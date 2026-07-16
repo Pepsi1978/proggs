@@ -1,6 +1,6 @@
 # Projektgrundlage: Bezahlter Android-Spezialrechner
 
-**Version:** v0.3 - 16.07.2026 11:16 Uhr  
+**Version:** v0.4 - 16.07.2026 11:32 Uhr  
 **Status:** Zwei Recherchewellen abgeschlossen, kein Kandidat ausreichend marktvalidiert und keine App zur Umsetzung freigegeben  
 **Recherchebericht:** [bezahlte-android-spezialrechner-recherche-2026-07-16.md](bezahlte-android-spezialrechner-recherche-2026-07-16.md)  
 **Nächster freigegebener Schritt:** Gezielte öffentliche Validierung von „Modellmaß“ als erster Hypothese. Es wird bis zur ausdrücklichen Auswahl eines ausreichend belegten Kandidaten keine App umgesetzt.

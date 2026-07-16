@@ -1,0 +1,95 @@
+# Ergebnis der Web-Recherche: Nicht ausreichend für eine quellentreue Antwort
+
+## Wichtiger Hinweis vorab
+
+Die bereitgestellten Websuchergebnisse enthalten **keine direkt verwertbaren Quellen** zur konkreten Frage nach:
+- Konkurrenz-Android-Apps für 3D-Druck-Materialplanung
+- Slicer-Funktionen (Cura, PrusaSlicer, OrcaSlicer etc.)
+- Filament-/Materialrechner im Web
+- Preisen, Reviews, Installationsschwellen solcher Apps
+- Formelgrundlagen für 3D-Druck-Materialberechnung
+
+Die Treffer behandeln überwiegend **allgemeine Themen** wie Quellenrecherche, Hypothesenvalidierung oder fachfremde Bereiche (Hydranten, E-Rechnungen, PCB-Design, Threat Hunting). Ich erfinde daher bewusst nichts und liste nachfolgend nur, was sich aus den vorhandenen Quellen tatsächlich belegen lässt – inklusive der Lücken.
+
+---
+
+## 1. Methodische Grundlagen aus den Quellen (überprüfbar)
+
+Mehrere Quellen beschäftigen sich mit der **methodischen Frage**, wie man eine Hypothese wie die hier genannte App-Idee validieren würde:
+
+- [scamper.blog](https://scamper.blog/hypothesen-aufstellen/) beschreibt, dass eine Hypothese nur dann Bestätigung findet, wenn **messbare Zielwerte** festgelegt werden (im konkreten Fall z. B. „50 Käufe pro Monat" oder „Anwender zahlen bis 3,49 EUR"). Die Seite betont, dass solche Schwellen **explizit definiert und mit Marktdaten abgeglichen** werden müssen, statt sie „nach Gefühl" zu setzen.
+- [automateed.com](https://www.automateed.com/de/nische-mit-umfragen-validieren) beschreibt analog, dass vor jeder Nischenvalidierung eine **vorab formulierte Hypothese** nötig ist, die später mit Umfragen / Marktdaten bestätigt oder widerlegt wird.
+- [DWDS](https://www.dwds.de/wb/verifizieren) definiert „verifizieren" als „die Wahrheit, Richtigkeit von etwas beglaubigen, bestätigen" – exakt der Begriff, der in der Frage verwendet wird.
+- [saferinternet.at](https://www.saferinternet.at/zielgruppen/lehrende/unterrichtsbeispiele/wahr-oder-falsch-im-internet/uebung-der-quellencheck) liefert eine Checkliste zur Quellenprüfung (Seriosität, Aktualität, Verlässlichkeit), die auf Bewertungen von Konkurrenz-Apps anwendbar wäre.
+- [kresse-discher.de](https://kresse-discher.de/warum-googeln-noch-keine-recherche-ist) und [studieren.de](https://studieren.de/recherchieren-internet.0.html) beschreiben, dass „richtige Recherche" über einfaches Googeln hinaus **mehrere voneinander unabhängige Quellen** erfordert.
+
+**Konsequenz für die App-Hypothese:** Die genannten methodischen Quellen stützen, dass die Frage (50 Käufe/Monat, 3,49 EUR, Materialplanung) **mit harten Marktdaten unterfüttert** werden müsste – liefern diese Daten aber selbst nicht.
+
+---
+
+## 2. Beispielhafte Analogie aus den Quellen: Offline-First-App als Vorbild
+
+- [weg.li/faq](https://www.weg.li/faq) beschreibt eine deutsche App-Idee, bei der die Macher **bewusst gegen native App-Stores** entschieden und „die Idee validieren" wollten, bevor sie in Marketing/Store-Präsenz investierten. Das ist ein vergleichbares Vorgehen („Prototyp zuerst, Hypothese prüfen") wie bei der hier zu prüfenden Materialplanungs-App.
+
+Diese Quelle belegt das **methodische Pattern** (kleines Offline-Tool, vor Stores validieren), aber sie ist **kein Marktbeleg** für eine 3D-Druck-Materialplanungs-App.
+
+---
+
+## 3. Was die Quellen NICHT liefern (ausdrückliche Lücken)
+
+Für die eigentliche Marktprüfung der Hypothese fehlt **jeder** belastbare Treffer zu folgenden, in der Frage geforderten Punkten:
+
+| Geforderter Beleg | Status in den Suchergebnissen |
+|---|---|
+| Android-Konkurrenz-Apps für 3D-Druck-Materialplanung | ❌ kein Treffer |
+| Slicer-Funktionen (Cura, PrusaSlicer, OrcaSlicer, Bambu Studio, Lychee …) | ❌ kein Treffer |
+| Preise (bis 3,49 EUR) und Installationsschwellen solcher Apps | ❌ kein Treffer |
+| Reviews, Updates, Funktionsumfang (Stückzahl, Reserve, Spulenbestand, Chargen) | ❌ kein Treffer |
+| Wiederkehrende Beschwerden in Communities (Reddit, Foren) | ❌ kein Treffer |
+| Datierte Community-Fragen (z. B. „Gibt es einen Filament-Rechner für Android?") | ❌ kein Treffer |
+| Web-Rechner für 3D-Druck-Material (z. B. von Eryone, Polymaker, Prusa, All3DP) | ❌ kein Treffer |
+| Frei zugängliche Formelgrundlagen (Masse = Dichte × Volumen, Infill-Berechnung, Support-Material) | ❌ kein Treffer |
+| Bewertung „Verlauf/PDF als Mehrwert ggü. kostenlosen Slicern" | ❌ kein Treffer |
+| Realismus von „50 monatlichen Käufen" | ❌ kein Treffer |
+
+Der einzige annähernd thematische Treffer ist [resources.altium.com](https://resources.altium.com/de/p/how-to-catch-enclosure-and-connector-misalignment) – er behandelt aber **3D-Modellierung für PCB-Gehäuse/Steckverbinder** in ECAD/MCAD, nicht FDM-/SLA-3D-Druck und nicht Materialmengenberechnung. Er ist deshalb **nicht auf die Frage anwendbar**.
+
+---
+
+## 4. Fazit / Bewertung der Hypothese auf Basis der Quellenlage
+
+**Quellentreue Antwort:** Die Web-Recherche kann die Frage **nicht belastbar beantworten**. Aus den vorhandenen Treffern lässt sich nur ableiten:
+
+1. Die App-Idee folgt einem bekannten **Validierungs-Muster** (klein, offline, vor Store-Präsenz testen), das z. B. bei [weg.li](https://www.weg.li/faq) dokumentiert ist.
+2. Eine seriöse Hypothesenprüfung verlangt nach [scamper.blog](https://scamper.blog/hypothesen-aufstellen/) und [automateed.com](https://www.automateed.com/de/nische-mit-umfragen-validieren) **vorab festgelegte Erfolgs-Schwellen** und **Marktdaten**, die im konkreten 3D-Druck-Materialplanungs-Markt hier nicht vorliegen.
+3. Aussagen zu Konkurrenz, Preisen, Reviews, Formelgrundlagen und Realismus von „50 Käufen/Monat zu 3,49 EUR" lassen sich aus diesen Quellen **nicht belegen oder widerlegen**.
+
+**Was ich offen NICHT sagen kann** (weil Quellen fehlen):
+- Ob es überhaupt eine deutschsprachige Offline-Android-App in diesem Segment gibt.
+- Welche konkreten Funktionen Cura / PrusaSlicer / OrcaSlicer für Materialplanung mitbringen und wo Lücken bestehen.
+- Ob 3,49 EUR eine marktübliche Preisschwelle ist.
+- Ob 50 Käufe/Monat für eine Nischen-App in diesem Segment realistisch sind.
+- Welche Formeln (Dichte × Volumen × Infill-Faktor, Support-Anteil, Verschnitt) als „frei zugängliche Grundlage" gelten.
+
+**Empfehlung für die weitere Prüfung:** Es wären zusätzliche, gezielte Suchen nötig (z. B. „filament calculator Android", „3D Druck Materialrechner App", „Cura material estimation", „PrusaSlicer filament usage"). Solche Suchen waren in den bereitgestellten Ergebnissen **nicht enthalten**, weshalb hier keine Fakten erfunden werden.
+
+=== Web-Quellen ===
+- Bisher aufgeschlagen (Verlauf) - dejure.org — https://dejure.org/dienste/verlauf
+- KI für Lokalisierungstests: Warum kulturelle Relevanz zur QA-Aufgabe wird | Itwelt — https://itwelt.at/news/ki-fuer-lokalisierungstests-warum-kulturelle-relevanz-zur-qa-aufgabe-wird
+- Hydranten / Wasserentnahmestellen | Pocsag Südtirol FAQ — https://faq.pocsagsuedtirol.it/hydranten-wasserentnahmestellen
+- Wie man Gehäuse- und Steckverbinder-Fehlausrichtungen vor dem ersten Prototyp erkennt | Altium — https://resources.altium.com/de/p/how-to-catch-enclosure-and-connector-misalignment
+- Was ist Threat Hunting? Methoden, Bedeutung und Typen — https://www.zscaler.com/de/zpedia/what-is-threat-hunting
+- Hypothesen aufstellen – So validierst Du Deine Geschäftsidee — https://scamper.blog/hypothesen-aufstellen/
+- verifizieren – Schreibung, Definition, Bedeutung, Etymologie, Synonyme, Beispiele | DWDS — https://www.dwds.de/wb/verifizieren
+- weg.li FAQ Wissenswertes für Behörden und Benutzer · 📸 📝 ✊ weg.li: 1, 2, 3 - Macht die Bahn frei! Einfach Falschparker online Anzeigen. — https://www.weg.li/faq
+- Elektronische Rechnungen - ZUGFeRD und X-Rechnungen – TOPMOTIVE — https://support.topmotive.eu/hc/de/articles/9817981934365-Elektronische-Rechnungen-ZUGFeRD-und-X-Rechnungen
+- Wie Sie Ihre Nische mit Umfragen validieren: Der umfassende Leitfaden für 2027 — https://www.automateed.com/de/nische-mit-umfragen-validieren
+- Recherchieren – was ist das und wieso solltest auch du ... - YouTube — https://www.youtube.com/watch?v=OYrGx4z36vk
+- Du kannst einer allwissende Quelle eine einzige Frage ... — https://www.reddit.com/r/FragReddit/comments/1615b4k/du_kannst_einer_allwissende_quelle_eine_einzige
+- Recherchieren im Internet - Studieren.de — https://studieren.de/recherchieren-internet.0.html
+- Nicht nur googeln: So geht richtiges Recherchieren — https://kresse-discher.de/warum-googeln-noch-keine-recherche-ist
+- beantworte folgende Fragen - Englisch-Übersetzung — https://www.linguee.de/deutsch-englisch/uebersetzung/beantworte%2Bfolgende%2Bfragen.html
+- Wahr oder falsch im Internet? Übung: „Der Quellencheck" — https://www.saferinternet.at/zielgruppen/lehrende/unterrichtsbeispiele/wahr-oder-falsch-im-internet/uebung-der-quellencheck
+- KI beantwortet Fragen inklusive Quellenangaben — https://www.pctipp.ch/themen/praxis/ki-beantwortet-fragen-inklusive-quellenangaben
+- Konjugation das Verb Recherchieren auf Deutsch — https://www.gymglish.com/de/konjugation/deutsch/verb/recherchieren
+- Menschen, die nicht recherchieren können/die Fähigkeit ... — https://www.reddit.com/r/PetPeeves/comments/1t6ujvx/people_who_cant_research_thingslack_the_ability?tl=de

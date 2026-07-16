@@ -1,0 +1,60 @@
+
+# Recherche-Ergebnis: Keine verwertbaren Quellen in der Websuche
+
+## Klare Aussage zur Evidenz
+
+Die mir vorliegenden zehn Web-Suchergebnisse vom 16.07.2026 enthalten **keinen einzigen Treffer**, der die gestellte Frage zu Spezialrechnern für technische/handwerkliche Hobbyisten im deutschen Android-Play-Store-Markt beantwortet. Eine quellen­treue Beantwortung ist daher **nicht möglich**, und ich werde – wie gefordert – **keine Kandidaten, URLs, App-Namen, Preise, Versionsnummern, Konkurrenzmetriken oder Community-Signale erfinden**.
+
+## Inhalt der durchgeführten Websuche (nicht themenrelevant)
+
+| # | Quelle | Thema des Treffers | Relevanz für Frage |
+|---|--------|--------------------|--------------------|
+| 1 | [whk-controlling.de](https://www.whk-controlling.de/wissen/boersenmakler-unternehmen-liquiditaetsmanagement) | Börsenmakler-Kostenrechner für Unternehmen | nein (Finanzbereich, zudem ausgeschlossen) |
+| 2 | [gutefrage.net](https://www.gutefrage.net/frage/stromanbieter-welchen-empfehlt-ihr) | Stromanbieter-Empfehlung Verbraucher | nein (Energie/Tarifvergleich) |
+| 3 | [billigster-internetanbieter.de](https://www.billigster-internetanbieter.de/news/internetanschluss-trotz-schufa) | Internet trotz Schufa 2026 | nein (DSL/Internet) |
+| 4 | [umzuege.de Heinsberg](https://www.umzuege.de/umzugsunternehmen/deutschland/nordrhein-westfalen/heinsberg/52525/28351) | Umzugsunternehmen Heinsberg | nein (Logistik) |
+| 5 | [casegrit.com](https://www.casegrit.com/case-study/fur-verivox-steigerten-wir-so-organische-reichweite-und-conversions) | SEO-Case-Study Verivox | nein (Marketing) |
+| 6 | [umzuege.de Krefeld](https://www.umzuege.de/umzugsunternehmen/deutschland/nordrhein-westfalen/krefeld/fischeln/47804/25940) | Umzugsunternehmen Krefeld | nein (Logistik) |
+| 7 | [wechseljetzt.de](https://wechseljetzt.de/haeufige-fragen/dsl) | DSL-Anbieterwechsel-FAQ | nein (DSL) |
+| 8 | [freiepresse.de](https://www.freiepresse.de/erfahrungen/gasanbieter/check24/) | Check24 Gas Erfahrungen 2026 | nein (Gas/Tarifvergleich; zudem ausgeschlossen) |
+| 9 | [umzuege.de Stuttgart](https://www.umzuege.de/umzugsunternehmen/deutschland/baden-w%C3%BCrttemberg/stuttgart/wangen/70327/35950) | Umzugsunternehmen Stuttgart | nein (Logistik) |
+| 10 | [durchblicker.at](https://durchblicker.at/online-kredit-beantragen) | Online-Kredit-Vergleich Österreich | nein (Finanzen; zudem ausgeschlossen und AT) |
+
+Kein Treffer liefert:
+- ein Play-Store-Listing (URL, Versionsnummer, Preis, Veröffentlichungsdatum),
+- eine datierte Community-Nachfrage (Reddit, gutefrage.net, Heise-Forum, ComputerBase-Forum u. ä.),
+- einen Web-Rechner-Vergleich gegen den ein Kandidat antreten würde,
+- ein Preis-Argument zu ≤ 3,49 EUR.
+
+## Warum die Frage mit dieser Suche nicht bedienbar ist
+
+Die Suchanfrage scheint das Tool nicht auf den angefragten Themenraum (Android-Apps, spezialisierte Hobby-Rechner, Play-Store-Metadaten) gelenkt zu haben. Stattdessen lieferte sie thematisch fremde Vergleichs­rechner-Themen (Börse, Strom, Gas, DSL, Kredit, Umzug). Für die in der Aufgabe geforderten harten Belege – insbesondere:
+
+- Play-Store-URLs mit nachprüfbaren Versions-/Datums-/Preisangaben,
+- datierte Nachfragesignale aus Foren/Communities,
+- nachvollziehbarer Web-Rechner-Vergleich mit Preisargument,
+
+…fehlt in den vorliegenden Treffern **jede Grundlage**.
+
+## Empfohlene Folgeschritte (ohne inhaltliche Fabrikation)
+
+Damit die Recherche quellen­treu abgeschlossen werden kann, wären mindestens diese zusätzlichen Suchtypen nötig – bitte mit angepassten Queries erneut anstoßen:
+
+1. **Play-Store-Direktsuche** (z. B. `site:play.google.com "Rechner" Hobby Bastler offline werbefrei`) – für Versionen, Preise, „Enthält keine Werbung"-Hinweise, Berechtigungs-Listen.
+2. **Community-Signale** mit Datum (z. B. `site:reddit.com "Hobby" "Rechner" Android`, `site:computerbase.de forum "Spezialrechner" app`, `site:heise.de forum "Werkstattrechner"`, `site:chip.de forum "Bastler App"`).
+3. **Web-Rechner-Vergleich** je Themenfeld (z. B. Gewinde, Schnittgeschwindigkeit, Farb­mischung, Papier-/Druck-Bogen, Foto-Belichtung, Akustik-Raum, CNC-Span­nungs-/Vorschub-Werte außerhalb tragender Konstruktionen) auf Anbieter­seiten, damit ein Preis-/Funktions-Argument entsteht.
+4. **Konkrete Themen** jenseits der Ausschlüsse: z. B. Foto-Belichtung & Schärfentiefe, Audio-DSP-Größen (nicht sicherheits­relevant), Druck-Bogenschema, Schnitt-/Span­nungs­daten für Modellbau, Stickerei/Plotter-Geometrie, Lötrauch-/Lüftungs­bilanz, 3D-Druck-Slicer-Stützstruktur­parameter, Garten-Bewässerungs­volumen, Imkerei-Kennzahlen – jeweils nur, sofern nicht in den Ausschluss­kategorien.
+
+Sobald mir solche Treffer vorliegen, kann ich die geforderte Tabelle mit Kandidat, Play-Store-URL, Preis, Community-Datum, Web-Rechner-Vergleich und Preisargument quellen­treu füllen. Ohne diese Belege bleibt die Antwort aus­drücklich **„keine Evidenz in den vorliegenden Quellen"**.
+
+=== Web-Quellen ===
+- Börsenmakler für Unternehmen: Optimales Liquiditätsmanagement - WHK Controlling — https://www.whk-controlling.de/wissen/boersenmakler-unternehmen-liquiditaetsmanagement
+- Stromanbieter: welchen empfehlt Ihr? (Haus, Stromverbrauch) — https://www.gutefrage.net/frage/stromanbieter-welchen-empfehlt-ihr
+- Internetanschluss trotz Schufa-Eintrag 2026 - So funktioniert es! — https://www.billigster-internetanbieter.de/news/internetanschluss-trotz-schufa
+- Umzugsunternehmen in 52525 Heinsberg Umzugsfirma-umzuege.de — https://www.umzuege.de/umzugsunternehmen/deutschland/nordrhein-westfalen/heinsberg/52525/28351
+- Für VERIVOX steigerte 4iMEDIA so Reichweite & Conversion — https://www.casegrit.com/case-study/fur-verivox-steigerten-wir-so-organische-reichweite-und-conversions
+- Umzugsunternehmen in 47804 Krefeld-Fischeln-umzuege.de — https://www.umzuege.de/umzugsunternehmen/deutschland/nordrhein-westfalen/krefeld/fischeln/47804/25940
+- Häufige Fragen zum DSL-Anbieterwechsel — https://wechseljetzt.de/haeufige-fragen/dsl
+- Check24 Gas Erfahrungen 2026 | Die Gas Vergleichsseite im Test — https://www.freiepresse.de/erfahrungen/gasanbieter/check24/
+- Umzugsunternehmen in 70327 Stuttgart-Wangen-umzuege.de — https://www.umzuege.de/umzugsunternehmen/deutschland/baden-w%C3%BCrttemberg/stuttgart/wangen/70327/35950
+- Online Kredit ab 100€ - 75.000€ | Jetzt Sofortangebote berechnen | durchblicker.at — https://durchblicker.at/online-kredit-beantragen

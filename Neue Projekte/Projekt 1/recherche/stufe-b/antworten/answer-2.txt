@@ -1,0 +1,39 @@
+## Transparenzhinweis vorab
+
+Ich muss ehrlich sagen: **Die mir vorliegenden Websuchergebnisse enthalten keinen einzigen Treffer zu Darts-Score-Apps, Dartregeln, Checkouts oder Dart-Communities.** Die zehn gelieferten Quellen befassen sich ausschließlich mit Werberecht (BGH-Urteil zu Bewertungsaufforderungen, [juraforum.de](https://www.juraforum.de/news/unzulaessige-werbung-durch-aufforderung-zu-guter-haendler-bewertung_216862)), Werbewirkung ([media-perspektiven.de](https://www.media-perspektiven.de/publikationsarchiv/2016/artikel/ueberraschung-und-provokation-in-der-werbung)), Android-Galerie-App ([chip.de](https://www.chip.de/news/handy/erstaunen-im-netz-offenbar-ist-vielen-nutzern-diese-android-app-voellig-unbekannt_ade6ccad-6fbe-4e7e-a07c-d33510b21a2e.html)), YouTube-Audioeinstellungen ([chip.de](https://www.chip.de/news/YouTube-veraendert-heimlich-den-Ton-Wie-Sie-das-verhindern_186028081.html)), Pkw-EnVKV ([datev-magazin.de](https://www.datev-magazin.de/nachrichten-steuern-recht/recht/auto-abo-keine-werbung-ohne-angaben-ueber-kraftstoffverbrauch-und-co2-emissionen-53758)), Duden-Definition von „Bewertung" ([duden.de](https://www.duden.de/rechtschreibung/Bewertung)), Homepage-Erstellung ([adfreak.de](https://www.adfreak.de/blog/homepage-kostenlos-erstellen-anbieter-ohne-werbung)), Grundlagen der Werbung ([chip.de](https://praxistipps.chip.de/wie-funktioniert-werbung-einfach-erklaert_99775) und [springerprofessional.de](https://www.springerprofessional.de/grundlagen-der-werbung/27086006)) sowie Datenschutz bei Bestätigungsmails ([dr-datenschutz.de](https://www.dr-datenschutz.de/bestaetigungsmail-als-unzulaessige-werbung-bewertung-und-ausblick)).
+
+**Kein einziger Treffer ist dartsbezogen.** Ich habe außerdem in dieser Sitzung kein funktionsfähiges Websuchetool zur Verfügung — ich kann also nicht eigenständig nach Dart-Apps, PDPA-Regeln, WDF-Formeln oder Google-Play-Einträgen suchen.
+
+## Was daraus folgt
+
+Gemäß deiner Vorgabe, ausschließlich Quellen zu verwenden und nichts zu erfinden, muss ich die Teilfragen einzeln als **nicht beantwortbar aus den vorliegenden Quellen** markieren:
+
+| Teilfrage | Status |
+|---|---|
+| Werbefreie, offline deutsche Dart-App ≤ 3,49 € validieren | Nicht belegbar — keine Quellen |
+| Google-Play-Konkurrenz mit URLs, Preisen, Install-Schwellen | Nicht belegbar — keine Quellen |
+| Reviews, Updates, Werbe-/IAP-Modell, Offlinefähigkeit der Konkurrenz | Nicht belegbar — keine Quellen |
+| Beschwerden über Werbung/Account/Verlauf/Export/Berechnung | Nicht belegbar — keine Quellen |
+| Web-Rechner für Dart-Checkouts | Nicht belegbar — keine Quellen |
+| Datierte Community-Nachfrage | Nicht belegbar — keine Quellen |
+| Frei nutzbare offizielle Regel-/Formelgrundlagen (PDC, WDF, DDB) | Nicht belegbar — keine Quellen |
+| Plausibilität 50 Käufe/Monat bei 3,49 € trotz Free-Alternativen | Quantitative Schätzung — explizit untersagt |
+
+## Empfehlung
+
+Damit ich die Frage quellentreu beantworten kann, bräuchte ich Suchergebnisse mit Begriffen wie „Darts Scoreboard Android", „Darts Checkout", „PDC rules", „Google Play Dart Scorer", „Dart Counter offline", „Dart Verlauf PDF Export" etc. Ohne solche Quellen wäre jede Antwort — insbesondere die von dir ausdrücklich ausgeschlossenen Zahlen zu Installationen, Reviews und Marktplausibilität — Spekulation. Ich liefere deshalb lieber ehrlich „keine belastbare Aussage möglich", als dir erfundene Fakten als Recherche zu verkaufen.
+
+Sag mir gern, ob du neue Suchergebnisse nachreichen möchtest — dann arbeite ich sie vollständig aus.
+
+=== Web-Quellen ===
+- Unzulässige Werbung durch Aufforderung zu guter Händler-Bewertung — https://www.juraforum.de/news/unzulaessige-werbung-durch-aufforderung-zu-guter-haendler-bewertung_216862
+- Überraschung und Provokation in der Werbung - MEDIA PERSPEKTIVEN — https://www.media-perspektiven.de/publikationsarchiv/2016/artikel/ueberraschung-und-provokation-in-der-werbung
+- Nutzer im Netz sind baff: Viele kennen offenbar diese praktische Android-App nicht - CHIP — https://www.chip.de/news/handy/erstaunen-im-netz-offenbar-ist-vielen-nutzern-diese-android-app-voellig-unbekannt_ade6ccad-6fbe-4e7e-a07c-d33510b21a2e.html
+- YouTube verändert heimlich den Ton: Wie Sie das verhindern - CHIP — https://www.chip.de/news/YouTube-veraendert-heimlich-den-Ton-Wie-Sie-das-verhindern_186028081.html
+- Auto-Abo: Keine Werbung ohne Angaben über Kraftstoffverbrauch und CO2-Emissionen – DATEV magazin — https://www.datev-magazin.de/nachrichten-steuern-recht/recht/auto-abo-keine-werbung-ohne-angaben-ueber-kraftstoffverbrauch-und-co2-emissionen-53758
+- Bewertung ▶ Rechtschreibung, Bedeutung, Definition, Herkunft | Duden — https://www.duden.de/rechtschreibung/Bewertung
+- 
+        Homepage kostenlos erstellen – Anbieter ohne Werbung? | Adfreak     — https://www.adfreak.de/blog/homepage-kostenlos-erstellen-anbieter-ohne-werbung
+- Wie funktioniert Werbung? Einfach erklärt - CHIP — https://praxistipps.chip.de/wie-funktioniert-werbung-einfach-erklaert_99775
+- Grundlagen der Werbung | springerprofessional.de — https://www.springerprofessional.de/grundlagen-der-werbung/27086006
+- Bestätigungsmail als unzulässige Werbung - Bewertung und Ausblick — https://www.dr-datenschutz.de/bestaetigungsmail-als-unzulaessige-werbung-bewertung-und-ausblick

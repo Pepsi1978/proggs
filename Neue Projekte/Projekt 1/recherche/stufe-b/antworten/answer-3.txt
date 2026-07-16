@@ -1,0 +1,19 @@
+Ich werde nun systematisch nach den geforderten Informationen suchen. Beginnen wir mit mehreren parallelen Suchanfragen.
+
+{
+  "query": "Android App Terrassenplatten Rechner offline Berechnung Menge Play Store",
+  "top_n": 10,
+  "source": "news"
+}
+
+=== Web-Quellen ===
+- 13 wichtige Usability-Prinzipien - ZEISS Digital Innovation Blog — https://blogs.zeiss.com/digital-innovation/de/design-prinzipien-reloaded
+- Validieren: Grundbuchantrag validieren | Onlinehilfe der Bundesnotarkammer — https://onlinehilfe.bnotk.de/einrichtungen/notarnet/xnotar/grundbuch-funktionen-der-aktionsleiste/grundbuchantrag-validieren.html
+- So beheben Sie den Fehler "DNS-Server reagiert nicht" — https://www.bluehost.com/de-de/blog/so-beheben-sie-dass-der-dns-server-auf-pc-und-mac-nicht-reagiert/
+- JSON reparieren & validieren (AI) – Fehlerkorrektur Online — https://www.onlinejsonformatt.org/de/fix-json
+- Ohne Cloud und Internet: Diese Smart-Home-Systeme funktionieren auch offline | heise online bestenlisten — https://www.heise.de/bestenlisten/ratgeber/ohne-cloud-und-internet-diese-smart-home-systeme-funktionieren-auch-offline/rj86zn6
+- XRechnungen Validieren: So geht's richtig! - Klippa — https://www.klippa.com/de/blog/informativ/xrechnungen-validieren
+- Schluss mit der Verwendung kompromittierter Passwörter — https://www.security-insider.de/schluss-mit-der-verwendung-kompromittierter-passwoerter-a-917404/
+- Wie man eine E-Mail-Adresse validiert: Sichere und verlässliche Wege — https://powerdmarc.com/de/how-to-validate-an-email-address
+- Daten validieren – PHP lernen — https://www.php-einfach.de/experte/php-sicherheit/daten-validieren
+- GMail Offline: E-Mails lassen sich jetzt auch ohne Internetverbindung lesen, durchsuchen & schreiben — https://www.googlewatchblog.de/2018/05/gmail-offline-e-mails/

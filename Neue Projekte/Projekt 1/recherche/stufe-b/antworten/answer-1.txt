@@ -1,0 +1,92 @@
+# Recherche-Ergebnis: Modellbau-Maßstabsrechner-Apps
+
+## ⚠️ Wichtige Einschränkung vorab
+
+Die vorliegenden Websuchergebnisse vom 16.07.2026 enthalten **keine Quellen**, die das konkrete Thema „kostenpflichtige deutschsprachige Android-App für Modellbau-Maßstabsumrechnung / Umbauplanung" direkt abdecken. Die gelieferten Treffer befassen sich mit:
+
+- In-Game-Käufen / Free-to-Play-Mechanismen ([lmz-bw.de](https://www.lmz-bw.de/medienbildung/themen-von-a-bis-f/digitale-spiele/in-game-kaeufe))
+- Affiliate-Link-Kennzeichnung ([kanzlei-herfurtner.de](https://kanzlei-herfurtner.de/affiliate-links/))
+- Microsoft Forms / Microsoft Store Spieletiteln ([priest-movie.net](https://priest-movie.net/nachricht/ist-ms-forms-kostenlos/), [microsoft.com](https://www.microsoft.com/de-lu/store/top-free/games/pc))
+- Claude-Abrechnung / Steuerberechnung ([support.claude.com](https://support.claude.com/de/articles/12997130-verstandnis-ihrer-rechnungsadresse-und-steuerberechnung))
+- Detergenzien-Verordnung ([ikw.org](https://www.ikw.org/haushaltspflege/wissen/neue-detergenzien-und-tensidverordnung))
+- DiGAV-PDF – digitale Gesundheitsanwendungen ([gesetze-im-internet.de](https://www.gesetze-im-internet.de/digav/DiGAV.pdf))
+- TikTok-Tracking-Pixel ([store.shopware.com](https://store.shopware.com/de/lenz330984750905m/tiktok-tracking-pixel.html))
+- Apple App-Store-Provision am Beispiel Hey ([golem.de](https://www.golem.de/news/streit-um-app-store-provision-apple-werden-unfaire-methoden-vorgeworfen-2006-149141.html))
+- Abo-Abschlüsse Minderjähriger ([srf.ch](https://www.srf.ch/sendungen/kassensturz-espresso/espresso/jugendliche-und-vertraege-ist-ein-abo-abschluss-ohne-die-einwilligung-der-eltern-erlaubt))
+
+**Kein einziger Treffer** bezieht sich auf Maßstabsrechner, Modellbau-Rechner, scale calculator, miniature scale calculator, Google-Play-Listings zu Modellbau-Tools, Foren-/Reddit-Diskussionen oder Web-Rechner für Modellmaßstäbe.
+
+---
+
+## Was die vorhandenen Quellen * indirekt* stützen
+
+Aus den genannten Quellen lässt sich nur **kontextuell** ableiten, nicht produktspezifisch:
+
+1. **In-Game-Kaufmechanismen & verschleierte Kosten** ([lmz-bw.de](https://www.lmz-bw.de/medienbildung/themen-von-a-bis-f/digitale-spiele/in-game-kaeufe)): Die Quelle beschreibt, dass kostenlose Basis-Apps später kostenpflichtige Funktionen über virtuelle Währungen anbieten – ein Modell, das für eine 3,49-EUR-Premium-App eher **nicht** typisch wäre (Einmalkauf statt Free-to-Play).
+2. **Apple App-Store-Provision / Bezahlmodelle** ([golem.de](https://www.golem.de/news/streit-um-app-store-provision-apple-werden-unfaire-methoden-vorgeworfen-2006-149141.html)): illustriert Plattform-Constraints für kostenpflichtige Apps, betrifft aber iOS/Apple, nicht Android/Google Play direkt.
+3. **Rechtliche Lage bei Minderjährigen und Abos** ([srf.ch](https://www.srf.ch/sendungen/kassensturz-espresso/espresso/jugendliche-und-vertraege-ist-ein-abo-abschluss-ohne-die-einwilligung-der-eltern-erlaubt)): relevant, falls Modellbau-Apps von Jugendlichen genutzt werden – aber keine Aussage zur Zielgruppe konkreter Modellbau-Apps.
+
+---
+
+## Was zur_validierung der Hypothese konkret FEHLT
+
+Die folgenden Daten sind in den vorliegenden Quellen **nicht enthalten** und können von mir nicht aus den Quellen abgeleitet werden:
+
+| Benötigtes Datum | Status |
+|---|---|
+| Liste deutschsprachiger kostenpflichtiger Android-Apps für Maßstabs­umrechnung | ❌ nicht in Quellen |
+| Vollständige Google-Play-Listing-URLs | ❌ nicht in Quellen |
+| Preis ≤ 3,49 EUR konkret belegt | ❌ nicht in Quellen |
+| Installationsschwellen | ❌ nicht in Quellen |
+| Review-Zahlen | ❌ nicht in Quellen |
+| Aktualisierungsdaten | ❌ nicht in Quellen |
+| Sprachversionen | ❌ nicht in Quellen |
+| Funktionsumfang (linear / Fläche / Volumen) | ❌ nicht in Quellen |
+| Wiederkehrende Kritik (Rezensionen) | ❌ nicht in Quellen |
+| Datierte Foren-/Reddit-/Community-Fragen | ❌ nicht in Quellen |
+| Web-Rechner (Vergleichsfunktionen) | ❌ nicht in Quellen |
+| Frei zugängliche Grundlagen linearer / Flächen- / Volumenskalierung | ❌ nicht in Quellen |
+| Daten zu Zahlungsbereitschaft / Suchintention | ❌ nicht in Quellen |
+| Plausibilitätsdaten für „50 Käufe pro Monat" | ❌ nicht in Quellen |
+
+---
+
+## Ehrliche Bewertung der Hypothese
+
+**Ich kann auf Basis dieser Quellen keine valide Bewertung** der Hypothese abgeben. Ohne direkten Webzugriff im Rahmen dieser Recherche und ohne passende Quellen ist jede Aussage zu:
+
+- tatsächlich existierenden Apps im Preis-Segment ≤ 3,49 EUR,
+- deren Download-Zahlen oder Verkaufsvolumina,
+- der deutschen Suchintention für „Maßstabsrechner Modellbau",
+- dem Mehrwert von Verlauf/PDF in dieser Nische,
+- der Plausibilität von 50 Käufen/Monat
+
+…**reine Spekulation** und gemäß deiner Anweisung („erfinde nichts") hier **nicht zulässig**.
+
+---
+
+## Empfohlenes weiteres Vorgehen
+
+Um die Hypothese tatsächlich zu validieren, wären folgende **separate Suchanfragen** außerhalb dieses Datensatzes nötig (die hier nicht durchgeführt werden konnten):
+
+1. Google Play Store Suche: `Maßstabsrechner`, `Modellbau Rechner`, `scale calculator model`, `miniature scale calculator`
+2. Reddit-Suche: `r/modelmakers`, `r/ScaleModeling`, `r/miniatures` + Schlagworte „scale calculator app"
+3. Foren: Stahlartillerie-Forum, Dreisechstel-Forum, Plastic-Soldier-Forum, modellbau-1-1.de
+4. Web-Rechner: scalecalculator.net, scale-model-makers-toolbox.de, mrscales.com
+5. App-Statistik-Tools: Sensor Tower, data.ai, appfigures für Verkaufszahlen
+6. Deutsche Suchintention: Google Trends, Keywordtool.io für Suchvolumen in DE
+
+Wenn du mir Zugriff auf eine **passende** Websuche gibst (Ergebnisse mit Modellbau-Bezug), kann ich die Hypothese quellengestützt validieren oder falsifizieren.
+
+=== Web-Quellen ===
+- In-Game-Käufe | Landesmedienzentrum Baden-Württemberg — https://www.lmz-bw.de/medienbildung/themen-von-a-bis-f/digitale-spiele/in-game-kaeufe
+- Affiliate Links: Rechtliche Anforderung und Kennzeichnungspflicht — https://kanzlei-herfurtner.de/affiliate-links/
+- Antwort Ist MS Forms kostenlos? Weitere Antworten – Ist Microsoft Forms kostenlos – priest-movie.net — https://priest-movie.net/nachricht/ist-ms-forms-kostenlos/
+- Top kostenlos | Microsoft Store — https://www.microsoft.com/de-lu/store/top-free/games/pc
+- Verständnis Ihrer Rechnungsadresse und Steuerberechnung | Help center — https://support.claude.com/de/articles/12997130-verstandnis-ihrer-rechnungsadresse-und-steuerberechnung
+- IKW: Neue Detergenzien- und Tensidverordnung — https://www.ikw.org/haushaltspflege/wissen/neue-detergenzien-und-tensidverordnung
+- [PDF] DiGAV als PDF - Gesetze im Internet — https://www.gesetze-im-internet.de/digav/DiGAV.pdf
+- 
+        TikTok Tracking (Pixel)     — https://store.shopware.com/de/lenz330984750905m/tiktok-tracking-pixel.html
+- Streit um App-Store-Provision: Apple werden unfaire Methoden vorgeworfen - Golem.de — https://www.golem.de/news/streit-um-app-store-provision-apple-werden-unfaire-methoden-vorgeworfen-2006-149141.html
+- Ist ein Abo-Abschluss ohne die Einwilligung der Eltern erlaubt? - Kassensturz Espresso - SRF — https://www.srf.ch/sendungen/kassensturz-espresso/espresso/jugendliche-und-vertraege-ist-ein-abo-abschluss-ohne-die-einwilligung-der-eltern-erlaubt

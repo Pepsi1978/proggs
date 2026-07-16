@@ -1,0 +1,114 @@
+# Audit-Ergebnis: Quellen-Mismatch festgestellt
+
+## Wichtiger Hinweis vorab
+
+Die mir zur Verfügung gestellten Web-Suchergebnisse behandeln **ausschließlich das Thema "Komplexe Zahlen"** (Mathematik). Sie enthalten **keine** Informationen zu den in Ihrer Frage angeforderten Themenbereichen:
+
+- ❌ **Modellmaßstab** (z. B. Architektur-/Eisenbahnmodellbau)
+- ❌ **Darts** (Sport, Punkte/Turnier)
+- ❌ **Terrassenmengen** (Material-/Flächenbedarfsberechnung)
+- ❌ **3D-Druck-Material** (Filamente, Harze, Mengenberechnung)
+- ❌ Alternativen zu diesen Rechnern
+
+Ich kann daher **keine** der geforderten Angaben (URLs, Eingaben, Rechenwege, mobile Tauglichkeit, Werbung, Verlauf, Export, Sprache, Formelquellen, Normabhängigkeiten, Aktualität) zu Modellmaßstab, Darts, Terrassen oder 3D-Druck liefern, ohne zu erfinden — was Sie ausdrücklich untersagt haben.
+
+Ich erfinde nichts und dokumentiere stattdessen transparent, was tatsächlich in den bereitgestellten Quellen steht.
+
+---
+
+## Inhalt der tatsächlich gelieferten Suchergebnisse
+
+Alle zehn Suchergebnisse befassen sich mit Mathematik, genauer **komplexen Zahlen** und verwandten Rechenwerkzeugen:
+
+### 1. Hochschul-Skript (Uni Kassel)
+- **URL**: [uni-kassel.de](https://www.uni-kassel.de/upress/online/frei/978-3-89958-114-0.volltext.frei.pdf)
+- **Inhalt**: Wirtschaftspädagogisches Skript; nur beiläufig erwähnt werden "Berechnung alternativer Kosten" und "Human-Resources-Accounting". Kein Bezug zu Modellbau, Darts, Terrassen oder 3D-Druck.
+- **Relevanz für Ihre Frage**: keine
+
+### 2. Wolfram|Alpha Notebook Edition
+- **URL**: [wolfram.com](https://www.wolfram.com/wolfram-alpha-notebook-edition/quick-help/index.php.de?source=footer)
+- **Inhalt**: Marketing-/Hilfeseite zu einem kommerziellen Mathematica-basierten Notebook-Produkt (nicht kostenlos).
+- **Relevanz**: keine — und kein kostenloser Rechner.
+
+### 3. SwissEduc Aufgabensammlung Sek. II
+- **URL**: [swisseduc.ch](https://www.swisseduc.ch/mathematik/munterbunt_aufgabensammlung)
+- **Inhalt**: Sammlung von Übungs-PDFs zu Algebra, Funktionen, Kombinatorik, Wahrscheinlichkeit, komplexen Zahlen.
+- **Relevanz**: keine
+
+### 4. Computer Weekly: generative KI & Rechnen
+- **URL**: [computerweekly.com](https://www.computerweekly.com/de/feature/Warum-generative-KI-nicht-gut-rechnen-kann)
+- **Inhalt**: Hintergrundartikel über die Rechenfähigkeiten/-grenzen generativer KI (Tool-Integration, Chain-of-Thought-Prompting).
+- **Relevanz**: keine
+
+### 5. Serlo: Aufgaben zu komplexen Zahlen
+- **URL**: [de.serlo.org](https://de.serlo.org/mathe/237253/aufgaben-zu-komplexen-zahlen)
+- **Inhalt**: Lernplattform-Aufgaben zu komplexen Zahlen.
+- **Relevanz**: keine
+
+### 6. APKCombo: Integralrechner mit Rechenweg (Android-App)
+- **URL**: [apkcombo.com](https://apkcombo.com/de/integral-calculator-with-steps/com.et.integral.calculator.calculation.integration.solution.steps)
+- **Inhalt**: Werbeseite für eine Android-Integralrechner-App (nicht zu komplexen Zahlen im Sinne der Frage).
+- **Relevanz**: keine — und keine Offline-Bewertung möglich
+
+### 7. Uni Frankfurt: Vorkurs Komplexe Zahlen (PDF)
+- **URL**: [starkerstart.uni-frankfurt.de](https://www.starkerstart.uni-frankfurt.de/65764686/F02_complex_ue_komplett.pdf)
+- **Inhalt**: Übungsblatt zu komplexen Zahlen (Re(z), Im(z), Kehrwert, Quadrate, Gleichungen).
+- **Relevanz**: keine
+
+### 8. RedCrab: Komplexe-Zahlen-Onlinerechner
+- **URL**: [redcrab-software.com](https://www.redcrab-software.com/de/Rechner/Komplex)
+- **Inhalt**: Vorstellung eines kostenlosen Onlinerechners für komplexe Zahlen (Darstellungsformen, Grundoperationen, Funktionen, Spezialfunktionen, Euler-Formel).
+- **Relevanz**: keine — beantwortet keine Ihrer Kategorien
+
+### 9. Studyflix: Betrag komplexer Zahlen
+- **URL**: [studyflix.de](https://studyflix.de/mathematik/betrag-komplexe-zahl-2519)
+- **Inhalt**: Erklärseite zu |z| (Nichtnegativität, Multiplikativität).
+- **Relevanz**: keine
+
+### 10. Mathematik Online Uni Stuttgart: Komplexe Zahlen
+- **URL**: [mo.mathematik.uni-stuttgart.de](https://mo.mathematik.uni-stuttgart.de/aufgaben/Z/zahlen_komplexe.html)
+- **Inhalt**: Interaktive Aufgaben zu komplexen Gleichungen, Gaußscher Zahlenebene, komplexem Widerstand.
+- **Relevanz**: keine
+
+---
+
+## Bewertung gemäß Ihren Anforderungskriterien (über die bereitgestellten Quellen)
+
+| Kriterium | Bewertung möglich? |
+|---|---|
+| Modellmaßstab-Rechner | Nein — keine Quelle vorhanden |
+| Darts-Rechner | Nein — keine Quelle vorhanden |
+| Terrassenmengen-Rechner | Nein — keine Quelle vorhanden |
+| 3D-Druck-Material-Rechner | Nein — keine Quelle vorhanden |
+| "Gefundene bessere Alternativen" | Nicht anwendbar — keine Kandidaten identifiziert |
+| Kostenlose deutsch-/englischsprachige Rechner | Nicht bewertbar — Quellen decken andere Domäne ab |
+| Eingaben / Teilrechnungen / Rechenweg | Nicht bewertbar |
+| Mobilnutzung / Werbung / Verlauf / Export | Nicht bewertbar |
+| Primär-/Fachquellen für Formeln (Norm, Tabellen, DB, Urheberrecht, Aktualität) | Nicht bewertbar |
+| "Echte Bündelungs- und Offline-Lücken" | Nicht bewertbar |
+| Mehrwert gegenüber Einzelformel | Nicht bewertbar |
+
+---
+
+## Empfehlung
+
+Damit ich die Audit-Aufgabe quellentreu erfüllen kann, benötige ich entweder
+
+1. **neue Suchergebnisse**, die gezielt zu den Themen **Modellmaßstab**, **Darts**, **Terrassenbedarf** und **3D-Druck-Material** recherchiert wurden, oder
+2. eine **explizite Bestätigung**, dass die Domäne "Komplexe Zahlen" tatsächlich gemeint war (was die Fragestellung zwar nicht nahelegt, aber bei einem Themendreher möglich wäre).
+
+Sobald passende Quellen vorliegen, führe ich das Audit gerne vollständig nach Ihrem Kriterienkatalog durch.
+
+=== Web-Quellen ===
+- m~ę~ãÉíÉę=ĮÉę=^ėŅíę~ÖëâäŪęėåÖ=îįå=ÉņíÉęåÉå=^ ... — https://www.uni-kassel.de/upress/online/frei/978-3-89958-114-0.volltext.frei.pdf
+- Legen Sie los mit Wolfram|Alpha Notebook Edition — https://www.wolfram.com/wolfram-alpha-notebook-edition/quick-help/index.php.de?source=footer
+- SwissEduc - Mathematik - Aufgabensammlung zum Mathematikunterricht Sekundarstufe II — https://www.swisseduc.ch/mathematik/munterbunt_aufgabensammlung
+- Warum generative KI nicht gut rechnen kann | Computer Weekly — https://www.computerweekly.com/de/feature/Warum-generative-KI-nicht-gut-rechnen-kann
+- Aufgaben zu komplexen Zahlen — https://de.serlo.org/mathe/237253/aufgaben-zu-komplexen-zahlen
+- Integralrechner mit Rechenweg APK (Android App) - Kostenloser Download — https://apkcombo.com/de/integral-calculator-with-steps/com.et.integral.calculator.calculation.integration.solution.steps
+- Vorkurs Mathematik ¨Ubungen zu Komplexen Zahlen — https://www.starkerstart.uni-frankfurt.de/65764686/F02_complex_ue_komplett.pdf
+- Komplexe Zahlen Onlinerechner - Berechnungen mit komplexen Zahlen — https://www.redcrab-software.com/de/Rechner/Komplex
+- 
+Betrag komplexe Zahl • Berechnung & Bedeutung · [mit Video]
+ — https://studyflix.de/mathematik/betrag-komplexe-zahl-2519
+- Mathematik-Online-Aufgabensammlung: Zahlen: komplexe — https://mo.mathematik.uni-stuttgart.de/aufgaben/Z/zahlen_komplexe.html

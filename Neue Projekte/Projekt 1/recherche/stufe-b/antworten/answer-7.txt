@@ -1,0 +1,68 @@
+
+
+# Recherche-Ergebnis: Keine belastbaren Quellen für die gestellte Frage
+
+Ich habe die Websuche mit den mir zur Verfügung stehenden Quellen durchgeführt. **Keine einzige der zehn gelieferten Quellen beantwortet auch nur einen Aspekt deiner konkreten Frage.** Ich erfinde daher keine App-Namen, URLs, Preise, Metriken, Daten oder Formeln. Im Folgenden die ehrliche Bestandsaufnahme.
+
+---
+
+## Was die vorhandenen Quellen tatsächlich behandeln
+
+Alle zehn Treffer befassen sich ausschließlich mit **allgemeinem Online-Marketing, Suchmaschinen und Webanalyse**, nicht mit spezialisierten Natur-/Garten-/Tier-Rechnern oder kreativen Hobby-Apps:
+
+| Quelle ([Domain](URL)) | Thema | Relevanz für deine Frage |
+|---|---|---|
+| [thealternativeboard.biz](https://www.thealternativeboard.biz/blog/13-moeglichkeiten-um-neue-kundinnen-zu-gewinnen-und-langfristig-zu-binden) | Kundengewinnung, SEA, Social Media | 0 – keine App-/Rechner-Bezüge |
+| [teltarif.de](https://www.teltarif.de/google-webinhalte-verantwortung/news/51489.html) | EuGH-Gutachten zu Google-Haftung | 0 |
+| [uni-bielefeld.de](https://www.uni-bielefeld.de/ub/learn/tutorials/websearch/searchengines.xml) | Tutorial zu Suchmaschinen (Bing, DuckDuckGo) | 0 |
+| [kalaidos-fh.ch](https://www.kalaidos-fh.ch/de-CH/Blog/Posts/2023/06/Digitalisierung-1111-SEO-oder-SEA) | SEO vs. SEA | 0 |
+| [guter-rat.de](https://www.guter-rat.de/magazin/ratgeber/verbrauchertipps/spezialsuchmaschinen-844) | Spezialsuchmaschinen für Online-Käufe | 0 |
+| [n-tv.de](https://www.n-tv.de/webtools-im-vergleich/kostenlose-website-erstellen) | Kostenlose Website-Baukästen (Wix, Jimdo, Webador) | 0 |
+| [printful.com/de/blog](https://www.printful.com/de/blog/was-ist-seo) | SEO-Grundlagen | 0 |
+| [zewas-digital.com](https://www.zewas-digital.com/blog/websiteanalyse) | Website-Analyse (SSL, SEO, WCAG) | 0 |
+| [content-baer.de](https://content-baer.de/website-traffic) | Website-Traffic-Definitionen | 0 |
+| [seo-ambulance.de](https://seo-ambulance.de/gfk-untersuchung-zum-suchverhalten-in-deutschland/) | GfK-Suchverhalten in Deutschland | 0 – nur Keyword-Nutzung (Ø 2,2 Keywords) |
+
+---
+
+## Was ich konkret **nicht** belegen kann
+
+Aus den Quellen lässt sich **nichts** zu folgenden von dir geforderten Punkten ableiten:
+
+1. **Spezialisierte Rechner für Garten / Tiere / Natur** – keine App, keine Webseite, keine Formel genannt.
+2. **Kreative Hobbys** als alternatives Themenfeld – keine Treffer.
+3. **Google-Play-Konkurrenz mit URLs / Metriken** – keine einzige Play-Store-URL, keine Download-Zahlen, keine Bewertungen.
+4. **Datierte, wiederkehrende Community-Probleme** (Rezensionen, Foreneinträge) – nicht vorhanden.
+5. **Web-Rechner-Lücken** – keine Analyse spezifischer Online-Rechner.
+6. **Freie Formeln** (z. B. Düngeformel, Pflanzabstand, Stoffbedarf) – nicht dokumentiert.
+7. **Preisargument ≤ 3,49 EUR** – keine Preisinformationen aus den Quellen.
+8. **Zielbewertung „50 Käufe pro Monat"** – keine Marktdaten oder Conversion-Daten zu Nischen-Apps.
+9. **Risiken** (Datenschutz, Konkurrenzdruck, Abo-Pflichten etc.) – nicht belegt.
+
+Die einzige inhaltlich verwertbare Aussage ist die GfK-Beobachtung, dass deutsche User **im Durchschnitt 2,2 Keywords pro Suchanfrage** nutzen ([seo-ambulance.de](https://seo-ambulance.de/gfk-untersuchung-zum-suchverhalten-in-deutschland/)) – das ist eine generische Keyword-Statistik, nicht auf deine Nische bezogen.
+
+---
+
+## Fazit
+
+**Die gestellte Frage kann mit den vorliegenden Suchergebnissen nicht beantwortet werden.** Um deine Anforderungen (Nischen-Rechner, Konkurrenz-URLs mit Metriken, Community-Probleme, freie Formeln, Zahlungsargument, Risikoabschätzung, 50-Käufe-Monatsziel) quellentreu zu bedienen, wären mindestens folgende Quellengruppen nötig:
+
+- Play-Store-/App-Store-Listings konkreter Rechner-Apps (Preis, Bewertungen, Download-Zahlen, Berechtigungen)
+- Rezensionsarchive (z. B. Google-Play-Reviews, Foreneinträge) mit Datierung
+- Spezialisierte Web-Rechner (Garten, Aquaristik, Hundehaltung, Stricken, Häkeln …) plus ihre jeweiligen Formeln
+- ASO-/Marktanalysen für deutsche Nischen-Apps
+- DSGVO-/Berechtigungs-Diskussionen für Offline-Apps
+
+Wenn du mir erlaubst, eine **neue Websuche** gezielt zu diesen Themen (z. B. „Garten Rechner App offline Play Store", „Hunde-Rechner App", „Häkel-/Strick-Rechner App") zu starten, kann ich belastbare Quellen nachliefern. Ohne entsprechende Quellen halte ich mich an die Vorgabe, **nichts zu erfinden**.
+
+=== Web-Quellen ===
+- Kunden gewinnen & binden | Möglichkeiten & Tipps — https://www.thealternativeboard.biz/blog/13-moeglichkeiten-um-neue-kundinnen-zu-gewinnen-und-langfristig-zu-binden
+- EuGH-Experte: Google nicht für Such-Inhalte verantwortlich - teltarif.de News — https://www.teltarif.de/google-webinhalte-verantwortung/news/51489.html
+- Die besten Suchmaschinen (Suchmaschinen-Tutorial) - Universitätsbibliothek - Universität Bielefeld — https://www.uni-bielefeld.de/ub/learn/tutorials/websearch/searchengines.xml
+- SEO oder SEA? Die richtige  Mischung macht’s. | Kalaidos FH — https://www.kalaidos-fh.ch/de-CH/Blog/Posts/2023/06/Digitalisierung-1111-SEO-oder-SEA
+- Günstige Online-Käufe: Suchmaschinen für alle Zwecke — https://www.guter-rat.de/magazin/ratgeber/verbrauchertipps/spezialsuchmaschinen-844
+- Kostenlose Website erstellen: Diese Tools lohnen sich 2024! — https://www.n-tv.de/webtools-im-vergleich/kostenlose-website-erstellen
+- SEO: Was ist das und warum ist es wichtig — https://www.printful.com/de/blog/was-ist-seo
+- Website analysieren für mehr Erfolg | Kostenlose Analyse! — https://www.zewas-digital.com/blog/websiteanalyse
+- Was ist Website-Traffic? Definition, Arten und hilfreiche Tools — https://content-baer.de/website-traffic
+- GfK Untersuchung zum Suchverhalten in Deutschland » SEO-AMBULANCE+de® — https://seo-ambulance.de/gfk-untersuchung-zum-suchverhalten-in-deutschland/

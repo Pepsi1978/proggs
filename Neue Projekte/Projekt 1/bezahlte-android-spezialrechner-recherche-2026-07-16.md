@@ -1,6 +1,6 @@
 # Abschlussbericht: Bezahlter Android-Spezialrechner
 
-**Version:** v1.0 - 16.07.2026 11:16 Uhr
+**Version:** v1.1 - 16.07.2026 11:32 Uhr
 **Status:** Recherche abgeschlossen, Marktvalidierung nicht erreicht, keine App zur Umsetzung freigegeben
 **Verwendete Engines:** A Firecrawl+MiniMax (8 Researcher) und B OpenRouter MiniMax M3 `:online` (10 Researcher)
 **Stand:** 16.07.2026
