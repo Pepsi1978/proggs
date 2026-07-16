@@ -8,5 +8,8 @@
   },
   "effortLevel": "xhigh",
   "skipDangerousModePermissionPrompt": true,
+  "claudeMdExcludes": [
+    "**/.claude/rules/**"
+  ],
   "theme": "dark"
 }
