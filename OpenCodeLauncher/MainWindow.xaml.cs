@@ -278,6 +278,10 @@ public partial class MainWindow : Window
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
         int cornerPreference = WindowState == WindowState.Maximized ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+
+        var windowChrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
+        if (windowChrome != null)
+            windowChrome.CornerRadius = WindowState == WindowState.Maximized ? new CornerRadius(0) : new CornerRadius(8);
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
