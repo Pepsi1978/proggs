@@ -61,6 +61,15 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void Run(string[] args)
         {
+            // NAudio postet RecordingStopped ueber den SynchronizationContext,
+            // der beim StartRecording aktiv ist. Dieser Worker-Thread stammt
+            // aus App.OnStartup und traegt den WPF-Dispatcher-Context — den wir
+            // aber mit _finished.Wait blockieren. Ohne Entfernen wuerde
+            // RecordingStopped nie feuern und der Stop erst per 3-s-Timeout
+            // finalisieren (spuerbare Latenz). Null-Context → NAudio ruft den
+            // Callback direkt vom Capture-Thread auf.
+            SynchronizationContext.SetSynchronizationContext(null);
+
             int rate = ArgInt(args, "--rate", 16000);
             int channels = ArgInt(args, "--channels", 1);
             _outPath = ArgStr(args, "--out", "") ?? "";
