@@ -92,6 +92,15 @@ VoiceAgent **1.2.0**.
 - **Windows-Audio-Checkliste** (einmalig pruefen, mmsys.cpl): AGC/„Mikrofon automatisch
   anpassen" AUS (auch Treiber-/Headset-Tool!), Mic-Boost ≤ +10 dB, Communications-Ducking
   "Do nothing", Exclusive-Mode-Haken weg, RAW-Mode bewusst waehlen. `offiziell`(MS Learn)
+- **Prozess-Isolation der Aufnahme, wenn 24/7-Zuverlaessigkeit zaehlt.** Die WinMM-`waveIn*`-
+  AccessViolation (§3.2 im Almanach) ist NICHT abfangbar und killt sonst die ganze App. Capture in
+  einen Kindprozess auslagern: ein Crash killt nur den Worker, UI + gesprochener Text ueberleben.
+  Regeln: (a) die WAV bei jedem Buffer flushen (Header-Laengen mitfuehren) und den Writer VOR dem
+  `WaveIn.Dispose` schliessen → die Aufnahme uebersteht selbst einen Mid-Crash und wird
+  weiterverarbeitet; (b) im Worker `SynchronizationContext.SetSynchronizationContext(null)`, sonst
+  postet NAudio `RecordingStopped` an einen evtl. blockierten Context (Stop haengt bis Timeout);
+  (c) traegt der Worker denselben EXE-Namen, den namensbasierten Watchdog per PID-Datei absichern,
+  damit er den kurzlebigen Worker nicht mit dem Overlay verwechselt. `eigener Vorfall`(TVO/CVO 2026-07-16)
 
 ## 4. Latenz-Budget & Pipeline-Ueberlappung
 

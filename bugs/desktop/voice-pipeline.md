@@ -25,6 +25,13 @@
 > **Update 2026-07-14:** Eigener TVO/CVO-Vorfall ergänzt: `WaveInEvent.StopRecording()` kann den
 > WPF-Dispatcher unbegrenzt blockieren, obwohl der Prozess weiterläuft. Stop und Cleanup müssen
 > außerhalb des UI-Threads laufen und jeweils ein hartes Timeout besitzen.
+>
+> **Update 2026-07-16:** Der harte Crash blieb trotz UI-Fix: `waveInReset`/`waveInPrepareHeader`
+> warfen `0xc0000005` (AccessViolation, in .NET NICHT abfangbar, Offset immer `0x19b2e8`) und
+> killten den ganzen Overlay-Prozess (Event-Log 1000/1026), mitten im Sprechen ODER beim Stop.
+> Lösung: **Prozess-Isolation** — die NAudio-Capture läuft in einem Kindprozess; ein Crash killt
+> nur diesen, UI und gesprochener Text überleben. Der Worker flusht die WAV laufend und schließt
+> sie VOR dem Dispose → die Aufnahme übersteht sogar den Crash. Siehe §3.2.
 
 ---
 
@@ -188,7 +195,24 @@ nativen Stop außerhalb des UI-Threads aus, begrenzt den Stop-Aufruf und die War
 Startfehler-Cleanup darf nicht synchron auf dem Dispatcher blockieren. Ein Timeout muss die UI
 freigeben; die native Operation kann unter .NET nicht sicher abgebrochen werden und wird deshalb
 nur noch im Hintergrund fertiggestellt.
-**Quelle:** naudio/NAudio#1150 · #657 · #1084 · #1203 (alle gh-verifiziert OPEN).
+
+**Eigener Vorfall TVO/CVO 2026-07-16 (harter Crash, Prozess-Isolation):** Trotz des UI-Fixes von
+07-14 crashte der Prozess weiter hart — `waveInReset` (Stop) bzw. `waveInPrepareHeader` (Start/Lauf)
+warfen `0xc0000005` (AccessViolation, Offset immer `0x19b2e8`, Event-Log 1000/1026). Eine
+AccessViolation ist in .NET Core eine **Corrupted-State-Exception** und per `try/catch` NICHT
+abfangbar — sie killt den ganzen Prozess, der Watchdog restartet, der gesprochene Text ist weg.
+Der `diag.log` half NICHT (er zeigte `recording_stop error:null` VOR dem Crash) — erst das
+Windows-Event-Log lieferte den Beweis. **Robuster Ablauf: die Aufnahme in einen eigenen Prozess
+isolieren.** Die gefährliche `waveIn*`-Schicht lebt nur im Kindprozess; ein Crash killt nur ihn,
+UI und Text überleben. Zwei Garantien: (a) die WAV bei jedem Buffer flushen (Header-Längen mitführen)
+und den Writer **vor** `WaveIn.Dispose` schließen → die Aufnahme ist immer valide und übersteht den
+Crash; (b) der Parent nutzt die WAV unabhängig vom ExitCode des Worker. Fallen dabei: Läuft der
+Worker auf einem Thread MIT SynchronizationContext (z.B. WPF-Dispatcher), postet NAudio
+`RecordingStopped` dorthin — blockiert man diesen Thread, feuert das Event nie und der Stop hängt bis
+zum Timeout (`SetSynchronizationContext(null)` im Worker). Trägt der Worker denselben EXE-Namen wie
+das Overlay, darf ein namensbasierter Watchdog ihn nicht mit dem Overlay verwechseln (PID-Datei).
+**Quelle:** naudio/NAudio#1150 · #657 · #1084 · #1203 (alle gh-verifiziert OPEN) · eigener Vorfall
+2026-07-16 (TVO 1.4.87 / CVO 2.1.73, Event-Log-Beweiskette).
 
 ### 3.3 `WaveInEvent` belegt dauerhaft einen ThreadPool-Thread
 **Symptom:** Bei Langlauf wird die App traege; parallele Tasks haengen (Pool-Starvation).
