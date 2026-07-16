@@ -351,7 +351,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+    <Border x:Name="WindowFrameBorder" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -700,7 +700,7 @@
             </Grid>
 
             <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->
-            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,8,8">
+            <Border x:Name="FooterBorder" Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,8,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

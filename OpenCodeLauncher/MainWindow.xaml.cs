@@ -282,6 +282,9 @@ public partial class MainWindow : Window
         var windowChrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
         if (windowChrome != null)
             windowChrome.CornerRadius = WindowState == WindowState.Maximized ? new CornerRadius(0) : new CornerRadius(8);
+
+        WindowFrameBorder.CornerRadius = WindowState == WindowState.Maximized ? new CornerRadius(0) : new CornerRadius(8);
+        FooterBorder.CornerRadius = WindowState == WindowState.Maximized ? new CornerRadius(0) : new CornerRadius(0, 0, 8, 8);
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
