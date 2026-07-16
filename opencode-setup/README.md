@@ -181,6 +181,9 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
   OpenCode gespeicherte echte `cost`; bei fehlenden oder
   veralteten Nullpreisen laedt es den aktuellen Modellpreis von models.dev und beruecksichtigt
   kontextabhaengige Preisstufen. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
+  Vor einer Einzelinstallation oder Aktualisierung muss
+  **`plugins/token-cost-sidebar/README.md` vollständig gelesen werden**, weil Sidebar,
+  `work-mode.js`, `tui.json` und npm-Abhängigkeiten nur gemeinsam die vollständige Funktion liefern.
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh

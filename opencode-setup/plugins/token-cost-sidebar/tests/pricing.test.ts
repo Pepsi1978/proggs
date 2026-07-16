@@ -234,6 +234,17 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("console.")
   })
 
+  test("documents every component required for a portable installation", async () => {
+    const readme = await Bun.file(new URL("../README.md", import.meta.url)).text()
+    const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json()
+    expect(readme).toContain("opencode-setup/plugins/token-cost-sidebar/")
+    expect(readme).toContain("opencode-setup/plugins/work-mode.js")
+    expect(readme).toContain("opencode-setup/tui.json")
+    expect(readme).toContain("Abhängigkeiten")
+    expect(readme).toContain("OpenCode vollständig beenden und neu starten")
+    expect(readme).toContain(`v${packageJson.version}`)
+  })
+
   test("offers built-in themes in a mouse-controlled dropdown", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const profileBlock = source.match(/const THEME_PROFILES = \[([\s\S]*?)\] as const/)?.[1] ?? ""
