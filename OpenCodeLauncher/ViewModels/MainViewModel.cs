@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.18";
-        Version = $"Version {version} (15.07.2026, 15.02 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.19";
+        Version = $"Version {version} (16.07.2026, 10.55 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -92,7 +92,7 @@ public sealed partial class MainViewModel : ObservableObject
         ThinkingOptions.Clear();
         ThinkingTitle = IsClaudeCodeModel(value) ? "EFFORT" : "THINKING";
         ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
-        ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · Standard + Minimal" : "OpenCode · Profil-Snapshots";
+        ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · Minimal + Standard + Strikt" : "OpenCode · Profil-Snapshots";
         UpdateProfileAvailability();
         UpdateThinkingState("Lade Thinking …");
         if (value != null) _ = LoadThinkingOptionsAsync(value);
@@ -215,7 +215,8 @@ public sealed partial class MainViewModel : ObservableObject
             (!IsClaudeCodeModel(SelectedModel) || IsClaudeCodeProfileSupported(SelectedProfile.Id));
     }
 
-    // Claude Code unterstuetzt bisher Standard (volles ~/.claude) und Minimal (frisches Repo-Profil).
+    // Claude Code unterstuetzt alle drei Profile: Minimal (isolierter Repo-Config-Ordner via
+    // CLAUDE_CONFIG_DIR, keine Skills/Regeln), Standard und Strikt (beide direkt das echte ~/.claude).
     private static bool IsClaudeCodeProfileSupported(string profileId) =>
         profileId is "standard" or "minimal" or "strict";
 
@@ -435,7 +436,7 @@ public sealed partial class MainViewModel : ObservableObject
             });
             if (isClaudeCode)
             {
-                // Minimal -> frischer Repo-Config-Ordner (CLAUDE_CONFIG_DIR); Standard -> normales ~/.claude (null).
+                // Minimal -> isolierter Repo-Config-Ordner (CLAUDE_CONFIG_DIR); Standard/Strikt -> null -> echtes ~/.claude (volle Skills + Regeln).
                 var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id);
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)

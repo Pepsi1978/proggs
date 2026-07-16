@@ -203,8 +203,9 @@ public sealed class OpenCodeLauncherService
 
     /// <summary>Startet Claude Code wie die Desktop-Verknüpfung, aber mit gewähltem Modell und Effort.</summary>
     /// <param name="claudeConfigDir">
-    /// Wenn gesetzt, wird CLAUDE_CONFIG_DIR auf diesen Ordner gezeigt (Minimal-Profil: frisches,
-    /// leeres Profil im Repo). Bei null startet Claude mit dem normalen ~/.claude (Standard-Profil).
+    /// Wenn gesetzt, wird CLAUDE_CONFIG_DIR auf diesen Ordner gezeigt (Minimal-Profil: isoliertes,
+    /// leeres Profil im Repo -> keine Skills/Rules/Hooks aus ~/.claude). Bei null startet Claude mit
+    /// dem echten ~/.claude inkl. aller Skills und Regeln (Standard- und Strikt-Profil).
     /// </param>
     public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null)
     {
@@ -535,8 +536,8 @@ if (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue) {
 }
 
 try {
-    # Minimal-Profil: eigener, frischer Config-Ordner (keine Rules/Hooks/Memory/Almanach).
-    # Leer -> Standard-Profil (~/.claude) bleibt unveraendert.
+    # Minimal-Profil: eigener, isolierter Config-Ordner (keine Rules/Hooks/Memory/Almanach).
+    # Leer -> Standard/Strikt: echtes ~/.claude bleibt unveraendert (volle Skills + Regeln).
     $claudeConfigDir = {{PowerShellLiteral(claudeConfigDir ?? string.Empty)}}
     if ($claudeConfigDir) {
         New-Item -ItemType Directory -Force -Path $claudeConfigDir | Out-Null

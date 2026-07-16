@@ -38,10 +38,11 @@ public sealed class InstructionProfileService
     // ===================== Claude Code =====================
 
     /// <summary>
-    /// Gemeinsamer Claude-Config-Ordner (CLAUDE_CONFIG_DIR) fuer ALLE Profile. Liegt im Repo
-    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal) und traegt Login-Token, settings.json,
-    /// skills/ usw. Die dortige .gitignore haelt Laufzeit/Secrets vom Repo fern; die aktive CLAUDE.md
-    /// ist bewusst untracked und wird pro Profil aus der Profilquelle befuellt.
+    /// Isolierter Claude-Config-Ordner (CLAUDE_CONFIG_DIR) NUR fuer das Minimal-Profil. Liegt im Repo
+    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal) und traegt Login-Token, settings.json
+    /// usw. Die dortige .gitignore haelt Laufzeit/Secrets vom Repo fern; die aktive CLAUDE.md ist
+    /// bewusst untracked und wird aus der Minimal-Profilquelle befuellt. Standard und Strikt setzen
+    /// KEIN CLAUDE_CONFIG_DIR und nutzen direkt das echte ~/.claude (volle Skills + Regeln + Login).
     /// </summary>
     public static string ResolveClaudeConfigDir()
     {
@@ -70,6 +71,14 @@ public sealed class InstructionProfileService
     /// </summary>
     public string? EnsureClaudeConfigDir(string profileId)
     {
+        ValidateProfileId(profileId);
+        // Nur Minimal wird isoliert: eigener, leerer Repo-Config-Ordner via CLAUDE_CONFIG_DIR
+        // -> keine Skills/Rules/Hooks/Memory aus ~/.claude, nur die profilspezifische CLAUDE.md.
+        // Standard und Strikt laden bewusst das echte ~/.claude (volle Skills + globale Regeln +
+        // Login): dafuer KEIN Redirect (null zurueckgeben) und ~/.claude bleibt unangetastet.
+        if (!string.Equals(profileId, "minimal", StringComparison.Ordinal))
+            return null;
+
         var dir = ResolveClaudeConfigDir();
         Directory.CreateDirectory(dir);
         WriteText(Path.Combine(dir, "CLAUDE.md"), ReadText(EnsureClaudeProfileSource(profileId)));
