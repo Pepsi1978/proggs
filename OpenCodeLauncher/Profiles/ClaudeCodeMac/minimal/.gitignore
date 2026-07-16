@@ -1,0 +1,11 @@
+# macOS Minimal-Profil = Claude-Code-Config-Ordner (CLAUDE_CONFIG_DIR).
+# Login-Token (.credentials.json), Sitzungs-Historie, projects/, sessions/, cache/ usw.
+# duerfen NIEMALS ins Repo. Strategie: erst ALLES ignorieren, dann bewusst Versioniertes einschliessen.
+# Secrets werden NIE per '!' eingeschlossen -> bleiben durch '*' lokal.
+
+*
+
+# skills/ wird bewusst NICHT eingeschlossen: auf macOS als Symlink auf ~/.claude/skills (lokal).
+!.gitignore
+!README.md
+!settings.json

@@ -1,0 +1,18 @@
+# macOS Strikt-Profil = Claude-Code-Config-Ordner (CLAUDE_CONFIG_DIR).
+# Login-Token (.credentials.json), Sitzungs-Historie, projects/, sessions/, cache/ usw.
+# duerfen NIEMALS ins Repo. Strategie: erst ALLES ignorieren, dann bewusst Versioniertes einschliessen.
+# Secrets werden NIE per '!' eingeschlossen -> bleiben durch '*' lokal.
+
+*
+
+!.gitignore
+!README.md
+!settings.json
+!skills/
+!skills/**
+!rules/
+!rules/**
+!agents/
+!agents/**
+!commands/
+!commands/**
