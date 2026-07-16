@@ -76,6 +76,21 @@ namespace ClaudeVoiceOverlay
         {
             base.OnStartup(e);
 
+            // Capture-Worker-Modus: isolierte Mikrofon-Aufnahme in eigenem
+            // Prozess (Prozess-Isolation gegen den nicht abfangbaren WinMM-
+            // waveIn*-Crash, bugs/desktop/voice-pipeline.md §3.2). MUSS vor
+            // allem anderen kommen — kein Tray, kein Overlay, kein Watchdog
+            // und bewusst KEINE globalen Exception-Handler: der Worker SOLL
+            // bei einer AccessViolation sterben, denn nur SEIN Tod (statt der
+            // des Overlays) rettet die UI und den gesprochenen Text.
+            // CaptureWorker.Run blockiert bis Aufnahme-Ende und ruft danach
+            // Environment.Exit — kehrt nie zurueck.
+            if (e.Args.Length > 0 && e.Args[0] == "--capture-worker")
+            {
+                CaptureWorker.Run(e.Args);
+                return;
+            }
+
             // Globale Exception-Sammler installieren BEVOR irgendein
             // anderer Code laufen kann. Frueher wurden async-void- und
             // background-Task-Exceptions still verschluckt — der Watchdog
@@ -285,11 +300,38 @@ namespace ClaudeVoiceOverlay
             });
         }
 
+        // PID-Datei des laufenden Overlay-Prozesses. Notwendig seit der
+        // Capture-Worker (Prozess-Isolation) denselben EXE-Namen
+        // "ClaudeVoiceOverlay" traegt: eine reine Namenssuche koennte den
+        // kurzlebigen Worker faelschlich als Overlay adoptieren und bei
+        // dessen Exit=0 den Watchdog stoppen. Der Overlay schreibt hier beim
+        // Start seine PID; der Watchdog adoptiert nur diese.
+        private static string OverlayPidFile => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ClaudeVoiceOverlay", "overlay.pid");
+
         private Process? FindOverlayProcess()
         {
             var myPid = Environment.ProcessId;
-            return Process.GetProcessesByName("ClaudeVoiceOverlay")
-                .FirstOrDefault(p => p.Id != myPid);
+            // Nur den ECHTEN Overlay-Prozess adoptieren, nie den Capture-Worker.
+            try
+            {
+                if (File.Exists(OverlayPidFile) &&
+                    int.TryParse(File.ReadAllText(OverlayPidFile).Trim(), out int pid) &&
+                    pid != myPid)
+                {
+                    var byPid = Process.GetProcessById(pid); // wirft, wenn tot
+                    if (string.Equals(byPid.ProcessName, "ClaudeVoiceOverlay", StringComparison.OrdinalIgnoreCase))
+                        return byPid;
+                }
+            }
+            catch
+            {
+                // Keine/veraltete PID-Datei oder Prozess tot → als "kein
+                // laufendes Overlay" behandeln (der Watchdog startet dann
+                // ueber StartOverlayProcess ein frisches).
+            }
+            return null;
         }
 
         private Process? StartOverlayProcess()
@@ -331,6 +373,19 @@ namespace ClaudeVoiceOverlay
                 _overlayInstanceMutex = null;
                 Shutdown(0);
                 return;
+            }
+
+            // Ab hier ist gesichert: DIES ist der eine echte Overlay-Prozess.
+            // PID hinterlegen, damit der Watchdog uns eindeutig vom
+            // gleichnamigen Capture-Worker unterscheiden kann.
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(OverlayPidFile)!);
+                File.WriteAllText(OverlayPidFile, Environment.ProcessId.ToString());
+            }
+            catch (Exception pidEx)
+            {
+                LogCrash("WriteOverlayPid", pidEx, "PID-Datei konnte nicht geschrieben werden (unkritisch).");
             }
 
             // Catch unhandled exceptions for logging. Frueher: nur

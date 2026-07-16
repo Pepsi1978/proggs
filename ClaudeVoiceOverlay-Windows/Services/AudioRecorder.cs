@@ -1,40 +1,61 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using NAudio.Wave;
 
 namespace ClaudeVoiceOverlay.Services
 {
+    /// <summary>
+    /// Mikrofon-Aufnahme mit PROZESS-ISOLATION: die eigentliche NAudio/WinMM-
+    /// Aufnahme laeuft in einem separaten Kindprozess (<see cref="CaptureWorker"/>,
+    /// gestartet mit <c>--capture-worker</c>). Grund: der WinMM-<c>waveIn*</c>-
+    /// Crash (0xc0000005 AccessViolation in <c>waveInReset</c>/
+    /// <c>waveInPrepareHeader</c>, NAudio #1150/#657/#1084/#1203, alle OPEN —
+    /// siehe <c>bugs/desktop/voice-pipeline.md</c> §3.2) ist eine
+    /// Corrupted-State-Exception und in .NET NICHT per try/catch abfangbar;
+    /// er wuerde den ganzen Overlay-Prozess killen. Im Kindprozess killt er
+    /// nur den Worker — die UI und der bereits gesprochene Text ueberleben.
+    ///
+    /// Die oeffentliche API (<see cref="Start"/>, <see cref="StopAsync"/>,
+    /// <see cref="LevelChanged"/>, <see cref="IsRecording"/>) ist unveraendert,
+    /// sodass alle Aufrufer gleich bleiben. <see cref="Start"/> blockiert bis
+    /// der Worker <c>READY</c> meldet — dadurch spielt der bestehende
+    /// Aufruf-Ablauf (Start → PlayStart-Cue) den Start-Ton erst bei echtem
+    /// Aufnahmebeginn (keine verlorenen ersten Woerter).
+    ///
+    /// Datenverlust-Schutz: Der Worker flusht die WAV laufend (Header-Laengen
+    /// mitgefuehrt) und schliesst sie VOR dem crash-anfaelligen Dispose. Selbst
+    /// bei Worker-Crash liest dieser Wrapper die bis dahin aufgenommene, valide
+    /// WAV und gibt sie zur Transkription zurueck — kein Neu-Einsprechen.
+    /// </summary>
     public sealed class AudioRecorder : IDisposable
     {
-        private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(4);
+        private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(5);
+        // Kleinster sinnvoller WAV-Inhalt (44 Byte Header + etwas PCM). Darunter
+        // gilt die Aufnahme als leer/unbrauchbar.
+        private const long MinUsableWavBytes = 44 + 320;
+
         private readonly int _sampleRate;
         private readonly int _channels;
         private readonly object _stateLock = new();
-        private RecordingSession? _session;
+        private Session? _session;
         private bool _disposed;
+
+        /// <summary>
+        /// Peak-Pegel des aktuellen Buffers, normiert 0..1. Wird ~alle 50 ms
+        /// aus dem Worker-Datenstrom gefeuert. Subscriber laufen auf einem
+        /// Pool-Thread — UI-Updates muessen auf den Dispatcher gehoben werden
+        /// (unveraendertes Verhalten gegenueber der In-Process-Aufnahme).
+        /// </summary>
+        public event Action<float>? LevelChanged;
 
         public bool IsRecording
         {
-            get
-            {
-                lock (_stateLock)
-                {
-                    return _session != null;
-                }
-            }
+            get { lock (_stateLock) { return _session != null; } }
         }
-
-        /// <summary>
-        /// Wird waehrend einer laufenden Aufnahme alle ~50ms gefeuert
-        /// (Takt entspricht WaveInEvent.BufferMilliseconds). Der Wert ist
-        /// der Peak-Pegel des aktuellen Buffers, normiert auf 0..1 (Stille
-        /// bis Vollausschlag). Subscribers laufen auf dem NAudio-Thread —
-        /// UI-Updates muessen auf den Dispatcher gehoben werden.
-        /// </summary>
-        public event Action<float>? LevelChanged;
 
         public AudioRecorder(int sampleRate = 16000, int channels = 1)
         {
@@ -45,306 +66,288 @@ namespace ClaudeVoiceOverlay.Services
         public bool Start()
         {
             var setupSw = Stopwatch.StartNew();
-            string tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
-            WaveFileWriter? writer = null;
-            WaveInEvent? waveIn = null;
-            RecordingSession? session = null;
+            string tempFile = Path.Combine(Path.GetTempPath(), $"cvo_recording_{Guid.NewGuid():N}.wav");
+            Session session;
+
+            lock (_stateLock)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                if (_session != null) return false;
+            }
 
             try
             {
-                lock (_stateLock)
+                session = new Session(tempFile);
+                var psi = new ProcessStartInfo
                 {
-                    ObjectDisposedException.ThrowIf(_disposed, this);
-                    if (_session != null) return false;
+                    FileName = Environment.ProcessPath!,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                psi.ArgumentList.Add("--capture-worker");
+                psi.ArgumentList.Add("--rate");
+                psi.ArgumentList.Add(_sampleRate.ToString(CultureInfo.InvariantCulture));
+                psi.ArgumentList.Add("--channels");
+                psi.ArgumentList.Add(_channels.ToString(CultureInfo.InvariantCulture));
+                psi.ArgumentList.Add("--out");
+                psi.ArgumentList.Add(tempFile);
 
-                    var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
-                    writer = new WaveFileWriter(tempFile, waveFormat);
-                    waveIn = new WaveInEvent
-                    {
-                        WaveFormat = waveFormat,
-                        BufferMilliseconds = 50,
-                        NumberOfBuffers = 3
-                    };
+                session.Proc = new Process { StartInfo = psi };
+                session.Proc.OutputDataReceived += (_, e) => OnWorkerStdout(session, e.Data);
+                session.Proc.ErrorDataReceived += (_, e) => OnWorkerStderr(e.Data);
 
-                    session = new RecordingSession(waveIn, writer, tempFile);
-                    session.DataAvailableHandler = (_, e) => OnDataAvailable(session, e);
-                    session.RecordingStoppedHandler = (_, e) => OnRecordingStopped(session, e);
-                    waveIn.DataAvailable += session.DataAvailableHandler;
-                    waveIn.RecordingStopped += session.RecordingStoppedHandler;
-                    _session = session;
+                if (!session.Proc.Start())
+                {
+                    LogError("recording_start_process_failed", new InvalidOperationException("Process.Start returned false"), tempFile);
+                    return false;
                 }
-
-                waveIn.StartRecording();
-                session.RecordingStopwatch.Restart();
-                session.StartCompleted.TrySetResult();
-
-                Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
-                DiagLog.Write("Audio", "recording_start", ("setupMs", setupSw.ElapsedMilliseconds), ("sampleRate", _sampleRate), ("channels", _channels), ("path", tempFile));
-                return true;
+                session.Proc.BeginOutputReadLine();
+                session.Proc.BeginErrorReadLine();
             }
             catch (Exception ex)
             {
                 LogError("recording_start_failed", ex, tempFile);
-                if (session != null)
-                {
-                    session.StartFailed = true;
-                    session.StartCompleted.TrySetResult();
-                    CompleteSession(session, ex);
-                    session.Stopped.Task.GetAwaiter().GetResult();
-                }
-                else
-                {
-                    CleanupStartupResources(waveIn, writer, tempFile);
-                }
+                return false;
+            }
 
-                throw;
-            }
-            finally
+            // Auf READY warten — erst dann laeuft die Aufnahme wirklich.
+            bool ready = session.Ready.Wait(ReadyTimeout);
+            if (!ready || session.StartError != null)
             {
-                session?.StartCompleted.TrySetResult();
+                LogError("recording_start_not_ready",
+                    new TimeoutException(session.StartError ?? $"Worker meldete kein READY in {ReadyTimeout.TotalSeconds:0}s"),
+                    tempFile);
+                KillWorker(session);
+                TryDeleteTempFile(tempFile);
+                return false;
             }
+
+            lock (_stateLock)
+            {
+                if (_session != null)
+                {
+                    // Race: parallel gestartet — diesen Worker verwerfen.
+                    KillWorker(session);
+                    TryDeleteTempFile(tempFile);
+                    return false;
+                }
+                _session = session;
+            }
+
+            session.RecordingStopwatch.Restart();
+            session.TouchLevel();
+            session.StartWatchdog(() => WatchdogTick(session));
+
+            DiagLog.Write("Audio", "recording_start",
+                ("setupMs", setupSw.ElapsedMilliseconds),
+                ("sampleRate", _sampleRate),
+                ("channels", _channels),
+                ("workerPid", SafePid(session)),
+                ("path", tempFile));
+            return true;
         }
 
         public string? Stop() => StopAsync().GetAwaiter().GetResult();
 
         public async Task<string?> StopAsync()
         {
-            RecordingSession? session;
+            Session? session;
             lock (_stateLock)
             {
                 session = _session;
+                _session = null;
             }
-
             if (session == null) return null;
+            if (Interlocked.Exchange(ref session.StopStarted, 1) != 0) return null;
+
+            session.StopWatchdog();
+            session.RecordingStopwatch.Stop();
+
+            // STOP senden (Pipe kann zu sein, wenn der Worker schon crashte).
             try
             {
-                await session.StartCompleted.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
+                session.Proc!.StandardInput.WriteLine("STOP");
+                session.Proc.StandardInput.Flush();
             }
-            catch (TimeoutException)
+            catch (Exception ex)
             {
-                return AbandonTimedOutSession(session, "recording_start_completion_timeout");
-            }
-            if (session.StartFailed)
-            {
-                try
-                {
-                    await session.Stopped.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
-                }
-                catch (TimeoutException)
-                {
-                    return AbandonTimedOutSession(session, "recording_start_cleanup_timeout");
-                }
-                return null;
+                DiagLog.Write("Audio", "stop_signal_failed", ("err", ex.Message), ("path", session.TempFile));
             }
 
-            if (Interlocked.CompareExchange(ref session.StopStarted, 1, 0) == 0 &&
-                Volatile.Read(ref session.CompletionStarted) == 0)
-            {
-                try
-                {
-                    await Task.Run(session.WaveIn.StopRecording)
-                        .WaitAsync(StopTimeout).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    if (ex is TimeoutException)
-                        return AbandonTimedOutSession(session, "recording_stop_call_timeout");
-                    LogError("recording_stop_failed", ex, session.TempFile);
-                    CompleteSession(session, ex);
-                }
-            }
-
-            // RecordingStopped is raised only after NAudio has delivered its final buffers.
+            bool exited;
             try
             {
-                await session.Stopped.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
+                using var cts = new CancellationTokenSource(StopTimeout);
+                await session.Proc!.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                exited = true;
             }
-            catch (TimeoutException)
+            catch (OperationCanceledException)
             {
-                return AbandonTimedOutSession(session, "recording_stopped_event_timeout");
+                exited = false;
+                DiagLog.Write("Audio", "stop_wait_timeout", ("path", session.TempFile));
+                KillWorker(session);
             }
-            return session.CompletionError == null ? session.TempFile : null;
-        }
 
-        private string? AbandonTimedOutSession(RecordingSession session, string phase)
-        {
-            var error = new TimeoutException($"Audio capture did not finish within {StopTimeout.TotalSeconds:0} seconds ({phase}).");
-            LogError(phase, error, session.TempFile);
-            session.CompletionError = error;
+            int exitCode = SafeExitCode(session);
+            long fileBytes = SafeFileSize(session.TempFile);
+            bool usable = fileBytes >= MinUsableWavBytes;
 
-            lock (_stateLock)
+            if (exited && exitCode != 0)
             {
-                if (ReferenceEquals(_session, session)) _session = null;
+                // Worker gecrasht (z.B. waveInReset AccessViolation). Dank
+                // laufendem Flush ist die WAV dennoch bis kurz vor dem Crash
+                // valide — der Text ist gerettet, nur die UI blieb verschont.
+                DiagLog.Write("Audio", "capture_worker_crashed",
+                    ("exitCode", exitCode),
+                    ("fileBytes", fileBytes),
+                    ("usableWav", usable),
+                    ("path", session.TempFile));
             }
 
-            // Release the UI immediately. Native WinMM cleanup may itself be stuck,
-            // so it must never run on or hold up the WPF dispatcher.
-            session.Stopped.TrySetResult();
-            _ = Task.Run(() => CompleteSession(session, error));
+            DiagLog.Write("Audio", "recording_stop",
+                ("ms", session.RecordingStopwatch.ElapsedMilliseconds),
+                ("pcmBytes", session.PcmBytes),
+                ("fileBytes", fileBytes),
+                ("buffers", session.Buffers),
+                ("peak", (session.PeakMille / 1000f).ToString("0.000", CultureInfo.InvariantCulture)),
+                ("exitCode", exited ? exitCode : (int?)null),
+                ("path", session.TempFile));
+
+            DisposeProc(session);
+
+            if (usable) return session.TempFile;
+            TryDeleteTempFile(session.TempFile);
             return null;
         }
 
-        private void OnDataAvailable(RecordingSession session, WaveInEventArgs e)
+        // ── Worker-Ausgabe ──
+
+        private void OnWorkerStdout(Session session, string? line)
         {
-            lock (session.WriterLock)
-            {
-                session.Writer?.Write(e.Buffer, 0, e.BytesRecorded);
-            }
-
-            session.BytesRecorded += e.BytesRecorded;
-            session.BuffersRecorded++;
-
-            int peak = 0;
-            int sampleCount = e.BytesRecorded / 2;
-            for (int i = 0; i < sampleCount; i++)
-            {
-                short sample = (short)(e.Buffer[i * 2] | (e.Buffer[i * 2 + 1] << 8));
-                int abs = sample < 0 ? -sample : sample;
-                if (abs > peak) peak = abs;
-            }
-
-            float normalized = peak / 32768f;
-            if (normalized > session.PeakMax) session.PeakMax = normalized;
+            if (string.IsNullOrEmpty(line)) return;
             try
             {
-                LevelChanged?.Invoke(normalized);
+                if (line == "READY")
+                {
+                    session.Ready.Set();
+                }
+                else if (line.Length > 2 && line[0] == 'L' && line[1] == ' ')
+                {
+                    session.TouchLevel();
+                    if (int.TryParse(line.AsSpan(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out int mille))
+                    {
+                        if (mille > session.PeakMille) session.PeakMille = mille;
+                        try { LevelChanged?.Invoke(mille / 1000f); }
+                        catch (Exception ex) { DiagLog.Write("Audio", "level_listener_failed", ("err", ex.Message)); }
+                    }
+                }
+                else if (line.StartsWith("DONE ", StringComparison.Ordinal))
+                {
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 5)
+                    {
+                        session.PcmBytes = ParseLong(parts[2], session.PcmBytes);
+                        session.Buffers = ParseLong(parts[3], session.Buffers);
+                        session.PeakMille = (int)ParseLong(parts[4], session.PeakMille);
+                    }
+                }
+                else if (line.StartsWith("ERR ", StringComparison.Ordinal))
+                {
+                    session.StartError = line.Substring(4);
+                    session.Ready.Set();
+                }
             }
             catch (Exception ex)
             {
-                LogError("level_listener_failed", ex, session.TempFile);
+                DiagLog.Write("Audio", "worker_stdout_parse_failed", ("err", ex.Message), ("line", line));
             }
         }
 
-        private void OnRecordingStopped(RecordingSession session, StoppedEventArgs e)
+        private static void OnWorkerStderr(string? line)
         {
-            session.StartCompleted.Task.GetAwaiter().GetResult();
-            CompleteSession(session, e.Exception);
+            if (string.IsNullOrEmpty(line)) return;
+            DiagLog.Write("CaptureWorker", "worker_log", ("line", line));
         }
 
-        private void CompleteSession(RecordingSession session, Exception? error)
-        {
-            if (Interlocked.Exchange(ref session.CompletionStarted, 1) != 0) return;
-
-            Exception? completionError = error;
-            try
-            {
-                session.RecordingStopwatch.Stop();
-
-                try
-                {
-                    session.WaveIn.DataAvailable -= session.DataAvailableHandler;
-                    session.WaveIn.RecordingStopped -= session.RecordingStoppedHandler;
-                }
-                catch (Exception ex)
-                {
-                    completionError ??= ex;
-                    LogError("recording_handler_cleanup_failed", ex, session.TempFile);
-                }
-
-                try
-                {
-                    session.WaveIn.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    completionError ??= ex;
-                    LogError("recording_input_cleanup_failed", ex, session.TempFile);
-                }
-
-                lock (session.WriterLock)
-                {
-                    try
-                    {
-                        session.Writer?.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        completionError ??= ex;
-                        LogError("recording_writer_cleanup_failed", ex, session.TempFile);
-                    }
-                    finally
-                    {
-                        session.Writer = null;
-                    }
-                }
-
-                if (session.StartFailed)
-                {
-                    TryDeleteTempFile(session.TempFile);
-                }
-
-                long fileBytes = 0;
-                try
-                {
-                    if (File.Exists(session.TempFile)) fileBytes = new FileInfo(session.TempFile).Length;
-                }
-                catch (Exception ex)
-                {
-                    LogError("recording_file_size_failed", ex, session.TempFile);
-                }
-
-                session.CompletionError = completionError;
-                string outcome = session.StartFailed
-                    ? "recording_start_cleanup"
-                    : Volatile.Read(ref session.StopStarted) != 0
-                        ? "recording_stop"
-                        : "recording_ended_unexpectedly";
-                DiagLog.Write("Audio", outcome,
-                    ("ms", session.RecordingStopwatch.ElapsedMilliseconds),
-                    ("pcmBytes", session.BytesRecorded),
-                    ("fileBytes", fileBytes),
-                    ("buffers", session.BuffersRecorded),
-                    ("peak", session.PeakMax.ToString("0.000")),
-                    ("error", completionError?.ToString()),
-                    ("path", session.TempFile));
-
-                if (completionError != null || Volatile.Read(ref session.StopStarted) == 0)
-                    TryDeleteTempFile(session.TempFile);
-            }
-            finally
-            {
-                lock (_stateLock)
-                {
-                    if (ReferenceEquals(_session, session)) _session = null;
-                }
-
-                session.Stopped.TrySetResult();
-            }
-        }
-
-        private static void CleanupStartupResources(WaveInEvent? waveIn, WaveFileWriter? writer, string tempFile)
+        // ── Level-Watchdog (Sonde): erkennt "Balken eingefroren" ──
+        // Wenn trotz laufender Aufnahme > 2,5 s kein Pegel mehr kommt, ist der
+        // Datenstrom versiegt (DataAvailable stumm, §3.1) oder der Worker haengt.
+        // Wir loggen das EINMAL pro Session — sichtbar in diag.log, damit der
+        // Vorfall in Zukunft nachvollziehbar ist (Observability-first).
+        private static void WatchdogTick(Session session)
         {
             try
             {
-                waveIn?.Dispose();
+                if (Volatile.Read(ref session.StopStarted) != 0) return;
+                long sinceMs = Environment.TickCount64 - Volatile.Read(ref session.LastLevelTicks);
+                if (sinceMs <= 2500) return;
+
+                bool workerAlive = !SafeHasExited(session);
+                if (session.StallLogged == 0 && Interlocked.Exchange(ref session.StallLogged, 1) == 0)
+                {
+                    DiagLog.Write("Audio", "capture_level_stalled",
+                        ("silentMs", sinceMs),
+                        ("workerAlive", workerAlive),
+                        ("path", session.TempFile));
+                }
+            }
+            catch { /* Watchdog darf nie werfen */ }
+        }
+
+        // ── Prozess-Hilfen ──
+
+        private static void KillWorker(Session session)
+        {
+            try
+            {
+                if (session.Proc is { } p && !p.HasExited) p.Kill(entireProcessTree: true);
             }
             catch (Exception ex)
             {
-                LogError("recording_start_input_cleanup_failed", ex, tempFile);
+                DiagLog.Write("Audio", "worker_kill_failed", ("err", ex.Message), ("path", session.TempFile));
             }
-
-            try
-            {
-                writer?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                LogError("recording_start_writer_cleanup_failed", ex, tempFile);
-            }
-
-            TryDeleteTempFile(tempFile);
         }
+
+        private static void DisposeProc(Session session)
+        {
+            session.StopWatchdog();
+            try { session.Proc?.Dispose(); } catch { /* tolerant */ }
+        }
+
+        private static int SafeExitCode(Session session)
+        {
+            try { return session.Proc is { HasExited: true } p ? p.ExitCode : 0; }
+            catch { return 0; }
+        }
+
+        private static bool SafeHasExited(Session session)
+        {
+            try { return session.Proc?.HasExited ?? true; }
+            catch { return true; }
+        }
+
+        private static int SafePid(Session session)
+        {
+            try { return session.Proc?.Id ?? -1; }
+            catch { return -1; }
+        }
+
+        private static long SafeFileSize(string path)
+        {
+            try { return File.Exists(path) ? new FileInfo(path).Length : 0; }
+            catch { return 0; }
+        }
+
+        private static long ParseLong(string s, long fallback) =>
+            long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : fallback;
 
         private static void TryDeleteTempFile(string tempFile)
         {
-            try
-            {
-                if (File.Exists(tempFile)) File.Delete(tempFile);
-            }
-            catch (Exception ex)
-            {
-                LogError("recording_temp_delete_failed", ex, tempFile);
-            }
+            try { if (File.Exists(tempFile)) File.Delete(tempFile); }
+            catch (Exception ex) { DiagLog.Write("Audio", "recording_temp_delete_failed", ("err", ex.Message), ("path", tempFile)); }
         }
 
         private static void LogError(string message, Exception ex, string? path)
@@ -360,35 +363,36 @@ namespace ClaudeVoiceOverlay.Services
                 if (_disposed) return;
                 _disposed = true;
             }
-
-            Stop();
+            try { Stop(); } catch { /* tolerant */ }
         }
 
-        private sealed class RecordingSession
+        private sealed class Session
         {
-            public RecordingSession(WaveInEvent waveIn, WaveFileWriter writer, string tempFile)
-            {
-                WaveIn = waveIn;
-                Writer = writer;
-                TempFile = tempFile;
-            }
+            public Session(string tempFile) => TempFile = tempFile;
 
-            public WaveInEvent WaveIn { get; }
-            public WaveFileWriter? Writer { get; set; }
             public string TempFile { get; }
-            public object WriterLock { get; } = new();
-            public TaskCompletionSource StartCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            public TaskCompletionSource Stopped { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            public Stopwatch RecordingStopwatch { get; } = new();
-            public EventHandler<WaveInEventArgs>? DataAvailableHandler { get; set; }
-            public EventHandler<StoppedEventArgs>? RecordingStoppedHandler { get; set; }
-            public Exception? CompletionError { get; set; }
-            public bool StartFailed { get; set; }
+            public Process? Proc;
+            public readonly ManualResetEventSlim Ready = new(false);
+            public volatile string? StartError;
+            public readonly Stopwatch RecordingStopwatch = new();
+            public long PcmBytes;
+            public long Buffers;
+            public int PeakMille;
             public int StopStarted;
-            public int CompletionStarted;
-            public long BytesRecorded;
-            public long BuffersRecorded;
-            public float PeakMax;
+            public int StallLogged;
+            public long LastLevelTicks;
+            private Timer? _watchdog;
+
+            public void TouchLevel() => Volatile.Write(ref LastLevelTicks, Environment.TickCount64);
+
+            public void StartWatchdog(Action tick)
+                => _watchdog = new Timer(_ => tick(), null, 1000, 1000);
+
+            public void StopWatchdog()
+            {
+                try { _watchdog?.Dispose(); } catch { /* tolerant */ }
+                _watchdog = null;
+            }
         }
     }
 }
