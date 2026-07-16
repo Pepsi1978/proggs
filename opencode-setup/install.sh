@@ -73,7 +73,7 @@ rm -f \
 rmdir "$DST/plugins/token-cost-sidebar/themes" 2>/dev/null || true
 
 if command -v npm >/dev/null 2>&1; then
-  if (cd "$DST" && npm install --silent '@opencode-ai/plugin@1.17.7' '@opentui/core@0.3.4' '@opentui/solid@0.4.0' 'solid-js@1.9.12'); then
+  if (cd "$DST" && npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12'); then
     green "OK  TUI-Plugin-Dependencies (npm)"
   else
     yellow "--  TUI-Plugin-Dependencies konnten nicht installiert werden"
