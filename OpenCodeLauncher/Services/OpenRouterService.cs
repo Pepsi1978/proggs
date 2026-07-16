@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -15,6 +16,7 @@ namespace OpenCodeLauncher.Services;
 public sealed class OpenRouterService
 {
     private const string BaseUrl = "https://openrouter.ai/api/v1";
+    private const string FrontendBaseUrl = "https://openrouter.ai/api/frontend";
     private static readonly HttpClient Http = new()
     {
         // Ohne Timeout blieben hängende Requests bis zum 100-Sekunden-Default stehen (Start-Load
@@ -34,6 +36,12 @@ public sealed class OpenRouterService
     private static readonly TimeSpan ModelsCacheTtl = TimeSpan.FromMinutes(5);
     private static string? _modelsJson;
     private static DateTime _modelsJsonUtc = DateTime.MinValue;
+    private static readonly object ThroughputCacheLock = new();
+    private static readonly string ThroughputCachePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OpenCodeLauncher",
+        "provider-throughput.json");
+    private static Dictionary<string, double>? _throughputCache;
 
     private static async Task<string> FetchModelsJsonAsync(CancellationToken ct)
     {
@@ -76,6 +84,7 @@ public sealed class OpenRouterService
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
 
             string? displayName = null;
+            string? permaslug = null;
             var providers = new List<ProviderEntry>();
 
             if (doc.RootElement.TryGetProperty("data", out var data))
@@ -87,13 +96,14 @@ public sealed class OpenRouterService
                 {
                     foreach (var ep in eps.EnumerateArray())
                     {
+                        permaslug ??= ReadPermaslug(ep);
                         var p = ParseEndpoint(ep);
                         if (p != null) providers.Add(p);
                     }
                 }
             }
 
-            await EnrichProviderMetricsFromWebAsync(slug, providers, ct).ConfigureAwait(false);
+            await EnrichProviderMetricsFromWebAsync(slug, permaslug ?? slug, providers, ct).ConfigureAwait(false);
             providers.Sort(CompareByPrice);
             log.Info("OpenRouterService", "GetProvidersAsync", $"slug={slug} -> {providers.Count} Provider");
             return (displayName, providers);
@@ -242,7 +252,8 @@ public sealed class OpenRouterService
                 Quantization = ep.TryGetProperty("quantization", out var q) && q.ValueKind == JsonValueKind.String ? q.GetString() ?? "" : "",
                 Status = ep.TryGetProperty("status", out var st) && st.ValueKind == JsonValueKind.Number ? st.GetInt32() : 0,
                 MaxCompletionTokens = ep.TryGetProperty("max_completion_tokens", out var mc) && mc.ValueKind == JsonValueKind.Number ? mc.GetInt32() : null,
-                ThroughputLast30m = ep.TryGetProperty("throughput_last_30m", out var tp) && tp.ValueKind == JsonValueKind.Number ? tp.GetDouble() : null,
+                EndpointId = ep.TryGetProperty("id", out var endpointId) && endpointId.ValueKind == JsonValueKind.String ? endpointId.GetString() ?? "" : "",
+                ThroughputLast30m = ReadThroughput(ep),
                 UptimeLast5m = ep.TryGetProperty("uptime_last_5m", out var up) && up.ValueKind == JsonValueKind.Number ? up.GetDouble() : null,
             };
 
@@ -270,39 +281,223 @@ public sealed class OpenRouterService
         }
     }
 
-    private static async Task EnrichProviderMetricsFromWebAsync(string slug, List<ProviderEntry> providers, CancellationToken ct)
+    private static string? ReadPermaslug(JsonElement endpoint)
     {
-        if (providers.Count == 0 || providers.All(p => p.ThroughputLast30m.HasValue)) return;
+        if (!endpoint.TryGetProperty("name", out var nameEl) || nameEl.ValueKind != JsonValueKind.String) return null;
+        var name = nameEl.GetString() ?? string.Empty;
+        var separator = name.LastIndexOf('|');
+        if (separator < 0) return null;
+        var value = name[(separator + 1)..].Trim();
+        if (value.EndsWith(":free", StringComparison.OrdinalIgnoreCase))
+            value = value[..^":free".Length];
+        return value.Contains('/') ? value : null;
+    }
 
+    private static double? ReadThroughput(JsonElement endpoint)
+    {
+        if (!endpoint.TryGetProperty("throughput_last_30m", out var throughput)) return null;
+        if (throughput.ValueKind == JsonValueKind.Number) return throughput.GetDouble();
+        if (throughput.ValueKind != JsonValueKind.Object) return null;
+
+        return ReadJsonDouble(throughput, "p50")
+            ?? ReadJsonDouble(throughput, "median")
+            ?? ReadJsonDouble(throughput, "value");
+    }
+
+    private static async Task EnrichProviderMetricsFromWebAsync(string slug, string permaslug, List<ProviderEntry> providers, CancellationToken ct)
+    {
+        if (providers.Count == 0) return;
+        if (providers.All(p => p.ThroughputLast30m.HasValue))
+        {
+            StoreThroughputCache(slug, providers);
+            return;
+        }
+
+        string? html = null;
         try
         {
-            var html = await Http.GetStringAsync($"https://openrouter.ai/{slug}/providers", ct).ConfigureAwait(false);
-            var metrics = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-            var matches = Regex.Matches(
-                html,
-                "provider_name\\\\\":\\\\\"(?<name>[^\\\\\"]+)\\\\\".*?routing_heuristics\\\\\":\\{(?<body>.*?)\\}",
-                RegexOptions.Singleline);
-
-            foreach (Match match in matches)
-            {
-                var name = match.Groups["name"].Value;
-                if (metrics.ContainsKey(name)) continue;
-
-                var body = match.Groups["body"].Value;
-                var throughput = ReadMetric(body, "p50_throughput_30_minutes") ?? ReadMetric(body, "p50_throughput");
-                if (throughput.HasValue) metrics[name] = throughput.Value;
-            }
-
-            foreach (var provider in providers)
-            {
-                if (!provider.ThroughputLast30m.HasValue && metrics.TryGetValue(provider.ProviderName, out var throughput))
-                    provider.ThroughputLast30m = throughput;
-            }
+            html = await Http.GetStringAsync($"https://openrouter.ai/{slug}/providers", ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("OpenRouterService", "EnrichProviderMetricsFromWebAsync", $"TPS-Web-Fallback fehlgeschlagen: {ex.Message}", new { slug });
+            Logger.Instance.Warn("OpenRouterService", "EnrichProviderMetricsFromWebAsync", $"TPS-Providerseite fehlgeschlagen: {ex.Message}", new { slug });
         }
+
+        if (html != null)
+        {
+            await EnrichFromThroughputChartAsync(permaslug, html, providers, ct).ConfigureAwait(false);
+            EnrichFromLegacyHtml(html, providers);
+        }
+
+        StoreThroughputCache(slug, providers);
+        ApplyThroughputCache(slug, providers);
+    }
+
+    private static async Task EnrichFromThroughputChartAsync(string permaslug, string html, List<ProviderEntry> providers, CancellationToken ct)
+    {
+        try
+        {
+            var endpointTags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var matches = Regex.Matches(
+                html,
+                "id\\\\\":\\\\\"(?<id>[0-9a-fA-F-]{36})\\\\\",\\\\\"name\\\\\":\\\\\"[^\\\\\"]+\\\\\".{0,40000}?provider_slug\\\\\":\\\\\"(?<tag>[^\\\\\"]+)\\\\\"",
+                RegexOptions.Singleline);
+            foreach (Match match in matches)
+                endpointTags.TryAdd(match.Groups["id"].Value, match.Groups["tag"].Value);
+
+            foreach (var provider in providers)
+            {
+                if (!string.IsNullOrEmpty(provider.EndpointId))
+                    endpointTags.TryAdd(provider.EndpointId, provider.Tag);
+            }
+            if (endpointTags.Count == 0) return;
+
+            var encodedPermaslug = Uri.EscapeDataString(permaslug);
+            string? json = null;
+            foreach (var url in new[]
+                     {
+                         $"{FrontendBaseUrl}/v1/stats/throughput-comparison?permaslug={encodedPermaslug}",
+                         $"{FrontendBaseUrl}/stats/throughput-comparison?permaslug={encodedPermaslug}"
+                     })
+            {
+                try
+                {
+                    json = await Http.GetStringAsync(url, ct).ConfigureAwait(false);
+                    break;
+                }
+                catch (HttpRequestException)
+                {
+                    // OpenRouter hat diesen Website-Endpunkt bereits zwischen /stats und /v1/stats verschoben.
+                }
+            }
+            if (json == null) return;
+
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return;
+            var latestByEndpoint = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            for (var i = data.GetArrayLength() - 1; i >= 0; i--)
+            {
+                if (!data[i].TryGetProperty("y", out var values) || values.ValueKind != JsonValueKind.Object) continue;
+                foreach (var metric in values.EnumerateObject())
+                {
+                    var endpointId = metric.Name.Split("::", 2, StringSplitOptions.None)[0];
+                    if (!latestByEndpoint.ContainsKey(endpointId) && metric.Value.ValueKind == JsonValueKind.Number)
+                        latestByEndpoint[endpointId] = metric.Value.GetDouble();
+                }
+            }
+
+            var throughputByTag = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (endpointId, throughput) in latestByEndpoint)
+            {
+                if (endpointTags.TryGetValue(endpointId, out var tag))
+                    throughputByTag[tag] = throughput;
+            }
+            foreach (var provider in providers)
+            {
+                if (!provider.ThroughputLast30m.HasValue && throughputByTag.TryGetValue(provider.Tag, out var throughput))
+                    provider.ThroughputLast30m = throughput;
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("OpenRouterService", "EnrichFromThroughputChartAsync", $"TPS-Chart-Fallback fehlgeschlagen: {ex.Message}", new { permaslug });
+        }
+    }
+
+    private static void EnrichFromLegacyHtml(string html, List<ProviderEntry> providers)
+    {
+        var metrics = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var matches = Regex.Matches(
+            html,
+            "provider_name\\\\\":\\\\\"(?<name>[^\\\\\"]+)\\\\\".*?routing_heuristics\\\\\":\\{(?<body>.*?)\\}",
+            RegexOptions.Singleline);
+
+        foreach (Match match in matches)
+        {
+            var name = match.Groups["name"].Value;
+            if (metrics.ContainsKey(name)) continue;
+            var body = match.Groups["body"].Value;
+            var throughput = ReadMetric(body, "p50_throughput_30_minutes") ?? ReadMetric(body, "p50_throughput");
+            if (throughput.HasValue) metrics[name] = throughput.Value;
+        }
+
+        foreach (var provider in providers)
+        {
+            if (!provider.ThroughputLast30m.HasValue && metrics.TryGetValue(provider.ProviderName, out var throughput))
+                provider.ThroughputLast30m = throughput;
+        }
+    }
+
+    private static void StoreThroughputCache(string slug, IEnumerable<ProviderEntry> providers)
+    {
+        lock (ThroughputCacheLock)
+        {
+            EnsureThroughputCacheLoaded();
+            var changed = false;
+            foreach (var provider in providers.Where(p => p.ThroughputLast30m.HasValue))
+            {
+                var key = ThroughputCacheKey(slug, provider);
+                var value = provider.ThroughputLast30m!.Value;
+                if (!_throughputCache!.TryGetValue(key, out var existing) || Math.Abs(existing - value) > 0.001)
+                {
+                    _throughputCache[key] = value;
+                    changed = true;
+                }
+            }
+            if (!changed) return;
+
+            try
+            {
+                var directory = Path.GetDirectoryName(ThroughputCachePath)!;
+                Directory.CreateDirectory(directory);
+                var tempPath = ThroughputCachePath + ".tmp";
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(_throughputCache));
+                File.Move(tempPath, ThroughputCachePath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warn("OpenRouterService", "StoreThroughputCache", $"TPS-Cache konnte nicht gespeichert werden: {ex.Message}");
+            }
+        }
+    }
+
+    private static void ApplyThroughputCache(string slug, IEnumerable<ProviderEntry> providers)
+    {
+        lock (ThroughputCacheLock)
+        {
+            EnsureThroughputCacheLoaded();
+            foreach (var provider in providers.Where(p => !p.ThroughputLast30m.HasValue))
+            {
+                if (_throughputCache!.TryGetValue(ThroughputCacheKey(slug, provider), out var value))
+                    provider.ThroughputLast30m = value;
+            }
+        }
+    }
+
+    private static void EnsureThroughputCacheLoaded()
+    {
+        if (_throughputCache != null) return;
+        try
+        {
+            _throughputCache = File.Exists(ThroughputCachePath)
+                ? JsonSerializer.Deserialize<Dictionary<string, double>>(File.ReadAllText(ThroughputCachePath))
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("OpenRouterService", "EnsureThroughputCacheLoaded", $"TPS-Cache wird neu aufgebaut: {ex.Message}");
+        }
+        _throughputCache ??= new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ThroughputCacheKey(string slug, ProviderEntry provider)
+    {
+        var endpoint = string.IsNullOrWhiteSpace(provider.Tag) ? provider.ProviderName : provider.Tag;
+        return $"{slug.Trim().ToLowerInvariant()}|{endpoint.Trim().ToLowerInvariant()}";
     }
 
     private static double? ReadMetric(string body, string name)
@@ -311,6 +506,15 @@ public sealed class OpenRouterService
         return match.Success && double.TryParse(match.Groups["value"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
             ? value
             : null;
+    }
+
+    private static double? ReadJsonDouble(JsonElement parent, string name)
+    {
+        if (!parent.TryGetProperty(name, out var value)) return null;
+        if (value.ValueKind == JsonValueKind.Number) return value.GetDouble();
+        if (value.ValueKind == JsonValueKind.String && double.TryParse(value.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+            return parsed;
+        return null;
     }
 
     private static double ParseDouble(JsonElement parent, string name)

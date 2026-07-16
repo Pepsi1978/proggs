@@ -25,6 +25,7 @@ public sealed class ProviderEntry
     public int? MaxCompletionTokens { get; set; }
     public string Quantization { get; set; } = string.Empty;
 
+    public string EndpointId { get; set; } = string.Empty;
     public double? ThroughputLast30m { get; set; }
     public double? UptimeLast5m { get; set; }
     public int Status { get; set; }
