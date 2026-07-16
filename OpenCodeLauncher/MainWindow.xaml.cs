@@ -13,6 +13,7 @@ public partial class MainWindow : Window
 {
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWCP_DONOTROUND = 1;
     private const int DWMWCP_ROUND = 2;
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int WM_SYSCOMMAND = 0x0112;
@@ -115,6 +116,7 @@ public partial class MainWindow : Window
         StateChanged += (_, _) =>
         {
             MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
+            ApplyWindowTheme();
             QueueSaveWindowLayout();
             if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground();
         };
@@ -274,7 +276,7 @@ public partial class MainWindow : Window
         if (hwnd == IntPtr.Zero) return;
         int dark = ThemeManager.Current == ThemeManager.AppTheme.Dark ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
-        int cornerPreference = DWMWCP_ROUND;
+        int cornerPreference = WindowState == WindowState.Maximized ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
     }
 
