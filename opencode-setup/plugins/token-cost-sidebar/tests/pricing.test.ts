@@ -188,8 +188,18 @@ describe("models.dev pricing", () => {
       writeWorkMode("session-a", "gruendlich", directory)
       expect(await readWorkMode("session-a", directory)).toBe("gruendlich")
       expect(await readWorkMode("session-b", directory)).toBe(DEFAULT_WORK_MODE)
-      expect(workModeInstruction("normal")).toContain("höchstens zwei")
-      expect(workModeInstruction("gruendlich")).toContain("bis alles grün ist")
+      expect(workModeInstruction("schnell")).toContain("kleinsten korrekten Eingriff")
+      expect(workModeInstruction("schnell")).toContain("direkt betroffenen Aufrufer")
+      expect(workModeInstruction("normal")).toContain("zum Risiko und Umfang passenden Eingriff")
+      expect(workModeInstruction("normal")).toContain("höchstens zwei Durchläufe")
+      expect(workModeInstruction("gruendlich")).toContain("verwandte Fehlerklassen")
+      expect(workModeInstruction("gruendlich")).toContain("alle Prüfungen grün sind")
+      for (const mode of WORK_MODES) {
+        const instruction = workModeInstruction(mode.id)
+        expect(instruction).toContain("Das aktive AGENTS.md-Profil gilt vollständig und unverändert.")
+        expect(instruction).toContain("bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang")
+        expect(instruction).not.toContain("überschreibt den Standardmodus")
+      }
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

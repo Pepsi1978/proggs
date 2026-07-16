@@ -1,7 +1,7 @@
 {
   "name": "frank-token-cost-sidebar",
-  "version": "1.3.3",
-  "updated": "11.07.2026, 22:19 Uhr",
+  "version": "1.3.4",
+  "updated": "16.07.2026, 13:52 Uhr",
   "description": "Local OpenCode TUI sidebar plugin showing a session work mode selector, model prices, token totals, session cost, theme preview, and light/dark mode.",
   "type": "module",
   "exports": {

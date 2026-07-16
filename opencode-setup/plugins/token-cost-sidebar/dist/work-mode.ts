@@ -52,10 +52,10 @@ export function writeWorkMode(
 
 export function workModeInstruction(mode: WorkModeId): string {
   const instructions: Record<WorkModeId, string> = {
-    schnell: "Kleinster korrekter Fix, fokussierte Tests, keine allgemeine Härtung und kein Quality Gate.",
-    normal: "Proportionaler Fix, relevante Regressionstests und höchstens zwei auftragsbezogene Quality-Gate-Durchläufe.",
-    gruendlich: "Verwandte Fehlerklassen und sinnvolle Härtung mitprüfen; Quality Gates ohne feste Obergrenze wiederholen, bis alles grün ist.",
+    schnell: "Bearbeite nur die ausdrücklich verlangte Änderung und wähle dafür den kleinsten korrekten Eingriff. Prüfe die direkt betroffenen Aufrufer und führe fokussierte Tests für das geänderte Verhalten aus. Vermeide allgemeine Refactorings, zusätzliche Härtung und themenfremde Verbesserungen. Starte kein zusätzliches Quality Gate, außer der Auftrag oder das aktive AGENTS.md-Profil verlangt es.",
+    normal: "Löse den Auftrag vollständig mit einem zum Risiko und Umfang passenden Eingriff. Prüfe betroffene Aufrufer, naheliegende Regressionen und relevante Randfälle und führe die passenden Tests oder Builds aus. Kleine, direkt auftragsbezogene Härtungen sind erlaubt; vermeide themenfremde Refactorings. Für durch diesen Modus zusätzlich veranlasste Quality Gates gelten höchstens zwei Durchläufe, sofern der Auftrag oder das aktive AGENTS.md-Profil nicht mehr verlangt.",
+    gruendlich: "Untersuche neben der konkreten Änderung auch betroffene Aufrufer, Abhängigkeiten, relevante Randfälle und verwandte Fehlerklassen. Nimm sinnvolle, auftragsnahe Härtungen vor und verifiziere das Ergebnis mit den vollständigen relevanten Tests oder Builds. Wiederhole erforderliche Quality Gates ohne feste Obergrenze, bis alle Befunde behoben und alle Prüfungen grün sind. Melde verbleibende Unsicherheiten ausdrücklich.",
   }
   const label = WORK_MODES.find((item) => item.id === mode)?.label ?? "Schnellmodus"
-  return `AKTIVER ARBEITSMODUS: ${label}. Diese Laufzeitwahl aus der Sidebar überschreibt den Standardmodus aus AGENTS.md für diesen Modellaufruf. ${instructions[mode]}`
+  return `AKTIVER ARBEITSMODUS: ${label}. Das aktive AGENTS.md-Profil gilt vollständig und unverändert. Diese Laufzeitwahl ergänzt es für diesen Modellaufruf nur um die Arbeitstiefe; bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang. ${instructions[mode]}`
 }
