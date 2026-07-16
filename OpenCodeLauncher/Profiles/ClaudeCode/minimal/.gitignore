@@ -17,11 +17,12 @@
 !settings.json
 !rules/
 !rules/**
-!hooks/
-!hooks/**
-!skills/
-!skills/**
 !agents/
 !agents/**
 !commands/
 !commands/**
+
+# skills/ wird BEWUSST NICHT wieder eingeschlossen: der Launcher legt es zur Laufzeit als
+# Verzeichnis-Junction auf ~/.claude/skills an (damit im Minimal-Profil alle Skills verfuegbar
+# sind). Der Junction-Inhalt (fremde/generierte Skills) darf nicht ins Repo -> bleibt durch '*'
+# lokal ignoriert.

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -41,8 +42,10 @@ public sealed class InstructionProfileService
     /// Isolierter Claude-Config-Ordner (CLAUDE_CONFIG_DIR) NUR fuer das Minimal-Profil. Liegt im Repo
     /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal) und traegt Login-Token, settings.json
     /// usw. Die dortige .gitignore haelt Laufzeit/Secrets vom Repo fern; die aktive CLAUDE.md ist
-    /// bewusst untracked und wird aus der Minimal-Profilquelle befuellt. Standard und Strikt setzen
-    /// KEIN CLAUDE_CONFIG_DIR und nutzen direkt das echte ~/.claude (volle Skills + Regeln + Login).
+    /// bewusst untracked und wird aus der Minimal-Profilquelle befuellt. Die Skills werden per
+    /// Verzeichnis-Junction (skills -> ~/.claude/skills) eingeblendet, sonst bleibt der Ordner
+    /// regelfrei. Standard und Strikt setzen KEIN CLAUDE_CONFIG_DIR und nutzen direkt das echte
+    /// ~/.claude (volle Skills + Regeln + Login).
     /// </summary>
     public static string ResolveClaudeConfigDir()
     {
@@ -72,17 +75,77 @@ public sealed class InstructionProfileService
     public string? EnsureClaudeConfigDir(string profileId)
     {
         ValidateProfileId(profileId);
-        // Nur Minimal wird isoliert: eigener, leerer Repo-Config-Ordner via CLAUDE_CONFIG_DIR
-        // -> keine Skills/Rules/Hooks/Memory aus ~/.claude, nur die profilspezifische CLAUDE.md.
-        // Standard und Strikt laden bewusst das echte ~/.claude (volle Skills + globale Regeln +
-        // Login): dafuer KEIN Redirect (null zurueckgeben) und ~/.claude bleibt unangetastet.
+        // Nur Minimal wird isoliert: eigener Repo-Config-Ordner via CLAUDE_CONFIG_DIR -> KEINE
+        // Rules/Hooks/Memory/Agents/Almanach aus ~/.claude, nur die profilspezifische CLAUDE.md.
+        // Ausnahme: die Skills werden bewusst mitbenutzt -- ~/.claude/skills wird per Verzeichnis-
+        // Junction eingeblendet, damit im Minimal-Profil alle Skills verfuegbar sind (Wunsch: nur
+        // die Skills nicht ausblenden). Standard und Strikt laden ohnehin das komplette echte
+        // ~/.claude: dafuer KEIN Redirect (null zurueckgeben) und ~/.claude bleibt unangetastet.
         if (!string.Equals(profileId, "minimal", StringComparison.Ordinal))
             return null;
 
         var dir = ResolveClaudeConfigDir();
         Directory.CreateDirectory(dir);
         WriteText(Path.Combine(dir, "CLAUDE.md"), ReadText(EnsureClaudeProfileSource(profileId)));
+        EnsureSkillsJunction(dir);
         return dir;
+    }
+
+    /// <summary>
+    /// Blendet die echten ~/.claude/skills als Verzeichnis-Junction in den Minimal-Config-Ordner ein,
+    /// damit im sonst isolierten Minimal-Profil ALLE Skills verfuegbar sind -- OHNE die uebrige
+    /// ~/.claude-Umgebung (Rules/Hooks/Memory/Agents) hereinzuholen. Junction statt Symlink: braucht
+    /// KEINE Admin-Rechte und keinen Developer-Mode. Idempotent: korrekte Junction -> nichts tun;
+    /// falsches Ziel -> ersetzen; ein echtes Verzeichnis wird aus Sicherheit nie angefasst. Die
+    /// Junction bleibt lokal (die .gitignore des Ordners schliesst skills/ NICHT wieder ein).
+    /// </summary>
+    private static void EnsureSkillsJunction(string configDir)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var realSkills = Path.Combine(home, ".claude", "skills");
+        // Kein echtes Skills-Verzeichnis -> nichts einzublenden (keinen toten Link anlegen).
+        if (!Directory.Exists(realSkills)) return;
+
+        var link = Path.Combine(configDir, "skills");
+        var info = new DirectoryInfo(link);
+        if (info.Exists)
+        {
+            if (!info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                return; // echtes Verzeichnis: nicht anfassen (koennte bewusst versionierte Skills sein).
+
+            var current = Path.TrimEndingDirectorySeparator(info.LinkTarget ?? string.Empty);
+            if (string.Equals(current, Path.TrimEndingDirectorySeparator(realSkills), StringComparison.OrdinalIgnoreCase))
+                return; // Junction zeigt bereits korrekt.
+
+            // Falsches Ziel: nur den Reparse-Point entfernen (folgt der Junction NICHT -> Zielinhalt bleibt).
+            try { Directory.Delete(link, recursive: false); }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", $"Alte Skills-Junction nicht entfernbar: {ex.Message}", new { link });
+                return;
+            }
+        }
+
+        try
+        {
+            // mklink /J erzeugt eine Junction ohne Admin/Developer-Mode (Directory.CreateSymbolicLink braucht beides).
+            var psi = new ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{realSkills}\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var p = Process.Start(psi);
+            if (p != null && p.WaitForExit(5000) && p.ExitCode == 0)
+                Logger.Instance.Info("InstructionProfileService", "EnsureSkillsJunction", "Skills-Junction eingerichtet", new { link, target = realSkills });
+            else
+                Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", "mklink /J nicht erfolgreich", new { link, target = realSkills, exit = p?.ExitCode });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", $"Skills-Junction fehlgeschlagen: {ex.Message}", new { link, target = realSkills });
+        }
     }
 
     // ===================== OpenCode =====================
