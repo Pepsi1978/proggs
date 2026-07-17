@@ -245,6 +245,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("available.has(level.id)")
     expect(source).toContain("model()?.variant.set(id)")
     expect(source).toContain("model()?.variant.current() === item.id")
+    expect(source).toContain('<box flexDirection="row" paddingBottom={1}>')
     expect(source).toContain("<EffortSelector api={api} />")
     expect(source.indexOf("<EffortSelector api={api} />")).toBeLessThan(source.indexOf("<WorkModeSelector api={api}"))
     expect(patch).toContain("model?: TuiModel")

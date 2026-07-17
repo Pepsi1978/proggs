@@ -255,7 +255,7 @@ function EffortSelector(props: { api: TuiPluginApi }) {
 
   return (
     <Show when={levels().length > 0}>
-      <box flexDirection="row">
+      <box flexDirection="row" paddingBottom={1}>
         <For each={levels()}>
           {(item, index) => {
             const active = () => model()?.variant.current() === item.id
