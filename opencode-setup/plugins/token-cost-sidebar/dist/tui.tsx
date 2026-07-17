@@ -400,7 +400,9 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
     if (current === undefined) return "Woche ..."
     if (current === null) return "Woche n/v"
     const reset = new Date(current.resetAt * 1_000)
-    const date = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long" }).format(reset)
+    const day = new Intl.DateTimeFormat("de-DE", { day: "numeric" }).format(reset)
+    const month = new Intl.DateTimeFormat("de-DE", { month: "long" }).format(reset)
+    const date = `${day}.${month}`
     return `Woche ${current.remainingPercent}% ${date}`
   }
 
