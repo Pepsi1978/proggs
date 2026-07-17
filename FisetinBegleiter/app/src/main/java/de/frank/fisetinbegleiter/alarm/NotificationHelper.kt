@@ -60,6 +60,11 @@ object NotificationHelper {
                 "Kur abgeschlossen ($targetDay Tage). Der Eintrag ist im Protokoll gespeichert.",
                 "history",
             )
+            AlarmType.CURE_START -> Triple(
+                "Fisetin-Kur starten",
+                "Deine geplante Kur beginnt jetzt. Öffne die Drink-Checkliste und starte T0, wenn du bereit bist.",
+                "today",
+            )
         }
 
         val openIntent = Intent(context, MainActivity::class.java).apply {

@@ -55,8 +55,14 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,7 +92,13 @@ import de.frank.fisetinbegleiter.data.AppCureState
 import de.frank.fisetinbegleiter.data.IngredientEntity
 import de.frank.fisetinbegleiter.data.IngredientPhase
 import de.frank.fisetinbegleiter.domain.timeline
+import de.frank.fisetinbegleiter.domain.plannedStartAt
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 internal val FbMotionEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
@@ -94,7 +106,7 @@ internal val FbMotionEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 @Composable
 fun TodayScreen(
     state: MainUiState,
-    onCreateCure: (Int, String, String, Int) -> Unit,
+    onCreateCure: (Int, String, String, LocalDate, Int) -> Unit,
     onDrinkNow: () -> Unit,
     onCancelCure: () -> Unit,
     onGoTimeline: () -> Unit,
@@ -196,8 +208,8 @@ fun TodayScreen(
             defaultDuration = state.protocol.standardDurationDays,
             defaultStartMinute = state.protocol.preferredStartMinuteOfDay,
             onDismiss = { showSetup = false },
-            onConfirm = { duration, liquid, fat, startMinute ->
-                onCreateCure(duration, liquid, fat, startMinute)
+            onConfirm = { duration, liquid, fat, startDate, startMinute ->
+                onCreateCure(duration, liquid, fat, startDate, startMinute)
                 showSetup = false
             },
         )
@@ -426,18 +438,24 @@ private fun NextStepCard(state: MainUiState, onGoTimeline: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SetupSheet(
     defaultDuration: Int,
     defaultStartMinute: Int,
     onDismiss: () -> Unit,
-    onConfirm: (Int, String, String, Int) -> Unit,
+    onConfirm: (Int, String, String, LocalDate, Int) -> Unit,
 ) {
     var duration by remember { mutableIntStateOf(defaultDuration.coerceIn(2, 3)) }
     var liquid by remember { mutableStateOf("Wasser") }
     var fat by remember { mutableStateOf("MCT-Öl") }
+    var startDate by remember { mutableStateOf<LocalDate?>(null) }
     var startMinute by remember { mutableIntStateOf(defaultStartMinute.coerceIn(0, 1_425)) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var startError by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
+    val plannedStart = startDate?.let { plannedStartAt(it, startMinute) }
+    val validStart = plannedStart?.let { it > System.currentTimeMillis() } == true
     FbBottomSheet(onDismiss) {
         Text("Kur einrichten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         SheetLabel("Dauer")
@@ -458,28 +476,108 @@ private fun SetupSheet(
                 SelectionButton(value, fat == value, { fat = value }, Modifier.weight(1f))
             }
         }
-        SheetLabel("Geplante Startzeit")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            SquareControl("−15", { startMinute = (startMinute - 15).coerceAtLeast(0) })
+        SheetLabel("Geplantes Datum / Startzeit")
+        DesignOutlineButton(
+            text = startDate?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) ?: "Datum auswählen",
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (startDate != null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                SquareControl("−15", {
+                    startMinute = (startMinute - 15).coerceAtLeast(0)
+                    startError = false
+                })
+                Text(
+                    "%02d:%02d".format(startMinute / 60, startMinute % 60),
+                    modifier = Modifier.weight(1f),
+                    color = colors.text,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                SquareControl("+15", {
+                    startMinute = (startMinute + 15).coerceAtMost(1_425)
+                    startError = false
+                })
+            }
             Text(
-                "%02d:%02d".format(startMinute / 60, startMinute % 60),
-                modifier = Modifier.weight(1f),
-                color = colors.text,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                if (validStart && !startError) {
+                    "Start-Erinnerung am ${startDate!!.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))} um %02d:%02d Uhr.".format(startMinute / 60, startMinute % 60)
+                } else {
+                    "Datum und Startzeit müssen in der Zukunft liegen."
+                },
+                color = if (validStart && !startError) colors.sub else colors.bad,
+                fontSize = 12.5.sp,
+                lineHeight = 18.75.sp,
             )
-            SquareControl("+15", { startMinute = (startMinute + 15).coerceAtMost(1_425) })
+        } else {
+            Text("Wähle zuerst den Kurtag und danach die Startzeit.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
         }
         Text("T0 wird erst gesetzt, wenn du „Drink getrunken – jetzt“ bestätigst.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
             AccentGradientButton(
-                onClick = { onConfirm(duration, liquid, fat, startMinute) },
+                onClick = {
+                    val selectedDate = startDate
+                    if (selectedDate != null && plannedStartAt(selectedDate, startMinute) > System.currentTimeMillis()) {
+                        onConfirm(duration, liquid, fat, selectedDate, startMinute)
+                    } else {
+                        startError = true
+                    }
+                },
+                enabled = validStart,
                 modifier = Modifier.weight(1.4f),
                 shape = RoundedCornerShape(16.dp),
                 contentPadding = PaddingValues(14.dp),
             ) { Text("Kur anlegen", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+
+    if (showDatePicker) {
+        val today = LocalDate.now()
+        val todayUtcMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = startDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+            initialDisplayedMonthMillis = startDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli() ?: todayUtcMillis,
+            selectableDates = remember(todayUtcMillis) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayUtcMillis
+                }
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    enabled = datePickerState.selectedDateMillis != null,
+                    onClick = {
+                        val selected = datePickerState.selectedDateMillis?.let { millis ->
+                            Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        }
+                        if (selected != null) {
+                            startDate = selected
+                            if (selected == LocalDate.now()) {
+                                val current = LocalTime.now()
+                                val nextQuarter = ((current.hour * 60 + current.minute) / 15 + 1) * 15
+                                if (startMinute <= current.hour * 60 + current.minute) {
+                                    startMinute = nextQuarter.coerceAtMost(1_425)
+                                }
+                            }
+                            startError = false
+                            showDatePicker = false
+                        }
+                    },
+                ) { Text("Übernehmen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

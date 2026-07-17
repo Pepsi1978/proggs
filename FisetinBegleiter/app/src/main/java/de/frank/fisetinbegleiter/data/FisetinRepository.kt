@@ -37,7 +37,7 @@ class FisetinRepository(private val database: FisetinDatabase) {
                 isTestRun = false,
             ),
         )
-        dao.insertCureDays(
+        val dayIds = dao.insertCureDays(
             (1..durationDays).map { day ->
                 CureDayEntity(
                     cureId = cureId,
@@ -46,7 +46,8 @@ class FisetinRepository(private val database: FisetinDatabase) {
                 )
             },
         )
-        cureId
+        check(dayIds.isNotEmpty()) { "Eine Kur benötigt mindestens einen Kurtag" }
+        dayIds.first()
     }
 
     suspend fun setDrinkTime(cure: CureEntity, day: CureDayEntity, timestamp: Long) = database.withTransaction {

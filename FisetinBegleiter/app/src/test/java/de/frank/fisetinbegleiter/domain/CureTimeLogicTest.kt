@@ -10,6 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneId
 
 class CureTimeLogicTest {
     private val protocol = ProtocolTemplateEntity()
@@ -50,6 +52,24 @@ class CureTimeLogicTest {
         val second = day(dayNumber = 2)
 
         assertEquals(2, currentDay(activeCure(first, second))?.dayNumber)
+    }
+
+    @Test
+    fun `planned start combines selected date and minute in device zone`() {
+        val zone = ZoneId.of("Europe/Berlin")
+        val date = LocalDate.of(2026, 7, 20)
+
+        val result = plannedStartAt(date, 9 * 60 + 30, zone)
+
+        assertEquals(date.atTime(9, 30).atZone(zone).toInstant().toEpochMilli(), result)
+    }
+
+    @Test
+    fun `planned start clamps corrupt persisted minutes to one day`() {
+        val date = LocalDate.of(2026, 7, 20)
+        val zone = ZoneId.of("UTC")
+
+        assertEquals(date.atTime(23, 59).atZone(zone).toInstant().toEpochMilli(), plannedStartAt(date, 99_999, zone))
     }
 
     private fun day(dayNumber: Int = 1, t0: Long? = null) = CureDayEntity(

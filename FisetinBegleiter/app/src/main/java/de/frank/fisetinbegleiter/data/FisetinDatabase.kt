@@ -66,7 +66,7 @@ interface FisetinDao {
     suspend fun deleteAllActiveCures()
 
     @Insert
-    suspend fun insertCureDays(days: List<CureDayEntity>)
+    suspend fun insertCureDays(days: List<CureDayEntity>): List<Long>
 
     @Update
     suspend fun updateCureDay(day: CureDayEntity)

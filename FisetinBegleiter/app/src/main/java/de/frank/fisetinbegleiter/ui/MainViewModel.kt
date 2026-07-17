@@ -14,6 +14,7 @@ import de.frank.fisetinbegleiter.data.StackItemEntity
 import de.frank.fisetinbegleiter.domain.canComplete
 import de.frank.fisetinbegleiter.domain.cureState
 import de.frank.fisetinbegleiter.domain.currentDay
+import de.frank.fisetinbegleiter.domain.plannedStartAt
 import de.frank.fisetinbegleiter.domain.timeline
 import java.time.LocalDate
 import kotlinx.coroutines.delay
@@ -84,15 +85,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createCure(duration: Int, liquid: String, fat: String, startMinute: Int) {
+    fun createCure(duration: Int, liquid: String, fat: String, startDate: LocalDate, startMinute: Int) {
+        val startAt = plannedStartAt(startDate, startMinute)
+        if (startAt <= System.currentTimeMillis()) return
         viewModelScope.launch {
-            repository.createCure(
+            val firstDayId = repository.createCure(
                 durationDays = duration,
-                startDate = LocalDate.now(),
+                startDate = startDate,
                 carrierLiquid = liquid,
                 fatCarrier = fat,
                 preferredStartMinuteOfDay = startMinute,
             )
+            if (uiState.value.protocol.remindersEnabled) {
+                scheduler.scheduleCureStart(firstDayId, startAt)
+            }
         }
     }
 

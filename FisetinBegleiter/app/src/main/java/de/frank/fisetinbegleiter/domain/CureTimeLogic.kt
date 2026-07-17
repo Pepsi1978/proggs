@@ -4,6 +4,8 @@ import de.frank.fisetinbegleiter.data.AppCureState
 import de.frank.fisetinbegleiter.data.CureDayEntity
 import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import java.time.LocalDate
+import java.time.ZoneId
 
 data class DayTimeline(
     val t0: Long,
@@ -20,6 +22,13 @@ fun timeline(t0: Long, protocol: ProtocolTemplateEntity): DayTimeline = DayTimel
     spermidinEnd = t0 + protocol.antioxidantBlockMinutes * 60_000L,
     blockEnd = t0 + protocol.antioxidantBlockMinutes * 60_000L,
 )
+
+fun plannedStartAt(startDate: LocalDate, startMinuteOfDay: Int, zoneId: ZoneId = ZoneId.systemDefault()): Long =
+    startDate
+        .atStartOfDay(zoneId)
+        .plusMinutes(startMinuteOfDay.coerceIn(0, 1_439).toLong())
+        .toInstant()
+        .toEpochMilli()
 
 fun currentDay(cure: CureWithDays?): CureDayEntity? = cure?.days
     ?.sortedBy { it.dayNumber }

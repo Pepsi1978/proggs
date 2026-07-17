@@ -9,8 +9,8 @@ import android.provider.Settings
 import de.frank.fisetinbegleiter.data.CureDayEntity
 import de.frank.fisetinbegleiter.data.CureEntity
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import de.frank.fisetinbegleiter.domain.plannedStartAt
 import java.time.LocalDate
-import java.time.ZoneId
 
 enum class AlarmType {
     MEAL_WARNING,
@@ -19,6 +19,7 @@ enum class AlarmType {
     BLOCK_ENDED,
     NEXT_DAY,
     CURE_ENDED,
+    CURE_START,
 }
 
 class AlarmScheduler(private val context: Context) {
@@ -51,13 +52,13 @@ class AlarmScheduler(private val context: Context) {
 
         if (day.dayNumber < cure.plannedDurationDays) {
             val nextDate = LocalDate.ofEpochDay(day.plannedEpochDay).plusDays(1)
-            val nextStart = nextDate.atStartOfDay()
-                .plusMinutes(cure.preferredStartMinuteOfDay.toLong())
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
+            val nextStart = plannedStartAt(nextDate, cure.preferredStartMinuteOfDay)
             schedule(day.id, AlarmType.NEXT_DAY, nextStart, day.dayNumber + 1)
         }
+    }
+
+    fun scheduleCureStart(firstDayId: Long, triggerAt: Long) {
+        schedule(firstDayId, AlarmType.CURE_START, triggerAt, targetDay = 1)
     }
 
     fun cancelMeal(dayId: Long) = cancel(dayId, AlarmType.MEAL_WARNING)
