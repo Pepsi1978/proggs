@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.30 - 18.07.2026, 01:05 Uhr
+Version 0.1.31 - 18.07.2026, 01:28 Uhr
 
 ## 1. Übersicht
 
@@ -277,8 +277,21 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   Credentials gemergt. Rotierte Refresh-Tokens ersetzen nur das entsprechende Feld.
 - Inferenz läuft über `https://chatgpt.com/backend-api/codex/responses` mit Bearer-Token,
   `originator: codex_cli_rs`, Codex-User-Agent und `ChatGPT-Account-ID` aus dem JWT.
-  `input` ist eine Liste aus User-Items, `stream=true` und `store=false`; SSE-Deltas
-  werden vollständig zusammengesetzt und erst danach als Lerndaten validiert.
+  `input` ist eine Liste aus User-Items, `stream=true` und `store=false`. Der Body wird
+  als echter SSE-Stream über einen geteilten OkHttp-Client verarbeitet und nicht mehr
+  bis zum Ende gepuffert. Ein inkrementeller JSON-Decoder extrahiert das Top-Level-Feld
+  `answer` escape- und Unicode-sicher; das erste Antwortstück erscheint sofort, weitere
+  UI-Updates werden begrenzt. Nach dem Antwortfeld zeigt die UI die Kartenphase, während
+  das Modell die Karten fertigstellt. Die Terminalmeldung `response.completed` ist
+  Pflicht; ihr vollständiger Text hat Vorrang, andernfalls wird der bis dahin komplett
+  zusammengesetzte Output validiert und transaktional gespeichert.
+- Sol, Terra und Luna werden mit Niedrig, Mittel und Hoch deterministisch auf alle neun
+  gültigen Modell-/Effort-Kombinationen abgebildet. Der Priority-Service-Tier reduziert
+  Warteschlangenzeiten ohne Modell- oder Qualitätswechsel. Connect-, Idle- und
+  Gesamt-Timeout sind getrennt; Reset bricht den zugrunde liegenden OkHttp-Call ab.
+- Feste Nachlaufwartezeiten von insgesamt 2,4 Sekunden entfallen. `CodexPerf`
+  protokolliert ohne Inhalte oder Tokens Headerzeit, erstes Antwortdelta, Ende des
+  Antwortfelds und Gesamtzeit für reale Messungen.
 - Fehler werden getrennt behandelt: `429` als Kontingentgrenze ohne Relogin-Schleife,
   `401/403/invalid_grant` als erneute Anmeldung und `refresh_token_reused` als eigener
   Konflikthinweis. Das Modell wird bei jedem Request explizit übergeben.

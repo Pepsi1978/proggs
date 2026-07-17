@@ -51,6 +51,7 @@ import de.frank.karteikartenlernen.model.GenerationPhase
 import de.frank.karteikartenlernen.model.MicState
 import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
+import de.frank.karteikartenlernen.ui.theme.Newsreader
 import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
 
 @Composable
@@ -222,14 +223,25 @@ private fun AnswerBlock(state: AppUiState, onSpeak: (String) -> Unit, onLearn: (
                     Text("Antwort", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(
-                    Modifier.clip(RoundedCornerShape(99.dp)).background(c.chip).border(1.dp, c.border, RoundedCornerShape(99.dp)).clickable { state.answer?.let { onSpeak(researchAnswerForSpeech(it)) } }.padding(horizontal = 12.dp, vertical = 6.dp),
+                    Modifier.clip(RoundedCornerShape(99.dp)).background(c.chip).border(1.dp, c.border, RoundedCornerShape(99.dp)).clickable(enabled = state.generationPhase == GenerationPhase.DONE) { state.answer?.let { onSpeak(researchAnswerForSpeech(it)) } }.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Outlined.Campaign, null, tint = c.muted, modifier = Modifier.size(15.dp))
                     Text("Vorlesen", color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                 }
             }
-            ResearchArticle(state.answer.orEmpty(), paragraphColor = c.text)
+            if (state.generationPhase == GenerationPhase.ANSWER) {
+                Text(
+                    state.answer.orEmpty(),
+                    color = c.text,
+                    fontFamily = Newsreader,
+                    fontSize = 16.5.sp,
+                    lineHeight = 27.sp,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            } else {
+                ResearchArticle(state.answer.orEmpty(), paragraphColor = c.text)
+            }
             if (state.generationPhase == GenerationPhase.CARDS) {
                 Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     LoadingRing(c.accent, 16.dp)

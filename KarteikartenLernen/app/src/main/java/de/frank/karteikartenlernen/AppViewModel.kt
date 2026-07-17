@@ -13,6 +13,7 @@ import de.frank.karteikartenlernen.auth.CodexAuthException
 import de.frank.karteikartenlernen.auth.ExistingSessionContext
 import de.frank.karteikartenlernen.auth.GeneratedCard
 import de.frank.karteikartenlernen.auth.GeneratedResearch
+import de.frank.karteikartenlernen.auth.codexModelId
 import de.frank.karteikartenlernen.data.AppDatabase
 import de.frank.karteikartenlernen.data.FlashcardEntity
 import de.frank.karteikartenlernen.data.ResearchEntity
@@ -92,6 +93,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var recordingStart: Deferred<Unit>? = null
     private var transcriptionJob: Job? = null
     private var generationJob: Job? = null
+    @Volatile private var generationSequence = 0L
     private var improveJob: Job? = null
     private var loginJob: Job? = null
     private val activeSessionId = MutableStateFlow("hrv")
@@ -256,15 +258,37 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(showOAuth = true) }
             return
         }
-        _uiState.update { it.copy(answer = "", generationPhase = GenerationPhase.ANSWER, authError = null) }
+        val generationId = ++generationSequence
         generationJob?.cancel()
+        _uiState.update { it.copy(answer = "", generationPhase = GenerationPhase.ANSWER, authError = null) }
         generationJob = viewModelScope.launch {
             val sessionContexts = dao.sessionContexts().map { row ->
                 ExistingSessionContext(row.id, row.title, row.question, row.answerExcerpt)
             }
-            val result = runCatching {
-                auth.generateResearch(modelId(state.model), state.reasoning, state.input, sessionContexts)
-            }.getOrElse { error ->
+            val streamedAnswer = StringBuilder()
+            val result = try {
+                auth.generateResearch(
+                    model = codexModelId(state.model),
+                    reasoning = state.reasoning,
+                    question = state.input,
+                    sessions = sessionContexts,
+                    onAnswerDelta = { delta ->
+                        if (generationId != generationSequence) return@generateResearch
+                        streamedAnswer.append(delta)
+                        _uiState.update { current ->
+                            if (generationId == generationSequence) current.copy(answer = streamedAnswer.toString()) else current
+                        }
+                    },
+                    onAnswerComplete = {
+                        _uiState.update { current ->
+                            if (generationId == generationSequence) current.copy(generationPhase = GenerationPhase.CARDS) else current
+                        }
+                    },
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (generationId != generationSequence) return@launch
                 if (error is CodexAuthException && error.kind == AuthErrorKind.REAUTH) {
                     auth.logout()
                     _uiState.update { it.copy(answer = null, generationPhase = null, connectedEmail = null, showOAuth = true, authError = error.message) }
@@ -273,11 +297,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 return@launch
             }
+            if (generationId != generationSequence) return@launch
             _uiState.update { it.copy(answer = result.answer, generationPhase = GenerationPhase.CARDS) }
-            val (sessionId, persistedCardIds) = persistResearch(state.input, result)
+            val persisted = try {
+                persistResearch(state.input, result)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (generationId != generationSequence) return@launch
+                _uiState.update { it.copy(generationPhase = null, authError = error.message ?: "Die vollständige Recherche konnte nicht gespeichert werden.") }
+                return@launch
+            }
+            if (generationId != generationSequence) return@launch
+            val (sessionId, persistedCardIds) = persisted
             val crossSuggestions = buildCrossSuggestions(result.cards, persistedCardIds, sessionContexts)
             activeSessionId.value = sessionId
-            delay(1700)
             _uiState.update { current ->
                 current.copy(
                     generationPhase = GenerationPhase.DONE,
@@ -286,7 +320,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     crossSuggestions = crossSuggestions,
                 )
             }
-            delay(700)
             if (crossSuggestions.isNotEmpty()) _uiState.update { it.copy(showCrossSheet = true) }
         }
     }
@@ -312,6 +345,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetResearch() {
+        generationSequence++
         generationJob?.cancel()
         generationJob = null
         _uiState.update {
@@ -556,9 +590,4 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
     }
 
-    private fun modelId(label: String): String = when (label) {
-        "GPT 5.6 Sol" -> "gpt-5.6-sol"
-        "GPT 5.6 Luna" -> "gpt-5.6-luna"
-        else -> "gpt-5.6-terra"
-    }
 }
