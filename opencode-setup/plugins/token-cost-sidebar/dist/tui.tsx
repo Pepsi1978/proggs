@@ -400,14 +400,16 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
     if (current === undefined) return "Woche ..."
     if (current === null) return "Woche n/v"
     const reset = new Date(current.resetAt * 1_000)
-    const date = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(reset)
-    return `Woche ${current.remainingPercent} % · ${date}.`
+    const date = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long" }).format(reset)
+    return `Woche ${current.remainingPercent}% · ${date}`
   }
 
   return (
     <text fg={theme().accent}>
       <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
-      <Show when={modelMeta().providerID === "openai"}><b>{` · ${quotaLabel()}`}</b></Show>
+      <Show when={modelMeta().providerID === "openai"}>
+        <span style={{ fg: theme().text }}>{` · ${quotaLabel()}`}</span>
+      </Show>
     </text>
   )
 }

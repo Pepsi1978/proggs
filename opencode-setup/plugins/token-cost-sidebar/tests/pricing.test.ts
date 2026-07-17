@@ -228,8 +228,10 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('<span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>')
     expect(source).toContain("const selected = liveModel(api)?.current?.()")
-    expect(source).toContain('<Show when={modelMeta().providerID === "openai"}><b>{` · ${quotaLabel()}`}</b></Show>')
-    expect(source).toContain('return `Woche ${current.remainingPercent} % · ${date}.`')
+    expect(source).toContain('<span style={{ fg: theme().text }}>{` · ${quotaLabel()}`}</span>')
+    expect(source).toContain('{ day: "numeric", month: "long" }')
+    expect(source).toContain('return `Woche ${current.remainingPercent}% · ${date}`')
+    expect(source).not.toContain('<b>{` · ${quotaLabel()}`}</b>')
     expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>')
     expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")
     expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")).toBeLessThan(
