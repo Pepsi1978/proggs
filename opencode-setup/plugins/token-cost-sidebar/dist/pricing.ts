@@ -12,6 +12,13 @@ export type UsageRecord = {
   pricingModel?: any
 }
 
+export type UsageCostBreakdown = {
+  inputUsd: number
+  outputUsd: number
+  reasoningUsd: number
+  usd: number
+}
+
 let catalogPromise: Promise<any> | undefined
 
 function safeNumber(value: unknown): number {
@@ -33,13 +40,17 @@ function priceSource(model: any): any {
   return model?.cost ?? model?.pricing ?? model?.price ?? model?.info?.cost
 }
 
-export function readPricing(model: any, contextTokens = 0) {
+function contextualPrice(model: any, contextTokens: number): any {
   const base = priceSource(model) ?? {}
   const tiers = Array.isArray(base?.tiers) ? base.tiers : []
   const tier = tiers
     .filter((item: any) => item?.tier?.type === "context" && contextTokens > safeNumber(item?.tier?.size))
     .sort((a: any, b: any) => safeNumber(b?.tier?.size) - safeNumber(a?.tier?.size))[0]
-  const price = tier ? { ...base, ...tier } : base
+  return tier ? { ...base, ...tier } : base
+}
+
+export function readPricing(model: any, contextTokens = 0) {
+  const price = contextualPrice(model, contextTokens)
 
   return {
     input: normalizePrice(price?.input ?? price?.prompt),
@@ -77,16 +88,93 @@ export function hasKnownPricing(model: any): boolean {
   )
 }
 
-export function calculateUsageCost(model: any, usage: TokenUsage): number {
+function hasPrice(value: unknown): boolean {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0
+  if (typeof value === "string" && value !== "") {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) && parsed >= 0
+  }
+  return false
+}
+
+function hasUsagePricing(model: any, usage: TokenUsage): boolean {
+  const price = contextualPrice(model, usage.input + usage.cacheRead + usage.cacheWrite)
+  const input = price?.input ?? price?.prompt
+  const output = price?.output ?? price?.completion
+  const reasoning = price?.reasoning ?? output
+  const cacheRead = price?.cache_read ?? price?.cacheRead ?? price?.cache?.read
+  const cacheWrite = price?.cache_write ?? price?.cacheWrite ?? price?.cache?.write
+  return (
+    (usage.input === 0 || hasPrice(input)) &&
+    (usage.output === 0 || hasPrice(output)) &&
+    (usage.reasoning === 0 || hasPrice(reasoning)) &&
+    (usage.cacheRead === 0 || hasPrice(cacheRead)) &&
+    (usage.cacheWrite === 0 || hasPrice(cacheWrite))
+  )
+}
+
+export function calculateUsageCostBreakdown(model: any, usage: TokenUsage): UsageCostBreakdown {
   const contextTokens = usage.input + usage.cacheRead + usage.cacheWrite
   const price = readPricing(model, contextTokens)
-  return (
-    usage.input * price.input +
-    usage.output * price.output +
-    usage.reasoning * price.reasoning +
-    usage.cacheRead * price.cacheRead +
-    usage.cacheWrite * price.cacheWrite
-  )
+  const inputUsd = usage.input * price.input + usage.cacheRead * price.cacheRead + usage.cacheWrite * price.cacheWrite
+  const outputUsd = usage.output * price.output
+  const reasoningUsd = usage.reasoning * price.reasoning
+  return { inputUsd, outputUsd, reasoningUsd, usd: inputUsd + outputUsd + reasoningUsd }
+}
+
+export function calculateUsageCost(model: any, usage: TokenUsage): number {
+  return calculateUsageCostBreakdown(model, usage).usd
+}
+
+export function calculateSessionCostBreakdown(model: any, records: UsageRecord[]) {
+  let pricingAvailable = hasKnownPricing(model)
+  let breakdownAvailable = true
+  let usedRecorded = false
+  let usedCalculated = false
+  let missingUnpriced = false
+  let inputUsd = 0
+  let outputUsd = 0
+  let reasoningUsd = 0
+  let usd = 0
+
+  for (const record of records) {
+    const recordModel = record.pricingModel ?? model
+    const recordPricingAvailable = hasKnownPricing(recordModel)
+    pricingAvailable = pricingAvailable || recordPricingAvailable
+    if (recordPricingAvailable && hasUsagePricing(recordModel, record.usage)) {
+      const cost = calculateUsageCostBreakdown(recordModel, record.usage)
+      const hasUsage = Object.values(record.usage).some((value) => value > 0)
+      const staleZeroPricing = hasUsage && cost.usd === 0 && record.recordedCostUsd > 0
+      if (!staleZeroPricing) {
+        inputUsd += cost.inputUsd
+        outputUsd += cost.outputUsd
+        reasoningUsd += cost.reasoningUsd
+        usd += cost.usd
+        usedCalculated = true
+        continue
+      }
+    }
+
+    breakdownAvailable = false
+    if (record.recordedCostUsd > 0) {
+      usd += record.recordedCostUsd
+      usedRecorded = true
+    } else {
+      missingUnpriced = true
+    }
+  }
+
+  return {
+    usd,
+    inputUsd,
+    outputUsd,
+    reasoningUsd,
+    usedRecorded,
+    usedCalculated,
+    missingUnpriced,
+    pricingAvailable,
+    breakdownAvailable,
+  }
 }
 
 export function calculateSessionCost(model: any, records: UsageRecord[]) {

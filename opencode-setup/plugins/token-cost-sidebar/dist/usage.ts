@@ -6,6 +6,10 @@ export type SessionUsageRecord = {
   modelID?: string
   usage: TokenUsage
   recordedCostUsd: number
+  segments?: Array<{
+    usage: TokenUsage
+    recordedCostUsd: number
+  }>
 }
 
 export type SessionUsageSnapshot = {
@@ -68,9 +72,27 @@ function usageOf(message: any): TokenUsage {
   }
 }
 
+function usageSegments(message: any): SessionUsageRecord["segments"] {
+  const steps = stepFinishParts(message)
+  if (steps.length === 0) return undefined
+  return steps.map((step) => ({
+    usage: usageOf(step),
+    recordedCostUsd: safeNumber(step?.cost),
+  }))
+}
+
 function storedRecord(value: unknown): SessionUsageRecord | undefined {
   const record = value as Partial<SessionUsageRecord> | undefined
   if (!record || typeof record.id !== "string" || record.id === "") return undefined
+  const segments = Array.isArray(record.segments) ? record.segments.map((segment) => ({
+    usage: usageOf({ tokens: {
+      input: segment?.usage?.input,
+      output: segment?.usage?.output,
+      reasoning: segment?.usage?.reasoning,
+      cache: { read: segment?.usage?.cacheRead, write: segment?.usage?.cacheWrite },
+    } }),
+    recordedCostUsd: safeNumber(segment?.recordedCostUsd),
+  })) : undefined
   return {
     id: record.id,
     providerID: typeof record.providerID === "string" ? record.providerID : undefined,
@@ -82,6 +104,7 @@ function storedRecord(value: unknown): SessionUsageRecord | undefined {
       cache: { read: record.usage?.cacheRead, write: record.usage?.cacheWrite },
     } }),
     recordedCostUsd: safeNumber(record.recordedCostUsd),
+    segments: segments?.length ? segments : undefined,
   }
 }
 
@@ -122,6 +145,7 @@ export function observeAssistantMessage(ledger: SessionUsageLedger, message: any
       previous?.recordedCostUsd ?? 0,
       recordedCostOf(message),
     ),
+    segments: usageSegments(message) ?? previous?.segments,
   }
 
   if (previous && JSON.stringify(previous) === JSON.stringify(next)) return false

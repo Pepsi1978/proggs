@@ -2,7 +2,7 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import {
-  calculateSessionCost,
+  calculateSessionCostBreakdown,
   commitIfCurrent,
   hasKnownPricing,
   loadCatalogModel,
@@ -658,19 +658,29 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
 
   const money = createMemo(() => {
     const t = totals()
-    const cost = calculateSessionCost(pricedModel(), t.records.map((record) => {
+    const cost = calculateSessionCostBreakdown(pricedModel(), t.records.flatMap((record) => {
       const provider = props.api.state.provider.find((item: any) => item?.id === record.providerID)
       const embeddedModel = provider?.models?.[record.modelID ?? ""]
       const currentModel = record.providerID === modelMeta().providerID && record.modelID === modelMeta().modelID
         ? pricedModel()
         : embeddedModel
-      return { usage: record.usage, recordedCostUsd: record.recordedCostUsd, pricingModel: currentModel }
+      return (record.segments ?? [{ usage: record.usage, recordedCostUsd: record.recordedCostUsd }]).map((segment) => ({
+        usage: segment.usage,
+        recordedCostUsd: segment.recordedCostUsd,
+        pricingModel: currentModel,
+      }))
     }))
 
     return {
       usd: cost.usd,
       eur: cost.usd * eurPerUsd(),
+      inputEur: cost.inputUsd * eurPerUsd(),
+      outputEur: cost.outputUsd * eurPerUsd(),
+      reasoningEur: cost.reasoningUsd * eurPerUsd(),
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
+      breakdownAvailable: cost.breakdownAvailable && (
+        cost.usedCalculated || (t.records.length === 0 && cost.pricingAvailable)
+      ),
     }
   })
 
@@ -694,15 +704,17 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
           muted
         />
 
-        <Row api={props.api} label="Input" value={formatInt(totals().input)} />
-        <Row api={props.api} label="Output" value={formatInt(totals().output)} />
-        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row
           api={props.api}
-          label="Gesamt"
-          value={formatInt(totals().input + totals().output + totals().reasoning)}
+          label="Input"
+          value={formatInt(totals().input + totals().cacheRead + totals().cacheWrite)}
         />
-        <Row api={props.api} label="Kosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
+        <Row api={props.api} label="Output" value={formatInt(totals().output)} />
+        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
+        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
+        <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatEur(money().inputEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatEur(money().outputEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatEur(money().reasoningEur) : "nicht verfügbar"} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>

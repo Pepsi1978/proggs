@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  calculateSessionCostBreakdown,
   calculateUsageCost,
   calculateSessionCost,
   commitIfCurrent,
@@ -123,6 +124,67 @@ describe("models.dev pricing", () => {
         cacheWrite: 0,
       }),
     ).toBe(8)
+  })
+
+  test("splits session cost into input, output, and reasoning without double-counting", () => {
+    const cost = calculateSessionCostBreakdown(model, [{
+      usage: {
+        input: 100_000,
+        output: 2_000,
+        reasoning: 1_000,
+        cacheRead: 100_000,
+        cacheWrite: 10_000,
+      },
+      recordedCostUsd: 99,
+    }])
+    expect(cost).toMatchObject({
+      usedRecorded: false,
+      usedCalculated: true,
+      missingUnpriced: false,
+      pricingAvailable: true,
+      breakdownAvailable: true,
+    })
+    expect(cost.inputUsd).toBeCloseTo(0.6125)
+    expect(cost.outputUsd).toBeCloseTo(0.06)
+    expect(cost.reasoningUsd).toBeCloseTo(0.03)
+    expect(cost.usd).toBeCloseTo(0.7025)
+  })
+
+  test("falls back to the recorded total without inventing unavailable components", () => {
+    expect(calculateSessionCostBreakdown({ cost: { input: 5, output: 30 } }, [{
+      usage: { input: 0, output: 0, reasoning: 0, cacheRead: 1_000, cacheWrite: 0 },
+      recordedCostUsd: 0.25,
+    }])).toEqual({
+      usd: 0.25,
+      inputUsd: 0,
+      outputUsd: 0,
+      reasoningUsd: 0,
+      usedRecorded: true,
+      usedCalculated: false,
+      missingUnpriced: false,
+      pricingAvailable: true,
+      breakdownAvailable: false,
+    })
+  })
+
+  test("applies context tiers to each model step instead of their session sum", () => {
+    const step = {
+      usage: { input: 200_000, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+      recordedCostUsd: 0,
+    }
+    const cost = calculateSessionCostBreakdown(model, [step, step])
+    expect(cost.inputUsd).toBeCloseTo(2)
+    expect(cost.usd).toBeCloseTo(2)
+  })
+
+  test("uses a recorded total when zero catalog prices are stale", () => {
+    const cost = calculateSessionCostBreakdown({ cost: { input: 0, output: 0 } }, [{
+      usage: { input: 1_000, output: 100, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+      recordedCostUsd: 0.25,
+    }])
+    expect(cost.usd).toBe(0.25)
+    expect(cost.usedRecorded).toBe(true)
+    expect(cost.breakdownAvailable).toBe(false)
   })
 
   test("distinguishes known free pricing from missing and stale zero pricing", () => {
@@ -257,19 +319,35 @@ describe("models.dev pricing", () => {
       matchedMessages: 1,
     })
     expect(sessionUsageSnapshot(ledger).records[0]?.recordedCostUsd).toBe(0.75)
+    expect(sessionUsageSnapshot(ledger).records[0]?.segments).toEqual([
+      {
+        recordedCostUsd: 0.5,
+        usage: { input: 100, output: 20, reasoning: 10, cacheRead: 5, cacheWrite: 1 },
+      },
+      {
+        recordedCostUsd: 0.25,
+        usage: { input: 200, output: 30, reasoning: 15, cacheRead: 6, cacheWrite: 2 },
+      },
+    ])
+    expect(sessionUsageSnapshot(createSessionUsageLedger(serializeSessionUsage(ledger)))).toEqual(
+      sessionUsageSnapshot(ledger),
+    )
   })
 
   test("renders the requested token rows without a cache row", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
+    expect(source).toContain("totals().input + totals().cacheRead + totals().cacheWrite")
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
-    expect(source).toContain('label="Gesamt"')
+    expect(source).not.toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
     expect(source).toContain('api.event.on("message.updated"')
     expect(source).toContain('api.event.on("message.part.updated"')
     expect(source).toContain("parts: props.api.state.part(info.id)")
+    expect(source).toContain("t.records.flatMap((record)")
+    expect(source).toContain("record.segments ??")
     expect(source).toContain("api.client.session.messages({")
     expect(source).not.toContain("providerOf(message) !== providerID")
     expect(source).not.toContain("modelOf(message) !== modelID")
@@ -459,6 +537,21 @@ describe("models.dev pricing", () => {
     expect(source).toContain('return "<$0.000001 / 1M"')
     expect(source).not.toContain("MONEY_SOURCE_")
     expect(source).not.toContain("formatUsd(money().usd)")
+  })
+
+  test("renders total, input, output, and reasoning costs in euros", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    expect(source).toContain('label="Gesamtkosten"')
+    expect(source).toContain('label="Input-Kosten"')
+    expect(source).toContain('label="Output-Kosten"')
+    expect(source).toContain('label="Reasoning-Kosten"')
+    expect(source).toContain("formatEur(money().inputEur)")
+    expect(source).toContain("formatEur(money().outputEur)")
+    expect(source).toContain("formatEur(money().reasoningEur)")
+    expect(source).not.toContain('label="Kosten"')
+    expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
+    expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
+    expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

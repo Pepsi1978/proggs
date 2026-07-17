@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.7.1 - 17.07.2026, 18:10 Uhr
+Stand: v1.8.0 - 17.07.2026, 18:18 Uhr
 
 ## Funktionen
 
@@ -18,8 +18,9 @@ Stand: v1.7.1 - 17.07.2026, 18:10 Uhr
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
-- Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten.
-- Kumulative Session-Summen für Input, Output, Reasoning, Gesamt und Kosten, die durch Compress,
+- Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten, getrennt nach Input,
+  Output und Reasoning. Cache-Read und Cache-Write zählen zu den Input-Kosten.
+- Kumulative Session-Summen für Input, Output, Reasoning und Kosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
 - Das aktive `AGENTS.md`-Profil bleibt vollständig gültig und hat bei Widersprüchen Vorrang.
@@ -37,6 +38,24 @@ Für eine funktionsfähige Installation werden immer alle folgenden Bestandteile
 
 Die maßgebliche Quelle der Modusbezeichnungen und Prompts ist
 `dist/work-mode.ts`. Eine zweite Kopie der Prompttexte soll nicht gepflegt werden.
+
+## Kostenformel
+
+Die Sidebar rechnet jeden abgeschlossenen Modellschritt mit dessen Modell und Kontextstufe ab:
+
+```text
+Input-Kosten     = regulärer Input × Inputpreis
+                 + Cache-Read × Cache-Read-Preis
+                 + Cache-Write × Cache-Write-Preis
+Output-Kosten    = Output ohne Reasoning × Outputpreis
+Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
+Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten
+```
+
+Der sichtbare Input-Tokenwert umfasst regulären Input, Cache-Read und Cache-Write. Effort-Stufen
+haben keinen eigenen Multiplikator; sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
+Fehlt ein erforderlicher Preis, zeigt die Sidebar für die nicht belastbar aufteilbaren Werte
+`nicht verfügbar`, statt einen Preis zu erfinden.
 
 ## Empfohlene Installation
 
