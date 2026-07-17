@@ -1,6 +1,8 @@
 package de.frank.karteikartenlernen
 
 import de.frank.karteikartenlernen.model.advanceLearningQueue
+import de.frank.karteikartenlernen.model.Flashcard
+import de.frank.karteikartenlernen.model.learningSpeechText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,5 +24,16 @@ class LearningQueueTest {
 
         assertEquals(2, result.nextPosition)
         assertTrue(result.done)
+    }
+
+    @Test
+    fun activeNarrationReadsQuestionAndThenCompleteAnswerSide() {
+        val card = Flashcard(1L, "Was ist Licht?", "Elektromagnetische Strahlung", "Sie transportiert Energie.")
+
+        assertEquals("Was ist Licht?", learningSpeechText(card, flipped = false))
+        assertEquals(
+            "Was ist Licht? Elektromagnetische Strahlung. Sie transportiert Energie.",
+            learningSpeechText(card, flipped = true),
+        )
     }
 }

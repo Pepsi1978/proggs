@@ -12,9 +12,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import de.frank.karteikartenlernen.audio.EdgeTtsPlayer
@@ -38,7 +35,6 @@ class MainActivity : ComponentActivity() {
         edgeTtsPlayer = EdgeTtsPlayer(this)
         setContent {
             val state by viewModel.uiState.collectAsState()
-            var isSpeaking by remember { mutableStateOf(false) }
             KarteikartenApp(
                 state = state,
                 viewModel = viewModel,
@@ -48,18 +44,14 @@ class MainActivity : ComponentActivity() {
                     } else if (state.mic == MicState.IDLE) requestSpeechStart()
                 },
                 onSpeak = { text ->
-                    isSpeaking = true
                     edgeTtsPlayer.speak(
                         text = text,
                         voice = state.settings.voice,
                         speechRate = state.settings.speechRate,
-                        onComplete = { isSpeaking = false },
                     )
                 },
-                isSpeaking = isSpeaking,
                 onStopSpeaking = {
                     edgeTtsPlayer.stop()
-                    isSpeaking = false
                 },
                 onLogin = { viewModel.login(this) },
                 onOpenAuthPage = {

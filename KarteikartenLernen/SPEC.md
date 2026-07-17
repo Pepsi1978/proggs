@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.29 - 18.07.2026, 01:01 Uhr
+Version 0.1.30 - 18.07.2026, 01:05 Uhr
 
 ## 1. Übersicht
 
@@ -226,10 +226,12 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   inhaltlichen Einheiten liegt etwa eine Sekunde Pause. Quellen-URLs werden nicht
   vorgelesen. Stopp, Fehler und verspätete Netzwerk-Callbacks räumen alle temporären
   Dateien auf, ohne einen neueren Vorlesevorgang zu beeinflussen.
-- Der Lautsprecher in der Lernrunde ist ein echter Wiedergabe-Schalter: Während Edge
-  TTS spricht, leuchtet er orange. Im Ruhezustand ist er weiß und durchgestrichen.
-  Ein erneuter Tipp oder das Schließen der Lernrunde bricht die Wiedergabe sofort ab;
-  Abschluss und Fehler setzen den sichtbaren Zustand ebenfalls zuverlässig zurück.
+- Der Lautsprecher in der Lernrunde ist ein dauerhafter Vorlesemodus. Nach dem
+  Einschalten bleibt er orange und liest die aktuelle Frage, beim Umdrehen Frage,
+  Antwort und Erklärung sowie bei jeder nächsten Karte automatisch die neue Frage.
+  Der Modus bleibt auch nach dem Ende einer einzelnen Audioausgabe aktiv. Nur ein
+  erneuter manueller Tipp oder das Schließen der Lernrunde schaltet ihn aus und
+  stoppt laufendes Audio; ausgeschaltet ist das Symbol weiß und durchgestrichen.
 - Die Vorlesen-Aktionen der aktuellen Recherche und des Profil-Recherche-Details
   entfernen abschließende Quellenabschnitte vor dem TTS-Aufruf. Im Profil wird nur
   die Antwort vorgelesen, niemals die darüber angezeigte ursprüngliche Frage. Der

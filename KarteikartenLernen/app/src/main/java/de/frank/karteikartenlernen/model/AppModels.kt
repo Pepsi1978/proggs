@@ -16,6 +16,14 @@ data class Flashcard(
     val status: CardStatus = CardStatus.NEW,
 )
 
+fun learningSpeechText(card: Flashcard, flipped: Boolean): String {
+    if (!flipped) return card.question.trim()
+    return listOf(card.question, card.answer, card.explanation)
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .joinToString(" ") { part -> if (part.last() in ".,;:?!") part else "$part." }
+}
+
 data class StudySession(
     val id: String,
     val title: String,

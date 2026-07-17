@@ -12,6 +12,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -28,12 +32,12 @@ fun KarteikartenApp(
     viewModel: AppViewModel,
     onMicClick: () -> Unit,
     onSpeak: (String) -> Unit,
-    isSpeaking: Boolean,
     onStopSpeaking: () -> Unit,
     onLogin: () -> Unit,
     onOpenAuthPage: () -> Unit,
     onDarkChanged: (Boolean) -> Unit,
 ) {
+    var learningNarrationEnabled by remember { mutableStateOf(false) }
     val profile = if (state.settings.dark) state.settings.darkProfile else state.settings.lightProfile
     KarteikartenTheme(state.settings.dark, profile) {
         LaunchedEffect(state.settings.dark) { onDarkChanged(state.settings.dark) }
@@ -45,6 +49,7 @@ fun KarteikartenApp(
                 state.showModelSheet -> viewModel.showModelSheet(false)
                 state.showCrossSheet -> viewModel.closeCross()
                 state.learning != null -> {
+                    learningNarrationEnabled = false
                     onStopSpeaking()
                     viewModel.closeLearning()
                 }
@@ -110,6 +115,7 @@ fun KarteikartenApp(
                 LearningOverlay(
                     state = state,
                     onClose = {
+                        learningNarrationEnabled = false
                         onStopSpeaking()
                         viewModel.closeLearning()
                     },
@@ -117,7 +123,8 @@ fun KarteikartenApp(
                     onRate = viewModel::rateCard,
                     onRestart = viewModel::restartLearning,
                     onSpeak = onSpeak,
-                    isSpeaking = isSpeaking,
+                    narrationEnabled = learningNarrationEnabled,
+                    onNarrationEnabledChange = { learningNarrationEnabled = it },
                     onStopSpeaking = onStopSpeaking,
                 )
             }

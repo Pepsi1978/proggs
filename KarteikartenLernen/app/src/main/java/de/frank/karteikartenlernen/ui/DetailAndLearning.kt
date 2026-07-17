@@ -47,6 +47,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.CardStatus
 import de.frank.karteikartenlernen.model.Flashcard
 import de.frank.karteikartenlernen.model.SAMPLE_ANSWER
+import de.frank.karteikartenlernen.model.learningSpeechText
 import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.Newsreader
@@ -212,7 +214,8 @@ fun LearningOverlay(
     onRate: (Boolean) -> Unit,
     onRestart: () -> Unit,
     onSpeak: (String) -> Unit,
-    isSpeaking: Boolean,
+    narrationEnabled: Boolean,
+    onNarrationEnabledChange: (Boolean) -> Unit,
     onStopSpeaking: () -> Unit,
 ) {
     val c = LocalAppPalette.current
@@ -224,6 +227,9 @@ fun LearningOverlay(
             return@Box
         }
         val card = learning.deck[learning.queue[learning.position]]
+        LaunchedEffect(narrationEnabled, learning.position, learning.flipped) {
+            if (narrationEnabled) onSpeak(learningSpeechText(card, learning.flipped))
+        }
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 IconButtonBox(onClose, size = 36) { Icon(Icons.Outlined.Close, "Schließen", tint = c.text, modifier = Modifier.size(20.dp)) }
@@ -234,16 +240,20 @@ fun LearningOverlay(
                 val speakerOrange = Color(0xFFFFA24C)
                 IconButtonBox(
                     onClick = {
-                        if (isSpeaking) onStopSpeaking()
-                        else onSpeak(if (learning.flipped) "${card.answer}. ${card.explanation}" else card.question)
+                        if (narrationEnabled) {
+                            onNarrationEnabledChange(false)
+                            onStopSpeaking()
+                        } else {
+                            onNarrationEnabledChange(true)
+                        }
                     },
                     size = 36,
-                    background = if (isSpeaking) speakerOrange.copy(alpha = 0.18f) else null,
+                    background = if (narrationEnabled) speakerOrange.copy(alpha = 0.18f) else null,
                 ) {
                     Icon(
-                        if (isSpeaking) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
-                        if (isSpeaking) "Vorlesen stoppen" else "Vorlesen",
-                        tint = if (isSpeaking) speakerOrange else Color.White,
+                        if (narrationEnabled) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
+                        if (narrationEnabled) "Automatisches Vorlesen ausschalten" else "Automatisches Vorlesen einschalten",
+                        tint = if (narrationEnabled) speakerOrange else Color.White,
                         modifier = Modifier.size(20.dp),
                     )
                 }
