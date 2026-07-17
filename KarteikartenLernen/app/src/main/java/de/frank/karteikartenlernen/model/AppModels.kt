@@ -5,6 +5,9 @@ enum class MicState { IDLE, RECORDING, TRANSCRIBING }
 enum class GenerationPhase { ANSWER, CARDS, DONE }
 enum class CardStatus { NEW, KNOWN, UNKNOWN }
 
+internal fun normalizeModelName(value: String): String =
+    if (value == "GPT 5.6 Soul") "GPT 5.6 Sol" else value
+
 data class Flashcard(
     val id: Long,
     val question: String,

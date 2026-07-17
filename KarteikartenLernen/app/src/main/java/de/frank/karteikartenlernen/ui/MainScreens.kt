@@ -126,7 +126,7 @@ fun SettingsScreen(
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
         SettingsSection("GPT-MODELL") {
             SettingRow("Aktives Modell", "${state.model}") {
-                SegmentedControl(listOf("Soul", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { onModel("GPT 5.6 $it") })
+                SegmentedControl(listOf("Sol", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { onModel("GPT 5.6 $it") })
             }
             SettingRow("Reasoning-Stufe") {
                 SegmentedControl(listOf("Niedrig", "Mittel", "Hoch"), state.reasoning, onReasoning)

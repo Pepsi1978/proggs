@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.24 - 18.07.2026, 00:50 Uhr
+Version 0.1.25 - 18.07.2026, 00:52 Uhr
 
 ## 1. Übersicht
 
@@ -140,7 +140,7 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
    gegliederte Antwort, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
-7. **Modell-Bottom-Sheet:** GPT 5.6 Soul/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.
+7. **Modell-Bottom-Sheet:** GPT 5.6 Sol/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.
    Das Fenster fährt sichtbar von unten ein und wieder aus. Es lässt sich am oberen
    Griff mit einer Abwärtsbewegung schließen; Inhalt und Hintergrund folgen der
    Ziehbewegung ohne abrupten Sichtbarkeitswechsel.
@@ -208,6 +208,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 - Bei „Nicht gewusst“ wird die Karte ans Ende der aktuellen Queue gehängt; „Gewusst“
   schließt sie für die Runde ab. Die Abschlussansicht zeigt beide Zähler.
 - Alle sichtbaren Einstellungen sind interaktiv und persistent.
+- Das offizielle Modell heißt überall `GPT 5.6 Sol`. Der frühere falsche gespeicherte
+  Anzeigename `GPT 5.6 Soul` wird beim Laden automatisch und verlustfrei migriert.
 - Vorlesen verwendet den Microsoft-Edge-TTS-WebSocket aus Best Journal Android.
   Die sechs deutschen Neural-Stimmen werden mit ihren echten Microsoft-Voice-IDs
   in einem Dropdown angeboten; bestehende Anzeigenamen werden automatisch migriert.
