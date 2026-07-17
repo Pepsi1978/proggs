@@ -161,8 +161,6 @@ fun FisetinApp(
                         onSaveProtocol = viewModel::saveProtocol,
                         onSaveIngredient = viewModel::saveIngredient,
                         onDeleteIngredient = viewModel::deleteIngredient,
-                        onSaveStack = viewModel::saveStackItem,
-                        onDeleteStack = viewModel::deleteStackItem,
                         onOpenBatterySettings = onOpenBatterySettings,
                         modifier = modifier,
                     )

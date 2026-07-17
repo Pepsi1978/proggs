@@ -14,8 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,9 +35,6 @@ import de.frank.fisetinbegleiter.BuildConfig
 import de.frank.fisetinbegleiter.data.IngredientEntity
 import de.frank.fisetinbegleiter.data.IngredientPhase
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
-import de.frank.fisetinbegleiter.data.StackCategory
-import de.frank.fisetinbegleiter.data.StackItemEntity
-import de.frank.fisetinbegleiter.ui.theme.AllowedGreen
 import de.frank.fisetinbegleiter.ui.theme.WarningYellow
 import de.frank.fisetinbegleiter.ui.theme.WarningYellowContainer
 
@@ -49,8 +44,6 @@ fun MoreScreen(
     onSaveProtocol: (ProtocolTemplateEntity) -> Unit,
     onSaveIngredient: (IngredientEntity) -> Unit,
     onDeleteIngredient: (IngredientEntity) -> Unit,
-    onSaveStack: (StackItemEntity) -> Unit,
-    onDeleteStack: (StackItemEntity) -> Unit,
     onOpenBatterySettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -59,8 +52,6 @@ fun MoreScreen(
         onSaveProtocol,
         onSaveIngredient,
         onDeleteIngredient,
-        onSaveStack,
-        onDeleteStack,
         onOpenBatterySettings,
         modifier.padding(horizontal = 20.dp),
     )
@@ -72,8 +63,6 @@ private fun SettingsContent(
     onSaveProtocol: (ProtocolTemplateEntity) -> Unit,
     onSaveIngredient: (IngredientEntity) -> Unit,
     onDeleteIngredient: (IngredientEntity) -> Unit,
-    onSaveStack: (StackItemEntity) -> Unit,
-    onDeleteStack: (StackItemEntity) -> Unit,
     onOpenBatterySettings: () -> Unit,
     modifier: Modifier,
 ) {
@@ -81,8 +70,6 @@ private fun SettingsContent(
     var protocol by remember(state.protocol) { mutableStateOf(state.protocol) }
     var editedIngredient by remember { mutableStateOf<IngredientEntity?>(null) }
     var ingredientDialog by remember { mutableStateOf(false) }
-    var editedStack by remember { mutableStateOf<StackItemEntity?>(null) }
-    var stackDialog by remember { mutableStateOf(false) }
 
     LazyColumn(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionTitle("System", "Berechtigungen und Zuverlässigkeit der App.") }
@@ -154,18 +141,6 @@ private fun SettingsContent(
         item {
             OutlinedButton(onClick = { editedIngredient = null; ingredientDialog = true }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Zutat hinzufügen") }
         }
-        item { Text("Konflikt-Tabelle", style = MaterialTheme.typography.headlineMedium) }
-        items(state.stackItems, key = { stackItemListKey(it.id) }) { item ->
-            EditableRow(
-                title = item.name,
-                subtitle = "${categoryLabel(item.category)} · ${item.usualDose}",
-                onEdit = if (locked) null else ({ editedStack = item; stackDialog = true }),
-                onDelete = if (locked || item.isMedication) null else ({ onDeleteStack(item) }),
-            )
-        }
-        item {
-            OutlinedButton(onClick = { editedStack = null; stackDialog = true }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Substanz hinzufügen") }
-        }
         item { Text("App-Version ${BuildConfig.VERSION_NAME} · Stand ${BuildConfig.VERSION_BUMPED_AT}", style = MaterialTheme.typography.bodySmall) }
         item { Spacer(Modifier.height(12.dp)) }
     }
@@ -176,14 +151,6 @@ private fun SettingsContent(
             nextSort = state.ingredients.size + 1,
             onDismiss = { ingredientDialog = false },
             onSave = { onSaveIngredient(it); ingredientDialog = false },
-        )
-    }
-    if (stackDialog) {
-        StackEditor(
-            item = editedStack,
-            nextSort = state.stackItems.size + 1,
-            onDismiss = { stackDialog = false },
-            onSave = { onSaveStack(it); stackDialog = false },
         )
     }
 }
@@ -248,60 +215,4 @@ private fun IngredientEditor(item: IngredientEntity?, nextSort: Int, onDismiss: 
     )
 }
 
-@Composable
-private fun StackEditor(item: StackItemEntity?, nextSort: Int, onDismiss: () -> Unit, onSave: (StackItemEntity) -> Unit) {
-    var name by remember(item) { mutableStateOf(item?.name.orEmpty()) }
-    var dose by remember(item) { mutableStateOf(item?.usualDose.orEmpty()) }
-    var note by remember(item) { mutableStateOf(item?.note.orEmpty()) }
-    var category by remember(item) { mutableStateOf(item?.category ?: StackCategory.UNPROBLEMATISCH) }
-    var expanded by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (item == null) "Substanz hinzufügen" else "Substanz bearbeiten") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), enabled = item?.isMedication != true)
-                OutlinedTextField(dose, { dose = it }, label = { Text("Übliche Dosis") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(note, { note = it }, label = { Text("Hinweis") }, modifier = Modifier.fillMaxWidth())
-                Column {
-                    OutlinedButton(onClick = { expanded = true }, enabled = item?.isMedication != true) { Text(categoryLabel(category)) }
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        StackCategory.entries.forEach { value ->
-                            DropdownMenuItem(text = { Text(categoryLabel(value)) }, onClick = { category = value; expanded = false })
-                        }
-                    }
-                }
-                if (item?.isMedication == true) Text("Medikamente bleiben immer als unproblematisch gekennzeichnet.", color = AllowedGreen)
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = name.isNotBlank() && dose.isNotBlank(),
-                onClick = {
-                    onSave(
-                        StackItemEntity(
-                            id = item?.id ?: 0,
-                            name = name.trim(),
-                            usualDose = dose.trim(),
-                            category = if (item?.isMedication == true) StackCategory.UNPROBLEMATISCH else category,
-                            isMedication = item?.isMedication ?: false,
-                            note = note.trim(),
-                            sortOrder = item?.sortOrder ?: nextSort,
-                        ),
-                    )
-                },
-            ) { Text("Speichern") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
-    )
-}
-
-private fun categoryLabel(category: StackCategory): String = when (category) {
-    StackCategory.HARTE_SPERRE -> "Harte Sperre"
-    StackCategory.GRENZFALL -> "Grenzfall"
-    StackCategory.UNPROBLEMATISCH -> "Unproblematisch"
-}
-
 internal fun ingredientListKey(id: Long): String = "ingredient:$id"
-
-internal fun stackItemListKey(id: Long): String = "stack:$id"
