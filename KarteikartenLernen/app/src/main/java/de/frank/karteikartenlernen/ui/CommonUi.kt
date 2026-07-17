@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.School
@@ -115,37 +114,21 @@ fun GlassSurface(
 }
 
 @Composable
-fun AppHeader(model: String, reasoning: String, onModelClick: () -> Unit) {
+fun AppHeader() {
     val c = LocalAppPalette.current
-    Row(
+    Column(
         Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("RECHERCHE", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp)
-            Text(
-                "Was möchtest du wissen?",
-                color = c.text,
-                fontFamily = Newsreader,
-                fontSize = 24.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        GlassSurface(
-            Modifier.clickable(onClick = onModelClick),
-            radius = 99.dp,
-        ) {
-            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(8.dp).background(c.accent2, CircleShape))
-                Column(Modifier.padding(start = 8.dp)) {
-                    Text(model, color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp)
-                    Text("Reasoning · $reasoning", color = c.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, lineHeight = 11.sp)
-                }
-            }
-        }
+        Text("RECHERCHE", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp)
+        Text(
+            "Was möchtest du wissen?",
+            color = c.text,
+            fontFamily = Newsreader,
+            fontSize = 24.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 

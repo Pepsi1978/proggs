@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.6 - 17.07.2026, 22:46 Uhr
+Version 0.1.7 - 17.07.2026, 22:48 Uhr
 
 ## 1. Übersicht
 
@@ -126,8 +126,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 
 ## 5. Screens und Zustände
 
-1. **Recherche, leer:** Kopfzeile, Modell-Chip, animiertes Mikrofon, Eingabefeld,
-   Sprachaufnahme, Deutsch-Verbesserung, Rückgängig und Absenden.
+1. **Recherche, leer:** Kopfzeile, animiertes Mikrofon und ein Eingabefeld mit
+   Modell-Chip unten rechts, Sprachaufnahme, Deutsch-Verbesserung, Rückgängig und
+   Absenden. Das Eingabefeld wächst von `102` bis maximal `306` dp und scrollt
+   danach per Touch ohne sichtbare Scrollleiste.
 2. **Recherche, Aufnahme:** Pulsringe, neun Pegelbalken, roter Mikrofonkern und Timer.
 3. **Recherche, Transkription:** Spinner, Whisper-Text und Shimmer über dem Eingabefeld.
 4. **Recherche, Formulierung:** animierter Loader; neue Formulierung kann rückgängig

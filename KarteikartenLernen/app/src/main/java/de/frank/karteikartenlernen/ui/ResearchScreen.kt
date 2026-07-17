@@ -1,6 +1,7 @@
 package de.frank.karteikartenlernen.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,31 +60,47 @@ fun ResearchScreen(
     onReset: () -> Unit,
 ) {
     val c = LocalAppPalette.current
-    AppHeader(state.model, state.reasoning, onModelClick)
+    AppHeader()
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
         if (state.answer == null) MicButton(state.mic, state.recordingSeconds, onMicClick)
         Spacer(Modifier.height(if (state.answer == null) 4.dp else 8.dp))
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(102.dp)
+                .heightIn(min = 102.dp, max = 306.dp)
+                .animateContentSize()
                 .clip(RoundedCornerShape(18.dp))
                 .background(c.field)
-                .border(1.dp, if (state.input.isNotEmpty()) c.borderHigh else c.border, RoundedCornerShape(18.dp))
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .border(1.dp, if (state.input.isNotEmpty()) c.borderHigh else c.border, RoundedCornerShape(18.dp)),
         ) {
             BasicTextField(
                 value = state.input,
                 onValueChange = onInput,
                 textStyle = TextStyle(color = c.text, fontSize = 15.5.sp, lineHeight = 23.sp, fontFamily = SchibstedGrotesk),
-                modifier = Modifier.fillMaxWidth(),
+                minLines = 1,
+                maxLines = Int.MAX_VALUE,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 102.dp, max = 306.dp),
                 decorationBox = { inner ->
-                    if (state.input.isEmpty()) Text("Frage sprechen oder hier eintippen …", color = c.faint, fontSize = 15.5.sp)
-                    inner()
+                    Box(Modifier.fillMaxWidth().padding(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 58.dp)) {
+                        if (state.input.isEmpty()) Text("Frage sprechen oder hier eintippen …", color = c.faint, fontSize = 15.5.sp)
+                        inner()
+                    }
                 },
             )
+            GlassSurface(
+                Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 10.dp).clickable(onClick = onModelClick),
+                radius = 99.dp,
+            ) {
+                Row(Modifier.padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).background(c.accent2, CircleShape))
+                    Column(Modifier.padding(start = 8.dp)) {
+                        Text(state.model, color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp)
+                        Text("Reasoning · ${state.reasoning}", color = c.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, lineHeight = 11.sp)
+                    }
+                }
+            }
             if (state.mic == MicState.TRANSCRIBING) {
-                Box(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) { LoadingRing(c.accent, 20.dp) }
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 14.dp)) { LoadingRing(c.accent, 20.dp) }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
