@@ -133,10 +133,8 @@ fun SettingsScreen(
             SettingRow("Reasoning-Stufe") {
                 SegmentedControl(listOf("Niedrig", "Mittel", "Hoch"), state.reasoning, onReasoning)
             }
-            SettingRow("Karten pro Recherche", if (s.cardsPerResearch == 0) "Unbegrenzt" else "${s.cardsPerResearch} Karten") {
-                SmallPill(if (s.cardsPerResearch == 0) "Maximum" else s.cardsPerResearch.toString()) {
-                    onSettings { old -> old.copy(cardsPerResearch = when (old.cardsPerResearch) { 0 -> 10; 10 -> 20; 20 -> 30; else -> 0 }) }
-                }
+            SettingRow("Karten pro Recherche", "Automatisch nach Inhalt") {
+                Text("30–70", color = c.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         SettingsSection("VERBINDUNGEN") {

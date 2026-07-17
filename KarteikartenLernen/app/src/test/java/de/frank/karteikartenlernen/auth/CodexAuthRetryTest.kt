@@ -66,6 +66,45 @@ class CodexAuthRetryTest {
     }
 
     @Test
+    fun codexSsePrefersCompleteResponseOverPartialDeltas() {
+        val stream = """
+            data: {"type":"response.output_text.delta","delta":"teilweise"}
+            data: {"type":"response.completed","response":{"output_text":"vollständig"}}
+        """.trimIndent()
+
+        assertEquals("vollständig", parseCodexSse(stream))
+    }
+
+    @Test
+    fun researchPayloadRequiresWebSearchAndDynamicCardRange() {
+        val payload = codexResearchPayload("gpt-test", "Hoch", "Erkläre Photosynthese")
+        val schema = payload.getJSONObject("text").getJSONObject("format").getJSONObject("schema")
+        val cards = schema.getJSONObject("properties").getJSONObject("cards")
+
+        assertEquals("web_search", payload.getJSONArray("tools").getJSONObject(0).getString("type"))
+        assertEquals("auto", payload.getString("tool_choice"))
+        assertEquals("high", payload.getJSONObject("reasoning").getString("effort"))
+        assertEquals(30, cards.getInt("minItems"))
+        assertEquals(70, cards.getInt("maxItems"))
+    }
+
+    @Test
+    fun researchInstructionsRequireSimpleGermanAndForeignWordExplanations() {
+        val instructions = researchInstructions()
+
+        assertTrue(instructions.contains("Niveau der 10. Klasse"))
+        assertTrue(instructions.contains("Fachwort oder Fremdwort"))
+        assertTrue(instructions.contains("1.500 und 5.000 Wörtern"))
+        assertTrue(instructions.contains("30 bis 70"))
+    }
+
+    @Test
+    fun wordCountHandlesWhitespaceAndParagraphs() {
+        assertEquals(5, researchWordCount(" Eins  zwei\n\ndrei\tvier fünf "))
+        assertEquals(0, researchWordCount("   \n "))
+    }
+
+    @Test
     fun codexSseRejectsStreamsWithoutCompletion() {
         val stream = """data: {"type":"response.output_text.delta","delta":"teilweise"}"""
 

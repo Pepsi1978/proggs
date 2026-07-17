@@ -239,7 +239,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         generationJob?.cancel()
         generationJob = viewModelScope.launch {
             val result = runCatching {
-                auth.generateResearch(modelId(state.model), state.reasoning, state.input, state.settings.cardsPerResearch)
+                auth.generateResearch(modelId(state.model), state.reasoning, state.input)
             }.getOrElse { error ->
                 if (error is CodexAuthException && error.kind == AuthErrorKind.REAUTH) {
                     auth.logout()

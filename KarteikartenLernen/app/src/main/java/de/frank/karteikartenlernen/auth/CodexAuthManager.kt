@@ -26,6 +26,7 @@ data class AuthResult(val email: String?)
 data class DeviceAuthInfo(val userCode: String, val verificationUri: String)
 data class GeneratedCard(val question: String, val answer: String, val explanation: String)
 data class GeneratedResearch(val title: String, val answer: String, val cards: List<GeneratedCard>)
+private data class GeneratedSource(val title: String, val url: String)
 
 enum class AuthErrorKind { REAUTH, QUOTA, NETWORK }
 class CodexAuthException(val kind: AuthErrorKind, message: String) : Exception(message)
@@ -80,8 +81,8 @@ internal fun parseCodexSse(body: String): String {
         }
     }
     if (!completed) throw CodexAuthException(AuthErrorKind.NETWORK, "Die OpenAI-Verbindung endete vor dem Abschluss der Antwort.")
-    return deltas.toString().takeIf(String::isNotBlank)
-        ?: completedText?.takeIf(String::isNotBlank)
+    return completedText?.takeIf(String::isNotBlank)
+        ?: deltas.toString().takeIf(String::isNotBlank)
         ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antworttext geliefert.")
 }
 
@@ -91,11 +92,81 @@ internal fun extractOutputText(json: JSONObject): String? {
     for (i in 0 until output.length()) {
         val content = output.optJSONObject(i)?.optJSONArray("content") ?: continue
         for (j in 0 until content.length()) {
-            content.optJSONObject(j)?.optString("text")?.takeIf(String::isNotBlank)?.let { return it }
+            val item = content.optJSONObject(j) ?: continue
+            (item.optString("text").takeIf(String::isNotBlank)
+                ?: item.optString("output_text").takeIf(String::isNotBlank))?.let { return it }
         }
     }
     return null
 }
+
+internal fun researchInstructions(): String = """
+    Nutze die Websuche aktiv. Beantworte die Frage nur mit fachlich zuverlässigen und möglichst aktuellen Informationen.
+    Schreibe die gesamte Ausgabe auf Deutsch für Menschen auf dem Niveau der 10. Klasse. Verwende kurze, klare Sätze,
+    aktive Formulierungen und einfaches Deutsch. Das gilt auch für Erklärungen und Beschreibungen auf den Karteikarten.
+    Vermeide unnötige Fremdwörter. Wenn ein Fachwort oder Fremdwort nötig ist, erkläre es beim ersten Auftreten sofort
+    in einfachen Worten. Setze kein Vorwissen über das Thema voraus.
+
+    Erzeuge einen kurzen, eindeutigen Sessiontitel. Die Lernantwort muss zwischen 1.500 und 5.000 Wörtern lang sein.
+    Gliedere sie mit aussagekräftigen Markdown-Überschriften der Ebene 2 im Format "## Überschrift". Unter jeder
+    Überschrift folgt ein zusammenhängender Absatz, der ungefähr 7 bis 13 Bildschirmzeilen beziehungsweise meist
+    90 bis 150 Wörter umfasst. Trenne Absätze durch eine Leerzeile. Verwende keine Tabellen und keine Stichpunktwüsten.
+
+    Erzeuge abhängig von Umfang und Verständnisdichte des Themas automatisch 30 bis 70 eigenständige Karteikarten.
+    Decke die wichtigen Zusammenhänge ab, ohne Karten künstlich aufzufüllen oder Inhalte doppelt abzufragen. Jede
+    Kartenfrage prüft echtes Verständnis. Jede Antwort ist klar und knapp. Jede Erklärung beschreibt in einfachem
+    Deutsch, warum die Antwort stimmt, und erklärt darin vorkommende Fach- oder Fremdwörter.
+
+    Gib zusätzlich 3 bis 12 tatsächlich verwendete Webquellen mit präzisem Titel und vollständiger URL zurück.
+""".trimIndent()
+
+internal fun codexResearchPayload(model: String, reasoning: String, question: String): JSONObject = JSONObject().apply {
+    put("model", model)
+    put("stream", true)
+    put("store", false)
+    put("instructions", researchInstructions())
+    put("input", codexInput(question))
+    put("reasoning", JSONObject().put("effort", reasoning.lowercase().replace("mittel", "medium").replace("niedrig", "low").replace("hoch", "high")))
+    put("tools", JSONArray().put(JSONObject().put("type", "web_search")))
+    put("tool_choice", "auto")
+    put("text", structuredResearchOutputFormat())
+}
+
+internal fun structuredResearchOutputFormat(): JSONObject {
+    val card = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("properties", JSONObject()
+            .put("question", JSONObject().put("type", "string"))
+            .put("answer", JSONObject().put("type", "string"))
+            .put("explanation", JSONObject().put("type", "string")))
+        .put("required", JSONArray(listOf("question", "answer", "explanation")))
+    val source = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("properties", JSONObject()
+            .put("title", JSONObject().put("type", "string"))
+            .put("url", JSONObject().put("type", "string")))
+        .put("required", JSONArray(listOf("title", "url")))
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("properties", JSONObject()
+            .put("title", JSONObject().put("type", "string"))
+            .put("answer", JSONObject().put("type", "string"))
+            .put("cards", JSONObject().put("type", "array").put("minItems", 30).put("maxItems", 70).put("items", card))
+            .put("sources", JSONObject().put("type", "array").put("minItems", 3).put("maxItems", 12).put("items", source)))
+        .put("required", JSONArray(listOf("title", "answer", "cards", "sources")))
+    return JSONObject().put("format", JSONObject()
+        .put("type", "json_schema")
+        .put("name", "karteikarten_research")
+        .put("strict", true)
+        .put("schema", schema))
+}
+
+internal fun researchWordCount(text: String): Int = text.trim()
+    .split(Regex("\\s+"))
+    .count(String::isNotBlank)
 
 class CodexAuthManager(context: Context) {
     private val appContext = context.applicationContext
@@ -169,26 +240,17 @@ class CodexAuthManager(context: Context) {
 
     fun cancelLogin() = Unit
 
-    suspend fun generateResearch(model: String, reasoning: String, question: String, cardLimit: Int): GeneratedResearch =
+    suspend fun generateResearch(model: String, reasoning: String, question: String): GeneratedResearch =
         withContext(Dispatchers.IO) {
             val token = validAccessToken()
             val accountId = jwtClaim(token, "chatgpt_account_id")
                 ?: store.getString(KEY_ACCOUNT_ID, null)
                 ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
-            val requestedCards = if (cardLimit == 0) 12 else cardLimit
-            val payload = JSONObject().apply {
-                put("model", model)
-                put("stream", true)
-                put("store", false)
-                put("instructions", "Antworte auf Deutsch, fachlich korrekt und gut verständlich. Erzeuge einen kurzen Sessiontitel, eine Lernantwort und genau $requestedCards eigenständige Karteikarten. Keine Markdown-Syntax.")
-                put("input", codexInput(question))
-                put("reasoning", JSONObject().put("effort", reasoning.lowercase().replace("mittel", "medium").replace("niedrig", "low").replace("hoch", "high")))
-                put("text", structuredOutputFormat())
-            }
+            val payload = codexResearchPayload(model, reasoning, question)
             val connection = (URL(RESPONSES_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 20_000
-                readTimeout = 120_000
+                readTimeout = 180_000
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Accept", "text/event-stream")
@@ -205,9 +267,36 @@ class CodexAuthManager(context: Context) {
                 throw CodexAuthException(AuthErrorKind.NETWORK, "Das gewählte GPT-Modell hat keine gültigen strukturierten Lerndaten geliefert.")
             }
             val cards = result.getJSONArray("cards")
+            val answer = result.getString("answer").trim()
+            val wordCount = researchWordCount(answer)
+            if (wordCount !in MIN_RESEARCH_WORDS..MAX_RESEARCH_WORDS) {
+                throw CodexAuthException(
+                    AuthErrorKind.NETWORK,
+                    "OpenAI hat $wordCount statt 1.500 bis 5.000 Wörtern geliefert. Bitte versuche die Recherche erneut.",
+                )
+            }
+            if (cards.length() !in MIN_RESEARCH_CARDS..MAX_RESEARCH_CARDS) {
+                throw CodexAuthException(
+                    AuthErrorKind.NETWORK,
+                    "OpenAI hat ${cards.length()} statt 30 bis 70 Verständnis-Karten geliefert. Bitte versuche die Recherche erneut.",
+                )
+            }
+            val sourceRows = result.getJSONArray("sources")
+            val sources = (0 until sourceRows.length()).map { index ->
+                val source = sourceRows.getJSONObject(index)
+                GeneratedSource(source.getString("title").trim(), source.getString("url").trim())
+            }.filter { it.title.isNotBlank() && (it.url.startsWith("https://") || it.url.startsWith("http://")) }
+            if (sources.size < MIN_RESEARCH_SOURCES) {
+                throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keine ausreichende Liste der verwendeten Webquellen geliefert.")
+            }
+            val answerWithSources = buildString {
+                append(answer)
+                append("\n\n## Quellen\n\n")
+                append(sources.joinToString("\n") { "- ${it.title}: ${it.url}" })
+            }
             GeneratedResearch(
-                title = result.getString("title"),
-                answer = result.getString("answer"),
+                title = result.getString("title").trim(),
+                answer = answerWithSources,
                 cards = (0 until cards.length()).map { index ->
                     val card = cards.getJSONObject(index)
                     GeneratedCard(card.getString("question"), card.getString("answer"), card.getString("explanation"))
@@ -372,30 +461,6 @@ class CodexAuthManager(context: Context) {
         }
     }
 
-    private fun structuredOutputFormat(): JSONObject {
-        val card = JSONObject()
-            .put("type", "object")
-            .put("additionalProperties", false)
-            .put("properties", JSONObject()
-                .put("question", JSONObject().put("type", "string"))
-                .put("answer", JSONObject().put("type", "string"))
-                .put("explanation", JSONObject().put("type", "string")))
-            .put("required", JSONArray(listOf("question", "answer", "explanation")))
-        val schema = JSONObject()
-            .put("type", "object")
-            .put("additionalProperties", false)
-            .put("properties", JSONObject()
-                .put("title", JSONObject().put("type", "string"))
-                .put("answer", JSONObject().put("type", "string"))
-                .put("cards", JSONObject().put("type", "array").put("items", card)))
-            .put("required", JSONArray(listOf("title", "answer", "cards")))
-        return JSONObject().put("format", JSONObject()
-            .put("type", "json_schema")
-            .put("name", "karteikarten_research")
-            .put("strict", true)
-            .put("schema", schema))
-    }
-
     private fun jwtClaim(token: String, name: String): String? {
         val payload = jwtPayload(token) ?: return null
         return payload.optJSONObject("https://api.openai.com/auth")?.optString(name)?.takeIf(String::isNotBlank)
@@ -421,6 +486,11 @@ class CodexAuthManager(context: Context) {
         private const val DEVICE_VERIFICATION_URL = "https://auth.openai.com/codex/device"
         private const val DEVICE_REDIRECT_URI = "https://auth.openai.com/deviceauth/callback"
         private const val RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
+        private const val MIN_RESEARCH_WORDS = 1_500
+        private const val MAX_RESEARCH_WORDS = 5_000
+        private const val MIN_RESEARCH_CARDS = 30
+        private const val MAX_RESEARCH_CARDS = 70
+        private const val MIN_RESEARCH_SOURCES = 3
         private const val REFRESH_SKEW_MS = 120_000L
         private const val FOREGROUND_NETWORK_TIMEOUT_MS = 5 * 60_000L
         private const val DEVICE_CODE_LIFETIME_MS = 15 * 60_000L

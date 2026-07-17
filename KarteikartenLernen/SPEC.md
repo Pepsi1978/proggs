@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.17 - 17.07.2026, 23:49 Uhr
+Version 0.1.18 - 18.07.2026, 00:28 Uhr
 
 ## 1. Übersicht
 
@@ -181,8 +181,12 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   bedeutungstreuen Redaktionsanweisung: Intention, Satzbau, Wortstellung,
   Verständlichkeit und Stil werden aktiv verbessert, ohne Fakten hinzuzuerfinden.
   Das Original bleibt in der Versionshistorie erhalten und unterstützt Rückgängig.
-- Absenden erzeugt eine Antwort und Karteikarten, speichert beides in einer Session
-  und zeigt danach passende bestehende Sessions zur optionalen Kopie.
+- Absenden nutzt die Codex-Websuche und erzeugt eine gegliederte Antwort mit 1.500 bis
+  5.000 Wörtern sowie automatisch 30 bis 70 Verständnis-Karteikarten. Antwort,
+  Erklärungen und Beschreibungen verwenden einfaches Deutsch auf dem Niveau der
+  10. Klasse; notwendige Fach- und Fremdwörter werden beim ersten Auftreten erklärt.
+  Die Antwort nennt die tatsächlich verwendeten Webquellen, speichert alles in einer
+  Session und zeigt danach passende bestehende Sessions zur optionalen Kopie.
 - Session-Suche filtert Titel lokal; Karten können gelöscht und Lernstände
   zurückgesetzt werden.
 - „Nur schwierige“ nimmt alle Karten außer Status `known`.
