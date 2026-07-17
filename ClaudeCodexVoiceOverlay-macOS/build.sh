@@ -6,6 +6,18 @@ SRC_DIR="$PROJECT_DIR/ClaudeCodexVoiceOverlay"
 BUILD_DIR="$PROJECT_DIR/build"
 APP_NAME="ClaudeCodexVoiceOverlay"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+source "$PROJECT_DIR/../voice-overlay-deploy-guard.sh"
+DEPLOYMENT_RESERVED=0
+cleanup_deployment_guard() {
+    release_voice_overlay_deployment "$APP_NAME" 5724 "$DEPLOYMENT_RESERVED"
+}
+trap cleanup_deployment_guard EXIT
+if reserve_voice_overlay_deployment "$APP_NAME" 5724; then
+    DEPLOYMENT_RESERVED=1
+else
+    rc=$?
+    if [ "$rc" -eq 2 ]; then exit 1; fi
+fi
 
 # Voice-Overlay-Config-Datei in $HOME/SK/VoiceOverlays/ installieren falls
 # noch nicht vorhanden. Idempotent — vorhandene User-Anpassungen werden NIE

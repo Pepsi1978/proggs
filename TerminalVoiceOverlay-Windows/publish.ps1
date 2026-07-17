@@ -8,7 +8,9 @@ $publishDir = Join-Path $PSScriptRoot "publish"
 $exePath = Join-Path $publishDir "TerminalVoiceOverlay.exe"
 $deploymentMutex = [System.Threading.Mutex]::new($false, "Local\TerminalVoiceOverlay.Deployment")
 $mutexHeld = $false
+$reservationHeld = $false
 $exitCode = 0
+. (Join-Path $PSScriptRoot '..\voice-overlay-deploy-guard.ps1')
 
 try {
     try {
@@ -19,6 +21,7 @@ try {
     if (-not $mutexHeld) {
         throw "Ein anderes TerminalVoiceOverlay-Deployment ist noch aktiv."
     }
+    $reservationHeld = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TerminalVoiceOverlay' -Port 5723
 
     Write-Host "Baue TerminalVoiceOverlay..." -ForegroundColor Cyan
 
@@ -48,6 +51,7 @@ try {
     Write-Host "`nPublish fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor Red
     $exitCode = 1
 } finally {
+    Exit-VoiceOverlayDeploymentWindow -ProcessName 'TerminalVoiceOverlay' -Port 5723 -Reserved $reservationHeld
     if ($mutexHeld) {
         $deploymentMutex.ReleaseMutex()
     }

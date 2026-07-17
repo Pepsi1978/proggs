@@ -35,10 +35,11 @@ namespace TerminalVoiceOverlay.Services
 
         private readonly Func<bool> _getCurrentState;
         private readonly Action _toggle;
-        // Liefert "ist das Overlay gerade beschaeftigt?" (Aufnahme/Transkription/BTW).
-        // Wird von rebuild-overlay.ps1 ueber GET /recording/status abgefragt, damit ein
-        // Rebuild NICHT killt waehrend Frank einspricht (Datenverlust-Schutz).
+        // Busy-Status plus atomare Deployment-Reservierung schuetzen Aufnahme,
+        // Transkription und Paste in allen Build-/Update-Einstiegen.
         private readonly Func<bool>? _getBusyState;
+        private readonly Func<bool>? _tryBeginDeployment;
+        private readonly Action? _endDeployment;
         private HttpListener? _listener;
         private Thread? _thread;
         private volatile bool _stopRequested;
@@ -61,11 +62,18 @@ namespace TerminalVoiceOverlay.Services
         /// Nach dem Toggle wird <paramref name="getCurrentState"/> erneut
         /// abgefragt, um den neuen Stand als Antwort zu senden.
         /// </summary>
-        public AutoEnterStatusServer(Func<bool> getCurrentState, Action toggle, Func<bool>? getBusyState = null)
+        public AutoEnterStatusServer(
+            Func<bool> getCurrentState,
+            Action toggle,
+            Func<bool>? getBusyState = null,
+            Func<bool>? tryBeginDeployment = null,
+            Action? endDeployment = null)
         {
             _getCurrentState = getCurrentState ?? throw new ArgumentNullException(nameof(getCurrentState));
             _toggle = toggle ?? throw new ArgumentNullException(nameof(toggle));
             _getBusyState = getBusyState;
+            _tryBeginDeployment = tryBeginDeployment;
+            _endDeployment = endDeployment;
         }
 
         public void Start()
@@ -175,13 +183,27 @@ namespace TerminalVoiceOverlay.Services
                 return;
             }
 
-            // Aufnahme-/Beschaeftigt-Status fuer den Datenverlust-Schutz beim Rebuild:
-            // rebuild-overlay.ps1 fragt das VOR dem Kill ab und wartet, solange busy=true
-            // (Frank spricht ein / Transkription laeuft). Antwort {"busy":true|false}.
+            // Aufnahme-/Beschaeftigt-Status fuer Diagnose und Legacy-Migration.
             if (path.Equals("/recording/status", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "GET")
             {
                 WriteBusyJson(ctx, _getBusyState?.Invoke() ?? false);
+                return;
+            }
+
+            if (path.Equals("/deployment/prepare", StringComparison.OrdinalIgnoreCase)
+                && ctx.Request.HttpMethod == "POST")
+            {
+                bool ready = _tryBeginDeployment?.Invoke() ?? false;
+                WriteDeploymentJson(ctx, ready);
+                return;
+            }
+
+            if (path.Equals("/deployment/release", StringComparison.OrdinalIgnoreCase)
+                && ctx.Request.HttpMethod == "POST")
+            {
+                _endDeployment?.Invoke();
+                WriteDeploymentJson(ctx, true);
                 return;
             }
 
@@ -248,6 +270,17 @@ namespace TerminalVoiceOverlay.Services
         private static void WriteBusyJson(HttpListenerContext ctx, bool busy)
         {
             string json = busy ? "{\"busy\":true}" : "{\"busy\":false}";
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            ctx.Response.StatusCode = 200;
+            ctx.Response.ContentType = "application/json; charset=utf-8";
+            ctx.Response.ContentLength64 = bytes.Length;
+            ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
+            ctx.Response.Close();
+        }
+
+        private static void WriteDeploymentJson(HttpListenerContext ctx, bool ready)
+        {
+            string json = ready ? "{\"ready\":true}" : "{\"ready\":false}";
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             ctx.Response.StatusCode = 200;
             ctx.Response.ContentType = "application/json; charset=utf-8";

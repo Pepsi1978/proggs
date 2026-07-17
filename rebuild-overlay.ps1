@@ -43,6 +43,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
+. (Join-Path $repoRoot 'voice-overlay-deploy-guard.ps1')
 
 # --- Overlay-Konfiguration (eine Quelle der Wahrheit) ---
 $Overlays = @{
@@ -100,48 +101,14 @@ function Stop-Overlay {
     Start-Sleep -Milliseconds 2000
 }
 
-# Datenverlust-Schutz (Frank-Regel 2026-06-21): Wartet VOR dem Kill, solange das Overlay
-# gerade aufnimmt/transkribiert (Frank spricht ein). Fragt GET /recording/status ab
-# ({"busy":true|false}). Der Status haengt am OVERLAY, nicht an einer Claude-Session —
-# deshalb wirkt der Schutz auch session-uebergreifend: egal welche (Hintergrund-)Session
-# den Rebuild ausloest, gekillt wird erst, wenn Frank seinen Text fertig eingefuegt hat.
-# Endpoint nicht erreichbar (altes Overlay ohne Endpoint / nicht gestartet) -> NICHT
-# blockieren, normal weiter (Rueckwaertskompatibilitaet).
+# Datenverlust-Schutz: Reserviert das Overlay atomar VOR dem Kill. Die laufende App
+# antwortet erst im echten Idle-Zustand mit ready=true und blockiert danach neue
+# Aufnahmen. Unlesbarer Status bei laufendem Prozess bleibt fail-closed. Nur fuer die
+# einmalige Migration alter Binaries wird /recording/status stabil bestaetigt und vor
+# dem Kill ein zweites Mal geprueft.
 function Wait-OverlayIdle {
     param([hashtable]$O, [int]$TimeoutSeconds = 600)
-    $url = "http://127.0.0.1:$($O.Port)/recording/status"
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    $announced = $false
-    while ((Get-Date) -lt $deadline) {
-        try {
-            $resp = Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction Stop
-        }
-        catch {
-            return   # Endpoint nicht da -> nicht blockieren
-        }
-        if (-not $resp.busy) {
-            # Sicherheits-Nachlauf (Frank-Wunsch 2026-06-22): nach dem letzten Busy
-            # noch 5s warten, damit Transkription + Einfuegen + Draft-Speichern
-            # garantiert durch sind, BEVOR gekillt wird. Beginnt in den 5s wieder
-            # eine Aufnahme, wird normal weiter gewartet.
-            Write-Step 'Overlay idle — 5s Sicherheits-Nachlauf, dann Kill...'
-            Start-Sleep -Seconds 5
-            try {
-                if ((Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction Stop).busy) {
-                    $announced = $false
-                    continue
-                }
-            } catch { }
-            if ($announced) { Write-Ok 'Overlay im Ruhezustand — Rebuild wird fortgesetzt.' }
-            return
-        }
-        if (-not $announced) {
-            Write-Warn 'Overlay nimmt gerade auf / transkribiert — warte mit dem Rebuild, bis dein Text fertig eingefuegt ist...'
-            $announced = $true
-        }
-        Start-Sleep -Milliseconds 500
-    }
-    Write-Warn "Timeout ($TimeoutSeconds s) beim Warten auf Ruhezustand — fahre trotzdem fort."
+    return Enter-VoiceOverlayDeploymentWindow -ProcessName $O.Name -Port $O.Port -TimeoutSeconds $TimeoutSeconds
 }
 
 # Prueft, ob die publish/.exe schreibbar (= nicht gelockt) ist.
@@ -228,11 +195,16 @@ foreach ($t in $targets) {
     }
 
     # Schritt 0: Datenverlust-Schutz — warten, falls gerade aufgenommen/transkribiert wird.
-    Wait-OverlayIdle -O $O
+    $reservationHeld = Wait-OverlayIdle -O $O
 
     # Schritt 1: alle Prozesse beenden
     Write-Step 'Schritt 1/3: Prozesse beenden (Watcher + exe)...'
-    Stop-Overlay -O $O
+    try {
+        Stop-Overlay -O $O
+    }
+    finally {
+        Exit-VoiceOverlayDeploymentWindow -ProcessName $O.Name -Port $O.Port -Reserved $reservationHeld
+    }
 
     if (-not (Test-ExeFree -O $O)) {
         Write-Step 'publish/.exe noch gelockt — warte zusaetzlich 2s...'

@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
+    private var deploymentPending = false
     private var geminiEnabled = false // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
     private var autoEnterEnabled = true
     private let autoEnterServer = AutoEnterStatusServer()
@@ -190,6 +191,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.panel?.setAutoEnterEnabled(self.autoEnterEnabled)
             }
             return self.autoEnterEnabled
+        }
+        autoEnterServer.busyProvider = { [weak self] in
+            DispatchQueue.main.sync {
+                guard let self = self else { return false }
+                return self.isRecording || self.isProcessing
+            }
+        }
+        autoEnterServer.deploymentPrepareHandler = { [weak self] in
+            DispatchQueue.main.sync {
+                guard let self = self, !self.isRecording, !self.isProcessing else { return false }
+                self.deploymentPending = true
+                return true
+            }
+        }
+        autoEnterServer.deploymentReleaseHandler = { [weak self] in
+            DispatchQueue.main.async { self?.deploymentPending = false }
         }
         autoEnterServer.start()
 
@@ -503,6 +520,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startRecording(btw: Bool) {
+        guard !deploymentPending else {
+            tvoDebug("[App] recording blocked: overlay deployment is reserved")
+            NSSound.beep()
+            return
+        }
         // KRITISCH: Reset-Timer aus der vorherigen Aufnahme stoppen, sonst
         // feuert er ggf. mitten in der NEUEN Aufnahme und setzt den Mic-State
         // auf Idle zurueck — UI sieht aus als waere die Aufnahme aus, der

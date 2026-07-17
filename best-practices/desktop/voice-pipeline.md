@@ -214,12 +214,13 @@ eingefuegt wird — sonst geht der noch nicht eingefuegte Text still verloren. B
 mehreren parallelen Tool-/Agenten-Sessions: die killende Session weiss nichts von der laufenden
 Aufnahme in einer anderen Session.
 
-**Pattern (verifiziert 2026-06-21, TVO/CVO #47064 — Poka-Yoke St. 3):**
+**Pattern (verifiziert 2026-07-17, TVO/CVO — Poka-Yoke St. 3):**
 - Das Tool exponiert seinen **Busy-Status** ueber einen winzigen lokalen Loopback-Endpoint
   (`GET http://127.0.0.1:<port>/recording/status` → `{"busy":true|false}`). `busy` = Aufnahme laeuft
   ODER Transkription laeuft ODER **Einfuegen/Paste laeuft** (NICHT nur „Mikro an").
-- Das Deploy-/Rebuild-Skript fragt diesen Status **VOR dem Kill** ab und **wartet** (Poll ~500 ms,
-  Sicherheits-Timeout), solange `busy=true`. Erst im Ruhezustand wird gekillt.
+- Jeder Build-, Update- und Rebuild-Einstieg reserviert das laufende Overlay **vor Build und Kill**
+  atomar über `POST /deployment/prepare`. Die App erteilt die Reservierung nur bei `busy=false`
+  und blockiert danach neue Aufnahmen bis `POST /deployment/release` oder Prozessneustart.
 - **`busy` MUSS bis zum bestaetigten Einfuegen true bleiben** — nicht schon nach der Transkription auf
   false fallen. Sonst entsteht eine Luecke, in der der Text noch im Tool haengt (noch nicht im Ziel)
   und ein Kill ihn verliert. Faustregel: `busy=false` erst, NACHDEM der Paste sicher im Zielfenster ist.
@@ -229,7 +230,8 @@ Aufnahme in einer anderen Session.
   UNABHAENGIG vom Tool — ein Neustart des Overlays beruehrt ihn nicht mehr. Der Schutz muss also nur
   die Phasen Aufnahme→Transkription→**Paste abgeschlossen** abdecken, nicht danach.
 - Der Status haengt am **Tool**, nicht an der ausloesenden Session → session-uebergreifender Schutz.
-  Endpoint nicht erreichbar (Tool aus/alt) → nicht blockieren (graceful), damit der Deploy nie haengt.
+  Endpoint nicht erreichbar bei laufendem Tool → **fail-closed** warten und nach Timeout sicher
+  abbrechen, niemals trotzdem bauen oder killen. Nur ohne laufenden Prozess darf es weitergehen.
 - Busy aus dem vorhandenen FSM ableiten (§1: nicht-Idle = busy) — keine separate Zustandshaltung (Drift).
 
 **Zwei getrennte Schutzebenen (wichtig — verifiziert 2026-06-22):** Der busy-Lock schuetzt nur die

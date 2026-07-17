@@ -24,6 +24,8 @@ $updateSucceeded = $false
 $exitCode = 0
 $maxAttempts = 10
 $watcherStopped = $false
+$reservationHeld = $false
+. (Join-Path $PSScriptRoot '..\voice-overlay-deploy-guard.ps1')
 
 function Get-TargetOverlayProcesses {
     @(Get-CimInstance Win32_Process -Filter "Name = '$exeName'" -ErrorAction Stop | Where-Object {
@@ -106,6 +108,7 @@ try {
     if (-not $mutexHeld) {
         throw "Ein anderes TerminalVoiceOverlay-Deployment ist noch aktiv."
     }
+    $reservationHeld = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TerminalVoiceOverlay' -Port 5723
     if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
         throw "Die zu aktualisierende EXE fehlt: $exePath"
     }
@@ -140,6 +143,9 @@ try {
 
     # Step 2: Stop only overlay processes running from the deployment path.
     Write-Host "2/4 Beende laufendes Overlay..." -ForegroundColor Cyan
+    if (-not $reservationHeld) {
+        $reservationHeld = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TerminalVoiceOverlay' -Port 5723
+    }
     Stop-TargetWatcher
     Stop-TargetOverlayProcesses
 
@@ -232,6 +238,7 @@ try {
     }
     $exitCode = 1
 } finally {
+    Exit-VoiceOverlayDeploymentWindow -ProcessName 'TerminalVoiceOverlay' -Port 5723 -Reserved $reservationHeld
     if (Test-Path -LiteralPath $newExe) {
         Remove-Item -LiteralPath $newExe -Force -ErrorAction SilentlyContinue
     }

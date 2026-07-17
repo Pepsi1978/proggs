@@ -22,6 +22,9 @@ final class AutoEnterStatusServer {
     /// Wird vom AppDelegate gesetzt — togglet den Status und liefert
     /// den NEUEN Wert zurueck.
     var toggleHandler: (() -> Bool)?
+    var busyProvider: (() -> Bool)?
+    var deploymentPrepareHandler: (() -> Bool)?
+    var deploymentReleaseHandler: (() -> Void)?
 
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "tvo.autoenter.server")
@@ -99,19 +102,30 @@ final class AutoEnterStatusServer {
         let method = parts.count > 0 ? String(parts[0]) : ""
         let path   = parts.count > 1 ? String(parts[1]) : ""
 
-        let on: Bool
+        let json: String
         switch (method, path) {
         case ("GET", "/autoenter/status"):
-            on = self.statusProvider?() ?? false
+            let on = self.statusProvider?() ?? false
+            json = "{\"on\":\(on ? "true" : "false")}"
         case ("POST", "/autoenter/toggle"):
-            on = self.toggleHandler?() ?? false
+            let on = self.toggleHandler?() ?? false
+            json = "{\"on\":\(on ? "true" : "false")}"
+        case ("GET", "/recording/status"):
+            let busy = self.busyProvider?() ?? false
+            json = "{\"busy\":\(busy ? "true" : "false")}"
+        case ("POST", "/deployment/prepare"):
+            let ready = self.deploymentPrepareHandler?() ?? false
+            json = "{\"ready\":\(ready ? "true" : "false")}"
+        case ("POST", "/deployment/release"):
+            self.deploymentReleaseHandler?()
+            json = "{\"ready\":true}"
         default:
             return httpResponse(status: "404 Not Found",
                                 contentType: "text/plain",
                                 body: Data("not found".utf8))
         }
 
-        let body = Data("{\"on\":\(on ? "true" : "false")}".utf8)
+        let body = Data(json.utf8)
         return httpResponse(status: "200 OK",
                             contentType: "application/json",
                             body: body)

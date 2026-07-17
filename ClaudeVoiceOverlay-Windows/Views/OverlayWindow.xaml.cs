@@ -81,6 +81,7 @@ namespace ClaudeVoiceOverlay.Views
         private bool _btwStartInProgress;
         private bool _mainStopRequestedDuringStart;
         private bool _btwStopRequestedDuringStart;
+        private bool _deploymentPending;
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
@@ -2003,9 +2004,10 @@ namespace ClaudeVoiceOverlay.Views
             // ~5-50ms bis die UI das Toggle durchgefuehrt hat — fuer das
             // Stream-Deck-Plugin praktisch instantan.
             _autoEnterServer = new Services.AutoEnterStatusServer(
-                // Beschaeftigt-Status fuer den Datenverlust-Schutz beim Rebuild:
-                // true solange aufgenommen/transkribiert wird (rebuild-overlay.ps1 wartet darauf).
-                getBusyState: () => _micState == RecordingState.Recording || _isProcessing || isBtwRecording,
+                // Vollstaendiger Voice-Pipeline-Status fuer alle Build-/Update-Guards.
+                getBusyState: IsVoicePipelineBusy,
+                tryBeginDeployment: TryBeginDeployment,
+                endDeployment: EndDeployment,
                 getCurrentState: () => autoEnterEnabled,
                 toggle: () =>
                 {
@@ -2031,6 +2033,21 @@ namespace ClaudeVoiceOverlay.Views
                 });
             _autoEnterServer.Start();
         }
+
+        private bool IsVoicePipelineBusy() =>
+            _mainStartInProgress || _btwStartInProgress ||
+            _mainStopInProgress || _btwStopInProgress ||
+            _micState == RecordingState.Recording || _isProcessing ||
+            isBtwRecording || _audioRecorder.IsRecording;
+
+        private bool TryBeginDeployment() => Dispatcher.Invoke(() =>
+        {
+            if (IsVoicePipelineBusy()) return false;
+            _deploymentPending = true;
+            return true;
+        });
+
+        private void EndDeployment() => Dispatcher.Invoke(() => _deploymentPending = false);
 
         private static void LogAutoEnterToggleError(string scope, Exception ex)
         {
@@ -2655,6 +2672,11 @@ namespace ClaudeVoiceOverlay.Views
             else
             {
                 // ── Start recording ──
+                if (_deploymentPending)
+                {
+                    Console.WriteLine("Aufnahme blockiert: Overlay-Deployment ist reserviert.");
+                    return;
+                }
                 // KRITISCH: Reset-Timer aus der vorherigen Aufnahme stoppen.
                 // Sonst feuert er ggf. mitten in der NEUEN Aufnahme und setzt
                 // _micState auf Idle zurueck — UI sieht aus als waere die
@@ -2808,6 +2830,11 @@ namespace ClaudeVoiceOverlay.Views
             else
             {
                 // ── Start BTW recording ──
+                if (_deploymentPending)
+                {
+                    Console.WriteLine("BTW-Aufnahme blockiert: Overlay-Deployment ist reserviert.");
+                    return;
+                }
                 _btwStartInProgress = true;
                 bool started = false;
                 var targetHwnd = _appWatcher.ActiveAppHwnd;

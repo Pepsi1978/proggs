@@ -23,6 +23,8 @@ $updateSucceeded = $false
 $exitCode = 0
 $maxAttempts = 10
 $watcherStopped = $false
+$reservationHeld = $false
+. (Join-Path $PSScriptRoot '..\voice-overlay-deploy-guard.ps1')
 
 $sdkDotnet = Join-Path $env:USERPROFILE ".dotnet\dotnet.exe"
 if (Test-Path -LiteralPath $sdkDotnet -PathType Leaf) {
@@ -113,6 +115,7 @@ try {
     if (-not $mutexHeld) {
         throw "Ein anderes ClaudeVoiceOverlay-Deployment ist noch aktiv."
     }
+    $reservationHeld = Enter-VoiceOverlayDeploymentWindow -ProcessName 'ClaudeVoiceOverlay' -Port 5724
     if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
         throw "Die zu aktualisierende EXE fehlt: $exePath"
     }
@@ -144,6 +147,9 @@ try {
     }
 
     Write-Host "2/4 Beende laufendes Overlay..." -ForegroundColor Cyan
+    if (-not $reservationHeld) {
+        $reservationHeld = Enter-VoiceOverlayDeploymentWindow -ProcessName 'ClaudeVoiceOverlay' -Port 5724
+    }
     Stop-TargetWatcher
     Stop-TargetOverlayProcesses
 
@@ -235,6 +241,7 @@ try {
     }
     $exitCode = 1
 } finally {
+    Exit-VoiceOverlayDeploymentWindow -ProcessName 'ClaudeVoiceOverlay' -Port 5724 -Reserved $reservationHeld
     if (Test-Path -LiteralPath $newExe) {
         Remove-Item -LiteralPath $newExe -Force -ErrorAction SilentlyContinue
     }
