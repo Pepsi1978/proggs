@@ -694,6 +694,7 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
       usd: cost.usd,
       eur: cost.usd * eurPerUsd(),
       inputEur: cost.inputUsd * eurPerUsd(),
+      cacheEur: cost.cacheUsd * eurPerUsd(),
       outputEur: cost.outputUsd * eurPerUsd(),
       reasoningEur: cost.reasoningUsd * eurPerUsd(),
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
@@ -709,11 +710,16 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     <Show when={hasAnything()}>
       <box>
         <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context (kumuliert)</span></text>
-
         <Row
           api={props.api}
           label="Inputpreis"
           value={rateValue("input")}
+          muted
+        />
+        <Row
+          api={props.api}
+          label="Outputpreis"
+          value={rateValue("output")}
           muted
         />
         <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
@@ -721,30 +727,23 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
         </Show>
         <Row
           api={props.api}
-          label="Outputpreis"
-          value={rateValue("output")}
-          muted
-        />
-
-        <Row
-          api={props.api}
           label="Input"
           value={formatInt(totals().input)}
         />
+        <Row api={props.api} label="Output" value={formatInt(totals().output)} />
+        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
           <Row
             api={props.api}
             label="Cache R/W"
             value={`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`}
-            muted
           />
         </Show>
-        <Row api={props.api} label="Output" value={formatInt(totals().output)} />
-        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row api={props.api} label="Gesamtkosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
         <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatEur(money().inputEur) : "nicht verfügbar"} muted />
         <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatEur(money().outputEur) : "nicht verfügbar"} muted />
         <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatEur(money().reasoningEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Cache-Kosten" value={money().breakdownAvailable ? formatEur(money().cacheEur) : "nicht verfügbar"} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>

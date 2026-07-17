@@ -156,7 +156,8 @@ describe("models.dev pricing", () => {
       pricingAvailable: true,
       breakdownAvailable: true,
     })
-    expect(cost.inputUsd).toBeCloseTo(0.6125)
+    expect(cost.inputUsd).toBeCloseTo(0.5)
+    expect(cost.cacheUsd).toBeCloseTo(0.1125)
     expect(cost.outputUsd).toBeCloseTo(0.06)
     expect(cost.reasoningUsd).toBeCloseTo(0.03)
     expect(cost.usd).toBeCloseTo(0.7025)
@@ -169,6 +170,7 @@ describe("models.dev pricing", () => {
     }])).toEqual({
       usd: 0.25,
       inputUsd: 0,
+      cacheUsd: 0,
       outputUsd: 0,
       reasoningUsd: 0,
       usedRecorded: true,
@@ -186,6 +188,7 @@ describe("models.dev pricing", () => {
     }
     const cost = calculateSessionCostBreakdown(model, [step, step])
     expect(cost.inputUsd).toBeCloseTo(2)
+    expect(cost.cacheUsd).toBe(0)
     expect(cost.usd).toBeCloseTo(2)
   })
 
@@ -346,7 +349,7 @@ describe("models.dev pricing", () => {
     )
   })
 
-  test("renders the requested token rows without a cache row", async () => {
+  test("renders regular token rows followed by a non-muted cache row", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
     expect(source).toContain("value={formatInt(totals().input)}")
@@ -355,6 +358,12 @@ describe("models.dev pricing", () => {
     expect(source).toContain("`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`")
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
+    expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Output"'))
+    expect(source.indexOf('label="Output"')).toBeLessThan(source.indexOf('label="Reasoning"'))
+    expect(source.indexOf('label="Reasoning"')).toBeLessThan(source.indexOf('label="Cache R/W"'))
+    const cacheRowStart = source.indexOf('label="Cache R/W"')
+    const cacheRowEnd = source.indexOf("</Show>", cacheRowStart)
+    expect(source.slice(cacheRowStart, cacheRowEnd)).not.toContain("muted")
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
@@ -549,8 +558,11 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Inputpreis"')
     expect(source).toContain('label="Outputpreis"')
     expect(source).toContain('label="Cachepreis R/W"')
+    expect(source.indexOf('label="Inputpreis"')).toBeLessThan(source.indexOf('label="Outputpreis"'))
+    expect(source.indexOf('label="Outputpreis"')).toBeLessThan(source.indexOf('label="Cachepreis R/W"'))
     expect(source).toMatch(/label="Inputpreis"[\s\S]*?value=\{rateValue\("input"\)\}[\s\S]*?muted/)
     expect(source).toMatch(/label="Outputpreis"[\s\S]*?value=\{rateValue\("output"\)\}[\s\S]*?muted/)
+    expect(source).toMatch(/label="Cachepreis R\/W" value=\{cacheRateValue\(\)\} muted/)
     expect(source).toContain('return `$${new Intl.NumberFormat("en-US"')
     expect(source).toContain("} / 1M`")
     expect(source).toContain('return "<$0.000001 / 1M"')
@@ -565,13 +577,16 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Input-Kosten"')
     expect(source).toContain('label="Output-Kosten"')
     expect(source).toContain('label="Reasoning-Kosten"')
+    expect(source).toContain('label="Cache-Kosten"')
     expect(source).toContain("formatEur(money().inputEur)")
     expect(source).toContain("formatEur(money().outputEur)")
     expect(source).toContain("formatEur(money().reasoningEur)")
+    expect(source).toContain("formatEur(money().cacheEur)")
     expect(source).not.toContain('label="Kosten"')
     expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
     expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
     expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
+    expect(source.indexOf('label="Reasoning-Kosten"')).toBeLessThan(source.indexOf('label="Cache-Kosten"'))
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

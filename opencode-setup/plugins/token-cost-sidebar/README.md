@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.9.0 - 17.07.2026, 18:53 Uhr
+Stand: v1.9.2 - 17.07.2026, 19:00 Uhr
 
 ## Funktionen
 
@@ -48,16 +48,16 @@ Die Sidebar rechnet jeden abgeschlossenen Modellschritt mit dessen Modell und Ko
 
 ```text
 Input-Kosten     = regulärer Input × Inputpreis
-                 + Cache-Read × Cache-Read-Preis
+Cache-Kosten     = Cache-Read × Cache-Read-Preis
                  + Cache-Write × Cache-Write-Preis
 Output-Kosten    = Output ohne Reasoning × Outputpreis
 Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
-Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten
+Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
 ```
 
 Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Stark rabattierter Cache-Read und
 gegebenenfalls teurerer Cache-Write werden separat als `Cache R/W` mit ihren eigenen Preisen
-angezeigt; beide fließen weiterhin in die `Input-Kosten` ein. Effort-Stufen haben keinen eigenen
+angezeigt; ihre Kosten erscheinen separat als `Cache-Kosten`. Effort-Stufen haben keinen eigenen
 Multiplikator; sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
 `Context (kumuliert)` bedeutet, dass jeder API-Modellaufruf der Session eingeht; wiederverwendete
 Kontexttokens können daher über viele Aufrufe deutlich größer als das aktuelle Kontextfenster werden.

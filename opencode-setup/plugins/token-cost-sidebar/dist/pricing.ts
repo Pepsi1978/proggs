@@ -14,6 +14,7 @@ export type UsageRecord = {
 
 export type UsageCostBreakdown = {
   inputUsd: number
+  cacheUsd: number
   outputUsd: number
   reasoningUsd: number
   usd: number
@@ -119,10 +120,11 @@ function hasUsagePricing(model: any, usage: TokenUsage): boolean {
 export function calculateUsageCostBreakdown(model: any, usage: TokenUsage): UsageCostBreakdown {
   const contextTokens = usage.input + usage.cacheRead + usage.cacheWrite
   const price = readPricing(model, contextTokens)
-  const inputUsd = usage.input * price.input + usage.cacheRead * price.cacheRead + usage.cacheWrite * price.cacheWrite
+  const inputUsd = usage.input * price.input
+  const cacheUsd = usage.cacheRead * price.cacheRead + usage.cacheWrite * price.cacheWrite
   const outputUsd = usage.output * price.output
   const reasoningUsd = usage.reasoning * price.reasoning
-  return { inputUsd, outputUsd, reasoningUsd, usd: inputUsd + outputUsd + reasoningUsd }
+  return { inputUsd, cacheUsd, outputUsd, reasoningUsd, usd: inputUsd + cacheUsd + outputUsd + reasoningUsd }
 }
 
 export function calculateUsageCost(model: any, usage: TokenUsage): number {
@@ -136,6 +138,7 @@ export function calculateSessionCostBreakdown(model: any, records: UsageRecord[]
   let usedCalculated = false
   let missingUnpriced = false
   let inputUsd = 0
+  let cacheUsd = 0
   let outputUsd = 0
   let reasoningUsd = 0
   let usd = 0
@@ -150,6 +153,7 @@ export function calculateSessionCostBreakdown(model: any, records: UsageRecord[]
       const staleZeroPricing = hasUsage && cost.usd === 0 && record.recordedCostUsd > 0
       if (!staleZeroPricing) {
         inputUsd += cost.inputUsd
+        cacheUsd += cost.cacheUsd
         outputUsd += cost.outputUsd
         reasoningUsd += cost.reasoningUsd
         usd += cost.usd
@@ -170,6 +174,7 @@ export function calculateSessionCostBreakdown(model: any, records: UsageRecord[]
   return {
     usd,
     inputUsd,
+    cacheUsd,
     outputUsd,
     reasoningUsd,
     usedRecorded,
