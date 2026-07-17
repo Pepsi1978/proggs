@@ -380,7 +380,10 @@ private fun IngredientEditorSheet(item: IngredientEntity?, nextSort: Int, onDism
             DesignCheckbox(optional) { optional = it }
             Text("Optional", color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
             AccentGradientButton(
                 onClick = {
