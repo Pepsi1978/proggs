@@ -39,4 +39,27 @@ class ResearchArticleParserTest {
     fun blankArticleHasNoBlocks() {
         assertEquals(emptyList<ArticleBlock>(), parseResearchArticle(" \n "))
     }
+
+    @Test
+    fun speechTextEndsBeforeSources() {
+        val answer = """
+            ## Erklärung
+
+            Nur dieser Inhalt soll vorgelesen werden.
+
+            ## Quellenangaben
+
+            - Beispiel: https://example.org
+        """.trimIndent()
+
+        assertEquals(
+            "## Erklärung\n\nNur dieser Inhalt soll vorgelesen werden.",
+            researchAnswerForSpeech(answer),
+        )
+    }
+
+    @Test
+    fun speechTextWithoutSourcesRemainsUnchanged() {
+        assertEquals("Die vollständige Antwort.", researchAnswerForSpeech("  Die vollständige Antwort.  "))
+    }
 }

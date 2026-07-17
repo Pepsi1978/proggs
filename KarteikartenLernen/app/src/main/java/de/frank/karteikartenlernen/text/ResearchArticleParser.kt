@@ -30,6 +30,11 @@ fun parseResearchArticle(text: String): List<ArticleBlock> {
     return blocks
 }
 
+fun researchAnswerForSpeech(answer: String): String {
+    val sourceHeading = SOURCE_HEADING.find(answer) ?: return answer.trim()
+    return answer.substring(0, sourceHeading.range.first).trim()
+}
+
 private fun appendArticleLines(blocks: MutableList<ArticleBlock>, lines: List<String>) {
     lines.forEach { line ->
         val source = SOURCE.matchEntire(line)
@@ -43,3 +48,7 @@ private fun appendArticleLines(blocks: MutableList<ArticleBlock>, lines: List<St
 
 private val HEADING = Regex("^(#{1,3})\\s+(.+)$")
 private val SOURCE = Regex("^-\\s+(.+?):\\s+(https?://\\S+)$")
+private val SOURCE_HEADING = Regex(
+    pattern = "^(?:#{1,3}\\s*)?(?:Quellen|Quellenangaben|Sources)\\s*:?\\s*$",
+    options = setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
+)

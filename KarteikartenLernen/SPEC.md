@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.27 - 18.07.2026, 00:56 Uhr
+Version 0.1.28 - 18.07.2026, 00:57 Uhr
 
 ## 1. Übersicht
 
@@ -227,6 +227,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   TTS spricht, leuchtet er orange. Im Ruhezustand ist er weiß und durchgestrichen.
   Ein erneuter Tipp oder das Schließen der Lernrunde bricht die Wiedergabe sofort ab;
   Abschluss und Fehler setzen den sichtbaren Zustand ebenfalls zuverlässig zurück.
+- Die Vorlesen-Aktionen der aktuellen Recherche und des Profil-Recherche-Details
+  entfernen abschließende Quellenabschnitte vor dem TTS-Aufruf. Im Profil wird nur
+  die Antwort vorgelesen, niemals die darüber angezeigte ursprüngliche Frage. Der
+  zentrale TTS-Parser überspringt Quellen zusätzlich als zweite Schutzschicht.
 
 ### Datenmodell
 

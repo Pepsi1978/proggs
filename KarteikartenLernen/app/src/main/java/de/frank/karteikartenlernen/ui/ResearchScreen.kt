@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.GenerationPhase
 import de.frank.karteikartenlernen.model.MicState
+import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
 
@@ -221,7 +222,7 @@ private fun AnswerBlock(state: AppUiState, onSpeak: (String) -> Unit, onLearn: (
                     Text("Antwort", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(
-                    Modifier.clip(RoundedCornerShape(99.dp)).background(c.chip).border(1.dp, c.border, RoundedCornerShape(99.dp)).clickable { state.answer?.let(onSpeak) }.padding(horizontal = 12.dp, vertical = 6.dp),
+                    Modifier.clip(RoundedCornerShape(99.dp)).background(c.chip).border(1.dp, c.border, RoundedCornerShape(99.dp)).clickable { state.answer?.let { onSpeak(researchAnswerForSpeech(it)) } }.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Outlined.Campaign, null, tint = c.muted, modifier = Modifier.size(15.dp))

@@ -67,6 +67,7 @@ import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.CardStatus
 import de.frank.karteikartenlernen.model.Flashcard
 import de.frank.karteikartenlernen.model.SAMPLE_ANSWER
+import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.Newsreader
 
@@ -143,7 +144,7 @@ private fun ResearchDetail(question: String, answer: String, onSpeak: (String) -
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Vollständige Recherche", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.muted, modifier = Modifier.size(18.dp).clickable { onSpeak(answer) })
+                Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.muted, modifier = Modifier.size(18.dp).clickable { onSpeak(researchAnswerForSpeech(answer)) })
             }
             SelectionContainer {
                 Column {
