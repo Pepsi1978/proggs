@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.9.3 - 17.07.2026, 19:20 Uhr
+Stand: v1.9.4 - 17.07.2026, 21:31 Uhr
 
 ## Funktionen
 
@@ -55,10 +55,11 @@ Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
 Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
 ```
 
-Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Stark rabattierter Cache-Read und
-gegebenenfalls teurerer Cache-Write werden separat als `Cache R/W` mit ihren eigenen Preisen
-angezeigt; ihre Kosten erscheinen separat als `Cache-Kosten`. Effort-Stufen haben keinen eigenen
-Multiplikator; sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
+Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read, Cache-Write und ihre
+Preise bleiben als Berechnungsgrundlage intern und werden nicht als eigene Token- oder Preiszeile
+angezeigt. Sichtbar bleibt ausschließlich `Cache-Kosten`, direkt zwischen `Output-Kosten` und
+`Reasoning-Kosten` und ohne Leerzeile dazwischen. Effort-Stufen haben keinen eigenen Multiplikator;
+sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
 Die unter `Context` gezeigten Werte enthalten jeden API-Modellaufruf der Session; wiederverwendete
 Kontexttokens können daher über viele Aufrufe deutlich größer als das aktuelle Kontextfenster werden.
 Fehlt ein erforderlicher Preis, zeigt die Sidebar für die nicht belastbar aufteilbaren Werte

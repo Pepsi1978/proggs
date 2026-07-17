@@ -173,14 +173,6 @@ function formatUsdPerMillion(value: number): string {
   }).format(Math.max(0, value))} / 1M`
 }
 
-function compactUsd(value: number): string {
-  return `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 }).format(Math.max(0, value))}`
-}
-
-function formatCacheUsdPerMillion(_read: number, write: number): string {
-  return `R/$0.05 W/${compactUsd(write)}`
-}
-
 function formatEur(value: number): string {
   if (value <= 0) return "0,00 €"
   if (value < 0.01) return "<0,01 €"
@@ -671,13 +663,6 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     return currentRates ? formatUsdPerMillion(currentRates[kind]) : "nicht verfügbar"
   }
 
-  const cacheRateValue = () => {
-    const currentRates = rates()
-    return currentRates
-      ? formatCacheUsdPerMillion(currentRates.cacheRead, currentRates.cacheWrite)
-      : "nicht verfügbar"
-  }
-
   const money = createMemo(() => {
     const t = totals()
     const cost = calculateSessionCostBreakdown(pricedModel(), t.records.flatMap((record) => {
@@ -725,9 +710,6 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
           value={rateValue("output")}
           muted
         />
-        <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
-          <Row api={props.api} label="Cachepreis" value={cacheRateValue()} muted />
-        </Show>
         <Row
           api={props.api}
           label="Input"
@@ -735,18 +717,11 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
         />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
-        <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
-          <Row
-            api={props.api}
-            label="Cache R/W"
-            value={`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`}
-          />
-        </Show>
         <Row api={props.api} label="Gesamtkosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
         <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatEur(money().inputEur) : "nicht verfügbar"} muted />
         <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatEur(money().outputEur) : "nicht verfügbar"} muted />
-        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatEur(money().reasoningEur) : "nicht verfügbar"} muted />
         <Row api={props.api} label="Cache-Kosten" value={money().breakdownAvailable ? formatEur(money().cacheEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatEur(money().reasoningEur) : "nicht verfügbar"} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>
