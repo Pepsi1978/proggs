@@ -136,9 +136,7 @@ extension OverlayPanel {
     /// HorizontalAlignment=Center. Stern 34×34, Diskette 34×34 mit Margin 5,0,0,0.
     /// Total breite 34+5+34 = 73, zentriert in 96px Panel → x_origin = 11.
     ///
-    /// **S7** (Padding 0,6,0,17): Grid mit Spalten 52 + Auto, HorizontalAlignment
-    /// Center. Enter 40×40 zentriert in 52-Spalte, ⇄ 40×40 in Auto-Spalte
-    /// mit Margin 2,0,0,0. Grid-Breite = 52+2+40 = 94, zentriert → x_origin = 1.
+    /// **S7**: Enter und ⇄ jeweils 34×34 mit 4 px Abstand, gemeinsam zentriert.
     func positionExtraButtonsVertical() {
         // S1: y=547..610 (h=63). WPF padding top 21 + bot 8.
         // macOS-Y (unten=0): Buttons-Unterkante = 547 + 8 = 555.
@@ -158,10 +156,9 @@ extension OverlayPanel {
         }
         ultrathinkButton.needsDisplay = true
 
-        // S7: y=0..65 (nach Pillenenden-Fix). WPF padding top 6 + bot 17.
-        // X: Enter endet bei 13+40=53, ⇄ mit kleinem Margin 2 → x=55.
-        enterButton.frame = NSRect(x: 13, y: 19, width: 40, height: 40)
-        orientationToggleButton.frame = NSRect(x: 55, y: 19, width: 40, height: 40)
+        // Beide Kreise behalten die bisherige gemeinsame Mitte bei.
+        enterButton.frame = NSRect(x: 12, y: 22, width: 34, height: 34)
+        orientationToggleButton.frame = NSRect(x: 50, y: 22, width: 34, height: 34)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
