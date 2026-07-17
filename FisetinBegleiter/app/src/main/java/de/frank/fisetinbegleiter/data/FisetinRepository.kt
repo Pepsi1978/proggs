@@ -1,9 +1,7 @@
 package de.frank.fisetinbegleiter.data
 
 import androidx.room.withTransaction
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 
 class FisetinRepository(private val database: FisetinDatabase) {
@@ -85,21 +83,4 @@ class FisetinRepository(private val database: FisetinDatabase) {
         dao.getCureDay(dayId)?.let { dao.updateCureDay(transform(it)) }
     }
 
-    fun exportText(cures: List<CureWithDays>): String = buildString {
-        appendLine("Fisetin-Kur – lokales Protokoll")
-        appendLine("Exportiert: ${Instant.now().atZone(ZoneId.systemDefault())}")
-        appendLine()
-        cures.forEach { item ->
-            val cure = item.cure
-            appendLine("Kur ab ${LocalDate.ofEpochDay(cure.startEpochDay)}")
-            appendLine("Dauer: ${cure.plannedDurationDays} Tage")
-            appendLine("Status: ${cure.status}")
-            item.days.sortedBy { it.dayNumber }.forEach { day ->
-                appendLine("Tag ${day.dayNumber}: Drink=${day.drinkDoneAt != null}, Mahlzeit=${day.mealDoneAt != null}, Spermidin=${day.spermidinDoneAt != null}, Sperrfenster beendet=${day.blockEndedAt != null}")
-            }
-            if (cure.note.isNotBlank()) appendLine("Notiz: ${cure.note}")
-            appendLine()
-        }
-        appendLine("Hinweis: Dieses Protokoll ist keine medizinische Beratung.")
-    }
 }

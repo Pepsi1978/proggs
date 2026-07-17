@@ -166,7 +166,6 @@ fun HistoryScreen(
     state: MainUiState,
     onUpdateNote: (CureWithDays, String) -> Unit,
     onCancelCure: () -> Unit,
-    onExport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -176,14 +175,6 @@ fun HistoryScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { SectionTitle("Protokoll", "Alle Daten bleiben lokal auf diesem Gerät.") }
-        item {
-            DesignOutlineButton(
-                "Als Textdatei exportieren",
-                onExport,
-                Modifier.fillMaxWidth(),
-                enabled = state.history.isNotEmpty(),
-            )
-        }
         if (state.history.isEmpty()) {
             item { Text("Noch keine Kur gespeichert.", color = colors.sub, fontSize = 13.5.sp) }
         }

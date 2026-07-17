@@ -94,7 +94,6 @@ fun FisetinApp(
     onThemeModeToggle: () -> Unit,
     externalDestination: String?,
     onDestinationConsumed: () -> Unit,
-    onExport: (String) -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     showFirstStartNotice: Boolean,
@@ -184,7 +183,6 @@ fun FisetinApp(
                                 state = state,
                                 onUpdateNote = viewModel::updateNote,
                                 onCancelCure = viewModel::cancelAllActiveCures,
-                                onExport = { onExport(viewModel.exportText()) },
                                 modifier = contentModifier,
                             )
                             MainScreen.MORE -> MoreScreen(

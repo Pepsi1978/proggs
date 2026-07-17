@@ -158,8 +158,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateNote(cure.cure, note)
     }
 
-    fun exportText(): String = repository.exportText(uiState.value.history)
-
     private suspend fun reconcileTime(timestamp: Long) {
         val state = uiState.value
         val day = currentDay(state.activeCure) ?: return

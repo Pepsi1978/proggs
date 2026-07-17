@@ -30,18 +30,10 @@ class MainActivity : ComponentActivity() {
     private var themeVariant by mutableStateOf(AppThemeVariant.DEFAULT)
     private var themeMode by mutableStateOf(AppThemeMode.DEFAULT)
     private var appPreferences: SharedPreferences? = null
-    private var exportText: String = ""
 
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { }
-
-    private val createDocument = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain"),
-    ) { uri ->
-        uri ?: return@registerForActivityResult
-        contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(exportText) }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,10 +70,6 @@ class MainActivity : ComponentActivity() {
                     onThemeModeToggle = ::toggleThemeMode,
                     externalDestination = externalDestination,
                     onDestinationConsumed = { externalDestination = null },
-                    onExport = { text ->
-                        exportText = text
-                        createDocument.launch("fisetin-protokoll.txt")
-                    },
                     onOpenExactAlarmSettings = {
                         openSettings((application as FisetinApplication).alarmScheduler.exactAlarmSettingsIntent())
                     },
