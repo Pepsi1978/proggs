@@ -40,6 +40,12 @@ export function parseWeeklyQuota(payload: any): WeeklyQuota | undefined {
   }
 }
 
+export function isCompletedOpenAIMessage(message: any): boolean {
+  return message?.role === "assistant"
+    && message?.providerID === "openai"
+    && finiteNumber(message?.time?.completed) !== undefined
+}
+
 export async function loadOpenAIWeeklyQuota(
   stateDirectory: string,
   fetcher: typeof fetch = fetch,

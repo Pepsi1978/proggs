@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { loadOpenAIWeeklyQuota, parseWeeklyQuota } from "../dist/openai-quota"
+import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, parseWeeklyQuota } from "../dist/openai-quota"
 
 describe("OpenAI weekly quota", () => {
   test("selects the weekly window and converts used to remaining percent", () => {
@@ -21,6 +21,24 @@ describe("OpenAI weekly quota", () => {
         secondary_window: null,
       },
     })).toEqual({ remainingPercent: 66, resetAt: 1_784_796_030 })
+  })
+
+  test("refreshes only after completed OpenAI assistant messages", () => {
+    expect(isCompletedOpenAIMessage({
+      role: "assistant",
+      providerID: "openai",
+      time: { completed: 1_784_300_000 },
+    })).toBe(true)
+    expect(isCompletedOpenAIMessage({
+      role: "assistant",
+      providerID: "openai",
+      time: { created: 1_784_300_000 },
+    })).toBe(false)
+    expect(isCompletedOpenAIMessage({
+      role: "assistant",
+      providerID: "anthropic",
+      time: { completed: 1_784_300_000 },
+    })).toBe(false)
   })
 
   test("reads OpenCode OAuth credentials without exposing them", async () => {

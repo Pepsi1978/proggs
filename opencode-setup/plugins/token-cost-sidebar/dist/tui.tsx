@@ -24,9 +24,11 @@ import {
   sessionUsageSnapshot,
   type SessionUsageLedger,
 } from "./usage"
-import { loadOpenAIWeeklyQuota, type WeeklyQuota } from "./openai-quota"
+import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, type WeeklyQuota } from "./openai-quota"
 
 const FALLBACK_EUR_PER_USD = 0.92
+const QUOTA_POLL_MS = 60_000
+const QUOTA_RECHECK_DELAY_MS = 2_000
 const EFFORT_LEVELS = [
   { id: "low", label: "Low" },
   { id: "medium", label: "Medium" },
@@ -307,32 +309,94 @@ function EffortSelector(props: { api: TuiPluginApi }) {
   )
 }
 
-function ModelLabel(props: { api: TuiPluginApi; sessionID: string }) {
-  const theme = () => props.api.theme.current
-  const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
-  const [quota, setQuota] = createSignal<WeeklyQuota | null | undefined>()
-  let requestRevision = 0
+type OpenAIQuotaStore = {
+  quota: () => WeeklyQuota | null | undefined
+}
 
-  createEffect(() => {
-    if (modelMeta().providerID !== "openai") {
-      requestRevision++
-      setQuota(undefined)
+function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
+  const [quota, setQuota] = createSignal<WeeklyQuota | null | undefined>()
+  const delayedRefreshes = new Set<ReturnType<typeof setTimeout>>()
+  let pollTimer: ReturnType<typeof setTimeout> | undefined
+  let disposed = false
+  let inFlight = false
+  let refreshPending = false
+
+  const logFailure = (error: unknown) => {
+    void api.client.app.log({
+      body: {
+        service: "frank.token-cost-sidebar",
+        level: "warn",
+        message: "Das OpenAI-Wochenkontingent konnte nicht aktualisiert werden.",
+        extra: { error: String(error) },
+      },
+      query: { directory: api.state.path.directory },
+    })
+  }
+
+  const refresh = async () => {
+    if (disposed) return
+    if (inFlight) {
+      refreshPending = true
       return
     }
 
-    const revision = ++requestRevision
-    setQuota(undefined)
-    void loadOpenAIWeeklyQuota(props.api.state.path.state)
-      .then((value) => {
-        if (requestRevision === revision) setQuota(value ?? null)
-      })
-      .catch(() => {
-        if (requestRevision === revision) setQuota(null)
-      })
+    inFlight = true
+    try {
+      const value = await loadOpenAIWeeklyQuota(api.state.path.state)
+      if (!disposed) setQuota(value ?? null)
+    } catch (error) {
+      if (!disposed) {
+        if (quota() === undefined) setQuota(null)
+        logFailure(error)
+      }
+    } finally {
+      inFlight = false
+      if (refreshPending && !disposed) {
+        refreshPending = false
+        void refresh()
+      }
+    }
+  }
+
+  const refreshAfterServerUpdate = () => {
+    void refresh()
+    const timer = setTimeout(() => {
+      delayedRefreshes.delete(timer)
+      void refresh()
+    }, QUOTA_RECHECK_DELAY_MS)
+    delayedRefreshes.add(timer)
+  }
+
+  const schedulePoll = () => {
+    if (disposed) return
+    pollTimer = setTimeout(() => {
+      void refresh().finally(schedulePoll)
+    }, QUOTA_POLL_MS)
+  }
+
+  const stopMessageUpdates = api.event.on("message.updated", (event) => {
+    if (isCompletedOpenAIMessage(event.properties.info)) refreshAfterServerUpdate()
+  })
+  void refresh()
+  schedulePoll()
+
+  api.lifecycle.onDispose(() => {
+    disposed = true
+    stopMessageUpdates()
+    if (pollTimer) clearTimeout(pollTimer)
+    for (const timer of delayedRefreshes) clearTimeout(timer)
+    delayedRefreshes.clear()
   })
 
+  return { quota }
+}
+
+function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: OpenAIQuotaStore }) {
+  const theme = () => props.api.theme.current
+  const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
+
   const quotaLabel = () => {
-    const current = quota()
+    const current = props.quotaStore.quota()
     if (current === undefined) return "Woche ..."
     if (current === null) return "Woche n/v"
     const reset = new Date(current.resetAt * 1_000)
@@ -616,13 +680,14 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
 
 const tui: TuiPlugin = async (api) => {
   const usageStore = createSessionUsageStore(api)
+  const quotaStore = createOpenAIQuotaStore(api)
   api.slots.register({
     order: 90,
     slots: {
       sidebar_content(_ctx, props) {
         return (
           <box>
-            <ModelLabel api={api} sessionID={props.session_id} />
+            <ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />
             <EffortSelector api={api} />
             <WorkModeSelector api={api} sessionID={props.session_id} />
           </box>

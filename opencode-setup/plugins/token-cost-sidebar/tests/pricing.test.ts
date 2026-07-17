@@ -231,10 +231,14 @@ describe("models.dev pricing", () => {
     expect(source).toContain('<Show when={modelMeta().providerID === "openai"}>{` · ${quotaLabel()}`}</Show>')
     expect(source).toContain('return `Woche ${current.remainingPercent} % · ${date}.`')
     expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>')
-    expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} />")
-    expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} />")).toBeLessThan(
+    expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")
+    expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")).toBeLessThan(
       source.indexOf("<EffortSelector api={api} />"),
     )
+    expect(source).toContain('api.event.on("message.updated"')
+    expect(source).toContain("isCompletedOpenAIMessage(event.properties.info)")
+    expect(source).toContain("QUOTA_RECHECK_DELAY_MS = 2_000")
+    expect(source).toContain("QUOTA_POLL_MS = 60_000")
   })
 
   test("replaces the sidebar title with a live German date and time", async () => {
