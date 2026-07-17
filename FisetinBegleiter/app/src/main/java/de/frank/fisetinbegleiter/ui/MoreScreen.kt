@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -26,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,16 +40,8 @@ import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import de.frank.fisetinbegleiter.data.StackCategory
 import de.frank.fisetinbegleiter.data.StackItemEntity
 import de.frank.fisetinbegleiter.ui.theme.AllowedGreen
-import de.frank.fisetinbegleiter.ui.theme.AllowedGreenContainer
 import de.frank.fisetinbegleiter.ui.theme.WarningYellow
 import de.frank.fisetinbegleiter.ui.theme.WarningYellowContainer
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
-private enum class MoreTab(val label: String) { PLANER("Schicht-Planer"), EINSTELLUNGEN("Einstellungen"), SICHERHEIT("Sicherheit") }
-private enum class ShiftBlock(val label: String) {
-    DAY("Tagdienst"), FREE_AFTER_DAY("Frei nach Tagdienst"), NIGHT("Nachtdienst"), FREE_AFTER_NIGHT("Frei nach Nachtdienst")
-}
 
 @Composable
 fun MoreScreen(
@@ -63,80 +53,15 @@ fun MoreScreen(
     onDeleteStack: (StackItemEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var tab by remember { mutableStateOf(MoreTab.PLANER) }
-    Column(modifier.padding(horizontal = 20.dp)) {
-        LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(MoreTab.entries) { destination ->
-                FilterChip(selected = tab == destination, onClick = { tab = destination }, label = { Text(destination.label) })
-            }
-        }
-        when (tab) {
-            MoreTab.PLANER -> ShiftPlanner(Modifier.weight(1f))
-            MoreTab.EINSTELLUNGEN -> SettingsContent(
-                state,
-                onSaveProtocol,
-                onSaveIngredient,
-                onDeleteIngredient,
-                onSaveStack,
-                onDeleteStack,
-                Modifier.weight(1f),
-            )
-            MoreTab.SICHERHEIT -> SafetyContent(Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun ShiftPlanner(modifier: Modifier) {
-    var block by remember { mutableStateOf(ShiftBlock.DAY) }
-    var dayInBlock by remember { mutableIntStateOf(1) }
-    val daysUntilFree = when (block) {
-        ShiftBlock.DAY, ShiftBlock.NIGHT -> (5 - dayInBlock).coerceAtLeast(1)
-        ShiftBlock.FREE_AFTER_DAY, ShiftBlock.FREE_AFTER_NIGHT -> 0
-    }
-    val suggested = LocalDate.now().plusDays(daysUntilFree.toLong())
-    LazyColumn(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { SectionTitle("Wann Kur legen?", "Das 4-4-4-System wird als Entscheidungshilfe abgebildet.") }
-        item {
-            Text("Aktueller Block", style = MaterialTheme.typography.titleLarge)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ShiftBlock.entries.forEach { option ->
-                    FilterChip(selected = block == option, onClick = { block = option }, label = { Text(option.label) })
-                }
-            }
-        }
-        if (block == ShiftBlock.DAY || block == ShiftBlock.NIGHT) {
-            item {
-                Text("Tag $dayInBlock von 4", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { dayInBlock = (dayInBlock - 1).coerceAtLeast(1) }) { Text("−") }
-                    OutlinedButton(onClick = { dayInBlock = (dayInBlock + 1).coerceAtMost(4) }) { Text("+") }
-                }
-            }
-        }
-        item {
-            SignalCard(
-                "Empfohlenes Kur-Fenster",
-                if (daysUntilFree == 0) {
-                    "Der Freiblock läuft. Frühester sinnvoller Start: heute, ${suggested.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))}."
-                } else {
-                    "Nächster Freiblock ab ${suggested.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))}. Dort sind nüchterner Morgen, Mahlzeiten und 4-Stunden-Fenster realistisch."
-                },
-                AllowedGreenContainer,
-                AllowedGreen,
-            )
-        }
-        item {
-            SignalCard(
-                "Tagdienst ist ungeeignet",
-                "An Tagdienst-Tagen (04:00 auf, 04:30 los) ist die Kur nicht durchführbar.",
-                WarningYellowContainer,
-                WarningYellow,
-            )
-        }
-        item { Text("Die Planung ist eine organisatorische Hilfe und keine medizinische Empfehlung.") }
-        item { Spacer(Modifier.height(12.dp)) }
-    }
+    SettingsContent(
+        state,
+        onSaveProtocol,
+        onSaveIngredient,
+        onDeleteIngredient,
+        onSaveStack,
+        onDeleteStack,
+        modifier.padding(horizontal = 20.dp),
+    )
 }
 
 @Composable
@@ -232,6 +157,7 @@ private fun SettingsContent(
         item {
             OutlinedButton(onClick = { editedStack = null; stackDialog = true }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Substanz hinzufügen") }
         }
+        item { Text("App-Version ${BuildConfig.VERSION_NAME} · Stand ${BuildConfig.VERSION_BUMPED_AT}", style = MaterialTheme.typography.bodySmall) }
         item { Spacer(Modifier.height(12.dp)) }
     }
 
@@ -370,29 +296,3 @@ private fun categoryLabel(category: StackCategory): String = when (category) {
 internal fun ingredientListKey(id: Long): String = "ingredient:$id"
 
 internal fun stackItemListKey(id: Long): String = "stack:$id"
-
-@Composable
-private fun SafetyContent(modifier: Modifier) {
-    LazyColumn(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { SectionTitle("Sicherheit & Haftung") }
-        item {
-            SignalCard(
-                "Keine medizinische Beratung",
-                "Diese App bildet nur dein persönliches, selbst festgelegtes Protokoll ab. Bei Unsicherheiten oder Wechselwirkungen ärztlichen Rat einholen.",
-                WarningYellowContainer,
-                WarningYellow,
-            )
-        }
-        item {
-            SignalCard(
-                "Venlafaxin nicht aussetzen",
-                "Dein Medikament wird durch die Kur nicht verändert und nie ausgesetzt.",
-                AllowedGreenContainer,
-                AllowedGreen,
-            )
-        }
-        item { Text("Keine Cloud, kein Nutzerkonto, keine Internetverbindung. Protokoll- und Verlaufsdaten bleiben lokal auf dem Gerät.") }
-        item { Text("App-Version ${BuildConfig.VERSION_NAME} · Stand ${BuildConfig.VERSION_BUMPED_AT}", style = MaterialTheme.typography.bodySmall) }
-        item { Spacer(Modifier.height(12.dp)) }
-    }
-}
