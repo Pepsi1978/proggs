@@ -50,7 +50,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -168,15 +167,6 @@ fun TodayScreen(
                     },
                 )
             }
-        }
-        item {
-            StatusNotice(
-                title = "Venlafaxin immer einnehmen",
-                text = "Medikament — nie wegen der Kur weglassen. Die Kur verändert deinen Einnahmeplan nicht.",
-                containerColor = colors.okBg,
-                contentColor = colors.ok,
-                icon = { Icon(Icons.Outlined.CheckCircle, null, tint = colors.ok, modifier = Modifier.size(20.dp)) },
-            )
         }
         item {
             StatusNotice(
