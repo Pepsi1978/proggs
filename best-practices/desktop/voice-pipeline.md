@@ -99,6 +99,12 @@ VoiceAgent **1.2.0**.
 - **WPF reaktiv halten:** Worker-Start und `READY` asynchron abwarten, Stop während Start als
   Pending-Zustand erhalten. Pegel im Worker auf etwa 10 Hz aggregieren und in WPF höchstens einen
   Dispatcher-Auftrag gleichzeitig offen halten. `eigener Vorfall`(TVO/CVO 2026-07-17)
+- **CPU-Druck gezielt abfangen:** Den langlebigen Overlay- und Capture-Prozess höchstens auf
+  Windows-Prioritätsklasse `High` setzen und den echten Capture-Callback über MMCSS
+  (`Pro Audio`, Fallback `Audio`) mit `Critical` priorisieren. Writer-/Stop-Threads dürfen
+  `Highest` nutzen. `RealTime` als Prozessklasse ist verboten: Sie kann Eingabe, Audio-Treiber
+  und Systemdienste aushungern und dadurch gerade neue Aussetzer erzeugen. Prioritätsklasse und
+  aktives MMCSS-Profil nach dem Deploy live verifizieren. `eigener Vorfall`(TVO/CVO 2026-07-17)
 - **Watchdog**: kommt N Sekunden kein `DataAvailable` trotz aktivem Mikro → Capture neu aufbauen
   (Stop → RecordingStopped abwarten → Dispose → Start). Stop/Dispose strikt serialisieren,
   NIE im Callback. `extern`(NAudio #1168/#1150)

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using NAudio.Wave;
 
@@ -22,14 +23,11 @@ namespace TerminalVoiceOverlay.Services
     /// der bereits gesprochene/getippte Text bleiben unberuehrt.
     ///
     /// Zwei Robustheits-Garantien:
-    /// 1. Die WAV wird bei JEDEM Buffer geflusht (Header-Laengen mitgefuehrt),
-    ///    also ist die Datei zu jedem Zeitpunkt valide. Selbst ein Crash
-    ///    MITTEN in der Aufnahme verliert nur den allerletzten ~50-ms-Buffer;
-    ///    der Parent transkribiert das bereits Aufgenommene.
-    /// 2. Beim Stopp wird der Writer ZUERST geschlossen (WAV vollstaendig auf
-    ///    Platte), DANN erst <c>WaveIn.Dispose()</c> aufgerufen (die Stelle,
-    ///    die crashen kann). Selbst wenn dieser Dispose crasht, ist die
-    ///    Aufnahme schon sicher.
+    /// 1. Der Capture-Callback kopiert nur in eine FIFO; ein eigener Writer-
+    ///    Thread schreibt und flusht geordnet, ohne die WinMM-Kette zu bremsen.
+    /// 2. Beim Stopp wird die FIFO vollstaendig geleert und der Writer vor
+    ///    DONE geschlossen. Ein riskantes WaveIn.Dispose ist danach unnoetig,
+    ///    weil Windows die Handles beim Prozessende freigibt.
     ///
     /// Protokoll (zeilenbasiert, InvariantCulture):
     ///   stdout  Parent liest:   READY | L &lt;0..1000&gt; | DONE &lt;fileBytes&gt; &lt;pcmBytes&gt; &lt;buffers&gt; &lt;peakMille&gt; | ERR &lt;msg&gt;
@@ -62,6 +60,9 @@ namespace TerminalVoiceOverlay.Services
         private static int _pendingLevelPeak;
         private static long _lastLevelEmitTicks;
         private static readonly Stopwatch _sinceFlush = new();
+        [ThreadStatic] private static bool _audioPriorityConfigured;
+        [ThreadStatic] private static IntPtr _mmcssHandle;
+        private static volatile string _mmcssProfile = "not-configured";
 
         /// <summary>
         /// Einstieg aus <c>App.OnStartup</c>. Blockiert bis die Aufnahme
@@ -100,7 +101,8 @@ namespace TerminalVoiceOverlay.Services
                 _writerThread = new Thread(WriterLoop)
                 {
                     IsBackground = true,
-                    Name = "capture-wav-writer"
+                    Name = "capture-wav-writer",
+                    Priority = ThreadPriority.Highest
                 };
                 _writerThread.Start();
                 _waveIn = new WaveInEvent
@@ -127,7 +129,12 @@ namespace TerminalVoiceOverlay.Services
             Log("worker_ready", $"rate={rate} channels={channels} pid={Environment.ProcessId}");
 
             // stdin-Leser: STOP oder EOF (Parent tot) beenden die Aufnahme.
-            var stdinThread = new Thread(StdinLoop) { IsBackground = true, Name = "capture-stdin" };
+            var stdinThread = new Thread(StdinLoop)
+            {
+                IsBackground = true,
+                Name = "capture-stdin",
+                Priority = ThreadPriority.AboveNormal
+            };
             stdinThread.Start();
 
             // Warten bis stop finalisiert ODER Notbremse greift.
@@ -179,7 +186,7 @@ namespace TerminalVoiceOverlay.Services
                     try { _waveIn?.StopRecording(); }
                     catch (Exception ex) { Log("stop_recording_failed", ex.Message); FinalizeAndExit(); }
                 })
-                { IsBackground = true, Name = "capture-stop" };
+                { IsBackground = true, Name = "capture-stop", Priority = ThreadPriority.Highest };
                 stopThread.Start();
 
                 if (!_finished.Wait(TimeSpan.FromSeconds(3)))
@@ -198,6 +205,7 @@ namespace TerminalVoiceOverlay.Services
         private static void OnDataAvailable(object? sender, WaveInEventArgs e)
         {
             if (e.BytesRecorded <= 0) return;
+            EnsureAudioThreadPriority();
 
             byte[] copy = ArrayPool<byte>.Shared.Rent(e.BytesRecorded);
             Buffer.BlockCopy(e.Buffer, 0, copy, 0, e.BytesRecorded);
@@ -232,6 +240,41 @@ namespace TerminalVoiceOverlay.Services
                 _lastLevelEmitTicks = now;
                 int level = Interlocked.Exchange(ref _pendingLevelPeak, 0);
                 Emit("L " + level.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        private static void EnsureAudioThreadPriority()
+        {
+            if (_audioPriorityConfigured) return;
+            _audioPriorityConfigured = true;
+
+            try { Thread.CurrentThread.Priority = ThreadPriority.Highest; }
+            catch (Exception ex) { Log("audio_thread_priority_failed", ex.Message); }
+
+            try
+            {
+                _mmcssHandle = AvSetMmThreadCharacteristics("Pro Audio", out _);
+                _mmcssProfile = "Pro Audio";
+                if (_mmcssHandle == IntPtr.Zero)
+                {
+                    _mmcssHandle = AvSetMmThreadCharacteristics("Audio", out _);
+                    _mmcssProfile = "Audio";
+                }
+
+                if (_mmcssHandle == IntPtr.Zero)
+                {
+                    _mmcssProfile = "failed:" + Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture);
+                    Log("mmcss_registration_failed", _mmcssProfile);
+                }
+                else if (!AvSetMmThreadPriority(_mmcssHandle, AvrtPriority.Critical))
+                {
+                    Log("mmcss_priority_failed", Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture));
+                }
+            }
+            catch (Exception ex)
+            {
+                _mmcssProfile = "exception";
+                Log("mmcss_registration_failed", ex.Message);
             }
         }
 
@@ -296,7 +339,7 @@ namespace TerminalVoiceOverlay.Services
             long fileBytes = CloseWriterAndMeasure();
 
             Emit($"DONE {fileBytes} {_pcmBytes} {_buffers} {_peakMille}");
-            Log("worker_done", $"fileBytes={fileBytes} pcmBytes={_pcmBytes} buffers={_buffers} peakMille={_peakMille}");
+            Log("worker_done", $"fileBytes={fileBytes} pcmBytes={_pcmBytes} buffers={_buffers} peakMille={_peakMille} mmcss={_mmcssProfile}");
             _finished.Set();
 
             // Der Prozess endet jetzt ohnehin. Windows gibt die nativen WaveIn-
@@ -368,6 +411,18 @@ namespace TerminalVoiceOverlay.Services
             (s ?? "").Replace('\r', ' ').Replace('\n', ' ');
 
         private readonly record struct CapturedBuffer(byte[] Data, int Count);
+
+        private enum AvrtPriority
+        {
+            Critical = 2
+        }
+
+        [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr AvSetMmThreadCharacteristics(string taskName, out uint taskIndex);
+
+        [DllImport("avrt.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AvSetMmThreadPriority(IntPtr avrtHandle, AvrtPriority priority);
 
         private static int ArgInt(string[] args, string key, int fallback)
         {

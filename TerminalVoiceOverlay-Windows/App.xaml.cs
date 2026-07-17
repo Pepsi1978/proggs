@@ -75,6 +75,7 @@ namespace TerminalVoiceOverlay
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ApplyMaximumSafePriority();
 
             // Capture-Worker-Modus: isolierte Mikrofon-Aufnahme in eigenem
             // Prozess (Prozess-Isolation gegen den nicht abfangbaren WinMM-
@@ -113,6 +114,29 @@ namespace TerminalVoiceOverlay
             {
                 // Watchdog mode: launch overlay and monitor it
                 RunWatchdog();
+            }
+        }
+
+        private static void ApplyMaximumSafePriority()
+        {
+            // HIGH ist die hoechste fuer Desktop-Apps sichere Prozessklasse.
+            // REALTIME kann Eingabe, Audio-Treiber und selbst Windows-Dienste
+            // aushungern und wuerde dadurch neue Audioaussetzer provozieren.
+            try
+            {
+                using var process = Process.GetCurrentProcess();
+                process.PriorityClass = ProcessPriorityClass.High;
+                process.PriorityBoostEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                try { Console.Error.WriteLine($"priority_process_failed | {ex.Message}"); } catch { }
+            }
+
+            try { Thread.CurrentThread.Priority = ThreadPriority.Highest; }
+            catch (Exception ex)
+            {
+                try { Console.Error.WriteLine($"priority_thread_failed | {ex.Message}"); } catch { }
             }
         }
 
