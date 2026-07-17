@@ -139,7 +139,6 @@ fun FisetinApp(
                         onGoTimeline = { screen = MainScreen.TIMELINE },
                         onGoStack = { screen = MainScreen.STACK },
                         onOpenExactAlarmSettings = onOpenExactAlarmSettings,
-                        onOpenBatterySettings = onOpenBatterySettings,
                         exactAlarmsAvailable = viewModel.canScheduleExactAlarms(),
                         modifier = modifier,
                     )
@@ -164,6 +163,7 @@ fun FisetinApp(
                         onDeleteIngredient = viewModel::deleteIngredient,
                         onSaveStack = viewModel::saveStackItem,
                         onDeleteStack = viewModel::deleteStackItem,
+                        onOpenBatterySettings = onOpenBatterySettings,
                         modifier = modifier,
                     )
                 }

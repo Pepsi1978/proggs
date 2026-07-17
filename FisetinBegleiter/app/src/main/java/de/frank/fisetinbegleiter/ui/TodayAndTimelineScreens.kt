@@ -53,7 +53,6 @@ fun TodayScreen(
     onGoTimeline: () -> Unit,
     onGoStack: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
     exactAlarmsAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -105,11 +104,6 @@ fun TodayScreen(
                     contentColor = WarningYellow,
                     trailing = { TextButton(onClick = onOpenExactAlarmSettings) { Text("Öffnen") } },
                 )
-            }
-        }
-        item {
-            OutlinedButton(onClick = onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
-                Text("Akku-Optimierung für zuverlässige Erinnerungen prüfen")
             }
         }
         when (state.cureState) {

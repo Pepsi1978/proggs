@@ -51,6 +51,7 @@ fun MoreScreen(
     onDeleteIngredient: (IngredientEntity) -> Unit,
     onSaveStack: (StackItemEntity) -> Unit,
     onDeleteStack: (StackItemEntity) -> Unit,
+    onOpenBatterySettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsContent(
@@ -60,6 +61,7 @@ fun MoreScreen(
         onDeleteIngredient,
         onSaveStack,
         onDeleteStack,
+        onOpenBatterySettings,
         modifier.padding(horizontal = 20.dp),
     )
 }
@@ -72,6 +74,7 @@ private fun SettingsContent(
     onDeleteIngredient: (IngredientEntity) -> Unit,
     onSaveStack: (StackItemEntity) -> Unit,
     onDeleteStack: (StackItemEntity) -> Unit,
+    onOpenBatterySettings: () -> Unit,
     modifier: Modifier,
 ) {
     val locked = state.activeCure != null
@@ -82,6 +85,12 @@ private fun SettingsContent(
     var stackDialog by remember { mutableStateOf(false) }
 
     LazyColumn(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { SectionTitle("System", "Berechtigungen und Zuverlässigkeit der App.") }
+        item {
+            OutlinedButton(onClick = onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Akku-Optimierung für zuverlässige Erinnerungen prüfen")
+            }
+        }
         item { SectionTitle("Standard-Protokoll", "Änderungen gelten für neue Abläufe.") }
         if (locked) {
             item {
