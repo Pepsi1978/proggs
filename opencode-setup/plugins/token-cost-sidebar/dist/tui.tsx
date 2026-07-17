@@ -8,7 +8,6 @@ import {
   loadCatalogModel,
   readPricingPerMillion,
   selectPricingModel,
-  type TokenUsage,
 } from "./pricing"
 import {
   DEFAULT_WORK_MODE,
@@ -17,6 +16,14 @@ import {
   WORK_MODES,
   writeWorkMode,
 } from "./work-mode"
+import {
+  createSessionUsageLedger,
+  observeAssistantMessage,
+  observeAssistantMessages,
+  serializeSessionUsage,
+  sessionUsageSnapshot,
+  type SessionUsageLedger,
+} from "./usage"
 
 const FALLBACK_EUR_PER_USD = 0.92
 const EFFORT_LEVELS = [
@@ -69,28 +76,6 @@ function safeNumber(value: unknown): number {
     if (Number.isFinite(parsed)) return parsed
   }
   return 0
-}
-
-function firstNumber(...values: unknown[]): number {
-  for (const value of values) {
-    const parsed = safeNumber(value)
-    if (parsed > 0) return parsed
-  }
-  return 0
-}
-
-function readCost(source: any): number {
-  return firstNumber(source?.cost, source?.info?.cost, source?.usage?.cost, source?.metrics?.cost)
-}
-
-function tokensOf(message: any): TokenUsage {
-  return {
-    input: safeNumber(message?.tokens?.input ?? message?.info?.tokens?.input),
-    output: safeNumber(message?.tokens?.output ?? message?.info?.tokens?.output),
-    reasoning: safeNumber(message?.tokens?.reasoning ?? message?.info?.tokens?.reasoning),
-    cacheRead: safeNumber(message?.tokens?.cache?.read ?? message?.info?.tokens?.cache?.read),
-    cacheWrite: safeNumber(message?.tokens?.cache?.write ?? message?.info?.tokens?.cache?.write),
-  }
 }
 
 function roleOf(message: any): string | undefined {
@@ -419,7 +404,80 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
   )
 }
 
-function View(props: { api: TuiPluginApi; sessionID: string }) {
+type SessionUsageStore = {
+  merge: (sessionID: string, messages: readonly any[]) => void
+  snapshot: (sessionID: string) => ReturnType<typeof sessionUsageSnapshot>
+  hydrateHistory: (sessionID: string) => void
+  revision: () => number
+}
+
+function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
+  const prefix = "frank.token-cost-sidebar.usage."
+  const ledgers = new Map<string, SessionUsageLedger>()
+  const historyRequests = new Set<string>()
+  const [revision, setRevision] = createSignal(0)
+
+  const ledgerFor = (sessionID: string) => {
+    let ledger = ledgers.get(sessionID)
+    if (ledger) return ledger
+    ledger = createSessionUsageLedger(api.kv.get(`${prefix}${sessionID}`, []))
+    ledgers.set(sessionID, ledger)
+    return ledger
+  }
+
+  const commit = (sessionID: string, ledger: SessionUsageLedger) => {
+    api.kv.set(`${prefix}${sessionID}`, serializeSessionUsage(ledger))
+    setRevision((value) => value + 1)
+  }
+
+  const merge = (sessionID: string, messages: readonly any[]) => {
+    const ledger = ledgerFor(sessionID)
+    if (observeAssistantMessages(ledger, messages)) commit(sessionID, ledger)
+  }
+
+  const stopMessageUpdates = api.event.on("message.updated", (event) => {
+    const message = event.properties.info
+    const ledger = ledgerFor(message.sessionID)
+    if (observeAssistantMessage(ledger, message)) commit(message.sessionID, ledger)
+  })
+  const stopSessionDeletes = api.event.on("session.deleted", (event) => {
+    const sessionID = event.properties.info.id
+    ledgers.delete(sessionID)
+    historyRequests.delete(sessionID)
+    api.kv.set(`${prefix}${sessionID}`, [])
+    setRevision((value) => value + 1)
+  })
+  api.lifecycle.onDispose(stopMessageUpdates)
+  api.lifecycle.onDispose(stopSessionDeletes)
+
+  return {
+    merge,
+    revision,
+    snapshot(sessionID) {
+      return sessionUsageSnapshot(ledgerFor(sessionID))
+    },
+    hydrateHistory(sessionID) {
+      if (historyRequests.has(sessionID)) return
+      historyRequests.add(sessionID)
+      void api.client.session.messages({
+        path: { id: sessionID },
+        query: { directory: api.state.path.directory },
+      }).then((response) => merge(sessionID, response.data ?? [])).catch((error) => {
+        void api.client.app.log({
+          body: {
+            service: "frank.token-cost-sidebar",
+            level: "warn",
+            message: "Der vollständige Session-Verlauf konnte nicht für die Kostenanzeige geladen werden.",
+            extra: { sessionID, error: String(error) },
+          },
+          query: { directory: api.state.path.directory },
+        })
+      })
+    },
+  }
+}
+
+function View(props: { api: TuiPluginApi; sessionID: string; usageStore: SessionUsageStore }) {
   const [eurPerUsd, setEurPerUsd] = createSignal(FALLBACK_EUR_PER_USD)
   const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
@@ -427,6 +485,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
 
   onMount(() => {
+    props.usageStore.hydrateHistory(props.sessionID)
     void fetch("https://api.frankfurter.app/latest?from=USD&to=EUR")
       .then((response) => (response.ok ? response.json() : undefined))
       .then((data) => {
@@ -450,41 +509,9 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   })
 
   const totals = createMemo(() => {
-    const providerID = modelMeta().providerID
-    const modelID = modelMeta().modelID
-    const seen = new Set<string>()
-    const result = {
-      input: 0,
-      output: 0,
-      reasoning: 0,
-      cacheRead: 0,
-      cacheWrite: 0,
-      recordedCostUsd: 0,
-      matchedMessages: 0,
-      records: [] as Array<{ usage: TokenUsage; recordedCostUsd: number }>,
-    }
-
-    for (const message of messages()) {
-      if (roleOf(message) !== "assistant") continue
-      if (providerID && providerOf(message) && providerOf(message) !== providerID) continue
-      if (modelID && modelOf(message) && modelOf(message) !== modelID) continue
-
-      const id = message?.id ?? message?.info?.id
-      if (typeof id === "string" && seen.has(id)) continue
-      if (typeof id === "string") seen.add(id)
-
-      const t = tokensOf(message)
-      result.input += t.input
-      result.output += t.output
-      result.reasoning += t.reasoning
-      result.cacheRead += t.cacheRead
-      result.cacheWrite += t.cacheWrite
-      const recordedCostUsd = readCost(message)
-      result.recordedCostUsd += recordedCostUsd
-      result.matchedMessages++
-      result.records.push({ usage: t, recordedCostUsd })
-    }
-    return result
+    props.usageStore.revision()
+    props.usageStore.merge(props.sessionID, messages())
+    return props.usageStore.snapshot(props.sessionID)
   })
 
   const pricedModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
@@ -501,7 +528,14 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
 
   const money = createMemo(() => {
     const t = totals()
-    const cost = calculateSessionCost(pricedModel(), t.records)
+    const cost = calculateSessionCost(pricedModel(), t.records.map((record) => {
+      const provider = props.api.state.provider.find((item: any) => item?.id === record.providerID)
+      const embeddedModel = provider?.models?.[record.modelID ?? ""]
+      const currentModel = record.providerID === modelMeta().providerID && record.modelID === modelMeta().modelID
+        ? pricedModel()
+        : embeddedModel
+      return { usage: record.usage, recordedCostUsd: record.recordedCostUsd, pricingModel: currentModel }
+    }))
 
     return {
       usd: cost.usd,
@@ -546,6 +580,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
 }
 
 const tui: TuiPlugin = async (api) => {
+  const usageStore = createSessionUsageStore(api)
   api.slots.register({
     order: 90,
     slots: {
@@ -568,7 +603,7 @@ const tui: TuiPlugin = async (api) => {
         return <SidebarClock api={api} />
       },
       sidebar_content(_ctx, props) {
-        return <View api={api} sessionID={props.session_id} />
+        return <View api={api} sessionID={props.session_id} usageStore={usageStore} />
       },
     },
   })

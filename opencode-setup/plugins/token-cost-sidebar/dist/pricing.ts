@@ -9,6 +9,7 @@ export type TokenUsage = {
 export type UsageRecord = {
   usage: TokenUsage
   recordedCostUsd: number
+  pricingModel?: any
 }
 
 let catalogPromise: Promise<any> | undefined
@@ -89,18 +90,21 @@ export function calculateUsageCost(model: any, usage: TokenUsage): number {
 }
 
 export function calculateSessionCost(model: any, records: UsageRecord[]) {
-  const pricingAvailable = hasKnownPricing(model)
+  let pricingAvailable = hasKnownPricing(model)
   let usedRecorded = false
   let usedCalculated = false
   let missingUnpriced = false
   let usd = 0
 
   for (const record of records) {
+    const recordModel = record.pricingModel ?? model
+    const recordPricingAvailable = hasKnownPricing(recordModel)
+    pricingAvailable = pricingAvailable || recordPricingAvailable
     if (record.recordedCostUsd > 0) {
       usd += record.recordedCostUsd
       usedRecorded = true
-    } else if (pricingAvailable) {
-      usd += calculateUsageCost(model, record.usage)
+    } else if (recordPricingAvailable) {
+      usd += calculateUsageCost(recordModel, record.usage)
       usedCalculated = true
     } else {
       missingUnpriced = true

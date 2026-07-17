@@ -18,6 +18,13 @@ import {
   workModeInstruction,
   writeWorkMode,
 } from "../dist/work-mode"
+import {
+  createSessionUsageLedger,
+  observeAssistantMessage,
+  observeAssistantMessages,
+  serializeSessionUsage,
+  sessionUsageSnapshot,
+} from "../dist/usage"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -135,6 +142,74 @@ describe("models.dev pricing", () => {
     })
   })
 
+  test("prices missing costs with each message model", () => {
+    expect(calculateSessionCost(undefined, [
+      {
+        usage: { input: 1_000_000, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+        recordedCostUsd: 0,
+        pricingModel: { cost: { input: 1, output: 2 } },
+      },
+      {
+        usage: { input: 1_000_000, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+        recordedCostUsd: 0,
+        pricingModel: { cost: { input: 5, output: 10 } },
+      },
+    ]).usd).toBe(6)
+  })
+
+  test("keeps session usage monotonic across compaction and model switches", () => {
+    const ledger = createSessionUsageLedger()
+    const first = {
+      id: "msg-1",
+      sessionID: "session-1",
+      role: "assistant",
+      providerID: "openai",
+      modelID: "model-a",
+      tokens: { input: 100, output: 20, reasoning: 10, cache: { read: 5, write: 0 } },
+      cost: 0.5,
+    }
+    const second = {
+      id: "msg-2",
+      sessionID: "session-1",
+      role: "assistant",
+      providerID: "other",
+      modelID: "model-b",
+      tokens: { input: 200, output: 30, reasoning: 15, cache: { read: 0, write: 0 } },
+      cost: 0.75,
+    }
+
+    expect(observeAssistantMessages(ledger, [first])).toBe(true)
+    expect(sessionUsageSnapshot(ledger).input).toBe(100)
+    // A compacted TUI window no longer contains msg-1, but the ledger must retain it.
+    expect(observeAssistantMessages(ledger, [second])).toBe(true)
+    expect(sessionUsageSnapshot(ledger)).toMatchObject({
+      input: 300,
+      output: 50,
+      reasoning: 25,
+      matchedMessages: 2,
+    })
+    expect(sessionUsageSnapshot(ledger).records.reduce((sum, record) => sum + record.recordedCostUsd, 0)).toBe(1.25)
+  })
+
+  test("ignores regressive message updates and restores the ledger", () => {
+    const ledger = createSessionUsageLedger()
+    const message = {
+      id: "msg-1",
+      role: "assistant",
+      tokens: { input: 100, output: 20, reasoning: 10, cache: { read: 5, write: 1 } },
+      cost: 0.5,
+    }
+    expect(observeAssistantMessage(ledger, message)).toBe(true)
+    expect(observeAssistantMessage(ledger, {
+      ...message,
+      tokens: { input: 10, output: 2, reasoning: 1, cache: { read: 0, write: 0 } },
+      cost: 0.05,
+    })).toBe(false)
+
+    const restored = createSessionUsageLedger(serializeSessionUsage(ledger))
+    expect(sessionUsageSnapshot(restored)).toEqual(sessionUsageSnapshot(ledger))
+  })
+
   test("renders the requested token rows without a cache row", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
@@ -143,6 +218,10 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
+    expect(source).toContain('api.event.on("message.updated"')
+    expect(source).toContain("api.client.session.messages({")
+    expect(source).not.toContain("providerOf(message) !== providerID")
+    expect(source).not.toContain("modelOf(message) !== modelID")
   })
 
   test("shows the live model and Context as accented bold underlined headings", async () => {
