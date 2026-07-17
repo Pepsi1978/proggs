@@ -74,6 +74,10 @@ namespace TerminalVoiceOverlay.Views
         private bool _isProcessing          = false;
         private bool _mainStopInProgress    = false;
         private bool _btwStopInProgress     = false;
+        private bool _mainStartInProgress;
+        private bool _btwStartInProgress;
+        private bool _mainStopRequestedDuringStart;
+        private bool _btwStopRequestedDuringStart;
         private long _voiceTurnSeq          = 0;
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
@@ -457,6 +461,8 @@ namespace TerminalVoiceOverlay.Views
         // ein Lambda + ein Marshall in die Dispatcher-Queue gepostet, nur
         // damit das Lambda dann beim Visibility-Check direkt zurueckspringt.
         private volatile bool _waveformVisibleFast;
+        private float _pendingWaveformLevel;
+        private int _waveformUpdateQueued;
 
         // ── Constructor ──
 
@@ -2546,8 +2552,13 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>Main mic button — start / stop recording.</summary>
         private async void BtnMic_Click(object sender, RoutedEventArgs e)
         {
+            if (_mainStartInProgress)
+            {
+                _mainStopRequestedDuringStart = true;
+                return;
+            }
             // Ignore if BTW mic is active
-            if (isBtwRecording) return;
+            if (isBtwRecording || _btwStartInProgress) return;
             if (_isProcessing)  return;
             if (_mainStopInProgress) return;
 
@@ -2708,10 +2719,19 @@ namespace TerminalVoiceOverlay.Views
                 // Aufnahme aus, _audioRecorder laeuft aber weiter (State-Drift
                 // bei schnellen aufeinanderfolgenden Aufnahmen).
                 _resetTimer.Stop();
+                _mainStartInProgress = true;
+                bool started = false;
+                var targetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                 try
                 {
-                    if (!_audioRecorder.Start()) return;
-                    _mainRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
+                    started = await _audioRecorder.StartAsync();
+                    if (!started)
+                    {
+                        _pttRecording = false;
+                        _pttToggleMode = false;
+                        return;
+                    }
+                    _mainRecordingTargetHwnd = targetHwnd;
                     SetMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("Recording started");
@@ -2722,14 +2742,30 @@ namespace TerminalVoiceOverlay.Views
                     SetMicState(RecordingState.Error);
                     ScheduleReset();
                 }
+                finally
+                {
+                    _mainStartInProgress = false;
+                    if (!started) _mainStopRequestedDuringStart = false;
+                }
+
+                if (started && _mainStopRequestedDuringStart)
+                {
+                    _mainStopRequestedDuringStart = false;
+                    Dispatcher.BeginInvoke(new Action(() => BtnMic_Click(MicButton, new RoutedEventArgs())));
+                }
             }
         }
 
         /// <summary>BTW mic button — record and prepend "/btw " to the text.</summary>
         private async void BtnBtw_Click(object sender, RoutedEventArgs e)
         {
+            if (_btwStartInProgress)
+            {
+                _btwStopRequestedDuringStart = true;
+                return;
+            }
             // Ignore if main mic is active
-            if (_micState == RecordingState.Recording) return;
+            if (_micState == RecordingState.Recording || _mainStartInProgress) return;
             if (_isProcessing) return;
             if (_btwStopInProgress) return;
 
@@ -2851,11 +2887,15 @@ namespace TerminalVoiceOverlay.Views
             else
             {
                 // ── Start BTW recording ──
+                _btwStartInProgress = true;
+                bool started = false;
+                var targetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                 try
                 {
-                    if (!_audioRecorder.Start()) return;
+                    started = await _audioRecorder.StartAsync();
+                    if (!started) return;
                     isBtwRecording = true;
-                    _btwRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
+                    _btwRecordingTargetHwnd = targetHwnd;
                     SetBtwMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("BTW recording started");
@@ -2868,6 +2908,17 @@ namespace TerminalVoiceOverlay.Views
 
                     await Task.Delay(3000);
                     SetBtwMicState(RecordingState.Idle);
+                }
+                finally
+                {
+                    _btwStartInProgress = false;
+                    if (!started) _btwStopRequestedDuringStart = false;
+                }
+
+                if (started && _btwStopRequestedDuringStart)
+                {
+                    _btwStopRequestedDuringStart = false;
+                    Dispatcher.BeginInvoke(new Action(() => BtnBtw_Click(BtwButton, new RoutedEventArgs())));
                 }
             }
         }
@@ -4707,39 +4758,49 @@ namespace TerminalVoiceOverlay.Views
             // Spart pro nicht-sichtbarem Buffer (z.B. BTW-Aufnahme: 10/s)
             // ein Lambda + ein BeginInvoke in die UI-Queue.
             if (!_waveformVisibleFast) return;
+            Volatile.Write(ref _pendingWaveformLevel, level);
+            if (Interlocked.Exchange(ref _waveformUpdateQueued, 1) != 0) return;
 
             // Marshall auf den UI-Thread — das Event kommt vom NAudio-
             // Buffer-Thread. BeginInvoke statt Invoke damit der Audio-
             // Thread nicht auf das UI-Rendering wartet.
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Doppel-Check auf dem UI-Thread (gegen die Race wo die
-                // Welle zwischen Pre-Filter und Dispatcher-Tick versteckt
-                // wurde). Wenn Welle weg: nichts tun.
-                if (WaveformCanvas == null || WaveformCanvas.Visibility != Visibility.Visible)
-                    return;
+                try
+                {
+                    // Doppel-Check auf dem UI-Thread (gegen die Race wo die
+                    // Welle zwischen Pre-Filter und Dispatcher-Tick versteckt
+                    // wurde). Wenn Welle weg: nichts tun.
+                    if (WaveformCanvas == null || WaveformCanvas.Visibility != Visibility.Visible)
+                        return;
 
-                // Pegel verstaerken: Wurzel macht leise Toene sichtbarer,
-                // Faktor 1.6 hebt das Ergebnis nochmal an. Cap auf 1.0
-                // verhindert dass Vollausschlag den Canvas verlaesst.
-                float boosted = MathF.Min(1f, MathF.Sqrt(level) * 1.6f);
+                    // Pegel verstaerken: Wurzel macht leise Toene sichtbarer,
+                    // Faktor 1.6 hebt das Ergebnis nochmal an. Cap auf 1.0
+                    // verhindert dass Vollausschlag den Canvas verlaesst.
+                    float latestLevel = Volatile.Read(ref _pendingWaveformLevel);
+                    float boosted = MathF.Min(1f, MathF.Sqrt(latestLevel) * 1.6f);
 
                 // Buffer nach links shiften, neuer Wert rechts rein.
                 // Array.Copy ueberlappenden Source/Dest ist ausdruecklich
                 // erlaubt und nutzt intern memmove — schneller und allokations-
                 // frei gegenueber der Hand-Schleife. Bei 10 Aufrufen/Sekunde
                 // waehrend einer Aufnahme summieren sich die Iterations-Kosten.
-                Array.Copy(_waveformBuffer, 1, _waveformBuffer, 0, WaveformBarCount - 1);
-                _waveformBuffer[WaveformBarCount - 1] = boosted;
+                    Array.Copy(_waveformBuffer, 1, _waveformBuffer, 0, WaveformBarCount - 1);
+                    _waveformBuffer[WaveformBarCount - 1] = boosted;
 
                 // Strich-Hoehen aktualisieren.
-                for (int i = 0; i < WaveformBarCount; i++)
+                    for (int i = 0; i < WaveformBarCount; i++)
+                    {
+                        if (_waveformBars[i] == null) continue;
+                        double h = WaveformMinH + _waveformBuffer[i] * (WaveformMaxH - WaveformMinH);
+                        _waveformBars[i].Height = h;
+                        System.Windows.Controls.Canvas.SetTop(
+                            _waveformBars[i], (WaveformCanvasH - h) / 2.0);
+                    }
+                }
+                finally
                 {
-                    if (_waveformBars[i] == null) continue;
-                    double h = WaveformMinH + _waveformBuffer[i] * (WaveformMaxH - WaveformMinH);
-                    _waveformBars[i].Height = h;
-                    System.Windows.Controls.Canvas.SetTop(
-                        _waveformBars[i], (WaveformCanvasH - h) / 2.0);
+                    Volatile.Write(ref _waveformUpdateQueued, 0);
                 }
             }));
         }
@@ -4999,11 +5060,6 @@ namespace TerminalVoiceOverlay.Views
                             try
                             {
                                 BtnMic_Click(this, new RoutedEventArgs());
-                                if (_micState != RecordingState.Recording)
-                                {
-                                    _pttRecording = false;
-                                    _pttToggleMode = false;
-                                }
                             }
                             catch (Exception ex) { Console.WriteLine($"PTT start error: {ex.Message}"); }
                         }));

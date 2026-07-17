@@ -32,6 +32,12 @@
 > Lösung: **Prozess-Isolation** — die NAudio-Capture läuft in einem Kindprozess; ein Crash killt
 > nur diesen, UI und gesprochener Text überleben. Der Worker flusht die WAV laufend und schließt
 > sie VOR dem Dispose → die Aufnahme übersteht sogar den Crash. Siehe §3.2.
+>
+> **Update 2026-07-17:** Eigener TVO-Vorfall ergänzt: Ein Turn lief real 19,25 s, die WAV
+> enthielt aber nur 7,62 s Audio. Synchrones WAV-Schreiben/Flushen und Pegel-stdout im
+> `DataAvailable`-Callback ließen unter Last Capture-Buffer ausfallen. Lösung: Callback nur
+> kopieren/queuen, geordneter Writer-Thread, Queue vor `DONE` vollständig leeren; Start und
+> `READY`-Wartezeit laufen asynchron zur WPF-UI. Siehe §3.4.
 
 ---
 
@@ -61,6 +67,7 @@
 | 16 | Diktat-Live-Vorschau ueberschreibt finale Fassung / springt im Feld ⭐⭐ | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt NUR die finale Engine | §7 |
 | 17 | Kurzer Start-/Stoppton kommt Sekunden später oder stottert ⭐⭐ | Output dauerhaft offen halten; PCM puffern; Latenz nicht unter die Treibergrenze drücken | §4.4 |
 | 18 | Stop-Klick friert das Overlay ein, Prozess lebt weiter ⭐⭐ | `StopRecording()` nie auf dem UI-Thread; Stop, Event-Wartezeit und Cleanup separat begrenzen | §3.2 |
+| 19 | Reale Sprechzeit ist viel länger als fertige WAV ⭐⭐ | Kein Datei-I/O im Capture-Callback; FIFO-Writer drainieren; PCM-Dauer gegen Turn-Dauer loggen | §3.4 |
 
 ---
 
@@ -219,8 +226,36 @@ das Overlay, darf ein namensbasierter Watchdog ihn nicht mit dem Overlay verwech
 **Ursache:** WaveInEvent stellt eine blockierende Dauerschleife auf einen ThreadPool-Thread.
 **Versionen:** NAudio 2.x per Design (#539 CLOSED COMPLETED = dokumentiert).
 **FIX:** Genau EINE langlebige Instanz (nicht staendig neu erzeugen); `DataAvailable`-Handler
-sofort zurueckkehren lassen (Arbeit in bounded Channel auslagern, DropOldest).
+sofort zurueckkehren lassen. Nur abgeleitete, erneut berechenbare Analysewerte dürfen in einem
+bounded Channel `DropOldest` nutzen; rohe Diktatdaten müssen verlustfrei in eine FIFO (§3.4).
 **Quelle:** naudio/NAudio#539 (gh-verifiziert).
+
+### 3.4 Synchrones Datei-I/O im Capture-Callback verliert Audio   [⭐⭐ EIGENER VORFALL 2026-07-17]
+**Symptom:** Das Overlay reagiert beim Sprechen ruckelig oder friert ein; Whisper erhält nur den
+ersten Teil des Diktats. Im belegten TVO-Turn lagen zwischen Start und Stop **19,25 s**, die
+fertige WAV enthielt jedoch nur **7,62 s** PCM. Nach `worker_done` wartete der Parent zusätzlich
+bis zum 5-s-Timeout, obwohl die WAV bereits sicher geschlossen war.
+
+**Ursache:** `DataAvailable` schrieb jeden NAudio-Buffer synchron per `WaveFileWriter.Write`,
+flushte periodisch im selben Callback und sendete für jeden Buffer eine Pegelzeile über stdout.
+Unter System-/Datenträgerlast kehrte der Callback nicht schnell genug zurück; WinMM konnte seine
+kleine Buffer-Kette nicht zuverlässig nachliefern. Parallel blockierte `AudioRecorder.Start()`
+den WPF-Dispatcher bis zu vier Sekunden beim Warten auf `READY`, und jede Pegelzeile erzeugte einen
+neuen Dispatcher-Auftrag.
+
+**FIX (verlustfrei):** Im Capture-Callback nur den Treiberbuffer in einen gepoolten Buffer kopieren
+und sofort in eine FIFO-Queue legen. Genau ein dedizierter Writer-Thread schreibt und flusht die
+WAV in Reihenfolge. Beim Stop zuerst `CompleteAdding`, die Queue vollständig drainieren, den Writer
+schließen und **erst danach** `DONE` senden. Für Diktat ist `DropOldest` verboten, weil es Sprache
+still löschen würde; eine harte maximale Aufnahmedauer begrenzt stattdessen den Speicherbedarf.
+Pegel auf etwa 10 Hz zusammenfassen und in WPF höchstens einen Dispatcher-Auftrag offen halten.
+`READY` asynchron abwarten und einen Stop während des Starts vormerken. Der Parent behandelt `DONE`
+als maßgebliche Persistenz-Garantie und beendet einen danach noch hängenden Worker, statt erneut fünf
+Sekunden auf nativen Cleanup zu warten. `FinalizeAndExit` atomar gegen doppelte Aufrufe absichern.
+
+**Verifikation:** TVO 1.4.88 / CVO 2.1.74; Capture-Diagnose loggt weiterhin Turn-, PCM-, Buffer-
+und Dateigröße sowie `done`, wodurch `WAV-Dauer << Turn-Dauer` künftig direkt erkennbar bleibt.
+**Quelle:** eigener TVO-Laufzeitvorfall und `diag.log` vom 2026-07-17.
 
 ---
 

@@ -45,6 +45,9 @@ public partial class PromptEditDialog : Window
     /// </summary>
     private bool _recordingStartedHere;
     private bool _stopInProgress;
+    private bool _startInProgress;
+    private bool _stopRequestedDuringStart;
+    private bool _isClosed;
 
     /// <summary>
     /// True while the short-label field still holds an auto-generated value
@@ -151,6 +154,7 @@ public partial class PromptEditDialog : Window
 
         Closed += async (_, _) =>
         {
+            _isClosed = true;
             // Defensive: NUR eine Aufnahme stoppen, die DIESER Dialog selbst
             // gestartet hat — damit das Mikrofon nicht geleakt wird wenn der
             // Dialog mitten in der eigenen Aufnahme geschlossen wird. Eine vom
@@ -159,6 +163,19 @@ public partial class PromptEditDialog : Window
             // Aufnahme abwuergen (geteilter AudioRecorder).
             string? wavPath = null;
             var recorder = VoiceServiceProvider.Recorder;
+            if (_startInProgress && recorder != null)
+            {
+                _stopRequestedDuringStart = true;
+                try { wavPath = await recorder.StopAsync(); }
+                catch (Exception ex) { DiagLog.Write("PromptEditMic", "close_start_stop_failed", ("error", ex.ToString())); }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(wavPath)) TryDeleteFile(wavPath);
+                    _pulseTimer?.Stop();
+                    _recordingStartedHere = false;
+                }
+                return;
+            }
             if (_stopInProgress || !_recordingStartedHere || recorder?.IsRecording != true)
             {
                 _pulseTimer?.Stop();
@@ -383,6 +400,11 @@ public partial class PromptEditDialog : Window
             ShowStatus("Mic-Aufnahme nicht verfuegbar (kein GROQ_API_KEY in .env).");
             return;
         }
+        if (_startInProgress)
+        {
+            _stopRequestedDuringStart = true;
+            return;
+        }
         if (_stopInProgress) return;
 
         // Der AudioRecorder ist prozessweit geteilt. Laeuft bereits eine
@@ -436,13 +458,17 @@ public partial class PromptEditDialog : Window
         }
 
         // ── Start ──
+        _startInProgress = true;
+        bool started = false;
         try
         {
-            if (!recorder.Start())
+            started = await recorder.StartAsync();
+            if (!started)
             {
                 ShowStatus("Es laeuft bereits eine andere Aufnahme.");
                 return;
             }
+            if (_isClosed) return;
             _recordingStartedHere = true;
             StartPulse();
             ShowStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.");
@@ -451,6 +477,17 @@ public partial class PromptEditDialog : Window
         {
             ShowStatus($"Aufnahme konnte nicht gestartet werden: {ex.Message}");
             BtnMic.Background = MicIdle;
+        }
+        finally
+        {
+            _startInProgress = false;
+            if (!started) _stopRequestedDuringStart = false;
+        }
+
+        if (started && _stopRequestedDuringStart && !_isClosed)
+        {
+            _stopRequestedDuringStart = false;
+            await ToggleRecordingAsync();
         }
     }
 

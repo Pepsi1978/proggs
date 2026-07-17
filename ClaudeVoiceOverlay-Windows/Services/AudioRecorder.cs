@@ -18,10 +18,10 @@ namespace ClaudeVoiceOverlay.Services
     /// er wuerde den ganzen Overlay-Prozess killen. Im Kindprozess killt er
     /// nur den Worker — die UI und der bereits gesprochene Text ueberleben.
     ///
-    /// Die oeffentliche API (<see cref="Start"/>, <see cref="StopAsync"/>,
+    /// Die oeffentliche API (<see cref="StartAsync"/>, <see cref="StopAsync"/>,
     /// <see cref="LevelChanged"/>, <see cref="IsRecording"/>) ist unveraendert,
-    /// sodass alle Aufrufer gleich bleiben. <see cref="Start"/> blockiert bis
-    /// der Worker <c>READY</c> meldet — dadurch spielt der bestehende
+    /// <see cref="StartAsync"/> wartet ohne UI-Blockade bis der Worker
+    /// <c>READY</c> meldet — dadurch spielt der bestehende
     /// Aufruf-Ablauf (Start → PlayStart-Cue) den Start-Ton erst bei echtem
     /// Aufnahmebeginn (keine verlorenen ersten Woerter).
     ///
@@ -42,10 +42,11 @@ namespace ClaudeVoiceOverlay.Services
         private readonly int _channels;
         private readonly object _stateLock = new();
         private Session? _session;
+        private Task<bool>? _startTask;
         private bool _disposed;
 
         /// <summary>
-        /// Peak-Pegel des aktuellen Buffers, normiert 0..1. Wird ~alle 50 ms
+        /// Peak-Pegel des aktuellen Buffers, normiert 0..1. Wird ~alle 100 ms
         /// aus dem Worker-Datenstrom gefeuert. Subscriber laufen auf einem
         /// Pool-Thread — UI-Updates muessen auf den Dispatcher gehoben werden
         /// (unveraendertes Verhalten gegenueber der In-Process-Aufnahme).
@@ -54,7 +55,7 @@ namespace ClaudeVoiceOverlay.Services
 
         public bool IsRecording
         {
-            get { lock (_stateLock) { return _session != null; } }
+            get { lock (_stateLock) { return _session != null || _startTask != null; } }
         }
 
         public AudioRecorder(int sampleRate = 16000, int channels = 1)
@@ -63,7 +64,37 @@ namespace ClaudeVoiceOverlay.Services
             _channels = channels;
         }
 
-        public bool Start()
+        public bool Start() => StartAsync().GetAwaiter().GetResult();
+
+        public Task<bool> StartAsync()
+        {
+            lock (_stateLock)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                if (_session != null || _startTask != null) return Task.FromResult(false);
+
+                var startTask = Task.Run(StartCore);
+                _startTask = startTask;
+                return ObserveStartAsync(startTask);
+            }
+        }
+
+        private async Task<bool> ObserveStartAsync(Task<bool> startTask)
+        {
+            try
+            {
+                return await startTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (_stateLock)
+                {
+                    if (ReferenceEquals(_startTask, startTask)) _startTask = null;
+                }
+            }
+        }
+
+        private bool StartCore()
         {
             var setupSw = Stopwatch.StartNew();
             string tempFile = Path.Combine(Path.GetTempPath(), $"cvo_recording_{Guid.NewGuid():N}.wav");
@@ -127,9 +158,9 @@ namespace ClaudeVoiceOverlay.Services
 
             lock (_stateLock)
             {
-                if (_session != null)
+                if (_disposed || _session != null)
                 {
-                    // Race: parallel gestartet — diesen Worker verwerfen.
+                    // Dispose oder ein unerwarteter Parallelstart waehrend READY.
                     KillWorker(session);
                     TryDeleteTempFile(tempFile);
                     return false;
@@ -155,10 +186,26 @@ namespace ClaudeVoiceOverlay.Services
         public async Task<string?> StopAsync()
         {
             Session? session;
+            Task<bool>? pendingStart;
             lock (_stateLock)
             {
                 session = _session;
-                _session = null;
+                pendingStart = session == null ? _startTask : null;
+                if (session != null) _session = null;
+            }
+
+            // Ein PTT-KeyUp kann eintreffen, waehrend der Worker noch READY
+            // aushandelt. Nicht als "keine Aufnahme" verlieren, sondern den
+            // laufenden Start abwarten und die entstandene Session sofort stoppen.
+            if (session == null && pendingStart != null)
+            {
+                try { await pendingStart.ConfigureAwait(false); }
+                catch { return null; }
+                lock (_stateLock)
+                {
+                    session = _session;
+                    _session = null;
+                }
             }
             if (session == null) return null;
             if (Interlocked.Exchange(ref session.StopStarted, 1) != 0) return null;
@@ -178,24 +225,44 @@ namespace ClaudeVoiceOverlay.Services
             }
 
             bool exited;
+            bool done;
             try
             {
                 using var cts = new CancellationTokenSource(StopTimeout);
-                await session.Proc!.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-                exited = true;
+                var exitTask = session.Proc!.WaitForExitAsync();
+                var completed = await Task.WhenAny(session.Done.Task, exitTask).WaitAsync(cts.Token).ConfigureAwait(false);
+                if (ReferenceEquals(completed, exitTask) && !session.Done.Task.IsCompleted)
+                    await Task.WhenAny(session.Done.Task, Task.Delay(100)).ConfigureAwait(false);
+                done = session.Done.Task.IsCompletedSuccessfully;
+
+                // DONE wird erst nach Queue-Drain, WAV-Flush und Writer-Close
+                // gesendet. Danach nur kurz natuerlichen Exit erlauben; ein
+                // verbleibender nativer Hang wird ohne Datenrisiko beendet.
+                try { await session.Proc.WaitForExitAsync().WaitAsync(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false); }
+                catch (TimeoutException)
+                {
+                    KillWorker(session);
+                    try { await session.Proc.WaitForExitAsync().WaitAsync(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false); }
+                    catch { /* WAV ist nach DONE bereits sicher */ }
+                }
+                exited = SafeHasExited(session);
             }
             catch (OperationCanceledException)
             {
+                done = false;
                 exited = false;
-                DiagLog.Write("Audio", "stop_wait_timeout", ("path", session.TempFile));
+                DiagLog.Write("Audio", "stop_wait_timeout", ("path", session.TempFile), ("done", false));
                 KillWorker(session);
+                try { await session.Proc!.WaitForExitAsync().WaitAsync(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false); }
+                catch { /* WAV-Fallback bleibt auch bei unkillbarem Worker erhalten */ }
+                exited = SafeHasExited(session);
             }
 
             int exitCode = SafeExitCode(session);
             long fileBytes = SafeFileSize(session.TempFile);
             bool usable = fileBytes >= MinUsableWavBytes;
 
-            if (exited && exitCode != 0)
+            if (exited && exitCode != 0 && !done)
             {
                 // Worker gecrasht (z.B. waveInReset AccessViolation). Dank
                 // laufendem Flush ist die WAV dennoch bis kurz vor dem Crash
@@ -213,6 +280,7 @@ namespace ClaudeVoiceOverlay.Services
                 ("fileBytes", fileBytes),
                 ("buffers", session.Buffers),
                 ("peak", (session.PeakMille / 1000f).ToString("0.000", CultureInfo.InvariantCulture)),
+                ("done", done),
                 ("exitCode", exited ? exitCode : (int?)null),
                 ("path", session.TempFile));
 
@@ -253,6 +321,7 @@ namespace ClaudeVoiceOverlay.Services
                         session.Buffers = ParseLong(parts[3], session.Buffers);
                         session.PeakMille = (int)ParseLong(parts[4], session.PeakMille);
                     }
+                    session.Done.TrySetResult(true);
                 }
                 else if (line.StartsWith("ERR ", StringComparison.Ordinal))
                 {
@@ -373,6 +442,7 @@ namespace ClaudeVoiceOverlay.Services
             public string TempFile { get; }
             public Process? Proc;
             public readonly ManualResetEventSlim Ready = new(false);
+            public readonly TaskCompletionSource<bool> Done = new(TaskCreationOptions.RunContinuationsAsynchronously);
             public volatile string? StartError;
             public readonly Stopwatch RecordingStopwatch = new();
             public long PcmBytes;

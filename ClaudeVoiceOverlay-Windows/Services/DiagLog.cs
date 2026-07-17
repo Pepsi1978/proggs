@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ClaudeVoiceOverlay.Services
 {
@@ -20,7 +22,17 @@ namespace ClaudeVoiceOverlay.Services
     {
         private static readonly object _lock = new();
         private static readonly string _path = ResolvePath();
+        private static readonly BlockingCollection<string> _queue = new();
+        private static readonly Task _writerTask = Task.Factory.StartNew(
+            WriterLoop,
+            TaskCreationOptions.LongRunning);
         private static bool _announced;
+
+        static DiagLog()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => FlushOnExit();
+            AppDomain.CurrentDomain.DomainUnload += (_, _) => FlushOnExit();
+        }
 
         public static string FilePath => _path;
 
@@ -58,19 +70,48 @@ namespace ClaudeVoiceOverlay.Services
                     }
                 sb.Append('}');
 
-                lock (_lock)
+                EnqueueLine(sb.ToString());
+            }
+            catch { /* Logging darf nie crashen */ }
+        }
+
+        private static void EnqueueLine(string line)
+        {
+            lock (_lock)
+            {
+                if (!_announced)
                 {
-                    RotateIfBig();
-                    if (!_announced)
-                    {
-                        _announced = true;
-                        File.AppendAllText(_path,
-                            "{\"ts\":\"" + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") +
-                            "\",\"ctx\":\"DiagLog\",\"msg\":\"=== session start ===\"}\n",
-                            Encoding.UTF8);
-                    }
-                    File.AppendAllText(_path, sb.ToString() + "\n", Encoding.UTF8);
+                    _announced = true;
+                    _queue.Add("{\"ts\":\"" + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") +
+                               "\",\"ctx\":\"DiagLog\",\"msg\":\"=== session start ===\"}");
                 }
+                _queue.Add(line);
+            }
+        }
+
+        private static void WriterLoop()
+        {
+            try
+            {
+                foreach (var line in _queue.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        RotateIfBig();
+                        File.AppendAllText(_path, line + "\n", Encoding.UTF8);
+                    }
+                    catch { /* Logging darf nie crashen */ }
+                }
+            }
+            catch { /* Logging darf nie crashen */ }
+        }
+
+        private static void FlushOnExit()
+        {
+            try
+            {
+                _queue.CompleteAdding();
+                _writerTask.Wait(500);
             }
             catch { /* Logging darf nie crashen */ }
         }

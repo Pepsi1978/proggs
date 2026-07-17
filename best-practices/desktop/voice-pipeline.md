@@ -11,6 +11,11 @@ VoiceAgent **1.2.0**.
 > **Update 2026-07-10:** Für kurze Windows-UI-Signale bestätigt: PCM-Daten und Audio-Output
 > vorhalten. Die kleinste nominelle Pufferlatenz ist nicht automatisch die beste; auf dem getesteten
 > Realtek-Treiber waren `100 ms / 3 Buffer` schnell und flüssig, `40 ms / 2 Buffer` stotterte.
+>
+> **Update 2026-07-17:** Für verlustfreie Windows-Aufnahme bestätigt: Der NAudio-Capture-
+> Callback darf weder WAV-I/O noch Flush noch ungedrosseltes stdout ausführen. Buffer nur
+> gepoolt in eine FIFO kopieren, auf einem Writer-Thread schreiben und vor `DONE` vollständig
+> drainieren. `DropOldest` ist bei Diktat Datenverlust, keine Überlaststrategie.
 
 > **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/voice-pipeline.md`](../../bugs/desktop/voice-pipeline.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man eine Sprach-Pipeline von
@@ -34,7 +39,7 @@ VoiceAgent **1.2.0**.
 | 4 | Stille-Pause dimensionieren | 300–550 ms Dialog, 1000–2000 ms Diktat + semantisches Netz | §2 |
 | 5 | Endpointing robust machen | Drei Schichten: Energie + Transkript + LLM-Check (FERTIG/WEITER) | §2 |
 | 6 | Endlos-Aufnahme verhindern | Max-Utterance-Deckel 15–30 s, finalisieren UND verarbeiten | §2 |
-| 7 | Daueraufnahme stabil halten | EINE WaveInEvent-Instanz, Watchdog, Stop/Dispose serialisieren | §3 |
+| 7 | Daueraufnahme stabil halten | Capture-Callback nur kopieren/queuen; FIFO-Writer drainieren; Watchdog und Stop-Guard | §3 |
 | 8 | Windows-Audio einrichten | AGC/Boost/Ducking/Exclusive aus (mmsys.cpl, einmalig) | §3 |
 | 9 | Latenz minimieren | Budget < 1 s, Zwischenschritte aufs kleinste Modell/Effort | §4 |
 | 10 | Pipeline schnell machen | Parallelisieren statt verketten, Streaming + Ueberlappung | §4 |
@@ -82,8 +87,18 @@ VoiceAgent **1.2.0**.
 
 ## 3. Robuste Daueraufnahme (NAudio, Windows)
 
-- **EINE langlebige `WaveInEvent`-Instanz**, BufferMilliseconds 50–100, ≥3 Buffer; Handler kehrt
-  SOFORT zurueck (Arbeit in bounded Channel, DropOldest). `offiziell`(NAudio)
+- **Capture-Callback als harte Echtzeitgrenze behandeln:** `BufferMilliseconds` 50–100, ≥3
+  Treiberbuffer; im Handler nur in einen `ArrayPool`-Buffer kopieren und in eine FIFO legen.
+  Kein Datei-I/O, Flush, synchrones Logging oder UI-Marshalling. Genau ein Writer-Thread schreibt
+  geordnet. Für verlustfreie Diktate **niemals `DropOldest`**; den maximalen Speicher stattdessen
+  durch eine harte maximale Aufnahmedauer begrenzen. `offiziell`(NAudio)+`eigener Vorfall`(TVO 2026-07-17)
+- **Stop ist ein Persistenzprotokoll:** Queue für neue Einträge schließen, vollständig drainieren,
+  WAV flushen/disposen, dann `DONE` senden. `DONE` ist die Parent-Garantie; danach darf ein noch
+  hängender nativer Worker beendet werden. Finalisierung atomar gegen Event-/Timeout-Doppelaufruf
+  schützen. Turn-Dauer und PCM-/WAV-Dauer gemeinsam loggen. `eigener Vorfall`(TVO/CVO 2026-07-17)
+- **WPF reaktiv halten:** Worker-Start und `READY` asynchron abwarten, Stop während Start als
+  Pending-Zustand erhalten. Pegel im Worker auf etwa 10 Hz aggregieren und in WPF höchstens einen
+  Dispatcher-Auftrag gleichzeitig offen halten. `eigener Vorfall`(TVO/CVO 2026-07-17)
 - **Watchdog**: kommt N Sekunden kein `DataAvailable` trotz aktivem Mikro → Capture neu aufbauen
   (Stop → RecordingStopped abwarten → Dispose → Start). Stop/Dispose strikt serialisieren,
   NIE im Callback. `extern`(NAudio #1168/#1150)

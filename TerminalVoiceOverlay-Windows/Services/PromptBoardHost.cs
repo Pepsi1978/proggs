@@ -24,6 +24,7 @@ namespace TerminalVoiceOverlay.Services;
 /// </summary>
 public static class PromptBoardHost
 {
+    private const int CurrentOverlaySchemaVersion = 1;
     private static IServiceProvider? _provider;
     private static readonly object _gate = new();
 
@@ -78,58 +79,59 @@ public static class PromptBoardHost
             var provider = services.BuildServiceProvider();
             try
             {
-                // Schema bootstrap. Mirrors PromptBoardStore.createSchemaIfNeeded()
-                // on macOS (PromptBoardStore.swift:49). Without this the DB file
-                // gets created empty by SqliteConnection but no tables exist —
-                // every read/write then crashes with "no such table: ...".
-                // EnsureCreated is idempotent: it only creates tables that are
-                // missing, so it's safe to call on every startup.
-                using (var scope = provider.CreateScope())
+                // Der volle EF-/ALTER-Bootstrap ist nur bei einer echten
+                // Schema-Aenderung noetig. Die Marke liegt in derselben DB,
+                // bleibt also auch bei Backup/Restore korrekt gekoppelt.
+                if (!IsOverlaySchemaCurrent())
                 {
-                    var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
-                    ctx.Database.EnsureCreated();
-                }
+                    using (var scope = provider.CreateScope())
+                    {
+                        var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+                        ctx.Database.EnsureCreated();
+                    }
 
                 // Idempotent schema migration for older Windows DBs that
                 // pre-date the per-prompt Pre/Post split (#1820 macOS, this
                 // commit Windows). SQLite throws on duplicate-column ALTER
                 // TABLE, which we swallow because we just want "the columns
                 // exist" — exactly mirrors the macOS approach.
-                EnsurePrePostColumns();
+                    EnsurePrePostColumns();
 
                 // Strg+1..9 prompt hotkeys (this feature). Same idempotent
                 // ALTER pattern: the column starts NULL on every existing
                 // row so prior installs upgrade silently with all hotkeys
                 // unassigned, exactly as if no one had ever set one.
-                EnsureHotkeyColumn();
+                    EnsureHotkeyColumn();
 
                 // Win+Alt+<letter> prompt hotkeys (A-Z). Same idempotent ALTER
                 // pattern as HotkeyNumber. Adds the column + index to legacy
                 // SQLite files that pre-date this feature; first-run installs
                 // already have it from EnsureCreated.
-                EnsureHotkeyLetterColumn();
+                    EnsureHotkeyLetterColumn();
 
                 // Overlay auto-hide toggle. Same idempotent ALTER pattern: existing
                 // SQLite files that pre-date the auto-hide feature get the column
                 // added with DEFAULT 1 (auto-hide on), so prior installs upgrade
                 // silently with the feature enabled. First-run installs already
                 // have it from EnsureCreated via the model property.
-                EnsureAutoHideColumn();
+                    EnsureAutoHideColumn();
 
                 // Overlay orientation (vertical/horizontal). Same idempotent ALTER
                 // pattern: existing DBs get the column with DEFAULT 'vertical', so
                 // prior installs keep the classic vertical pill until the user
                 // switches. First-run installs get it from EnsureCreated.
-                EnsureOrientationColumn();
+                    EnsureOrientationColumn();
 
                 // Overlay position persistence (diskette button). Existing DBs get
                 // the legacy flag for schema compatibility plus four nullable REAL
                 // columns. Non-null coordinates are always restored at startup.
-                EnsurePersistPositionColumns();
+                    EnsurePersistPositionColumns();
 
                 // Existing databases still carry the former non-unique index.
                 // Normalize legacy duplicates before enforcing the invariant.
-                EnsureSingleActiveAiPromptIndex();
+                    EnsureSingleActiveAiPromptIndex();
+                    MarkOverlaySchemaCurrent();
+                }
 
                 // The AppSettingsRepository self-bootstraps the singleton
                 // row on first GetAsync() call, so no explicit seeding here.
@@ -311,6 +313,39 @@ public static class PromptBoardHost
             """;
         cmd.ExecuteNonQuery();
         tx.Commit();
+    }
+
+    private static bool IsOverlaySchemaCurrent()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Version FROM OverlaySchemaMetadata WHERE Id = 1";
+            return Convert.ToInt32(cmd.ExecuteScalar()) >= CurrentOverlaySchemaVersion;
+        }
+        catch (Exception ex) when (ex is SqliteException or InvalidCastException or FormatException or OverflowException)
+        {
+            return false;
+        }
+    }
+
+    private static void MarkOverlaySchemaCurrent()
+    {
+        using var conn = new SqliteConnection($"Data Source={DbPath}");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            CREATE TABLE IF NOT EXISTS OverlaySchemaMetadata (
+                Id INTEGER NOT NULL PRIMARY KEY,
+                Version INTEGER NOT NULL
+            );
+            INSERT INTO OverlaySchemaMetadata (Id, Version) VALUES (1, $version)
+            ON CONFLICT(Id) DO UPDATE SET Version = excluded.Version;
+            """;
+        cmd.Parameters.AddWithValue("$version", CurrentOverlaySchemaVersion);
+        cmd.ExecuteNonQuery();
     }
 
     private static void EnsurePrePostColumns()

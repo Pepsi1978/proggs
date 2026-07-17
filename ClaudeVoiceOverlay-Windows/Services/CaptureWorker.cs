@@ -1,4 +1,6 @@
 using System;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -42,16 +44,23 @@ namespace ClaudeVoiceOverlay.Services
         // Stueck so lange; rein defensiv (Direktive 3).
         private static readonly TimeSpan MaxRecording = TimeSpan.FromMinutes(20);
         private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(200);
+        private static readonly TimeSpan WriterDrainTimeout = TimeSpan.FromSeconds(4);
+        private const long LevelEmitIntervalMs = 100;
 
         private static readonly object _writerLock = new();
         private static readonly ManualResetEventSlim _finished = new(false);
+        private static readonly BlockingCollection<CapturedBuffer> _writeQueue = new();
         private static WaveFileWriter? _writer;
         private static WaveInEvent? _waveIn;
+        private static Thread? _writerThread;
         private static string _outPath = "";
         private static long _pcmBytes;
         private static long _buffers;
         private static int _peakMille;
         private static int _stopping;          // 0/1 via Interlocked
+        private static int _finalizing;        // 0/1 via Interlocked
+        private static int _pendingLevelPeak;
+        private static long _lastLevelEmitTicks;
         private static readonly Stopwatch _sinceFlush = new();
 
         /// <summary>
@@ -88,6 +97,12 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     _writer = new WaveFileWriter(_outPath, format);
                 }
+                _writerThread = new Thread(WriterLoop)
+                {
+                    IsBackground = true,
+                    Name = "capture-wav-writer"
+                };
+                _writerThread.Start();
                 _waveIn = new WaveInEvent
                 {
                     WaveFormat = format,
@@ -182,29 +197,22 @@ namespace ClaudeVoiceOverlay.Services
 
         private static void OnDataAvailable(object? sender, WaveInEventArgs e)
         {
-            lock (_writerLock)
-            {
-                var w = _writer;
-                if (w == null) return;
-                try
-                {
-                    w.Write(e.Buffer, 0, e.BytesRecorded);
-                    _pcmBytes += e.BytesRecorded;
-                    _buffers++;
+            if (e.BytesRecorded <= 0) return;
 
-                    // Periodisch flushen → WAV bleibt jederzeit valide lesbar
-                    // (ueberlebt einen Crash mitten in der Aufnahme).
-                    if (_sinceFlush.Elapsed >= FlushInterval)
-                    {
-                        w.Flush();
-                        _sinceFlush.Restart();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log("write_failed", ex.Message);
-                }
+            byte[] copy = ArrayPool<byte>.Shared.Rent(e.BytesRecorded);
+            Buffer.BlockCopy(e.Buffer, 0, copy, 0, e.BytesRecorded);
+            try
+            {
+                _writeQueue.Add(new CapturedBuffer(copy, e.BytesRecorded));
             }
+            catch (InvalidOperationException)
+            {
+                ArrayPool<byte>.Shared.Return(copy);
+                return;
+            }
+
+            _pcmBytes += e.BytesRecorded;
+            _buffers++;
 
             int peak = 0;
             int sampleCount = e.BytesRecorded / 2;
@@ -216,7 +224,51 @@ namespace ClaudeVoiceOverlay.Services
             }
             int mille = (int)(peak / 32768f * 1000f);
             if (mille > _peakMille) _peakMille = mille;
-            Emit("L " + mille.ToString(CultureInfo.InvariantCulture));
+            if (mille > _pendingLevelPeak) _pendingLevelPeak = mille;
+
+            long now = Environment.TickCount64;
+            if (now - _lastLevelEmitTicks >= LevelEmitIntervalMs)
+            {
+                _lastLevelEmitTicks = now;
+                int level = Interlocked.Exchange(ref _pendingLevelPeak, 0);
+                Emit("L " + level.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        private static void WriterLoop()
+        {
+            try
+            {
+                foreach (var buffer in _writeQueue.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        lock (_writerLock)
+                        {
+                            var writer = _writer;
+                            if (writer == null) continue;
+                            writer.Write(buffer.Data, 0, buffer.Count);
+                            if (_sinceFlush.Elapsed >= FlushInterval)
+                            {
+                                writer.Flush();
+                                _sinceFlush.Restart();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("write_failed", ex.Message);
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(buffer.Data);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("writer_loop_failed", ex.Message);
+            }
         }
 
         private static void OnRecordingStopped(object? sender, StoppedEventArgs e)
@@ -226,23 +278,31 @@ namespace ClaudeVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Writer ZUERST schliessen (WAV vollstaendig + valide), DONE melden,
-        /// DANN erst WaveIn disposen (die crash-anfaellige Stelle). Idempotent.
+        /// Queue leeren, Writer schliessen (WAV vollstaendig + valide), DONE
+        /// melden und ohne crash-anfaelliges WaveIn-Dispose beenden. Idempotent.
         /// </summary>
         private static void FinalizeAndExit()
         {
+            if (Interlocked.Exchange(ref _finalizing, 1) != 0) return;
+            try { _writeQueue.CompleteAdding(); } catch { /* idempotent */ }
+            if (_writerThread is { } writerThread && !writerThread.Join(WriterDrainTimeout))
+            {
+                Log("writer_drain_timeout", $"queue={_writeQueue.Count}");
+                _finished.Set();
+                Environment.Exit(3);
+                return;
+            }
+
             long fileBytes = CloseWriterAndMeasure();
 
             Emit($"DONE {fileBytes} {_pcmBytes} {_buffers} {_peakMille}");
             Log("worker_done", $"fileBytes={fileBytes} pcmBytes={_pcmBytes} buffers={_buffers} peakMille={_peakMille}");
             _finished.Set();
 
-            // Ab hier ist die Aufnahme sicher auf Platte. Der native Dispose
-            // (waveInReset/waveInClose) darf jetzt crashen — der Parent hat
-            // das DONE samt validem WAV bereits.
-            try { _waveIn?.Dispose(); }
-            catch (Exception ex) { Log("wavein_dispose_failed", ex.Message); }
-
+            // Der Prozess endet jetzt ohnehin. Windows gibt die nativen WaveIn-
+            // Handles beim Prozessende frei; ein explizites Dispose wuerde nur
+            // erneut den bekannten waveInReset-Crash oder einen Endlos-Hang
+            // riskieren, nachdem die WAV bereits vollstaendig gesichert ist.
             Environment.Exit(0);
         }
 
@@ -306,6 +366,8 @@ namespace ClaudeVoiceOverlay.Services
 
         private static string OneLine(string s) =>
             (s ?? "").Replace('\r', ' ').Replace('\n', ' ');
+
+        private readonly record struct CapturedBuffer(byte[] Data, int Count);
 
         private static int ArgInt(string[] args, string key, int fallback)
         {
