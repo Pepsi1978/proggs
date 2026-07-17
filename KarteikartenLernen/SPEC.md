@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.15 - 17.07.2026, 23:39 Uhr
+Version 0.1.16 - 17.07.2026, 23:40 Uhr
 
 ## 1. Übersicht
 
@@ -165,6 +165,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 - Room ist lokale Source of Truth für Sessions, Recherchen, Karten und Lernstatus.
 - DataStore speichert Theme, Profile, Modell, Reasoning, Kartenlimit, Audio- und
   TTS-Einstellungen.
+- Groq- und Gemini-Schlüssel werden ausschließlich beim lokalen Build aus dem externen
+  Secret-Store geladen und nicht im Repository abgelegt. Die Einstellungen unterscheiden
+  ehrlich zwischen `Konfiguriert` und `Fehlt`; sie behaupten keine ungeprüfte Verbindung.
 - Services kapseln Spracheingabe, KI-Generierung, OAuth/Schlüsselzugriff, TTS und Audio.
 
 ### Verhalten

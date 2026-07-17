@@ -148,10 +148,26 @@ fun SettingsScreen(
                     SmallPill("Trennen", onLogout)
                 }
             }
-            SettingRow("Groq (Whisper)", "Geräte-Spracherkennung") {
+            val groqConfigured = BuildConfig.GROQ_API_KEY.isNotBlank()
+            SettingRow(
+                "Groq Whisper",
+                if (groqConfigured) "${BuildConfig.GROQ_TRANSCRIPTION_MODEL} · lokaler Build-Schlüssel" else "Nicht konfiguriert",
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(7.dp).background(c.green, CircleShape))
-                    Text("Verbunden", color = c.green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                    val statusColor = if (groqConfigured) c.accent2 else c.red
+                    Box(Modifier.size(7.dp).background(statusColor, CircleShape))
+                    Text(if (groqConfigured) "Konfiguriert" else "Fehlt", color = statusColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            val geminiConfigured = BuildConfig.GEMINI_API_KEY.isNotBlank()
+            SettingRow(
+                "Gemini Textverbesserung",
+                if (geminiConfigured) "${BuildConfig.GEMINI_MODEL} · lokaler Build-Schlüssel" else "Nicht konfiguriert",
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusColor = if (geminiConfigured) c.accent2 else c.red
+                    Box(Modifier.size(7.dp).background(statusColor, CircleShape))
+                    Text(if (geminiConfigured) "Konfiguriert" else "Fehlt", color = statusColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                 }
             }
         }
