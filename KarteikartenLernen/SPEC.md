@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.9 - 17.07.2026, 22:54 Uhr
+Version 0.1.10 - 17.07.2026, 22:55 Uhr
 
 ## 1. Übersicht
 
@@ -218,6 +218,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 - Nach der Bestätigung wartet der Token-Austausch, bis die App wieder im Vordergrund
   und ein validiertes Netz aktiv ist. Reine DNS-Fehler werden begrenzt mit Backoff
   wiederholt; OAuth- und sonstige HTTP-Fehler werden nicht blind erneut gesendet.
+  `ACCESS_NETWORK_STATE` ist deklariert; kann der Zustand dennoch nicht gelesen werden,
+  dient der reale HTTP-Aufruf als funktionserhaltender Konnektivitäts-Fallback.
 - Tokens werden nicht aus `~/.codex` übernommen oder dorthin zurückgeschrieben.
 - App-eigener, verschlüsselter Token-Store; Refresh-Antworten werden in bestehende
   Credentials gemergt. Rotierte Refresh-Tokens ersetzen nur das entsprechende Feld.

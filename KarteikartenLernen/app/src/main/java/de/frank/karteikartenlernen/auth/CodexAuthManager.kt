@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -283,10 +284,16 @@ class CodexAuthManager(context: Context) {
     }
 
     private fun hasValidatedNetwork(): Boolean {
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return try {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } catch (error: SecurityException) {
+            // The following HTTP request remains the authoritative connectivity check.
+            Log.e("CodexAuth", "Network-state permission unavailable; falling back to HTTP", error)
+            true
+        }
     }
 
     private fun HttpURLConnection.readBody(): String {
