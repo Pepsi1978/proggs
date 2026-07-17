@@ -31,6 +31,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Check
@@ -156,6 +158,8 @@ fun LearningOverlay(
     onRate: (Boolean) -> Unit,
     onRestart: () -> Unit,
     onSpeak: (String) -> Unit,
+    isSpeaking: Boolean,
+    onStopSpeaking: () -> Unit,
 ) {
     val c = LocalAppPalette.current
     val learning = state.learning ?: return
@@ -173,8 +177,21 @@ fun LearningOverlay(
                     Text(learning.title, color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Text("${learning.position + 1} / ${learning.queue.size}", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                IconButtonBox({ onSpeak(if (learning.flipped) "${card.answer}. ${card.explanation}" else card.question) }, size = 36) {
-                    Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.text, modifier = Modifier.size(18.dp))
+                val speakerOrange = Color(0xFFFFA24C)
+                IconButtonBox(
+                    onClick = {
+                        if (isSpeaking) onStopSpeaking()
+                        else onSpeak(if (learning.flipped) "${card.answer}. ${card.explanation}" else card.question)
+                    },
+                    size = 36,
+                    background = if (isSpeaking) speakerOrange.copy(alpha = 0.18f) else null,
+                ) {
+                    Icon(
+                        if (isSpeaking) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
+                        if (isSpeaking) "Vorlesen stoppen" else "Vorlesen",
+                        tint = if (isSpeaking) speakerOrange else Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), horizontalArrangement = Arrangement.Center) {
@@ -334,9 +351,22 @@ private fun RatingButton(known: Boolean, modifier: Modifier, onClick: () -> Unit
 }
 
 @Composable
-private fun IconButtonBox(onClick: () -> Unit, size: Int = 34, transparent: Boolean = false, content: @Composable () -> Unit) {
+private fun IconButtonBox(
+    onClick: () -> Unit,
+    size: Int = 34,
+    transparent: Boolean = false,
+    background: Color? = null,
+    content: @Composable () -> Unit,
+) {
     val c = LocalAppPalette.current
-    Box(Modifier.size(size.dp).clip(RoundedCornerShape(10.dp)).background(if (transparent) Color.Transparent else c.chip).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
+    Box(
+        Modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(background ?: if (transparent) Color.Transparent else c.chip)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 @Composable

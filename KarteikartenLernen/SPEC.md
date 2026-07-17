@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.25 - 18.07.2026, 00:52 Uhr
+Version 0.1.26 - 18.07.2026, 00:54 Uhr
 
 ## 1. Übersicht
 
@@ -221,6 +221,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   inhaltlichen Einheiten liegt etwa eine Sekunde Pause. Quellen-URLs werden nicht
   vorgelesen. Stopp, Fehler und verspätete Netzwerk-Callbacks räumen alle temporären
   Dateien auf, ohne einen neueren Vorlesevorgang zu beeinflussen.
+- Der Lautsprecher in der Lernrunde ist ein echter Wiedergabe-Schalter: Während Edge
+  TTS spricht, leuchtet er orange. Im Ruhezustand ist er weiß und durchgestrichen.
+  Ein erneuter Tipp oder das Schließen der Lernrunde bricht die Wiedergabe sofort ab;
+  Abschluss und Fehler setzen den sichtbaren Zustand ebenfalls zuverlässig zurück.
 
 ### Datenmodell
 

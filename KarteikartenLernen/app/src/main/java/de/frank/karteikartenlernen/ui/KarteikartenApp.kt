@@ -28,6 +28,8 @@ fun KarteikartenApp(
     viewModel: AppViewModel,
     onMicClick: () -> Unit,
     onSpeak: (String) -> Unit,
+    isSpeaking: Boolean,
+    onStopSpeaking: () -> Unit,
     onLogin: () -> Unit,
     onOpenAuthPage: () -> Unit,
     onDarkChanged: (Boolean) -> Unit,
@@ -42,7 +44,10 @@ fun KarteikartenApp(
                 state.showOAuth -> viewModel.showOAuth(false)
                 state.showModelSheet -> viewModel.showModelSheet(false)
                 state.showCrossSheet -> viewModel.closeCross()
-                state.learning != null -> viewModel.closeLearning()
+                state.learning != null -> {
+                    onStopSpeaking()
+                    viewModel.closeLearning()
+                }
                 state.selectedSession != null -> viewModel.closeSession()
             }
         }
@@ -103,11 +108,16 @@ fun KarteikartenApp(
             if (state.learning != null) {
                 LearningOverlay(
                     state = state,
-                    onClose = viewModel::closeLearning,
+                    onClose = {
+                        onStopSpeaking()
+                        viewModel.closeLearning()
+                    },
                     onFlip = viewModel::flipCard,
                     onRate = viewModel::rateCard,
                     onRestart = viewModel::restartLearning,
                     onSpeak = onSpeak,
+                    isSpeaking = isSpeaking,
+                    onStopSpeaking = onStopSpeaking,
                 )
             }
             CrossSheet(state, viewModel::decideCross, viewModel::closeCross)
