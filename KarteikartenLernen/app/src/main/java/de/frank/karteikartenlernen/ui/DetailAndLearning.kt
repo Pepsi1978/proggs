@@ -139,11 +139,11 @@ private fun ResearchDetail(question: String, answer: String, onSpeak: (String) -
     GlassSurface(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Heute · 09:24", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Vollständige Recherche", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.muted, modifier = Modifier.size(18.dp).clickable { onSpeak(answer) })
             }
             Text(question, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-            Text(answer, color = c.muted, fontFamily = Newsreader, fontSize = 15.5.sp, lineHeight = 25.sp, modifier = Modifier.padding(top = 8.dp))
+            ResearchArticle(answer)
         }
     }
 }

@@ -50,7 +50,6 @@ import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.GenerationPhase
 import de.frank.karteikartenlernen.model.MicState
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
-import de.frank.karteikartenlernen.ui.theme.Newsreader
 import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
 
 @Composable
@@ -229,14 +228,7 @@ private fun AnswerBlock(state: AppUiState, onSpeak: (String) -> Unit, onLearn: (
                     Text("Vorlesen", color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                 }
             }
-            Text(
-                state.answer.orEmpty() + if (state.generationPhase == GenerationPhase.ANSWER) " ▌" else "",
-                color = c.text,
-                fontFamily = Newsreader,
-                fontSize = 16.5.sp,
-                lineHeight = 27.sp,
-                modifier = Modifier.padding(top = 10.dp),
-            )
+            ResearchArticle(state.answer.orEmpty(), paragraphColor = c.text)
             if (state.generationPhase == GenerationPhase.CARDS) {
                 Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     LoadingRing(c.accent, 16.dp)

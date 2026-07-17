@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.20 - 18.07.2026, 00:34 Uhr
+Version 0.1.21 - 18.07.2026, 00:37 Uhr
 
 ## 1. Übersicht
 
@@ -136,8 +136,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 4. **Recherche, Formulierung:** animierter Loader; neue Formulierung kann rückgängig
    gemacht werden.
 5. **Recherche, Generierung:** Während die Antwort erzeugt wird, zeigt eine animierte
-   Eieruhr deutlich „Bitte warten, Antwort wird erzeugt“. Danach folgen gestreamte
-   Antwort mit Cursor, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
+   Eieruhr deutlich „Bitte warten, Antwort wird erzeugt“. Danach folgen die vollständige
+   gegliederte Antwort, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
 7. **Modell-Bottom-Sheet:** GPT 5.6 Soul/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.
@@ -145,7 +145,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
    Komplett-Status.
 9. **Session-Detail, Karten:** Titel, Fortschritt, Alle lernen, Nur schwierige,
    Lernstand zurücksetzen, Kartenliste mit Status und Löschaktion.
-10. **Session-Detail, Recherche:** gespeicherte Frage/Antwort samt Vorlesen.
+10. **Session-Detail, Recherche:** vollständige gespeicherte Frage und Antwort samt
+    typografisch getrennten Überschriften, Absätzen, anklickbaren Quellen und Vorlesen.
 11. **Lernrunde, Frage:** Fortschritt, Kartenindikatoren, Vorlesen, 3D-Karte und Flip.
 12. **Lernrunde, Antwort:** Antwort plus Erklärung, Nicht gewusst und Gewusst.
 13. **Lernrunde, Abschluss:** Konfetti, Ergebniszahlen, Nochmal und Fertig.
@@ -164,6 +165,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   Multi-Modul-Komplexität.
 - Unidirectional Data Flow über einen `AppViewModel` und immutable `UiState`.
 - Room ist lokale Source of Truth für Sessions, Recherchen, Karten und Lernstatus.
+- Neue Session, vollständige Recherche und alle erzeugten Karten werden unmittelbar
+  nach Empfang gemeinsam in einer Room-Transaktion gespeichert. Die UI verzögert die
+  Speicherung nicht durch eine künstliche Schreibanimation.
 - DataStore speichert Theme, Profile, Modell, Reasoning, Kartenlimit, Audio- und
   TTS-Einstellungen.
 - Groq- und Gemini-Schlüssel werden ausschließlich beim lokalen Build aus dem externen

@@ -105,6 +105,17 @@ interface StudyDao {
         return sourceCards.size
     }
 
+    @Transaction
+    suspend fun insertResearchBundle(
+        session: SessionEntity,
+        research: ResearchEntity,
+        cards: List<FlashcardEntity>,
+    ): List<Long> {
+        upsertSession(session)
+        val researchId = insertResearch(research)
+        return insertCards(cards.map { it.copy(researchId = researchId) })
+    }
+
     @Insert
     suspend fun insertLearningResult(result: LearningResultEntity)
 

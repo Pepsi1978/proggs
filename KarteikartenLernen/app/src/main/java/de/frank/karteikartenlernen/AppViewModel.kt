@@ -273,11 +273,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 return@launch
             }
-            val words = result.answer.split(' ')
-            for (end in 2..words.size step 2) {
-                _uiState.update { it.copy(answer = words.take(end).joinToString(" ")) }
-                delay(38)
-            }
             _uiState.update { it.copy(answer = result.answer, generationPhase = GenerationPhase.CARDS) }
             val (sessionId, persistedCardIds) = persistResearch(state.input, result)
             val crossSuggestions = buildCrossSuggestions(result.cards, persistedCardIds, sessionContexts)
@@ -298,18 +293,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun persistResearch(question: String, result: GeneratedResearch): Pair<String, List<Long>> {
         val sessionId = "research-${System.currentTimeMillis()}"
-        dao.upsertSession(SessionEntity(sessionId, result.title, System.currentTimeMillis(), result.cards.size, 0, "Heute", 0))
-        val researchId = dao.insertResearch(ResearchEntity(sessionId = sessionId, question = question, answer = result.answer, createdAt = System.currentTimeMillis()))
-        val cardIds = dao.insertCards(result.cards.map {
+        val createdAt = System.currentTimeMillis()
+        val cardIds = dao.insertResearchBundle(
+            session = SessionEntity(sessionId, result.title, createdAt, result.cards.size, 0, "Heute", 0),
+            research = ResearchEntity(sessionId = sessionId, question = question, answer = result.answer, createdAt = createdAt),
+            cards = result.cards.map {
             FlashcardEntity(
                 sessionId = sessionId,
-                researchId = researchId,
+                researchId = 0,
                 question = it.question,
                 answer = it.answer,
                 explanation = it.explanation,
                 status = CardStatus.NEW.name,
             )
-        })
+        },
+        )
         return sessionId to cardIds
     }
 
@@ -385,10 +383,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun updateSearch(value: String) = _uiState.update { it.copy(search = value) }
     fun openSession(session: StudySession) {
         activeSessionId.value = session.id
-        _uiState.update { it.copy(selectedSession = session, detailResearchTab = false) }
+        _uiState.update { it.copy(selectedSession = session, detailResearchTab = false, detailQuestion = "", detailAnswer = "") }
         viewModelScope.launch {
-            dao.latestResearch(session.id)?.let { research ->
-                _uiState.update { it.copy(detailQuestion = research.question, detailAnswer = research.answer) }
+            val research = dao.latestResearch(session.id)
+            _uiState.update { current ->
+                if (current.selectedSession?.id != session.id) current
+                else current.copy(
+                    detailQuestion = research?.question.orEmpty(),
+                    detailAnswer = research?.answer.orEmpty(),
+                )
             }
         }
     }
