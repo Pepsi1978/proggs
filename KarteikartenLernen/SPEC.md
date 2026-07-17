@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.5 - 17.07.2026, 22:35 Uhr
+Version 0.1.6 - 17.07.2026, 22:46 Uhr
 
 ## 1. Übersicht
 
@@ -78,6 +78,8 @@ Aurora-Blobs je Profil:
 - Hauptseitenabstand: `18` dp; Lernkarten-Seitenabstand: `22` dp.
 - Häufige Abstände: `2`, `3`, `4`, `5`, `6`, `8`, `9`, `10`, `12`, `14`,
   `15`, `16`, `18`, `20`, `22`, `24`, `26` und `28` dp.
+- Die Mikrofon-Aura nutzt ungebundene Blur-Kanten und läuft rundum weich aus,
+  ohne an ihrer Renderfläche rechteckig abgeschnitten zu werden.
 - Radien: `2`, `3`, `4`, `8`, `10`, `11`, `12`, `14`, `16`, `18`, `22`,
   `26`, `28`, `44` und pillenförmig `99` dp.
 - Karten: transluzente Flächen, 1-dp-Rand, Blur-Äquivalent und Profil-Schatten.

@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -167,7 +168,7 @@ fun MicButton(state: MicState, seconds: Int, onClick: () -> Unit) {
                 Modifier
                     .size(172.dp)
                     .scale(breathe)
-                    .blur(14.dp)
+                    .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                     .background(c.accent.copy(alpha = if (c.dark) 0.47f else 0.35f), CircleShape),
             )
             if (state == MicState.RECORDING) {
