@@ -101,24 +101,12 @@
             </Setter>
         </Style>
 
-        <!-- Save button style: 40x40 rounded square (Viereck-Diskette),
-             CornerRadius=8. Sitzt im vertikalen Layout neben dem Enter-Button,
-             im horizontalen Layout unter dem Enter-Button. Merkt sich die
-             aktuelle Overlay-Position pro Orientierung (nur fuer die laufende
-             Session — nach Neustart gilt wieder die Standardposition). -->
+        <!-- Save button style: identischer runder 34x34-Button wie der Stern.
+             Vertikal stehen beide nebeneinander, horizontal untereinander. -->
         <Style x:Key="SaveButton" TargetType="Button">
-            <!-- 28px im vertikalen Modus: passt mit 2px Margin in die 30px
-                 breite Profil-Spalte → Enter bleibt exakt auf der Achse der
-                 anderen runden Buttons. Im Horizontal-Modus setzt
-                 MakeEnterSaveGroup auf 40px hoch (dort ist Platz unter Enter). -->
-            <Setter Property="Width" Value="28"/>
-            <Setter Property="Height" Value="28"/>
-            <!-- Transparent: nur das Disketten-Symbol ist sichtbar, KEIN grauer
-                 Kasten (Frank-Wunsch 2026-05-25). Transparent bleibt klickbar —
-                 die volle 40x40-Flaeche ist weiterhin hit-testbar. Feedback beim
-                 Speichern laeuft ueber das Symbol selbst (gruenes Aufblitzen der
-                 Foreground-Farbe), nicht ueber einen Hintergrund-Kasten. -->
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -128,7 +116,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="BtnBorder"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="8"
+                                CornerRadius="17"
                                 Width="{TemplateBinding Width}"
                                 Height="{TemplateBinding Height}">
                             <ContentPresenter HorizontalAlignment="Center"
@@ -514,7 +502,7 @@
                         <TextBlock x:Name="SaveIcon"
                                    Text="&#xE74E;"
                                    FontFamily="Segoe MDL2 Assets"
-                                   FontSize="16"
+                                   FontSize="20"
                                    Foreground="White"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>

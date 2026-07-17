@@ -7,9 +7,11 @@
     <key>CFBundleIdentifier</key>
     <string>com.frank.ClaudeCodexVoiceOverlay</string>
     <key>CFBundleVersion</key>
-    <string>1.22</string>
+    <string>1.24</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.23</string>
+    <string>1.24</string>
+    <key>BuildTimestamp</key>
+    <string>17.07.2026, 17:40 Uhr</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>

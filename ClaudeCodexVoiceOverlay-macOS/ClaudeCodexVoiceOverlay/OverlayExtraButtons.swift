@@ -9,7 +9,7 @@ import AppKit
 //   - S7 vertikal: neben dem Enter (positioniert in applyVerticalLayout)
 //   - S7 horizontal: gleiche Sektion, unter dem Enter
 //
-// SaveButton (28x28, Symbol 💾): merkt die aktuelle Position pro Orientation
+// SaveButton (34x34, Symbol 💾): merkt die aktuelle Position pro Orientation
 //   - S1 vertikal: neben dem Stern
 //   - S1 horizontal: gleiche Sektion, unter dem Stern
 
@@ -36,10 +36,8 @@ extension OverlayPanel {
         return b
     }
 
-    /// Save-Button (Diskette) — TRANSPARENT (kein grauer Kasten), nur das
-    /// Disketten-Symbol ist sichtbar. Vergroessert von 28×28 auf 36×36 fuer
-    /// bessere Sichtbarkeit (Windows-Pendant zieht auf 36 mit).
-    /// CornerRadius 10 (proportional skaliert).
+    /// Save-Button (Diskette) — identischer runder 34×34-Button wie der Stern.
+    /// Das Glyph ist etwas groesser, damit beide Symbole optisch gleichwertig sind.
     /// Disketten-Symbol als NSBezierPath (Material 'save'-Glyph approximiert
     /// das Segoe MDL2 E74E-Glyph aus Windows-XAML).
     /// Beim Klick blitzt das Symbol kurz gruen auf als Feedback.
@@ -52,12 +50,11 @@ extension OverlayPanel {
             return b
         }
         let b = RoundButton(label: "",
-                            color: NSColor.clear,
-                            width: 36, height: 36)
+                            color: .toggleOff,
+                            width: 34, height: 34)
         b.symbolImage = IconPaths.renderImage(
             path: IconPaths.save(), size: NSSize(width: 22, height: 22), fill: .white)
         b.labelColor = NSColor.white
-        b.cornerRadius = 10
         b.onClick = { [weak self] in
             self?.onSaveClicked?()
             self?.flashSaveButtonGreen()
@@ -164,7 +161,7 @@ extension OverlayPanel {
         saveButton.alphaValue = 1.0
 
         // Die Diskette sitzt beim Stern in einem 34×34-Slot.
-        saveButton.symbolScaleFactor = 0.53
+        saveButton.symbolScaleFactor = 20.0 / 34.0
         saveButton.needsDisplay = true
 
         // 30% Durchsichtigkeit auf den Sektions-Hintergruenden (B3-Alpha in Windows).
@@ -220,7 +217,7 @@ extension OverlayPanel {
         saveButton.alphaValue = 1.0
 
         // Die Diskette bleibt im 34×34-Slot der Stern-Sektion.
-        saveButton.symbolScaleFactor = 0.53
+        saveButton.symbolScaleFactor = 20.0 / 34.0
         saveButton.needsDisplay = true
 
         // Save-Diskette einfaerben: gruen wenn eine horizontale Position
