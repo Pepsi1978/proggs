@@ -67,30 +67,40 @@ lese den Entwurf komplett ein und setze ihn dann 1:1 in Jetpack Compose um."
 
 ## Phase 0 — Design-Ordner finden
 
-Die Design-Entwuerfe liegen im Repo unter `~/proggs/Designs/`. Jeder Unterordner ist
-**ein** Design-Entwurf fuer **eine** App und enthaelt typischerweise:
+**Feste Ordner-Struktur (wichtig):** Der Standard-Container fuer ALLE Design-Entwuerfe
+ist immer der Ordner **`~/proggs/Designs/`** selbst. Er ist kein Design-Ordner, sondern
+nur die Sammlung. **Jedes einzelne Designprojekt liegt als eigener Unterordner darin**
+— z.B. `~/proggs/Designs/Fisetin-Begleiter-Design-Update/`. Der Unterordner ist das,
+was 1:1 umgesetzt wird. Ordnernamen koennen Bindestriche ODER Leerzeichen enthalten.
+
+Im `Designs/`-Root liegt ausserdem eine **`README.md`** (Index, listet die Projekte auf).
+Diese README ist **kein** Designprojekt — sie NIE als Design-Ordner behandeln, aber ihren
+Inhalt gerne lesen, um die vorhandenen Projekte/Namen zu erkennen.
+
+Ein Projekt-Unterordner enthaelt typischerweise:
 
 | Datei | Inhalt | Rolle fuer die Umsetzung |
 |-------|--------|--------------------------|
 | `*.dc.html` | Der komplette Design-Prototyp (HTML/CSS/Handlebars) | **PRIMAERE Quelle** — hier stehen ALLE exakten Werte |
 | `android-frame.jsx` | Material-3-Geraeterahmen (Statusbar, AppBar, NavBar) | Referenz fuer M3-Kontext, NICHT selbst nachbauen |
 | `support.js` | Generierte React-Runtime | **Ignorieren** (nur Rendering-Maschinerie, kein Design) |
-| `.thumbnail` | Vorschaubild des Designs | Visueller Gesamteindruck / Abgleich |
+| `.thumbnail` | Vorschaubild des Designs (**optional**, nicht immer vorhanden) | Falls da: visueller Gesamteindruck / Abgleich |
 
 **Ablauf:**
 
-1. `Glob("Designs/*")` bzw. `ls ~/proggs/Designs/` — alle Design-Ordner auflisten.
+1. `Glob("Designs/*")` bzw. `ls ~/proggs/Designs/` — alle **Unterordner** auflisten
+   (Dateien im Root wie `README.md` sind KEINE Projekte). Optional die `README.md` lesen.
 2. **Automatisch raten + bestaetigen:**
-   - Bei genau EINEM Ordner: diesen vorschlagen.
+   - Bei genau EINEM Projekt-Unterordner: diesen vorschlagen.
    - Bei mehreren: den plausibelsten anhand des Aufruf-Parameters / App-Namens
-     waehlen (z.B. Parameter "Fisetin" → Ordner "Fisetin Begleiter Design Update").
+     waehlen (z.B. Parameter "Fisetin" → Ordner `Fisetin-Begleiter-Design-Update`).
    - Dem Benutzer den Fund zeigen und **bestaetigen lassen**:
      "Ich habe den Design-Ordner `Designs/<Name>` gefunden. Diesen umsetzen? (ja / anderer)"
 3. **Fallback — Ordner nicht gefunden oder unklar:** Den Benutzer direkt fragen:
    "Ich konnte den Design-Ordner nicht eindeutig finden. Bitte kopiere mir den Pfad
    des Design-Ordners hier rein." Danach mit dem genannten Pfad weiterarbeiten.
 
-Erst weitermachen, wenn der Design-Ordner feststeht.
+Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 
 ---
 
@@ -99,7 +109,8 @@ Erst weitermachen, wenn der Design-Ordner feststeht.
 **Grundsatz:** Wer den Entwurf nicht komplett gelesen hat, kann ihn nicht 1:1 umsetzen.
 Lies die `*.dc.html` **vollstaendig** (sie kann gross sein, 50-100 KB — trotzdem ganz lesen,
 notfalls in mehreren Read-Baecken mit `offset`/`limit`). Lies zusaetzlich `android-frame.jsx`
-und sieh dir `.thumbnail` visuell an (Read-Tool ist multimodal). `support.js` NICHT lesen.
+und sieh dir `.thumbnail` visuell an, **falls vorhanden** (Read-Tool ist multimodal;
+die Datei fehlt in manchen Projekten — dann ohne sie weiterarbeiten). `support.js` NICHT lesen.
 
 > Technische Details zum Aufbau der Claude-Design-Dateien (wo genau welche Werte stehen,
 > wie `<x-dc>`, Props, `data-t`-Themes und die `{{ }}`-Platzhalter funktionieren):

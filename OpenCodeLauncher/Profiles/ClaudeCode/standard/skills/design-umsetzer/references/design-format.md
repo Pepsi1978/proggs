@@ -3,14 +3,17 @@
 Diese Referenz beschreibt, wie ein mit Claude Designs erstellter Entwurf aufgebaut ist
 und **wo genau** die Design-Werte stehen, die 1:1 in Jetpack Compose zu uebertragen sind.
 
-Ein Design-Ordner (unter `~/proggs/Designs/<Name>/`) enthaelt typischerweise vier Dateien:
+Der Standard-Container fuer alle Designs ist immer der Ordner `~/proggs/Designs/` selbst;
+darin liegt je Projekt ein Unterordner (z.B. `~/proggs/Designs/Fisetin-Begleiter-Design-Update/`)
+sowie eine `README.md` als Index (kein Projekt). Ein Projekt-Unterordner enthaelt
+typischerweise diese Dateien (`.thumbnail` optional):
 
 | Datei | Rolle | Fuer die Umsetzung |
 |-------|-------|--------------------|
 | `<Name>.dc.html` | Kompletter Prototyp (HTML/CSS/Handlebars) | **PRIMAERE Quelle** — vollstaendig lesen |
 | `android-frame.jsx` | Material-3-Geraeterahmen (Bezel, Statusbar, AppBar, NavBar, Keyboard) | Referenz fuer M3-Kontext, nicht selbst nachbauen |
 | `support.js` | Generierte React-Runtime (`dc-runtime`) | **Ignorieren** — reine Rendering-Maschinerie |
-| `.thumbnail` | Vorschaubild | Visueller Gesamteindruck / Endabgleich |
+| `.thumbnail` | Vorschaubild (**optional**, nicht immer vorhanden) | Falls da: visueller Gesamteindruck / Endabgleich |
 
 ---
 
@@ -137,5 +140,5 @@ dagegen zu halten.
 4. Alle `border-radius`, `box-shadow`, `blur`, Gradients, `padding/gap` sammeln.
 5. Screen-Struktur (div-Verschachtelung) und Navigation notieren.
 6. Alle `@keyframes` + `animation:`/`transition:` erfassen.
-7. `.thumbnail` visuell ansehen; `android-frame.jsx` als M3-Kontext quer lesen.
+7. `.thumbnail` visuell ansehen (falls vorhanden); `android-frame.jsx` als M3-Kontext quer lesen.
 8. `support.js` ueberspringen.
