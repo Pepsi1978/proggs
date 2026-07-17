@@ -20,6 +20,8 @@ fun localSecret(name: String): String {
 fun String.asBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 val groqApiKey = localSecret("GROQ_API_KEY")
+val geminiApiKey = localSecret("GEMINI_API_KEY")
+val geminiModel = localSecret("GEMINI_MODEL").ifBlank { "gemini-3.1-flash-lite" }
 
 android {
     namespace = "de.frank.karteikartenlernen"
@@ -29,11 +31,13 @@ android {
         applicationId = "de.frank.karteikartenlernen"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.1.14"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:34 Uhr\"")
+        versionCode = 16
+        versionName = "0.1.15"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:39 Uhr\"")
         buildConfigField("String", "GROQ_API_KEY", groqApiKey.asBuildConfigString())
         buildConfigField("String", "GROQ_TRANSCRIPTION_MODEL", "\"whisper-large-v3-turbo\"")
+        buildConfigField("String", "GEMINI_API_KEY", geminiApiKey.asBuildConfigString())
+        buildConfigField("String", "GEMINI_MODEL", geminiModel.asBuildConfigString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }

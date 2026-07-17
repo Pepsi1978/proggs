@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.14 - 17.07.2026, 23:34 Uhr
+Version 0.1.15 - 17.07.2026, 23:39 Uhr
 
 ## 1. Übersicht
 
@@ -173,7 +173,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   mit `16 kHz`, Mono und 16 Bit auf. Nur ein erneuter Mikrofon-Tipp beendet die
   Aufnahme; Sprechpausen stoppen sie nicht. Danach transkribiert Groq mit dem exakten
   Modell `whisper-large-v3-turbo`. Weitere Diktate werden an vorhandenen Text angehängt.
-- Textverbesserung verwaltet eine lokale Versionshistorie und unterstützt Rückgängig.
+- Textverbesserung nutzt das lokal konfigurierte Gemini-Modell mit einer
+  bedeutungstreuen Redaktionsanweisung: Intention, Satzbau, Wortstellung,
+  Verständlichkeit und Stil werden aktiv verbessert, ohne Fakten hinzuzuerfinden.
+  Das Original bleibt in der Versionshistorie erhalten und unterstützt Rückgängig.
 - Absenden erzeugt eine Antwort und Karteikarten, speichert beides in einer Session
   und zeigt danach passende bestehende Sessions zur optionalen Kopie.
 - Session-Suche filtert Titel lokal; Karten können gelöscht und Lernstände

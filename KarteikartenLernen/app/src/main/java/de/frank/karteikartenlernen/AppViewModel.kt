@@ -33,6 +33,7 @@ import de.frank.karteikartenlernen.model.sampleSessions
 import de.frank.karteikartenlernen.model.sampleCards
 import de.frank.karteikartenlernen.model.advanceLearningQueue
 import de.frank.karteikartenlernen.transcription.GroqTranscriber
+import de.frank.karteikartenlernen.text.GeminiTextImprover
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
@@ -61,6 +62,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sounds = ProceduralSoundPlayer()
     private val audioRecorder = WavAudioRecorder(application)
     private val groqTranscriber = GroqTranscriber(BuildConfig.GROQ_API_KEY, BuildConfig.GROQ_TRANSCRIPTION_MODEL)
+    private val textImprover = GeminiTextImprover(BuildConfig.GEMINI_API_KEY, BuildConfig.GEMINI_MODEL)
     private val _uiState = MutableStateFlow(
         AppUiState(connectedEmail = auth.email),
     )
@@ -69,6 +71,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var recordingStart: Deferred<Unit>? = null
     private var transcriptionJob: Job? = null
     private var generationJob: Job? = null
+    private var improveJob: Job? = null
     private var loginJob: Job? = null
     private val activeSessionId = MutableStateFlow("hrv")
 
@@ -193,15 +196,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun improve() {
         val state = _uiState.value
         if (state.improving || state.input.isBlank() || state.mic != MicState.IDLE) return
-        _uiState.update { it.copy(improving = true) }
-        viewModelScope.launch {
-            delay(1100)
-            _uiState.update {
-                val clean = it.input.trim().replaceFirstChar { first -> first.uppercase() }.let { text -> if (text.endsWith('?') || text.endsWith('.') || text.endsWith('!')) text else "$text?" }
-                val versions = if (it.versions.lastOrNull() == clean) it.versions else it.versions + clean
-                it.copy(input = clean, versions = versions, versionIndex = versions.lastIndex, improving = false)
+        val source = state.input
+        _uiState.update { it.copy(improving = true, message = null) }
+        improveJob?.cancel()
+        improveJob = viewModelScope.launch {
+            try {
+                val improved = textImprover.improve(source)
+                _uiState.update { current ->
+                    if (current.input != source) current.copy(improving = false)
+                    else {
+                        val base = current.versions.take(current.versionIndex + 1)
+                        val versions = if (base.lastOrNull() == improved) base else base + improved
+                        current.copy(input = improved, versions = versions, versionIndex = versions.lastIndex, improving = false)
+                    }
+                }
+                sounds.play(SoundEffect.FLIP, _uiState.value.settings)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update { it.copy(improving = false, message = error.message ?: "Gemini konnte den Text nicht verbessern. Das Original blieb unverändert.") }
             }
-            sounds.play(SoundEffect.FLIP, _uiState.value.settings)
         }
     }
 
@@ -465,6 +479,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         transcriptionJob?.cancel()
         audioRecorder.shutdown()
         groqTranscriber.shutdown()
+        improveJob?.cancel()
+        textImprover.shutdown()
         super.onCleared()
     }
 
