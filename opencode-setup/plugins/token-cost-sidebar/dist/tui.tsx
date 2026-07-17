@@ -24,6 +24,7 @@ import {
   sessionUsageSnapshot,
   type SessionUsageLedger,
 } from "./usage"
+import { loadOpenAIWeeklyQuota, type WeeklyQuota } from "./openai-quota"
 
 const FALLBACK_EUR_PER_USD = 0.92
 const EFFORT_LEVELS = [
@@ -309,8 +310,42 @@ function EffortSelector(props: { api: TuiPluginApi }) {
 function ModelLabel(props: { api: TuiPluginApi; sessionID: string }) {
   const theme = () => props.api.theme.current
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
+  const [quota, setQuota] = createSignal<WeeklyQuota | null | undefined>()
+  let requestRevision = 0
 
-  return <text fg={theme().accent}><span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span></text>
+  createEffect(() => {
+    if (modelMeta().providerID !== "openai") {
+      requestRevision++
+      setQuota(undefined)
+      return
+    }
+
+    const revision = ++requestRevision
+    setQuota(undefined)
+    void loadOpenAIWeeklyQuota(props.api.state.path.state)
+      .then((value) => {
+        if (requestRevision === revision) setQuota(value ?? null)
+      })
+      .catch(() => {
+        if (requestRevision === revision) setQuota(null)
+      })
+  })
+
+  const quotaLabel = () => {
+    const current = quota()
+    if (current === undefined) return "Woche ..."
+    if (current === null) return "Woche n/v"
+    const reset = new Date(current.resetAt * 1_000)
+    const date = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(reset)
+    return `Woche ${current.remainingPercent} % · ${date}.`
+  }
+
+  return (
+    <text fg={theme().accent}>
+      <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
+      <Show when={modelMeta().providerID === "openai"}>{` · ${quotaLabel()}`}</Show>
+    </text>
+  )
 }
 
 function applyTheme(api: TuiPluginApi, name: string): boolean {

@@ -4,13 +4,14 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.5.4 - 17.07.2026, 15:47 Uhr
+Stand: v1.6.0 - 17.07.2026, 17:00 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
 - Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
+- Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt neben OpenAI-Modellen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
@@ -72,6 +73,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
    `AKTIVER ARBEITSMODUS: <gewählter Modus>`.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
+8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
 
 Tests im Repo:
 
