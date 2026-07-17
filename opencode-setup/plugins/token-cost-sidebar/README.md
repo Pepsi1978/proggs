@@ -4,12 +4,13 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.4.4 - 17.07.2026, 13:06 Uhr
+Stand: v1.5.0 - 17.07.2026, 13:33 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
 - Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
+- Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
@@ -60,7 +61,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 
 ## Verifikation
 
-1. Unter dem Session-Titel stehen die unterstützten Effort-Stufen nebeneinander; ein Klick markiert die aktive Stufe.
+1. Unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter die unterstützten Effort-Stufen; ein Klick markiert die aktive Stufe.
 2. Die rechte Sidebar zeigt darunter `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
 3. Ein Effort-Klick ändert denselben validierten Model-Variant-State wie OpenCodes eigener Varianten-Picker.
 4. Ein Modus-Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.

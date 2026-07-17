@@ -24,11 +24,12 @@ index 6781216..43a05a3 100644
    set(prompt: TuiPromptInfo): void
    reset(): void
    blur(): void
-@@ -372,6 +374,14 @@ export type TuiKV = {
+@@ -372,6 +374,15 @@ export type TuiKV = {
    readonly ready: boolean
  }
  
 +export type TuiModel = {
++  current: () => { providerID: string; modelID: string } | undefined
 +  variant: {
 +    current: () => string | undefined
 +    list: () => ReadonlyArray<string>
@@ -39,7 +40,7 @@ index 6781216..43a05a3 100644
  export type TuiState = {
    readonly ready: boolean
    readonly config: SdkConfig
-@@ -591,6 +601,7 @@ export type TuiPluginApi = {
+@@ -591,6 +602,7 @@ export type TuiPluginApi = {
    keys: TuiKeys
    keymap: TuiKeymap
    mode: TuiModeApi
@@ -133,11 +134,14 @@ index fef0ec8..45cbbe3 100644
    kv: ReturnType<typeof useKV>
    route: ReturnType<typeof useRoute>
    routes: PluginRoutes
-@@ -193,6 +195,21 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
+@@ -193,6 +195,24 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
          return Keymap.getOpencodeModeStack(input.keymap).push(mode)
        },
      },
 +    model: {
++      current() {
++        return input.local.model.current()
++      },
 +      variant: {
 +        current() {
 +          return input.local.model.variant.current()
@@ -1048,12 +1052,13 @@ index 78611e0..6716070 100644
      footer: state(api, item),
      disabled: item.id === id,
 diff --git a/packages/tui/src/feature-plugins/sidebar/context.tsx b/packages/tui/src/feature-plugins/sidebar/context.tsx
-index f1c99d9..56e1d35 100644
+index f1c99d9..7c31f62 100644
 --- a/packages/tui/src/feature-plugins/sidebar/context.tsx
 +++ b/packages/tui/src/feature-plugins/sidebar/context.tsx
-@@ -1,47 +1,16 @@
+@@ -1,61 +1,9 @@
 -import type { AssistantMessage } from "@opencode-ai/sdk/v2"
- import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
+-import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
++import type { TuiPlugin } from "@opencode-ai/plugin/tui"
  import type { BuiltinTuiPlugin } from "../builtins"
 -import { createMemo } from "solid-js"
  
@@ -1064,8 +1069,8 @@ index f1c99d9..56e1d35 100644
 -  currency: "USD",
 -})
 -
- function View(props: { api: TuiPluginApi; session_id: string }) {
-   const theme = () => props.api.theme.current
+-function View(props: { api: TuiPluginApi; session_id: string }) {
+-  const theme = () => props.api.theme.current
 -  const msg = createMemo(() => props.api.state.session.messages(props.session_id))
 -  const session = createMemo(() => props.api.state.session.get(props.session_id))
 -  const cost = createMemo(() => session()?.cost ?? 0)
@@ -1087,15 +1092,30 @@ index f1c99d9..56e1d35 100644
 -      percent: model?.limit.context ? Math.round((tokens / model.limit.context) * 100) : null,
 -    }
 -  })
- 
-   return (
-     <box>
-       <text fg={theme().text}>
-         <b>Context</b>
-       </text>
+-
+-  return (
+-    <box>
+-      <text fg={theme().text}>
+-        <b>Context</b>
+-      </text>
 -      <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
 -      <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
 -      <text fg={theme().textMuted}>{money.format(cost())} spent</text>
-     </box>
-   )
- }
+-    </box>
+-  )
+-}
+-
+-const tui: TuiPlugin = async (api) => {
+-  api.slots.register({
+-    order: 100,
+-    slots: {
+-      sidebar_content(_ctx, props) {
+-        return <View api={api} session_id={props.session_id} />
+-      },
+-    },
+-  })
+-}
++const tui: TuiPlugin = async () => {}
+ 
+ const plugin: BuiltinTuiPlugin = {
+   id,

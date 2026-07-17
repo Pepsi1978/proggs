@@ -109,6 +109,59 @@ function shortLabel(label: string): string {
   return label.length <= 34 ? label : `${label.slice(0, 31)}...`
 }
 
+type LiveModelApi = {
+  current?: () => { providerID: string; modelID: string } | undefined
+  variant: {
+    current: () => string | undefined
+    list: () => ReadonlyArray<string>
+    set: (value: string | undefined) => boolean
+  }
+}
+
+function liveModel(api: TuiPluginApi): LiveModelApi | undefined {
+  return (api as TuiPluginApi & { model?: LiveModelApi }).model
+}
+
+function resolveModelMeta(api: TuiPluginApi, sessionID: string) {
+  const messages = api.state.session.messages(sessionID) as any[]
+  const configured = String((api.state.config as any)?.model ?? "")
+  const selected = liveModel(api)?.current?.()
+  let providerID = selected?.providerID
+  let modelID = selected?.modelID
+
+  if (!providerID && !modelID) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i]
+      if (roleOf(message) !== "assistant") continue
+      providerID = providerOf(message)
+      modelID = modelOf(message)
+      if (providerID || modelID) break
+    }
+  }
+
+  if (!providerID && !modelID) {
+    const splitAt = configured.indexOf("/")
+    if (splitAt > 0) {
+      providerID = configured.slice(0, splitAt)
+      modelID = configured.slice(splitAt + 1)
+    } else {
+      modelID = configured || undefined
+    }
+  }
+
+  const provider = api.state.provider.find((item: any) => item?.id === providerID)
+  const model = provider?.models?.[modelID ?? ""]
+  const fullID = providerID && modelID ? `${providerID}/${modelID}` : modelID || configured || "unbekannt"
+  return {
+    providerID,
+    modelID,
+    provider,
+    model,
+    fullID,
+    label: model?.name ? `${model.name}` : fullID,
+  }
+}
+
 function formatInt(value: number): string {
   return new Intl.NumberFormat("de-DE").format(Math.max(0, Math.round(value)))
 }
@@ -227,15 +280,7 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
 
 function EffortSelector(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
-  const model = () => (props.api as TuiPluginApi & {
-    model?: {
-      variant: {
-        current: () => string | undefined
-        list: () => ReadonlyArray<string>
-        set: (value: string | undefined) => boolean
-      }
-    }
-  }).model
+  const model = () => liveModel(props.api)
   const levels = createMemo(() => {
     const available = new Set(model()?.variant.list() ?? [])
     return EFFORT_LEVELS.filter((level) => available.has(level.id))
@@ -274,6 +319,13 @@ function EffortSelector(props: { api: TuiPluginApi }) {
       </box>
     </Show>
   )
+}
+
+function ModelLabel(props: { api: TuiPluginApi; sessionID: string }) {
+  const theme = () => props.api.theme.current
+  const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
+
+  return <text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>
 }
 
 function applyTheme(api: TuiPluginApi, name: string): boolean {
@@ -363,7 +415,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
   const messages = createMemo(() => props.api.state.session.messages(props.sessionID) as any[])
-  const configModel = createMemo(() => String((props.api.state.config as any)?.model ?? ""))
+  const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
 
   onMount(() => {
     void fetch("https://api.frankfurter.app/latest?from=USD&to=EUR")
@@ -375,45 +427,10 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
       .catch(() => {})
   })
 
-  const current = createMemo(() => {
-    const list = messages()
-    for (let i = list.length - 1; i >= 0; i--) {
-      const message = list[i]
-      if (roleOf(message) !== "assistant") continue
-      const providerID = providerOf(message)
-      const modelID = modelOf(message)
-      if (providerID || modelID) return { providerID, modelID }
-    }
-
-    const configured = configModel()
-    const splitAt = configured.indexOf("/")
-    if (splitAt > 0) {
-      return {
-        providerID: configured.slice(0, splitAt),
-        modelID: configured.slice(splitAt + 1),
-      }
-    }
-    return { providerID: undefined, modelID: configured || undefined }
-  })
-
-  const modelMeta = createMemo(() => {
-    const providerID = current().providerID
-    const modelID = current().modelID
-    const provider = props.api.state.provider.find((item: any) => item?.id === providerID)
-    const model = provider?.models?.[modelID ?? ""]
-    const fullID = providerID && modelID ? `${providerID}/${modelID}` : modelID || configModel() || "unbekannt"
-    return {
-      provider,
-      model,
-      fullID,
-      label: model?.name ? `${model.name}` : fullID,
-    }
-  })
-
   let catalogRequestKey = ""
   createEffect(() => {
-    const providerID = current().providerID
-    const modelID = current().modelID
+    const providerID = modelMeta().providerID
+    const modelID = modelMeta().modelID
     const key = `${providerID ?? ""}/${modelID ?? ""}`
     if (key === catalogRequestKey) return
     catalogRequestKey = key
@@ -424,8 +441,8 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   })
 
   const totals = createMemo(() => {
-    const providerID = current().providerID
-    const modelID = current().modelID
+    const providerID = modelMeta().providerID
+    const modelID = modelMeta().modelID
     const seen = new Set<string>()
     const result = {
       input: 0,
@@ -489,7 +506,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>
+        <text fg={theme().accent}>Kontext</text>
 
         <Row
           api={props.api}
@@ -526,6 +543,7 @@ const tui: TuiPlugin = async (api) => {
       sidebar_content(_ctx, props) {
         return (
           <box>
+            <ModelLabel api={api} sessionID={props.session_id} />
             <EffortSelector api={api} />
             <WorkModeSelector api={api} sessionID={props.session_id} />
           </box>

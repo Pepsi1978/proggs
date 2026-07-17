@@ -145,11 +145,15 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain('label="Cache"')
   })
 
-  test("shows only the accented model name without redundant headings", async () => {
+  test("shows the live model above effort and the accented context heading above prices", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('<text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>')
-    expect(source).not.toContain("Modellkosten")
-    expect(source).not.toContain("modelMeta().label !== modelMeta().fullID")
+    expect(source).toContain("const selected = liveModel(api)?.current?.()")
+    expect(source).toContain('<text fg={theme().accent}>Kontext</text>')
+    expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} />")
+    expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} />")).toBeLessThan(
+      source.indexOf("<EffortSelector api={api} />"),
+    )
   })
 
   test("replaces the sidebar title with a live German date and time", async () => {
@@ -165,7 +169,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
   })
 
-  test("renders clickable work modes before the built-in context block", async () => {
+  test("renders clickable work modes in the leading sidebar block", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain("order: 90")
     expect(source).toContain("<WorkModeSelector api={api} sessionID={props.session_id} />")
@@ -249,9 +253,12 @@ describe("models.dev pricing", () => {
     expect(source).toContain("<EffortSelector api={api} />")
     expect(source.indexOf("<EffortSelector api={api} />")).toBeLessThan(source.indexOf("<WorkModeSelector api={api}"))
     expect(patch).toContain("model?: TuiModel")
+    expect(patch).toContain("current: () => { providerID: string; modelID: string } | undefined")
     expect(patch).toContain("model: api.model")
+    expect(patch).toContain("return input.local.model.current()")
     expect(patch).toContain("input.local.model.variant.set(value)")
     expect(patch).toContain("!input.local.model.variant.list().includes(value)")
+    expect(patch).toContain("+const tui: TuiPlugin = async () => {}")
   })
 
   test("documents every component required for a portable installation", async () => {
