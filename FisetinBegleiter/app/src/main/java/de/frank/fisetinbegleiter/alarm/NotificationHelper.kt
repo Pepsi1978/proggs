@@ -7,10 +7,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import de.frank.fisetinbegleiter.MainActivity
+import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 
 object NotificationHelper {
     private const val CHANNEL_STEPS = "kur_schritte"
@@ -26,46 +28,16 @@ object NotificationHelper {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    fun show(context: Context, type: AlarmType, dayId: Long, targetDay: Int) {
+    fun show(
+        context: Context,
+        type: AlarmType,
+        dayId: Long,
+        targetDay: Int,
+        protocol: ProtocolTemplateEntity = ProtocolTemplateEntity(),
+    ) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
 
-        val (title, text, destination) = when (type) {
-            AlarmType.MEAL_WARNING -> Triple(
-                "Fettige Mahlzeit",
-                "In 5 Minuten läuft das 30-Minuten-Fenster für deine fettige Mahlzeit ab.",
-                "timeline",
-            )
-            AlarmType.SPERMIDIN_OPEN -> Triple(
-                "Spermidin-Fenster offen",
-                "Fenster offen: Spermidin (6 mg) + optional Piperin (10–15 mg) + leichte Mahlzeit. Zeit bis 4 h.",
-                "timeline",
-            )
-            AlarmType.SPERMIDIN_REMINDER -> Triple(
-                "Spermidin-Erinnerung",
-                "Erinnerung: Spermidin-Schritt in 15 Minuten fällig, falls noch nicht erledigt.",
-                "timeline",
-            )
-            AlarmType.BLOCK_ENDED -> Triple(
-                "Antioxidantien wieder erlaubt",
-                "Antioxidantien-Fenster vorbei – Vitamin C und deine restlichen Antioxidantien sind jetzt wieder erlaubt.",
-                "stack",
-            )
-            AlarmType.NEXT_DAY -> Triple(
-                "Tag $targetDay deiner Fisetin-Kur",
-                "Nüchtern starten, wenn du bereit bist.",
-                "today",
-            )
-            AlarmType.CURE_ENDED -> Triple(
-                "Kur abgeschlossen",
-                "Kur abgeschlossen ($targetDay Tage). Der Eintrag ist im Protokoll gespeichert.",
-                "history",
-            )
-            AlarmType.CURE_START -> Triple(
-                "Fisetin-Kur starten",
-                "Deine geplante Kur beginnt jetzt. Öffne die Drink-Checkliste und starte T0, wenn du bereit bist.",
-                "today",
-            )
-        }
+        val (title, text, destination) = notificationContent(type, targetDay, protocol)
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -87,6 +59,17 @@ object NotificationHelper {
             .setContentIntent(pendingIntent)
             .build()
         NotificationManagerCompat.from(context).notify(((dayId % 100_000) * 10 + type.ordinal).toInt(), notification)
+    }
+
+    fun areNotificationsAvailable(context: Context): Boolean {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+        val channel = context.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL_STEPS)
+        return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    fun notificationSettingsIntent(context: Context): Intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     fun cancelDay(context: Context, dayId: Long) {

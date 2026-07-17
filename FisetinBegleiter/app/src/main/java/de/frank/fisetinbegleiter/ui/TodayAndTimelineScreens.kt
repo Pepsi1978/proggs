@@ -114,6 +114,8 @@ fun TodayScreen(
     onGoTimeline: () -> Unit,
     onGoStack: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
+    notificationsAvailable: Boolean,
+    onOpenNotificationSettings: () -> Unit,
     exactAlarmsAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -178,6 +180,20 @@ fun TodayScreen(
                     icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
                     trailing = {
                         SmallActionButton("Öffnen", onOpenExactAlarmSettings)
+                    },
+                )
+            }
+        }
+        if (!notificationsAvailable) {
+            item {
+                StatusNotice(
+                    title = "Notifications freigeben",
+                    text = "Android blockiert derzeit die Kur-Erinnerungen. Aktiviere den Channel „Kur-Schritte“ in den App-Einstellungen.",
+                    containerColor = colors.warnBg,
+                    contentColor = colors.warn,
+                    icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                    trailing = {
+                        SmallActionButton("Öffnen", onOpenNotificationSettings)
                     },
                 )
             }

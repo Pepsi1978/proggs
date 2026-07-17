@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import de.frank.fisetinbegleiter.ui.FisetinApp
+import de.frank.fisetinbegleiter.alarm.NotificationHelper
 import de.frank.fisetinbegleiter.ui.theme.AppThemeMode
 import de.frank.fisetinbegleiter.ui.theme.AppThemeVariant
 import de.frank.fisetinbegleiter.ui.theme.FisetinTheme
@@ -29,17 +30,19 @@ class MainActivity : ComponentActivity() {
     private var externalDestination by mutableStateOf<String?>(null)
     private var themeVariant by mutableStateOf(AppThemeVariant.DEFAULT)
     private var themeMode by mutableStateOf(AppThemeMode.DEFAULT)
+    private var notificationsAvailable by mutableStateOf(true)
     private var appPreferences: SharedPreferences? = null
 
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { }
+    ) { notificationsAvailable = NotificationHelper.areNotificationsAvailable(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         externalDestination = intent.getStringExtra(EXTRA_DESTINATION)
         restoreThemePreferences()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        notificationsAvailable = NotificationHelper.areNotificationsAvailable(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsAvailable) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         setContent {
@@ -75,6 +78,10 @@ class MainActivity : ComponentActivity() {
                     },
                     onOpenBatterySettings = {
                         openSettings((application as FisetinApplication).alarmScheduler.batterySettingsIntent())
+                    },
+                    notificationsAvailable = notificationsAvailable,
+                    onOpenNotificationSettings = {
+                        openSettings(NotificationHelper.notificationSettingsIntent(this))
                     },
                     showFirstStartNotice = !getPreferences(MODE_PRIVATE).getBoolean(KEY_NOTICE_SEEN, false),
                     onNoticeConfirmed = {
@@ -132,6 +139,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         externalDestination = intent.getStringExtra(EXTRA_DESTINATION)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        notificationsAvailable = NotificationHelper.areNotificationsAvailable(this)
     }
 
     private fun openSettings(intent: Intent) {

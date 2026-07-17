@@ -8,7 +8,9 @@ import android.os.Build
 import android.provider.Settings
 import de.frank.fisetinbegleiter.data.CureDayEntity
 import de.frank.fisetinbegleiter.data.CureEntity
+import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import de.frank.fisetinbegleiter.domain.currentDay
 import de.frank.fisetinbegleiter.domain.plannedStartAt
 import java.time.LocalDate
 
@@ -45,10 +47,18 @@ class AlarmScheduler(private val context: Context) {
 
     fun scheduleDay(cure: CureEntity, day: CureDayEntity, protocol: ProtocolTemplateEntity, t0: Long) {
         if (!protocol.remindersEnabled) return
-        schedule(day.id, AlarmType.MEAL_WARNING, t0 + protocol.mealWarningMinutes * 60_000L)
-        schedule(day.id, AlarmType.SPERMIDIN_OPEN, t0 + protocol.spermidinStartMinutes * 60_000L)
-        schedule(day.id, AlarmType.SPERMIDIN_REMINDER, t0 + protocol.spermidinReminderMinutes * 60_000L)
-        schedule(day.id, AlarmType.BLOCK_ENDED, t0 + protocol.antioxidantBlockMinutes * 60_000L)
+        cancel(day.id, AlarmType.CURE_START)
+        cancel(day.id, AlarmType.NEXT_DAY)
+        if (day.mealDoneAt == null) {
+            schedule(day.id, AlarmType.MEAL_WARNING, t0 + protocol.mealWarningMinutes * 60_000L)
+        }
+        if (day.spermidinDoneAt == null) {
+            schedule(day.id, AlarmType.SPERMIDIN_OPEN, t0 + protocol.spermidinStartMinutes * 60_000L)
+            schedule(day.id, AlarmType.SPERMIDIN_REMINDER, t0 + protocol.spermidinReminderMinutes * 60_000L)
+        }
+        if (day.blockEndedAt == null) {
+            schedule(day.id, AlarmType.BLOCK_ENDED, t0 + protocol.antioxidantBlockMinutes * 60_000L)
+        }
 
         if (day.dayNumber < cure.plannedDurationDays) {
             val nextDate = LocalDate.ofEpochDay(day.plannedEpochDay).plusDays(1)
@@ -59,6 +69,26 @@ class AlarmScheduler(private val context: Context) {
 
     fun scheduleCureStart(firstDayId: Long, triggerAt: Long) {
         schedule(firstDayId, AlarmType.CURE_START, triggerAt, targetDay = 1)
+    }
+
+    fun restoreCure(cureWithDays: CureWithDays, protocol: ProtocolTemplateEntity) {
+        if (!protocol.remindersEnabled) return
+        val day = currentDay(cureWithDays) ?: return
+        val t0 = day.t0
+        if (t0 != null) {
+            scheduleDay(cureWithDays.cure, day, protocol, t0)
+            return
+        }
+        val triggerAt = plannedStartAt(
+            LocalDate.ofEpochDay(day.plannedEpochDay),
+            cureWithDays.cure.preferredStartMinuteOfDay,
+        )
+        val type = if (day.dayNumber == 1) AlarmType.CURE_START else AlarmType.NEXT_DAY
+        if (triggerAt <= System.currentTimeMillis()) {
+            NotificationHelper.show(context, type, day.id, day.dayNumber, protocol)
+        } else {
+            schedule(day.id, type, triggerAt, targetDay = day.dayNumber)
+        }
     }
 
     fun cancelMeal(dayId: Long) = cancel(dayId, AlarmType.MEAL_WARNING)

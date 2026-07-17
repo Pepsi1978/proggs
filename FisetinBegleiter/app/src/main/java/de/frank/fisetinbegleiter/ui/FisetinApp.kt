@@ -96,6 +96,8 @@ fun FisetinApp(
     onDestinationConsumed: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
+    notificationsAvailable: Boolean,
+    onOpenNotificationSettings: () -> Unit,
     showFirstStartNotice: Boolean,
     onNoticeConfirmed: () -> Unit,
     viewModel: MainViewModel = viewModel(),
@@ -168,6 +170,8 @@ fun FisetinApp(
                                 onGoTimeline = { screen = MainScreen.TIMELINE },
                                 onGoStack = { screen = MainScreen.STACK },
                                 onOpenExactAlarmSettings = onOpenExactAlarmSettings,
+                                notificationsAvailable = notificationsAvailable,
+                                onOpenNotificationSettings = onOpenNotificationSettings,
                                 exactAlarmsAvailable = viewModel.canScheduleExactAlarms(),
                                 modifier = contentModifier,
                             )

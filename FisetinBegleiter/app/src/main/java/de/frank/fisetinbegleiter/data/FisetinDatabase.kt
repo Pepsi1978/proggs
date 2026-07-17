@@ -79,6 +79,10 @@ interface FisetinDao {
     fun observeActiveCure(): Flow<CureWithDays?>
 
     @Transaction
+    @Query("SELECT * FROM cures WHERE status != 'ABGESCHLOSSEN' ORDER BY id DESC")
+    suspend fun getActiveCures(): List<CureWithDays>
+
+    @Transaction
     @Query("SELECT * FROM cures ORDER BY startEpochDay DESC, id DESC")
     fun observeCureHistory(): Flow<List<CureWithDays>>
 }

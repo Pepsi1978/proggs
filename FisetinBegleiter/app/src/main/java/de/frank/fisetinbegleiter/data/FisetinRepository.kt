@@ -74,6 +74,10 @@ class FisetinRepository(private val database: FisetinDatabase) {
 
     suspend fun deleteAllActiveCures() = dao.deleteAllActiveCures()
 
+    suspend fun getProtocolSnapshot(): ProtocolTemplateEntity = dao.getProtocol() ?: ProtocolTemplateEntity()
+
+    suspend fun getActiveCuresSnapshot(): List<CureWithDays> = dao.getActiveCures()
+
     suspend fun saveProtocol(protocol: ProtocolTemplateEntity) = dao.upsertProtocol(protocol)
     suspend fun saveIngredient(ingredient: IngredientEntity) = dao.upsertIngredient(ingredient)
     suspend fun deleteIngredient(ingredient: IngredientEntity) = dao.deleteIngredient(ingredient)

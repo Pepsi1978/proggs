@@ -16,11 +16,11 @@ class AlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val app = context.applicationContext as FisetinApplication
                 if (type == AlarmType.BLOCK_ENDED && dayId > 0) {
-                    (context.applicationContext as FisetinApplication).repository
-                        .markBlockEnded(dayId, System.currentTimeMillis())
+                    app.repository.markBlockEnded(dayId, System.currentTimeMillis())
                 }
-                NotificationHelper.show(context, type, dayId, targetDay)
+                NotificationHelper.show(context, type, dayId, targetDay, app.repository.getProtocolSnapshot())
             } finally {
                 pendingResult.finish()
             }
