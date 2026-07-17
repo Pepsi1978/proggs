@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.7 - 17.07.2026, 22:48 Uhr
+Version 0.1.8 - 17.07.2026, 22:53 Uhr
 
 ## 1. Übersicht
 
@@ -178,6 +178,11 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 - Bei „Nicht gewusst“ wird die Karte ans Ende der aktuellen Queue gehängt; „Gewusst“
   schließt sie für die Runde ab. Die Abschlussansicht zeigt beide Zähler.
 - Alle sichtbaren Einstellungen sind interaktiv und persistent.
+- Vorlesen verwendet den Microsoft-Edge-TTS-WebSocket aus Best Journal Android.
+  Die sechs deutschen Neural-Stimmen werden mit ihren echten Microsoft-Voice-IDs
+  in einem Dropdown angeboten; bestehende Anzeigenamen werden automatisch migriert.
+  Ein Watchdog beendet hängende Streams, erneutes Vorlesen stoppt die vorige Ausgabe,
+  und die Sprechgeschwindigkeit wird als begrenzte SSML-Prosodie übertragen.
 
 ### Datenmodell
 

@@ -63,7 +63,7 @@ data class AppSettings(
     val soundUnknown: Boolean = true,
     val soundTransition: Boolean = true,
     val soundDone: Boolean = true,
-    val voice: String = "Seraphina (Multilingual)",
+    val voice: String = "de-DE-SeraphinaMultilingualNeural",
     val speechRate: Float = 1f,
     val cardFont: Int = 20,
     val model: String = "GPT 5.6 Terra",

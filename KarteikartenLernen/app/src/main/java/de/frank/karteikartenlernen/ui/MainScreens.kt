@@ -21,10 +21,16 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.karteikartenlernen.audio.SoundEffect
+import de.frank.karteikartenlernen.audio.TtsVoiceRegistry
 import de.frank.karteikartenlernen.model.AppSettings
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.StudySession
@@ -115,6 +122,7 @@ fun SettingsScreen(
 ) {
     val c = LocalAppPalette.current
     val s = state.settings
+    var voiceMenuExpanded by remember { mutableStateOf(false) }
     ScreenTitle("Einstellungen")
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
         SettingsSection("GPT-MODELL") {
@@ -192,8 +200,33 @@ fun SettingsScreen(
             SoundSetting("Rundenabschluss", SoundEffect.DONE, s.soundDone, onTestSound) { onSettings { it.copy(soundDone = !it.soundDone) } }
         }
         SettingsSection("VORLESEN (EDGE TTS)") {
-            val voices = listOf("Seraphina (Multilingual)", "Florian (Multilingual)", "Katja", "Killian", "Conrad", "Amala")
-            SettingRow("Stimme") { SmallPill(s.voice) { onSettings { it.copy(voice = voices[(voices.indexOf(it.voice) + 1).mod(voices.size)]) } } }
+            val selectedVoice = TtsVoiceRegistry.voice(s.voice)
+            SettingRow("Stimme", TtsVoiceRegistry.displayName(selectedVoice)) {
+                Box {
+                    SmallPill(selectedVoice.name) { voiceMenuExpanded = true }
+                    DropdownMenu(
+                        expanded = voiceMenuExpanded,
+                        onDismissRequest = { voiceMenuExpanded = false },
+                    ) {
+                        TtsVoiceRegistry.voices.forEach { voice ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        TtsVoiceRegistry.displayName(voice),
+                                        color = if (voice.id == selectedVoice.id) c.accent else c.text,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (voice.id == selectedVoice.id) FontWeight.Bold else FontWeight.Medium,
+                                    )
+                                },
+                                onClick = {
+                                    voiceMenuExpanded = false
+                                    onSettings { it.copy(voice = voice.id) }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
             SettingRow("") { GradientPill("Stimme testen", onSpeakTest) }
             SettingRow("Sprechgeschwindigkeit") {
                 Slider(

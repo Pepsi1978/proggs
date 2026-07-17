@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,14 +17,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import de.frank.karteikartenlernen.audio.EdgeTtsPlayer
 import de.frank.karteikartenlernen.model.MicState
 import de.frank.karteikartenlernen.ui.KarteikartenApp
-import java.util.Locale
 
 class MainActivity : ComponentActivity(), RecognitionListener {
     private val viewModel: AppViewModel by viewModels()
     private var speechRecognizer: SpeechRecognizer? = null
-    private var textToSpeech: TextToSpeech? = null
+    private lateinit var edgeTtsPlayer: EdgeTtsPlayer
     private var pendingSpeechStart = false
 
     private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -39,9 +38,7 @@ class MainActivity : ComponentActivity(), RecognitionListener {
         speechRecognizer = if (SpeechRecognizer.isRecognitionAvailable(this)) {
             SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(this) }
         } else null
-        textToSpeech = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.GERMAN
-        }
+        edgeTtsPlayer = EdgeTtsPlayer(this)
         setContent {
             val state by viewModel.uiState.collectAsState()
             KarteikartenApp(
@@ -54,8 +51,11 @@ class MainActivity : ComponentActivity(), RecognitionListener {
                     } else requestSpeechStart()
                 },
                 onSpeak = { text ->
-                    textToSpeech?.setSpeechRate(state.settings.speechRate)
-                    textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "karteikarten-tts")
+                    edgeTtsPlayer.speak(
+                        text = text,
+                        voice = state.settings.voice,
+                        speechRate = state.settings.speechRate,
+                    )
                 },
                 onLogin = { viewModel.login(this) },
                 onOpenAuthPage = {
@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity(), RecognitionListener {
 
     override fun onDestroy() {
         speechRecognizer?.destroy()
-        textToSpeech?.shutdown()
+        if (::edgeTtsPlayer.isInitialized) edgeTtsPlayer.shutdown()
         super.onDestroy()
     }
 

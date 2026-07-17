@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import de.frank.karteikartenlernen.audio.TtsVoiceRegistry
 import de.frank.karteikartenlernen.model.AppSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -45,7 +46,7 @@ class SettingsStore(private val context: Context) {
             soundUnknown = p[Keys.unknown] ?: true,
             soundTransition = p[Keys.transition] ?: true,
             soundDone = p[Keys.done] ?: true,
-            voice = p[Keys.voice] ?: "Seraphina (Multilingual)",
+            voice = TtsVoiceRegistry.resolveVoiceId(p[Keys.voice].orEmpty()),
             speechRate = p[Keys.rate] ?: 1f,
             cardFont = p[Keys.cardFont] ?: 20,
             model = p[Keys.model] ?: "GPT 5.6 Terra",
