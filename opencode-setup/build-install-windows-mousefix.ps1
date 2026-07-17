@@ -1,11 +1,11 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "17",
+    [string]$PatchRevision = "18",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
 
-# Stand: windowsfix.17 - 17.07.2026 13:44 Uhr
+# Stand: windowsfix.18 - 17.07.2026 13:50 Uhr
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
@@ -240,30 +240,44 @@ try {
             bun run --cwd "packages/$package" typecheck
             if ($LASTEXITCODE -ne 0) { throw "Typecheck fehlgeschlagen: packages/$package" }
         }
-        Push-Location "packages\tui"
+        $configEnvironmentNames = @("OPENCODE_CONFIG", "OPENCODE_CONFIG_DIR", "OPENCODE_CONFIG_CONTENT")
+        $configEnvironment = @{}
+        foreach ($name in $configEnvironmentNames) {
+            $value = [Environment]::GetEnvironmentVariable($name, "Process")
+            if ($null -ne $value) { $configEnvironment[$name] = $value }
+            [Environment]::SetEnvironmentVariable($name, $null, "Process")
+        }
         try {
-            bun test "test/context/local.test.ts" "test/clipboard.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "TUI-Regressionstests fehlgeschlagen." }
-        } finally { Pop-Location }
-        Push-Location "packages\opencode"
-        try {
-            # Process startup on Windows can exceed Bun's 5 s default even when isolated.
-            bun test --timeout 15000 "test/cli/tui/thread.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "CLI-Livetests fehlgeschlagen." }
-            # plugin-toggle spies on process-global state (process.cwd, TuiConfig) and flaked when
-            # sharing a run with other suites (2026-07-11: 1 fail in-suite, 3/3 pass standalone).
-            # Same isolation reasoning as thread.test.ts above — all tests still run.
-            # --timeout 15000 lifts bun's 5 s default: under full build load the machine is busy
-            # (config Git-Bash-path test needed 6.5 s on 2026-07-11); tests with an explicit
-            # per-test timeout keep their own value.
-            bun test --timeout 15000 "test/cli/tui/plugin-toggle.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "Plugin-Toggle-Regressionstest fehlgeschlagen." }
-            # Beide Suites verändern prozessglobale Config-/Temp-Zustände und kollidieren im selben Bun-Lauf.
-            bun test --timeout 15000 "test/plugin/install.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "Plugin-Install-Regressionstests fehlgeschlagen." }
-            bun test --timeout 15000 "test/config/config.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "Config-Regressionstests fehlgeschlagen." }
-        } finally { Pop-Location }
+            Push-Location "packages\tui"
+            try {
+                bun test "test/context/local.test.ts" "test/clipboard.test.ts"
+                if ($LASTEXITCODE -ne 0) { throw "TUI-Regressionstests fehlgeschlagen." }
+            } finally { Pop-Location }
+            Push-Location "packages\opencode"
+            try {
+                # Process startup on Windows can exceed Bun's 5 s default even when isolated.
+                bun test --timeout 15000 "test/cli/tui/thread.test.ts"
+                if ($LASTEXITCODE -ne 0) { throw "CLI-Livetests fehlgeschlagen." }
+                # plugin-toggle spies on process-global state (process.cwd, TuiConfig) and flaked when
+                # sharing a run with other suites (2026-07-11: 1 fail in-suite, 3/3 pass standalone).
+                # Same isolation reasoning as thread.test.ts above — all tests still run.
+                # --timeout 15000 lifts bun's 5 s default: under full build load the machine is busy
+                # (config Git-Bash-path test needed 6.5 s on 2026-07-11); tests with an explicit
+                # per-test timeout keep their own value.
+                bun test --timeout 15000 "test/cli/tui/plugin-toggle.test.ts"
+                if ($LASTEXITCODE -ne 0) { throw "Plugin-Toggle-Regressionstest fehlgeschlagen." }
+                # Beide Suites verändern prozessglobale Config-/Temp-Zustände und bleiben deshalb getrennt.
+                bun test --timeout 15000 "test/plugin/install.test.ts"
+                if ($LASTEXITCODE -ne 0) { throw "Plugin-Install-Regressionstests fehlgeschlagen." }
+                bun test --timeout 15000 "test/config/config.test.ts"
+                if ($LASTEXITCODE -ne 0) { throw "Config-Regressionstests fehlgeschlagen." }
+            } finally { Pop-Location }
+        } finally {
+            foreach ($name in $configEnvironmentNames) {
+                $value = if ($configEnvironment.ContainsKey($name)) { $configEnvironment[$name] } else { $null }
+                [Environment]::SetEnvironmentVariable($name, $value, "Process")
+            }
+        }
 
         $env:OPENCODE_VERSION = $customVersion
         bun run --cwd packages/opencode script/build.ts --single --skip-install --skip-embed-web-ui
