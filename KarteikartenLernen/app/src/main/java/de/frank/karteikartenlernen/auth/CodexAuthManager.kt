@@ -24,7 +24,13 @@ import java.util.Base64
 
 data class AuthResult(val email: String?)
 data class DeviceAuthInfo(val userCode: String, val verificationUri: String)
-data class GeneratedCard(val question: String, val answer: String, val explanation: String)
+data class ExistingSessionContext(val id: String, val title: String, val question: String, val answerExcerpt: String)
+data class GeneratedCard(
+    val question: String,
+    val answer: String,
+    val explanation: String,
+    val targetSessionIds: List<String> = emptyList(),
+)
 data class GeneratedResearch(val title: String, val answer: String, val cards: List<GeneratedCard>)
 private data class GeneratedSource(val title: String, val url: String)
 
@@ -117,15 +123,42 @@ internal fun researchInstructions(): String = """
     Kartenfrage prüft echtes Verständnis. Jede Antwort ist klar und knapp. Jede Erklärung beschreibt in einfachem
     Deutsch, warum die Antwort stimmt, und erklärt darin vorkommende Fach- oder Fremdwörter.
 
+    Prüfe für jede Karte alle im Benutzertext aufgeführten bestehenden Sessions. Trage in targetSessionIds nur IDs von
+    Sessions ein, zu denen genau diese Karte fachlich wirklich passt und dort einen klaren Lernwert hat. Ein ähnliches
+    Einzelwort reicht nicht. Eine Karte darf zu mehreren Sessions passen oder zu keiner; ein leeres Array ist besser
+    als ein schwacher Vorschlag. Erfinde keine Session-ID und ordne nichts der neu erzeugten Session zu.
+
     Gib zusätzlich 3 bis 12 tatsächlich verwendete Webquellen mit präzisem Titel und vollständiger URL zurück.
 """.trimIndent()
 
-internal fun codexResearchPayload(model: String, reasoning: String, question: String): JSONObject = JSONObject().apply {
+internal fun researchInput(question: String, sessions: List<ExistingSessionContext>): String = buildString {
+    append("Frage für die neue Recherche:\n")
+    append(question.trim())
+    append("\n\nBestehende Sessions, die für jede neue Karte vollständig geprüft werden müssen:\n")
+    if (sessions.isEmpty()) {
+        append("Keine bestehenden Sessions. targetSessionIds muss bei jeder Karte leer sein.")
+    } else {
+        append(JSONArray(sessions.map { session ->
+            JSONObject()
+                .put("id", session.id)
+                .put("title", session.title)
+                .put("lastQuestion", session.question)
+                .put("answerExcerpt", session.answerExcerpt)
+        }).toString())
+    }
+}
+
+internal fun codexResearchPayload(
+    model: String,
+    reasoning: String,
+    question: String,
+    sessions: List<ExistingSessionContext> = emptyList(),
+): JSONObject = JSONObject().apply {
     put("model", model)
     put("stream", true)
     put("store", false)
     put("instructions", researchInstructions())
-    put("input", codexInput(question))
+    put("input", codexInput(researchInput(question, sessions)))
     put("reasoning", JSONObject().put("effort", reasoning.lowercase().replace("mittel", "medium").replace("niedrig", "low").replace("hoch", "high")))
     put("tools", JSONArray().put(JSONObject().put("type", "web_search")))
     put("tool_choice", "auto")
@@ -139,8 +172,9 @@ internal fun structuredResearchOutputFormat(): JSONObject {
         .put("properties", JSONObject()
             .put("question", JSONObject().put("type", "string"))
             .put("answer", JSONObject().put("type", "string"))
-            .put("explanation", JSONObject().put("type", "string")))
-        .put("required", JSONArray(listOf("question", "answer", "explanation")))
+            .put("explanation", JSONObject().put("type", "string"))
+            .put("targetSessionIds", JSONObject().put("type", "array").put("items", JSONObject().put("type", "string"))))
+        .put("required", JSONArray(listOf("question", "answer", "explanation", "targetSessionIds")))
     val source = JSONObject()
         .put("type", "object")
         .put("additionalProperties", false)
@@ -240,13 +274,18 @@ class CodexAuthManager(context: Context) {
 
     fun cancelLogin() = Unit
 
-    suspend fun generateResearch(model: String, reasoning: String, question: String): GeneratedResearch =
+    suspend fun generateResearch(
+        model: String,
+        reasoning: String,
+        question: String,
+        sessions: List<ExistingSessionContext>,
+    ): GeneratedResearch =
         withContext(Dispatchers.IO) {
             val token = validAccessToken()
             val accountId = jwtClaim(token, "chatgpt_account_id")
                 ?: store.getString(KEY_ACCOUNT_ID, null)
                 ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
-            val payload = codexResearchPayload(model, reasoning, question)
+            val payload = codexResearchPayload(model, reasoning, question, sessions)
             val connection = (URL(RESPONSES_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 20_000
@@ -267,6 +306,7 @@ class CodexAuthManager(context: Context) {
                 throw CodexAuthException(AuthErrorKind.NETWORK, "Das gewählte GPT-Modell hat keine gültigen strukturierten Lerndaten geliefert.")
             }
             val cards = result.getJSONArray("cards")
+            val validSessionIds = sessions.mapTo(mutableSetOf(), ExistingSessionContext::id)
             val answer = result.getString("answer").trim()
             val wordCount = researchWordCount(answer)
             if (wordCount !in MIN_RESEARCH_WORDS..MAX_RESEARCH_WORDS) {
@@ -299,7 +339,16 @@ class CodexAuthManager(context: Context) {
                 answer = answerWithSources,
                 cards = (0 until cards.length()).map { index ->
                     val card = cards.getJSONObject(index)
-                    GeneratedCard(card.getString("question"), card.getString("answer"), card.getString("explanation"))
+                    val targetIds = card.getJSONArray("targetSessionIds")
+                    GeneratedCard(
+                        question = card.getString("question"),
+                        answer = card.getString("answer"),
+                        explanation = card.getString("explanation"),
+                        targetSessionIds = (0 until targetIds.length())
+                            .map(targetIds::getString)
+                            .filter(validSessionIds::contains)
+                            .distinct(),
+                    )
                 },
             )
         }

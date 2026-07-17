@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.19 - 18.07.2026, 00:32 Uhr
+Version 0.1.20 - 18.07.2026, 00:34 Uhr
 
 ## 1. Übersicht
 
@@ -186,8 +186,11 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   5.000 Wörtern sowie automatisch 30 bis 70 Verständnis-Karteikarten. Antwort,
   Erklärungen und Beschreibungen verwenden einfaches Deutsch auf dem Niveau der
   10. Klasse; notwendige Fach- und Fremdwörter werden beim ersten Auftreten erklärt.
-  Die Antwort nennt die tatsächlich verwendeten Webquellen, speichert alles in einer
-  Session und zeigt danach passende bestehende Sessions zur optionalen Kopie.
+  Die Antwort nennt die tatsächlich verwendeten Webquellen und speichert alles in einer
+  Session. Dasselbe GPT-Modell prüft für jede neue Karte den Titel, die letzte Frage und
+  einen Antwortauszug aller bestehenden Sessions. Nur fachlich klar passende Karten
+  werden über ihre gespeicherten IDs zur optionalen, transaktionalen Kopie angeboten;
+  schwache Ähnlichkeiten erzeugen keinen Vorschlag.
 - Session-Suche filtert Titel lokal; Karten können gelöscht und Lernstände
   zurückgesetzt werden.
 - „Nur schwierige“ nimmt alle Karten außer Status `known`.

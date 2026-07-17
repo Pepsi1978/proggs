@@ -86,6 +86,22 @@ class CodexAuthRetryTest {
         assertEquals("high", payload.getJSONObject("reasoning").getString("effort"))
         assertEquals(30, cards.getInt("minItems"))
         assertEquals(70, cards.getInt("maxItems"))
+        assertTrue(cards.getJSONObject("items").getJSONObject("properties").has("targetSessionIds"))
+    }
+
+    @Test
+    fun researchInputIncludesEveryExistingSession() {
+        val sessions = listOf(
+            ExistingSessionContext("bio", "Biologie", "Was ist eine Zelle?", "Eine Zelle ist ..."),
+            ExistingSessionContext("chemie", "Chemie", "Was ist ein Atom?", "Ein Atom ist ..."),
+        )
+
+        val input = researchInput("Wie arbeitet der Körper?", sessions)
+
+        assertTrue(input.contains("\"id\":\"bio\""))
+        assertTrue(input.contains("\"id\":\"chemie\""))
+        assertTrue(input.contains("Was ist eine Zelle?"))
+        assertTrue(input.contains("Was ist ein Atom?"))
     }
 
     @Test

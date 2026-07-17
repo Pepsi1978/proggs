@@ -10,6 +10,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "study_sessions")
@@ -51,6 +52,13 @@ data class LearningResultEntity(
     val reviewedAt: Long,
 )
 
+data class SessionContextRow(
+    val id: String,
+    val title: String,
+    val question: String,
+    val answerExcerpt: String,
+)
+
 @Dao
 interface StudyDao {
     @Query("SELECT * FROM study_sessions ORDER BY createdAt DESC")
@@ -65,6 +73,15 @@ interface StudyDao {
     @Query("SELECT COUNT(*) FROM study_sessions")
     suspend fun sessionCount(): Int
 
+    @Query("""
+        SELECT s.id, s.title,
+            COALESCE((SELECT r.question FROM researches r WHERE r.sessionId = s.id ORDER BY r.createdAt DESC LIMIT 1), '') AS question,
+            COALESCE((SELECT SUBSTR(r.answer, 1, 600) FROM researches r WHERE r.sessionId = s.id ORDER BY r.createdAt DESC LIMIT 1), '') AS answerExcerpt
+        FROM study_sessions s
+        ORDER BY s.createdAt DESC
+    """)
+    suspend fun sessionContexts(): List<SessionContextRow>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSession(session: SessionEntity)
 
@@ -72,7 +89,21 @@ interface StudyDao {
     suspend fun insertResearch(research: ResearchEntity): Long
 
     @Insert
-    suspend fun insertCards(cards: List<FlashcardEntity>)
+    suspend fun insertCards(cards: List<FlashcardEntity>): List<Long>
+
+    @Query("SELECT * FROM flashcards WHERE id IN (:ids) ORDER BY id")
+    suspend fun cardsByIds(ids: List<Long>): List<FlashcardEntity>
+
+    @Transaction
+    suspend fun copyCardsToSession(sourceCardIds: List<Long>, targetSessionId: String): Int {
+        val sourceCards = cardsByIds(sourceCardIds.distinct())
+        if (sourceCards.isEmpty()) return 0
+        insertCards(sourceCards.map { card ->
+            card.copy(id = 0, sessionId = targetSessionId, status = "NEW")
+        })
+        addCardCount(targetSessionId, sourceCards.size)
+        return sourceCards.size
+    }
 
     @Insert
     suspend fun insertLearningResult(result: LearningResultEntity)

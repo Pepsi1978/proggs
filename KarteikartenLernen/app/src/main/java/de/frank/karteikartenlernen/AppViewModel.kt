@@ -10,6 +10,8 @@ import de.frank.karteikartenlernen.audio.WavAudioRecorder
 import de.frank.karteikartenlernen.auth.CodexAuthManager
 import de.frank.karteikartenlernen.auth.AuthErrorKind
 import de.frank.karteikartenlernen.auth.CodexAuthException
+import de.frank.karteikartenlernen.auth.ExistingSessionContext
+import de.frank.karteikartenlernen.auth.GeneratedCard
 import de.frank.karteikartenlernen.auth.GeneratedResearch
 import de.frank.karteikartenlernen.data.AppDatabase
 import de.frank.karteikartenlernen.data.FlashcardEntity
@@ -52,6 +54,25 @@ internal fun appendTranscription(existing: String, transcript: String): String {
     if (addition.isEmpty()) return existing
     if (existing.isEmpty() || existing.last().isWhitespace()) return existing + addition
     return "$existing $addition"
+}
+
+internal fun buildCrossSuggestions(
+    generatedCards: List<GeneratedCard>,
+    persistedCardIds: List<Long>,
+    sessions: List<ExistingSessionContext>,
+): List<CrossSuggestion> {
+    val cardIdsBySession = linkedMapOf<String, MutableList<Long>>()
+    generatedCards.zip(persistedCardIds).forEach { (card, cardId) ->
+        card.targetSessionIds.forEach { sessionId ->
+            cardIdsBySession.getOrPut(sessionId) { mutableListOf() }.add(cardId)
+        }
+    }
+    return sessions.mapNotNull { session ->
+        cardIdsBySession[session.id]
+            ?.distinct()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { cardIds -> CrossSuggestion(session.id, session.title, cardIds) }
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -238,8 +259,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(answer = "", generationPhase = GenerationPhase.ANSWER, authError = null) }
         generationJob?.cancel()
         generationJob = viewModelScope.launch {
+            val sessionContexts = dao.sessionContexts().map { row ->
+                ExistingSessionContext(row.id, row.title, row.question, row.answerExcerpt)
+            }
             val result = runCatching {
-                auth.generateResearch(modelId(state.model), state.reasoning, state.input)
+                auth.generateResearch(modelId(state.model), state.reasoning, state.input, sessionContexts)
             }.getOrElse { error ->
                 if (error is CodexAuthException && error.kind == AuthErrorKind.REAUTH) {
                     auth.logout()
@@ -255,7 +279,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 delay(38)
             }
             _uiState.update { it.copy(answer = result.answer, generationPhase = GenerationPhase.CARDS) }
-            val sessionId = persistResearch(state.input, result)
+            val (sessionId, persistedCardIds) = persistResearch(state.input, result)
+            val crossSuggestions = buildCrossSuggestions(result.cards, persistedCardIds, sessionContexts)
             activeSessionId.value = sessionId
             delay(1700)
             _uiState.update { current ->
@@ -263,19 +288,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     generationPhase = GenerationPhase.DONE,
                     savedSessionTitle = result.title,
                     savedCardCount = result.cards.size,
-                    crossSuggestions = current.sessions.filterNot { it.id == sessionId }.take(2).map { CrossSuggestion(it.id, it.title, result.cards.size.coerceAtMost(6)) },
+                    crossSuggestions = crossSuggestions,
                 )
             }
             delay(700)
-            _uiState.update { it.copy(showCrossSheet = true) }
+            if (crossSuggestions.isNotEmpty()) _uiState.update { it.copy(showCrossSheet = true) }
         }
     }
 
-    private suspend fun persistResearch(question: String, result: GeneratedResearch): String {
+    private suspend fun persistResearch(question: String, result: GeneratedResearch): Pair<String, List<Long>> {
         val sessionId = "research-${System.currentTimeMillis()}"
         dao.upsertSession(SessionEntity(sessionId, result.title, System.currentTimeMillis(), result.cards.size, 0, "Heute", 0))
         val researchId = dao.insertResearch(ResearchEntity(sessionId = sessionId, question = question, answer = result.answer, createdAt = System.currentTimeMillis()))
-        dao.insertCards(result.cards.map {
+        val cardIds = dao.insertCards(result.cards.map {
             FlashcardEntity(
                 sessionId = sessionId,
                 researchId = researchId,
@@ -285,7 +310,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 status = CardStatus.NEW.name,
             )
         })
-        return sessionId
+        return sessionId to cardIds
     }
 
     fun resetResearch() {
@@ -450,17 +475,37 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun decideCross(index: Int, accepted: Boolean) {
         val suggestion = _uiState.value.crossSuggestions.getOrNull(index) ?: return
-        if (accepted) viewModelScope.launch {
-            val cards = _uiState.value.cards.take(suggestion.count).map {
-                FlashcardEntity(sessionId = suggestion.sessionId, researchId = 0, question = it.question, answer = it.answer, explanation = it.explanation, status = CardStatus.NEW.name)
-            }
-            dao.insertCards(cards)
-            dao.addCardCount(suggestion.sessionId, cards.size)
-        }
+        if (suggestion.accepted != null) return
         _uiState.update { state ->
             state.copy(crossSuggestions = state.crossSuggestions.mapIndexed { i, item ->
                 if (i == index) item.copy(accepted = accepted) else item
             })
+        }
+        if (accepted) viewModelScope.launch {
+            try {
+                val copied = dao.copyCardsToSession(suggestion.cardIds, suggestion.sessionId)
+                if (copied == 0) {
+                    _uiState.update { state ->
+                        state.copy(
+                            crossSuggestions = state.crossSuggestions.mapIndexed { i, item ->
+                                if (i == index) item.copy(accepted = null) else item
+                            },
+                            message = "Die passenden Karten wurden nicht mehr gefunden. Bitte erzeuge die Recherche erneut.",
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update { state ->
+                    state.copy(
+                        crossSuggestions = state.crossSuggestions.mapIndexed { i, item ->
+                            if (i == index) item.copy(accepted = null) else item
+                        },
+                        message = error.message ?: "Die Karten konnten nicht zur Session hinzugefügt werden.",
+                    )
+                }
+            }
         }
     }
 

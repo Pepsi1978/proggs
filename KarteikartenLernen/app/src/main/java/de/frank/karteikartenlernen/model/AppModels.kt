@@ -25,9 +25,11 @@ data class StudySession(
 data class CrossSuggestion(
     val sessionId: String,
     val title: String,
-    val count: Int,
+    val cardIds: List<Long>,
     val accepted: Boolean? = null,
-)
+) {
+    val count: Int get() = cardIds.size
+}
 
 data class LearningState(
     val sessionId: String,
@@ -103,10 +105,7 @@ data class AppUiState(
     val savedCardCount: Int = 27,
     val detailQuestion: String = "Warum ist die HRV nachts höher und welche Rolle spielt der Vagusnerv?",
     val detailAnswer: String = SAMPLE_ANSWER,
-    val crossSuggestions: List<CrossSuggestion> = listOf(
-        CrossSuggestion("drone", "Drohnen-Recht in der EU", 6),
-        CrossSuggestion("vagus", "Cold Exposure & Vagusnerv", 3),
-    ),
+    val crossSuggestions: List<CrossSuggestion> = emptyList(),
 )
 
 val sampleCards = listOf(
