@@ -1,9 +1,11 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "13",
+    [string]$PatchRevision = "14",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
+
+# Stand: windowsfix.14 - 17.07.2026 13:30 Uhr
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
