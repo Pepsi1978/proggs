@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.18 - 18.07.2026, 00:28 Uhr
+Version 0.1.19 - 18.07.2026, 00:32 Uhr
 
 ## 1. Übersicht
 
@@ -135,8 +135,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 3. **Recherche, Transkription:** Spinner, Whisper-Text und Shimmer über dem Eingabefeld.
 4. **Recherche, Formulierung:** animierter Loader; neue Formulierung kann rückgängig
    gemacht werden.
-5. **Recherche, Generierung:** gestreamte Antwort mit Cursor, Karten-Loader,
-   Erfolgskarte und Aktion „Jetzt lernen“.
+5. **Recherche, Generierung:** Während die Antwort erzeugt wird, zeigt eine animierte
+   Eieruhr deutlich „Bitte warten, Antwort wird erzeugt“. Danach folgen gestreamte
+   Antwort mit Cursor, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
 7. **Modell-Bottom-Sheet:** GPT 5.6 Soul/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.

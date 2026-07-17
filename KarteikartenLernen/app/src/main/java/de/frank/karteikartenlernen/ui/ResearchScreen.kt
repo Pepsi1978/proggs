@@ -2,6 +2,12 @@ package de.frank.karteikartenlernen.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
@@ -25,6 +31,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -32,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -129,7 +137,7 @@ fun ResearchScreen(
                 .padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(if (state.generationPhase == GenerationPhase.ANSWER) "Denkt nach …" else "Absenden ↗", color = if (state.input.isNotBlank()) c.background0 else c.faint, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(if (state.generationPhase == GenerationPhase.ANSWER) "Bitte warten …" else "Absenden ↗", color = if (state.input.isNotBlank()) c.background0 else c.faint, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
         state.authError?.let {
             Text(it, color = c.red, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp))
@@ -138,7 +146,13 @@ fun ResearchScreen(
             Text(it, color = c.red, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp))
         }
         AnimatedVisibility(
-            visible = state.answer != null,
+            visible = state.generationPhase == GenerationPhase.ANSWER && state.answer.isNullOrBlank(),
+            enter = fadeIn() + slideInVertically { it / 4 },
+        ) {
+            ResearchWaitingCard()
+        }
+        AnimatedVisibility(
+            visible = !state.answer.isNullOrBlank(),
             enter = fadeIn() + slideInVertically { it / 4 },
         ) {
             AnswerBlock(state, onSpeak, onLearn)
@@ -152,6 +166,44 @@ fun ResearchScreen(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onReset).padding(top = 12.dp, bottom = 4.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
+        }
+    }
+}
+
+@Composable
+private fun ResearchWaitingCard() {
+    val c = LocalAppPalette.current
+    val transition = rememberInfiniteTransition(label = "research-hourglass")
+    val rotation = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2_400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "hourglass-rotation",
+    )
+    GlassSurface(Modifier.fillMaxWidth().padding(top = 16.dp), radius = 22.dp) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.accent.copy(alpha = 0.13f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.HourglassTop,
+                    contentDescription = "Animierte Eieruhr",
+                    tint = c.accent,
+                    modifier = Modifier.size(25.dp).graphicsLayer { rotationZ = rotation.value },
+                )
+            }
+            Column(Modifier.padding(start = 14.dp)) {
+                Text("Bitte warten", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("Antwort wird erzeugt …", color = c.muted, fontSize = 13.5.sp, modifier = Modifier.padding(top = 2.dp))
+            }
         }
     }
 }
