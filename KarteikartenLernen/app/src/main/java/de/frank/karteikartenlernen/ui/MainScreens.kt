@@ -21,8 +21,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -217,30 +215,7 @@ fun SettingsScreen(
         SettingsSection("VORLESEN (EDGE TTS)") {
             val selectedVoice = TtsVoiceRegistry.voice(s.voice)
             SettingRow("Stimme", TtsVoiceRegistry.displayName(selectedVoice)) {
-                Box {
-                    SmallPill(selectedVoice.name) { voiceMenuExpanded = true }
-                    DropdownMenu(
-                        expanded = voiceMenuExpanded,
-                        onDismissRequest = { voiceMenuExpanded = false },
-                    ) {
-                        TtsVoiceRegistry.voices.forEach { voice ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        TtsVoiceRegistry.displayName(voice),
-                                        color = if (voice.id == selectedVoice.id) c.accent else c.text,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (voice.id == selectedVoice.id) FontWeight.Bold else FontWeight.Medium,
-                                    )
-                                },
-                                onClick = {
-                                    voiceMenuExpanded = false
-                                    onSettings { it.copy(voice = voice.id) }
-                                },
-                            )
-                        }
-                    }
-                }
+                SmallPill(selectedVoice.name) { voiceMenuExpanded = true }
             }
             SettingRow("") { GradientPill("Stimme testen", onSpeakTest) }
             SettingRow("Sprechgeschwindigkeit") {
@@ -262,6 +237,46 @@ fun SettingsScreen(
             Text("Stand ${BuildConfig.VERSION_BUMPED_AT}", color = c.faint, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
         }
         Spacer(Modifier.height(18.dp))
+    }
+    AppModalBottomSheet(voiceMenuExpanded, { voiceMenuExpanded = false }) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+            Text(
+                "STIMME",
+                color = c.faint,
+                fontSize = 12.sp,
+                letterSpacing = 1.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 10.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TtsVoiceRegistry.voices.forEach { voice ->
+                    val selected = voice.id == s.voice
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (selected) c.chip else Color.Transparent)
+                            .border(1.dp, if (selected) c.accent else c.border, RoundedCornerShape(14.dp))
+                            .clickable {
+                                onSettings { it.copy(voice = voice.id) }
+                                voiceMenuExpanded = false
+                            }
+                            .padding(horizontal = 16.dp, vertical = 13.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            TtsVoiceRegistry.displayName(voice),
+                            color = c.text,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(26.dp))
+        }
     }
 }
 

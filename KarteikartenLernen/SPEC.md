@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.23 - 18.07.2026, 00:49 Uhr
+Version 0.1.24 - 18.07.2026, 00:50 Uhr
 
 ## 1. Übersicht
 
@@ -159,6 +159,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
     stehen die generierte App-Version und der genaue Build-Zeitstempel.
 15. **OpenAI-OAuth-Dialog:** Browserähnlicher Sicherheitsdialog mit Fortfahren und
     Abbrechen; nach Erfolg zeigt die Verbindung Mailadresse und Trennen.
+16. **Stimmen-Bottom-Sheet:** Ein Tipp auf die gewählte Edge-Stimme öffnet die
+    Stimmenliste sichtbar von unten in derselben Optik wie die Modellauswahl. Das
+    Fenster kann am oberen Griff nach unten gezogen und damit animiert geschlossen
+    werden; die aktive Stimme ist mit Akzentrahmen und Haken markiert.
 
 ## 6. Funktionen und Daten
 
