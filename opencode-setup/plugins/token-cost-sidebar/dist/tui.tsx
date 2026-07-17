@@ -407,7 +407,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
   return (
     <text fg={theme().accent}>
       <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
-      <Show when={modelMeta().providerID === "openai"}>{` · ${quotaLabel()}`}</Show>
+      <Show when={modelMeta().providerID === "openai"}><b>{` · ${quotaLabel()}`}</b></Show>
     </text>
   )
 }

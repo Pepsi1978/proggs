@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, parseWeeklyQuota } from "../dist/openai-quota"
+import {
+  isCompletedOpenAIMessage,
+  loadOpenAIWeeklyQuota,
+  openAIAuthFileCandidates,
+  parseWeeklyQuota,
+} from "../dist/openai-quota"
 
 describe("OpenAI weekly quota", () => {
   test("selects the weekly window and converts used to remaining percent", () => {
@@ -65,6 +70,35 @@ describe("OpenAI weekly quota", () => {
       })
     } finally {
       await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("maps the TUI state directory to OpenCode's data auth file", async () => {
+    const home = await mkdtemp(join(tmpdir(), "opencode-quota-home-"))
+    try {
+      const stateDirectory = join(home, ".local", "state", "opencode")
+      const dataDirectory = join(home, ".local", "share", "opencode")
+      await mkdir(stateDirectory, { recursive: true })
+      await mkdir(dataDirectory, { recursive: true })
+      await writeFile(join(dataDirectory, "auth.json"), JSON.stringify({
+        openai: { type: "oauth", access: "secret", accountId: "account" },
+      }))
+      expect(openAIAuthFileCandidates(stateDirectory, home, undefined)).toEqual([
+        join(stateDirectory, "auth.json"),
+        join(dataDirectory, "auth.json"),
+      ])
+      const fetcher = (async () => new Response(JSON.stringify({
+        rate_limit: {
+          primary_window: { used_percent: 36, limit_window_seconds: 604_800, reset_at: 1_784_796_030 },
+        },
+      }))) as typeof fetch
+
+      expect(await loadOpenAIWeeklyQuota(stateDirectory, fetcher)).toEqual({
+        remainingPercent: 64,
+        resetAt: 1_784_796_030,
+      })
+    } finally {
+      await rm(home, { recursive: true, force: true })
     }
   })
 })
