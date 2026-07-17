@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.12 - 17.07.2026, 23:27 Uhr
+Version 0.1.13 - 17.07.2026, 23:32 Uhr
 
 ## 1. Übersicht
 
@@ -169,8 +169,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 
 ### Verhalten
 
-- Spracheingabe fordert Mikrofonberechtigung kontextbezogen an, zeigt Aufnahmezeit
-  und transkribiert anschließend.
+- Spracheingabe fordert Mikrofonberechtigung kontextbezogen an und zeichnet PCM-WAV
+  mit `16 kHz`, Mono und 16 Bit auf. Nur ein erneuter Mikrofon-Tipp beendet die
+  Aufnahme; Sprechpausen stoppen sie nicht. Danach transkribiert Groq mit dem exakten
+  Modell `whisper-large-v3-turbo`. Weitere Diktate werden an vorhandenen Text angehängt.
 - Textverbesserung verwaltet eine lokale Versionshistorie und unterstützt Rückgängig.
 - Absenden erzeugt eine Antwort und Karteikarten, speichert beides in einer Session
   und zeigt danach passende bestehende Sessions zur optionalen Kopie.

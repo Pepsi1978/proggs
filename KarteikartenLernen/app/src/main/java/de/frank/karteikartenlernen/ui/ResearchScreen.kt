@@ -90,7 +90,7 @@ fun ResearchScreen(
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val enabled = state.input.isNotBlank()
+            val enabled = state.input.isNotBlank() && state.mic == MicState.IDLE
             Row(
                 Modifier
                     .weight(1f)
@@ -117,7 +117,7 @@ fun ResearchScreen(
                 Icon(Icons.Outlined.Replay, "Rückgängig", tint = if (state.versionIndex > 0) c.text else c.faint)
             }
         }
-        val canSend = state.input.isNotBlank() && state.generationPhase == null
+        val canSend = state.input.isNotBlank() && state.generationPhase == null && state.mic == MicState.IDLE
         Box(
             Modifier
                 .fillMaxWidth()

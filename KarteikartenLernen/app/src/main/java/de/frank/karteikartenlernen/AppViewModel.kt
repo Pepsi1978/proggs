@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.karteikartenlernen.audio.ProceduralSoundPlayer
 import de.frank.karteikartenlernen.audio.SoundEffect
+import de.frank.karteikartenlernen.audio.WavAudioRecorder
 import de.frank.karteikartenlernen.auth.CodexAuthManager
 import de.frank.karteikartenlernen.auth.AuthErrorKind
 import de.frank.karteikartenlernen.auth.CodexAuthException
@@ -31,8 +32,11 @@ import de.frank.karteikartenlernen.model.StudySession
 import de.frank.karteikartenlernen.model.sampleSessions
 import de.frank.karteikartenlernen.model.sampleCards
 import de.frank.karteikartenlernen.model.advanceLearningQueue
+import de.frank.karteikartenlernen.transcription.GroqTranscriber
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,17 +46,28 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+internal fun appendTranscription(existing: String, transcript: String): String {
+    val addition = transcript.trim()
+    if (addition.isEmpty()) return existing
+    if (existing.isEmpty() || existing.last().isWhitespace()) return existing + addition
+    return "$existing $addition"
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsStore = SettingsStore(application)
     private val dao = AppDatabase.get(application).studyDao()
     private val auth = CodexAuthManager(application)
     private val sounds = ProceduralSoundPlayer()
+    private val audioRecorder = WavAudioRecorder(application)
+    private val groqTranscriber = GroqTranscriber(BuildConfig.GROQ_API_KEY, BuildConfig.GROQ_TRANSCRIPTION_MODEL)
     private val _uiState = MutableStateFlow(
         AppUiState(connectedEmail = auth.email),
     )
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
-    private var recordingJob: Job? = null
+    private var recordingTimerJob: Job? = null
+    private var recordingStart: Deferred<Unit>? = null
+    private var transcriptionJob: Job? = null
     private var generationJob: Job? = null
     private var loginJob: Job? = null
     private val activeSessionId = MutableStateFlow("hrv")
@@ -87,6 +102,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectTab(tab: AppTab) {
+        if (_uiState.value.mic != MicState.IDLE) return
         if (tab == AppTab.LEARN) startLearning(_uiState.value.cards) else _uiState.update { it.copy(tab = tab) }
     }
 
@@ -98,34 +114,85 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startRecording() {
+        if (_uiState.value.mic != MicState.IDLE || !groqTranscriber.isConfigured) {
+            if (!groqTranscriber.isConfigured) {
+                _uiState.update { it.copy(message = "Groq Whisper Large V3 Turbo ist in diesem Build nicht konfiguriert.") }
+            }
+            return
+        }
         _uiState.update { it.copy(mic = MicState.RECORDING, recordingSeconds = 0, authError = null) }
-        recordingJob?.cancel()
-        recordingJob = viewModelScope.launch {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = viewModelScope.launch {
             while (true) {
                 delay(1000)
                 _uiState.update { it.copy(recordingSeconds = it.recordingSeconds + 1) }
             }
         }
+        val start = viewModelScope.async { audioRecorder.start() }
+        recordingStart = start
+        viewModelScope.launch {
+            runCatching { start.await() }.onFailure { error ->
+                if (recordingStart === start && _uiState.value.mic == MicState.RECORDING) {
+                    recordingTimerJob?.cancel()
+                    _uiState.update { it.copy(mic = MicState.IDLE, message = error.message ?: "Das Mikrofon konnte nicht gestartet werden.") }
+                }
+            }
+        }
     }
 
     fun stopRecording() {
-        recordingJob?.cancel()
-        sounds.play(SoundEffect.TRANSITION, _uiState.value.settings)
+        if (_uiState.value.mic != MicState.RECORDING) return
+        recordingTimerJob?.cancel()
         _uiState.update { it.copy(mic = MicState.TRANSCRIBING) }
+        val start = recordingStart
+        transcriptionJob?.cancel()
+        transcriptionJob = viewModelScope.launch {
+            var audioFile: java.io.File? = null
+            try {
+                start?.await() ?: error("Die Aufnahme wurde nicht gestartet.")
+                audioFile = audioRecorder.stop()
+                val transcript = groqTranscriber.transcribe(audioFile)
+                transcriptionFinished(transcript)
+                sounds.play(SoundEffect.TRANSITION, _uiState.value.settings)
+            } catch (cancelled: CancellationException) {
+                audioRecorder.cancel()
+                throw cancelled
+            } catch (error: Exception) {
+                audioRecorder.cancel()
+                _uiState.update {
+                    it.copy(
+                        mic = MicState.IDLE,
+                        message = error.message ?: "Transkription fehlgeschlagen. Deine vorhandene Eingabe wurde nicht verändert.",
+                    )
+                }
+            } finally {
+                audioFile?.delete()
+                if (recordingStart === start) recordingStart = null
+            }
+        }
     }
 
     fun transcriptionFinished(text: String?) {
-        recordingJob?.cancel()
+        recordingTimerJob?.cancel()
         val result = text?.takeIf(String::isNotBlank)
-        _uiState.update {
-            if (result == null) it.copy(mic = MicState.IDLE, message = "Die Spracherkennung hat keinen Text geliefert. Bitte erneut versuchen oder tippen.")
-            else it.copy(mic = MicState.IDLE, input = result, versions = listOf(result), versionIndex = 0, message = null)
+        _uiState.update { state ->
+            if (result == null) state.copy(mic = MicState.IDLE, message = "Groq hat keinen Text erkannt. Deine vorhandene Eingabe wurde nicht verändert.")
+            else {
+                val merged = appendTranscription(state.input, result)
+                val base = state.versions.take(state.versionIndex + 1)
+                val versions = if (base.lastOrNull() == merged) base else base + merged
+                state.copy(mic = MicState.IDLE, input = merged, versions = versions, versionIndex = versions.lastIndex, message = null)
+            }
         }
+    }
+
+    fun recordingPermissionDenied() {
+        _uiState.update { it.copy(mic = MicState.IDLE, message = "Mikrofonzugriff wurde nicht erlaubt.") }
     }
 
     fun improve() {
         val state = _uiState.value
-        if (state.improving || state.input.isBlank()) return
+        if (state.improving || state.input.isBlank() || state.mic != MicState.IDLE) return
         _uiState.update { it.copy(improving = true) }
         viewModelScope.launch {
             delay(1100)
@@ -149,7 +216,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun send() {
         val state = _uiState.value
-        if (state.input.isBlank() || state.generationPhase != null) return
+        if (state.input.isBlank() || state.generationPhase != null || state.mic != MicState.IDLE) return
         if (!auth.isConnected) {
             _uiState.update { it.copy(showOAuth = true) }
             return
@@ -392,6 +459,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun testSound(effect: SoundEffect) = sounds.play(effect, _uiState.value.settings)
+
+    override fun onCleared() {
+        recordingTimerJob?.cancel()
+        transcriptionJob?.cancel()
+        audioRecorder.shutdown()
+        groqTranscriber.shutdown()
+        super.onCleared()
+    }
 
     private fun modelId(label: String): String = when (label) {
         "GPT 5.6 Soul" -> "gpt-5.6-soul"

@@ -5,6 +5,22 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun localSecret(name: String): String {
+    System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+    val secretFile = file("${System.getProperty("user.home")}/SK/VoiceOverlays/.env")
+    if (!secretFile.isFile) return ""
+    return secretFile.useLines { lines ->
+        lines.firstNotNullOfOrNull { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("$name=")) trimmed.substringAfter('=').trim().takeIf { it.isNotEmpty() } else null
+        }.orEmpty()
+    }
+}
+
+fun String.asBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val groqApiKey = localSecret("GROQ_API_KEY")
+
 android {
     namespace = "de.frank.karteikartenlernen"
     compileSdk = 35
@@ -13,9 +29,11 @@ android {
         applicationId = "de.frank.karteikartenlernen"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.1.12"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:27 Uhr\"")
+        versionCode = 14
+        versionName = "0.1.13"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:32 Uhr\"")
+        buildConfigField("String", "GROQ_API_KEY", groqApiKey.asBuildConfigString())
+        buildConfigField("String", "GROQ_TRANSCRIPTION_MODEL", "\"whisper-large-v3-turbo\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }

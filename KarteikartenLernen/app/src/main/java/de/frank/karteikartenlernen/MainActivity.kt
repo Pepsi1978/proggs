@@ -5,9 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,23 +18,20 @@ import de.frank.karteikartenlernen.audio.EdgeTtsPlayer
 import de.frank.karteikartenlernen.model.MicState
 import de.frank.karteikartenlernen.ui.KarteikartenApp
 
-class MainActivity : ComponentActivity(), RecognitionListener {
+class MainActivity : ComponentActivity() {
     private val viewModel: AppViewModel by viewModels()
-    private var speechRecognizer: SpeechRecognizer? = null
     private lateinit var edgeTtsPlayer: EdgeTtsPlayer
     private var pendingSpeechStart = false
 
     private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted && pendingSpeechStart) startSpeechRecognition()
+        if (granted && pendingSpeechStart) viewModel.startRecording()
+        else if (!granted && pendingSpeechStart) viewModel.recordingPermissionDenied()
         pendingSpeechStart = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        speechRecognizer = if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(this) }
-        } else null
         edgeTtsPlayer = EdgeTtsPlayer(this)
         setContent {
             val state by viewModel.uiState.collectAsState()
@@ -47,8 +41,7 @@ class MainActivity : ComponentActivity(), RecognitionListener {
                 onMicClick = {
                     if (state.mic == MicState.RECORDING) {
                         viewModel.stopRecording()
-                        speechRecognizer?.stopListening()
-                    } else requestSpeechStart()
+                    } else if (state.mic == MicState.IDLE) requestSpeechStart()
                 },
                 onSpeak = { text ->
                     edgeTtsPlayer.speak(
@@ -75,48 +68,15 @@ class MainActivity : ComponentActivity(), RecognitionListener {
 
     private fun requestSpeechStart() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            startSpeechRecognition()
+            viewModel.startRecording()
         } else {
             pendingSpeechStart = true
             microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
-    private fun startSpeechRecognition() {
-        val recognizer = speechRecognizer
-        if (recognizer == null) {
-            viewModel.startRecording()
-            viewModel.stopRecording()
-            viewModel.transcriptionFinished(null)
-            return
-        }
-        viewModel.startRecording()
-        recognizer.startListening(
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            },
-        )
-    }
-
     override fun onDestroy() {
-        speechRecognizer?.destroy()
         if (::edgeTtsPlayer.isInitialized) edgeTtsPlayer.shutdown()
         super.onDestroy()
-    }
-
-    override fun onReadyForSpeech(params: Bundle?) = Unit
-    override fun onBeginningOfSpeech() = Unit
-    override fun onRmsChanged(rmsdB: Float) = Unit
-    override fun onBufferReceived(buffer: ByteArray?) = Unit
-    override fun onEndOfSpeech() { viewModel.stopRecording() }
-    override fun onError(error: Int) { viewModel.transcriptionFinished(null) }
-    override fun onPartialResults(partialResults: Bundle?) = Unit
-    override fun onEvent(eventType: Int, params: Bundle?) = Unit
-
-    override fun onResults(results: Bundle?) {
-        val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-        viewModel.transcriptionFinished(text)
     }
 }

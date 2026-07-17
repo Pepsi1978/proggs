@@ -200,8 +200,8 @@ fun MicButton(state: MicState, seconds: Int, onClick: () -> Unit) {
         }
         val text = when (state) {
             MicState.IDLE -> "Antippen und sprechen"
-            MicState.RECORDING -> "Aufnahme läuft · 0:${seconds.toString().padStart(2, '0')} — antippen zum Beenden"
-            MicState.TRANSCRIBING -> "Transkribiere mit Whisper …"
+            MicState.RECORDING -> "Aufnahme läuft · ${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')} — erneut tippen zum Beenden"
+            MicState.TRANSCRIBING -> "Transkribiere mit Groq Whisper Large V3 Turbo …"
         }
         Text(text, color = if (state == MicState.RECORDING) c.red else c.muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
