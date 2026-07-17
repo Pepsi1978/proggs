@@ -136,6 +136,30 @@ interface StudyDao {
 
     @Query("UPDATE flashcards SET status = 'NEW' WHERE sessionId = :sessionId")
     suspend fun resetSession(sessionId: String)
+
+    @Query("DELETE FROM learning_results WHERE flashcardId IN (SELECT id FROM flashcards WHERE sessionId = :sessionId)")
+    suspend fun deleteLearningResultsForSession(sessionId: String)
+
+    @Query("UPDATE flashcards SET researchId = 0 WHERE sessionId != :sessionId AND researchId IN (SELECT id FROM researches WHERE sessionId = :sessionId)")
+    suspend fun detachCopiedCardsFromResearch(sessionId: String)
+
+    @Query("DELETE FROM flashcards WHERE sessionId = :sessionId")
+    suspend fun deleteCardsForSession(sessionId: String)
+
+    @Query("DELETE FROM researches WHERE sessionId = :sessionId")
+    suspend fun deleteResearchesForSession(sessionId: String)
+
+    @Query("DELETE FROM study_sessions WHERE id = :sessionId")
+    suspend fun deleteSessionRow(sessionId: String)
+
+    @Transaction
+    suspend fun deleteSession(sessionId: String) {
+        deleteLearningResultsForSession(sessionId)
+        detachCopiedCardsFromResearch(sessionId)
+        deleteCardsForSession(sessionId)
+        deleteResearchesForSession(sessionId)
+        deleteSessionRow(sessionId)
+    }
 }
 
 @Database(

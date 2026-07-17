@@ -101,6 +101,7 @@ fun KarteikartenApp(
                     onResearchTab = viewModel::setDetailResearch,
                     onLearn = viewModel::startLearning,
                     onDelete = viewModel::deleteCard,
+                    onDeleteSession = viewModel::deleteSelectedSession,
                     onReset = viewModel::resetLearningStatus,
                     onSpeak = onSpeak,
                 )

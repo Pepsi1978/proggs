@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.28 - 18.07.2026, 00:57 Uhr
+Version 0.1.29 - 18.07.2026, 01:01 Uhr
 
 ## 1. Übersicht
 
@@ -152,6 +152,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
     typografisch getrennten Überschriften, Absätzen, anklickbaren Quellen und Vorlesen.
     Langes Drücken aktiviert die native Textauswahl; Auswahlgriffe können über Frage
     und Antwort bewegt und der gewählte Text über das Systemmenü kopiert werden.
+    Das Drei-Punkte-Menü bietet „Lernstand zurücksetzen“ und „Lernsession löschen“.
+    Nach einer Sicherheitsabfrage löscht die zweite Aktion Recherche, Karten,
+    Lernfortschritt und Session gemeinsam in einer Datenbanktransaktion.
 11. **Lernrunde, Frage:** Fortschritt, Kartenindikatoren, Vorlesen, 3D-Karte und Flip.
 12. **Lernrunde, Antwort:** Antwort plus Erklärung, Nicht gewusst und Gewusst.
 13. **Lernrunde, Abschluss:** Konfetti, Ergebniszahlen, Nochmal und Fertig.

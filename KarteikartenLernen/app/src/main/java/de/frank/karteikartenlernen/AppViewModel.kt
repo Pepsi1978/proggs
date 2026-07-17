@@ -409,6 +409,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { dao.resetSession(sessionId); dao.clearKnown(sessionId) }
     }
 
+    fun deleteSelectedSession() {
+        val sessionId = _uiState.value.selectedSession?.id ?: return
+        _uiState.update {
+            it.copy(
+                selectedSession = null,
+                detailQuestion = "",
+                detailAnswer = "",
+                cards = if (activeSessionId.value == sessionId) emptyList() else it.cards,
+            )
+        }
+        if (activeSessionId.value == sessionId) activeSessionId.value = ""
+        viewModelScope.launch {
+            try {
+                dao.deleteSession(sessionId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(message = error.message ?: "Die Lernsession konnte nicht gelöscht werden.")
+                }
+            }
+        }
+    }
+
     fun startLearning(deck: List<Flashcard>) {
         if (deck.isEmpty()) return
         sounds.play(SoundEffect.TRANSITION, _uiState.value.settings)

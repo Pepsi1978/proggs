@@ -78,18 +78,21 @@ fun SessionDetail(
     onResearchTab: (Boolean) -> Unit,
     onLearn: (List<Flashcard>) -> Unit,
     onDelete: (Long) -> Unit,
+    onDeleteSession: () -> Unit,
     onReset: () -> Unit,
     onSpeak: (String) -> Unit,
 ) {
     val c = LocalAppPalette.current
     val session = state.selectedSession ?: return
+    var showOptions by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(c.background1).safeDrawingPadding()) {
         Column(Modifier.fillMaxWidth().border(0.5.dp, c.border).padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButtonBox(onClose) { Icon(Icons.Outlined.ArrowBackIosNew, "Zurück", tint = c.text, modifier = Modifier.size(20.dp)) }
                 Text(session.title, color = c.text, fontFamily = Newsreader, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-                IconButtonBox({ confirmReset = true }, transparent = true) { Icon(Icons.Outlined.MoreHoriz, "Optionen", tint = c.faint, modifier = Modifier.size(20.dp)) }
+                IconButtonBox({ showOptions = true }, transparent = true) { Icon(Icons.Outlined.MoreHoriz, "Optionen", tint = c.faint, modifier = Modifier.size(20.dp)) }
             }
             val progress = session.known.toFloat() / session.count
             Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -113,6 +116,37 @@ fun SessionDetail(
             Spacer(Modifier.height(18.dp))
         }
     }
+    if (showOptions) {
+        AlertDialog(
+            onDismissRequest = { showOptions = false },
+            title = { Text("Lernsession verwalten") },
+            text = {
+                Column {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable {
+                            showOptions = false
+                            confirmReset = true
+                        }.padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Refresh, null, tint = c.muted, modifier = Modifier.size(20.dp))
+                        Text("Lernstand zurücksetzen", color = c.text, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp))
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable {
+                            showOptions = false
+                            confirmDelete = true
+                        }.padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.DeleteOutline, null, tint = c.red, modifier = Modifier.size(20.dp))
+                        Text("Lernsession löschen", color = c.red, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp))
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showOptions = false }) { Text("Schließen") } },
+        )
+    }
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
@@ -120,6 +154,20 @@ fun SessionDetail(
             text = { Text("Alle Karten dieser Session werden wieder als neu markiert.") },
             confirmButton = { TextButton(onClick = { confirmReset = false; onReset() }) { Text("Zurücksetzen") } },
             dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Abbrechen") } },
+        )
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Lernsession löschen?") },
+            text = { Text("Die gesamte Recherche, alle Karten und der Lernfortschritt dieser Session werden dauerhaft gelöscht.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onDeleteSession()
+                }) { Text("Endgültig löschen", color = c.red) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Abbrechen") } },
         )
     }
 }
