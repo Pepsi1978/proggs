@@ -209,7 +209,7 @@ private fun SettingsContent(
         }
         item { Button(onClick = { onSaveProtocol(protocol) }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Protokollwerte speichern") } }
         item { Text("Zutaten", style = MaterialTheme.typography.headlineMedium) }
-        items(state.ingredients, key = { it.id }) { item ->
+        items(state.ingredients, key = { ingredientListKey(it.id) }) { item ->
             EditableRow(
                 title = "${item.name} · ${item.amount}",
                 subtitle = "${if (item.phase == IngredientPhase.DRINK) "Drink" else "Spermidin"}${if (item.optional) " · optional" else ""}",
@@ -221,7 +221,7 @@ private fun SettingsContent(
             OutlinedButton(onClick = { editedIngredient = null; ingredientDialog = true }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Zutat hinzufügen") }
         }
         item { Text("Konflikt-Tabelle", style = MaterialTheme.typography.headlineMedium) }
-        items(state.stackItems, key = { it.id }) { item ->
+        items(state.stackItems, key = { stackItemListKey(it.id) }) { item ->
             EditableRow(
                 title = item.name,
                 subtitle = "${categoryLabel(item.category)} · ${item.usualDose}",
@@ -366,6 +366,10 @@ private fun categoryLabel(category: StackCategory): String = when (category) {
     StackCategory.GRENZFALL -> "Grenzfall"
     StackCategory.UNPROBLEMATISCH -> "Unproblematisch"
 }
+
+internal fun ingredientListKey(id: Long): String = "ingredient:$id"
+
+internal fun stackItemListKey(id: Long): String = "stack:$id"
 
 @Composable
 private fun SafetyContent(modifier: Modifier) {
