@@ -25,6 +25,15 @@ test("all Windows build and update entrypoints reserve before build or kill", as
   assert.ok(rebuild.indexOf("$reservationHeld = Wait-OverlayIdle") < rebuild.indexOf("Stop-Overlay -O $O"))
   assert.match(rebuild, /Exit-VoiceOverlayDeploymentWindow/)
   assert.doesNotMatch(rebuild, /fahre trotzdem fort/)
+  assert.match(rebuild, /pwsh -NoProfile -File \$publishScript \| Out-Host/)
+  assert.match(rebuild, /\$publishExitCode = \$LASTEXITCODE/)
+  assert.match(rebuild, /function Test-BuiltArtifact/)
+  assert.match(rebuild, /PropertyGroup\.Version/)
+  assert.match(rebuild, /recording\/status/)
+  assert.match(rebuild, /for \(\$attempt = 1; \$attempt -le 20; \$attempt\+\+\)/)
+  assert.match(rebuild, /Stop-ScheduledTask -TaskName \$O\.Task/)
+  assert.match(rebuild, /Start-ScheduledTask -TaskName \$O\.Task/)
+  assert.match(rebuild, /\$startupDeadline = \(Get-Date\)\.AddMinutes\(10\)/)
 })
 
 test("both Windows apps atomically reserve idle state and block new recordings", async () => {

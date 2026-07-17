@@ -1,4 +1,5 @@
 #Requires -Version 7
+# Version 1.3.0 - 17.07.2026, 18:54 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -53,6 +54,7 @@ $Overlays = @{
         Folder = Join-Path $repoRoot 'ClaudeVoiceOverlay-Windows'
         Exe    = 'ClaudeVoiceOverlay.exe'
         Port   = 5724
+        Task   = 'Spracheingabe - Claude Desktop'
     }
     TVO = @{
         Label  = 'Windows Terminal'
@@ -60,6 +62,7 @@ $Overlays = @{
         Folder = Join-Path $repoRoot 'TerminalVoiceOverlay-Windows'
         Exe    = 'TerminalVoiceOverlay.exe'
         Port   = 5723
+        Task   = 'Spracheingabe - Terminal'
     }
 }
 
@@ -69,36 +72,74 @@ function Write-Ok   { param([string]$m) Write-Host "  OK: $m" -ForegroundColor G
 function Write-Warn { param([string]$m) Write-Host "  ! $m" -ForegroundColor Yellow }
 function Write-Err  { param([string]$m) Write-Host "  ! $m" -ForegroundColor Red }
 
-# Beendet ALLE Prozesse eines Overlays: zuerst der watcher.vbs (wscript), dann die .exe.
-# Watcher zuerst, damit er die exe waehrend des Kills nicht erneut respawnt.
+# Beendet ALLE Prozesse eines Overlays. Da sich interner Watchdog und Overlay
+# gegenseitig neu starten, wird bis zum stabilen Stillstand wiederholt beendet.
 function Stop-Overlay {
     param([hashtable]$O)
 
     $leaf = Split-Path $O.Folder -Leaf   # z.B. "ClaudeVoiceOverlay-Windows" — eindeutig pro Overlay
+    $announced = $false
 
-    # exe-Prozesse — NAMENS-Filter (CommandLine-Filter wuerde die eigene pwsh treffen!)
-    $exeProcs = @(Get-CimInstance Win32_Process -Filter "name='$($O.Exe)'" -ErrorAction SilentlyContinue)
-
-    # watcher: nur wscript.exe (Namens-Filter), die GENAU dieses Overlays watcher.vbs ausfuehren.
-    # Der Ordnername im Pfad ist eindeutig -> kein Cross-Match zwischen CVO und TVO.
-    $watcherProcs = @(
-        Get-CimInstance Win32_Process -Filter "name='wscript.exe'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$leaf\watcher.vbs*") }
-    )
-
-    $pidsToKill = @()
-    $pidsToKill += $watcherProcs.ProcessId   # Watcher ZUERST
-    $pidsToKill += $exeProcs.ProcessId
-    $pidsToKill = $pidsToKill | Where-Object { $_ } | Select-Object -Unique
-
-    if ($pidsToKill.Count -eq 0) {
-        Write-Step 'Keine laufenden Prozesse gefunden (nichts zu beenden).'
-        return
+    # Die Autostart-Aufgaben laufen mit RunLevel=Highest. Aus einem normalen
+    # Prozess sind CommandLine/ExecutablePath ihrer wscript.exe daher leer und
+    # ein reiner WMI-Pfadfilter kann sie nicht erkennen. Die konkrete Aufgabe
+    # zuerst kontrolliert stoppen; danach verbleibende interne Prozesse fangen.
+    $scheduledTask = Get-ScheduledTask -TaskName $O.Task -ErrorAction SilentlyContinue
+    if ($scheduledTask -and $scheduledTask.State -eq 'Running') {
+        Write-Step "Stoppe geplante Aufgabe '$($O.Task)'..."
+        Stop-ScheduledTask -TaskName $O.Task -ErrorAction Stop
+        $taskDeadline = (Get-Date).AddSeconds(10)
+        do {
+            Start-Sleep -Milliseconds 200
+            $scheduledTask = Get-ScheduledTask -TaskName $O.Task -ErrorAction SilentlyContinue
+        } while ($scheduledTask -and $scheduledTask.State -eq 'Running' -and (Get-Date) -lt $taskDeadline)
+        if ($scheduledTask -and $scheduledTask.State -eq 'Running') {
+            throw "Geplante Aufgabe '$($O.Task)' liess sich nicht stoppen; Build sicher abgebrochen."
+        }
     }
 
-    Write-Step "Beende $($pidsToKill.Count) Prozess(e): watcher=$($watcherProcs.Count), exe=$($exeProcs.Count)"
-    Stop-Process -Id $pidsToKill -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Milliseconds 2000
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        # Ausschliesslich per Prozessname/WScript-Pfad suchen, damit die
+        # ausfuehrende PowerShell niemals als Treffer beendet wird.
+        $exeProcs = @(Get-CimInstance Win32_Process -Filter "name='$($O.Exe)'" -ErrorAction SilentlyContinue)
+        $watcherProcs = @(
+            Get-CimInstance Win32_Process -Filter "name='wscript.exe' OR name='cscript.exe'" -ErrorAction SilentlyContinue |
+                Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$leaf\watcher.vbs*") }
+        )
+
+        if ($exeProcs.Count -eq 0 -and $watcherProcs.Count -eq 0) {
+            if (-not $announced) {
+                Write-Step 'Keine laufenden Prozesse gefunden (nichts zu beenden).'
+            }
+            return
+        }
+
+        if (-not $announced) {
+            Write-Step "Beende Prozesse bis zum stabilen Stillstand: watcher=$($watcherProcs.Count), exe=$($exeProcs.Count)"
+            $announced = $true
+        }
+
+        # EXEs zuerst: der externe VBS-Watcher prueft nur alle drei Sekunden.
+        # Danach alle VBS-Watcher beenden und frisch erzeugte Prozesse im
+        # naechsten Durchlauf mitnehmen.
+        if ($exeProcs.Count -gt 0) {
+            Stop-Process -Id @($exeProcs.ProcessId) -Force -ErrorAction SilentlyContinue
+        }
+        if ($watcherProcs.Count -gt 0) {
+            Stop-Process -Id @($watcherProcs.ProcessId) -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Milliseconds 250
+    }
+
+    $remainingExe = @(Get-CimInstance Win32_Process -Filter "name='$($O.Exe)'" -ErrorAction SilentlyContinue)
+    $remainingWatcher = @(
+        Get-CimInstance Win32_Process -Filter "name='wscript.exe' OR name='cscript.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$leaf\watcher.vbs*") }
+    )
+    if ($remainingExe.Count -eq 0 -and $remainingWatcher.Count -eq 0) {
+        return
+    }
+    throw "Prozesse von $($O.Name) starten sich trotz wiederholtem Quiesce weiter neu; Build sicher abgebrochen."
 }
 
 # Datenverlust-Schutz: Reserviert das Overlay atomar VOR dem Kill. Die laufende App
@@ -134,16 +175,46 @@ function Invoke-Publish {
     }
     Push-Location $O.Folder
     try {
-        pwsh -NoProfile -File $publishScript
-        return ($LASTEXITCODE -eq 0)
+        # Ohne Out-Host wuerde die gesamte Kindprozess-Ausgabe Teil des
+        # Funktionsrueckgabewerts. Ein Array aus Textzeilen plus abschliessendem
+        # $false ist in PowerShell truthy und maskierte bisher Publish-Fehler.
+        pwsh -NoProfile -File $publishScript | Out-Host
+        $publishExitCode = $LASTEXITCODE
+        return ($publishExitCode -eq 0)
     }
     finally { Pop-Location }
+}
+
+function Test-BuiltArtifact {
+    param([hashtable]$O)
+
+    $projectPath = Join-Path $O.Folder "$($O.Name).csproj"
+    $exePath = Join-Path $O.Folder "publish\$($O.Exe)"
+    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
+        return @{ Ok = $false; Expected = '<fehlt>'; Actual = '<fehlt>' }
+    }
+
+    [xml]$project = Get-Content -LiteralPath $projectPath -Raw
+    $expected = [string]$project.Project.PropertyGroup.Version
+    $actual = (Get-Item -LiteralPath $exePath).VersionInfo.ProductVersion
+    $versionMatches = $actual -eq $expected -or
+        $actual.StartsWith("$expected ", [StringComparison]::OrdinalIgnoreCase) -or
+        $actual.StartsWith("$expected+", [StringComparison]::OrdinalIgnoreCase)
+    return @{ Ok = $versionMatches; Expected = $expected; Actual = $actual }
 }
 
 # Startet das Overlay wie beim Boot: ueber watcher.vbs (wscript.exe).
 # Faellt auf direkten exe-Start zurueck, falls kein watcher.vbs vorhanden ist.
 function Start-Overlay {
     param([hashtable]$O)
+    $scheduledTask = Get-ScheduledTask -TaskName $O.Task -ErrorAction SilentlyContinue
+    if ($scheduledTask) {
+        Start-ScheduledTask -TaskName $O.Task -ErrorAction Stop
+        Write-Step "Gestartet ueber geplante Aufgabe '$($O.Task)'."
+        return
+    }
+
     $watcherPath = Join-Path $O.Folder 'watcher.vbs'
     if (Test-Path $watcherPath) {
         Start-Process wscript.exe -ArgumentList "`"$watcherPath`""
@@ -172,12 +243,17 @@ function Get-OverlayProcs {
 function Test-FreshVersion {
     param([hashtable]$O, [datetime]$BuildTime)
     $procs = Get-OverlayProcs -O $O
-    if ($procs.Count -lt 1) { return @{ Ok = $false; Count = 0; Stale = 0; Version = '<keiner>' } }
+    if ($procs.Count -lt 1) { return @{ Ok = $false; Count = 0; Stale = 0; Version = '<keiner>'; Endpoint = $false } }
     $threshold = $BuildTime.AddSeconds(-2)
     $stale = @($procs | Where-Object { $_.StartTime -lt $threshold })
-    $ver = '<unlesbar>'
-    try { $ver = ($procs | Sort-Object StartTime -Descending | Select-Object -First 1).MainModule.FileVersionInfo.ProductVersion } catch {}
-    return @{ Ok = ($stale.Count -eq 0); Count = $procs.Count; Stale = $stale.Count; Version = $ver }
+    $exePath = Join-Path $O.Folder "publish\$($O.Exe)"
+    $ver = try { (Get-Item -LiteralPath $exePath).VersionInfo.ProductVersion } catch { '<unlesbar>' }
+    $endpoint = $false
+    try {
+        $status = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:$($O.Port)/recording/status" -TimeoutSec 2
+        $endpoint = $null -ne $status.busy
+    } catch { }
+    return @{ Ok = ($stale.Count -eq 0 -and $endpoint); Count = $procs.Count; Stale = $stale.Count; Version = $ver; Endpoint = $endpoint }
 }
 
 # --- Hauptablauf ---
@@ -218,6 +294,12 @@ foreach ($t in $targets) {
         $failed += $t
         continue
     }
+    $artifact = Test-BuiltArtifact -O $O
+    if (-not $artifact.Ok) {
+        Write-Err "Build-Artefakt passt nicht zum Projekt: erwartet $($artifact.Expected), gefunden $($artifact.Actual)."
+        $failed += $t
+        continue
+    }
     Write-Ok 'Build erfolgreich.'
 
     # Build-Zeitpunkt der frischen exe merken — Referenz fuer "laeuft die NEUE Version?".
@@ -233,19 +315,35 @@ foreach ($t in $targets) {
     $verified = $false
     for ($attempt = 1; $attempt -le 2 -and -not $verified; $attempt++) {
         Start-Overlay -O $O
-        Start-Sleep -Seconds 6
-        $r = Test-FreshVersion -O $O -BuildTime $buildTime
-        if ($r.Count -lt 1) {
-            Write-Warn "$t scheint NICHT gestartet (0 exe). Versuch $attempt/2."
-        }
-        elseif ($r.Ok) {
-            Write-Ok "$t laeuft wieder ($($r.Count) exe, NEUE Version $($r.Version) VERIFIZIERT, Port $($O.Port))."
-            $verified = $true
-        }
-        else {
-            # ALTE EXE laeuft noch (haelt vermutlich den Single-Instance-Mutex, sodass die
-            # neue exe sich sofort wieder beendet). ALLE killen und erneut starten.
-            Write-Err "${t}: ALTE VERSION laeuft noch ($($r.Stale) Prozess(e) AELTER als der Build)! Toete ALLE + starte erneut (Versuch $attempt/2)."
+        $startupDeadline = (Get-Date).AddMinutes(10)
+        $announcedEndpointWait = $false
+        do {
+            Start-Sleep -Seconds 2
+            $r = Test-FreshVersion -O $O -BuildTime $buildTime
+            if ($r.Ok) {
+                Write-Ok "$t laeuft wieder ($($r.Count) exe, NEUE Version $($r.Version) VERIFIZIERT, Port $($O.Port))."
+                $verified = $true
+                break
+            }
+            if ($r.Stale -gt 0) {
+                break
+            }
+            if ($r.Count -gt 0 -and -not $r.Endpoint -and -not $announcedEndpointWait) {
+                Write-Step "$t initialisiert noch; warte fail-closed bis Port $($O.Port) den Aufnahme-Status liefert..."
+                $announcedEndpointWait = $true
+            }
+        } while ((Get-Date) -lt $startupDeadline)
+
+        if (-not $verified) {
+            if ($r.Stale -gt 0) {
+                Write-Err "${t}: ALTE VERSION laeuft noch ($($r.Stale) Prozess(e) AELTER als der Build)! Toete ALLE + starte erneut (Versuch $attempt/2)."
+            }
+            elseif ($r.Count -lt 1) {
+                Write-Warn "$t scheint NICHT gestartet (0 exe). Versuch $attempt/2."
+            }
+            else {
+                Write-Warn "$t lieferte innerhalb von 10 Minuten keinen gueltigen Aufnahme-Status auf Port $($O.Port). Versuch $attempt/2."
+            }
             Stop-Overlay -O $O
             Start-Sleep -Seconds 2
         }
