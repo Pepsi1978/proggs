@@ -39,6 +39,7 @@
 ## 5. SSE-Streaming robust
 - **Zeilenpuffer** (Events splitten über TCP-Pakete), `data:`-Präfix + Doppel-Newline als Event-Grenze, `[DONE]` abfangen, Mid-Stream-`error`-Event behandeln. Nach `[DONE]` den HTTP-Transport sauber drainen, wenn SDK/Proxy sonst Chunked-Verbindungen zerstört; fehlendes `event:`-Feld defensiv aus `data` ableiten.
 - Proxy: `X-Accel-Buffering: no`, `Content-Type: text/event-stream`, nach jedem Event flushen; Heartbeat-Kommentar (`: keepalive`) alle 5–15 s; Proxy-Idle-Timeouts hoch. Quelle: https://oneuptime.com/blog/post/2025-12-16-server-sent-events-nginx/view · extern
+- `stream=true` reicht nicht: niemals zuerst den vollständigen Body per `readText()`/`string()` sammeln. Den Body inkrementell lesen, das erste echte Textdelta sofort publizieren und weitere UI-Updates takten. Vorläufige Deltas dürfen angezeigt werden; validiert und persistiert wird erst nach der Terminalmeldung. Transport-Cancellation muss bis zum Ende des Body-Reads aktiv bleiben.
 
 ## 6. Connection-Pooling / Keepalive
 - `HttpClient` als Singleton/`IHttpClientFactory` (nie `new` pro Request → Socket-Exhaustion); `SocketsHttpHandler.PooledConnectionLifetime` 2–15 min (DNS-Refresh); `HandlerLifetime` ggf. Infinite + PooledConnectionLifetime. Quelle: https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines · offiziell
@@ -53,7 +54,7 @@
 | Best-Practice | Bug-Abschnitt (`bugs/apis/api-integration-general.md`) |
 |---|---|
 | 1–2 Rate-Limiting/Retry | A1–A8, B1–B3 |
-| 5 SSE | C1–C10 |
+| 5 SSE | C1–C11 |
 | 4 Timeouts | D1–D4 |
 | 6 Pooling/Keepalive | E1–E3 |
 | 7 Secrets/Fehler | F1–F3, G1–G4 |

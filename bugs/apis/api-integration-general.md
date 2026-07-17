@@ -4,6 +4,7 @@
 > Timeouts, Connection-Pooling, Secret-Handling, Fehlerbehandlung). Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > Anbieterspezifika: siehe die jeweilige Datei in `bugs/apis/`.
 > Zweite Seite: `best-practices/apis/api-integration-general.md`.
+> Ergänzt am 2026-07-18: C11 (`stream=true` plus vollständiges Body-Puffern ist kein Live-Streaming).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -125,6 +126,12 @@
 - **Ursache:** OpenAI-Python-Responses-Parser erwartete iterierbares `output`, obwohl Backends terminal `null` liefern können.
 - **FIX:** Terminale Nullfelder vor Iteration abfangen; SDK-Fixstatus pro Version prüfen.
 - **Quelle:** OpenAI-Python Issues #3459/#3325/#3321/#3314/#3313/#3312.
+
+### C11. `stream=true`, aber Client liest den ganzen Body → minutenlang keine sichtbare Antwort
+- **Symptom:** Der Request verwendet SSE und `stream=true`, trotzdem sieht der Nutzer bis zum vollständigen Ende nur einen Ladezustand. Lange Websuche, Reasoning und große strukturierte Ausgaben wirken wie ein Hänger.
+- **Ursache:** Der Client ruft `readText()`, `string()` oder ein gleichwertiges EOF-pufferndes Verfahren auf und parst die SSE-Deltas erst danach. Das Protokoll streamt, aber der Anwendungspfad nicht.
+- **FIX:** Response-Body inkrementell zeilen-/eventweise lesen, Deltas sofort an einen begrenzten UI-Callback geben und nur die vollständige Terminalantwort validieren/persistieren. Bei strukturiertem JSON das benötigte Textfeld mit einer escape- und Unicode-sicheren Zustandsmaschine extrahieren. UI-Updates drosseln, erstes echtes Textstück sofort ausgeben; Cancellation bis zum Body-Ende an den Transport-Call koppeln.
+- **Live-Fund:** KarteikartenLernen 0.1.30, 2026-07-18: reale Antwortdauer 4–5 Minuten; `HttpURLConnection.readText()` verbarg sämtliche vorhandenen Deltas. Ab 0.1.31 OkHttp-SSE, Top-Level-`answer`-Decoder, Completion-Gate, Generation-ID und Latenzmarken.
 
 ---
 
