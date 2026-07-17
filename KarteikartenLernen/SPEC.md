@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.21 - 18.07.2026, 00:37 Uhr
+Version 0.1.22 - 18.07.2026, 00:42 Uhr
 
 ## 1. Übersicht
 
@@ -206,7 +206,12 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   in einem Dropdown angeboten; bestehende Anzeigenamen werden automatisch migriert.
   Ein Watchdog beendet hängende Streams, erneutes Vorlesen stoppt die vorige Ausgabe,
   und die Sprechgeschwindigkeit wird als begrenzte SSML-Prosodie übertragen. Lange
-  Texte werden UTF-8-sicher aufgeteilt und lückenlos in derselben Vorlesesitzung abgespielt.
+  Texte werden UTF-8-sicher aufgeteilt. Bei gegliederten Recherchen liest Edge TTS jede
+  Überschrift zusammen mit ihrem Absatz als inhaltliche Einheit. Während eine Einheit
+  läuft, wird die nächste in einer eindeutigen Cachedatei vorbereitet; zwischen
+  inhaltlichen Einheiten liegt etwa eine Sekunde Pause. Quellen-URLs werden nicht
+  vorgelesen. Stopp, Fehler und verspätete Netzwerk-Callbacks räumen alle temporären
+  Dateien auf, ohne einen neueren Vorlesevorgang zu beeinflussen.
 
 ### Datenmodell
 

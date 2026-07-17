@@ -3,6 +3,8 @@ package de.frank.karteikartenlernen.audio
 import android.content.Context
 import android.media.MediaPlayer
 import android.util.Log
+import de.frank.karteikartenlernen.text.ArticleBlock
+import de.frank.karteikartenlernen.text.parseResearchArticle
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
@@ -24,6 +26,8 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
 
+internal data class SpeechUnit(val text: String, val pauseAfterMs: Long)
+
 class EdgeTtsPlayer(context: Context) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -32,12 +36,33 @@ class EdgeTtsPlayer(context: Context) {
         .readTimeout(45, TimeUnit.SECONDS)
         .build()
 
+    private data class PreparedAudio(val index: Int, val file: File)
+
+    private class PlaybackSession(
+        val generation: Long,
+        val units: List<SpeechUnit>,
+        val voice: String,
+        val speechRate: Float,
+        val onPlaybackStart: (() -> Unit)?,
+        val onComplete: () -> Unit,
+    ) {
+        val completed = AtomicBoolean(false)
+        val files = mutableSetOf<File>()
+        var prepared: PreparedAudio? = null
+        var preparingIndex: Int? = null
+        var waitingIndex: Int? = null
+        var pauseElapsed = false
+        var preparationFailed = false
+    }
+
     private var mediaPlayer: MediaPlayer? = null
     private var webSocket: WebSocket? = null
     private var watchdogJob: Job? = null
     private var watchdogOwner: String? = null
+    private var pauseJob: Job? = null
     @Volatile private var currentOutputStream: FileOutputStream? = null
     @Volatile private var generation = 0L
+    private var activeSession: PlaybackSession? = null
 
     fun speak(
         text: String,
@@ -47,30 +72,29 @@ class EdgeTtsPlayer(context: Context) {
         onComplete: () -> Unit = {},
     ) {
         stop()
-        if (text.isBlank()) {
+        val units = buildSpeechUnits(text)
+        if (units.isEmpty()) {
             onComplete()
             return
         }
-
-        val requestGeneration = generation
-        val resolvedVoice = TtsVoiceRegistry.resolveVoiceId(voice)
-        val chunks = splitForTts(text)
-        speakChunk(chunks, 0, resolvedVoice, speechRate, requestGeneration, onPlaybackStart, onComplete)
+        val session = PlaybackSession(
+            generation = generation,
+            units = units,
+            voice = TtsVoiceRegistry.resolveVoiceId(voice),
+            speechRate = speechRate,
+            onPlaybackStart = onPlaybackStart,
+            onComplete = onComplete,
+        )
+        activeSession = session
+        prepareUnit(session, 0)
     }
 
-    private fun speakChunk(
-        chunks: List<String>,
-        index: Int,
-        voice: String,
-        speechRate: Float,
-        requestGeneration: Long,
-        onPlaybackStart: (() -> Unit)?,
-        onComplete: () -> Unit,
-    ) {
-        if (requestGeneration != generation || index !in chunks.indices) return
-        val text = chunks[index]
-        val connectionId = UUID.randomUUID().toString().replace("-", "")
-        val requestId = UUID.randomUUID().toString().replace("-", "")
+    private fun prepareUnit(session: PlaybackSession, index: Int) {
+        if (!isActive(session) || index !in session.units.indices || session.preparingIndex != null) return
+        session.preparingIndex = index
+        val text = session.units[index].text
+        val connectionId = randomId()
+        val requestId = randomId()
         val terminal = AtomicBoolean(false)
         val request = Request.Builder()
             .url(
@@ -91,13 +115,25 @@ class EdgeTtsPlayer(context: Context) {
             .header("Cookie", "muid=${generateMuid()};")
             .build()
 
-        val audioFile = File(appContext.cacheDir, "tts_audio.mp3")
+        val audioFile = File(appContext.cacheDir, "tts_${session.generation}_${index}_${randomId()}.mp3")
+        session.files += audioFile
         val outputStream = try {
             FileOutputStream(audioFile).also { currentOutputStream = it }
         } catch (error: Exception) {
             Log.e(TAG, "Could not open TTS cache file", error)
-            onComplete()
+            preparationFailed(session, index, audioFile)
             return
+        }
+
+        fun fail(socket: WebSocket, error: Throwable) {
+            if (!terminal.compareAndSet(false, true)) return
+            Log.e(TAG, "Edge TTS preparation failed: ${error.message}", error)
+            cancelWatchdog(requestId)
+            socket.cancel()
+            closeOutputStream(outputStream)
+            audioFile.delete()
+            if (webSocket === socket) webSocket = null
+            scope.launch { preparationFailed(session, index, audioFile) }
         }
 
         try {
@@ -105,75 +141,143 @@ class EdgeTtsPlayer(context: Context) {
                 request,
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
-                        if (requestGeneration != generation) return
-                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, requestGeneration, requestId, terminal, onComplete)
+                        if (!isActive(session)) return
+                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, session.generation, requestId, terminal) {
+                            fail(webSocket, IllegalStateException("Edge TTS antwortet nicht."))
+                        }
                         webSocket.send(SPEECH_CONFIG)
-                        webSocket.send(buildSsmlFrame(requestId, text, voice, speechRate))
+                        webSocket.send(buildSsmlFrame(requestId, text, session.voice, session.speechRate))
                     }
 
                     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                        if (requestGeneration != generation) return
+                        if (!isActive(session)) return
                         val data = bytes.toByteArray()
                         if (data.size <= 2) return
                         val headerLength = ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
                         val audioStart = headerLength + 2
                         if (data.size > audioStart) {
-                            runCatching { outputStream.write(data, audioStart, data.size - audioStart) }
-                                .onFailure { Log.e(TAG, "Could not write TTS audio", it) }
-                            startWatchdog(webSocket, WATCHDOG_IDLE_MS, requestGeneration, requestId, terminal, onComplete)
-                        }
-                    }
-
-                    override fun onMessage(webSocket: WebSocket, text: String) {
-                        if (requestGeneration != generation || !text.contains("Path:turn.end") || !terminal.compareAndSet(false, true)) return
-                        cancelWatchdog(requestId)
-                        closeOutputStream(outputStream)
-                        webSocket.close(1000, "turn.end")
-                        if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
-                        scope.launch {
-                            if (requestGeneration == generation) {
-                                playFile(
-                                    audioFile,
-                                    requestGeneration,
-                                    if (index == 0) onPlaybackStart else null,
-                                ) {
-                                    if (index + 1 < chunks.size) {
-                                        speakChunk(chunks, index + 1, voice, speechRate, requestGeneration, null, onComplete)
-                                    } else {
-                                        onComplete()
-                                    }
-                                }
+                            try {
+                                outputStream.write(data, audioStart, data.size - audioStart)
+                            } catch (error: Exception) {
+                                fail(webSocket, error)
+                                return
+                            }
+                            startWatchdog(webSocket, WATCHDOG_IDLE_MS, session.generation, requestId, terminal) {
+                                fail(webSocket, IllegalStateException("Edge TTS liefert keine weiteren Audiodaten."))
                             }
                         }
                     }
 
-                    override fun onFailure(webSocket: WebSocket, error: Throwable, response: Response?) {
-                        if (requestGeneration != generation || !terminal.compareAndSet(false, true)) return
-                        Log.e(TAG, "WebSocket failure: ${error.message}", error)
+                    override fun onMessage(webSocket: WebSocket, text: String) {
+                        if (!isActive(session) || !text.contains("Path:turn.end") || !terminal.compareAndSet(false, true)) return
                         cancelWatchdog(requestId)
                         closeOutputStream(outputStream)
-                        audioFile.delete()
+                        webSocket.close(1000, "turn.end")
                         if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
-                        scope.launch { if (requestGeneration == generation) onComplete() }
+                        scope.launch { prepared(session, PreparedAudio(index, audioFile)) }
+                    }
+
+                    override fun onFailure(webSocket: WebSocket, error: Throwable, response: Response?) {
+                        if (isActive(session)) fail(webSocket, error)
                     }
                 },
             )
         } catch (error: Exception) {
-            Log.e(TAG, "Creating Edge TTS WebSocket failed", error)
             closeOutputStream(outputStream)
-            if (requestGeneration == generation) onComplete()
+            audioFile.delete()
+            Log.e(TAG, "Creating Edge TTS WebSocket failed", error)
+            preparationFailed(session, index, audioFile)
         }
+    }
+
+    private fun prepared(session: PlaybackSession, audio: PreparedAudio) {
+        if (!isActive(session)) {
+            audio.file.delete()
+            return
+        }
+        if (session.preparingIndex == audio.index) session.preparingIndex = null
+        session.prepared = audio
+        if (audio.index == 0 || session.waitingIndex == audio.index && session.pauseElapsed) {
+            playPrepared(session, audio)
+        }
+    }
+
+    private fun preparationFailed(session: PlaybackSession, index: Int, file: File) {
+        session.files -= file
+        file.delete()
+        if (!isActive(session)) return
+        if (session.preparingIndex == index) session.preparingIndex = null
+        session.preparationFailed = true
+        if (index == 0 || session.waitingIndex == index && session.pauseElapsed) finishSession(session)
+    }
+
+    private fun playPrepared(session: PlaybackSession, audio: PreparedAudio) {
+        if (!isActive(session) || session.prepared != audio) return
+        session.prepared = null
+        session.waitingIndex = null
+        session.pauseElapsed = false
+        playFile(
+            file = audio.file,
+            requestGeneration = session.generation,
+            onPlaybackStart = {
+                if (audio.index == 0) session.onPlaybackStart?.invoke()
+                if (audio.index + 1 < session.units.size) prepareUnit(session, audio.index + 1)
+            },
+        ) {
+            session.files -= audio.file
+            unitFinished(session, audio.index)
+        }
+    }
+
+    private fun unitFinished(session: PlaybackSession, index: Int) {
+        if (!isActive(session)) return
+        val nextIndex = index + 1
+        if (nextIndex !in session.units.indices) {
+            finishSession(session)
+            return
+        }
+        session.waitingIndex = nextIndex
+        session.pauseElapsed = false
+        if (session.prepared?.index != nextIndex && session.preparingIndex != nextIndex && !session.preparationFailed) {
+            prepareUnit(session, nextIndex)
+        }
+        pauseJob?.cancel()
+        pauseJob = scope.launch {
+            delay(session.units[index].pauseAfterMs)
+            if (!isActive(session) || session.waitingIndex != nextIndex) return@launch
+            session.pauseElapsed = true
+            val next = session.prepared
+            when {
+                next?.index == nextIndex -> playPrepared(session, next)
+                session.preparationFailed -> finishSession(session)
+            }
+        }
+    }
+
+    private fun finishSession(session: PlaybackSession) {
+        if (!session.completed.compareAndSet(false, true)) return
+        if (activeSession === session) activeSession = null
+        pauseJob?.cancel()
+        pauseJob = null
+        session.files.forEach(File::delete)
+        session.files.clear()
+        session.onComplete()
     }
 
     fun stop() {
         generation++
         cancelWatchdog()
+        pauseJob?.cancel()
+        pauseJob = null
         webSocket?.cancel()
         webSocket = null
         closeOutputStream(currentOutputStream)
         runCatching { mediaPlayer?.stop() }
         mediaPlayer?.release()
         mediaPlayer = null
+        activeSession?.files?.forEach(File::delete)
+        activeSession?.files?.clear()
+        activeSession = null
     }
 
     fun shutdown() {
@@ -189,21 +293,18 @@ class EdgeTtsPlayer(context: Context) {
         requestGeneration: Long,
         owner: String,
         terminal: AtomicBoolean,
-        onComplete: () -> Unit,
+        onTimeout: () -> Unit,
     ) {
         cancelWatchdog(owner)
         watchdogOwner = owner
         watchdogJob = scope.launch {
             delay(timeoutMs)
-            if (requestGeneration != generation || watchdogOwner != owner || !terminal.compareAndSet(false, true)) return@launch
+            if (requestGeneration != generation || watchdogOwner != owner || terminal.get()) return@launch
             Log.w(TAG, "No Edge TTS audio received for ${timeoutMs}ms; aborting")
-            generation++
-            webSocket.cancel()
-            closeOutputStream(currentOutputStream)
+            if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
             watchdogOwner = null
             watchdogJob = null
-            if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
-            onComplete()
+            onTimeout()
         }
     }
 
@@ -225,24 +326,24 @@ class EdgeTtsPlayer(context: Context) {
         mediaPlayer = player
         try {
             player.apply {
-            setDataSource(file.absolutePath)
-            setOnCompletionListener { completedPlayer ->
-                completedPlayer.release()
-                if (mediaPlayer === completedPlayer) mediaPlayer = null
-                if (requestGeneration == generation) onComplete()
-                file.delete()
+                setDataSource(file.absolutePath)
+                setOnCompletionListener { completedPlayer ->
+                    completedPlayer.release()
+                    if (mediaPlayer === completedPlayer) mediaPlayer = null
+                    file.delete()
+                    if (requestGeneration == generation) onComplete()
+                }
+                setOnErrorListener { failedPlayer, what, extra ->
+                    Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
+                    failedPlayer.release()
+                    if (mediaPlayer === failedPlayer) mediaPlayer = null
+                    file.delete()
+                    if (requestGeneration == generation) onComplete()
+                    true
+                }
+                prepare()
+                start()
             }
-            setOnErrorListener { failedPlayer, what, extra ->
-                Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
-                failedPlayer.release()
-                if (mediaPlayer === failedPlayer) mediaPlayer = null
-                if (requestGeneration == generation) onComplete()
-                file.delete()
-                true
-            }
-            }
-            player.prepare()
-            player.start()
             onPlaybackStart?.invoke()
         } catch (error: Exception) {
             Log.e(TAG, "Could not play Edge TTS audio", error)
@@ -258,6 +359,9 @@ class EdgeTtsPlayer(context: Context) {
         if (currentOutputStream === stream) currentOutputStream = null
     }
 
+    private fun isActive(session: PlaybackSession): Boolean =
+        activeSession === session && session.generation == generation && !session.completed.get()
+
     companion object {
         private const val TAG = "EdgeTTS"
         private const val EDGE_TTS_URL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
@@ -267,6 +371,7 @@ class EdgeTtsPlayer(context: Context) {
         private const val WINDOWS_EPOCH_SECONDS = 11644473600L
         private const val WATCHDOG_INITIAL_MS = 30_000L
         private const val WATCHDOG_IDLE_MS = 30_000L
+        private const val SECTION_PAUSE_MS = 1_000L
         private const val SPEECH_CONFIG =
             "Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" +
                 "{\"context\":{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"false\"},\"outputFormat\":\"audio-24khz-96kbitrate-mono-mp3\"}}}}"
@@ -282,6 +387,36 @@ class EdgeTtsPlayer(context: Context) {
                 "<voice name='$voice'><prosody rate='$rate'>$escaped</prosody></voice></speak>"
         }
 
+        internal fun buildSpeechUnits(text: String, maxUtf8Bytes: Int = 3_800): List<SpeechUnit> {
+            val logicalSegments = mutableListOf<String>()
+            var pendingHeading: String? = null
+            var skipSources = false
+            parseResearchArticle(text).forEach { block ->
+                when (block) {
+                    is ArticleBlock.Heading -> {
+                        pendingHeading?.let(logicalSegments::add)
+                        skipSources = block.text.equals("Quellen", ignoreCase = true)
+                        pendingHeading = block.text.takeUnless { skipSources }
+                    }
+                    is ArticleBlock.Paragraph -> if (!skipSources) {
+                        logicalSegments += pendingHeading?.let { "$it. ${block.text}" } ?: block.text
+                        pendingHeading = null
+                    }
+                    is ArticleBlock.Source -> Unit
+                }
+            }
+            pendingHeading?.let(logicalSegments::add)
+            val units = logicalSegments.flatMapIndexed { segmentIndex, segment ->
+                val chunks = splitForTts(segment, maxUtf8Bytes)
+                chunks.mapIndexed { chunkIndex, chunk ->
+                    val isLastChunk = chunkIndex == chunks.lastIndex
+                    val hasNextSegment = segmentIndex < logicalSegments.lastIndex
+                    SpeechUnit(chunk, if (isLastChunk && hasNextSegment) SECTION_PAUSE_MS else 0L)
+                }
+            }
+            return units.filter { it.text.isNotBlank() }
+        }
+
         internal fun splitForTts(text: String, maxUtf8Bytes: Int = 3_800): List<String> {
             require(maxUtf8Bytes > 0)
             val chunks = mutableListOf<String>()
@@ -292,7 +427,7 @@ class EdgeTtsPlayer(context: Context) {
                 current = StringBuilder()
             }
 
-            text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.forEach { word ->
+            text.trim().split(Regex("\\s+")).filter(String::isNotEmpty).forEach { word ->
                 val candidate = if (current.isEmpty()) word else "$current $word"
                 if (candidate.toByteArray(Charsets.UTF_8).size <= maxUtf8Bytes) {
                     current = StringBuilder(candidate)
@@ -311,7 +446,7 @@ class EdgeTtsPlayer(context: Context) {
                 }
             }
             flush()
-            return chunks.ifEmpty { listOf("") }
+            return chunks
         }
 
         private fun generateSecMsGec(): String {
@@ -322,6 +457,7 @@ class EdgeTtsPlayer(context: Context) {
             return MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02X".format(it) }
         }
 
-        private fun generateMuid(): String = UUID.randomUUID().toString().replace("-", "").uppercase()
+        private fun randomId(): String = UUID.randomUUID().toString().replace("-", "")
+        private fun generateMuid(): String = randomId().uppercase()
     }
 }

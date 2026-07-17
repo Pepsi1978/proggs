@@ -38,4 +38,48 @@ class EdgeTtsPlayerTest {
         assertTrue(chunks.all { it.toByteArray(Charsets.UTF_8).size <= 64 })
         assertEquals(text, chunks.joinToString(" "))
     }
+
+    @Test
+    fun headingAndParagraphBecomeOneSpeechUnit() {
+        val units = EdgeTtsPlayer.buildSpeechUnits("## Die Zelle\n\nEine Zelle ist der kleinste lebende Baustein.")
+
+        assertEquals(listOf(SpeechUnit("Die Zelle. Eine Zelle ist der kleinste lebende Baustein.", 0L)), units)
+    }
+
+    @Test
+    fun articleSectionsHaveOneSecondPauseAndSourcesAreSkipped() {
+        val article = """
+            ## Teil eins
+
+            Erster Absatz.
+
+            ## Teil zwei
+
+            Zweiter Absatz.
+
+            ## Quellen
+
+            - Beispiel: https://example.org
+        """.trimIndent()
+
+        assertEquals(
+            listOf(
+                SpeechUnit("Teil eins. Erster Absatz.", 1_000L),
+                SpeechUnit("Teil zwei. Zweiter Absatz.", 0L),
+            ),
+            EdgeTtsPlayer.buildSpeechUnits(article),
+        )
+    }
+
+    @Test
+    fun longSectionPausesOnlyAfterItsLastTransportChunk() {
+        val article = "## Eins\n\n${List(12) { "Wissen" }.joinToString(" ")}\n\n## Zwei\n\nKurz."
+        val units = EdgeTtsPlayer.buildSpeechUnits(article, maxUtf8Bytes = 24)
+
+        assertTrue(units.size > 2)
+        assertTrue(units.dropLast(2).all { it.pauseAfterMs == 0L })
+        assertEquals(1_000L, units[units.lastIndex - 1].pauseAfterMs)
+        assertEquals(0L, units.last().pauseAfterMs)
+        assertTrue(units.all { it.text.toByteArray(Charsets.UTF_8).size <= 24 })
+    }
 }
