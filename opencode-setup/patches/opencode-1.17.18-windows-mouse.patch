@@ -1123,14 +1123,19 @@ diff --git a/packages/tui/src/feature-plugins/sidebar/lsp.tsx b/packages/tui/src
 index c260cfb..e194f3c 100644
 --- a/packages/tui/src/feature-plugins/sidebar/lsp.tsx
 +++ b/packages/tui/src/feature-plugins/sidebar/lsp.tsx
-@@ -16,7 +16,7 @@ function View(props: { api: TuiPluginApi }) {
+@@ -1,3 +1,4 @@
+ import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
++import { TextAttributes } from "@opentui/core"
+ import type { BuiltinTuiPlugin } from "../builtins"
+ import { createMemo, For, Show, createSignal } from "solid-js"
+@@ -16,7 +17,5 @@ function View(props: { api: TuiPluginApi }) {
          <Show when={list().length > 2}>
            <text fg={theme().text}>{open() ? "▼" : "▶"}</text>
          </Show>
 -        <text fg={theme().text}>
-+        <text fg={theme().accent}>
-           <b>LSP</b>
-         </text>
+-          <b>LSP</b>
+-        </text>
++        <text fg={theme().accent} attributes={TextAttributes.BOLD | TextAttributes.UNDERLINE}>LSP</text>
        </box>
 diff --git a/packages/tui/src/feature-plugins/sidebar/mcp.tsx b/packages/tui/src/feature-plugins/sidebar/mcp.tsx
 index 99d8567..83c2db8 100644
@@ -1142,6 +1147,7 @@ index 99d8567..83c2db8 100644
            </Show>
 -          <text fg={theme().text}>
 +          <text fg={theme().accent}>
-             <b>MCP</b>
+-            <b>MCP</b>
++            <span style={{ bold: true, underline: true }}>MCP</span>
              <Show when={!open()}>
                <span style={{ fg: theme().textMuted }}>

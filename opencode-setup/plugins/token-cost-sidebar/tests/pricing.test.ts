@@ -145,11 +145,11 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain('label="Cache"')
   })
 
-  test("shows the live model and Context as accented bold headings", async () => {
+  test("shows the live model and Context as accented bold underlined headings", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
-    expect(source).toContain('<text fg={theme().accent}><b>{shortLabel(modelMeta().label)}</b></text>')
+    expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span></text>')
     expect(source).toContain("const selected = liveModel(api)?.current?.()")
-    expect(source).toContain('<text fg={theme().accent}><b>Context</b></text>')
+    expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>')
     expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} />")
     expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} />")).toBeLessThan(
       source.indexOf("<EffortSelector api={api} />"),
@@ -165,7 +165,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("timer = setTimeout(() =>")
     expect(source).toContain("clearTimeout(timer)")
     expect(source).not.toContain("setInterval(")
-    expect(source).toContain('<span style={{ fg: theme().accent }}><b>Session</b></span>{" "}{formatDateTime(now())}')
+    expect(source).toContain('<span style={{ fg: theme().accent, bold: true, underline: true }}>Session</span>{" "}{formatDateTime(now())}')
     expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
   })
 
@@ -259,8 +259,9 @@ describe("models.dev pricing", () => {
     expect(patch).toContain("input.local.model.variant.set(value)")
     expect(patch).toContain("!input.local.model.variant.list().includes(value)")
     expect(patch).toContain("+const tui: TuiPlugin = async () => {}")
-    expect(patch).toMatch(/\+        <text fg=\{theme\(\)\.accent\}>[\s\S]*?<b>LSP<\/b>/)
-    expect(patch).toMatch(/\+          <text fg=\{theme\(\)\.accent\}>[\s\S]*?<b>MCP<\/b>/)
+    expect(patch).toContain('+import { TextAttributes } from "@opentui/core"')
+    expect(patch).toContain('+        <text fg={theme().accent} attributes={TextAttributes.BOLD | TextAttributes.UNDERLINE}>LSP</text>')
+    expect(patch).toMatch(/\+          <text fg=\{theme\(\)\.accent\}>[\s\S]*?<span style=\{\{ bold: true, underline: true \}\}>MCP<\/span>/)
   })
 
   test("documents every component required for a portable installation", async () => {
@@ -293,7 +294,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("confirmed = true")
     expect(source).toContain('dispatchCommand("theme.switch_mode")')
     expect(source).toContain('<box flexDirection="row" backgroundColor={theme().backgroundElement}')
-    expect(source).toContain('<text fg={theme().accent}><b>Theme</b></text>')
+    expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Theme</span></text>')
     expect(source).toContain('<text fg={theme().accent}>{` ${selected()} v`}</text>')
     expect(source).not.toContain('<box flexGrow={1} />\n        <text fg={theme().accent}>{`${selected()} v`}</text>')
     expect(source).toContain('<text fg={theme().accent}><b>Dunkel</b></text>')

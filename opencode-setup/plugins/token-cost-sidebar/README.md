@@ -4,14 +4,14 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.5.2 - 17.07.2026, 14:14 Uhr
+Stand: v1.5.3 - 17.07.2026, 14:28 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
 - Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
-- Orange, fette Sidebar-Überschriften für Session, Modell, Context, MCP und LSP.
+- Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.

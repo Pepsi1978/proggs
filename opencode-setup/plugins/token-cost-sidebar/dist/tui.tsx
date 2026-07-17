@@ -220,7 +220,7 @@ function SidebarClock(props: { api: TuiPluginApi }) {
 
   return (
     <text fg={theme().text}>
-      <span style={{ fg: theme().accent }}><b>Session</b></span>{" "}{formatDateTime(now())}
+      <span style={{ fg: theme().accent, bold: true, underline: true }}>Session</span>{" "}{formatDateTime(now())}
     </text>
   )
 }
@@ -325,7 +325,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string }) {
   const theme = () => props.api.theme.current
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
 
-  return <text fg={theme().accent}><b>{shortLabel(modelMeta().label)}</b></text>
+  return <text fg={theme().accent}><span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span></text>
 }
 
 function applyTheme(api: TuiPluginApi, name: string): boolean {
@@ -384,7 +384,7 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
   return (
     <box paddingTop={1}>
       <box flexDirection="row" backgroundColor={theme().backgroundElement} onMouseUp={(event) => event.button === 0 && open()}>
-        <text fg={theme().accent}><b>Theme</b></text>
+        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Theme</span></text>
         <text fg={theme().accent}>{` ${selected()} v`}</text>
       </box>
       <box flexDirection="row">
@@ -515,7 +515,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().accent}><b>Context</b></text>
+        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
 
         <Row
           api={props.api}
