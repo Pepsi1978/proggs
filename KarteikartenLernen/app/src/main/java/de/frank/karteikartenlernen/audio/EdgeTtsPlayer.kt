@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ class EdgeTtsPlayer(context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var webSocket: WebSocket? = null
     private var watchdogJob: Job? = null
+    private var watchdogOwner: String? = null
     @Volatile private var currentOutputStream: FileOutputStream? = null
     @Volatile private var generation = 0L
 
@@ -52,8 +54,24 @@ class EdgeTtsPlayer(context: Context) {
 
         val requestGeneration = generation
         val resolvedVoice = TtsVoiceRegistry.resolveVoiceId(voice)
+        val chunks = splitForTts(text)
+        speakChunk(chunks, 0, resolvedVoice, speechRate, requestGeneration, onPlaybackStart, onComplete)
+    }
+
+    private fun speakChunk(
+        chunks: List<String>,
+        index: Int,
+        voice: String,
+        speechRate: Float,
+        requestGeneration: Long,
+        onPlaybackStart: (() -> Unit)?,
+        onComplete: () -> Unit,
+    ) {
+        if (requestGeneration != generation || index !in chunks.indices) return
+        val text = chunks[index]
         val connectionId = UUID.randomUUID().toString().replace("-", "")
         val requestId = UUID.randomUUID().toString().replace("-", "")
+        val terminal = AtomicBoolean(false)
         val request = Request.Builder()
             .url(
                 "$EDGE_TTS_URL?TrustedClientToken=$TRUSTED_CLIENT_TOKEN" +
@@ -88,9 +106,9 @@ class EdgeTtsPlayer(context: Context) {
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
                         if (requestGeneration != generation) return
-                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, requestGeneration, onComplete)
+                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, requestGeneration, requestId, terminal, onComplete)
                         webSocket.send(SPEECH_CONFIG)
-                        webSocket.send(buildSsmlFrame(requestId, text, resolvedVoice, speechRate))
+                        webSocket.send(buildSsmlFrame(requestId, text, voice, speechRate))
                     }
 
                     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
@@ -102,26 +120,40 @@ class EdgeTtsPlayer(context: Context) {
                         if (data.size > audioStart) {
                             runCatching { outputStream.write(data, audioStart, data.size - audioStart) }
                                 .onFailure { Log.e(TAG, "Could not write TTS audio", it) }
-                            startWatchdog(webSocket, WATCHDOG_IDLE_MS, requestGeneration, onComplete)
+                            startWatchdog(webSocket, WATCHDOG_IDLE_MS, requestGeneration, requestId, terminal, onComplete)
                         }
                     }
 
                     override fun onMessage(webSocket: WebSocket, text: String) {
-                        if (requestGeneration != generation || !text.contains("Path:turn.end")) return
-                        cancelWatchdog()
+                        if (requestGeneration != generation || !text.contains("Path:turn.end") || !terminal.compareAndSet(false, true)) return
+                        cancelWatchdog(requestId)
                         closeOutputStream(outputStream)
+                        webSocket.close(1000, "turn.end")
+                        if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
                         scope.launch {
                             if (requestGeneration == generation) {
-                                playFile(audioFile, requestGeneration, onPlaybackStart, onComplete)
+                                playFile(
+                                    audioFile,
+                                    requestGeneration,
+                                    if (index == 0) onPlaybackStart else null,
+                                ) {
+                                    if (index + 1 < chunks.size) {
+                                        speakChunk(chunks, index + 1, voice, speechRate, requestGeneration, null, onComplete)
+                                    } else {
+                                        onComplete()
+                                    }
+                                }
                             }
                         }
                     }
 
                     override fun onFailure(webSocket: WebSocket, error: Throwable, response: Response?) {
-                        if (requestGeneration != generation) return
+                        if (requestGeneration != generation || !terminal.compareAndSet(false, true)) return
                         Log.e(TAG, "WebSocket failure: ${error.message}", error)
-                        cancelWatchdog()
+                        cancelWatchdog(requestId)
                         closeOutputStream(outputStream)
+                        audioFile.delete()
+                        if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
                         scope.launch { if (requestGeneration == generation) onComplete() }
                     }
                 },
@@ -151,22 +183,35 @@ class EdgeTtsPlayer(context: Context) {
         client.connectionPool.evictAll()
     }
 
-    private fun startWatchdog(webSocket: WebSocket, timeoutMs: Long, requestGeneration: Long, onComplete: () -> Unit) {
-        cancelWatchdog()
+    private fun startWatchdog(
+        webSocket: WebSocket,
+        timeoutMs: Long,
+        requestGeneration: Long,
+        owner: String,
+        terminal: AtomicBoolean,
+        onComplete: () -> Unit,
+    ) {
+        cancelWatchdog(owner)
+        watchdogOwner = owner
         watchdogJob = scope.launch {
             delay(timeoutMs)
-            if (requestGeneration != generation) return@launch
+            if (requestGeneration != generation || watchdogOwner != owner || !terminal.compareAndSet(false, true)) return@launch
             Log.w(TAG, "No Edge TTS audio received for ${timeoutMs}ms; aborting")
             generation++
             webSocket.cancel()
             closeOutputStream(currentOutputStream)
+            watchdogOwner = null
+            watchdogJob = null
+            if (this@EdgeTtsPlayer.webSocket === webSocket) this@EdgeTtsPlayer.webSocket = null
             onComplete()
         }
     }
 
-    private fun cancelWatchdog() {
+    private fun cancelWatchdog(owner: String? = null) {
+        if (owner != null && watchdogOwner != owner) return
         watchdogJob?.cancel()
         watchdogJob = null
+        watchdogOwner = null
     }
 
     private fun playFile(
@@ -181,12 +226,16 @@ class EdgeTtsPlayer(context: Context) {
         try {
             player.apply {
             setDataSource(file.absolutePath)
-            setOnCompletionListener {
+            setOnCompletionListener { completedPlayer ->
+                completedPlayer.release()
+                if (mediaPlayer === completedPlayer) mediaPlayer = null
                 if (requestGeneration == generation) onComplete()
                 file.delete()
             }
-            setOnErrorListener { _, what, extra ->
+            setOnErrorListener { failedPlayer, what, extra ->
                 Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
+                failedPlayer.release()
+                if (mediaPlayer === failedPlayer) mediaPlayer = null
                 if (requestGeneration == generation) onComplete()
                 file.delete()
                 true
@@ -231,6 +280,38 @@ class EdgeTtsPlayer(context: Context) {
                 "Content-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n" +
                 "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$language'>" +
                 "<voice name='$voice'><prosody rate='$rate'>$escaped</prosody></voice></speak>"
+        }
+
+        internal fun splitForTts(text: String, maxUtf8Bytes: Int = 3_800): List<String> {
+            require(maxUtf8Bytes > 0)
+            val chunks = mutableListOf<String>()
+            var current = StringBuilder()
+
+            fun flush() {
+                if (current.isNotEmpty()) chunks += current.toString()
+                current = StringBuilder()
+            }
+
+            text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.forEach { word ->
+                val candidate = if (current.isEmpty()) word else "$current $word"
+                if (candidate.toByteArray(Charsets.UTF_8).size <= maxUtf8Bytes) {
+                    current = StringBuilder(candidate)
+                } else {
+                    flush()
+                    if (word.toByteArray(Charsets.UTF_8).size <= maxUtf8Bytes) {
+                        current.append(word)
+                    } else {
+                        val codePoints = word.codePoints().iterator()
+                        while (codePoints.hasNext()) {
+                            val character = String(Character.toChars(codePoints.nextInt()))
+                            if ((current.toString() + character).toByteArray(Charsets.UTF_8).size > maxUtf8Bytes) flush()
+                            current.append(character)
+                        }
+                    }
+                }
+            }
+            flush()
+            return chunks.ifEmpty { listOf("") }
         }
 
         private fun generateSecMsGec(): String {

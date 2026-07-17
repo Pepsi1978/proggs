@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.10 - 17.07.2026, 22:55 Uhr
+Version 0.1.11 - 17.07.2026, 23:05 Uhr
 
 ## 1. Übersicht
 
@@ -183,7 +183,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   Die sechs deutschen Neural-Stimmen werden mit ihren echten Microsoft-Voice-IDs
   in einem Dropdown angeboten; bestehende Anzeigenamen werden automatisch migriert.
   Ein Watchdog beendet hängende Streams, erneutes Vorlesen stoppt die vorige Ausgabe,
-  und die Sprechgeschwindigkeit wird als begrenzte SSML-Prosodie übertragen.
+  und die Sprechgeschwindigkeit wird als begrenzte SSML-Prosodie übertragen. Lange
+  Texte werden UTF-8-sicher aufgeteilt und lückenlos in derselben Vorlesesitzung abgespielt.
 
 ### Datenmodell
 

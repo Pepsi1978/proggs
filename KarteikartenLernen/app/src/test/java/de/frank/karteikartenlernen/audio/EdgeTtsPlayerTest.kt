@@ -28,4 +28,14 @@ class EdgeTtsPlayerTest {
         assertTrue(frame.contains("A &lt; B &amp; C &gt; D"))
         assertFalse(frame.contains("A < B"))
     }
+
+    @Test
+    fun longTextIsSplitOnUtf8SafeBoundaries() {
+        val text = List(200) { "Wissen😀" }.joinToString(" ")
+        val chunks = EdgeTtsPlayer.splitForTts(text, maxUtf8Bytes = 64)
+
+        assertTrue(chunks.size > 1)
+        assertTrue(chunks.all { it.toByteArray(Charsets.UTF_8).size <= 64 })
+        assertEquals(text, chunks.joinToString(" "))
+    }
 }
