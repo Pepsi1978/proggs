@@ -145,11 +145,11 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain('label="Cache"')
   })
 
-  test("shows the live model above effort and the accented context heading above prices", async () => {
+  test("shows the live model and Context as accented bold headings", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
-    expect(source).toContain('<text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>')
+    expect(source).toContain('<text fg={theme().accent}><b>{shortLabel(modelMeta().label)}</b></text>')
     expect(source).toContain("const selected = liveModel(api)?.current?.()")
-    expect(source).toContain('<text fg={theme().accent}>Kontext</text>')
+    expect(source).toContain('<text fg={theme().accent}><b>Context</b></text>')
     expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} />")
     expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} />")).toBeLessThan(
       source.indexOf("<EffortSelector api={api} />"),
@@ -165,7 +165,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("timer = setTimeout(() =>")
     expect(source).toContain("clearTimeout(timer)")
     expect(source).not.toContain("setInterval(")
-    expect(source).toContain('<b>Session</b>{" "}{formatDateTime(now())}')
+    expect(source).toContain('<span style={{ fg: theme().accent }}><b>Session</b></span>{" "}{formatDateTime(now())}')
     expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
   })
 
@@ -259,6 +259,8 @@ describe("models.dev pricing", () => {
     expect(patch).toContain("input.local.model.variant.set(value)")
     expect(patch).toContain("!input.local.model.variant.list().includes(value)")
     expect(patch).toContain("+const tui: TuiPlugin = async () => {}")
+    expect(patch).toMatch(/\+        <text fg=\{theme\(\)\.accent\}>[\s\S]*?<b>LSP<\/b>/)
+    expect(patch).toMatch(/\+          <text fg=\{theme\(\)\.accent\}>[\s\S]*?<b>MCP<\/b>/)
   })
 
   test("documents every component required for a portable installation", async () => {

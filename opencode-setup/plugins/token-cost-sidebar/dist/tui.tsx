@@ -220,7 +220,7 @@ function SidebarClock(props: { api: TuiPluginApi }) {
 
   return (
     <text fg={theme().text}>
-      <b>Session</b>{" "}{formatDateTime(now())}
+      <span style={{ fg: theme().accent }}><b>Session</b></span>{" "}{formatDateTime(now())}
     </text>
   )
 }
@@ -325,7 +325,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string }) {
   const theme = () => props.api.theme.current
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
 
-  return <text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>
+  return <text fg={theme().accent}><b>{shortLabel(modelMeta().label)}</b></text>
 }
 
 function applyTheme(api: TuiPluginApi, name: string): boolean {
@@ -506,7 +506,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().accent}>Kontext</text>
+        <text fg={theme().accent}><b>Context</b></text>
 
         <Row
           api={props.api}
