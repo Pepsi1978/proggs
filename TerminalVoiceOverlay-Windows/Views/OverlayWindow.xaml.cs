@@ -1265,9 +1265,8 @@ namespace TerminalVoiceOverlay.Views
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            // Enter oben + Umschalter darunter. MakeHGroup behält die bisherige
-            // Breite dieser Randgruppe und setzt nur ihre Position nach rechts.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { OrientationToggleButton }, "#B31A1A1A", new CornerRadius(0, 34, 34, 0)));
+            // Enter + Umschalter als gleich grosse, zentrierte Kreise stapeln.
+            HBar.Children.Add(MakeHStackGroup(EnterButton, OrientationToggleButton, "#B31A1A1A", new CornerRadius(0, 34, 34, 0)));
         }
 
         // Senkrechter Trennstrich zwischen den horizontalen Sektionen — das
@@ -1316,9 +1315,9 @@ namespace TerminalVoiceOverlay.Views
             };
         }
 
-        // Spezial-Gruppe fuer Stern + Diskette im HORIZONTAL-Modus: beide
+        // Spezial-Gruppe fuer die Randgruppen im HORIZONTAL-Modus: beide
         // Buttons UNTEREINANDER (statt nebeneinander) in Standard-Rundgroesse
-        // (40x40), vertikal mittig in der Leiste, ohne Zahlen-Slot. Im vertikalen
+        // (34x34), vertikal mittig in der Leiste, ohne Zahlen-Slot. Im vertikalen
         // Modus bleiben sie nebeneinander (XAML Section1Panel) — RestoreVerticalLayout
         // setzt die urspruengliche Groesse (34) wieder zurueck.
         private FrameworkElement MakeHStackGroup(Button topBtn, Button bottomBtn, string bgHex, CornerRadius corner)

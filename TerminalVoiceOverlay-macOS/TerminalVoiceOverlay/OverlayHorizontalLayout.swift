@@ -34,16 +34,8 @@ enum HBarLayout {
     /// Standard-Button-Groessen wie in init().
     static let actionButtonSize = NSSize(width: 40, height: 40)
     static let micButtonSize    = NSSize(width: 52, height: 52)
-    /// Stern + OrientationToggle in S1: 34×34 (Windows-Code Z. 1279).
+    /// Kleine Randgruppen-Buttons: 34×34 und damit garantiert rund.
     static let smallButtonSize  = NSSize(width: 34, height: 34)
-    /// Save-Diskette in S7: 30×30 (QUADRATISCH). Frueher 36×26 — das
-    /// nicht-quadratische Frame hat das quadratische Disketten-Symbol via
-    /// RoundButton.draw (Symbolgroesse = bounds.width×scale × bounds.height×scale)
-    /// horizontal gestaucht ("gequetscht": 18×13 statt 18×18). Quadratisch +
-    /// hoeherer symbolScaleFactor (0.62, gesetzt in positionExtraButtonsHorizontal)
-    /// ergibt wieder ein sauberes ~18×18-Symbol. Passt unter die 40×40 Enter-Reihe.
-    static let saveButtonHSize  = NSSize(width: 30, height: 30)
-
     /// CornerRadius der HBar — Hoehe/2 = 46 fuer perfekt runde Enden.
     static let cornerRadius: CGFloat = 46
 }
@@ -396,10 +388,10 @@ extension OverlayPanel {
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#B31A1A1A",  // S7 = Enter oben + Umschalter unten (MakeHGroup)
-            width: 56,
-            upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
-            lowerButtons: [.orientationToggleExtra(HBarLayout.saveButtonHSize)],  // 30×22
+            backgroundHex: "#B31A1A1A",  // S7 = zwei symmetrische Kreise (MakeHStackGroup)
+            width: 50,
+            upperButtons: [.action(\.enterButton, HBarLayout.smallButtonSize)],
+            lowerButtons: [.orientationToggleExtra(HBarLayout.smallButtonSize)],
             cornerMode: .leftRounded)
 
         // Sektion-Widths: Mindestbreite = Content + 2×sectionInnerPadX (=16),
