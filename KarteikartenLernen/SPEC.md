@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.8 - 17.07.2026, 22:53 Uhr
+Version 0.1.9 - 17.07.2026, 22:54 Uhr
 
 ## 1. Übersicht
 
@@ -149,7 +149,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 13. **Lernrunde, Abschluss:** Konfetti, Ergebniszahlen, Nochmal und Fertig.
 14. **Einstellungen:** GPT-Modell, Reasoning, Kartenlimit, Verbindungen,
     Erscheinungsbild, Farbprofil, Kartenschriftgröße, globale/einzelne Sounds,
-    Lautstärke, TTS-Stimme, Stimmtest und Sprechgeschwindigkeit.
+    Lautstärke, TTS-Stimme, Stimmtest und Sprechgeschwindigkeit. Am Seitenende
+    stehen die generierte App-Version und der genaue Build-Zeitstempel.
 15. **OpenAI-OAuth-Dialog:** Browserähnlicher Sicherheitsdialog mit Fortfahren und
     Abbrechen; nach Erfolg zeigt die Verbindung Mailadresse und Trennen.
 

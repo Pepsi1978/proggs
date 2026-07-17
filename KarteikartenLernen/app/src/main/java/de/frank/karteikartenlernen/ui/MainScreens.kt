@@ -40,6 +40,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.karteikartenlernen.BuildConfig
 import de.frank.karteikartenlernen.audio.SoundEffect
 import de.frank.karteikartenlernen.audio.TtsVoiceRegistry
 import de.frank.karteikartenlernen.model.AppSettings
@@ -238,6 +239,13 @@ fun SettingsScreen(
                     modifier = Modifier.width(120.dp),
                 )
             }
+        }
+        Column(
+            Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("Version ${BuildConfig.VERSION_NAME}", color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("Stand ${BuildConfig.VERSION_BUMPED_AT}", color = c.faint, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
         }
         Spacer(Modifier.height(18.dp))
     }

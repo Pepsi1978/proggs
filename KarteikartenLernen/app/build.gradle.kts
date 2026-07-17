@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.karteikartenlernen"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.1.8"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 22:53 Uhr\"")
+        versionCode = 10
+        versionName = "0.1.9"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 22:54 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
