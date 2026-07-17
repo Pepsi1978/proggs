@@ -41,7 +41,23 @@ function messageInfo(message: any): any {
   return message?.info ?? message
 }
 
+function stepFinishParts(message: any): any[] {
+  if (!Array.isArray(message?.parts)) return []
+  return message.parts.filter((part: any) => part?.type === "step-finish")
+}
+
 function usageOf(message: any): TokenUsage {
+  const steps = stepFinishParts(message)
+  if (steps.length > 0) {
+    return steps.reduce<TokenUsage>((total, step) => ({
+      input: total.input + safeNumber(step?.tokens?.input),
+      output: total.output + safeNumber(step?.tokens?.output),
+      reasoning: total.reasoning + safeNumber(step?.tokens?.reasoning),
+      cacheRead: total.cacheRead + safeNumber(step?.tokens?.cache?.read),
+      cacheWrite: total.cacheWrite + safeNumber(step?.tokens?.cache?.write),
+    }), { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 })
+  }
+
   const info = messageInfo(message)
   return {
     input: safeNumber(info?.tokens?.input),
@@ -69,6 +85,12 @@ function storedRecord(value: unknown): SessionUsageRecord | undefined {
   }
 }
 
+function recordedCostOf(message: any): number {
+  const info = messageInfo(message)
+  const stepCost = stepFinishParts(message).reduce((total, step) => total + safeNumber(step?.cost), 0)
+  return firstNumber(info?.cost, info?.usage?.cost, info?.metrics?.cost, stepCost)
+}
+
 export function createSessionUsageLedger(stored?: unknown): SessionUsageLedger {
   const ledger: SessionUsageLedger = new Map()
   if (!Array.isArray(stored)) return ledger
@@ -84,7 +106,7 @@ export function observeAssistantMessage(ledger: SessionUsageLedger, message: any
   if (info?.role !== "assistant" || typeof info?.id !== "string" || info.id === "") return false
 
   const previous = ledger.get(info.id)
-  const usage = usageOf(info)
+  const usage = usageOf(message)
   const next: SessionUsageRecord = {
     id: info.id,
     providerID: typeof info.providerID === "string" ? info.providerID : previous?.providerID,
@@ -98,7 +120,7 @@ export function observeAssistantMessage(ledger: SessionUsageLedger, message: any
     },
     recordedCostUsd: Math.max(
       previous?.recordedCostUsd ?? 0,
-      firstNumber(info?.cost, info?.usage?.cost, info?.metrics?.cost),
+      recordedCostOf(message),
     ),
   }
 

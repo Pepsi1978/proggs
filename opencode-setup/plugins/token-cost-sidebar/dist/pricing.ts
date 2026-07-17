@@ -84,8 +84,8 @@ export function calculateUsageCost(model: any, usage: TokenUsage): number {
     usage.input * price.input +
     usage.output * price.output +
     usage.reasoning * price.reasoning +
-    usage.cacheRead * (price.cacheRead || price.input) +
-    usage.cacheWrite * (price.cacheWrite || price.input)
+    usage.cacheRead * price.cacheRead +
+    usage.cacheWrite * price.cacheWrite
   )
 }
 

@@ -96,6 +96,18 @@ describe("models.dev pricing", () => {
     ).toBeCloseTo(0.64)
   })
 
+  test("does not invent cache prices when the catalog omits them", () => {
+    expect(
+      calculateUsageCost({ cost: { input: 5, output: 30 } }, {
+        input: 0,
+        output: 0,
+        reasoning: 0,
+        cacheRead: 1_000_000,
+        cacheWrite: 1_000_000,
+      }),
+    ).toBe(0)
+  })
+
   test("normalizes very small models.dev prices per million tokens", () => {
     expect(readPricing({ cost: { input: 0.001, output: 0.002 } }).input).toBe(0.000000001)
   })
@@ -210,6 +222,43 @@ describe("models.dev pricing", () => {
     expect(sessionUsageSnapshot(restored)).toEqual(sessionUsageSnapshot(ledger))
   })
 
+  test("aggregates every completed model step instead of only the final message tokens", () => {
+    const ledger = createSessionUsageLedger()
+    expect(observeAssistantMessage(ledger, {
+      info: {
+        id: "msg-steps",
+        role: "assistant",
+        providerID: "openai",
+        modelID: "model-a",
+        tokens: { input: 20, output: 4, reasoning: 1, cache: { read: 0, write: 0 } },
+        cost: 0.75,
+      },
+      parts: [
+        {
+          type: "step-finish",
+          cost: 0.5,
+          tokens: { input: 100, output: 20, reasoning: 10, cache: { read: 5, write: 1 } },
+        },
+        { type: "tool", tokens: { input: 9_999 } },
+        {
+          type: "step-finish",
+          cost: 0.25,
+          tokens: { input: 200, output: 30, reasoning: 15, cache: { read: 6, write: 2 } },
+        },
+      ],
+    })).toBe(true)
+
+    expect(sessionUsageSnapshot(ledger)).toMatchObject({
+      input: 300,
+      output: 50,
+      reasoning: 25,
+      cacheRead: 11,
+      cacheWrite: 3,
+      matchedMessages: 1,
+    })
+    expect(sessionUsageSnapshot(ledger).records[0]?.recordedCostUsd).toBe(0.75)
+  })
+
   test("renders the requested token rows without a cache row", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
@@ -219,6 +268,8 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
     expect(source).toContain('api.event.on("message.updated"')
+    expect(source).toContain('api.event.on("message.part.updated"')
+    expect(source).toContain("parts: props.api.state.part(info.id)")
     expect(source).toContain("api.client.session.messages({")
     expect(source).not.toContain("providerOf(message) !== providerID")
     expect(source).not.toContain("modelOf(message) !== modelID")

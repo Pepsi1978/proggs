@@ -553,7 +553,18 @@ function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
   const stopMessageUpdates = api.event.on("message.updated", (event) => {
     const message = event.properties.info
     const ledger = ledgerFor(message.sessionID)
-    if (observeAssistantMessage(ledger, message)) commit(message.sessionID, ledger)
+    if (observeAssistantMessage(ledger, { info: message, parts: api.state.part(message.id) })) {
+      commit(message.sessionID, ledger)
+    }
+  })
+  const stopPartUpdates = api.event.on("message.part.updated", (event) => {
+    if (event.properties.part.type !== "step-finish") return
+    const sessionID = event.properties.sessionID
+    const messageID = event.properties.part.messageID
+    const message = api.state.session.messages(sessionID).find((item) => item.id === messageID)
+    if (!message) return
+    const ledger = ledgerFor(sessionID)
+    if (observeAssistantMessage(ledger, { info: message, parts: api.state.part(messageID) })) commit(sessionID, ledger)
   })
   const stopSessionDeletes = api.event.on("session.deleted", (event) => {
     const sessionID = event.properties.info.id
@@ -563,6 +574,7 @@ function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
     setRevision((value) => value + 1)
   })
   api.lifecycle.onDispose(stopMessageUpdates)
+  api.lifecycle.onDispose(stopPartUpdates)
   api.lifecycle.onDispose(stopSessionDeletes)
 
   return {
@@ -596,7 +608,10 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
   const [eurPerUsd, setEurPerUsd] = createSignal(FALLBACK_EUR_PER_USD)
   const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
-  const messages = createMemo(() => props.api.state.session.messages(props.sessionID) as any[])
+  const messages = createMemo(() => props.api.state.session.messages(props.sessionID).map((info) => ({
+    info,
+    parts: props.api.state.part(info.id),
+  })))
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
 
   onMount(() => {
