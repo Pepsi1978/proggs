@@ -29,7 +29,7 @@ index 6781216..43a05a3 100644
  }
  
 +export type TuiModel = {
-+  current: () => { providerID: string; modelID: string } | undefined
++  current?: () => { providerID: string; modelID: string } | undefined
 +  variant: {
 +    current: () => string | undefined
 +    list: () => ReadonlyArray<string>

@@ -253,7 +253,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("<EffortSelector api={api} />")
     expect(source.indexOf("<EffortSelector api={api} />")).toBeLessThan(source.indexOf("<WorkModeSelector api={api}"))
     expect(patch).toContain("model?: TuiModel")
-    expect(patch).toContain("current: () => { providerID: string; modelID: string } | undefined")
+    expect(patch).toContain("current?: () => { providerID: string; modelID: string } | undefined")
     expect(patch).toContain("model: api.model")
     expect(patch).toContain("return input.local.model.current()")
     expect(patch).toContain("input.local.model.variant.set(value)")
