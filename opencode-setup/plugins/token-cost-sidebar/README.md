@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.5.1 - 17.07.2026, 13:59 Uhr
+Stand: v1.5.2 - 17.07.2026, 14:14 Uhr
 
 ## Funktionen
 
@@ -16,7 +16,7 @@ Stand: v1.5.1 - 17.07.2026, 13:59 Uhr
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten.
-- Theme-Auswahl sowie Dunkel-/Hell-Umschaltung in der Sidebar.
+- Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
 - Das aktive `AGENTS.md`-Profil bleibt vollständig gültig und hat bei Widersprüchen Vorrang.
 
 ## Vollständiger Installationsumfang

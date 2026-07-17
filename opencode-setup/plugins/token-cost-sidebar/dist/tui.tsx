@@ -383,10 +383,9 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
 
   return (
     <box paddingTop={1}>
-      <box flexDirection="row" paddingX={1} backgroundColor={theme().backgroundElement} onMouseUp={(event) => event.button === 0 && open()}>
-        <text fg={theme().text}>Theme</text>
-        <box flexGrow={1} />
-        <text fg={theme().accent}>{`${selected()} v`}</text>
+      <box flexDirection="row" backgroundColor={theme().backgroundElement} onMouseUp={(event) => event.button === 0 && open()}>
+        <text fg={theme().accent}><b>Theme</b></text>
+        <text fg={theme().accent}>{` ${selected()} v`}</text>
       </box>
       <box flexDirection="row">
         <box
@@ -395,7 +394,12 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
           backgroundColor={mode() === "dark" ? theme().backgroundElement : undefined}
           onMouseUp={(event) => event.button === 0 && selectMode("dark")}
         >
-          <text fg={mode() === "dark" ? theme().accent : theme().textMuted}>Dunkel</text>
+          <Show
+            when={mode() === "dark"}
+            fallback={<text fg={theme().textMuted}>Dunkel</text>}
+          >
+            <text fg={theme().accent}><b>Dunkel</b></text>
+          </Show>
         </box>
         <box
           flexGrow={1}
@@ -403,7 +407,12 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
           backgroundColor={mode() === "light" ? theme().backgroundElement : undefined}
           onMouseUp={(event) => event.button === 0 && selectMode("light")}
         >
-          <text fg={mode() === "light" ? theme().accent : theme().textMuted}>Hell</text>
+          <Show
+            when={mode() === "light"}
+            fallback={<text fg={theme().textMuted}>Hell</text>}
+          >
+            <text fg={theme().accent}><b>Hell</b></text>
+          </Show>
         </box>
       </box>
     </box>
