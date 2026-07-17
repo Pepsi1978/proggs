@@ -38,6 +38,25 @@ weg, du "verbesserst" nichts eigenmaechtig. Was im Entwurf steht, kommt exakt so
 Setze genau dieses Design mit Jetpack Compose um — Farben, Abstaende, Schriftgroessen und
 Anordnung exakt aus der Datei."
 
+## Vollstaendigkeit — 100%, nichts weglassen (oberste Regel)
+
+Das **komplette** Design wird umgesetzt, nicht nur ein Teil. Ausdruecklich zu **100%**:
+
+- **JEDER Bildschirm** und **jeder Unterbildschirm** — Haupt-Screens, Detail-Screens,
+  Dialoge, Bottom-Sheets, Onboarding, leere/fehler/lade-Zustaende, Overlays, Tooltips.
+- **JEDES Untermenue** — Tabs, Bottom-Nav-Ziele, Drawer, Dropdowns, Kontextmenues,
+  aufklappbare Bereiche, Einstellungs-Unterseiten.
+- **JEDE Verknuepfung/Navigation** — jeder Button, jedes Nav-Item, jeder Link fuehrt
+  genau dorthin, wohin der Entwurf ihn fuehrt. Keine toten Buttons, keine Sackgassen.
+- **JEDES visuelle Detail** — jede Farbe, jede Fettschrift (font-weight), jede Schriftart,
+  jeder Abstand, jeder Eckenradius, jeder Schatten, jeder Gradient, jeder Glow/Blur,
+  jede Animation. Alle Themes (Light/Dark + Zusatz).
+
+Ein zu 90% umgesetztes Design ist **nicht** erledigt. Bevor der Skill fertig meldet,
+muss **jeder** Eintrag des Screen-/Navigations-/Token-Inventars aus Phase 1 im Code
+nachweisbar vorhanden sein (Vollstaendigkeits-Check in Phase 8). Nichts wird
+stillschweigend ausgelassen, gekuerzt oder "spaeter"-vertagt.
+
 ---
 
 ## Aufruf
@@ -156,6 +175,19 @@ aus der Datei uebernehmen):
 - Navigation: Bottom-Nav / Tabs / AppBar — welche Eintraege, welche Icons, welcher
   aktive Zustand. `android-frame.jsx` zeigt den M3-Rahmen-Kontext.
 - Zustaende: aktiv/inaktiv, ausgewaehlt, leer, Fehler, Ladephasen — falls im Entwurf vorhanden.
+
+**E2) VOLLSTAENDIGES Screen- & Navigations-Inventar (Pflicht fuer 100%)**
+- Erstelle eine **nummerierte Liste ALLER Bildschirme und Unterbildschirme** des
+  Entwurfs — inkl. Dialoge, Bottom-Sheets, Overlays, Onboarding, Menue-Unterseiten.
+- **Verborgene/bedingte Screens finden:** Der Prototyp blendet Ansichten oft ueber
+  `{{ #if }}`/`{{ #each }}`-Bloecke, `data-*`-Zustaende, Tab-/Routen-Variablen oder
+  verschiedene `{{ themeKey }}`/Props-Werte ein. JEDE dieser Varianten ist ein
+  umzusetzender Zustand/Screen — auch was nur unter einer Bedingung sichtbar wird.
+  Prueft dazu auch das Props-JSON (`data-props`) auf weitere Ansichts-/Tab-Werte.
+- **Navigations-/Verknuepfungs-Karte:** Fuer JEDES interaktive Element (Button, Nav-Item,
+  Chip, Link, Listeneintrag) notieren, **wohin** es fuehrt. Diese Karte wird spaeter
+  1:1 als Navigation verdrahtet — kein Button bleibt ohne Ziel.
+- Dieses Inventar ist die **Checkliste** fuer den Vollstaendigkeits-Abgleich in Phase 8.
 
 **F) Animationen & Motion**
 - Alle `@keyframes` (Name + Verlauf), `animation:`-Kurzformen (Dauer, Easing, Delay,
@@ -360,6 +392,16 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
   Abstand, Anordnung) korrigieren, bis es zum Entwurf passt.
 - **Selbstpruefung gegen die Token-Liste:** Jede Farbe/Groesse/Schrift/Animation aus
   Phase 1 einmal gegen den geschriebenen Code gegenpruefen — nichts vergessen?
+- **Vollstaendigkeits-Abgleich (100% — Pflicht):** Das komplette Screen-/Navigations-/
+  Untermenue-Inventar aus Phase 1 (E2) Punkt fuer Punkt gegen den Code abhaken:
+  - Ist **jeder** Bildschirm und Unterbildschirm umgesetzt? (keiner fehlt)
+  - Ist **jedes** Untermenue / jeder Tab / jeder Dialog / jedes Bottom-Sheet da?
+  - Fuehrt **jede** Verknuepfung/Navigation genau dorthin wie im Entwurf? (keine toten
+    Buttons, keine Sackgassen, kein Platzhalter)
+  - Sind **alle** Zustaende (leer/aktiv/ausgewaehlt/Fehler/Ladephase) vorhanden?
+  - Sind **alle** Themes und **alle** Effekte/Animationen umgesetzt?
+  Fehlt auch nur EIN Punkt, ist die Umsetzung **nicht fertig** — nachziehen, bis das
+  Inventar zu 100% abgehakt ist. Am Ende die abgehakte Inventarliste kurz berichten.
 
 **Projekt-Konventionen beachten (aus der globalen CLAUDE.md):** Nach der Umsetzung
 die sichtbare App-Version mit Zeitstempel bumpen. Committen/Pushen und der finale
@@ -370,6 +412,10 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 
 ## Was NIEMALS passieren darf
 
+- ❌ Nur einen TEIL des Designs umsetzen — es wird zu **100%** umgesetzt: jeder Bildschirm,
+  jeder Unterbildschirm, jedes Untermenue, jede Verknuepfung, jeder Zustand, jedes Detail.
+- ❌ Einen Screen/Dialog/Tab/ein Untermenue auslassen, weil es "unwichtig" oder versteckt wirkt.
+- ❌ Buttons/Nav-Items ohne funktionierendes Ziel lassen (tote Verknuepfung, Sackgasse, Platzhalter).
 - ❌ Das Design "interpretieren" oder eigenmaechtig "verbessern" — es wird 1:1 umgesetzt.
 - ❌ Farben/Abstaende/Groessen schaetzen oder runden — immer die exakten Werte aus der Datei.
 - ❌ Nur das Basis-Theme umsetzen und Dark Mode / Zusatz-Themes weglassen — ALLE Themes.
