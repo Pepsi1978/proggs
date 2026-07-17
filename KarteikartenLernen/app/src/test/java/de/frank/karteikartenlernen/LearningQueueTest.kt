@@ -32,7 +32,7 @@ class LearningQueueTest {
 
         assertEquals("Was ist Licht?", learningSpeechText(card, flipped = false))
         assertEquals(
-            "Was ist Licht? Elektromagnetische Strahlung. Sie transportiert Energie.",
+            "Elektromagnetische Strahlung. Sie transportiert Energie.",
             learningSpeechText(card, flipped = true),
         )
     }

@@ -214,6 +214,8 @@ fun LearningOverlay(
     onRate: (Boolean) -> Unit,
     onRestart: () -> Unit,
     onSpeak: (String) -> Unit,
+    onSpeakWithContinuation: (String, String) -> Unit,
+    onContinueSpeaking: () -> Unit,
     narrationEnabled: Boolean,
     onNarrationEnabledChange: (Boolean) -> Unit,
     onStopSpeaking: () -> Unit,
@@ -228,7 +230,10 @@ fun LearningOverlay(
         }
         val card = learning.deck[learning.queue[learning.position]]
         LaunchedEffect(narrationEnabled, learning.position, learning.flipped) {
-            if (narrationEnabled) onSpeak(learningSpeechText(card, learning.flipped))
+            if (narrationEnabled) {
+                if (learning.flipped) onContinueSpeaking()
+                else onSpeakWithContinuation(card.question, learningSpeechText(card, flipped = true))
+            }
         }
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -245,6 +250,7 @@ fun LearningOverlay(
                             onStopSpeaking()
                         } else {
                             onNarrationEnabledChange(true)
+                            if (learning.flipped) onSpeak(learningSpeechText(card, flipped = true))
                         }
                     },
                     size = 36,

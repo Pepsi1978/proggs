@@ -27,6 +27,7 @@ import okhttp3.WebSocketListener
 import okio.ByteString
 
 internal data class SpeechUnit(val text: String, val pauseAfterMs: Long)
+internal data class ManualSpeechPlan(val units: List<SpeechUnit>, val continuationIndex: Int)
 
 class EdgeTtsPlayer(context: Context) {
     private val appContext = context.applicationContext
@@ -45,6 +46,7 @@ class EdgeTtsPlayer(context: Context) {
         val speechRate: Float,
         val onPlaybackStart: (() -> Unit)?,
         val onComplete: () -> Unit,
+        val manualContinuationIndex: Int? = null,
     ) {
         val completed = AtomicBoolean(false)
         val files = mutableSetOf<File>()
@@ -53,6 +55,7 @@ class EdgeTtsPlayer(context: Context) {
         var waitingIndex: Int? = null
         var pauseElapsed = false
         var preparationFailed = false
+        var manualContinuationRequested = false
     }
 
     private var mediaPlayer: MediaPlayer? = null
@@ -71,8 +74,54 @@ class EdgeTtsPlayer(context: Context) {
         onPlaybackStart: (() -> Unit)? = null,
         onComplete: () -> Unit = {},
     ) {
-        stop()
         val units = buildSpeechUnits(text)
+        startSession(units, voice, speechRate, onPlaybackStart, onComplete)
+    }
+
+    fun speakWithPreparedContinuation(
+        text: String,
+        continuationText: String,
+        voice: String = TtsVoiceRegistry.DEFAULT_VOICE_ID,
+        speechRate: Float = 1f,
+        onPlaybackStart: (() -> Unit)? = null,
+        onComplete: () -> Unit = {},
+    ) {
+        val plan = buildManualSpeechPlan(text, continuationText)
+        startSession(
+            units = plan.units,
+            voice = voice,
+            speechRate = speechRate,
+            onPlaybackStart = onPlaybackStart,
+            onComplete = onComplete,
+            manualContinuationIndex = plan.continuationIndex,
+        )
+    }
+
+    fun continuePreparedSpeech() {
+        val session = activeSession ?: return
+        val continuationIndex = session.manualContinuationIndex ?: return
+        session.manualContinuationRequested = true
+        if (session.waitingIndex != continuationIndex) return
+        session.pauseElapsed = true
+        val prepared = session.prepared
+        when {
+            prepared?.index == continuationIndex -> playPrepared(session, prepared)
+            session.preparationFailed -> {
+                session.preparationFailed = false
+                prepareUnit(session, continuationIndex)
+            }
+        }
+    }
+
+    private fun startSession(
+        units: List<SpeechUnit>,
+        voice: String,
+        speechRate: Float,
+        onPlaybackStart: (() -> Unit)?,
+        onComplete: () -> Unit,
+        manualContinuationIndex: Int? = null,
+    ) {
+        stop()
         if (units.isEmpty()) {
             onComplete()
             return
@@ -84,6 +133,7 @@ class EdgeTtsPlayer(context: Context) {
             speechRate = speechRate,
             onPlaybackStart = onPlaybackStart,
             onComplete = onComplete,
+            manualContinuationIndex = manualContinuationIndex,
         )
         activeSession = session
         prepareUnit(session, 0)
@@ -197,7 +247,8 @@ class EdgeTtsPlayer(context: Context) {
         }
         if (session.preparingIndex == audio.index) session.preparingIndex = null
         session.prepared = audio
-        if (audio.index == 0 || session.waitingIndex == audio.index && session.pauseElapsed) {
+        val waitingForManualFlip = audio.index == session.manualContinuationIndex && !session.manualContinuationRequested
+        if (!waitingForManualFlip && (audio.index == 0 || session.waitingIndex == audio.index && session.pauseElapsed)) {
             playPrepared(session, audio)
         }
     }
@@ -208,6 +259,7 @@ class EdgeTtsPlayer(context: Context) {
         if (!isActive(session)) return
         if (session.preparingIndex == index) session.preparingIndex = null
         session.preparationFailed = true
+        if (index == session.manualContinuationIndex && !session.manualContinuationRequested) return
         if (index == 0 || session.waitingIndex == index && session.pauseElapsed) finishSession(session)
     }
 
@@ -240,6 +292,10 @@ class EdgeTtsPlayer(context: Context) {
         session.pauseElapsed = false
         if (session.prepared?.index != nextIndex && session.preparingIndex != nextIndex && !session.preparationFailed) {
             prepareUnit(session, nextIndex)
+        }
+        if (nextIndex == session.manualContinuationIndex && !session.manualContinuationRequested) {
+            session.pauseElapsed = true
+            return
         }
         pauseJob?.cancel()
         pauseJob = scope.launch {
@@ -415,6 +471,16 @@ class EdgeTtsPlayer(context: Context) {
                 }
             }
             return units.filter { it.text.isNotBlank() }
+        }
+
+        internal fun buildManualSpeechPlan(
+            text: String,
+            continuationText: String,
+            maxUtf8Bytes: Int = 3_800,
+        ): ManualSpeechPlan {
+            val initial = buildSpeechUnits(text, maxUtf8Bytes).map { it.copy(pauseAfterMs = 0L) }
+            val continuation = buildSpeechUnits(continuationText, maxUtf8Bytes)
+            return ManualSpeechPlan(initial + continuation, initial.size)
         }
 
         internal fun splitForTts(text: String, maxUtf8Bytes: Int = 3_800): List<String> {

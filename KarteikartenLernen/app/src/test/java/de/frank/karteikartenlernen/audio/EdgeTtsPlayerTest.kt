@@ -82,4 +82,19 @@ class EdgeTtsPlayerTest {
         assertEquals(0L, units.last().pauseAfterMs)
         assertTrue(units.all { it.text.toByteArray(Charsets.UTF_8).size <= 24 })
     }
+
+    @Test
+    fun manualContinuationPlanPrefetchesAnswerAfterQuestionChunks() {
+        val plan = EdgeTtsPlayer.buildManualSpeechPlan(
+            text = "Kurze Frage?",
+            continuationText = "Ausführliche Antwort.",
+            maxUtf8Bytes = 18,
+        )
+
+        assertEquals(1, plan.continuationIndex)
+        assertEquals("Kurze Frage?", plan.units.first().text)
+        assertEquals(0L, plan.units.first().pauseAfterMs)
+        assertEquals("Ausführliche", plan.units[plan.continuationIndex].text)
+        assertTrue(plan.units.size > plan.continuationIndex)
+    }
 }

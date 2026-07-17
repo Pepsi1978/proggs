@@ -50,6 +50,15 @@ class MainActivity : ComponentActivity() {
                         speechRate = state.settings.speechRate,
                     )
                 },
+                onSpeakWithContinuation = { text, continuation ->
+                    edgeTtsPlayer.speakWithPreparedContinuation(
+                        text = text,
+                        continuationText = continuation,
+                        voice = state.settings.voice,
+                        speechRate = state.settings.speechRate,
+                    )
+                },
+                onContinueSpeaking = edgeTtsPlayer::continuePreparedSpeech,
                 onStopSpeaking = {
                     edgeTtsPlayer.stop()
                 },
