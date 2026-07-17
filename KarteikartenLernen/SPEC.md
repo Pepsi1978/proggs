@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.22 - 18.07.2026, 00:42 Uhr
+Version 0.1.23 - 18.07.2026, 00:49 Uhr
 
 ## 1. Übersicht
 
@@ -141,6 +141,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
 7. **Modell-Bottom-Sheet:** GPT 5.6 Soul/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.
+   Das Fenster fährt sichtbar von unten ein und wieder aus. Es lässt sich am oberen
+   Griff mit einer Abwärtsbewegung schließen; Inhalt und Hintergrund folgen der
+   Ziehbewegung ohne abrupten Sichtbarkeitswechsel.
 8. **Profile:** Suchfeld und Sessionkarten mit Datum, Kartenanzahl, Fortschritt und
    Komplett-Status.
 9. **Session-Detail, Karten:** Titel, Fortschritt, Alle lernen, Nur schwierige,

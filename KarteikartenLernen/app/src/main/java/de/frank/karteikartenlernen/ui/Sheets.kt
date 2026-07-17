@@ -27,7 +27,10 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,11 +46,9 @@ import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 
 @Composable
 fun ModelSheet(state: AppUiState, onClose: () -> Unit, onModel: (String) -> Unit, onReasoning: (String) -> Unit) {
-    if (!state.showModelSheet) return
     val c = LocalAppPalette.current
-    BottomSheetBackdrop(onClose) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)).background(c.background1).border(1.dp, c.border, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)).padding(horizontal = 18.dp, vertical = 12.dp)) {
-            Handle()
+    AppModalBottomSheet(state.showModelSheet, onClose) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
             SheetLabel("MODELL")
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("GPT 5.6 Soul", "GPT 5.6 Terra", "GPT 5.6 Luna").forEach { model ->
@@ -63,7 +64,7 @@ fun ModelSheet(state: AppUiState, onClose: () -> Unit, onModel: (String) -> Unit
             }
             SheetLabel("REASONING", Modifier.padding(top = 20.dp))
             SegmentedControl(listOf("Niedrig", "Mittel", "Hoch"), state.reasoning, onReasoning, Modifier.fillMaxWidth())
-            Spacer(Modifier.padding(bottom = 14.dp))
+            Spacer(Modifier.padding(bottom = 26.dp))
         }
     }
 }
@@ -174,10 +175,29 @@ private fun BottomSheetBackdrop(onClose: () -> Unit, content: @Composable () -> 
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppModalBottomSheet(visible: Boolean, onClose: () -> Unit, content: @Composable () -> Unit) {
+    if (!visible) return
+    val c = LocalAppPalette.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+        containerColor = c.background1,
+        contentColor = c.text,
+        scrimColor = Color.Black.copy(alpha = 0.45f),
+        dragHandle = { Handle() },
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun Handle() {
     val c = LocalAppPalette.current
-    Box(Modifier.fillMaxWidth().padding(bottom = 16.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp), contentAlignment = Alignment.Center) {
         Box(Modifier.size(38.dp, 4.dp).background(c.border, RoundedCornerShape(99.dp)))
     }
 }
