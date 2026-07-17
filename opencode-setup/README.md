@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.2 - 17.07.2026, 16:24 Uhr
+> Stand: v1.0.3 - 17.07.2026, 16:51 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
@@ -19,7 +19,7 @@
 | 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`**; unter Windows nach erfolgreicher Profilmigration ein kleiner Bootstrap | ja |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** | ja (shell angepasst) |
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
-| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` + Plugin-Pakete | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`, `token-cost-sidebar/`) | ja |
+| 2c. Globale Plugins | `~/.config/opencode/plugins/*.{js,mjs}` + Plugin-Pakete | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`, `token-cost-sidebar/`) | ja |
 | 2c1. TUI-Plugin-Liste | `~/.config/opencode/tui.json` | nein (lokal) | **`tui.json`** | ja |
 | 2c2. Globale Skills | `~/.config/opencode/skill/<name>/SKILL.md` | nein (lokal) | **`skill/`** (z.B. `session-opencode`) | ja |
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
@@ -41,9 +41,10 @@ Session-Beginn alle Arbeitsregeln aus dem **zweiten Gehirn** zu laden (`second-b
 `Programmierung/Rules`, per Nummer iteriert). Diese Regeln liegen also zentral — auf jedem Rechner
 identisch, ohne Kopieren. Dafuer muss der WireGuard-Tunnel stehen (siehe Voraussetzungen).
 
-> **NICHT versioniert** (von OpenCode/Bun selbst erzeugt, in `~/.config/opencode/.gitignore`):
-> `node_modules/`, `package.json`, `package-lock.json`, `bun.lock`, `opencode-notifier-state.json`
-> (Laufzeit-Zaehler). Diese werden weder gespiegelt noch vom Installer angefasst.
+> **NICHT versioniert** (von OpenCode/Bun beziehungsweise dem Updater selbst erzeugt und nur lokal):
+> `node_modules/`, `package.json`, `package-lock.json`, `bun.lock`, `opencode-notifier-state.json`,
+> `opencode-notifier-update-state.json`, `opencode-notifier-update.log` und der kurzlebige Update-Lock.
+> Diese werden nicht gespiegelt; Abhängigkeiten pflegt der Installer beziehungsweise Auto-Updater lokal.
 
 ---
 
@@ -163,6 +164,9 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
    Nur Abschluss nach echter Arbeit und eine echte KI-Rückfrage melden sich auch dann, wenn OpenCode
    gerade fokussiert ist. Alle anderen Ereignisse und der Dirty-Worktree-Watchdog bleiben stumm.
+   Anschließend wird npm sofort und danach bei OpenCode-Starts höchstens einmal täglich auf eine neue
+   Notifier-Version geprüft. Ein Kandidat wird isoliert installiert und nur übernommen, wenn der echte
+   Vertragstest weiterhin exakt `question` und `complete` sowie keine Zwischenalarme bestätigt.
 6. Unter Windows: neueste stabile OpenCode-Version prüfen, vollständig testen, versioniert installieren und
    erst danach atomar aktivieren; Launcher `Release` bauen und Desktop-Verknüpfung erzeugen.
 7. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
@@ -174,6 +178,10 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 - **`notifier-completion-guard.js`** — lädt den Notifier genau einmal und lässt einen Abschlussalarm nur
   nach einem Busy-Zyklus mit echter Schreib-/Build-Arbeit durch. Nur das `question`-Tool bleibt sofort
   hörbar; Eingaben, Freigaben, Fehler, Planwechsel, interne Unteraufgaben und Abbrüche bleiben stumm.
+- **`notifier-auto-updater.mjs`** — prüft mit 24-Stunden-Cooldown und Prozess-Lock die npm-Version,
+  installiert Updates zunächst in ein Temp-Verzeichnis, führt dort `notifier-candidate-contract.mjs`
+  gegen den echten Kandidaten aus und promoted erst danach. Fehler werden nur protokolliert; die letzte
+  funktionierende Version bleibt aktiv und wird nach einer Stunde erneut geprüft.
 - **`tool-first-guard.js`** — setzt die Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im
   Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu

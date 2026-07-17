@@ -77,8 +77,8 @@ if (Test-Path $agentsPath) {
 $agents = Get-ChildItem (Join-Path $Src 'agents') -Filter *.md -ErrorAction SilentlyContinue
 if ($agents) { $agents | Copy-Item -Destination (Join-Path $Dst 'agents') -Force; Ok 'agents/' } else { Warn 'keine agents/*.md' }
 
-$plugins = Get-ChildItem (Join-Path $Src 'plugins') -Filter *.js -ErrorAction SilentlyContinue
-if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Force; Ok 'plugins/ (inkl. tool-first-guard)' } else { Warn 'keine plugins/*.js' }
+$plugins = Get-ChildItem (Join-Path $Src 'plugins') -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.js', '.mjs' }
+if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Force; Ok 'plugins/ (inkl. Notifier-Vertrag)' } else { Warn 'keine plugins/*.{js,mjs}' }
 
 $pluginDirs = Get-ChildItem (Join-Path $Src 'plugins') -Directory -ErrorAction SilentlyContinue
 if ($pluginDirs) { $pluginDirs | Copy-Item -Destination (Join-Path $Dst 'plugins') -Recurse -Force; Ok 'plugins/*/ (TUI-Plugin-Pakete)' } else { Warn 'keine plugins/*/' }
@@ -99,9 +99,24 @@ if ((Test-Path $obsoletePluginThemeDir) -and -not (Get-ChildItem $obsoletePlugin
 
 $npm = Get-Command npm -ErrorAction SilentlyContinue
 if ($npm) {
+  $notifierVersion = '0.2.8'
+  $installedNotifierPackage = Join-Path $Dst 'node_modules\@mohak34\opencode-notifier\package.json'
+  if (Test-Path -LiteralPath $installedNotifierPackage) {
+    try {
+      $installedNotifierVersion = ([IO.File]::ReadAllText($installedNotifierPackage) | ConvertFrom-Json).version
+      if ($installedNotifierVersion -match '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { $notifierVersion = $installedNotifierVersion }
+    } catch { Warn 'Installierte Notifier-Version unlesbar -> sichere Basis 0.2.8 wird verwendet' }
+  }
+  $dependencies = @(
+    '@opencode-ai/plugin@1.17.15',
+    '@opentui/core@0.4.3',
+    '@opentui/solid@0.4.3',
+    'solid-js@1.9.12',
+    "@mohak34/opencode-notifier@$notifierVersion"
+  )
   Push-Location $Dst
   try {
-    & npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' '@mohak34/opencode-notifier@0.2.8' | Out-Null
+    & npm install --silent --save-exact @dependencies | Out-Null
     if ($LASTEXITCODE -eq 0) { Ok 'TUI-Plugin-Dependencies (npm)' } else { Warn 'TUI-Plugin-Dependencies konnten nicht installiert werden' }
   } finally {
     Pop-Location
@@ -160,6 +175,15 @@ $notifier = [ordered]@{
 }
 Write-Utf8NoBom (Join-Path $Dst 'opencode-notifier.json') ($notifier | ConvertTo-Json -Depth 5)
 Ok 'opencode-notifier.json (lokale Sound-Pfade, BOM-frei)'
+
+$notifierUpdater = Join-Path $Dst 'plugins\notifier-auto-updater.mjs'
+$node = Get-Command node -ErrorAction SilentlyContinue
+if ($node -and (Test-Path -LiteralPath $notifierUpdater)) {
+  & $node.Source $notifierUpdater --config-dir $Dst --force --verbose
+  if ($LASTEXITCODE -eq 0) { Ok 'Notifier täglich geprüft und Vertragsregeln verifiziert' } else { Warn 'Notifier-Update verworfen -> letzte funktionierende Version bleibt aktiv' }
+} else {
+  Warn 'Node oder Notifier-Updater fehlt -> tägliche Prüfung startet beim nächsten OpenCode-Start erneut'
+}
 
 # --- 5) Windows-Stabilitätsbuild + Launcher (auf Testzielen überspringbar) ---
 if (-not $SkipWindowsFix) {

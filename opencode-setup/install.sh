@@ -60,7 +60,7 @@ cp "$SRC/AGENTS-global.md" "$DST/AGENTS.md"
 green "OK  AGENTS.md (globale Regeln)"
 
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
-if cp "$SRC/plugins/"*.js "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. tool-first-guard)"; else yellow "--  keine plugins/*.js"; fi
+if cp "$SRC/plugins/"*.js "$SRC/plugins/"*.mjs "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. Notifier-Vertrag)"; else yellow "--  keine plugins/*.{js,mjs}"; fi
 if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete)"; else yellow "--  keine plugins/*/"; fi
 
 # Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown
@@ -73,7 +73,15 @@ rm -f \
 rmdir "$DST/plugins/token-cost-sidebar/themes" 2>/dev/null || true
 
 if command -v npm >/dev/null 2>&1; then
-  if (cd "$DST" && npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' '@mohak34/opencode-notifier@0.2.8'); then
+  notifier_version="0.2.8"
+  installed_notifier_package="$DST/node_modules/@mohak34/opencode-notifier/package.json"
+  if [ -f "$installed_notifier_package" ] && command -v node >/dev/null 2>&1; then
+    detected_notifier_version="$(node -p "try { require(process.argv[1]).version } catch { '' }" "$installed_notifier_package" 2>/dev/null || true)"
+    case "$detected_notifier_version" in
+      [0-9]*.[0-9]*.[0-9]*) notifier_version="$detected_notifier_version" ;;
+    esac
+  fi
+  if (cd "$DST" && npm install --silent --save-exact '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' "@mohak34/opencode-notifier@$notifier_version"); then
     green "OK  TUI-Plugin-Dependencies (npm)"
   else
     yellow "--  TUI-Plugin-Dependencies konnten nicht installiert werden"
@@ -129,6 +137,16 @@ cat > "$DST/opencode-notifier.json" <<EOF
 }
 EOF
 green "OK  opencode-notifier.json (lokale Sound-Pfade)"
+
+if command -v node >/dev/null 2>&1 && [ -f "$DST/plugins/notifier-auto-updater.mjs" ]; then
+  if node "$DST/plugins/notifier-auto-updater.mjs" --config-dir "$DST" --force --verbose; then
+    green "OK  Notifier taeglich geprueft und Vertragsregeln verifiziert"
+  else
+    yellow "--  Notifier-Update verworfen -> letzte funktionierende Version bleibt aktiv"
+  fi
+else
+  yellow "--  Node oder Notifier-Updater fehlt -> taegliche Pruefung startet beim naechsten OpenCode-Start erneut"
+fi
 
 # --- 5) Voraussetzungs-Check (nur Hinweise; das Setup selbst ist fertig) ---
 echo ""

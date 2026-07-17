@@ -66,18 +66,27 @@ test("errors and permission requests stay silent", async () => {
   assert.equal(calls.permissions, 0)
 })
 
-test("setup has one guarded notifier and no intermediate-event sounds", async () => {
+test("setup has one guarded, auto-updated notifier and no intermediate-event sounds", async () => {
   const setupDir = new URL("../", import.meta.url)
-  const [config, windowsInstaller, unixInstaller, dirtyWatchdog] = await Promise.all([
+  const [config, windowsInstaller, unixInstaller, dirtyWatchdog, guard, updater, contract] = await Promise.all([
     readFile(new URL("opencode.jsonc", setupDir), "utf8"),
     readFile(new URL("install.ps1", setupDir), "utf8"),
     readFile(new URL("install.sh", setupDir), "utf8"),
     readFile(new URL("plugins/git-dirty-watchdog.js", setupDir), "utf8"),
+    readFile(new URL("plugins/notifier-completion-guard.js", setupDir), "utf8"),
+    readFile(new URL("plugins/notifier-auto-updater.mjs", setupDir), "utf8"),
+    readFile(new URL("plugins/notifier-candidate-contract.mjs", setupDir), "utf8"),
   ])
 
   assert.doesNotMatch(config, /^\s*"@mohak34\/opencode-notifier@/m)
-  assert.match(windowsInstaller, /npm install[^\r\n]*'@mohak34\/opencode-notifier@0\.2\.8'/)
-  assert.match(unixInstaller, /npm install[^\r\n]*'@mohak34\/opencode-notifier@0\.2\.8'/)
+  assert.match(windowsInstaller, /notifier-auto-updater\.mjs[^]*--force --verbose/)
+  assert.match(unixInstaller, /notifier-auto-updater\.mjs[^]*--force --verbose/)
+  assert.match(windowsInstaller, /npm install --silent --save-exact/)
+  assert.match(unixInstaller, /npm install --silent --save-exact/)
+  assert.match(guard, /notifier-auto-updater\.mjs/)
+  assert.match(updater, /24 \* 60 \* 60 \* 1000/)
+  assert.match(updater, /notifier-candidate-contract\.mjs/)
+  assert.match(contract, /\["question", "complete"\]/)
 
   const disabledEvents = ["permission", "subagent_complete", "error", "interrupted", "user_cancelled", "plan_exit", "session_started", "user_message", "client_connected"]
   for (const source of [windowsInstaller, unixInstaller]) {
