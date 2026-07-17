@@ -4,15 +4,15 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.6.5 - 17.07.2026, 17:28 Uhr
+Stand: v1.7.0 - 17.07.2026, 17:33 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
 - Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
-- Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt neben OpenAI-Modellen.
-- Das Modell erscheint orange, fett und unterstrichen; das Kontingent folgt kompakt und ungefettet in der normalen Theme-Textfarbe, beispielsweise `Woche 62% 23.Juli`.
+- Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt unter OpenAI-Modellen.
+- Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Eine Leerzeile trennt den Block von der Effort-Auswahl.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.

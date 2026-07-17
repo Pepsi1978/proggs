@@ -399,20 +399,32 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
     const current = props.quotaStore.quota()
     if (current === undefined) return "Woche ..."
     if (current === null) return "Woche n/v"
+    return `Woche ${current.remainingPercent}%`
+  }
+
+  const quotaDate = () => {
+    const current = props.quotaStore.quota()
+    if (!current) return undefined
     const reset = new Date(current.resetAt * 1_000)
     const day = new Intl.DateTimeFormat("de-DE", { day: "numeric" }).format(reset)
     const month = new Intl.DateTimeFormat("de-DE", { month: "long" }).format(reset)
-    const date = `${day}.${month}`
-    return `Woche ${current.remainingPercent}% ${date}`
+    return `${day}. ${month}`
   }
 
   return (
-    <text fg={theme().accent}>
-      <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
+    <box paddingBottom={1}>
+      <text fg={theme().accent}>
+        <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
+      </text>
       <Show when={modelMeta().providerID === "openai"}>
-        <span style={{ fg: theme().text }}>{` ${quotaLabel()}`}</span>
+        <text fg={theme().text}>
+          {quotaLabel()}
+          <Show when={quotaDate()}>
+            <span style={{ fg: theme().textMuted }}>{` (${quotaDate()})`}</span>
+          </Show>
+        </text>
       </Show>
-    </text>
+    </box>
   )
 }
 
