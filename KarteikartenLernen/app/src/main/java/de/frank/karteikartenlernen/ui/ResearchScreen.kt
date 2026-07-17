@@ -203,7 +203,7 @@ private fun ResearchWaitingCard() {
             }
             Column(Modifier.padding(start = 14.dp)) {
                 Text("Bitte warten", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text("Antwort wird erzeugt …", color = c.muted, fontSize = 13.5.sp, modifier = Modifier.padding(top = 2.dp))
+                Text("Gründliche Recherche läuft …", color = c.muted, fontSize = 13.5.sp, modifier = Modifier.padding(top = 2.dp))
             }
         }
     }

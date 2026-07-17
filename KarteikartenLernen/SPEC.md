@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.31 - 18.07.2026, 01:28 Uhr
+Version 0.1.32 - 18.07.2026, 01:37 Uhr
 
 ## 1. Übersicht
 
@@ -136,7 +136,7 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 4. **Recherche, Formulierung:** animierter Loader; neue Formulierung kann rückgängig
    gemacht werden.
 5. **Recherche, Generierung:** Während die Antwort erzeugt wird, zeigt eine animierte
-   Eieruhr deutlich „Bitte warten, Antwort wird erzeugt“. Danach folgen die vollständige
+   Eieruhr deutlich „Bitte warten, gründliche Recherche läuft“. Danach folgen die vollständige
    gegliederte Antwort, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
