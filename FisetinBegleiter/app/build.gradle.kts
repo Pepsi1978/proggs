@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.fisetinbegleiter"
         minSdk = 29
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.0.14"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 12:58 Uhr\"")
+        versionCode = 17
+        versionName = "1.0.16"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 16:22 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons)
+    implementation(libs.compose.google.fonts)
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.core.ktx)

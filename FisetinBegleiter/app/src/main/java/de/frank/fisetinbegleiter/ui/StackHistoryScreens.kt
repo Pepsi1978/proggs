@@ -1,118 +1,162 @@
 package de.frank.fisetinbegleiter.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.frank.fisetinbegleiter.data.CureStatus
 import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.StackCategory
 import de.frank.fisetinbegleiter.data.StackItemEntity
-import de.frank.fisetinbegleiter.ui.theme.AllowedGreen
-import de.frank.fisetinbegleiter.ui.theme.AllowedGreenContainer
-import de.frank.fisetinbegleiter.ui.theme.BlockedRed
-import de.frank.fisetinbegleiter.ui.theme.BlockedRedContainer
-import de.frank.fisetinbegleiter.ui.theme.WarningYellow
-import de.frank.fisetinbegleiter.ui.theme.WarningYellowContainer
+import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
-    val hardBlocked = state.blockActive
-    LazyColumn(modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val colors = LocalAppColors.current
+    val blocked = state.blockActive
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(bottom = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         item {
             SectionTitle(
-                "Angepasster Morgen-Stack",
-                if (hardBlocked) "Für heute während des aktiven Sperrfensters." else "Aktuell besteht keine Antioxidantien-Sperre.",
+                "Morgen-Stack",
+                if (blocked) "Für heute während des aktiven Sperrfensters." else "Aktuell besteht keine Antioxidantien-Sperre.",
             )
         }
-        if (hardBlocked) {
+        if (blocked) {
             item {
-                SignalCard(
+                StatusNotice(
                     "Freigabe um ${formatTime(state.blockEnd!!)}",
                     "Bis dahin rote Substanzen weglassen. Gelbe Grenzfälle im Zweifel ebenfalls verschieben.",
-                    WarningYellowContainer,
-                    WarningYellow,
+                    colors.warnBg,
+                    colors.warn,
                 )
             }
         }
-        StackCategory.entries.forEach { category ->
-            val categoryItems = state.stackItems.filter { it.category == category }
-            if (categoryItems.isNotEmpty()) {
-                item {
-                    Text(
-                        when (category) {
-                            StackCategory.HARTE_SPERRE -> if (hardBlocked) "Harte Sperre" else "Jetzt wieder erlaubt"
-                            StackCategory.GRENZFALL -> "Grenzfälle"
-                            StackCategory.UNPROBLEMATISCH -> "Unproblematisch"
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-                items(categoryItems, key = { it.id }) { item -> StackItemCard(item, hardBlocked) }
+
+        val hardItems = state.stackItems.filter { it.category == StackCategory.HARTE_SPERRE }
+        if (hardItems.isNotEmpty()) {
+            item { StackSectionTitle(if (blocked) "Harte Sperre" else "Jetzt wieder erlaubt") }
+            items(hardItems, key = { it.id }) { StackStatusCard(it, blocked) }
+        }
+
+        val cautionItems = state.stackItems.filter { it.category == StackCategory.GRENZFALL }
+        if (cautionItems.isNotEmpty()) {
+            item { StackSectionTitle("Grenzfälle", topPadding = 6.dp) }
+            items(cautionItems, key = { it.id }) { StackStatusCard(it, blocked) }
+        }
+
+        val safeItems = state.stackItems.filter { it.category == StackCategory.UNPROBLEMATISCH }
+        if (safeItems.isNotEmpty()) {
+            item { StackSectionTitle("Unproblematisch", topPadding = 6.dp) }
+            items(safeItems.filter { it.isMedication }, key = { it.id }) { StackStatusCard(it, blocked = false) }
+            item { SafeItemChips(safeItems.filterNot { it.isMedication }) }
+            item {
+                Text(
+                    "Alle unproblematischen Substanzen: wie im Morgen-Stack einnehmen.",
+                    modifier = Modifier.fillMaxWidth(),
+                    color = colors.sub,
+                    fontSize = 12.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
             }
         }
-        item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
 @Composable
-private fun StackItemCard(item: StackItemEntity, hardBlocked: Boolean) {
-    val blocked = item.category == StackCategory.HARTE_SPERRE && hardBlocked
-    val caution = item.category == StackCategory.GRENZFALL && hardBlocked
-    val container = when {
-        blocked -> BlockedRedContainer
-        caution -> WarningYellowContainer
-        else -> AllowedGreenContainer
+private fun StackSectionTitle(text: String, topPadding: androidx.compose.ui.unit.Dp = 4.dp) {
+    val colors = LocalAppColors.current
+    Text(text, modifier = Modifier.padding(top = topPadding), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+}
+
+@Composable
+private fun StackStatusCard(item: StackItemEntity, blocked: Boolean) {
+    val colors = LocalAppColors.current
+    val isBlocked = item.category == StackCategory.HARTE_SPERRE && blocked
+    val caution = item.category == StackCategory.GRENZFALL && blocked
+    val background = when {
+        isBlocked -> colors.badBg
+        caution -> colors.warnBg
+        else -> colors.okBg
     }
-    val content = when {
-        blocked -> BlockedRed
-        caution -> WarningYellow
-        else -> AllowedGreen
+    val foreground = when {
+        isBlocked -> colors.bad
+        caution -> colors.warn
+        else -> colors.ok
     }
-    Card(colors = CardDefaults.cardColors(containerColor = container, contentColor = content)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val status = when {
+        item.isMedication -> "Medikament — immer einnehmen, nie wegen der Kur weglassen."
+        isBlocked -> "Während des Sperrfensters weglassen."
+        caution -> "Im Zweifel hinter das 4-Stunden-Fenster verschieben."
+        item.category == StackCategory.HARTE_SPERRE -> "Sperrfenster vorbei – jetzt nachholbar."
+        else -> "Normal einnehmen."
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(background).padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 item.name,
-                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+                color = foreground,
+                fontSize = 14.5.sp,
                 fontWeight = FontWeight.Bold,
-                textDecoration = if (blocked) TextDecoration.LineThrough else null,
+                textDecoration = if (isBlocked) TextDecoration.LineThrough else TextDecoration.None,
             )
-            Text(item.usualDose)
-            val status = when {
-                item.isMedication -> "Medikament – immer einnehmen, nie wegen der Kur weglassen."
-                blocked -> "Während des Sperrfensters weglassen."
-                caution -> "Im Zweifel hinter das 4-Stunden-Fenster verschieben."
-                item.category == StackCategory.HARTE_SPERRE -> "Sperrfenster vorbei – jetzt nachholbar."
-                else -> "Normal einnehmen."
-            }
-            Text(if (blocked) "Während des Sperrfensters weglassen; Freigabezeit siehe oben." else status, fontWeight = FontWeight.SemiBold)
-            if (item.note.isNotBlank()) Text(item.note, style = MaterialTheme.typography.bodySmall)
+            Text(item.usualDose, color = colors.sub, fontSize = 12.sp)
+        }
+        Text(status, modifier = Modifier.padding(top = 3.dp), color = foreground, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+        if (item.note.isNotBlank()) {
+            Text(item.note, modifier = Modifier.padding(top = 3.dp), color = colors.sub, fontSize = 12.sp, lineHeight = 16.8.sp)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SafeItemChips(items: List<StackItemEntity>) {
+    val colors = LocalAppColors.current
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        items.forEach { item ->
+            Text(
+                item.name,
+                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(colors.chip).border(1.dp, colors.line, RoundedCornerShape(999.dp)).padding(horizontal = 13.dp, vertical = 8.dp),
+                color = colors.text,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -125,72 +169,133 @@ fun HistoryScreen(
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val colors = LocalAppColors.current
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(bottom = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         item { SectionTitle("Protokoll", "Alle Daten bleiben lokal auf diesem Gerät.") }
         item {
-            OutlinedButton(onClick = onExport, enabled = state.history.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                Text("Als Textdatei exportieren")
-            }
+            DesignOutlineButton(
+                "Als Textdatei exportieren",
+                onExport,
+                Modifier.fillMaxWidth(),
+                enabled = state.history.isNotEmpty(),
+            )
         }
         if (state.history.isEmpty()) {
-            item { Text("Noch keine Kur gespeichert.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text("Noch keine Kur gespeichert.", color = colors.sub, fontSize = 13.5.sp) }
         }
         items(state.history, key = { it.cure.id }) { cure ->
             HistoryCard(cure, onUpdateNote, onCancelCure)
         }
-        item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
 @Composable
-private fun HistoryCard(
-    cure: CureWithDays,
-    onUpdateNote: (CureWithDays, String) -> Unit,
-    onCancelCure: () -> Unit,
-) {
+private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String) -> Unit, onCancelCure: () -> Unit) {
+    val colors = LocalAppColors.current
     var note by remember(cure.cure.id, cure.cure.note) { mutableStateOf(cure.cure.note) }
     var showCancelConfirmation by remember(cure.cure.id) { mutableStateOf(false) }
     val doneSteps = cure.days.sumOf { day ->
         listOf(day.drinkDoneAt, day.mealDoneAt, day.spermidinDoneAt, day.blockEndedAt).count { it != null }
     }
     val allSteps = cure.days.size * 4
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
-                    LocalDate.ofEpochDay(cure.cure.startEpochDay).format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(if (cure.cure.status == CureStatus.ABGESCHLOSSEN) "Abgeschlossen" else "Aktiv", color = if (cure.cure.status == CureStatus.ABGESCHLOSSEN) AllowedGreen else WarningYellow)
-            }
-            Text("${cure.cure.plannedDurationDays} Tage · $doneSteps von $allSteps Schritten dokumentiert")
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("Notiz, Verträglichkeit, Beobachtungen") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
+    val completed = cure.cure.status == CureStatus.ABGESCHLOSSEN
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(18.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                LocalDate.ofEpochDay(cure.cure.startEpochDay).format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                color = colors.text,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
             )
-            Button(onClick = { onUpdateNote(cure, note) }, enabled = note != cure.cure.note) { Text("Notiz speichern") }
-            if (cure.cure.status != CureStatus.ABGESCHLOSSEN) {
-                OutlinedButton(onClick = { showCancelConfirmation = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Abbrechen und vollständig zurücksetzen")
-                }
+            Text(
+                if (completed) "Abgeschlossen" else "Aktiv",
+                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (completed) colors.okBg else colors.warnBg).padding(horizontal = 11.dp, vertical = 5.dp),
+                color = if (completed) colors.ok else colors.warn,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.3.sp,
+            )
+        }
+        Text(
+            "${cure.cure.plannedDurationDays} Tage · $doneSteps von $allSteps Schritten dokumentiert",
+            modifier = Modifier.padding(top = 10.dp),
+            color = colors.sub,
+            fontSize = 13.sp,
+        )
+        Text(
+            "NOTIZ, VERTRÄGLICHKEIT, BEOBACHTUNGEN",
+            modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+            color = colors.sub,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.4.sp,
+        )
+        NoteEditor(note, { note = it })
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SmallActionButton("Notiz speichern", { onUpdateNote(cure, note) }, enabled = note != cure.cure.note)
+            if (!completed) {
+                DesignOutlineButton(
+                    "Abbrechen & zurücksetzen",
+                    { showCancelConfirmation = true },
+                    contentColor = colors.bad,
+                    borderColor = colors.badBg,
+                    verticalPadding = 10.dp,
+                )
             }
         }
     }
+
     if (showCancelConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showCancelConfirmation = false },
-            title = { Text("Aktiven Ablauf löschen?") },
-            text = { Text("Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onCancelCure()
-                    showCancelConfirmation = false
-                }) { Text("Vollständig löschen") }
-            },
-            dismissButton = { TextButton(onClick = { showCancelConfirmation = false }) { Text("Behalten") } },
-        )
+        FbPopDialog(onDismiss = { showCancelConfirmation = false }) {
+            Text("Aktiven Ablauf löschen?", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht.",
+                modifier = Modifier.padding(top = 10.dp),
+                color = colors.sub,
+                fontSize = 13.5.sp,
+                lineHeight = 20.925.sp,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DesignOutlineButton("Behalten", { showCancelConfirmation = false }, Modifier.weight(1f), verticalPadding = 13.dp)
+                FlatDesignButton(
+                    "Vollständig löschen",
+                    {
+                        onCancelCure()
+                        showCancelConfirmation = false
+                    },
+                    Modifier.weight(1f),
+                    colors.badBg,
+                    colors.bad,
+                )
+            }
+        }
     }
+}
+
+@Composable
+private fun NoteEditor(value: String, onValueChange: (String) -> Unit) {
+    val colors = LocalAppColors.current
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colors.chip).border(1.dp, colors.line, RoundedCornerShape(14.dp)).padding(12.dp),
+        minLines = 3,
+        textStyle = TextStyle(color = colors.text, fontSize = 13.5.sp, lineHeight = 19.575.sp),
+        cursorBrush = SolidColor(colors.accent),
+        decorationBox = { inner ->
+            Box {
+                if (value.isEmpty()) Text("Beobachtungen festhalten …", color = colors.sub, fontSize = 13.5.sp)
+                inner()
+            }
+        },
+    )
 }
