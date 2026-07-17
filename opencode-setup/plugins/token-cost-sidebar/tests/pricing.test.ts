@@ -71,8 +71,20 @@ describe("models.dev pricing", () => {
   })
 
   test("exposes input and output rates in USD per million tokens", () => {
-    expect(readPricingPerMillion(model)).toEqual({ input: 5, output: 30 })
-    expect(readPricingPerMillion({ cost: { input: 0, output: 0 } })).toEqual({ input: 0, output: 0 })
+    expect(readPricingPerMillion(model)).toEqual({
+      input: 5,
+      output: 30,
+      reasoning: 30,
+      cacheRead: 0.5,
+      cacheWrite: 6.25,
+    })
+    expect(readPricingPerMillion({ cost: { input: 0, output: 0 } })).toEqual({
+      input: 0,
+      output: 0,
+      reasoning: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    })
   })
 
   test("uses the context tier for a large individual request", () => {
@@ -337,7 +349,10 @@ describe("models.dev pricing", () => {
   test("renders the requested token rows without a cache row", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
-    expect(source).toContain("totals().input + totals().cacheRead + totals().cacheWrite")
+    expect(source).toContain("value={formatInt(totals().input)}")
+    expect(source).not.toContain("totals().input + totals().cacheRead + totals().cacheWrite")
+    expect(source).toContain('label="Cache R/W"')
+    expect(source).toContain("`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`")
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
@@ -365,7 +380,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain('return `${day}. ${month}`')
     expect(source).toContain('return `Woche ${current.remainingPercent}%`')
     expect(source).not.toContain('<b>{` · ${quotaLabel()}`}</b>')
-    expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>')
+    expect(source).toContain('<text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context (kumuliert)</span></text>')
     expect(source).toContain("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")
     expect(source.indexOf("<ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />")).toBeLessThan(
       source.indexOf("<EffortSelector api={api} />"),
@@ -530,11 +545,13 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Inputpreis"')
     expect(source).toContain('label="Outputpreis"')
+    expect(source).toContain('label="Cachepreis R/W"')
     expect(source).toMatch(/label="Inputpreis"[\s\S]*?value=\{rateValue\("input"\)\}[\s\S]*?muted/)
     expect(source).toMatch(/label="Outputpreis"[\s\S]*?value=\{rateValue\("output"\)\}[\s\S]*?muted/)
     expect(source).toContain('return `$${new Intl.NumberFormat("en-US"')
     expect(source).toContain("} / 1M`")
     expect(source).toContain('return "<$0.000001 / 1M"')
+    expect(source).toContain('return `${withoutUnit(read)} R / ${withoutUnit(write)} W / 1M`')
     expect(source).not.toContain("MONEY_SOURCE_")
     expect(source).not.toContain("formatUsd(money().usd)")
   })

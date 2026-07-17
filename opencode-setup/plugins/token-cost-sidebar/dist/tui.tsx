@@ -163,6 +163,11 @@ function formatUsdPerMillion(value: number): string {
   }).format(Math.max(0, value))} / 1M`
 }
 
+function formatCacheUsdPerMillion(read: number, write: number): string {
+  const withoutUnit = (value: number) => formatUsdPerMillion(value).replace(" / 1M", "")
+  return `${withoutUnit(read)} R / ${withoutUnit(write)} W / 1M`
+}
+
 function formatEur(value: number): string {
   if (value <= 0) return "0,00 €"
   if (value < 0.01) return "<0,01 €"
@@ -656,6 +661,13 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     return currentRates ? formatUsdPerMillion(currentRates[kind]) : "nicht verfügbar"
   }
 
+  const cacheRateValue = () => {
+    const currentRates = rates()
+    return currentRates
+      ? formatCacheUsdPerMillion(currentRates.cacheRead, currentRates.cacheWrite)
+      : "nicht verfügbar"
+  }
+
   const money = createMemo(() => {
     const t = totals()
     const cost = calculateSessionCostBreakdown(pricedModel(), t.records.flatMap((record) => {
@@ -689,7 +701,7 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
+        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context (kumuliert)</span></text>
 
         <Row
           api={props.api}
@@ -697,6 +709,9 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
           value={rateValue("input")}
           muted
         />
+        <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
+          <Row api={props.api} label="Cachepreis R/W" value={cacheRateValue()} muted />
+        </Show>
         <Row
           api={props.api}
           label="Outputpreis"
@@ -707,8 +722,16 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
         <Row
           api={props.api}
           label="Input"
-          value={formatInt(totals().input + totals().cacheRead + totals().cacheWrite)}
+          value={formatInt(totals().input)}
         />
+        <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
+          <Row
+            api={props.api}
+            label="Cache R/W"
+            value={`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`}
+            muted
+          />
+        </Show>
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row api={props.api} label="Gesamtkosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />

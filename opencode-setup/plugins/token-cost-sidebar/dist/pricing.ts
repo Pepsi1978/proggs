@@ -66,6 +66,9 @@ export function readPricingPerMillion(model: any, contextTokens = 0) {
   return {
     input: price.input * 1_000_000,
     output: price.output * 1_000_000,
+    reasoning: price.reasoning * 1_000_000,
+    cacheRead: price.cacheRead * 1_000_000,
+    cacheWrite: price.cacheWrite * 1_000_000,
   }
 }
 
