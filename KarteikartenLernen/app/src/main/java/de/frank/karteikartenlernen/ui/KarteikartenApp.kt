@@ -25,6 +25,7 @@ import de.frank.karteikartenlernen.model.AppTab
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.ui.theme.KarteikartenTheme
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
+import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 
 @Composable
 fun KarteikartenApp(
@@ -40,6 +41,7 @@ fun KarteikartenApp(
     onDarkChanged: (Boolean) -> Unit,
 ) {
     var learningNarrationEnabled by remember { mutableStateOf(false) }
+    var activeReadAloudTarget by remember { mutableStateOf<String?>(null) }
     val profile = if (state.settings.dark) state.settings.darkProfile else state.settings.lightProfile
     KarteikartenTheme(state.settings.dark, profile) {
         LaunchedEffect(state.settings.dark) { onDarkChanged(state.settings.dark) }
@@ -102,6 +104,7 @@ fun KarteikartenApp(
                 MainBottomBar(state.tab, viewModel::selectTab)
             }
             if (state.selectedSession != null) {
+                val profileReadAloudTarget = "profile:${state.selectedSession.id}"
                 SessionDetail(
                     state = state,
                     onClose = viewModel::closeSession,
@@ -110,7 +113,16 @@ fun KarteikartenApp(
                     onDelete = viewModel::deleteCard,
                     onDeleteSession = viewModel::deleteSelectedSession,
                     onReset = viewModel::resetLearningStatus,
-                    onSpeak = onSpeak,
+                    readAloudEnabled = activeReadAloudTarget == profileReadAloudTarget,
+                    onToggleReadAloud = {
+                        if (activeReadAloudTarget == profileReadAloudTarget) {
+                            activeReadAloudTarget = null
+                            onStopSpeaking()
+                        } else if (state.detailAnswer.isNotBlank()) {
+                            activeReadAloudTarget = profileReadAloudTarget
+                            onSpeak(researchAnswerForSpeech(state.detailAnswer))
+                        }
+                    },
                 )
             }
             if (state.learning != null) {

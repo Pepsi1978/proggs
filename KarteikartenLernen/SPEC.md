@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.35 - 18.07.2026, 01:43 Uhr
+Version 0.1.36 - 18.07.2026, 01:46 Uhr
 
 ## 1. Übersicht
 
@@ -155,6 +155,9 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
     Das Drei-Punkte-Menü bietet „Lernstand zurücksetzen“ und „Lernsession löschen“.
     Nach einer Sicherheitsabfrage löscht die zweite Aktion Recherche, Karten,
     Lernfortschritt und Session gemeinsam in einer Datenbanktransaktion.
+    Der Vorlesen-Schalter bleibt nach dem Einschalten orange, bis er erneut manuell
+    gedrückt wird. Ausgeschaltet ist er weiß und durchgestrichen; ein erneuter Tipp
+    stoppt laufendes TTS sofort.
 11. **Lernrunde, Frage:** Fortschritt, Kartenindikatoren, Vorlesen, 3D-Karte und Flip.
 12. **Lernrunde, Antwort:** Antwort plus Erklärung, Nicht gewusst und Gewusst.
     Der Erklärungskasten bleibt als visuelle Gliederung erhalten und besitzt rundum

@@ -35,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -69,7 +68,6 @@ import de.frank.karteikartenlernen.model.CardStatus
 import de.frank.karteikartenlernen.model.Flashcard
 import de.frank.karteikartenlernen.model.SAMPLE_ANSWER
 import de.frank.karteikartenlernen.model.learningSpeechText
-import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.Newsreader
 
@@ -82,7 +80,8 @@ fun SessionDetail(
     onDelete: (Long) -> Unit,
     onDeleteSession: () -> Unit,
     onReset: () -> Unit,
-    onSpeak: (String) -> Unit,
+    readAloudEnabled: Boolean,
+    onToggleReadAloud: () -> Unit,
 ) {
     val c = LocalAppPalette.current
     val session = state.selectedSession ?: return
@@ -114,7 +113,7 @@ fun SessionDetail(
             }
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            if (state.detailResearchTab) ResearchDetail(state.detailQuestion, state.detailAnswer, onSpeak) else state.cards.forEach { CardListItem(it, onDelete) }
+            if (state.detailResearchTab) ResearchDetail(state.detailQuestion, state.detailAnswer, readAloudEnabled, onToggleReadAloud) else state.cards.forEach { CardListItem(it, onDelete) }
             Spacer(Modifier.height(18.dp))
         }
     }
@@ -188,13 +187,30 @@ private fun CardListItem(card: Flashcard, onDelete: (Long) -> Unit) {
 }
 
 @Composable
-private fun ResearchDetail(question: String, answer: String, onSpeak: (String) -> Unit) {
+private fun ResearchDetail(
+    question: String,
+    answer: String,
+    readAloudEnabled: Boolean,
+    onToggleReadAloud: () -> Unit,
+) {
     val c = LocalAppPalette.current
+    val speakerOrange = Color(0xFFFFA24C)
     GlassSurface(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Vollständige Recherche", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.muted, modifier = Modifier.size(18.dp).clickable { onSpeak(researchAnswerForSpeech(answer)) })
+                IconButtonBox(
+                    onClick = onToggleReadAloud,
+                    size = 36,
+                    background = if (readAloudEnabled) speakerOrange.copy(alpha = 0.18f) else null,
+                ) {
+                    Icon(
+                        if (readAloudEnabled) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
+                        if (readAloudEnabled) "Vorlesen ausschalten" else "Vorlesen einschalten",
+                        tint = if (readAloudEnabled) speakerOrange else Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
             SelectionContainer {
                 Column {
