@@ -103,7 +103,7 @@ fun CrossSheet(state: AppUiState, onDecision: (Int, Boolean) -> Unit, onClose: (
 }
 
 @Composable
-fun OAuthDialog(state: AppUiState, onClose: () -> Unit, onLogin: () -> Unit) {
+fun OAuthDialog(state: AppUiState, onClose: () -> Unit, onLogin: () -> Unit, onOpenAuthPage: () -> Unit) {
     if (!state.showOAuth) return
     val c = LocalAppPalette.current
     Box(Modifier.fillMaxSize().safeDrawingPadding().background(Color.Black.copy(alpha = 0.55f)).clickable(onClick = onClose).padding(22.dp), contentAlignment = Alignment.Center) {
@@ -120,17 +120,40 @@ fun OAuthDialog(state: AppUiState, onClose: () -> Unit, onLogin: () -> Unit) {
                     Icon(Icons.Outlined.Key, null, tint = Color.White, modifier = Modifier.size(30.dp))
                 }
                 Text("Bei OpenAI anmelden", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
-                Text("Karteikarten Lernen möchte auf deine OpenAI-Modelle zugreifen. Melde dich sicher im Browser an – ganz ohne API-Schlüssel.", color = c.muted, fontSize = 13.5.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
+                Text("Karteikarten Lernen verbindet sich per OpenAI-Gerätecode mit deinen GPT-/Codex-Modellen – ganz ohne API-Schlüssel.", color = c.muted, fontSize = 13.5.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
                 state.authError?.let { Text(it, color = c.red, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 12.dp)) }
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(c.text).clickable(enabled = !state.authBusy, onClick = onLogin).padding(13.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (state.authBusy) {
-                        LoadingRing(c.background0, 16.dp)
-                        Text("Browser-Anmeldung läuft …", color = c.background0, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
-                    } else Text("Mit ChatGPT fortfahren", color = c.background0, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
+                if (state.authUserCode != null) {
+                    Text(
+                        state.authUserCode,
+                        color = c.accent,
+                        fontSize = 25.sp,
+                        letterSpacing = 2.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(c.field)
+                            .border(1.dp, c.border, RoundedCornerShape(14.dp))
+                            .padding(14.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    Text("Diesen Code auf der geöffneten OpenAI-Seite eingeben.", color = c.muted, fontSize = 12.5.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                    Text("OpenAI-Seite erneut öffnen", color = c.accent, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable(onClick = onOpenAuthPage).padding(vertical = 12.dp))
+                    Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        LoadingRing(c.accent, 16.dp)
+                        Text("Warte auf Bestätigung …", color = c.muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                    }
+                } else {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(c.text).clickable(enabled = !state.authBusy, onClick = onLogin).padding(13.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (state.authBusy) {
+                            LoadingRing(c.background0, 16.dp)
+                            Text("Gerätecode wird angefordert …", color = c.background0, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                        } else Text("Mit ChatGPT fortfahren", color = c.background0, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 Text("Abbrechen", color = c.faint, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, c.border, RoundedCornerShape(12.dp)).clickable(onClick = onClose).padding(12.dp))
             }

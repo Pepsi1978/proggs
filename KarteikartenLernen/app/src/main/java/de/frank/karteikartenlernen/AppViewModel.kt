@@ -1,7 +1,7 @@
 package de.frank.karteikartenlernen
 
-import android.app.Activity
 import android.app.Application
+import androidx.activity.ComponentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.karteikartenlernen.audio.ProceduralSoundPlayer
@@ -221,23 +221,52 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             auth.cancelLogin()
             loginJob?.cancel()
         }
-        _uiState.update { it.copy(showOAuth = show, authBusy = if (show) it.authBusy else false, authError = null) }
+        _uiState.update {
+            it.copy(
+                showOAuth = show,
+                authBusy = if (show) it.authBusy else false,
+                authError = null,
+                authUserCode = if (show) it.authUserCode else null,
+                authVerificationUri = if (show) it.authVerificationUri else null,
+            )
+        }
     }
 
     fun chooseModel(model: String) = updateSettings { it.copy(model = model) }
     fun chooseReasoning(reasoning: String) = updateSettings { it.copy(reasoning = reasoning) }
 
-    fun login(activity: Activity) {
-        _uiState.update { it.copy(authBusy = true, authError = null) }
+    fun login(activity: ComponentActivity) {
+        _uiState.update { it.copy(authBusy = true, authError = null, authUserCode = null, authVerificationUri = null) }
         loginJob?.cancel()
         loginJob = viewModelScope.launch {
-            runCatching { auth.login(activity) }
+            runCatching {
+                auth.login(activity) { info ->
+                    _uiState.update {
+                        it.copy(authUserCode = info.userCode, authVerificationUri = info.verificationUri)
+                    }
+                }
+            }
                 .onSuccess { result ->
-                    _uiState.update { it.copy(authBusy = false, showOAuth = false, connectedEmail = result.email ?: "ChatGPT-Konto") }
+                    _uiState.update {
+                        it.copy(
+                            authBusy = false,
+                            showOAuth = false,
+                            connectedEmail = result.email ?: "ChatGPT-Konto",
+                            authUserCode = null,
+                            authVerificationUri = null,
+                        )
+                    }
                 }
                 .onFailure { error ->
                     if (error is CancellationException) return@onFailure
-                    _uiState.update { it.copy(authBusy = false, authError = error.message ?: "Anmeldung fehlgeschlagen") }
+                    _uiState.update {
+                        it.copy(
+                            authBusy = false,
+                            authError = error.message ?: "Anmeldung fehlgeschlagen",
+                            authUserCode = null,
+                            authVerificationUri = null,
+                        )
+                    }
                 }
         }
     }

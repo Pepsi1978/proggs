@@ -89,6 +89,8 @@ data class AppUiState(
     val connectedEmail: String? = null,
     val authBusy: Boolean = false,
     val authError: String? = null,
+    val authUserCode: String? = null,
+    val authVerificationUri: String? = null,
     val message: String? = null,
     val selectedSession: StudySession? = null,
     val detailResearchTab: Boolean = false,

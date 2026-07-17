@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.2 - 17.07.2026, 21:58 Uhr
+Version 0.1.5 - 17.07.2026, 22:35 Uhr
 
 ## 1. Übersicht
 
@@ -199,9 +199,16 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 ## 8. Festgelegte Integrationen
 
 - Persönliche Einzelnutzer-App, nicht für Veröffentlichung oder API-Resale.
-- OpenAI-Anmeldung über Browser-OAuth mit PKCE und der öffentlichen Codex-Client-ID.
-  Der lokale Callback läuft auf Port `1455`; Tokens werden nicht aus `~/.codex`
-  übernommen oder dorthin zurückgeschrieben.
+- OpenAI-Anmeldung über den Codex-Gerätecode-Flow mit der öffentlichen Codex-Client-ID.
+  Die App fordert bei `/api/accounts/deviceauth/usercode` einen gruppierten Code an,
+  zeigt ihn exakt und sichtbar an und öffnet `https://auth.openai.com/codex/device`.
+- Die App pollt `/api/accounts/deviceauth/token` im vom Server vorgegebenen Intervall.
+  `403/404` bleiben ausstehend, `429/5xx` werden fehlertolerant weitergepollt und
+  `slow_down` erhöht das Intervall dauerhaft. Der Code läuft nach 15 Minuten ab.
+- Nach der Bestätigung wartet der Token-Austausch, bis die App wieder im Vordergrund
+  und ein validiertes Netz aktiv ist. Reine DNS-Fehler werden begrenzt mit Backoff
+  wiederholt; OAuth- und sonstige HTTP-Fehler werden nicht blind erneut gesendet.
+- Tokens werden nicht aus `~/.codex` übernommen oder dorthin zurückgeschrieben.
 - App-eigener, verschlüsselter Token-Store; Refresh-Antworten werden in bestehende
   Credentials gemergt. Rotierte Refresh-Tokens ersetzen nur das entsprechende Feld.
 - Inferenz läuft über `https://chatgpt.com/backend-api/codex/responses` mit Bearer-Token,

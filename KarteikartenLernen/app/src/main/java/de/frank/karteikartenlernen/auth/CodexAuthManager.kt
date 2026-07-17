@@ -1,38 +1,48 @@
 package de.frank.karteikartenlernen.auth
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.ServerSocket
+import java.net.UnknownHostException
 import java.net.URL
-import java.net.URLDecoder
 import java.net.URLEncoder
-import java.security.MessageDigest
-import java.security.SecureRandom
 import java.util.Base64
-import java.util.concurrent.TimeUnit
 
 data class AuthResult(val email: String?)
+data class DeviceAuthInfo(val userCode: String, val verificationUri: String)
 data class GeneratedCard(val question: String, val answer: String, val explanation: String)
 data class GeneratedResearch(val title: String, val answer: String, val cards: List<GeneratedCard>)
 
 enum class AuthErrorKind { REAUTH, QUOTA, NETWORK }
 class CodexAuthException(val kind: AuthErrorKind, message: String) : Exception(message)
+internal enum class DevicePollAction { PROCESS, PENDING, FAIL }
+
+internal fun devicePollAction(statusCode: Int): DevicePollAction = when {
+    statusCode == 200 -> DevicePollAction.PROCESS
+    statusCode == 403 || statusCode == 404 || statusCode == 429 || statusCode >= 500 -> DevicePollAction.PENDING
+    else -> DevicePollAction.FAIL
+}
+
+internal fun devicePollInterval(value: Any?): Int =
+    (value?.toString()?.toIntOrNull() ?: CodexAuthManager.DEFAULT_DEVICE_POLL_SECONDS)
+        .coerceAtLeast(CodexAuthManager.MIN_DEVICE_POLL_SECONDS)
 
 class CodexAuthManager(context: Context) {
     private val appContext = context.applicationContext
+    private val connectivityManager = appContext.getSystemService(ConnectivityManager::class.java)
     private val masterKey = MasterKey.Builder(appContext)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
@@ -43,65 +53,64 @@ class CodexAuthManager(context: Context) {
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
-    @Volatile private var activeServer: ServerSocket? = null
-
     val email: String? get() = store.getString(KEY_EMAIL, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
-    suspend fun login(activity: Activity): AuthResult = withContext(Dispatchers.IO) {
-        val verifier = randomUrlSafe(64)
-        val challenge = urlSafe(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()))
-        val state = randomUrlSafe(32)
-        val callbackServer = ServerSocket().apply { bind(InetSocketAddress(InetAddress.getLoopbackAddress(), CALLBACK_PORT)) }
-        activeServer = callbackServer
-        try {
-            callbackServer.use { server ->
-            activeServer = server
-            server.soTimeout = TimeUnit.MINUTES.toMillis(5).toInt()
-            val authUri = Uri.parse(AUTH_URL).buildUpon()
-                .appendQueryParameter("response_type", "code")
-                .appendQueryParameter("client_id", CLIENT_ID)
-                .appendQueryParameter("redirect_uri", REDIRECT_URI)
-                .appendQueryParameter("scope", "openid profile email offline_access")
-                .appendQueryParameter("code_challenge", challenge)
-                .appendQueryParameter("code_challenge_method", "S256")
-                .appendQueryParameter("state", state)
-                .appendQueryParameter("codex_cli_simplified_flow", "true")
-                .build()
-            withContext(Dispatchers.Main) {
-                activity.startActivity(Intent(Intent.ACTION_VIEW, authUri))
-            }
-            val socket = server.accept()
-            val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine().orEmpty()
-            val path = requestLine.split(' ').getOrNull(1).orEmpty()
-            if (!path.startsWith("/auth/callback?")) throw CodexAuthException(AuthErrorKind.REAUTH, "Ungültiger OAuth-Callback-Pfad.")
-            val query = Uri.parse("http://localhost$path")
-            val code = query.getQueryParameter("code")
-            val returnedState = query.getQueryParameter("state")
-            val error = query.getQueryParameter("error_description") ?: query.getQueryParameter("error")
-            val success = code != null && returnedState == state
-            val body = if (success) {
-                "<html><body style='font-family:sans-serif;background:#0c0e14;color:#f4f5fb;padding:40px'><h2>Anmeldung erfolgreich</h2><p>Du kannst zu Karteikarten Lernen zurückkehren.</p></body></html>"
-            } else {
-                "<html><body style='font-family:sans-serif;padding:40px'><h2>Anmeldung fehlgeschlagen</h2><p>${htmlEscape(error ?: "Ungültige OAuth-Antwort")}</p></body></html>"
-            }
-            val response = "HTTP/1.1 ${if (success) "200 OK" else "400 Bad Request"}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n$body"
-            socket.getOutputStream().use { it.write(response.toByteArray()) }
-            socket.close()
-            if (error != null) throw CodexAuthException(AuthErrorKind.REAUTH, error)
-            if (returnedState != state) throw CodexAuthException(AuthErrorKind.REAUTH, "OAuth-State stimmt nicht überein.")
-            if (code == null) throw CodexAuthException(AuthErrorKind.REAUTH, "OpenAI hat keinen Anmeldecode geliefert.")
-                exchangeCode(code, verifier)
-            }
-        } finally {
-            activeServer = null
+    suspend fun login(activity: ComponentActivity, onDeviceCode: (DeviceAuthInfo) -> Unit): AuthResult = withContext(Dispatchers.IO) {
+        val startConnection = postJsonWithDnsRetry(
+            DEVICE_USER_CODE_URL,
+            JSONObject().put("client_id", CLIENT_ID).toString(),
+        )
+        val startBody = startConnection.readBody()
+        classifyHttpError(startConnection.responseCode, startBody)
+        val start = JSONObject(startBody)
+        val userCode = start.optString("user_code").trim()
+        val deviceAuthId = start.optString("device_auth_id").trim()
+        if (userCode.isEmpty() || deviceAuthId.isEmpty()) {
+            throw CodexAuthException(AuthErrorKind.REAUTH, "OpenAI hat keinen vollständigen Gerätecode geliefert.")
         }
+        var intervalSeconds = devicePollInterval(start.opt("interval"))
+        val info = DeviceAuthInfo(userCode, DEVICE_VERIFICATION_URL)
+        withContext(Dispatchers.Main) {
+            onDeviceCode(info)
+            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.verificationUri)))
+        }
+        val expiresAt = System.currentTimeMillis() + DEVICE_CODE_LIFETIME_MS
+        while (System.currentTimeMillis() < expiresAt) {
+            delay(intervalSeconds * 1_000L)
+            val pollConnection = try {
+                postJsonWithDnsRetry(
+                    DEVICE_TOKEN_URL,
+                    JSONObject().put("device_auth_id", deviceAuthId).put("user_code", userCode).toString(),
+                )
+            } catch (_: CodexAuthException) {
+                intervalSeconds = (intervalSeconds + NETWORK_POLL_BACKOFF_SECONDS).coerceAtMost(MAX_DEVICE_POLL_SECONDS)
+                continue
+            }
+            val pollBody = pollConnection.readBody()
+            when (devicePollAction(pollConnection.responseCode)) {
+                DevicePollAction.PENDING -> {
+                    if (pollConnection.responseCode == 429 || pollBody.contains("slow_down", true)) {
+                        intervalSeconds = (intervalSeconds + SLOW_DOWN_SECONDS).coerceAtMost(MAX_DEVICE_POLL_SECONDS)
+                    }
+                }
+                DevicePollAction.FAIL -> classifyHttpError(pollConnection.responseCode, pollBody)
+                DevicePollAction.PROCESS -> {
+                    val authorization = JSONObject(pollBody)
+                    val code = authorization.optString("authorization_code").trim()
+                    val verifier = authorization.optString("code_verifier").trim()
+                    if (code.isEmpty() || verifier.isEmpty()) {
+                        throw CodexAuthException(AuthErrorKind.REAUTH, "OpenAI hat den Gerätecode bestätigt, aber keinen vollständigen Anmeldecode geliefert.")
+                    }
+                    awaitForegroundAndNetwork(activity)
+                    return@withContext exchangeCode(code, verifier, DEVICE_REDIRECT_URI)
+                }
+            }
+        }
+        throw CodexAuthException(AuthErrorKind.REAUTH, "Der OpenAI-Gerätecode ist abgelaufen. Bitte die Anmeldung neu starten.")
     }
 
-    fun cancelLogin() {
-        activeServer?.runCatching { close() }
-        activeServer = null
-    }
+    fun cancelLogin() = Unit
 
     suspend fun generateResearch(model: String, reasoning: String, question: String, cardLimit: Int): GeneratedResearch =
         withContext(Dispatchers.IO) {
@@ -150,15 +159,15 @@ class CodexAuthManager(context: Context) {
         store.edit().clear().apply()
     }
 
-    private fun exchangeCode(code: String, verifier: String): AuthResult {
+    private suspend fun exchangeCode(code: String, verifier: String, redirectUri: String): AuthResult {
         val form = formBody(
             "grant_type" to "authorization_code",
             "client_id" to CLIENT_ID,
             "code" to code,
-            "redirect_uri" to REDIRECT_URI,
+            "redirect_uri" to redirectUri,
             "code_verifier" to verifier,
         )
-        val connection = postForm(TOKEN_URL, form)
+        val connection = postFormWithDnsRetry(TOKEN_URL, form)
         val response = connection.readBody()
         classifyHttpError(connection.responseCode, response)
         val json = JSONObject(response)
@@ -179,13 +188,13 @@ class CodexAuthManager(context: Context) {
         return AuthResult(foundEmail)
     }
 
-    private fun validAccessToken(): String {
+    private suspend fun validAccessToken(): String {
         val token = store.getString(KEY_ACCESS_TOKEN, null)
             ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Bitte zuerst bei OpenAI anmelden.")
         if (System.currentTimeMillis() < store.getLong(KEY_EXPIRES_AT, 0) - REFRESH_SKEW_MS) return token
         val refreshToken = store.getString(KEY_REFRESH_TOKEN, null)
             ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Die Anmeldung ist abgelaufen. Bitte erneut anmelden.")
-        val connection = postForm(
+        val connection = postFormWithDnsRetry(
             TOKEN_URL,
             formBody(
                 "grant_type" to "refresh_token",
@@ -213,6 +222,71 @@ class CodexAuthManager(context: Context) {
         doOutput = true
         setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
         outputStream.use { it.write(form.toByteArray()) }
+    }
+
+    private fun postJson(url: String, json: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 20_000
+        readTimeout = 20_000
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("Accept", "application/json")
+        outputStream.use { it.write(json.toByteArray()) }
+    }
+
+    private suspend fun postFormWithDnsRetry(url: String, form: String): HttpURLConnection {
+        return withDnsRetry { postForm(url, form) }
+    }
+
+    private suspend fun postJsonWithDnsRetry(url: String, json: String): HttpURLConnection {
+        return withDnsRetry { postJson(url, json) }
+    }
+
+    private suspend fun withDnsRetry(block: () -> HttpURLConnection): HttpURLConnection {
+        var lastError: UnknownHostException? = null
+        repeat(DNS_RETRY_DELAYS_MS.size + 1) { attempt ->
+            try {
+                return block()
+            } catch (error: UnknownHostException) {
+                lastError = error
+                if (attempt < DNS_RETRY_DELAYS_MS.size) {
+                    awaitValidatedNetwork()
+                    delay(DNS_RETRY_DELAYS_MS[attempt])
+                }
+            }
+        }
+        throw CodexAuthException(
+            AuthErrorKind.NETWORK,
+            "OpenAI ist über die aktuelle Netzwerkverbindung noch nicht erreichbar. Bitte prüfe WLAN oder Mobilfunk und versuche die Anmeldung erneut. (${lastError?.message})",
+        )
+    }
+
+    private suspend fun awaitForegroundAndNetwork(activity: ComponentActivity) {
+        val ready = withTimeoutOrNull(FOREGROUND_NETWORK_TIMEOUT_MS) {
+            while (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !hasValidatedNetwork()) {
+                delay(NETWORK_POLL_MS)
+            }
+            true
+        } ?: false
+        if (!ready) {
+            throw CodexAuthException(
+                AuthErrorKind.NETWORK,
+                "Die Anmeldung wurde autorisiert, aber die App hat noch keine aktive Internetverbindung. Kehre zur App zurück und versuche es erneut.",
+            )
+        }
+    }
+
+    private suspend fun awaitValidatedNetwork() {
+        withTimeoutOrNull(DNS_NETWORK_WAIT_MS) {
+            while (!hasValidatedNetwork()) delay(NETWORK_POLL_MS)
+        }
+    }
+
+    private fun hasValidatedNetwork(): Boolean {
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun HttpURLConnection.readBody(): String {
@@ -281,21 +355,29 @@ class CodexAuthManager(context: Context) {
         JSONObject(String(Base64.getUrlDecoder().decode(part.padEnd((part.length + 3) / 4 * 4, '='))))
     }.getOrNull()
 
-    private fun randomUrlSafe(bytes: Int): String = ByteArray(bytes).also(SecureRandom()::nextBytes).let(::urlSafe)
-    private fun urlSafe(bytes: ByteArray): String = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     private fun formBody(vararg values: Pair<String, String>): String = values.joinToString("&") {
         "${URLEncoder.encode(it.first, "UTF-8")}=${URLEncoder.encode(it.second, "UTF-8")}"
     }
-    private fun htmlEscape(value: String): String = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
     companion object {
         private const val CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
-        private const val AUTH_URL = "https://auth.openai.com/oauth/authorize"
         private const val TOKEN_URL = "https://auth.openai.com/oauth/token"
+        private const val DEVICE_USER_CODE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode"
+        private const val DEVICE_TOKEN_URL = "https://auth.openai.com/api/accounts/deviceauth/token"
+        private const val DEVICE_VERIFICATION_URL = "https://auth.openai.com/codex/device"
+        private const val DEVICE_REDIRECT_URI = "https://auth.openai.com/deviceauth/callback"
         private const val RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
-        private const val CALLBACK_PORT = 1455
-        private const val REDIRECT_URI = "http://localhost:1455/auth/callback"
         private const val REFRESH_SKEW_MS = 120_000L
+        private const val FOREGROUND_NETWORK_TIMEOUT_MS = 5 * 60_000L
+        private const val DEVICE_CODE_LIFETIME_MS = 15 * 60_000L
+        private const val DNS_NETWORK_WAIT_MS = 10_000L
+        private const val NETWORK_POLL_MS = 200L
+        internal const val DEFAULT_DEVICE_POLL_SECONDS = 5
+        internal const val MIN_DEVICE_POLL_SECONDS = 3
+        private const val MAX_DEVICE_POLL_SECONDS = 30
+        private const val NETWORK_POLL_BACKOFF_SECONDS = 2
+        private const val SLOW_DOWN_SECONDS = 5
+        internal val DNS_RETRY_DELAYS_MS = longArrayOf(500L, 1_500L, 3_000L)
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_EXPIRES_AT = "expires_at"

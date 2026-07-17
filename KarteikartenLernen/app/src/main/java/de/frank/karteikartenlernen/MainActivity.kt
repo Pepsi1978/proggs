@@ -2,6 +2,7 @@ package de.frank.karteikartenlernen
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -57,6 +58,11 @@ class MainActivity : ComponentActivity(), RecognitionListener {
                     textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "karteikarten-tts")
                 },
                 onLogin = { viewModel.login(this) },
+                onOpenAuthPage = {
+                    state.authVerificationUri?.let { uri ->
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+                    }
+                },
                 onDarkChanged = { dark ->
                     WindowCompat.getInsetsController(window, window.decorView).apply {
                         isAppearanceLightStatusBars = !dark

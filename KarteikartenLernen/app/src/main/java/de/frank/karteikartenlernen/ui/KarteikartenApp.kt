@@ -26,6 +26,7 @@ fun KarteikartenApp(
     onMicClick: () -> Unit,
     onSpeak: (String) -> Unit,
     onLogin: () -> Unit,
+    onOpenAuthPage: () -> Unit,
     onDarkChanged: (Boolean) -> Unit,
 ) {
     val profile = if (state.settings.dark) state.settings.darkProfile else state.settings.lightProfile
@@ -99,7 +100,7 @@ fun KarteikartenApp(
             }
             CrossSheet(state, viewModel::decideCross, viewModel::closeCross)
             ModelSheet(state, { viewModel.showModelSheet(false) }, viewModel::chooseModel, viewModel::chooseReasoning)
-            OAuthDialog(state, { viewModel.showOAuth(false) }, onLogin)
+            OAuthDialog(state, { viewModel.showOAuth(false) }, onLogin, onOpenAuthPage)
         }
     }
 }
