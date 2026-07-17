@@ -28,6 +28,13 @@ public sealed class OpenCodeLauncherService
     private const string Gpt56TerraFastSlug = "gpt-5.6-terra-fast";
     private const string Gpt56LunaSlug = "gpt-5.6-luna";
     private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
+    private const string ProgrammerProcessPriorityScript = """
+try {
+    [Diagnostics.Process]::GetCurrentProcess().PriorityClass = [Diagnostics.ProcessPriorityClass]::AboveNormal
+} catch {
+    Write-Warning ('Prozesspriorität konnte nicht auf AboveNormal gesetzt werden: ' + $_.Exception.Message)
+}
+""";
 
     private static readonly TerminalTabColor[] TerminalTabColors =
     [
@@ -517,6 +524,7 @@ try {
         var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel);
         var script = $$"""
 $ErrorActionPreference = 'Continue'
+{{ProgrammerProcessPriorityScript}}
 [Console]::Write("`e[?1004l")
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
@@ -637,6 +645,7 @@ try {
         // ones are announced (watchdog) so errors stay observable instead of hidden.
         var script = $$"""
 $ErrorActionPreference = 'Continue'
+{{ProgrammerProcessPriorityScript}}
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 {{minimalEnv}}

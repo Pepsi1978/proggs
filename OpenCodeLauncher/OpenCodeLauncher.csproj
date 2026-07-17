@@ -11,9 +11,9 @@
     <AssemblyName>OpenCodeLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.17.29</Version>
-    <FileVersion>1.17.29.0</FileVersion>
-    <AssemblyVersion>1.17.29.0</AssemblyVersion>
+    <Version>1.17.30</Version>
+    <FileVersion>1.17.30.0</FileVersion>
+    <AssemblyVersion>1.17.30.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
     <Product>OpenCode Launcher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
