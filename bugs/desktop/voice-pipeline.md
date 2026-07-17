@@ -253,8 +253,9 @@ Pegel auf etwa 10 Hz zusammenfassen und in WPF höchstens einen Dispatcher-Auftr
 als maßgebliche Persistenz-Garantie und beendet einen danach noch hängenden Worker, statt erneut fünf
 Sekunden auf nativen Cleanup zu warten. `FinalizeAndExit` atomar gegen doppelte Aufrufe absichern.
 
-**Verifikation:** TVO 1.4.88 / CVO 2.1.74; Capture-Diagnose loggt weiterhin Turn-, PCM-, Buffer-
-und Dateigröße sowie `done`, wodurch `WAV-Dauer << Turn-Dauer` künftig direkt erkennbar bleibt.
+**Verifikation:** TVO 1.4.88 / CVO 2.1.74 bauten und wurden installiert. Separate Worker-Smokes
+lieferten jeweils `READY`, genau ein `DONE`, Exitcode 0, 51 Buffer und 2.518 ms WAV bei 2.500 ms
+Wartezeit. Die Capture-Diagnose loggt Turn-, PCM-, Buffer- und Dateigröße sowie `done` weiter.
 **Quelle:** eigener TVO-Laufzeitvorfall und `diag.log` vom 2026-07-17.
 
 ---

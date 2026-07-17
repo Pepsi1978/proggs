@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +39,7 @@ private enum class MainScreen(val route: String, val label: String, val icon: Im
     TIMELINE("timeline", "Ablauf", Icons.Outlined.Checklist),
     STACK("stack", "Stack", Icons.Outlined.Inventory2),
     HISTORY("history", "Verlauf", Icons.Outlined.History),
-    MORE("more", "Plan & mehr", Icons.Outlined.CalendarMonth),
+    MORE("more", "Sys", Icons.Outlined.Settings),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
