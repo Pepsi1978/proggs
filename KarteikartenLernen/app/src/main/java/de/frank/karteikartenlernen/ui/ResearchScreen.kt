@@ -28,7 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.HourglassTop
@@ -49,7 +50,6 @@ import androidx.compose.ui.unit.sp
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.GenerationPhase
 import de.frank.karteikartenlernen.model.MicState
-import de.frank.karteikartenlernen.text.researchAnswerForSpeech
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.Newsreader
 import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
@@ -62,7 +62,8 @@ fun ResearchScreen(
     onImprove: () -> Unit,
     onUndo: () -> Unit,
     onSend: () -> Unit,
-    onSpeak: (String) -> Unit,
+    readAloudEnabled: Boolean,
+    onToggleReadAloud: () -> Unit,
     onLearn: () -> Unit,
     onReset: () -> Unit,
 ) {
@@ -156,7 +157,7 @@ fun ResearchScreen(
             visible = !state.answer.isNullOrBlank(),
             enter = fadeIn() + slideInVertically { it / 4 },
         ) {
-            AnswerBlock(state, onSpeak, onLearn)
+            AnswerBlock(state, readAloudEnabled, onToggleReadAloud, onLearn)
         }
         if (state.generationPhase == GenerationPhase.DONE) {
             Text(
@@ -210,8 +211,14 @@ private fun ResearchWaitingCard() {
 }
 
 @Composable
-private fun AnswerBlock(state: AppUiState, onSpeak: (String) -> Unit, onLearn: () -> Unit) {
+private fun AnswerBlock(
+    state: AppUiState,
+    readAloudEnabled: Boolean,
+    onToggleReadAloud: () -> Unit,
+    onLearn: () -> Unit,
+) {
     val c = LocalAppPalette.current
+    val speakerOrange = Color(0xFFFFA24C)
     GlassSurface(Modifier.fillMaxWidth().padding(top = 16.dp), radius = 22.dp) {
         Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -223,11 +230,11 @@ private fun AnswerBlock(state: AppUiState, onSpeak: (String) -> Unit, onLearn: (
                     Text("Antwort", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(
-                    Modifier.clip(RoundedCornerShape(99.dp)).background(c.chip).border(1.dp, c.border, RoundedCornerShape(99.dp)).clickable(enabled = state.generationPhase == GenerationPhase.DONE) { state.answer?.let { onSpeak(researchAnswerForSpeech(it)) } }.padding(horizontal = 12.dp, vertical = 6.dp),
+                    Modifier.clip(RoundedCornerShape(99.dp)).background(if (readAloudEnabled) speakerOrange.copy(alpha = 0.18f) else c.chip).border(1.dp, if (readAloudEnabled) speakerOrange else c.border, RoundedCornerShape(99.dp)).clickable(enabled = !state.answer.isNullOrBlank(), onClick = onToggleReadAloud).padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Outlined.Campaign, null, tint = c.muted, modifier = Modifier.size(15.dp))
-                    Text("Vorlesen", color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                    Icon(if (readAloudEnabled) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff, null, tint = if (readAloudEnabled) speakerOrange else Color.White, modifier = Modifier.size(16.dp))
+                    Text(if (readAloudEnabled) "Vorlesen an" else "Vorlesen", color = if (readAloudEnabled) speakerOrange else c.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                 }
             }
             if (state.generationPhase == GenerationPhase.ANSWER) {

@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.36 - 18.07.2026, 01:46 Uhr
+Version 0.1.37 - 18.07.2026, 01:50 Uhr
 
 ## 1. Übersicht
 
@@ -138,6 +138,12 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
 5. **Recherche, Generierung:** Während die Antwort erzeugt wird, zeigt eine animierte
    Eieruhr deutlich „Bitte warten, gründliche Recherche läuft“. Danach folgen die vollständige
    gegliederte Antwort, Karten-Loader, Erfolgskarte und Aktion „Jetzt lernen“.
+   Der Vorlesen-Schalter ist ab dem ersten Streaming-Text verfügbar. Bleibt er orange
+   aktiviert, startet TTS nach dem ersten vollständig abgeschlossenen Absatz. Weitere
+   vollständige Überschrift-Absatz-Blöcke werden quellenbereinigt an eine offene
+   Edge-TTS-Warteschlange angehängt und vorbereitet, ohne den laufenden Block
+   abzubrechen. Ausschalten stoppt die gesamte Warteschlange sofort; ausgeschaltet ist
+   das Symbol weiß und durchgestrichen.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.
 7. **Modell-Bottom-Sheet:** GPT 5.6 Sol/Terra/Luna und Reasoning Niedrig/Mittel/Hoch.

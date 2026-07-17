@@ -59,6 +59,13 @@ class MainActivity : ComponentActivity() {
                     )
                 },
                 onContinueSpeaking = edgeTtsPlayer::continuePreparedSpeech,
+                onStartSpeechQueue = {
+                    edgeTtsPlayer.startSpeechQueue(
+                        voice = state.settings.voice,
+                        speechRate = state.settings.speechRate,
+                    )
+                },
+                onEnqueueSpeech = edgeTtsPlayer::enqueueSpeech,
                 onStopSpeaking = {
                     edgeTtsPlayer.stop()
                 },

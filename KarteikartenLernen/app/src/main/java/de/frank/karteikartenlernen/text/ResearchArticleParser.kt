@@ -54,6 +54,29 @@ fun sanitizeResearchAnswer(answer: String): String {
         .trim()
 }
 
+fun completedResearchSpeechSegments(answer: String, final: Boolean): List<String> {
+    val availableText = if (final) {
+        answer
+    } else {
+        val normalized = answer.replace("\r\n", "\n").replace('\r', '\n')
+        val boundary = normalized.lastIndexOf("\n\n")
+        if (boundary < 0) return emptyList() else normalized.substring(0, boundary + 2)
+    }
+    val segments = mutableListOf<String>()
+    var heading: String? = null
+    parseResearchArticle(sanitizeResearchAnswer(availableText)).forEach { block ->
+        when (block) {
+            is ArticleBlock.Heading -> heading = block.text
+            is ArticleBlock.Paragraph -> {
+                segments += heading?.let { "$it. ${block.text}" } ?: block.text
+                heading = null
+            }
+            is ArticleBlock.Source -> Unit
+        }
+    }
+    return segments
+}
+
 private fun appendArticleLines(blocks: MutableList<ArticleBlock>, lines: List<String>) {
     lines.forEach { line ->
         val source = SOURCE.matchEntire(line)

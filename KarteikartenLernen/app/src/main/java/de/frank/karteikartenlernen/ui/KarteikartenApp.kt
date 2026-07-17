@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.ui.theme.KarteikartenTheme
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.text.researchAnswerForSpeech
+import de.frank.karteikartenlernen.text.completedResearchSpeechSegments
 
 @Composable
 fun KarteikartenApp(
@@ -35,6 +37,8 @@ fun KarteikartenApp(
     onSpeak: (String) -> Unit,
     onSpeakWithContinuation: (String, String) -> Unit,
     onContinueSpeaking: () -> Unit,
+    onStartSpeechQueue: () -> Unit,
+    onEnqueueSpeech: (String) -> Unit,
     onStopSpeaking: () -> Unit,
     onLogin: () -> Unit,
     onOpenAuthPage: () -> Unit,
@@ -42,9 +46,26 @@ fun KarteikartenApp(
 ) {
     var learningNarrationEnabled by remember { mutableStateOf(false) }
     var activeReadAloudTarget by remember { mutableStateOf<String?>(null) }
+    var currentResearchSpokenSegments by remember { mutableIntStateOf(0) }
+    val currentResearchTarget = "research:current"
     val profile = if (state.settings.dark) state.settings.darkProfile else state.settings.lightProfile
     KarteikartenTheme(state.settings.dark, profile) {
         LaunchedEffect(state.settings.dark) { onDarkChanged(state.settings.dark) }
+        LaunchedEffect(activeReadAloudTarget, state.answer, state.generationPhase) {
+            if (activeReadAloudTarget != currentResearchTarget) return@LaunchedEffect
+            if (state.generationPhase == de.frank.karteikartenlernen.model.GenerationPhase.ANSWER && state.answer.isNullOrEmpty()) {
+                currentResearchSpokenSegments = 0
+                onStartSpeechQueue()
+                return@LaunchedEffect
+            }
+            val segments = completedResearchSpeechSegments(
+                answer = state.answer.orEmpty(),
+                final = state.generationPhase != de.frank.karteikartenlernen.model.GenerationPhase.ANSWER,
+            )
+            if (segments.size < currentResearchSpokenSegments) currentResearchSpokenSegments = 0
+            segments.drop(currentResearchSpokenSegments).forEach(onEnqueueSpeech)
+            currentResearchSpokenSegments = segments.size
+        }
         BackHandler(
             enabled = state.learning != null || state.showOAuth || state.showModelSheet || state.showCrossSheet || state.selectedSession != null,
         ) {
@@ -74,7 +95,18 @@ fun KarteikartenApp(
                                 onImprove = viewModel::improve,
                                 onUndo = viewModel::undo,
                                 onSend = viewModel::send,
-                                onSpeak = onSpeak,
+                                readAloudEnabled = activeReadAloudTarget == currentResearchTarget,
+                                onToggleReadAloud = {
+                                    if (activeReadAloudTarget == currentResearchTarget) {
+                                        activeReadAloudTarget = null
+                                        currentResearchSpokenSegments = 0
+                                        onStopSpeaking()
+                                    } else if (!state.answer.isNullOrBlank()) {
+                                        activeReadAloudTarget = currentResearchTarget
+                                        currentResearchSpokenSegments = 0
+                                        onStartSpeechQueue()
+                                    }
+                                },
                                 onLearn = { viewModel.startLearning(state.cards) },
                                 onReset = viewModel::resetResearch,
                             )

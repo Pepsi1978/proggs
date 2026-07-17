@@ -83,4 +83,18 @@ class ResearchArticleParserTest {
         )
         assertEquals(sanitizeResearchAnswer(answer), researchAnswerForSpeech(answer))
     }
+
+    @Test
+    fun streamingSpeechUsesOnlyCompletedParagraphs() {
+        val streaming = "## Eins\n\nErster Absatz ist fertig.\n\n## Zwei\n\nZweiter Absatz ist noch nicht fertig"
+
+        assertEquals(
+            listOf("Eins. Erster Absatz ist fertig."),
+            completedResearchSpeechSegments(streaming, final = false),
+        )
+        assertEquals(
+            listOf("Eins. Erster Absatz ist fertig.", "Zwei. Zweiter Absatz ist noch nicht fertig"),
+            completedResearchSpeechSegments(streaming, final = true),
+        )
+    }
 }

@@ -41,12 +41,13 @@ class EdgeTtsPlayer(context: Context) {
 
     private class PlaybackSession(
         val generation: Long,
-        val units: List<SpeechUnit>,
+        val units: MutableList<SpeechUnit>,
         val voice: String,
         val speechRate: Float,
         val onPlaybackStart: (() -> Unit)?,
         val onComplete: () -> Unit,
         val manualContinuationIndex: Int? = null,
+        val queued: Boolean = false,
     ) {
         val completed = AtomicBoolean(false)
         val files = mutableSetOf<File>()
@@ -56,6 +57,7 @@ class EdgeTtsPlayer(context: Context) {
         var pauseElapsed = false
         var preparationFailed = false
         var manualContinuationRequested = false
+        var playingIndex: Int? = null
     }
 
     private var mediaPlayer: MediaPlayer? = null
@@ -113,6 +115,42 @@ class EdgeTtsPlayer(context: Context) {
         }
     }
 
+    fun startSpeechQueue(
+        voice: String = TtsVoiceRegistry.DEFAULT_VOICE_ID,
+        speechRate: Float = 1f,
+    ) {
+        startSession(
+            units = emptyList(),
+            voice = voice,
+            speechRate = speechRate,
+            onPlaybackStart = null,
+            onComplete = {},
+            queued = true,
+        )
+    }
+
+    fun enqueueSpeech(text: String) {
+        val session = activeSession?.takeIf { it.queued } ?: return
+        val additions = buildSpeechUnits(text)
+        if (additions.isEmpty()) return
+        val firstNewIndex = session.units.size
+        if (firstNewIndex > 0) {
+            session.units[firstNewIndex - 1] = session.units[firstNewIndex - 1].copy(pauseAfterMs = SECTION_PAUSE_MS)
+        }
+        session.units += additions
+        val idle = session.playingIndex == null && session.preparingIndex == null && session.prepared == null
+        if (idle) {
+            if (firstNewIndex > 0) {
+                session.waitingIndex = firstNewIndex
+                session.pauseElapsed = true
+            }
+            session.preparationFailed = false
+            prepareUnit(session, firstNewIndex)
+        } else if (session.playingIndex != null && session.preparingIndex == null && session.prepared == null) {
+            prepareUnit(session, firstNewIndex)
+        }
+    }
+
     private fun startSession(
         units: List<SpeechUnit>,
         voice: String,
@@ -120,20 +158,22 @@ class EdgeTtsPlayer(context: Context) {
         onPlaybackStart: (() -> Unit)?,
         onComplete: () -> Unit,
         manualContinuationIndex: Int? = null,
+        queued: Boolean = false,
     ) {
         stop()
-        if (units.isEmpty()) {
+        if (units.isEmpty() && !queued) {
             onComplete()
             return
         }
         val session = PlaybackSession(
             generation = generation,
-            units = units,
+            units = units.toMutableList(),
             voice = TtsVoiceRegistry.resolveVoiceId(voice),
             speechRate = speechRate,
             onPlaybackStart = onPlaybackStart,
             onComplete = onComplete,
             manualContinuationIndex = manualContinuationIndex,
+            queued = queued,
         )
         activeSession = session
         prepareUnit(session, 0)
@@ -268,6 +308,7 @@ class EdgeTtsPlayer(context: Context) {
         session.prepared = null
         session.waitingIndex = null
         session.pauseElapsed = false
+        session.playingIndex = audio.index
         playFile(
             file = audio.file,
             requestGeneration = session.generation,
@@ -283,9 +324,10 @@ class EdgeTtsPlayer(context: Context) {
 
     private fun unitFinished(session: PlaybackSession, index: Int) {
         if (!isActive(session)) return
+        session.playingIndex = null
         val nextIndex = index + 1
         if (nextIndex !in session.units.indices) {
-            finishSession(session)
+            if (!session.queued) finishSession(session)
             return
         }
         session.waitingIndex = nextIndex
