@@ -50,6 +50,7 @@ fun TodayScreen(
     state: MainUiState,
     onCreateCure: (Int, String, String, Int) -> Unit,
     onDrinkNow: () -> Unit,
+    onCancelCure: () -> Unit,
     onGoTimeline: () -> Unit,
     onGoStack: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
@@ -58,6 +59,7 @@ fun TodayScreen(
 ) {
     var showSetup by remember { mutableStateOf(false) }
     var showDrink by remember { mutableStateOf(false) }
+    var showCancelConfirmation by remember { mutableStateOf(false) }
     if (!state.initialized) {
         Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             CircularProgressIndicator()
@@ -116,12 +118,16 @@ fun TodayScreen(
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                item { Button(onClick = { showSetup = true }, modifier = Modifier.fillMaxWidth()) { Text("Neue Kur starten") } }
+                item {
+                    Button(onClick = { showSetup = true }, modifier = Modifier.fillMaxWidth()) { Text("Neue Kur starten") }
+                }
             }
             else -> {
                 val cure = state.activeCure!!.cure
                 val day = state.currentDay!!
-                item { Text("Tag ${day.dayNumber} von ${cure.plannedDurationDays}", style = MaterialTheme.typography.headlineMedium) }
+                item {
+                    Text("Tag ${day.dayNumber} von ${cure.plannedDurationDays}", style = MaterialTheme.typography.headlineMedium)
+                }
                 if (day.t0 == null) {
                     item {
                         SignalCard(
@@ -137,6 +143,11 @@ fun TodayScreen(
                         NextStepCard(state, onGoTimeline)
                     }
                     item { OutlinedButton(onClick = onGoStack, modifier = Modifier.fillMaxWidth()) { Text("Angepassten Morgen-Stack ansehen") } }
+                }
+                item {
+                    OutlinedButton(onClick = { showCancelConfirmation = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Kur abbrechen und zurücksetzen")
+                    }
                 }
             }
         }
@@ -172,6 +183,20 @@ fun TodayScreen(
                 onDrinkNow()
                 showDrink = false
             },
+        )
+    }
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = { Text("Vollständig zurücksetzen?") },
+            text = { Text("Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCancelCure()
+                    showCancelConfirmation = false
+                }) { Text("Abbrechen und löschen") }
+            },
+            dismissButton = { TextButton(onClick = { showCancelConfirmation = false }) { Text("Behalten") } },
         )
     }
 }

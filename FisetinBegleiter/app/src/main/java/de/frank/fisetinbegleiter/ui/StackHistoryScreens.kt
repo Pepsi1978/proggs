@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -119,6 +121,7 @@ private fun StackItemCard(item: StackItemEntity, hardBlocked: Boolean) {
 fun HistoryScreen(
     state: MainUiState,
     onUpdateNote: (CureWithDays, String) -> Unit,
+    onCancelCure: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -133,15 +136,20 @@ fun HistoryScreen(
             item { Text("Noch keine Kur gespeichert.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         items(state.history, key = { it.cure.id }) { cure ->
-            HistoryCard(cure, onUpdateNote)
+            HistoryCard(cure, onUpdateNote, onCancelCure)
         }
         item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
 @Composable
-private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String) -> Unit) {
+private fun HistoryCard(
+    cure: CureWithDays,
+    onUpdateNote: (CureWithDays, String) -> Unit,
+    onCancelCure: () -> Unit,
+) {
     var note by remember(cure.cure.id, cure.cure.note) { mutableStateOf(cure.cure.note) }
+    var showCancelConfirmation by remember(cure.cure.id) { mutableStateOf(false) }
     val doneSteps = cure.days.sumOf { day ->
         listOf(day.drinkDoneAt, day.mealDoneAt, day.spermidinDoneAt, day.blockEndedAt).count { it != null }
     }
@@ -164,6 +172,25 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(onClick = { onUpdateNote(cure, note) }, enabled = note != cure.cure.note) { Text("Notiz speichern") }
+            if (cure.cure.status != CureStatus.ABGESCHLOSSEN) {
+                OutlinedButton(onClick = { showCancelConfirmation = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Abbrechen und vollständig zurücksetzen")
+                }
+            }
         }
+    }
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = { Text("Aktiven Ablauf löschen?") },
+            text = { Text("Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCancelCure()
+                    showCancelConfirmation = false
+                }) { Text("Vollständig löschen") }
+            },
+            dismissButton = { TextButton(onClick = { showCancelConfirmation = false }) { Text("Behalten") } },
+        )
     }
 }

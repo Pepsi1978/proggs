@@ -83,4 +83,11 @@ object NotificationHelper {
             .build()
         NotificationManagerCompat.from(context).notify(((dayId % 100_000) * 10 + type.ordinal).toInt(), notification)
     }
+
+    fun cancelDay(context: Context, dayId: Long) {
+        val manager = NotificationManagerCompat.from(context)
+        AlarmType.entries.forEach { type ->
+            manager.cancel(((dayId % 100_000) * 10 + type.ordinal).toInt())
+        }
+    }
 }

@@ -11,6 +11,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -60,6 +62,9 @@ interface FisetinDao {
     @Update
     suspend fun updateCure(cure: CureEntity)
 
+    @Query("DELETE FROM cures WHERE status != 'ABGESCHLOSSEN'")
+    suspend fun deleteAllActiveCures()
+
     @Insert
     suspend fun insertCureDays(days: List<CureDayEntity>)
 
@@ -86,17 +91,23 @@ interface FisetinDao {
         CureEntity::class,
         CureDayEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class FisetinDatabase : RoomDatabase() {
     abstract fun dao(): FisetinDao
 
     companion object {
+        private val migration1To2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `cures` ADD COLUMN `isTestRun` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun create(context: Context): FisetinDatabase = Room.databaseBuilder(
             context.applicationContext,
             FisetinDatabase::class.java,
             "fisetin-begleiter.db",
-        ).build()
+        ).addMigrations(migration1To2).build()
     }
 }

@@ -36,6 +36,7 @@ class FisetinRepository(private val database: FisetinDatabase) {
                 carrierLiquid = carrierLiquid,
                 fatCarrier = fatCarrier,
                 preferredStartMinuteOfDay = preferredStartMinuteOfDay,
+                isTestRun = false,
             ),
         )
         dao.insertCureDays(
@@ -71,6 +72,8 @@ class FisetinRepository(private val database: FisetinDatabase) {
     }
 
     suspend fun updateNote(cure: CureEntity, note: String) = dao.updateCure(cure.copy(note = note))
+
+    suspend fun deleteAllActiveCures() = dao.deleteAllActiveCures()
 
     suspend fun saveProtocol(protocol: ProtocolTemplateEntity) = dao.upsertProtocol(protocol)
     suspend fun saveIngredient(ingredient: IngredientEntity) = dao.upsertIngredient(ingredient)

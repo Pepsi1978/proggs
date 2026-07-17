@@ -67,6 +67,7 @@ data class CureEntity(
     val carrierLiquid: String,
     val fatCarrier: String,
     val preferredStartMinuteOfDay: Int,
+    val isTestRun: Boolean = false,
     val note: String = "",
     val completedAt: Long? = null,
 )

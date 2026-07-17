@@ -136,6 +136,7 @@ fun FisetinApp(
                         state = state,
                         onCreateCure = viewModel::createCure,
                         onDrinkNow = viewModel::drinkNow,
+                        onCancelCure = viewModel::cancelAllActiveCures,
                         onGoTimeline = { screen = MainScreen.TIMELINE },
                         onGoStack = { screen = MainScreen.STACK },
                         onOpenExactAlarmSettings = onOpenExactAlarmSettings,
@@ -153,6 +154,7 @@ fun FisetinApp(
                     MainScreen.HISTORY -> HistoryScreen(
                         state = state,
                         onUpdateNote = viewModel::updateNote,
+                        onCancelCure = viewModel::cancelAllActiveCures,
                         onExport = { onExport(viewModel.exportText()) },
                         modifier = modifier,
                     )

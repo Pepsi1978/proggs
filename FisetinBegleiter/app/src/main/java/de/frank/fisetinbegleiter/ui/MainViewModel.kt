@@ -86,7 +86,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createCure(duration: Int, liquid: String, fat: String, startMinute: Int) {
         viewModelScope.launch {
-            repository.createCure(duration, LocalDate.now(), liquid, fat, startMinute)
+            repository.createCure(
+                durationDays = duration,
+                startDate = LocalDate.now(),
+                carrierLiquid = liquid,
+                fatCarrier = fat,
+                preferredStartMinuteOfDay = startMinute,
+            )
         }
     }
 
@@ -133,6 +139,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun canScheduleExactAlarms(): Boolean = scheduler.canScheduleExact()
+
+    fun cancelAllActiveCures() {
+        val activeCures = uiState.value.history.filter { it.cure.status != de.frank.fisetinbegleiter.data.CureStatus.ABGESCHLOSSEN }
+        viewModelScope.launch {
+            activeCures.flatMap { it.days }.forEach { day -> scheduler.cancelDay(day.id) }
+            repository.deleteAllActiveCures()
+        }
+    }
 
     fun saveProtocol(protocol: ProtocolTemplateEntity) = viewModelScope.launch { repository.saveProtocol(protocol) }
     fun saveIngredient(item: IngredientEntity) = viewModelScope.launch { repository.saveIngredient(item) }

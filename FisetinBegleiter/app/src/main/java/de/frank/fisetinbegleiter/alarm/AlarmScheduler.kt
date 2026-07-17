@@ -67,6 +67,11 @@ class AlarmScheduler(private val context: Context) {
         cancel(dayId, AlarmType.SPERMIDIN_REMINDER)
     }
 
+    fun cancelDay(dayId: Long) {
+        AlarmType.entries.forEach { type -> cancel(dayId, type) }
+        NotificationHelper.cancelDay(context, dayId)
+    }
+
     private fun schedule(dayId: Long, type: AlarmType, triggerAt: Long, targetDay: Int = 0) {
         if (triggerAt <= System.currentTimeMillis()) return
         val pendingIntent = alarmPendingIntent(dayId, type, targetDay, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
