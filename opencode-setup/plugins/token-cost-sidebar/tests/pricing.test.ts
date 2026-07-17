@@ -247,7 +247,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("model()?.variant.current() === item.id")
     expect(source).toContain("<EffortSelector api={api} />")
     expect(source.indexOf("<EffortSelector api={api} />")).toBeLessThan(source.indexOf("<WorkModeSelector api={api}"))
-    expect(patch).toContain("model: TuiModel")
+    expect(patch).toContain("model?: TuiModel")
     expect(patch).toContain("input.local.model.variant.set(value)")
     expect(patch).toContain("!input.local.model.variant.list().includes(value)")
   })

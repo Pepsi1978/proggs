@@ -43,7 +43,7 @@ index 6781216..43a05a3 100644
    keys: TuiKeys
    keymap: TuiKeymap
    mode: TuiModeApi
-+  model: TuiModel
++  model?: TuiModel
    route: {
      register: (routes: TuiRouteDefinition[]) => () => void
      navigate: (name: string, params?: Record<string, unknown>) => void
