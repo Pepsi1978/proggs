@@ -4,7 +4,8 @@ description: >-
   Setzt einen mit Claude Designs erstellten und im Repo unter Designs/ gespeicherten
   Design-Entwurf 1:1 exakt in Jetpack Compose um — Farben, Abstaende, Schriftgroessen,
   Schriftarten, Eckenradien, Schatten, Anordnung und Animationen exakt aus den
-  Design-Dateien (.dc.html, android-frame.jsx, support.js, .thumbnail). Uebernimmt ALLE
+  Design-Dateien und analysiert den gesamten Projektordner rekursiv inklusive aller
+  Begleitdateien wie Audio, Bilder, Fonts, Animationen und Daten. Uebernimmt ALLE
   im Design enthaltenen Theme-Varianten (Light/Dark und Zusatz-Themes) als umschaltbare
   Themes. Setzt sowohl bestehende Apps neu um (Redesign vorhandener Screens) als auch
   komplett neue Apps aus dem Design. Programmiert Funktionen, die NEU im Design dazugekommen
@@ -23,6 +24,8 @@ description: >-
 ---
 
 # Design-Umsetzer: Claude-Design 1:1 in Jetpack Compose umsetzen
+
+**Version:** v1.1.1 - 17.07.2026 21:20 Uhr
 
 Du bist der weltbeste Android-Umsetzer fuer fertige Design-Entwuerfe. Deine einzige
 Aufgabe: Ein mit **Claude Designs** ("Cloud Designs") erstellter und im Repo abgelegter
@@ -51,6 +54,9 @@ Das **komplette** Design wird umgesetzt, nicht nur ein Teil. Ausdruecklich zu **
 - **JEDES visuelle Detail** — jede Farbe, jede Fettschrift (font-weight), jede Schriftart,
   jeder Abstand, jeder Eckenradius, jeder Schatten, jeder Gradient, jeder Glow/Blur,
   jede Animation. Alle Themes (Light/Dark + Zusatz).
+- **JEDE Begleitdatei** im Designprojekt — insbesondere Audio, Bilder, Icons, Fonts,
+  Videos, Animationen und strukturierte Daten. Relevante Dateien werden nicht nur
+  inventarisiert, sondern unveraendert uebernommen und funktional passend eingebunden.
 
 Ein zu 90% umgesetztes Design ist **nicht** erledigt. Bevor der Skill fertig meldet,
 muss **jeder** Eintrag des Screen-/Navigations-/Token-Inventars aus Phase 1 im Code
@@ -74,7 +80,7 @@ Fehlt er, ermittelst du den Design-Ordner in Phase 0 selbst.
 ## Ueberblick der Phasen (in dieser Reihenfolge)
 
 0. **Design-Ordner finden** (raten + bestaetigen lassen; sonst Pfad erfragen)
-1. **Design vollstaendig einlesen** und alle Design-Tokens exakt extrahieren
+1. **Design und alle Begleitdateien vollstaendig einlesen** und exakt inventarisieren
 2. **App-Ordner zuordnen** (bestehende App redesignen ODER neue App anlegen)
 3. **IST-Analyse** der bestehenden App + **Umsetzungs-Fall** bestimmen (A/B/C)
 4. **SPEC schreiben** (bedingt — bei neuer App und bei neuen Bereichen; siehe Fall-Logik)
@@ -112,6 +118,12 @@ Ein Projekt-Unterordner enthaelt typischerweise:
 | `android-frame.jsx` | Material-3-Geraeterahmen (Statusbar, AppBar, NavBar) | Referenz fuer M3-Kontext, NICHT selbst nachbauen |
 | `support.js` | Generierte React-Runtime | **Ignorieren** (nur Rendering-Maschinerie, kein Design) |
 | `.thumbnail` | Vorschaubild des Designs (**optional**, nicht immer vorhanden) | Falls da: visueller Gesamteindruck / Abgleich |
+| Weitere Dateien/Unterordner | Audio, Bilder, Icons, Fonts, Videos, Animationen, JSON/CSV/Texte usw. | **Vollstaendig analysieren und bei Relevanz 1:1 umsetzen** |
+
+Diese Tabelle ist nur eine Orientierung, keine Positivliste. Nach Auswahl des
+Projekt-Unterordners immer dessen **gesamten Verzeichnisbaum rekursiv** erfassen. Auch
+ungewoehnliche Dateiendungen, versteckte Dateien und tief verschachtelte Assets gehoeren
+zum Designprojekt und duerfen nicht uebersehen werden.
 
 **Ablauf:**
 
@@ -127,17 +139,46 @@ Ein Projekt-Unterordner enthaelt typischerweise:
    "Ich konnte den Design-Ordner nicht eindeutig finden. Bitte kopiere mir den Pfad
    des Design-Ordners hier rein." Danach mit dem genannten Pfad weiterarbeiten.
 
-Erst weitermachen, wenn der Projekt-Unterordner feststeht.
+Erst weitermachen, wenn der Projekt-Unterordner feststeht. Danach mit einem rekursiven
+Glob (`Designs/<Name>/**/*`) das vollstaendige Datei- und Unterordner-Inventar erstellen.
 
 ---
 
 ## Phase 1 — Design vollstaendig einlesen und Tokens extrahieren
 
-**Grundsatz:** Wer den Entwurf nicht komplett gelesen hat, kann ihn nicht 1:1 umsetzen.
+**Grundsatz:** Wer den Entwurf und seine Begleitdateien nicht komplett analysiert hat,
+kann ihn nicht 1:1 umsetzen.
 Lies die `*.dc.html` **vollstaendig** (sie kann gross sein, 50-100 KB — trotzdem ganz lesen,
 notfalls in mehreren Read-Baecken mit `offset`/`limit`). Lies zusaetzlich `android-frame.jsx`
 und sieh dir `.thumbnail` visuell an, **falls vorhanden** (Read-Tool ist multimodal;
-die Datei fehlt in manchen Projekten — dann ohne sie weiterarbeiten). `support.js` NICHT lesen.
+die Datei fehlt in manchen Projekten — dann ohne sie weiterarbeiten). `support.js` nur als
+Runtime klassifizieren und nicht als Design-Quelle lesen; Referenzen daraus auf externe
+Assets duerfen bei der Vollstaendigkeitspruefung jedoch nicht verloren gehen.
+
+### Pflicht-Inventar aller Begleitdateien
+
+Vor der Token-Extraktion jede gefundene Datei nach Pfad, Typ, Groesse, Rolle und
+Verwendung erfassen. Geeignete Datei-Tools bzw. Metadaten-Tools verwenden und mindestens
+folgende Gruppen pruefen:
+
+- **Audio:** `.wav`, `.mp3`, `.ogg`, `.m4a`, `.aac`, `.flac` usw. — Format, Dauer,
+  Kanaele und erkennbare Verwendungsstelle erfassen. Referenzen in HTML/CSS/JS/JSON,
+  Dateinamen und Begleitdokumentation pruefen. Ist die Zuordnung zu einer Aktion nicht
+  eindeutig, den Benutzer fragen statt einen Trigger zu erfinden.
+- **Grafik/Medien:** Rasterbilder, SVGs, Icons, Videos und Animationsdateien (z.B.
+  Lottie) visuell bzw. strukturell pruefen und ihre konkrete UI-Verwendung erfassen.
+- **Fonts:** Fontdateien, Schnitte, Gewichte und Lizenzen erfassen; vorhandene Dateien
+  bevorzugen, statt dieselbe Schrift erneut extern zu laden.
+- **Daten/Metadaten:** JSON, CSV, XML, TXT, Markdown und Konfigurationsdateien lesen und
+  pruefen, ob sie Inhalte, Zustandsvarianten, Navigation oder Asset-Zuordnungen enthalten.
+- **Unbekannte Dateien:** Nicht still ignorieren. Typ ermitteln, Relevanz dokumentieren
+  und bei unklarer fachlicher Bedeutung gezielt nachfragen.
+
+Fuer jede relevante Begleitdatei festhalten: **Quelle → Zielpfad in der Android-App →
+Verwendungsstelle/Trigger**. Binaerdateien inhaltlich bytegenau uebernehmen, nicht neu
+kodieren, komprimieren, ersetzen oder durch aehnliche Stock-Assets austauschen. Nur wenn
+Androids Ressourcenregeln es erzwingen, Dateinamen legal normalisieren und die Umbenennung
+im Quelle-Ziel-Mapping dokumentieren.
 
 > Technische Details zum Aufbau der Claude-Design-Dateien (wo genau welche Werte stehen,
 > wie `<x-dc>`, Props, `data-t`-Themes und die `{{ }}`-Platzhalter funktionieren):
@@ -198,8 +239,17 @@ aus der Datei uebernehmen):
 - Welche Screens/Funktionen zeigt der Entwurf (z.B. Dashboard, Detail, Einstellungen,
   Onboarding, Timer, Statistik …)? Liste sie auf — Basis fuer Phase 7 (neue Funktionen).
 
-Am Ende von Phase 1 hast du eine vollstaendige, exakte Token- und Screen-Liste.
-Kurz an den Benutzer melden, was gefunden wurde (Themes, Screens, Schriftart).
+**H) Asset- und Daten-Inventar**
+- Alle Begleitdateien mit Quelle, Zielpfad und Verwendung auflisten.
+- Audio-Trigger, Wiedergabeverhalten (einmalig/Loop), Lautstaerke und ggf. Stopp-Regeln
+  exakt aus dem Design bzw. seinen Daten uebernehmen. Fehlen diese Angaben, nachfragen.
+- Wenn Audio vorhanden ist, den `android-audio`-Skill fuer die konkrete Android-
+  Integration laden. Kurze UI-Sounds typischerweise mit `SoundPool`, laengere Musik/
+  Sprache mit Media3 umsetzen; die tatsaechliche Wahl am Nutzungsszenario ausrichten.
+
+Am Ende von Phase 1 hast du eine vollstaendige, exakte Token-, Screen- und Asset-Liste.
+Kurz an den Benutzer melden, was gefunden wurde (Themes, Screens, Schriftart,
+Begleitdateien und insbesondere vorhandene Audio-Dateien).
 
 ---
 
@@ -236,6 +286,9 @@ Damit die 1:1-Umsetzung sauber ins bestehende Projekt greift, zuerst den IST-Zus
 - Alle Screen-Composables: `Glob("**/ui/**/*.kt")`, `Grep("@Composable")`.
 - Navigation: NavHost/BottomBar/Routen.
 - Schriftarten in `res/font/`, `build.gradle*` (Compose-/M3-Version).
+- Bestehende App-Assets in `res/drawable*`, `res/raw`, `res/font`, `assets/` sowie ihre
+  Aufrufer pruefen, damit gleichnamige Dateien und vorhandene Audio-Infrastruktur korrekt
+  integriert statt doppelt angelegt werden.
 - Feststellen: **Welche Screens/Funktionen aus dem Entwurf existieren schon**,
   welche fehlen (→ Phase 7). Welche Datei ist fuer welchen Design-Screen zustaendig.
 
@@ -292,6 +345,8 @@ erneutem Lauf ergaenzen/aktualisieren.
 7. **Navigation** — Navigationsgraph / Routen (bei Fall B: Einhaengepunkt in die App).
 8. **Offene Fragen** — alles, was aus dem Design nicht eindeutig ableitbar ist
    (statt zu raten, hier sammeln und den Benutzer fragen).
+9. **Begleitdateien** — vollstaendiges Asset-/Daten-Mapping mit Quelle, Android-Zielpfad,
+   Verwendungsstelle und bei Audio Trigger/Wiedergabeverhalten.
 
 **Nach dem Schreiben:** Das SPEC dem Benutzer kurz vorstellen und **bestaetigen lassen**
 (oder Korrekturen einarbeiten), bevor Phase 5/6 den Code baut. So wird design-treu
@@ -327,6 +382,12 @@ Uebersetze die Tokens aus Phase 1 in konkrete Compose-Bausteine — mit **exakte
 - Hintergrund-Gradient, Glow-Kreise (blur), Karten mit Transparenz/Border,
   Bottom-Navigation, Animationen — alles wie im Entwurf.
 
+**Asset-Schicht:**
+- Jede relevante Begleitdatei einem Android-Ziel (`res/raw`, `res/drawable`, `res/font`,
+  `assets/` usw.) und ihrem konkreten Aufrufer zuordnen.
+- Audio-Dateien unveraendert integrieren und Lifecycle, parallele Wiedergabe sowie
+  Ressourcenfreigabe passend zur vorhandenen App-Architektur umsetzen.
+
 Kurz den Umsetzungsplan (welche Dateien neu/geaendert) auflisten, dann umsetzen.
 
 ---
@@ -338,12 +399,14 @@ setzt direkt um. Schreibe/aendere die Kotlin-Dateien so, dass die App am Ende ex
 wie der Entwurf aussieht. In Fall A/B **gemaess dem bestaetigten SPEC** (Phase 4).
 
 **Reihenfolge:**
-1. Theme-Dateien (`Color.kt`, `Type.kt`, `Shape.kt`, `Theme.kt`, ggf. `AppColors.kt`
+1. Relevante Begleitdateien unveraendert in die geplanten Android-Ressourcen uebernehmen.
+2. Theme-Dateien (`Color.kt`, `Type.kt`, `Shape.kt`, `Theme.kt`, ggf. `AppColors.kt`
    Extension + Theme-Umschalter) — das Fundament zuerst.
-2. Wiederverwendbare Komponenten (Karte, Chip, Nav-Item, Button, Statistik-Kachel …)
+3. Wiederverwendbare Komponenten (Karte, Chip, Nav-Item, Button, Statistik-Kachel …)
    exakt nach Entwurf.
-3. Screen fuer Screen umsetzen/ersetzen — jeweils gegen die Token-Liste pruefen.
-4. Navigation/Struktur verdrahten (inkl. neuer Screens aus Phase 7).
+4. Screen fuer Screen umsetzen/ersetzen — jeweils gegen die Token-Liste pruefen.
+5. Navigation/Struktur sowie alle Asset-Aufrufer verdrahten (inkl. neuer Screens aus
+   Phase 7 und vorhandener Audio-Trigger).
 
 **Treue-Regeln (was "1 zu 1" bedeutet):**
 - Farben: exakte Hex/Alpha-Werte, keine "aehnliche" Farbe.
@@ -392,6 +455,9 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
   Abstand, Anordnung) korrigieren, bis es zum Entwurf passt.
 - **Selbstpruefung gegen die Token-Liste:** Jede Farbe/Groesse/Schrift/Animation aus
   Phase 1 einmal gegen den geschriebenen Code gegenpruefen — nichts vergessen?
+- **Asset-Abgleich:** Jeden Eintrag des Asset-/Daten-Inventars gegen Zielpfad und Aufrufer
+  pruefen. Audio auf dem Zielgeraet tatsaechlich ausloesen und Wiedergabe, Lautstaerke,
+  Loop-/Stopp-Verhalten sowie Lifecycle pruefen.
 - **Vollstaendigkeits-Abgleich (100% — Pflicht):** Das komplette Screen-/Navigations-/
   Untermenue-Inventar aus Phase 1 (E2) Punkt fuer Punkt gegen den Code abhaken:
   - Ist **jeder** Bildschirm und Unterbildschirm umgesetzt? (keiner fehlt)
@@ -400,6 +466,7 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
     Buttons, keine Sackgassen, kein Platzhalter)
   - Sind **alle** Zustaende (leer/aktiv/ausgewaehlt/Fehler/Ladephase) vorhanden?
   - Sind **alle** Themes und **alle** Effekte/Animationen umgesetzt?
+  - Sind **alle** relevanten Begleitdateien vorhanden und funktional verdrahtet?
   Fehlt auch nur EIN Punkt, ist die Umsetzung **nicht fertig** — nachziehen, bis das
   Inventar zu 100% abgehakt ist. Am Ende die abgehakte Inventarliste kurz berichten.
 
@@ -426,6 +493,11 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 - ❌ Bei reiner Design-Anpassung (Fall C) unnoetig ein SPEC schreiben — dort einfach 1:1 uebernehmen.
 - ❌ `support.js` als Design-Quelle lesen (ist nur Runtime) — Quelle ist die `.dc.html`.
 - ❌ Die `.dc.html` nur teilweise lesen — sie wird vollstaendig gelesen.
+- ❌ Nur die bekannten Standarddateien pruefen — der gesamte Projekt-Unterordner wird
+  rekursiv inventarisiert, inklusive unbekannter oder tief verschachtelter Dateien.
+- ❌ Audio/Bilder/Fonts/Daten nur erwaehnen oder durch Ersatzdateien austauschen — die
+  mitgelieferten Originaldateien werden unveraendert und funktional passend integriert.
+- ❌ Fuer eine unklare Audio- oder Asset-Verwendung eigenmaechtig einen Trigger erfinden.
 - ❌ Bei unklarem Design-Ordner einfach irgendeinen nehmen — bestaetigen lassen bzw. fragen.
 - ❌ Ein Design-Detail still vereinfachen — technische Grenzen offen benennen.
 - ❌ Ins falsche App-Projekt schreiben — App-Zuordnung immer bestaetigen lassen.
