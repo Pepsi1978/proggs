@@ -550,7 +550,7 @@ index f07b78b..0268163 100644
 +  return { ok: true, file }
 +}
 diff --git a/packages/opencode/src/plugin/tui/runtime.ts b/packages/opencode/src/plugin/tui/runtime.ts
-index 2a88ad3..ea652d0 100644
+index 2a88ad3..47e39c6 100644
 --- a/packages/opencode/src/plugin/tui/runtime.ts
 +++ b/packages/opencode/src/plugin/tui/runtime.ts
 @@ -23,12 +23,18 @@ import {
@@ -669,7 +669,15 @@ index 2a88ad3..ea652d0 100644
    const plugin = state.plugins_by_id.get(id)
    if (!plugin) return false
    return deactivatePluginEntry(state, plugin, persist)
-@@ -651,6 +716,10 @@ function pluginApi(runtime: RuntimeState, plugin: PluginEntry, scope: PluginScop
+@@ -617,6 +682,7 @@ function pluginApi(runtime: RuntimeState, plugin: PluginEntry, scope: PluginScop
+     keys: api.keys,
+     keymap,
+     mode: createScopedMode(api.mode, scope),
++    model: api.model,
+     route,
+     ui: api.ui,
+     tuiConfig: api.tuiConfig,
+@@ -651,6 +717,10 @@ function pluginApi(runtime: RuntimeState, plugin: PluginEntry, scope: PluginScop
  }
  
  function addPluginEntry(state: RuntimeState, plugin: PluginEntry) {
@@ -688,8 +696,28 @@ index 2a88ad3..ea652d0 100644
    }
    runtime = next
    next.view.update({
+diff --git a/packages/opencode/test/fixture/tui-plugin.ts b/packages/opencode/test/fixture/tui-plugin.ts
+index 5d93139..b89f441 100644
+--- a/packages/opencode/test/fixture/tui-plugin.ts
++++ b/packages/opencode/test/fixture/tui-plugin.ts
+@@ -90,6 +90,7 @@ type Opts = {
+   attention?: AttentionOpts
+   event?: HostPluginApi["event"]
+   mode?: HostPluginApi["mode"]
++  model?: NonNullable<HostPluginApi["model"]>
+   count?: Count
+   keymap?: HostPluginApi["keymap"]
+   tuiConfig?: Partial<HostPluginApi["tuiConfig"]>
+@@ -242,6 +243,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
+       current: () => "base",
+       push: () => () => {},
+     },
++    model: opts.model,
+     route: {
+       register: () => {
+         if (count) count.route_add += 1
 diff --git a/packages/opencode/test/cli/tui/plugin-toggle.test.ts b/packages/opencode/test/cli/tui/plugin-toggle.test.ts
-index 4702655..7626551 100644
+index 4702655..fb5da21 100644
 --- a/packages/opencode/test/cli/tui/plugin-toggle.test.ts
 +++ b/packages/opencode/test/cli/tui/plugin-toggle.test.ts
 @@ -6,6 +6,7 @@ import { tmpdir } from "../../fixture/fixture"
@@ -700,7 +728,49 @@ index 4702655..7626551 100644
  
  const { TuiPluginRuntime } = await import("../../../src/plugin/tui/runtime")
  
-@@ -262,3 +263,107 @@ test("loads disabled-by-default internal plugin inactive and activates on demand
+@@ -22,7 +23,7 @@ test("toggles plugin runtime state by exported id", async () => {
+   id: "demo.toggle",
+   tui: async (api, options) => {
+     const text = await Bun.file(options.marker).text().catch(() => "")
+-    await Bun.write(options.marker, text + "start\\n")
++    await Bun.write(options.marker, text + "start:" + api.model?.variant.current() + "\\n")
+     api.lifecycle.onDispose(async () => {
+       const next = await Bun.file(options.marker).text().catch(() => "")
+       await Bun.write(options.marker, next + "stop\\n")
+@@ -55,7 +56,15 @@ test("toggles plugin runtime state by exported id", async () => {
+   })
+   const wait = spyOn(TuiConfig, "waitForDependencies").mockResolvedValue()
+   const cwd = spyOn(process, "cwd").mockImplementation(() => tmp.path)
+-  const api = createTuiPluginApi()
++  const api = createTuiPluginApi({
++    model: {
++      variant: {
++        current: () => "high",
++        list: () => ["low", "medium", "high", "xhigh"],
++        set: () => true,
++      },
++    },
++  })
+ 
+   try {
+     await TuiPluginRuntime.init({ api, config })
+@@ -71,13 +80,13 @@ test("toggles plugin runtime state by exported id", async () => {
+     })
+ 
+     await expect(TuiPluginRuntime.activatePlugin("demo.toggle")).resolves.toBe(true)
+-    await expect(fs.readFile(tmp.extra.marker, "utf8")).resolves.toBe("start\n")
++    await expect(fs.readFile(tmp.extra.marker, "utf8")).resolves.toBe("start:high\n")
+     expect(api.kv.get("plugin_enabled", {})).toEqual({
+       "demo.toggle": true,
+     })
+ 
+     await expect(TuiPluginRuntime.deactivatePlugin("demo.toggle")).resolves.toBe(true)
+-    await expect(fs.readFile(tmp.extra.marker, "utf8")).resolves.toBe("start\nstop\n")
++    await expect(fs.readFile(tmp.extra.marker, "utf8")).resolves.toBe("start:high\nstop\n")
+     expect(api.kv.get("plugin_enabled", {})).toEqual({
+       "demo.toggle": false,
+     })
+@@ -262,3 +271,107 @@ test("loads disabled-by-default internal plugin inactive and activates on demand
      wait.mockRestore()
    }
  })

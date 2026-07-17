@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "12",
+    [string]$PatchRevision = "13",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
@@ -193,7 +193,7 @@ try {
             throw "OpenTUI-Full-Repaint-Recovery ist weder vorhanden noch sicher patchbar."
         }
 
-        # windowsfix.12: process-level error handlers for the TUI MAIN thread (almanac #14a).
+        # windowsfix.13: process-level error handlers for the TUI MAIN thread (almanac #14a).
         # Unhandled errors printed raw Bun stack traces to stderr — the TTY the TUI renders
         # on — corrupting the diff-rendered screen until a manual resize. The server worker
         # (cli/tui/worker.ts) already installs handlers; the main thread had NONE. Log to a
