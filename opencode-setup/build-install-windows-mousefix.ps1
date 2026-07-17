@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "11",
+    [string]$PatchRevision = "12",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
@@ -193,7 +193,7 @@ try {
             throw "OpenTUI-Full-Repaint-Recovery ist weder vorhanden noch sicher patchbar."
         }
 
-        # windowsfix.11: process-level error handlers for the TUI MAIN thread (almanac #14a).
+        # windowsfix.12: process-level error handlers for the TUI MAIN thread (almanac #14a).
         # Unhandled errors printed raw Bun stack traces to stderr — the TTY the TUI renders
         # on — corrupting the diff-rendered screen until a manual resize. The server worker
         # (cli/tui/worker.ts) already installs handlers; the main thread had NONE. Log to a
@@ -245,8 +245,8 @@ try {
         } finally { Pop-Location }
         Push-Location "packages\opencode"
         try {
-            # Run process-spawning CLI tests separately so their fixed 5 s timeout is not consumed by suite contention.
-            bun test "test/cli/tui/thread.test.ts"
+            # Process startup on Windows can exceed Bun's 5 s default even when isolated.
+            bun test --timeout 15000 "test/cli/tui/thread.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "CLI-Livetests fehlgeschlagen." }
             # plugin-toggle spies on process-global state (process.cwd, TuiConfig) and flaked when
             # sharing a run with other suites (2026-07-11: 1 fail in-suite, 3/3 pass standalone).
