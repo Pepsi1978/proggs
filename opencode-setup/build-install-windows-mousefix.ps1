@@ -1,11 +1,11 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "16",
+    [string]$PatchRevision = "17",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
 
-# Stand: windowsfix.16 - 17.07.2026 13:40 Uhr
+# Stand: windowsfix.17 - 17.07.2026 13:44 Uhr
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
@@ -258,8 +258,11 @@ try {
             # per-test timeout keep their own value.
             bun test --timeout 15000 "test/cli/tui/plugin-toggle.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "Plugin-Toggle-Regressionstest fehlgeschlagen." }
-            bun test --timeout 15000 "test/plugin/install.test.ts" "test/config/config.test.ts"
-            if ($LASTEXITCODE -ne 0) { throw "CLI-Regressionstests fehlgeschlagen." }
+            # Beide Suites verändern prozessglobale Config-/Temp-Zustände und kollidieren im selben Bun-Lauf.
+            bun test --timeout 15000 "test/plugin/install.test.ts"
+            if ($LASTEXITCODE -ne 0) { throw "Plugin-Install-Regressionstests fehlgeschlagen." }
+            bun test --timeout 15000 "test/config/config.test.ts"
+            if ($LASTEXITCODE -ne 0) { throw "Config-Regressionstests fehlgeschlagen." }
         } finally { Pop-Location }
 
         $env:OPENCODE_VERSION = $customVersion
