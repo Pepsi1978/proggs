@@ -4,11 +4,13 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.3.5 - 16.07.2026, 14:03 Uhr
+Stand: v1.4.0 - 17.07.2026, 11:49 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
+- Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
+- Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten.
@@ -58,12 +60,14 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 
 ## Verifikation
 
-1. Die rechte Sidebar zeigt `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
-2. Ein Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.
-3. Beim nächsten Modellaufruf beginnt die zusätzliche Systemanweisung mit
+1. Unter dem Session-Titel stehen die unterstützten Effort-Stufen nebeneinander; ein Klick markiert die aktive Stufe.
+2. Die rechte Sidebar zeigt darunter `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
+3. Ein Effort-Klick ändert denselben validierten Model-Variant-State wie OpenCodes eigener Varianten-Picker.
+4. Ein Modus-Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.
+5. Beim nächsten Modellaufruf beginnt die zusätzliche Systemanweisung mit
    `AKTIVER ARBEITSMODUS: <gewählter Modus>`.
-4. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
-5. Die Plugin-Version in `package.json` entspricht der Version dieser README.
+6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
+7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 
 Tests im Repo:
 

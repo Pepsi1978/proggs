@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "9",
+    [string]$PatchRevision = "10",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
@@ -90,6 +90,7 @@ function Publish-Candidate([string]$Built, [string]$UpstreamVersion, [string]$Cu
                 windowsMouseHybrid = "present"
                 fullRepaintRecovery = "present"
                 tuiVariant = "present"
+                tuiVariantControl = "present"
                 runtimePluginToggle = "present"
                 tuiErrorHandlers = "present"
             }
@@ -192,7 +193,7 @@ try {
             throw "OpenTUI-Full-Repaint-Recovery ist weder vorhanden noch sicher patchbar."
         }
 
-        # windowsfix.9: process-level error handlers for the TUI MAIN thread (almanac #14a).
+        # windowsfix.10: process-level error handlers for the TUI MAIN thread (almanac #14a).
         # Unhandled errors printed raw Bun stack traces to stderr — the TTY the TUI renders
         # on — corrupting the diff-rendered screen until a manual resize. The server worker
         # (cli/tui/worker.ts) already installs handlers; the main thread had NONE. Log to a

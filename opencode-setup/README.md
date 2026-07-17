@@ -126,7 +126,8 @@ Die rechte TUI-Seitenleiste muss danach auf beiden Windows-Rechnern dieselben Fu
 - OpenCode-Version mit `-windowsfix.<revision>`
 
 Der Windows-Build erhält zusätzlich Linksauswahl-Copy, Rechtsklick-Paste, Mausrad, anklickbare Dialoge,
-automatische Full-Repaint-Recovery, prozesslokales `--variant` für High/Medium/etc. und eine vollständige
+automatische Full-Repaint-Recovery, prozesslokales `--variant` sowie eine direkte TUI-Variantensteuerung
+für den klickbaren Low/Medium/High/X-High-Effort-Umschalter und eine vollständige
 Plugin-Verwaltung: Die Plugin-Seite zeigt TUI- und Runtime-Hook-Plugins gemeinsam an und kann beide Typen
 dauerhaft aktivieren oder deaktivieren. Runtime-Schalter werden kompatibel in `tui.json` gespeichert;
 OpenCode lädt die Server-Plugins danach automatisch neu.

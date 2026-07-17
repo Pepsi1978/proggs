@@ -19,6 +19,12 @@ import {
 } from "./work-mode"
 
 const FALLBACK_EUR_PER_USD = 0.92
+const EFFORT_LEVELS = [
+  { id: "low", label: "Low" },
+  { id: "medium", label: "Medium" },
+  { id: "high", label: "High" },
+  { id: "xhigh", label: "X-High" },
+] as const
 const THEME_PROFILES = [
   "aura",
   "ayu",
@@ -216,6 +222,57 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
         }}
       </For>
     </box>
+  )
+}
+
+function EffortSelector(props: { api: TuiPluginApi }) {
+  const theme = () => props.api.theme.current
+  const model = () => (props.api as TuiPluginApi & {
+    model?: {
+      variant: {
+        current: () => string | undefined
+        list: () => ReadonlyArray<string>
+        set: (value: string | undefined) => boolean
+      }
+    }
+  }).model
+  const levels = createMemo(() => {
+    const available = new Set(model()?.variant.list() ?? [])
+    return EFFORT_LEVELS.filter((level) => available.has(level.id))
+  })
+
+  const selectEffort = (id: string, label: string) => {
+    if (model()?.variant.set(id)) {
+      props.api.ui.toast({ title: "Effort", message: `${label} ist ab dem nächsten Modellaufruf aktiv.` })
+      return
+    }
+    props.api.ui.toast({
+      variant: "error",
+      title: "Effort",
+      message: `${label} wird vom aktuellen Modell nicht unterstützt.`,
+    })
+  }
+
+  return (
+    <Show when={levels().length > 0}>
+      <box flexDirection="row">
+        <For each={levels()}>
+          {(item, index) => {
+            const active = () => model()?.variant.current() === item.id
+            return (
+              <box
+                paddingRight={index() < levels().length - 1 ? 1 : 0}
+                onMouseUp={(event) => event.button === 0 && selectEffort(item.id, item.label)}
+              >
+                <Show when={active()} fallback={<text fg={theme().textMuted}>{item.label}</text>}>
+                  <text fg={theme().accent}><b>{item.label}</b></text>
+                </Show>
+              </box>
+            )
+          }}
+        </For>
+      </box>
+    </Show>
   )
 }
 
@@ -467,7 +524,12 @@ const tui: TuiPlugin = async (api) => {
     order: 90,
     slots: {
       sidebar_content(_ctx, props) {
-        return <WorkModeSelector api={api} sessionID={props.session_id} />
+        return (
+          <box>
+            <EffortSelector api={api} />
+            <WorkModeSelector api={api} sessionID={props.session_id} />
+          </box>
+        )
       },
     },
   })

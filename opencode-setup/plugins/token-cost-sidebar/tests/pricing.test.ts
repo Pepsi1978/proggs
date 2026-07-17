@@ -234,6 +234,24 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("console.")
   })
 
+  test("changes the live model effort through the validated TUI variant API", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    const patch = await Bun.file(new URL("../../../patches/opencode-1.17.18-windows-mouse.patch", import.meta.url)).text()
+
+    expect(source).toContain('{ id: "low", label: "Low" }')
+    expect(source).toContain('{ id: "medium", label: "Medium" }')
+    expect(source).toContain('{ id: "high", label: "High" }')
+    expect(source).toContain('{ id: "xhigh", label: "X-High" }')
+    expect(source).toContain("available.has(level.id)")
+    expect(source).toContain("model()?.variant.set(id)")
+    expect(source).toContain("model()?.variant.current() === item.id")
+    expect(source).toContain("<EffortSelector api={api} />")
+    expect(source.indexOf("<EffortSelector api={api} />")).toBeLessThan(source.indexOf("<WorkModeSelector api={api}"))
+    expect(patch).toContain("model: TuiModel")
+    expect(patch).toContain("input.local.model.variant.set(value)")
+    expect(patch).toContain("!input.local.model.variant.list().includes(value)")
+  })
+
   test("documents every component required for a portable installation", async () => {
     const readme = await Bun.file(new URL("../README.md", import.meta.url)).text()
     const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json()
