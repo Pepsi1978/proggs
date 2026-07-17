@@ -341,7 +341,18 @@ private fun CardBack(card: Flashcard, fontSize: Int) {
             CardLabel("ANTWORT", c.accent2, c.green)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(card.answer, color = c.text, fontFamily = Newsreader, fontSize = (fontSize + 2).sp, lineHeight = ((fontSize + 2) * 1.42).sp, fontWeight = FontWeight.SemiBold)
-                Text(card.explanation, color = c.muted, fontFamily = Newsreader, fontSize = 14.5.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 15.dp).border(2.dp, c.accent2.copy(alpha = 0.4f), RoundedCornerShape(1.dp)).padding(start = 12.dp))
+                Text(
+                    card.explanation,
+                    color = c.muted,
+                    fontFamily = Newsreader,
+                    fontSize = 14.5.sp,
+                    lineHeight = 22.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 15.dp)
+                        .border(1.dp, c.accent2.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                )
             }
         }
     }

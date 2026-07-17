@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.33 - 18.07.2026, 01:40 Uhr
+Version 0.1.34 - 18.07.2026, 01:41 Uhr
 
 ## 1. Übersicht
 
@@ -157,6 +157,8 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
     Lernfortschritt und Session gemeinsam in einer Datenbanktransaktion.
 11. **Lernrunde, Frage:** Fortschritt, Kartenindikatoren, Vorlesen, 3D-Karte und Flip.
 12. **Lernrunde, Antwort:** Antwort plus Erklärung, Nicht gewusst und Gewusst.
+    Der Erklärungskasten bleibt als visuelle Gliederung erhalten und besitzt rundum
+    ausreichend Innenabstand, damit Kontur und Buchstaben sich nicht berühren.
 13. **Lernrunde, Abschluss:** Konfetti, Ergebniszahlen, Nochmal und Fertig.
 14. **Einstellungen:** GPT-Modell, Reasoning, Kartenlimit, Verbindungen,
     Erscheinungsbild, Farbprofil, Kartenschriftgröße, globale/einzelne Sounds,
