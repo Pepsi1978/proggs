@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.4 - 17.07.2026, 17:09 Uhr
+> Stand: v1.0.5 - 17.07.2026, 18:53 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
@@ -130,7 +130,8 @@ Die rechte TUI-Seitenleiste muss danach auf beiden Windows-Rechnern dieselben Fu
 
 Der Windows-Build erhält zusätzlich Linksauswahl-Copy, Rechtsklick-Paste, Mausrad, anklickbare Dialoge,
 automatische Full-Repaint-Recovery, prozesslokales `--variant` sowie eine direkte TUI-Variantensteuerung
-für den klickbaren Low/Medium/High/X-High-Effort-Umschalter und eine vollständige
+für den klickbaren, modellabhängigen Varianten-Umschalter einschließlich None, Minimal, Low,
+Medium, High, XHigh, Max sowie providerspezifischen Varianten und eine vollständige
 Plugin-Verwaltung: Die Plugin-Seite zeigt TUI- und Runtime-Hook-Plugins gemeinsam an und kann beide Typen
 dauerhaft aktivieren oder deaktivieren. Runtime-Schalter werden kompatibel in `tui.json` gespeichert;
 OpenCode lädt die Server-Plugins danach automatisch neu.

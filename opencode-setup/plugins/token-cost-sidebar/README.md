@@ -4,12 +4,15 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.8.1 - 17.07.2026, 18:46 Uhr
+Stand: v1.9.0 - 17.07.2026, 18:53 Uhr
 
 ## Funktionen
 
 - Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
-- Klickbare Effort-Auswahl für Low, Medium, High und X-High, soweit vom aktuellen Modell unterstützt.
+- Klickbare Auswahl aller Varianten, die OpenCode für das aktuelle Modell tatsächlich bereitstellt.
+  Dazu gehören modellabhängig unter anderem None, Minimal, Low, Medium, High, XHigh, Max und Thinking.
+- OpenAI-, OpenRouter- und andere Provider-Modelle verwenden dieselbe effektive Laufzeitliste; neue
+  oder benutzerdefinierte Varianten erscheinen ohne Plugin-Update und bleiben auswählbar.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
 - Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt unter OpenAI-Modellen.
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Eine Leerzeile trennt den Block von der Effort-Auswahl.
@@ -90,7 +93,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 
 ## Verifikation
 
-1. Unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter die unterstützten Effort-Stufen; ein Klick markiert die aktive Stufe.
+1. Unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter alle von OpenCode für dieses Modell bereitgestellten Varianten; ein Klick markiert die aktive Variante.
 2. Die rechte Sidebar zeigt darunter `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
 3. Ein Effort-Klick ändert denselben validierten Model-Variant-State wie OpenCodes eigener Varianten-Picker.
 4. Ein Modus-Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.

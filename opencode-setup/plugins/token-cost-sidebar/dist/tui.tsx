@@ -29,12 +29,16 @@ import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, type WeeklyQuota } fro
 const FALLBACK_EUR_PER_USD = 0.92
 const QUOTA_POLL_MS = 60_000
 const QUOTA_RECHECK_DELAY_MS = 2_000
-const EFFORT_LEVELS = [
-  { id: "low", label: "Low" },
-  { id: "medium", label: "Medium" },
-  { id: "high", label: "High" },
-  { id: "xhigh", label: "X-High" },
-] as const
+const VARIANT_LABELS: Record<string, string> = {
+  none: "None",
+  minimal: "Minimal",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "XHigh",
+  max: "Max",
+  thinking: "Thinking",
+}
 const THEME_PROFILES = [
   "aura",
   "ayu",
@@ -95,6 +99,12 @@ function modelOf(message: any): string | undefined {
 
 function shortLabel(label: string): string {
   return label.length <= 34 ? label : `${label.slice(0, 31)}...`
+}
+
+function variantLabel(value: string): string {
+  return VARIANT_LABELS[value] ?? value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
 type LiveModelApi = {
@@ -274,10 +284,7 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
 function EffortSelector(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   const model = () => liveModel(props.api)
-  const levels = createMemo(() => {
-    const available = new Set(model()?.variant.list() ?? [])
-    return EFFORT_LEVELS.filter((level) => available.has(level.id))
-  })
+  const levels = createMemo(() => (model()?.variant.list() ?? []).map((id) => ({ id, label: variantLabel(id) })))
 
   const selectEffort = (id: string, label: string) => {
     if (model()?.variant.set(id)) {

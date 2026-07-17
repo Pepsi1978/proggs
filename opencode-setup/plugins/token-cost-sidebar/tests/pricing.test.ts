@@ -473,15 +473,18 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("console.")
   })
 
-  test("changes the live model effort through the validated TUI variant API", async () => {
+  test("shows every live model variant through the validated TUI variant API", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const patch = await Bun.file(new URL("../../../patches/opencode-1.17.18-windows-mouse.patch", import.meta.url)).text()
 
-    expect(source).toContain('{ id: "low", label: "Low" }')
-    expect(source).toContain('{ id: "medium", label: "Medium" }')
-    expect(source).toContain('{ id: "high", label: "High" }')
-    expect(source).toContain('{ id: "xhigh", label: "X-High" }')
-    expect(source).toContain("available.has(level.id)")
+    expect(source).toContain('none: "None"')
+    expect(source).toContain('minimal: "Minimal"')
+    expect(source).toContain('xhigh: "XHigh"')
+    expect(source).toContain('max: "Max"')
+    expect(source).toContain('thinking: "Thinking"')
+    expect(source).toContain("model()?.variant.list() ?? []).map((id)")
+    expect(source).toContain("label: variantLabel(id)")
+    expect(source).not.toContain("EFFORT_LEVELS")
     expect(source).toContain("model()?.variant.set(id)")
     expect(source).toContain("model()?.variant.current() === item.id")
     expect(source).toContain('<box flexDirection="row" paddingBottom={1}>')
