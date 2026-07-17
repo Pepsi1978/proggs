@@ -1,4 +1,4 @@
-// git-dirty-watchdog.js — Hoerbare+sichtbare Warnung, wenn eine Session idle wird, obwohl das
+// git-dirty-watchdog.js — Stille Protokollwarnung, wenn eine Session idle wird, obwohl das
 // Repo ungespeicherte Git-Aenderungen hat (Code-Durchsetzung, nicht Prompt-Bitte).
 //
 // Hintergrund (Vorfall 2026-07-01, Almanach bugs/claude-tooling/claude-config.md §1.1 /
@@ -15,14 +15,12 @@
 // unterscheiden, welche geaenderten Dateien zu DIESER Session gehoeren vs. einer parallelen
 // Session (siehe parallel-sessions-git.md) — ein automatisches `git add -A && commit && push`
 // waere selbst ein Risiko (fremde/halbfertige Aenderungen mitreissen). Es macht das Vergessen
-// stattdessen UNMOEGLICH zu uebersehen: sobald die Session idle wird und `git status` NICHT
-// sauber ist, ertoent ein Warnton (dasselbe error.wav wie bei anderen Fehlern) + ein Log-Eintrag.
+// stattdessen im strukturierten OpenCode-Log sichtbar. Akustik und System-Notifications gehoeren
+// ausschliesslich dem Completion-Guard, damit Zwischen-Idle-Ereignisse nicht unterbrechen.
 //
 // Direktive #3: jeder Hook in try/catch, darf OpenCode NIE crashen (fail-open).
 
 export const GitDirtyWatchdog = async ({ client, $, directory }) => {
-	const SOUND_PATH = "C:\\Users\\barwa\\.config\\opencode\\sounds\\error.wav";
-
 	const log = async (level, message) => {
 		// NUR strukturiert in die OpenCode-Log-Datei schreiben — NIEMALS console.* / stdout / stderr.
 		// Plugins laufen IM TUI-Prozess: jeder direkte Terminal-Schreibvorgang zerstoert das
@@ -33,15 +31,6 @@ export const GitDirtyWatchdog = async ({ client, $, directory }) => {
 				body: { service: "git-dirty-watchdog", level, message },
 			});
 		} catch {}
-	};
-
-	const playAlertSound = async () => {
-		try {
-			// .quiet() unterdrueckt das Bun-Shell-Echo — sonst blutet PowerShell-Output ins TTY/TUI.
-			await $`powershell -NoProfile -Command "(New-Object Media.SoundPlayer '${SOUND_PATH}').PlaySync()"`.quiet();
-		} catch {
-			// Sound ist nur Komfort — nie deswegen crashen oder die Warnung unterdruecken.
-		}
 	};
 
 	return {
@@ -70,7 +59,6 @@ export const GitDirtyWatchdog = async ({ client, $, directory }) => {
 					`Commit+Push ist Pflicht nach jeder Aufgabe (AGENTS.md / commit-push-jede-aufgabe-vor-build.md). ` +
 					`Bitte pruefen: git status --short`,
 			);
-			await playAlertSound();
 		},
 	};
 };

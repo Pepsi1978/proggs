@@ -20,31 +20,37 @@ export async function createNotifierCompletionGuard(input, NotifierPlugin) {
       if (event.type === "message.updated" && event.properties?.info?.role === "user" && id) {
         busySessions.delete(id)
         workedSessions.delete(id)
+        return
       }
 
       if (event.type === "session.status" && event.properties?.status?.type === "busy" && id) {
         busySessions.add(id)
+        await handleEvent?.(args)
+        return
       }
 
       if (event.type === "session.idle") {
         const wasBusy = id && busySessions.delete(id)
         const didWork = id && workedSessions.delete(id)
         if (!wasBusy || !didWork) return
+        await handleEvent?.(args)
+        return
       }
 
       if ((event.type === "session.error" || event.type === "session.deleted") && id) {
         busySessions.delete(id)
         workedSessions.delete(id)
       }
-
-      await handleEvent?.(args)
     },
+    "permission.ask": async () => {},
     "tool.execute.before": async (toolInput, output) => {
       const id = toolInput?.sessionID
       if (id && WORK_TOOLS.has(toolInput.tool)) {
         workedSessions.add(id)
       }
-      await handleToolBefore?.(toolInput, output)
+      if (toolInput.tool === "question") {
+        await handleToolBefore?.(toolInput, output)
+      }
     },
   }
 }

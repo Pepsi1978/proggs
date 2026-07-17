@@ -10,10 +10,11 @@ const sessionEvent = (type, id, properties = {}) => ({
 })
 
 async function createHarness() {
-  const calls = { events: [], tools: [] }
+  const calls = { events: [], tools: [], permissions: 0 }
   const notifier = async () => ({
     event: async ({ event }) => calls.events.push(event.type),
     "tool.execute.before": async ({ tool }) => calls.tools.push(tool),
+    "permission.ask": async () => { calls.permissions += 1 },
   })
   const hooks = await createNotifierCompletionGuard({}, notifier)
   return { calls, hooks }
@@ -27,7 +28,7 @@ test("a submitted prompt does not become a completion alert", async () => {
   await hooks.event({ event: sessionEvent("session.status", id, { status: { type: "busy" } }) })
   await hooks.event({ event: sessionEvent("session.idle", id) })
 
-  assert.deepEqual(calls.events, ["message.updated", "session.status"])
+  assert.deepEqual(calls.events, ["session.status"])
 })
 
 test("idle is forwarded only after real work in the current turn", async () => {
@@ -38,36 +39,53 @@ test("idle is forwarded only after real work in the current turn", async () => {
   await hooks["tool.execute.before"]({ sessionID: id, tool: "apply_patch" }, {})
   await hooks.event({ event: sessionEvent("session.idle", id) })
 
-  assert.deepEqual(calls.tools, ["apply_patch"])
+  assert.deepEqual(calls.tools, [])
   assert.deepEqual(calls.events, ["session.status", "session.idle"])
 })
 
-test("questions and errors remain actionable alerts", async () => {
+test("only an AI question reaches the notifier tool hook", async () => {
   const { calls, hooks } = await createHarness()
   const id = "session-3"
 
+  await hooks["tool.execute.before"]({ sessionID: id, tool: "bash" }, {})
+  await hooks["tool.execute.before"]({ sessionID: id, tool: "plan_exit" }, {})
   await hooks["tool.execute.before"]({ sessionID: id, tool: "question" }, {})
-  await hooks.event({ event: sessionEvent("session.error", id) })
 
   assert.deepEqual(calls.tools, ["question"])
-  assert.deepEqual(calls.events, ["session.error"])
+})
+
+test("errors and permission requests stay silent", async () => {
+  const { calls, hooks } = await createHarness()
+  const id = "session-4"
+
+  await hooks.event({ event: sessionEvent("session.error", id) })
+  await hooks.event({ event: sessionEvent("permission.asked", id) })
+  await hooks["permission.ask"]()
+
+  assert.deepEqual(calls.events, [])
+  assert.equal(calls.permissions, 0)
 })
 
 test("setup has one guarded notifier and no intermediate-event sounds", async () => {
   const setupDir = new URL("../", import.meta.url)
-  const [config, windowsInstaller, unixInstaller] = await Promise.all([
+  const [config, windowsInstaller, unixInstaller, dirtyWatchdog] = await Promise.all([
     readFile(new URL("opencode.jsonc", setupDir), "utf8"),
     readFile(new URL("install.ps1", setupDir), "utf8"),
     readFile(new URL("install.sh", setupDir), "utf8"),
+    readFile(new URL("plugins/git-dirty-watchdog.js", setupDir), "utf8"),
   ])
 
   assert.doesNotMatch(config, /^\s*"@mohak34\/opencode-notifier@/m)
   assert.match(windowsInstaller, /npm install[^\r\n]*'@mohak34\/opencode-notifier@0\.2\.8'/)
   assert.match(unixInstaller, /npm install[^\r\n]*'@mohak34\/opencode-notifier@0\.2\.8'/)
 
+  const disabledEvents = ["permission", "subagent_complete", "error", "interrupted", "user_cancelled", "plan_exit", "session_started", "user_message", "client_connected"]
   for (const source of [windowsInstaller, unixInstaller]) {
-    assert.match(source, /["']?subagent_complete["']?\s*[=:]\s*(?:\$false|false)/)
-    assert.match(source, /["']?interrupted["']?\s*[=:]\s*(?:\$false|false)/)
-    assert.match(source, /["']?user_cancelled["']?\s*[=:]\s*(?:\$false|false)/)
+    assert.match(source, /["']?complete["']?\s*[=:]\s*(?:\$true|true)/)
+    assert.match(source, /["']?question["']?\s*[=:]\s*(?:\$true|true)/)
+    for (const event of disabledEvents) {
+      assert.match(source, new RegExp(`["']?${event}["']?\\s*[=:]\\s*(?:\\$false|false)`))
+    }
   }
+  assert.doesNotMatch(dirtyWatchdog, /SoundPlayer|playAlertSound|\.wav/)
 })

@@ -55,7 +55,7 @@
   // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-07-10):
   //  - @mohak34/opencode-notifier (v0.2.8, MIT) wird ausschliesslich vom lokalen
   //    notifier-completion-guard geladen. Eine zweite Registrierung hier wuerde den Guard umgehen.
-  //    Die Installer installieren das Paket und erzeugen die Event-Allowlist mit eigenen WAVs.
+  //    Die Installer installieren das Paket und erzeugen die Allowlist nur fuer Abschluss und Frage.
   //  - @plannotator/opencode (v0.20.3 — >=0.20.0 PFLICHT, sonst Bun-Import-Bug auf
   //    Node-Host, Almanach §55c): Plan-Annotation. workflow:"manual" -> submit_plan wird
   //    NICHT registriert, nur per /plannotator-annotate|review|last auf Abruf. KEIN

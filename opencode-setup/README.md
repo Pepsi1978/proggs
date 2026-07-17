@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.1 - 17.07.2026, 16:11 Uhr
+> Stand: v1.0.2 - 17.07.2026, 16:24 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
@@ -161,8 +161,8 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`; kopiert außerdem `tui.json` fuer TUI-Plugins.
 4. Legt `AGENTS-global.md` nur auf frischen Installationen als `AGENTS.md` an. Eine vorhandene lokale Datei bleibt erhalten, damit der Windows-Launcher genau diesen Ist-Zustand beim ersten Profilzugriff verlustfrei migriert und erst danach den Bootstrap setzt. Außerdem werden Agents, Plugins, TUI-Plugin-Dependencies, Sounds und Skills installiert.
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
-   Nur Abschluss nach echter Arbeit, Freigabe, Frage, Plan-Prüfung und Fehler melden sich auch dann,
-   wenn OpenCode gerade fokussiert ist; Unteraufgaben, Start, Abbruch und Nachrichteneingang bleiben stumm.
+   Nur Abschluss nach echter Arbeit und eine echte KI-Rückfrage melden sich auch dann, wenn OpenCode
+   gerade fokussiert ist. Alle anderen Ereignisse und der Dirty-Worktree-Watchdog bleiben stumm.
 6. Unter Windows: neueste stabile OpenCode-Version prüfen, vollständig testen, versioniert installieren und
    erst danach atomar aktivieren; Launcher `Release` bauen und Desktop-Verknüpfung erzeugen.
 7. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
@@ -172,8 +172,8 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 `plugins/*.js` werden vom Installer kopiert und beim Start automatisch geladen (kein Eintrag in
 `opencode.jsonc` noetig). Aktuell:
 - **`notifier-completion-guard.js`** — lädt den Notifier genau einmal und lässt einen Abschlussalarm nur
-  nach einem Busy-Zyklus mit echter Schreib-/Build-Arbeit durch. Fragen, Freigaben und Fehler bleiben
-  sofort hörbar; interne Unteraufgaben und das Absenden eines Prompts bleiben stumm.
+  nach einem Busy-Zyklus mit echter Schreib-/Build-Arbeit durch. Nur das `question`-Tool bleibt sofort
+  hörbar; Eingaben, Freigaben, Fehler, Planwechsel, interne Unteraufgaben und Abbrüche bleiben stumm.
 - **`tool-first-guard.js`** — setzt die Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im
   Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu

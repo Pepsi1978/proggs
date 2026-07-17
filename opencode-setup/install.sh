@@ -94,14 +94,14 @@ cat > "$DST/opencode-notifier.json" <<EOF
   "suppressWhenFocused": false,
   "minDuration": 0,
   "events": {
-    "permission": true,
+    "permission": false,
     "complete": true,
     "subagent_complete": false,
-    "error": true,
+    "error": false,
     "question": true,
     "interrupted": false,
     "user_cancelled": false,
-    "plan_exit": true,
+    "plan_exit": false,
     "session_started": false,
     "user_message": false,
     "client_connected": false
