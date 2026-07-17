@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.34 - 18.07.2026, 01:41 Uhr
+Version 0.1.35 - 18.07.2026, 01:43 Uhr
 
 ## 1. Übersicht
 
@@ -241,6 +241,12 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   entfernen abschließende Quellenabschnitte vor dem TTS-Aufruf. Im Profil wird nur
   die Antwort vorgelesen, niemals die darüber angezeigte ursprüngliche Frage. Der
   zentrale TTS-Parser überspringt Quellen zusätzlich als zweite Schutzschicht.
+- Das Antwortfeld enthält keine Quellenangaben zwischen Überschriften und Absätzen.
+  Prompt und deterministischer Filter entfernen Inline-URLs, Markdown-Links,
+  OpenAI-Zitatmarker, numerische Fußnoten und Quellenhinweise in Klammern. Alle Belege
+  erscheinen ausschließlich ganz unten unter der unveränderlichen Überschrift
+  `Quellen` als anklickbare Links. TTS endet vor dieser Überschrift und liest weder
+  diese Überschrift noch die darunterliegenden Links vor.
 
 ### Datenmodell
 

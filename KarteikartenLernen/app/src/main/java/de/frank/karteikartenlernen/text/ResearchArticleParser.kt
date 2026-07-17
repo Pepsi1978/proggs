@@ -31,8 +31,27 @@ fun parseResearchArticle(text: String): List<ArticleBlock> {
 }
 
 fun researchAnswerForSpeech(answer: String): String {
-    val sourceHeading = SOURCE_HEADING.find(answer) ?: return answer.trim()
-    return answer.substring(0, sourceHeading.range.first).trim()
+    return sanitizeResearchAnswer(answer)
+}
+
+fun sanitizeResearchAnswer(answer: String): String {
+    val sourceHeading = SOURCE_HEADING.find(answer)
+    val answerOnly = if (sourceHeading == null) answer else answer.substring(0, sourceHeading.range.first)
+    return answerOnly
+        .replace(OPENAI_CITATION, "")
+        .replace(CHATGPT_CITATION, "")
+        .replace(MARKDOWN_LINK) { match -> match.groupValues[1] }
+        .replace(PARENTHETICAL_SOURCE, "")
+        .replace(BRACKETED_SOURCE, "")
+        .replace(NUMERIC_CITATION, "")
+        .replace(BARE_URL, "")
+        .lineSequence()
+        .map { line -> line.replace(MULTIPLE_SPACES, " ").trimEnd() }
+        .filterNot { line -> SOURCE_ONLY_LINE.matches(line.trim()) }
+        .joinToString("\n")
+        .replace(SPACE_BEFORE_PUNCTUATION, "$1")
+        .replace(EXCESS_BLANK_LINES, "\n\n")
+        .trim()
 }
 
 private fun appendArticleLines(blocks: MutableList<ArticleBlock>, lines: List<String>) {
@@ -52,3 +71,14 @@ private val SOURCE_HEADING = Regex(
     pattern = "^(?:#{1,3}\\s*)?(?:Quellen|Quellenangaben|Sources)\\s*:?\\s*$",
     options = setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
 )
+private val OPENAI_CITATION = Regex("【[^】]*】")
+private val CHATGPT_CITATION = Regex("cite[^]*")
+private val MARKDOWN_LINK = Regex("\\[([^]]+)]\\(https?://[^)]+\\)", RegexOption.IGNORE_CASE)
+private val PARENTHETICAL_SOURCE = Regex("\\((?:Quelle|Quellen|Source|Sources|vgl\\.)\\s*:?[^)]*\\)", RegexOption.IGNORE_CASE)
+private val BRACKETED_SOURCE = Regex("\\[(?:Quelle|Quellen|Source|Sources)\\s*:?[^]]*]", RegexOption.IGNORE_CASE)
+private val NUMERIC_CITATION = Regex("\\[(?:\\d+[a-z]?)(?:\\s*[,;–-]\\s*\\d+[a-z]?)*]")
+private val BARE_URL = Regex("https?://\\S+|www\\.\\S+", RegexOption.IGNORE_CASE)
+private val SOURCE_ONLY_LINE = Regex("^(?:Quelle|Quellen|Source|Sources|vgl\\.)\\s*:?\\s*.*$", RegexOption.IGNORE_CASE)
+private val SPACE_BEFORE_PUNCTUATION = Regex("[ \\t]+([,.;:!?])")
+private val MULTIPLE_SPACES = Regex("[ \\t]{2,}")
+private val EXCESS_BLANK_LINES = Regex("\\n{3,}")

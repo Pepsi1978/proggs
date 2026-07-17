@@ -34,6 +34,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import de.frank.karteikartenlernen.text.sanitizeResearchAnswer
 
 data class AuthResult(val email: String?)
 data class DeviceAuthInfo(val userCode: String, val verificationUri: String)
@@ -383,7 +384,10 @@ internal fun researchInstructions(): String = """
     Einzelwort reicht nicht. Eine Karte darf zu mehreren Sessions passen oder zu keiner; ein leeres Array ist besser
     als ein schwacher Vorschlag. Erfinde keine Session-ID und ordne nichts der neu erzeugten Session zu.
 
-    Gib zusätzlich 3 bis 12 tatsächlich verwendete Webquellen mit präzisem Titel und vollständiger URL zurück.
+    Im Feld answer dürfen nirgendwo Quellenangaben stehen: keine URLs, Domains, Quellennamen, Fußnoten, Zitatmarker,
+    Markdown-Links oder Klammerhinweise am Absatzende. Füge dort auch keine Quellenüberschrift ein. Gib alle Belege
+    ausschließlich im separaten Feld sources zurück: 3 bis 12 tatsächlich verwendete Webquellen mit präzisem Titel
+    und vollständiger URL. Die App setzt daraus selbst ganz unten den einzigen Abschnitt "Quellen" zusammen.
 """.trimIndent()
 
 internal fun researchInput(question: String, sessions: List<ExistingSessionContext>): String = buildString {
@@ -580,7 +584,7 @@ class CodexAuthManager(context: Context) {
             }
             val cards = result.getJSONArray("cards")
             val validSessionIds = sessions.mapTo(mutableSetOf(), ExistingSessionContext::id)
-            val answer = result.getString("answer").trim()
+            val answer = sanitizeResearchAnswer(result.getString("answer"))
             val wordCount = researchWordCount(answer)
             if (wordCount !in MIN_RESEARCH_WORDS..MAX_RESEARCH_WORDS) {
                 throw CodexAuthException(

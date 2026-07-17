@@ -62,4 +62,25 @@ class ResearchArticleParserTest {
     fun speechTextWithoutSourcesRemainsUnchanged() {
         assertEquals("Die vollständige Antwort.", researchAnswerForSpeech("  Die vollständige Antwort.  "))
     }
+
+    @Test
+    fun inlineSourcesAreRemovedAndOnlyAnswerTextRemains() {
+        val answer = """
+            ## Erklärung
+
+            Pflanzen wandeln Licht in Energie um.【turn0search0†L1-L5】 Das nennt man [Photosynthese](https://example.org/photosynthese). [1]
+
+            Ein weiterer Satz (Quelle: Beispiel-Institut, 2026) mit Link https://example.org/studie.
+
+            ## Quellen
+
+            - Beispiel: https://example.org
+        """.trimIndent()
+
+        assertEquals(
+            "## Erklärung\n\nPflanzen wandeln Licht in Energie um. Das nennt man Photosynthese.\n\nEin weiterer Satz mit Link",
+            sanitizeResearchAnswer(answer),
+        )
+        assertEquals(sanitizeResearchAnswer(answer), researchAnswerForSpeech(answer))
+    }
 }
