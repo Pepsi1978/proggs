@@ -50,15 +50,22 @@ internal fun codexInput(question: String): JSONArray = JSONArray().put(
 internal fun parseCodexSse(body: String): String {
     val deltas = StringBuilder()
     var completedText: String? = null
+    var completed = false
     body.lineSequence().forEach { rawLine ->
         val line = rawLine.trim()
         if (!line.startsWith("data:")) return@forEach
         val data = line.removePrefix("data:").trim()
         if (data.isEmpty() || data == "[DONE]") return@forEach
-        val event = runCatching { JSONObject(data) }.getOrElse { return@forEach }
+        val event = runCatching { JSONObject(data) }.getOrElse {
+            throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat ein ungültiges Streaming-Ereignis geliefert.")
+        }
         when (event.optString("type")) {
             "response.output_text.delta" -> deltas.append(event.optString("delta"))
-            "response.completed" -> completedText = event.optJSONObject("response")?.let(::extractOutputText)
+            "response.completed" -> {
+                completed = true
+                completedText = event.optJSONObject("response")?.let(::extractOutputText)
+            }
+            "response.incomplete" -> throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat die Antwort unvollständig beendet.")
             "response.failed" -> {
                 val message = event.optJSONObject("response")?.optJSONObject("error")?.optString("message")
                     ?.takeIf(String::isNotBlank) ?: "OpenAI hat die Antwort abgebrochen."
@@ -72,6 +79,7 @@ internal fun parseCodexSse(body: String): String {
             }
         }
     }
+    if (!completed) throw CodexAuthException(AuthErrorKind.NETWORK, "Die OpenAI-Verbindung endete vor dem Abschluss der Antwort.")
     return deltas.toString().takeIf(String::isNotBlank)
         ?: completedText?.takeIf(String::isNotBlank)
         ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antworttext geliefert.")

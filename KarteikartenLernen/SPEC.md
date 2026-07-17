@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.16 - 17.07.2026, 23:40 Uhr
+Version 0.1.17 - 17.07.2026, 23:49 Uhr
 
 ## 1. Übersicht
 
@@ -176,6 +176,7 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   mit `16 kHz`, Mono und 16 Bit auf. Nur ein erneuter Mikrofon-Tipp beendet die
   Aufnahme; Sprechpausen stoppen sie nicht. Danach transkribiert Groq mit dem exakten
   Modell `whisper-large-v3-turbo`. Weitere Diktate werden an vorhandenen Text angehängt.
+  Stop, Abbruch und ViewModel-Ende schließen Writer, Stream und `AudioRecord` genau einmal.
 - Textverbesserung nutzt das lokal konfigurierte Gemini-Modell mit einer
   bedeutungstreuen Redaktionsanweisung: Intention, Satzbau, Wortstellung,
   Verständlichkeit und Stil werden aktiv verbessert, ohne Fakten hinzuzuerfinden.

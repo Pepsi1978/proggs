@@ -59,7 +59,7 @@ fun ResearchScreen(
 ) {
     val c = LocalAppPalette.current
     AppHeader()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 76.dp)) {
         if (state.answer == null) MicButton(state.mic, state.recordingSeconds, onMicClick)
         Spacer(Modifier.height(if (state.answer == null) 4.dp else 8.dp))
         Box(
@@ -90,20 +90,21 @@ fun ResearchScreen(
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val enabled = state.input.isNotBlank() && state.mic == MicState.IDLE
+            val inputAvailable = state.input.isNotBlank() && state.mic == MicState.IDLE && state.generationPhase == null
+            val canImprove = inputAvailable && !state.improving
             Row(
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (enabled) Brush.linearGradient(listOf(c.accent, c.accent2)) else Brush.linearGradient(listOf(c.field, c.field)))
-                    .clickable(enabled = enabled, onClick = onImprove)
+                    .background(if (inputAvailable) Brush.linearGradient(listOf(c.accent, c.accent2)) else Brush.linearGradient(listOf(c.field, c.field)))
+                    .clickable(enabled = canImprove, onClick = onImprove)
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (state.improving) LoadingRing(Color.White, 16.dp) else Icon(Icons.Outlined.AutoAwesome, null, tint = if (enabled) Color.White else c.faint, modifier = Modifier.size(17.dp))
+                if (state.improving) LoadingRing(Color.White, 16.dp) else Icon(Icons.Outlined.AutoAwesome, null, tint = if (inputAvailable) Color.White else c.faint, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (state.improving) "Formuliere …" else "In gutes Deutsch", color = if (enabled) Color.White else c.faint, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(if (state.improving) "Formuliere …" else "In gutes Deutsch", color = if (inputAvailable) Color.White else c.faint, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             Box(
                 Modifier
@@ -117,7 +118,7 @@ fun ResearchScreen(
                 Icon(Icons.Outlined.Replay, "Rückgängig", tint = if (state.versionIndex > 0) c.text else c.faint)
             }
         }
-        val canSend = state.input.isNotBlank() && state.generationPhase == null && state.mic == MicState.IDLE
+        val canSend = state.input.isNotBlank() && state.generationPhase == null && state.mic == MicState.IDLE && !state.improving
         Box(
             Modifier
                 .fillMaxWidth()

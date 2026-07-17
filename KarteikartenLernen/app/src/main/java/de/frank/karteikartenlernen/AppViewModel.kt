@@ -195,7 +195,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun improve() {
         val state = _uiState.value
-        if (state.improving || state.input.isBlank() || state.mic != MicState.IDLE) return
+        if (state.improving || state.input.isBlank() || state.mic != MicState.IDLE || state.generationPhase != null) return
         val source = state.input
         _uiState.update { it.copy(improving = true, message = null) }
         improveJob?.cancel()
@@ -230,7 +230,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun send() {
         val state = _uiState.value
-        if (state.input.isBlank() || state.generationPhase != null || state.mic != MicState.IDLE) return
+        if (state.input.isBlank() || state.generationPhase != null || state.mic != MicState.IDLE || state.improving) return
         if (!auth.isConnected) {
             _uiState.update { it.copy(showOAuth = true) }
             return

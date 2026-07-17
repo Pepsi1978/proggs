@@ -13,9 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class WavAudioRecorder(context: Context) {
@@ -23,8 +25,10 @@ class WavAudioRecorder(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
     private var session: RecordingSession? = null
+    @Volatile private var shutDown = false
 
     suspend fun start() = withContext(Dispatchers.IO) {
+        check(!shutDown) { "Der Audiorecorder wurde bereits beendet." }
         val minimum = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
         require(minimum > 0) { "Das Mikrofon unterstützt das benötigte Aufnahmeformat nicht." }
         val bufferSize = maxOf(minimum * 2, SAMPLE_RATE * 2)
@@ -61,16 +65,11 @@ class WavAudioRecorder(context: Context) {
         }
     }
 
-    suspend fun stop(): File = withContext(Dispatchers.IO) {
+    suspend fun stop(): File = withContext(NonCancellable + Dispatchers.IO) {
         val current = synchronized(lock) {
-            session?.also {
-                session = null
-                it.running.set(false)
-            } ?: error("Es läuft keine Aufnahme.")
+            session?.also { session = null } ?: error("Es läuft keine Aufnahme.")
         }
-        runCatching { current.recorder.stop() }
-        current.writer.join()
-        current.recorder.release()
+        finishSession(current)
         current.failure?.let {
             current.file.delete()
             throw it
@@ -85,21 +84,25 @@ class WavAudioRecorder(context: Context) {
 
     fun cancel() {
         val current = synchronized(lock) {
-            session?.also {
-                session = null
-                it.running.set(false)
-            }
+            session?.also { session = null }
         } ?: return
-        runCatching { current.recorder.stop() }
-        current.writer.cancel()
-        current.recorder.release()
-        runCatching { current.output.close() }
+        runBlocking(Dispatchers.IO + NonCancellable) { finishSession(current) }
         current.file.delete()
     }
 
     fun shutdown() {
+        shutDown = true
         cancel()
         scope.cancel()
+    }
+
+    private suspend fun finishSession(current: RecordingSession) {
+        if (!current.cleaned.compareAndSet(false, true)) return
+        current.running.set(false)
+        runCatching { current.recorder.stop() }
+        current.writer.join()
+        runCatching { current.output.close() }
+        current.recorder.release()
     }
 
     private fun writeAudio(current: RecordingSession) {
@@ -123,6 +126,7 @@ class WavAudioRecorder(context: Context) {
         val recorder: AudioRecord,
         val bufferSize: Int,
         val running: AtomicBoolean = AtomicBoolean(true),
+        val cleaned: AtomicBoolean = AtomicBoolean(false),
     ) {
         lateinit var writer: Job
         @Volatile var failure: Exception? = null

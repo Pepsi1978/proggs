@@ -3,6 +3,7 @@ package de.frank.karteikartenlernen.auth
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class CodexAuthRetryTest {
@@ -62,5 +63,12 @@ class CodexAuthRetryTest {
         """.trimIndent()
 
         assertEquals("fertig", parseCodexSse(stream))
+    }
+
+    @Test
+    fun codexSseRejectsStreamsWithoutCompletion() {
+        val stream = """data: {"type":"response.output_text.delta","delta":"teilweise"}"""
+
+        assertThrows(CodexAuthException::class.java) { parseCodexSse(stream) }
     }
 }
