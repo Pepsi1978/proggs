@@ -53,16 +53,15 @@
   "small_model": "openai/gpt-5.5-fast",
 
   // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-07-10):
-  //  - @mohak34/opencode-notifier (v0.2.8, MIT): Ton + System-Notification bei
-  //    Session-/Unteraufgaben-Abschluss, permission, question, plan_exit und error.
-  //    Die Installer erzeugen ~/.config/opencode/opencode-notifier.json mit eigenen WAVs.
+  //  - @mohak34/opencode-notifier (v0.2.8, MIT) wird ausschliesslich vom lokalen
+  //    notifier-completion-guard geladen. Eine zweite Registrierung hier wuerde den Guard umgehen.
+  //    Die Installer installieren das Paket und erzeugen die Event-Allowlist mit eigenen WAVs.
   //  - @plannotator/opencode (v0.20.3 — >=0.20.0 PFLICHT, sonst Bun-Import-Bug auf
   //    Node-Host, Almanach §55c): Plan-Annotation. workflow:"manual" -> submit_plan wird
   //    NICHT registriert, nur per /plannotator-annotate|review|last auf Abruf. KEIN
   //    Plan-Zwang bei normalen Anfragen (Frank-Wunsch). Slash-Commands kommen mit dem Paket.
   //  Eintrag-Form: String ODER [name, options]; { } NICHT als eigenes Array-Item (Plannotator-Doku).
   "plugin": [
-    "@mohak34/opencode-notifier@0.2.8",
     ["@plannotator/opencode@latest", { "workflow": "manual" }]
   ],
 

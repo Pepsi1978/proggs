@@ -101,7 +101,7 @@ $npm = Get-Command npm -ErrorAction SilentlyContinue
 if ($npm) {
   Push-Location $Dst
   try {
-    & npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' | Out-Null
+    & npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' '@mohak34/opencode-notifier@0.2.8' | Out-Null
     if ($LASTEXITCODE -eq 0) { Ok 'TUI-Plugin-Dependencies (npm)' } else { Warn 'TUI-Plugin-Dependencies konnten nicht installiert werden' }
   } finally {
     Pop-Location
@@ -127,11 +127,11 @@ $notifier = [ordered]@{
   events = [ordered]@{
     permission = $true
     complete = $true
-    subagent_complete = $true
+    subagent_complete = $false
     error = $true
     question = $true
-    interrupted = $true
-    user_cancelled = $true
+    interrupted = $false
+    user_cancelled = $false
     plan_exit = $true
     session_started = $false
     user_message = $false
@@ -212,7 +212,7 @@ Write-Host ''
 Warn 'Noch manuell (interaktiv, nicht skriptbar):'
 Write-Host '  - opencode auth login   (bzw. /connect in der TUI) fuer das Go-Abo (opencode-go/MiniMax + Plan)'
 Write-Host "  - Beim ERSTEN Prompt muss OpenCode melden: 'N Regeln aus dem zweiten Gehirn eingelesen.'"
-Write-Host '  - npm-Plugins (@mohak34/opencode-notifier, @plannotator/opencode) installiert OpenCode selbst beim Start.'
+Write-Host '  - @plannotator/opencode installiert OpenCode beim Start; der Notifier wurde lokal als Guard-Abhängigkeit installiert.'
 
 Write-Host ''
 if ($todo -eq 0) {

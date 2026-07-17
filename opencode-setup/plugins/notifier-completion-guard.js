@@ -1,12 +1,10 @@
-import NotifierPlugin from "@mohak34/opencode-notifier"
-
 const WORK_TOOLS = new Set(["apply_patch", "edit", "write", "bash"])
 
 function sessionId(event) {
   return event?.properties?.sessionID ?? event?.properties?.info?.sessionID ?? event?.properties?.info?.id ?? null
 }
 
-export default async function NotifierCompletionGuard(input) {
+export async function createNotifierCompletionGuard(input, NotifierPlugin) {
   const notifier = await NotifierPlugin(input)
   const handleEvent = notifier.event
   const handleToolBefore = notifier["tool.execute.before"]
@@ -49,4 +47,9 @@ export default async function NotifierCompletionGuard(input) {
       await handleToolBefore?.(toolInput, output)
     },
   }
+}
+
+export default async function NotifierCompletionGuard(input) {
+  const { default: NotifierPlugin } = await import("@mohak34/opencode-notifier")
+  return createNotifierCompletionGuard(input, NotifierPlugin)
 }

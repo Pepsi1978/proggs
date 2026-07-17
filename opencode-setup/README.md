@@ -1,5 +1,7 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
+> Stand: v1.0.1 - 17.07.2026, 16:11 Uhr
+
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
 > (NICHT im Repo) — dieser Ordner haelt sie versioniert fest, sodass ein neuer Rechner mit **einem
@@ -159,8 +161,8 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`; kopiert außerdem `tui.json` fuer TUI-Plugins.
 4. Legt `AGENTS-global.md` nur auf frischen Installationen als `AGENTS.md` an. Eine vorhandene lokale Datei bleibt erhalten, damit der Windows-Launcher genau diesen Ist-Zustand beim ersten Profilzugriff verlustfrei migriert und erst danach den Bootstrap setzt. Außerdem werden Agents, Plugins, TUI-Plugin-Dependencies, Sounds und Skills installiert.
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
-   Abschluss-, Unteraufgaben-, Freigabe-, Frage-, Plan- und Fehlerereignisse melden sich auch dann,
-   wenn OpenCode gerade fokussiert ist; Start- und Nachrichteneingangs-Ereignisse bleiben stumm.
+   Nur Abschluss nach echter Arbeit, Freigabe, Frage, Plan-Prüfung und Fehler melden sich auch dann,
+   wenn OpenCode gerade fokussiert ist; Unteraufgaben, Start, Abbruch und Nachrichteneingang bleiben stumm.
 6. Unter Windows: neueste stabile OpenCode-Version prüfen, vollständig testen, versioniert installieren und
    erst danach atomar aktivieren; Launcher `Release` bauen und Desktop-Verknüpfung erzeugen.
 7. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
@@ -169,6 +171,9 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 
 `plugins/*.js` werden vom Installer kopiert und beim Start automatisch geladen (kein Eintrag in
 `opencode.jsonc` noetig). Aktuell:
+- **`notifier-completion-guard.js`** — lädt den Notifier genau einmal und lässt einen Abschlussalarm nur
+  nach einem Busy-Zyklus mit echter Schreib-/Build-Arbeit durch. Fragen, Freigaben und Fehler bleiben
+  sofort hörbar; interne Unteraufgaben und das Absenden eines Prompts bleiben stumm.
 - **`tool-first-guard.js`** — setzt die Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im
   Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu
@@ -195,7 +200,7 @@ cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
 cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
 cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
 cp -R ~/proggs/opencode-setup/plugins/token-cost-sidebar ~/.config/opencode/plugins/
-npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.15 @opentui/core@0.4.3 @opentui/solid@0.4.3 solid-js@1.9.12
+npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.15 @opentui/core@0.4.3 @opentui/solid@0.4.3 solid-js@1.9.12 @mohak34/opencode-notifier@0.2.8
 cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
 # opencode-notifier.json mit lokalen Pfaden von Hand anlegen (siehe install-Skript als Vorlage)
 ```
