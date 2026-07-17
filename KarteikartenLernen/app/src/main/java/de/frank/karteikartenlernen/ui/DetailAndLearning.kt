@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
@@ -144,8 +145,12 @@ private fun ResearchDetail(question: String, answer: String, onSpeak: (String) -
                 Text("Vollständige Recherche", color = c.faint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Icon(Icons.Outlined.Campaign, "Vorlesen", tint = c.muted, modifier = Modifier.size(18.dp).clickable { onSpeak(answer) })
             }
-            Text(question, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-            ResearchArticle(answer)
+            SelectionContainer {
+                Column {
+                    Text(question, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                    ResearchArticle(answer)
+                }
+            }
         }
     }
 }
