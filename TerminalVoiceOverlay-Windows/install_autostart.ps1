@@ -40,6 +40,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
+    -RunLevel Highest `
     -Description "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal" `
     -Force `
     -ErrorAction Stop | Out-Null

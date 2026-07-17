@@ -183,7 +183,7 @@ Damit das Overlay bei jedem Windows-Login automatisch startet:
 pwsh -File install_autostart.ps1
 ```
 
-> Das Skript erstellt eine Verknuepfung im Windows-Autostart-Ordner, die den **Watcher** startet. Der Watcher ueberwacht alle 3 Sekunden, ob das Overlay laeuft, und startet es automatisch neu, falls es sich beendet hat.
+> Das Skript registriert den **Watcher** mit höchsten Privilegien im Aufgabenplaner. Der Watcher überwacht alle 3 Sekunden, ob das Overlay läuft, und startet es automatisch neu, falls es sich beendet hat. Die einmalige Einrichtung benötigt eine administrative PowerShell; danach startet die Aufgabe bei jeder Anmeldung ohne erneute UAC-Abfrage.
 
 Um den Autostart wieder zu entfernen:
 

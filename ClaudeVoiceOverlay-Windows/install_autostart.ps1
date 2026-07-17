@@ -51,6 +51,8 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
+    -RunLevel Highest `
+    -Force `
     -Description "Voice Overlay fuer Claude Desktop und Codex — Sprache zu Text in Electron-Apps" | Out-Null
 
 Write-Host "`nAutostart mit Watcher eingerichtet!" -ForegroundColor Green
