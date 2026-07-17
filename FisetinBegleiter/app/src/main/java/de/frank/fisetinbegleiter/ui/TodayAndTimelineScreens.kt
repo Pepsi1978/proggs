@@ -56,9 +56,11 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -540,6 +542,13 @@ private fun SetupSheet(
     if (showDatePicker) {
         val today = LocalDate.now()
         val todayUtcMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val calendarSurface = colors.bg0.copy(alpha = 0.90f)
+        val calendarColorScheme = MaterialTheme.colorScheme.copy(
+            background = calendarSurface,
+            surface = calendarSurface,
+            surfaceContainer = calendarSurface,
+            surfaceContainerHigh = calendarSurface,
+        )
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = startDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
             initialDisplayedMonthMillis = startDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli() ?: todayUtcMillis,
@@ -549,35 +558,47 @@ private fun SetupSheet(
                 }
             },
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    enabled = datePickerState.selectedDateMillis != null,
-                    onClick = {
-                        val selected = datePickerState.selectedDateMillis?.let { millis ->
-                            Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
-                        }
-                        if (selected != null) {
-                            startDate = selected
-                            if (selected == LocalDate.now()) {
-                                val current = LocalTime.now()
-                                val nextQuarter = ((current.hour * 60 + current.minute) / 15 + 1) * 15
-                                if (startMinute <= current.hour * 60 + current.minute) {
-                                    startMinute = nextQuarter.coerceAtMost(1_425)
-                                }
+        MaterialTheme(colorScheme = calendarColorScheme) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(
+                        enabled = datePickerState.selectedDateMillis != null,
+                        onClick = {
+                            val selected = datePickerState.selectedDateMillis?.let { millis ->
+                                Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
                             }
-                            startError = false
-                            showDatePicker = false
-                        }
-                    },
-                ) { Text("Übernehmen") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") }
-            },
-        ) {
-            DatePicker(state = datePickerState)
+                            if (selected != null) {
+                                startDate = selected
+                                if (selected == LocalDate.now()) {
+                                    val current = LocalTime.now()
+                                    val nextQuarter = ((current.hour * 60 + current.minute) / 15 + 1) * 15
+                                    if (startMinute <= current.hour * 60 + current.minute) {
+                                        startMinute = nextQuarter.coerceAtMost(1_425)
+                                    }
+                                }
+                                startError = false
+                                showDatePicker = false
+                            }
+                        },
+                    ) { Text("Übernehmen") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") }
+                },
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = calendarSurface,
+                        titleContentColor = colors.sub,
+                        headlineContentColor = colors.text,
+                        weekdayContentColor = colors.sub,
+                        subheadContentColor = colors.text,
+                        navigationContentColor = colors.text,
+                    ),
+                )
+            }
         }
     }
 }
