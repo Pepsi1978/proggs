@@ -29,11 +29,17 @@ public sealed class OpenCodeLauncherService
     private const string Gpt56LunaSlug = "gpt-5.6-luna";
     private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
     private const string ProgrammerProcessPriorityScript = """
-try {
-    [Diagnostics.Process]::GetCurrentProcess().PriorityClass = [Diagnostics.ProcessPriorityClass]::AboveNormal
-} catch {
-    Write-Warning ('Prozesspriorität konnte nicht auf AboveNormal gesetzt werden: ' + $_.Exception.Message)
+function Set-ProgrammerProcessPriority {
+    param([Diagnostics.Process]$Process, [string]$Label)
+    try {
+        $Process.PriorityClass = [Diagnostics.ProcessPriorityClass]::AboveNormal
+    } catch {
+        Write-Warning ($Label + ' konnte nicht auf AboveNormal gesetzt werden: ' + $_.Exception.Message)
+    }
 }
+Set-ProgrammerProcessPriority ([Diagnostics.Process]::GetCurrentProcess()) 'PowerShell'
+Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
+    ForEach-Object { Set-ProgrammerProcessPriority $_ 'Windows Terminal' }
 """;
 
     private static readonly TerminalTabColor[] TerminalTabColors =
@@ -618,13 +624,9 @@ try {
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
-        var invoke = Path.IsPathFullyQualified(executable)
-            ? $"& '{EscapePowerShellSingleQuotedValue(executable)}'"
-            : executable;
         // ConfigureProvider already stores the selected start level in OpenCode's native
         // variant state. A second process-local --variant override competes with Ctrl+T,
         // which must remain the single owner of in-session variant changes.
-        var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
 
         // Fuer ALLE OpenCode-Profile: nur den CLAUDE.md-Prompt-Fallback abschalten, damit OpenCode
         // ausschliesslich die Profil-AGENTS.md als Regelquelle nutzt und keine ~/.claude/CLAUDE.md
@@ -667,8 +669,14 @@ try {
 }
 if (-not (Test-Path -LiteralPath $stderrDir)) { $stderrDir = $env:TEMP }
 $stderrLog = Join-Path $stderrDir ('opencode-stderr-{0:yyyyMMdd-HHmmss}-{1}.log' -f (Get-Date), $PID)
+$opencodeProcess = $null
 try {
-    {{openCodeInvocation}} 2>>$stderrLog
+    $opencodeProcess = Start-Process -FilePath {{PowerShellLiteral(executable)}} `
+        -ArgumentList @('-m', {{PowerShellLiteral(modelString)}}) `
+        -NoNewWindow -RedirectStandardError $stderrLog -PassThru
+    Set-ProgrammerProcessPriority $opencodeProcess 'OpenCode'
+    $opencodeProcess.WaitForExit()
+    $global:LASTEXITCODE = $opencodeProcess.ExitCode
 } finally {
     try {
         if (Test-Path -LiteralPath $stderrLog) {
