@@ -173,9 +173,12 @@ function formatUsdPerMillion(value: number): string {
   }).format(Math.max(0, value))} / 1M`
 }
 
-function formatCacheUsdPerMillion(read: number, write: number): string {
-  const withoutUnit = (value: number) => formatUsdPerMillion(value).replace(" / 1M", "")
-  return `${withoutUnit(read)} R / ${withoutUnit(write)} W / 1M`
+function compactUsd(value: number): string {
+  return `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 }).format(Math.max(0, value))}`
+}
+
+function formatCacheUsdPerMillion(_read: number, write: number): string {
+  return `R/$0.05 W/${compactUsd(write)}`
 }
 
 function formatEur(value: number): string {
@@ -709,7 +712,7 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context (kumuliert)</span></text>
+        <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
         <Row
           api={props.api}
           label="Inputpreis"
@@ -723,7 +726,7 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
           muted
         />
         <Show when={totals().cacheRead > 0 || totals().cacheWrite > 0}>
-          <Row api={props.api} label="Cachepreis R/W" value={cacheRateValue()} muted />
+          <Row api={props.api} label="Cachepreis" value={cacheRateValue()} muted />
         </Show>
         <Row
           api={props.api}

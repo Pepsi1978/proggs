@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.9.2 - 17.07.2026, 19:00 Uhr
+Stand: v1.9.3 - 17.07.2026, 19:20 Uhr
 
 ## Funktionen
 
@@ -59,7 +59,7 @@ Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Stark rabatti
 gegebenenfalls teurerer Cache-Write werden separat als `Cache R/W` mit ihren eigenen Preisen
 angezeigt; ihre Kosten erscheinen separat als `Cache-Kosten`. Effort-Stufen haben keinen eigenen
 Multiplikator; sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
-`Context (kumuliert)` bedeutet, dass jeder API-Modellaufruf der Session eingeht; wiederverwendete
+Die unter `Context` gezeigten Werte enthalten jeden API-Modellaufruf der Session; wiederverwendete
 Kontexttokens können daher über viele Aufrufe deutlich größer als das aktuelle Kontextfenster werden.
 Fehlt ein erforderlicher Preis, zeigt die Sidebar für die nicht belastbar aufteilbaren Werte
 `nicht verfügbar`, statt einen Preis zu erfinden.
