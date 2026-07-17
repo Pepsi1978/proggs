@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
 import de.frank.karteikartenlernen.AppViewModel
 import de.frank.karteikartenlernen.model.AppTab
 import de.frank.karteikartenlernen.model.AppUiState
@@ -47,32 +50,41 @@ fun KarteikartenApp(
         Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(c.background1, c.background0)))) {
             AuroraBackground()
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                    when (state.tab) {
-                        AppTab.RESEARCH -> ResearchScreen(
-                            state = state,
-                            onModelClick = { viewModel.showModelSheet(true) },
-                            onMicClick = onMicClick,
-                            onInput = viewModel::updateInput,
-                            onImprove = viewModel::improve,
-                            onUndo = viewModel::undo,
-                            onSend = viewModel::send,
-                            onSpeak = onSpeak,
-                            onLearn = { viewModel.startLearning(state.cards) },
-                            onReset = viewModel::resetResearch,
+                Box(Modifier.weight(1f)) {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        when (state.tab) {
+                            AppTab.RESEARCH -> ResearchScreen(
+                                state = state,
+                                onMicClick = onMicClick,
+                                onInput = viewModel::updateInput,
+                                onImprove = viewModel::improve,
+                                onUndo = viewModel::undo,
+                                onSend = viewModel::send,
+                                onSpeak = onSpeak,
+                                onLearn = { viewModel.startLearning(state.cards) },
+                                onReset = viewModel::resetResearch,
+                            )
+                            AppTab.PROFILES -> ProfilesScreen(state, viewModel::updateSearch, viewModel::openSession)
+                            AppTab.SETTINGS -> SettingsScreen(
+                                state = state,
+                                onModel = viewModel::chooseModel,
+                                onReasoning = viewModel::chooseReasoning,
+                                onSettings = viewModel::updateSettings,
+                                onLogin = { viewModel.showOAuth(true) },
+                                onLogout = viewModel::logout,
+                                onSpeakTest = { onSpeak("Guten Tag, so klingt diese Stimme beim Vorlesen deiner Karten.") },
+                                onTestSound = viewModel::testSound,
+                            )
+                            AppTab.LEARN -> Unit
+                        }
+                    }
+                    if (state.tab == AppTab.RESEARCH) {
+                        ModelStatusPill(
+                            model = state.model,
+                            reasoning = state.reasoning,
+                            onClick = { viewModel.showModelSheet(true) },
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 10.dp),
                         )
-                        AppTab.PROFILES -> ProfilesScreen(state, viewModel::updateSearch, viewModel::openSession)
-                        AppTab.SETTINGS -> SettingsScreen(
-                            state = state,
-                            onModel = viewModel::chooseModel,
-                            onReasoning = viewModel::chooseReasoning,
-                            onSettings = viewModel::updateSettings,
-                            onLogin = { viewModel.showOAuth(true) },
-                            onLogout = viewModel::logout,
-                            onSpeakTest = { onSpeak("Guten Tag, so klingt diese Stimme beim Vorlesen deiner Karten.") },
-                            onTestSound = viewModel::testSound,
-                        )
-                        AppTab.LEARN -> Unit
                     }
                 }
                 MainBottomBar(state.tab, viewModel::selectTab)

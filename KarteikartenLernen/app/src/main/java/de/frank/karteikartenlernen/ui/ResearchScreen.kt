@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -49,7 +48,6 @@ import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
 @Composable
 fun ResearchScreen(
     state: AppUiState,
-    onModelClick: () -> Unit,
     onMicClick: () -> Unit,
     onInput: (String) -> Unit,
     onImprove: () -> Unit,
@@ -87,18 +85,6 @@ fun ResearchScreen(
                     }
                 },
             )
-            GlassSurface(
-                Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 10.dp).clickable(onClick = onModelClick),
-                radius = 99.dp,
-            ) {
-                Row(Modifier.padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).background(c.accent2, CircleShape))
-                    Column(Modifier.padding(start = 8.dp)) {
-                        Text(state.model, color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp)
-                        Text("Reasoning · ${state.reasoning}", color = c.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, lineHeight = 11.sp)
-                    }
-                }
-            }
             if (state.mic == MicState.TRANSCRIBING) {
                 Box(Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 14.dp)) { LoadingRing(c.accent, 20.dp) }
             }

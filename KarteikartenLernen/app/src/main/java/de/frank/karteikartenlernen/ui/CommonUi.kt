@@ -133,6 +133,25 @@ fun AppHeader() {
 }
 
 @Composable
+fun ModelStatusPill(
+    model: String,
+    reasoning: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = LocalAppPalette.current
+    GlassSurface(modifier.clickable(onClick = onClick), radius = 99.dp) {
+        Row(Modifier.padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).background(c.accent2, CircleShape))
+            Column(Modifier.padding(start = 8.dp)) {
+                Text(model, color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp)
+                Text("Reasoning · $reasoning", color = c.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, lineHeight = 11.sp)
+            }
+        }
+    }
+}
+
+@Composable
 fun MicButton(state: MicState, seconds: Int, onClick: () -> Unit) {
     val c = LocalAppPalette.current
     val transition = rememberInfiniteTransition(label = "microphone")
