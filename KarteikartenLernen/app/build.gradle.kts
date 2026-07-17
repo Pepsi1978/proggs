@@ -29,9 +29,9 @@ android {
         applicationId = "de.frank.karteikartenlernen"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.1.13"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:32 Uhr\"")
+        versionCode = 15
+        versionName = "0.1.14"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 23:34 Uhr\"")
         buildConfigField("String", "GROQ_API_KEY", groqApiKey.asBuildConfigString())
         buildConfigField("String", "GROQ_TRANSCRIPTION_MODEL", "\"whisper-large-v3-turbo\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -92,4 +92,5 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }

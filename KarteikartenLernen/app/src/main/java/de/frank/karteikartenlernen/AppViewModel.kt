@@ -469,7 +469,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun modelId(label: String): String = when (label) {
-        "GPT 5.6 Soul" -> "gpt-5.6-soul"
+        "GPT 5.6 Soul" -> "gpt-5.6-sol"
         "GPT 5.6 Luna" -> "gpt-5.6-luna"
         else -> "gpt-5.6-terra"
     }

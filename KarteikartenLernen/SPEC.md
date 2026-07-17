@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.13 - 17.07.2026, 23:32 Uhr
+Version 0.1.14 - 17.07.2026, 23:34 Uhr
 
 ## 1. Übersicht
 
@@ -229,11 +229,13 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
   Credentials gemergt. Rotierte Refresh-Tokens ersetzen nur das entsprechende Feld.
 - Inferenz läuft über `https://chatgpt.com/backend-api/codex/responses` mit Bearer-Token,
   `originator: codex_cli_rs`, Codex-User-Agent und `ChatGPT-Account-ID` aus dem JWT.
+  `input` ist eine Liste aus User-Items, `stream=true` und `store=false`; SSE-Deltas
+  werden vollständig zusammengesetzt und erst danach als Lerndaten validiert.
 - Fehler werden getrennt behandelt: `429` als Kontingentgrenze ohne Relogin-Schleife,
   `401/403/invalid_grant` als erneute Anmeldung und `refresh_token_reused` als eigener
   Konflikthinweis. Das Modell wird bei jedem Request explizit übergeben.
 - Diese Codex-Impersonation ist absichtlich auf die bestätigte persönliche Nutzung
   begrenzt. Sie ist driftanfällig und kann durch OpenAI gesperrt oder widerrufen werden.
-- Spracheingabe nutzt Android SpeechRecognizer als lokale Geräteintegration.
-- Vorlesen nutzt Android `TextToSpeech`.
+- Spracheingabe nutzt Groq `whisper-large-v3-turbo` mit lokal gebautem PCM-WAV.
+- Vorlesen nutzt Microsoft Edge TTS mit den ausgewählten Neural-Stimmen.
 - Schibsted Grotesk und Newsreader werden als lokale Font-Ressourcen gebündelt.

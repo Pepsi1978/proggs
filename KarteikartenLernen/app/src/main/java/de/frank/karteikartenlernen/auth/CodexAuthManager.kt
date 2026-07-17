@@ -41,6 +41,54 @@ internal fun devicePollInterval(value: Any?): Int =
     (value?.toString()?.toIntOrNull() ?: CodexAuthManager.DEFAULT_DEVICE_POLL_SECONDS)
         .coerceAtLeast(CodexAuthManager.MIN_DEVICE_POLL_SECONDS)
 
+internal fun codexInput(question: String): JSONArray = JSONArray().put(
+    JSONObject()
+        .put("role", "user")
+        .put("content", question),
+)
+
+internal fun parseCodexSse(body: String): String {
+    val deltas = StringBuilder()
+    var completedText: String? = null
+    body.lineSequence().forEach { rawLine ->
+        val line = rawLine.trim()
+        if (!line.startsWith("data:")) return@forEach
+        val data = line.removePrefix("data:").trim()
+        if (data.isEmpty() || data == "[DONE]") return@forEach
+        val event = runCatching { JSONObject(data) }.getOrElse { return@forEach }
+        when (event.optString("type")) {
+            "response.output_text.delta" -> deltas.append(event.optString("delta"))
+            "response.completed" -> completedText = event.optJSONObject("response")?.let(::extractOutputText)
+            "response.failed" -> {
+                val message = event.optJSONObject("response")?.optJSONObject("error")?.optString("message")
+                    ?.takeIf(String::isNotBlank) ?: "OpenAI hat die Antwort abgebrochen."
+                throw CodexAuthException(AuthErrorKind.NETWORK, message)
+            }
+            "error" -> {
+                val message = event.optString("message").takeIf(String::isNotBlank)
+                    ?: event.optJSONObject("error")?.optString("message")?.takeIf(String::isNotBlank)
+                    ?: "OpenAI hat einen unbekannten Streaming-Fehler gemeldet."
+                throw CodexAuthException(AuthErrorKind.NETWORK, message)
+            }
+        }
+    }
+    return deltas.toString().takeIf(String::isNotBlank)
+        ?: completedText?.takeIf(String::isNotBlank)
+        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antworttext geliefert.")
+}
+
+internal fun extractOutputText(json: JSONObject): String? {
+    json.optString("output_text").takeIf(String::isNotBlank)?.let { return it }
+    val output = json.optJSONArray("output") ?: return null
+    for (i in 0 until output.length()) {
+        val content = output.optJSONObject(i)?.optJSONArray("content") ?: continue
+        for (j in 0 until content.length()) {
+            content.optJSONObject(j)?.optString("text")?.takeIf(String::isNotBlank)?.let { return it }
+        }
+    }
+    return null
+}
+
 class CodexAuthManager(context: Context) {
     private val appContext = context.applicationContext
     private val connectivityManager = appContext.getSystemService(ConnectivityManager::class.java)
@@ -122,9 +170,10 @@ class CodexAuthManager(context: Context) {
             val requestedCards = if (cardLimit == 0) 12 else cardLimit
             val payload = JSONObject().apply {
                 put("model", model)
-                put("stream", false)
+                put("stream", true)
+                put("store", false)
                 put("instructions", "Antworte auf Deutsch, fachlich korrekt und gut verständlich. Erzeuge einen kurzen Sessiontitel, eine Lernantwort und genau $requestedCards eigenständige Karteikarten. Keine Markdown-Syntax.")
-                put("input", question)
+                put("input", codexInput(question))
                 put("reasoning", JSONObject().put("effort", reasoning.lowercase().replace("mittel", "medium").replace("niedrig", "low").replace("hoch", "high")))
                 put("text", structuredOutputFormat())
             }
@@ -134,6 +183,7 @@ class CodexAuthManager(context: Context) {
                 readTimeout = 120_000
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "text/event-stream")
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("originator", "codex_cli_rs")
                 setRequestProperty("User-Agent", "codex_cli_rs/0.0.0 (Karteikarten Lernen)")
@@ -142,9 +192,10 @@ class CodexAuthManager(context: Context) {
             connection.outputStream.use { it.write(payload.toString().toByteArray()) }
             val responseText = connection.readBody()
             classifyHttpError(connection.responseCode, responseText)
-            val output = extractOutputText(JSONObject(responseText))
-                ?: throw CodexAuthException(AuthErrorKind.NETWORK, "Das gewählte GPT-Modell hat keine strukturierten Lerndaten geliefert.")
-            val result = JSONObject(output)
+            val output = parseCodexSse(responseText).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+            val result = runCatching { JSONObject(output) }.getOrElse {
+                throw CodexAuthException(AuthErrorKind.NETWORK, "Das gewählte GPT-Modell hat keine gültigen strukturierten Lerndaten geliefert.")
+            }
             val cards = result.getJSONArray("cards")
             GeneratedResearch(
                 title = result.getString("title"),
@@ -335,18 +386,6 @@ class CodexAuthManager(context: Context) {
             .put("name", "karteikarten_research")
             .put("strict", true)
             .put("schema", schema))
-    }
-
-    private fun extractOutputText(json: JSONObject): String? {
-        json.optString("output_text").takeIf(String::isNotBlank)?.let { return it }
-        val output = json.optJSONArray("output") ?: return null
-        for (i in 0 until output.length()) {
-            val content = output.optJSONObject(i)?.optJSONArray("content") ?: continue
-            for (j in 0 until content.length()) {
-                content.optJSONObject(j)?.optString("text")?.takeIf(String::isNotBlank)?.let { return it }
-            }
-        }
-        return null
     }
 
     private fun jwtClaim(token: String, name: String): String? {
