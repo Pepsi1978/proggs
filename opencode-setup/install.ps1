@@ -77,7 +77,9 @@ if (Test-Path $agentsPath) {
 $agents = Get-ChildItem (Join-Path $Src 'agents') -Filter *.md -ErrorAction SilentlyContinue
 if ($agents) { $agents | Copy-Item -Destination (Join-Path $Dst 'agents') -Force; Ok 'agents/' } else { Warn 'keine agents/*.md' }
 
-$plugins = Get-ChildItem (Join-Path $Src 'plugins') -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.js', '.mjs' }
+$plugins = Get-ChildItem (Join-Path $Src 'plugins') -File -ErrorAction SilentlyContinue | Where-Object {
+  $_.Extension -in '.js', '.mjs' -and $_.Name -notlike '*.test.mjs'
+}
 if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Force; Ok 'plugins/ (inkl. Notifier-Vertrag)' } else { Warn 'keine plugins/*.{js,mjs}' }
 
 $pluginDirs = Get-ChildItem (Join-Path $Src 'plugins') -Directory -ErrorAction SilentlyContinue

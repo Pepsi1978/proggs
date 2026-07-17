@@ -60,7 +60,7 @@ cp "$SRC/AGENTS-global.md" "$DST/AGENTS.md"
 green "OK  AGENTS.md (globale Regeln)"
 
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
-if cp "$SRC/plugins/"*.js "$SRC/plugins/"*.mjs "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. Notifier-Vertrag)"; else yellow "--  keine plugins/*.{js,mjs}"; fi
+if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) ! -name '*.test.mjs' -exec cp {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/ (inkl. Notifier-Vertrag, ohne Tests)"; else yellow "--  keine produktiven Plugins"; fi
 if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete)"; else yellow "--  keine plugins/*/"; fi
 
 # Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown

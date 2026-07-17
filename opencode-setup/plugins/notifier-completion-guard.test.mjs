@@ -83,6 +83,8 @@ test("setup has one guarded, auto-updated notifier and no intermediate-event sou
   assert.match(unixInstaller, /notifier-auto-updater\.mjs[^]*--force --verbose/)
   assert.match(windowsInstaller, /npm install --silent --save-exact/)
   assert.match(unixInstaller, /npm install --silent --save-exact/)
+  assert.match(windowsInstaller, /-notlike '\*\.test\.mjs'/)
+  assert.match(unixInstaller, /! -name '\*\.test\.mjs'/)
   assert.match(guard, /notifier-auto-updater\.mjs/)
   assert.match(updater, /24 \* 60 \* 60 \* 1000/)
   assert.match(updater, /notifier-candidate-contract\.mjs/)

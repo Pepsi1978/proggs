@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.3 - 17.07.2026, 16:51 Uhr
+> Stand: v1.0.4 - 17.07.2026, 17:09 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
