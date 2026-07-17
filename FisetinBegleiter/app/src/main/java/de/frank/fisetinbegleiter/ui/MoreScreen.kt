@@ -77,13 +77,6 @@ fun MoreScreen(
         item { SectionTitle("System", "Berechtigungen und Zuverlässigkeit der App.") }
         item { ThemeFamilySelector(themeVariant, onThemeVariantChange) }
         item {
-            DesignOutlineButton(
-                text = "Akku-Optimierung für zuverlässige Erinnerungen prüfen",
-                onClick = onOpenBatterySettings,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        item {
             Text("Standard-Protokoll", modifier = Modifier.padding(top = 8.dp), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Text("Änderungen gelten für neue Abläufe.", color = colors.sub, fontSize = 12.5.sp)
         }
@@ -186,6 +179,13 @@ fun MoreScreen(
                     editedIngredient = null
                     ingredientDialog = true
                 },
+            )
+        }
+        item {
+            DesignOutlineButton(
+                text = "Akku-Optimierung für zuverlässige Erinnerungen prüfen",
+                onClick = onOpenBatterySettings,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
         item {
