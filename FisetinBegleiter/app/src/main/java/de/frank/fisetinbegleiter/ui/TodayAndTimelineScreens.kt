@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -677,11 +679,16 @@ internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
     LaunchedEffect(Unit) { visible = true }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BoxWithConstraints(
-            Modifier.fillMaxSize().background(Color(0x73080614)).clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss,
-            ),
+            Modifier
+                .fillMaxSize()
+                .background(Color(0x73080614))
+                .navigationBarsPadding()
+                .imePadding()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss,
+                ),
             contentAlignment = Alignment.BottomCenter,
         ) {
             AnimatedVisibility(
@@ -692,7 +699,7 @@ internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(max = maxHeight * 0.85f)
+                        .heightIn(max = maxHeight * 0.94f)
                         .clip(shape)
                         .background(colors.card)
                         .border(BorderStroke(1.dp, colors.cardBorder), shape)
@@ -702,7 +709,7 @@ internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
                             onClick = {},
                         )
                         .verticalScroll(rememberScrollState())
-                        .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 26.dp),
+                        .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 38.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).clip(RoundedCornerShape(99.dp)).background(colors.line))
