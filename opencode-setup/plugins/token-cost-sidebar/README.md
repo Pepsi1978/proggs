@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.9.5 - 18.07.2026, 11:54 Uhr
+Stand: v1.9.6 - 18.07.2026, 11:56 Uhr
 
 ## Funktionen
 
@@ -25,6 +25,8 @@ Stand: v1.9.5 - 18.07.2026, 11:54 Uhr
   Output und Reasoning. Cache-Read und Cache-Write zählen zu den Input-Kosten.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
+- OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
+  Tarif. Normale Aliase bleiben beim Standardtarif; GPT-5.5-Write-Preise werden nicht erfunden.
 - Kumulative Session-Summen für Input, Output, Reasoning und Kosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.

@@ -22,6 +22,13 @@ export type UsageCostBreakdown = {
 
 let catalogPromise: Promise<any> | undefined
 
+const OPENAI_PRIORITY_COST: Record<string, Record<string, number>> = {
+  "gpt-5.6-sol": { input: 10, output: 60, cache_read: 1, cache_write: 12.5 },
+  "gpt-5.6-terra": { input: 5, output: 30, cache_read: 0.5, cache_write: 6.25 },
+  "gpt-5.6-luna": { input: 2, output: 12, cache_read: 0.2, cache_write: 2.5 },
+  "gpt-5.5": { input: 12.5, output: 75, cache_read: 1.25 },
+}
+
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (typeof value === "string" && value !== "") {
@@ -215,9 +222,22 @@ export function findCatalogModel(catalog: any, providerID?: string, modelID?: st
   const models = catalog?.[providerID]?.models
   for (const candidate of catalogModelCandidates(providerID, modelID)) {
     const match = models?.[candidate]
-    if (match) return match
+    if (match) return withOpenAIPriorityPricing(match, providerID, modelID)
   }
   return undefined
+}
+
+export function withOpenAIPriorityPricing(model: any, providerID: string, modelID: string, serviceTier?: string): any {
+  if (providerID !== "openai" || (serviceTier !== "priority" && !modelID.endsWith("-fast"))) return model
+  const baseID = modelID.endsWith("-fast") ? modelID.slice(0, -"-fast".length) : modelID
+  const cost = OPENAI_PRIORITY_COST[baseID]
+  if (!cost) return model
+  return {
+    ...model,
+    cost: { ...cost },
+    pricingServiceTier: "priority",
+    pricingUnsupportedAbove: 272_000,
+  }
 }
 
 export function catalogModelCandidates(providerID: string, modelID: string): string[] {

@@ -22,6 +22,8 @@ namespace OpenCodeLauncher.Services;
 /// </summary>
 public sealed class OpenCodeLauncherService
 {
+    private const string Gpt55Slug = "gpt-5.5";
+    private const string Gpt55FastSlug = "gpt-5.5-fast";
     private const string Gpt56SolSlug = "gpt-5.6-sol";
     private const string Gpt56SolFastSlug = "gpt-5.6-sol-fast";
     private const string Gpt56TerraSlug = "gpt-5.6-terra";
@@ -98,7 +100,7 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
             var usesPriorityServiceTier = UsesPriorityServiceTier(model.ProviderId, model.Slug);
-            if (!string.IsNullOrWhiteSpace(thinkingLevel) || IsGpt56Model(model.ProviderId, model.Slug))
+            if (!string.IsNullOrWhiteSpace(thinkingLevel) || IsGpt56Model(model.ProviderId, model.Slug) || usesPriorityServiceTier)
             {
                 var root = ReadConfig();
                 root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
@@ -637,6 +639,10 @@ try {
         // die daneben liegende ~/proggs/AGENTS.md als Fallback unterdrueckt. Prozess-lokale
         // Env-Variable -- fasst KEINE Datei an.
         var minimalEnv = "$env:OPENCODE_DISABLE_CLAUDE_CODE_PROMPT = '1'";
+        var separator = modelString.IndexOf('/');
+        var launcherProvider = separator > 0 ? modelString[..separator] : string.Empty;
+        var launcherSlug = separator > 0 ? modelString[(separator + 1)..] : modelString;
+        var launcherServiceTier = UsesPriorityServiceTier(launcherProvider, launcherSlug) ? "priority" : "standard";
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the
@@ -650,6 +656,7 @@ $ErrorActionPreference = 'Continue'
 {{ProgrammerProcessPriorityScript}}
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
+$env:OPENCODE_LAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
 {{minimalEnv}}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {
@@ -864,12 +871,13 @@ try {
         // OpenCode variants own the active reasoning level. Keeping reasoningEffort in model
         // options pins every request and prevents in-session variant changes from taking effect.
         ClearThinkingOptions(optionsBlock);
-        if (IsGpt56Model(providerId, slug)) NormalizeExistingGpt56Models(models);
+        if (IsGpt56Model(providerId, slug) || UsesPriorityServiceTier(providerId, slug)) NormalizeExistingOpenAIModels(models);
         return rootObject;
     }
 
-    private static void NormalizeExistingGpt56Models(JsonObject models)
+    private static void NormalizeExistingOpenAIModels(JsonObject models)
     {
+        NormalizeModelPair(models, Gpt55Slug, Gpt55FastSlug, "GPT-5.5");
         NormalizeModelPair(models, Gpt56SolSlug, Gpt56SolFastSlug, "GPT-5.6 Sol");
         NormalizeModelPair(models, Gpt56TerraSlug, Gpt56TerraFastSlug, "GPT-5.6 Terra");
         NormalizeModelPair(models, Gpt56LunaSlug, Gpt56LunaFastSlug, "GPT-5.6 Luna");
@@ -904,7 +912,8 @@ try {
         if (modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase)) modelId = modelId["openai/".Length..];
         return string.Equals(modelId, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(modelId, Gpt56TerraFastSlug, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(modelId, Gpt56LunaFastSlug, StringComparison.OrdinalIgnoreCase);
+               string.Equals(modelId, Gpt56LunaFastSlug, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(modelId, Gpt55FastSlug, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsGpt56Model(string providerId, string slug)

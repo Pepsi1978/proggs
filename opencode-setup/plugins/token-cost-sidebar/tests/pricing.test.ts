@@ -12,6 +12,7 @@ import {
   readPricing,
   readPricingPerMillion,
   selectPricingModel,
+  withOpenAIPriorityPricing,
 } from "../dist/pricing"
 import {
   DEFAULT_WORK_MODE,
@@ -68,13 +69,45 @@ describe("models.dev pricing", () => {
       },
     }
     for (const id of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]) {
-      expect(findCatalogModel(catalog, "openai", `${id}-fast`)).toBe(catalog.openai.models[id as keyof typeof catalog.openai.models])
+      expect(findCatalogModel(catalog, "openai", `${id}-fast`)).toMatchObject({
+        id: catalog.openai.models[id as keyof typeof catalog.openai.models].id,
+        pricingServiceTier: "priority",
+      })
     }
     expect(catalogModelCandidates("openai", "gpt-5.6-terra-fast")).toEqual([
       "gpt-5.6-terra-fast",
       "gpt-5.6-terra",
     ])
     expect(catalogModelCandidates("openrouter", "vendor/model-fast")).toEqual(["vendor/model-fast"])
+  })
+
+  test("uses official Priority cache prices for Launcher Fast aliases", () => {
+    const base = { cost: { input: 5, output: 30, cache_read: 0.5, cache_write: 6.25 } }
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast"))).toMatchObject({
+      input: 10,
+      output: 60,
+      cacheRead: 1,
+      cacheWrite: 12.5,
+    })
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-terra-fast"))).toMatchObject({
+      input: 5,
+      output: 30,
+      cacheRead: 0.5,
+      cacheWrite: 6.25,
+    })
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-luna-fast"))).toMatchObject({
+      input: 2,
+      output: 12,
+      cacheRead: 0.2,
+      cacheWrite: 2.5,
+    })
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast"))).toMatchObject({
+      input: 12.5,
+      output: 75,
+      cacheRead: 1.25,
+      cacheWrite: 0,
+    })
+    expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol")).toBe(base)
   })
 
   test("normalizes per-million base prices", () => {
