@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.38 - 18.07.2026, 02:02 Uhr
+Version 0.1.39 - 18.07.2026, 02:07 Uhr
 
 ## 1. Übersicht
 
@@ -146,7 +146,11 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
    aktiviert, startet TTS nach dem ersten vollständig abgeschlossenen Absatz. Weitere
    vollständige Überschrift-Absatz-Blöcke werden quellenbereinigt an eine offene
    Edge-TTS-Warteschlange angehängt und vorbereitet, ohne den laufenden Block
-   abzubrechen. Ausschalten stoppt die gesamte Warteschlange sofort; ausgeschaltet ist
+   abzubrechen. Auch mehrere Absätze eines Abschnitts werden jeweils als eigener
+   TTS-Request zusammen mit ihrer Überschrift eingelesen; beim Start eines Blocks wird
+   der nächste bereits im Hintergrund vorbereitet. Das gilt identisch für aktuelle und
+   gespeicherte Profil-/Lernsession-Recherchen. Ausschalten stoppt die gesamte
+   Warteschlange sofort; ausgeschaltet ist
    das Symbol weiß und durchgestrichen.
 6. **Zuordnungs-Bottom-Sheet:** passende Karten zu bestehenden Sessions kopieren oder
    ablehnen; jeder Eintrag zeigt seinen Ergebniszustand.

@@ -97,4 +97,14 @@ class ResearchArticleParserTest {
             completedResearchSpeechSegments(streaming, final = true),
         )
     }
+
+    @Test
+    fun streamingSpeechRepeatsHeadingForEveryCompletedParagraph() {
+        val answer = "## Thema\n\nErster Absatz.\n\nZweiter Absatz.\n\nDritter Absatz läuft"
+
+        assertEquals(
+            listOf("Thema. Erster Absatz.", "Thema. Zweiter Absatz."),
+            completedResearchSpeechSegments(answer, final = false),
+        )
+    }
 }

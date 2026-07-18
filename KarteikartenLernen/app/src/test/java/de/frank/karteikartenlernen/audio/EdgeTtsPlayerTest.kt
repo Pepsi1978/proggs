@@ -72,6 +72,25 @@ class EdgeTtsPlayerTest {
     }
 
     @Test
+    fun everyParagraphRepeatsItsSectionHeadingInANewSpeechUnit() {
+        val article = """
+            ## Photosynthese
+
+            Pflanzen nehmen Licht auf.
+
+            Dabei entsteht chemische Energie.
+        """.trimIndent()
+
+        assertEquals(
+            listOf(
+                SpeechUnit("Photosynthese. Pflanzen nehmen Licht auf.", 1_000L),
+                SpeechUnit("Photosynthese. Dabei entsteht chemische Energie.", 0L),
+            ),
+            EdgeTtsPlayer.buildSpeechUnits(article),
+        )
+    }
+
+    @Test
     fun longSectionPausesOnlyAfterItsLastTransportChunk() {
         val article = "## Eins\n\n${List(12) { "Wissen" }.joinToString(" ")}\n\n## Zwei\n\nKurz."
         val units = EdgeTtsPlayer.buildSpeechUnits(article, maxUtf8Bytes = 24)

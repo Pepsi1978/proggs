@@ -69,7 +69,6 @@ fun completedResearchSpeechSegments(answer: String, final: Boolean): List<String
             is ArticleBlock.Heading -> heading = block.text
             is ArticleBlock.Paragraph -> {
                 segments += heading?.let { "$it. ${block.text}" } ?: block.text
-                heading = null
             }
             is ArticleBlock.Source -> Unit
         }

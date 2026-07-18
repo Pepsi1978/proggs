@@ -487,23 +487,25 @@ class EdgeTtsPlayer(context: Context) {
 
         internal fun buildSpeechUnits(text: String, maxUtf8Bytes: Int = 3_800): List<SpeechUnit> {
             val logicalSegments = mutableListOf<String>()
-            var pendingHeading: String? = null
+            var currentHeading: String? = null
+            var headingHasParagraph = false
             var skipSources = false
             parseResearchArticle(text).forEach { block ->
                 when (block) {
                     is ArticleBlock.Heading -> {
-                        pendingHeading?.let(logicalSegments::add)
+                        if (!skipSources && !headingHasParagraph) currentHeading?.let(logicalSegments::add)
                         skipSources = block.text.equals("Quellen", ignoreCase = true)
-                        pendingHeading = block.text.takeUnless { skipSources }
+                        currentHeading = block.text.takeUnless { skipSources }
+                        headingHasParagraph = false
                     }
                     is ArticleBlock.Paragraph -> if (!skipSources) {
-                        logicalSegments += pendingHeading?.let { "$it. ${block.text}" } ?: block.text
-                        pendingHeading = null
+                        logicalSegments += currentHeading?.let { "$it. ${block.text}" } ?: block.text
+                        headingHasParagraph = true
                     }
                     is ArticleBlock.Source -> Unit
                 }
             }
-            pendingHeading?.let(logicalSegments::add)
+            if (!skipSources && !headingHasParagraph) currentHeading?.let(logicalSegments::add)
             val units = logicalSegments.flatMapIndexed { segmentIndex, segment ->
                 val chunks = splitForTts(segment, maxUtf8Bytes)
                 chunks.mapIndexed { chunkIndex, chunk ->
