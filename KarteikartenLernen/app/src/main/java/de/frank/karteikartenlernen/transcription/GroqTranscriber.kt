@@ -5,7 +5,9 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -20,6 +22,8 @@ class GroqTranscriber(
     private val apiKey: String,
     private val model: String,
 ) {
+    private val speechAnalyzer = SpeechAnalyzer()
+    private val hallucinationFilter = WhisperHallucinationFilter()
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
@@ -28,9 +32,11 @@ class GroqTranscriber(
 
     val isConfigured: Boolean get() = apiKey.isNotBlank()
 
-    suspend fun transcribe(file: File): String {
+    suspend fun transcribe(file: File): String = withContext(Dispatchers.IO) {
         if (!isConfigured) throw GroqTranscriptionException("Groq ist auf diesem Gerät nicht konfiguriert.")
         if (file.length() > MAX_FILE_BYTES) throw GroqTranscriptionException("Die Aufnahme ist für die Groq-Transkription zu groß.")
+        val analysis = speechAnalyzer.analyze(file.readBytes())
+        if (analysis != null && analysis.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) return@withContext ""
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", file.name, file.asRequestBody("audio/wav".toMediaType()))
@@ -48,12 +54,31 @@ class GroqTranscriber(
         response.use {
             val responseBody = it.body?.string().orEmpty()
             if (!it.isSuccessful) throw GroqTranscriptionException(httpError(it.code, responseBody))
-            val text = runCatching { JSONObject(responseBody).optString("text").trim() }
+            val result = runCatching { parseResponse(responseBody) }
                 .getOrElse { throw GroqTranscriptionException("Groq hat eine ungültige Antwort geliefert.") }
-            if (text.isEmpty()) throw GroqTranscriptionException("In der Aufnahme wurde kein Text erkannt.")
-            return text
+            return@withContext hallucinationFilter.filter(result, analysis)
         }
     }
+
+    internal fun parseResponse(body: String): GroqTranscriptionResponse {
+        val json = JSONObject(body)
+        val segments = json.optJSONArray("segments")?.let { array ->
+            (0 until array.length()).map { index ->
+                val segment = array.getJSONObject(index)
+                GroqSegment(
+                    start = segment.optDoubleOrNull("start"),
+                    end = segment.optDoubleOrNull("end"),
+                    text = segment.optString("text"),
+                    noSpeechProbability = segment.optDoubleOrNull("no_speech_prob"),
+                    averageLogProbability = segment.optDoubleOrNull("avg_logprob"),
+                    compressionRatio = segment.optDoubleOrNull("compression_ratio"),
+                )
+            }
+        }
+        return GroqTranscriptionResponse(text = json.optString("text").trim(), segments = segments)
+    }
+
+    private fun JSONObject.optDoubleOrNull(name: String): Double? = optDouble(name).takeUnless(Double::isNaN)
 
     fun shutdown() {
         client.dispatcher.cancelAll()

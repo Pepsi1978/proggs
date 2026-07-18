@@ -1,6 +1,6 @@
 # Karteikarten Lernen
 
-Version 0.1.37 - 18.07.2026, 01:50 Uhr
+Version 0.1.38 - 18.07.2026, 02:02 Uhr
 
 ## 1. Übersicht
 
@@ -133,6 +133,10 @@ ausgewählte Farbprofil wird getrennt je Erscheinungsbild gespeichert.
    ohne sichtbare Scrollleiste.
 2. **Recherche, Aufnahme:** Pulsringe, neun Pegelbalken, roter Mikrofonkern und Timer.
 3. **Recherche, Transkription:** Spinner, Whisper-Text und Shimmer über dem Eingabefeld.
+   Vier Schutzschichten verhindern Whisper-Stillehalluzinationen funktionserhaltend:
+   PCM-Sprachgehalt vor dem Upload, segmentweises Confidence-/Repetitions-Gate,
+   Zeitfensterabgleich mit der Sprach-Timeline samt Drift-Sicherung und eine nur bei
+   messbarem Stille-Kontext greifende exakte Floskel-Blocklist.
 4. **Recherche, Formulierung:** animierter Loader; neue Formulierung kann rückgängig
    gemacht werden.
 5. **Recherche, Generierung:** Während die Antwort erzeugt wird, zeigt eine animierte
