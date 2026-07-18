@@ -20,11 +20,16 @@ import com.entropyjournal.util.Constants
  * Screen ruft [update] bzw. [updateTheme] beide Seiten gemeinsam an.
  */
 object ProfileTheme {
+    private const val PREF_APP_FONT_PAIR = "app_font_pair"
+
     /** Compose-State — alle Theme-Konsumenten lesen direkt diesen Index. */
     val currentProfileIndex = mutableIntStateOf(0)
 
-    /** Compose-State — vom Themes Manager Dropdown gelesen. Default = Profile (Frank-Verhalten). */
-    val currentAppTheme = mutableStateOf(AppTheme.Profile)
+    /** Compose-State — vom Themes Manager Dropdown gelesen. */
+    val currentAppTheme = mutableStateOf(AppTheme.GoldenThread)
+
+    /** Compose-State für das im Design auswählbare app-weite Schriftpaar. */
+    val currentFontPair = mutableStateOf(DEFAULT_FONT_PAIR_LABEL)
 
     private fun openPrefs(context: Context) =
         EncryptedSharedPreferences.create(
@@ -40,6 +45,8 @@ object ProfileTheme {
         val prefs = openPrefs(context)
         currentProfileIndex.intValue = prefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         currentAppTheme.value = AppTheme.fromKey(prefs.getString(Constants.PREF_APP_THEME, null))
+        currentFontPair.value = prefs.getString(PREF_APP_FONT_PAIR, DEFAULT_FONT_PAIR_LABEL)
+            ?: DEFAULT_FONT_PAIR_LABEL
     }
 
     /** Vom Settings-Screen aufgerufen: Prefs + Compose-State gemeinsam aktualisieren. */
@@ -58,5 +65,13 @@ object ProfileTheme {
             .putString(Constants.PREF_APP_THEME, theme.storageKey)
             .apply()
         currentAppTheme.value = theme
+    }
+
+    fun updateFontPair(context: Context, fontPairLabel: String) {
+        openPrefs(context)
+            .edit()
+            .putString(PREF_APP_FONT_PAIR, fontPairLabel)
+            .apply()
+        currentFontPair.value = fontPairLabel
     }
 }

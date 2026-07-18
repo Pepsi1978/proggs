@@ -5,12 +5,18 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,14 +29,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -49,12 +58,12 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -78,6 +87,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -85,12 +95,13 @@ import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
+import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
@@ -99,6 +110,7 @@ import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.theme.LocalJournalDesignTokens
 import com.entropyjournal.util.DateTimeFormatter as DTFormatter
 import kotlinx.coroutines.delay
 
@@ -119,6 +131,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     val snackbarHostState = remember { SnackbarHostState() }
     val doHaptic = rememberHapticAction()
     val context = LocalContext.current
+    val designTokens = LocalJournalDesignTokens.current
 
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted
@@ -165,12 +178,10 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(designTokens.backgroundBrush)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Sync status + search toggle
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -179,7 +190,11 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Tagebuch",
-                            style = MaterialTheme.typography.headlineMedium,
+                            style =
+                                MaterialTheme.typography.headlineLarge.copy(
+                                    fontSize = 27.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -237,11 +252,11 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         Surface(
                             onClick = { viewModel.toggleSearch() },
                             shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            color = designTokens.chipBackground,
                             border =
                                 androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    designTokens.chipBorder,
                                 ),
                         ) {
                             Row(
@@ -251,22 +266,24 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                                 Icon(
                                     Icons.Rounded.Search,
                                     "Suchen",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     "Suche",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
                     }
                 }
+                GoldenHairline(modifier = Modifier.padding(top = 10.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                 ) {
                     Text(
                         text = "${allEntries.size} Einträge",
@@ -282,6 +299,11 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                             modifier =
                                 Modifier.background(
                                         streakColor.copy(alpha = 0.1f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .border(
+                                        1.dp,
+                                        streakColor.copy(alpha = 0.4f),
                                         RoundedCornerShape(12.dp),
                                     )
                                     .clickable { doHaptic(HapticFeedbackType.LongPress); showStreakDialog = true }
@@ -346,18 +368,23 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         },
                         modifier =
                             Modifier.fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .padding(horizontal = 18.dp, vertical = 4.dp)
+                                .border(
+                                    1.dp,
+                                    designTokens.chipBorder,
+                                    RoundedCornerShape(14.dp),
+                                )
                                 .focusRequester(searchFocusRequester),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions =
                             KeyboardActions(onSearch = { focusManager.clearFocus() }),
                         colors =
                             TextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedContainerColor = designTokens.card,
+                                unfocusedContainerColor = designTokens.card,
                                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 cursorColor = MaterialTheme.colorScheme.primary,
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
                             ),
                         trailingIcon = {
@@ -370,13 +397,13 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                     )
                 }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
                 ) {
                     // Daily writing prompt banner — always visible, no animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
@@ -395,18 +422,32 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
                         item(key = "header_$sectionLabel") {
-                            Column(modifier = Modifier.animateItem().padding(top = 12.dp, bottom = 4.dp)) {
+                            Row(
+                                modifier = Modifier.animateItem().padding(top = 10.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
                                 Text(
                                     text = sectionLabel,
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style =
+                                        MaterialTheme.typography.titleSmall.copy(
+                                            fontSize = 15.sp,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                        ),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth()
+                                        Modifier.weight(1f)
                                             .height(1.dp)
-                                            .background(MaterialTheme.colorScheme.outlineVariant)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                                        Color.Transparent,
+                                                    )
+                                                )
+                                            )
                                 )
                             }
                         }
@@ -472,22 +513,30 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Text entry button (left)
-            FloatingActionButton(
+            Surface(
                 onClick = {
                     doHaptic(HapticFeedbackType.LongPress)
                     viewModel.startTextEntry()
                 },
-                modifier = Modifier.size(64.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(60.dp),
+                color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                border =
+                    androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        designTokens.chipBorder,
+                    ),
+                shadowElevation = 8.dp,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = "Text eingeben",
-                    modifier = Modifier.size(28.dp),
-                )
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = "Text eingeben",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
             }
 
             // Mic button (right)
@@ -540,9 +589,20 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
         if (showSyncLegend) {
             AlertDialog(
                 onDismissRequest = { showSyncLegend = false },
-                containerColor = MaterialTheme.colorScheme.surface,
+                modifier =
+                    Modifier.border(
+                        1.dp,
+                        designTokens.chipBorder,
+                        RoundedCornerShape(22.dp),
+                    ),
+                shape = RoundedCornerShape(22.dp),
+                containerColor = designTokens.card,
                 title = {
-                    Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "Google Drive Backup",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -637,6 +697,31 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 }
 
 @Composable
+private fun GoldenHairline(modifier: Modifier = Modifier) {
+    val designTokens = LocalJournalDesignTokens.current
+    val transition = rememberInfiniteTransition(label = "gold_hairline")
+    val shimmer by
+        transition.animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(2500, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "gold_hairline_alpha",
+        )
+    Box(
+        modifier =
+            modifier.fillMaxWidth().height(2.dp).clip(RoundedCornerShape(1.dp)).background(
+                designTokens.hairlineBrush,
+                alpha = shimmer,
+            )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun PreviewDialog(
     rawText: String,
     improvedText: String?,
@@ -650,6 +735,7 @@ private fun PreviewDialog(
     onDismiss: () -> Unit,
     onRecordClick: () -> Unit = {},
 ) {
+    val designTokens = LocalJournalDesignTokens.current
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
     val hasPrompt = activePrompt.isNotBlank()
@@ -693,36 +779,46 @@ private fun PreviewDialog(
         }
     }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = {
             focusManager.clearFocus()
             onDismiss()
         },
-        modifier = if (hasPrompt) Modifier.fillMaxWidth(0.95f) else Modifier,
-        properties =
-            if (hasPrompt)
-                androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-            else androidx.compose.ui.window.DialogProperties(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
+        containerColor = designTokens.card,
+        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+        dragHandle = {
+            Box(
+                Modifier.padding(top = 10.dp)
+                    .size(width = 40.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(designTokens.cardBorder)
+            )
+        },
+    ) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 26.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (hasPrompt) {
-                        Icon(
-                            imageVector = Icons.Rounded.Lightbulb,
-                            contentDescription = null,
-                            tint = NeonAmber,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                    Icon(
+                        imageVector = if (hasPrompt) Icons.Rounded.Lightbulb else Icons.Rounded.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         if (hasPrompt) "Schreibimpuls" else "Neuer Eintrag",
-                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -734,249 +830,162 @@ private fun PreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    if (!hasPrompt) {
-                        Text(
-                            text = "\u270F\uFE0F",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    }
+                    Text(
+                        text = "Heute",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
                 }
             }
-        },
-        text = {
-            Column {
-                // Inspirational prompt card
-                if (hasPrompt) {
-                    Box(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .background(
-                                    brush =
-                                        androidx.compose.ui.graphics.Brush.linearGradient(
-                                            listOf(
-                                                NeonAmber.copy(alpha = 0.10f),
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                    alpha = 0.4f
-                                                ),
-                                            )
-                                        ),
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .padding(16.dp)
+            if (hasPrompt) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Tagesimpuls: $activePrompt",
+                    style =
+                        MaterialTheme.typography.titleSmall.copy(
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        ),
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (hasPrompt && !inputModeChosen) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        onClick = { inputModeChosen = true },
+                        shape = CircleShape,
+                        color = designTokens.chipBackground,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            designTokens.chipBorder,
+                        ),
                     ) {
-                        Column {
-                            Text(
-                                text = "\u201E$activePrompt\u201C",
-                                style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                                    ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text =
-                                    "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Icon(
+                            Icons.Rounded.Edit,
+                            "Schreiben",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(16.dp).size(24.dp),
+                        )
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (!inputModeChosen) {
-                        // Phase 1: User chooses input method
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Pen button
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                FloatingActionButton(
-                                    onClick = { inputModeChosen = true },
-                                    modifier = Modifier.size(56.dp),
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape,
-                                    elevation =
-                                        FloatingActionButtonDefaults.elevation(
-                                            defaultElevation = 8.dp
-                                        ),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Edit,
-                                        "Schreiben",
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    "Schreiben",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Box(
-                                modifier =
-                                    Modifier.height(32.dp)
-                                        .width(1.dp)
-                                        .background(MaterialTheme.colorScheme.outlineVariant)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            // Mic button
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                FloatingActionButton(
-                                    onClick = onRecordClick,
-                                    modifier = Modifier.size(56.dp),
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape,
-                                    elevation =
-                                        FloatingActionButtonDefaults.elevation(
-                                            defaultElevation = 8.dp
-                                        ),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Mic,
-                                        "Einsprechen",
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    "Einsprechen",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    } else {
-                        // Phase 2: Input active — show small mic chip + label
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                "Deine Antwort:",
-                                style =
-                                    MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-                                    ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Surface(
-                                onClick = onRecordClick,
-                                shape = RoundedCornerShape(20.dp),
-                                color =
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Mic,
-                                        "Einsprechen",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        "Einsprechen",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.width(18.dp))
+                    AnimatedMicButton(isRecording = false, onClick = onRecordClick)
                 }
-
-                if (inputModeChosen) {
-                    TextField(
-                        value = displayText,
-                        onValueChange = { newText ->
-                            lastEditTime = System.currentTimeMillis()
-                            onTextEdit(newText)
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .heightIn(min = if (hasPrompt) 120.dp else 0.dp, max = 300.dp)
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { state ->
-                                    isFocused = state.isFocused
-                                    if (state.isFocused) hadFocusOnce = true
-                                    if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                                },
-                        textStyle =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                        colors =
-                            TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        placeholder = {
-                            Text(
-                                if (hasPrompt) "Schreibe hier deine Gedanken\u2026"
-                                else "Tippe hier, um den Text zu bearbeiten...",
-                                color = MaterialTheme.colorScheme.outline,
+                Spacer(modifier = Modifier.height(12.dp))
+            } else {
+                TextField(
+                    value = displayText,
+                    onValueChange = { newText ->
+                        lastEditTime = System.currentTimeMillis()
+                        onTextEdit(newText)
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .heightIn(min = 132.dp, max = 300.dp)
+                            .border(
+                                1.dp,
+                                designTokens.cardBorder,
+                                RoundedCornerShape(14.dp),
                             )
-                        },
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { state ->
+                                isFocused = state.isFocused
+                                if (state.isFocused) hadFocusOnce = true
+                                if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                            },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor =
+                                designTokens.chipBackground,
+                            unfocusedContainerColor =
+                                designTokens.chipBackground,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    placeholder = {
+                        Text(
+                            if (hasPrompt) "Schreibe hier deine Gedanken…"
+                            else "Was beschäftigt dich gerade?",
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "KI-Verbesserung",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        onClick = onRecordClick,
+                        shape = RoundedCornerShape(20.dp),
+                        color = designTokens.chipBackground,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Mic,
+                                "Einsprechen",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "Einsprechen",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                 }
 
-                if (inputModeChosen && improvedText != null && !isImproving) {
+                if (improvedText != null && !isImproving) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = { onToggleVersion(!showingImproved) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
+                        shape = RoundedCornerShape(999.dp),
                     ) {
                         Text(
-                            if (showingImproved) "\u21A9 Original anzeigen"
-                            else "\u2728 Verbesserte Version anzeigen"
+                            if (showingImproved) "↩ Original anzeigen"
+                            else "✨ Verbesserte Version anzeigen"
                         )
                     }
-                }
-
-                if (
-                    inputModeChosen &&
-                        improvedText == null &&
-                        !isImproving &&
-                        displayText.isNotBlank()
-                ) {
+                } else if (!isImproving && displayText.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         onClick = onImproveClick,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(999.dp),
                         colors =
                             ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             ),
                     ) {
-                        Text("\u2728 Text verbessern")
+                        Text("✨ Text verbessern")
                     }
                 }
 
                 if (isImproving) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 12.dp)
                         Text(
@@ -987,34 +996,34 @@ private fun PreviewDialog(
                         )
                     }
                 }
-            }
-        },
-        confirmButton = {
-            if (displayText.isNotBlank()) {
-                Button(
-                    onClick = onSave,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                    OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(999.dp)) {
+                        Text(if (displayText.isBlank()) "Abbrechen" else "Verwerfen")
+                    }
+                    if (displayText.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Button(
+                            onClick = onSave,
+                            shape = RoundedCornerShape(999.dp),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                        ) {
+                            Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                        }
+                    }
                 }
             }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-            ) {
-                Text(if (displayText.isBlank()) "Abbrechen" else "Verwerfen")
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable
@@ -1127,6 +1136,7 @@ private fun StreakDialog(
     totalEntries: Int,
     onDismiss: () -> Unit,
 ) {
+    val designTokens = LocalJournalDesignTokens.current
     val milestones = listOf(7, 14, 30, 60, 90, 180, 365)
     val nextMilestone = milestones.firstOrNull { it > currentStreak } ?: (currentStreak + 30)
     val prevMilestone = milestones.lastOrNull { it <= currentStreak } ?: 0
@@ -1162,26 +1172,43 @@ private fun StreakDialog(
         }
 
     val isDarkTheme = !MaterialTheme.colorScheme.background.luminance().let { it > 0.5f }
-    val accentColor = if (currentStreak > 7) NeonAmber else MaterialTheme.colorScheme.primary
+    val accentColor = if (currentStreak > 7) designTokens.warning else MaterialTheme.colorScheme.primary
     val daysToNext = nextMilestone - currentStreak
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
+        modifier =
+            Modifier.border(
+                1.dp,
+                designTokens.chipBorder,
+                RoundedCornerShape(22.dp),
+            ),
+        shape = RoundedCornerShape(22.dp),
+        containerColor = designTokens.card,
         icon = {
-            Icon(
-                imageVector = Icons.Rounded.LocalFireDepartment,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(40.dp),
-            )
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                color = accentColor.copy(alpha = 0.16f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
+                shadowElevation = 8.dp,
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocalFireDepartment,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(36.dp),
+                    )
+                }
+            }
         },
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     "$currentStreak Tage in Folge",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.headlineSmall,
+                    color = accentColor,
+                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = 26.sp),
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -1276,23 +1303,35 @@ private fun StatColumn(
     label: String,
     tint: Color,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            value,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
-        )
+    val designTokens = LocalJournalDesignTokens.current
+    Surface(
+        modifier = Modifier.width(78.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = designTokens.chipBackground,
+        border =
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                designTokens.cardBorder,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(value, style = MaterialTheme.typography.titleMedium, color = tint)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }

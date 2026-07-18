@@ -3,6 +3,7 @@ package com.entropyjournal.ui.theme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
@@ -15,107 +16,140 @@ val fontProvider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-private val exo2Font = GoogleFont("Exo 2")
+private val playfairDisplayFont = GoogleFont("Playfair Display")
 private val sourceSans3Font = GoogleFont("Source Sans 3")
+private val jetBrainsMonoFont = GoogleFont("JetBrains Mono")
+private val caveatFont = GoogleFont("Caveat")
 
-val Exo2 = FontFamily(
-    Font(googleFont = exo2Font, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = exo2Font, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = exo2Font, fontProvider = fontProvider, weight = FontWeight.SemiBold),
-    Font(googleFont = exo2Font, fontProvider = fontProvider, weight = FontWeight.Bold),
+const val DEFAULT_FONT_PAIR_LABEL = "Playfair × Source Sans"
+
+val PlayfairDisplay = FontFamily(
+    Font(googleFont = playfairDisplayFont, fontProvider = fontProvider, weight = FontWeight.Medium),
+    Font(googleFont = playfairDisplayFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(
+        googleFont = playfairDisplayFont,
+        fontProvider = fontProvider,
+        weight = FontWeight.Medium,
+        style = FontStyle.Italic,
+    ),
 )
 
-val SourceSansPro = FontFamily(
+val SourceSans3 = FontFamily(
     Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.Normal),
     Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.Medium),
+    Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.SemiBold),
 )
 
 val Caveat = FontFamily(
-    androidx.compose.ui.text.font.Font(R.font.caveat_bold, FontWeight.Bold),
-    androidx.compose.ui.text.font.Font(R.font.caveat_bold, FontWeight.Normal),
+    Font(googleFont = caveatFont, fontProvider = fontProvider, weight = FontWeight.Medium),
+    Font(googleFont = caveatFont, fontProvider = fontProvider, weight = FontWeight.Bold),
 )
 
 val JetBrainsMono = FontFamily(
-    Font(googleFont = GoogleFont("JetBrains Mono"), fontProvider = fontProvider, weight = FontWeight.Normal),
+    Font(googleFont = jetBrainsMonoFont, fontProvider = fontProvider, weight = FontWeight.Normal),
+    Font(googleFont = jetBrainsMonoFont, fontProvider = fontProvider, weight = FontWeight.Medium),
 )
+
+private fun googleFontFamily(
+    name: String,
+    weights: List<FontWeight> = listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold),
+): FontFamily =
+    FontFamily(
+        weights.map { weight ->
+            Font(googleFont = GoogleFont(name), fontProvider = fontProvider, weight = weight)
+        }
+    )
+
+private val Lora = googleFontFamily("Lora")
+private val Manrope = googleFontFamily("Manrope")
+private val Sora = googleFontFamily("Sora")
+private val SpaceGrotesk = googleFontFamily("Space Grotesk")
+private val IbmPlexSans = googleFontFamily("IBM Plex Sans")
+private val Nunito = googleFontFamily("Nunito")
+private val NunitoSans = googleFontFamily("Nunito Sans")
+private val GreatVibes = googleFontFamily("Great Vibes")
+
+val SourceSansPro = SourceSans3
+val Exo2 = PlayfairDisplay
 
 val AppTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = Exo2,
+        fontFamily = PlayfairDisplay,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        letterSpacing = (-0.5).sp
+        fontSize = 36.sp,
+        lineHeight = 44.sp,
+        letterSpacing = 0.sp
     ),
     displayMedium = TextStyle(
-        fontFamily = Exo2,
+        fontFamily = PlayfairDisplay,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
+        fontSize = 27.sp,
         letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp,
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
+        fontSize = 27.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
         letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = Exo2,
+        fontFamily = PlayfairDisplay,
         fontWeight = FontWeight.Medium,
-        fontSize = 20.sp,
+        fontSize = 19.sp,
         letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.Medium,
-        fontSize = 20.sp,
-        letterSpacing = 0.15.sp
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
+        fontSize = 17.sp,
+        letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.Medium,
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = Exo2,
+        fontFamily = PlayfairDisplay,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         letterSpacing = 0.1.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = SourceSansPro,
+        fontFamily = SourceSans3,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.25.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = SourceSansPro,
+        fontFamily = SourceSans3,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
+        fontSize = 15.sp,
+        lineHeight = 24.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = SourceSansPro,
+        fontFamily = SourceSans3,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+        letterSpacing = 0.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = SourceSansPro,
+        fontFamily = SourceSans3,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -134,3 +168,32 @@ val AppTypography = Typography(
         letterSpacing = 0.5.sp
     )
 )
+
+fun appTypography(fontPairLabel: String): Typography {
+    val (heading, body) =
+        when (fontPairLabel) {
+            "Lora × Manrope" -> Lora to Manrope
+            "Sora × Source Sans" -> Sora to SourceSans3
+            "Space Grotesk × IBM Plex" -> SpaceGrotesk to IbmPlexSans
+            "Nunito × Nunito Sans" -> Nunito to NunitoSans
+            "Caveat × Source Sans" -> Caveat to SourceSans3
+            "Great Vibes × Source Sans" -> GreatVibes to SourceSans3
+            else -> PlayfairDisplay to SourceSans3
+        }
+
+    return AppTypography.copy(
+        displayLarge = AppTypography.displayLarge.copy(fontFamily = heading),
+        displayMedium = AppTypography.displayMedium.copy(fontFamily = heading),
+        displaySmall = AppTypography.displaySmall.copy(fontFamily = heading),
+        headlineLarge = AppTypography.headlineLarge.copy(fontFamily = heading),
+        headlineMedium = AppTypography.headlineMedium.copy(fontFamily = heading),
+        headlineSmall = AppTypography.headlineSmall.copy(fontFamily = heading),
+        titleLarge = AppTypography.titleLarge.copy(fontFamily = heading),
+        titleMedium = AppTypography.titleMedium.copy(fontFamily = heading),
+        titleSmall = AppTypography.titleSmall.copy(fontFamily = heading),
+        bodyLarge = AppTypography.bodyLarge.copy(fontFamily = body),
+        bodyMedium = AppTypography.bodyMedium.copy(fontFamily = body),
+        bodySmall = AppTypography.bodySmall.copy(fontFamily = body),
+        labelLarge = AppTypography.labelLarge.copy(fontFamily = body),
+    )
+}

@@ -15,6 +15,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -63,6 +64,7 @@ import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -76,10 +78,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -113,17 +111,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
-import com.entropyjournal.ui.components.WaveformVisualizer
-import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.theme.LocalJournalDesignTokens
 import com.entropyjournal.ui.screens.journal.RecordingState
+import com.entropyjournal.ui.screens.journal.GoldenWaveform
 import com.entropyjournal.util.DateTimeFormatter
 import com.entropyjournal.util.TtsManager
 import java.io.File
@@ -137,6 +136,7 @@ fun EntryDetailScreen(
     searchQuery: String = "",
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val designTokens = LocalJournalDesignTokens.current
     val focusManager = LocalFocusManager.current
     val doHaptic = rememberHapticAction()
     val isDark = com.entropyjournal.ui.theme.LocalIsDarkTheme.current
@@ -281,7 +281,7 @@ fun EntryDetailScreen(
 
     Column(
         modifier =
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).clickable(
+            Modifier.fillMaxSize().background(designTokens.backgroundBrush).clickable(
                 interactionSource =
                     remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null,
@@ -290,14 +290,50 @@ fun EntryDetailScreen(
             }
     ) {
         TopAppBar(
-            title = { Text("Eintrag", color = MaterialTheme.colorScheme.onBackground) },
+            title = {},
             navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        "Zur\u00fcck",
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
+                Surface(
+                    onClick = onBack,
+                    modifier = Modifier.padding(start = 12.dp).size(40.dp),
+                    shape = CircleShape,
+                    color = designTokens.chipBackground,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        designTokens.chipBorder,
+                    ),
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ArrowBack,
+                            "Zur\u00fcck",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            },
+            actions = {
+                Surface(
+                    onClick = {
+                        doHaptic(HapticFeedbackType.LongPress)
+                        showShareDialog = true
+                    },
+                    modifier = Modifier.padding(end = 12.dp).size(40.dp),
+                    shape = CircleShape,
+                    color = designTokens.chipBackground,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        designTokens.chipBorder,
+                    ),
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            "Eintrag teilen",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(19.dp),
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -305,48 +341,61 @@ fun EntryDetailScreen(
 
         uiState.entry?.let { entry ->
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 if (!entry.summary.isNullOrBlank()) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        glowColor = MaterialTheme.colorScheme.primary,
+                        glowIntensity = 0.1f,
+                        cornerRadius = 18.dp,
+                    ) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.Start,
                         ) {
-                            Text(
-                                "Zusammenfassung",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.TipsAndUpdates,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Zusammenfassung",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
                             entry.summary
                                 .lines()
                                 .filter { it.trimStart().startsWith("\u2022") }
-                                .forEach { line ->
+                                .forEachIndexed { index, line ->
                                     val bulletText = line.trimStart().removePrefix("\u2022").trim()
-                                    Row(modifier = Modifier.padding(bottom = 2.dp)) {
-                                        Text(
-                                            "\u2022 ",
-                                            style =
-                                                MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight =
-                                                        androidx.compose.ui.text.font.FontWeight
-                                                            .Bold
-                                                ),
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                    Row(
+                                        modifier = Modifier.padding(bottom = 6.dp),
+                                        verticalAlignment = Alignment.Top,
+                                    ) {
+                                        Box(
+                                            Modifier.padding(top = 7.dp)
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    when (index % 3) {
+                                                        0 -> MaterialTheme.colorScheme.primary
+                                                        1 -> designTokens.warning
+                                                        else -> designTokens.success
+                                                    }
+                                                )
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             bulletText,
-                                            style =
-                                                MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight =
-                                                        androidx.compose.ui.text.font.FontWeight
-                                                            .Bold
-                                                ),
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -356,6 +405,7 @@ fun EntryDetailScreen(
 
                 entry.entropyScore?.let { score ->
                     GlassCard(
+                        cornerRadius = 18.dp,
                         glowColor =
                             when {
                                 score < 0.33f -> NeonEmerald
@@ -386,40 +436,49 @@ fun EntryDetailScreen(
                 val hasImproved = entry.isImproved && entry.improvedText != null
                 var selectedTab by remember { mutableIntStateOf(0) }
                 val isShowingOriginal = selectedTab == 1 && hasImproved
-
-                if (hasImproved) {
-                    TabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        indicator = { tabPositions ->
-                            if (selectedTab < tabPositions.size) {
-                                SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
+                val toggleSpeech: () -> Unit = {
+                    doHaptic(HapticFeedbackType.LongPress)
+                    if (isSpeaking || isTtsLoading) {
+                        tts.stop()
+                        isSpeaking = false
+                        isTtsLoading = false
+                    } else {
+                        isTtsLoading = true
+                        isSpeaking = true
+                        val baseText = if (isShowingOriginal) entry.rawText else entry.displayText
+                        val speakText =
+                            buildString {
+                                append(baseText)
+                                uiState.followUps.forEachIndexed { index, followUp ->
+                                    append("\n\nNachtrag ")
+                                    append(germanNumberWord(index + 1))
+                                    append(". ")
+                                    append(followUp.text)
+                                }
                             }
-                        },
-                    ) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                            Text(
-                                "Verbessert",
-                                modifier = Modifier.padding(8.dp),
-                                color =
-                                    if (selectedTab == 0) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                            Text(
-                                "Original",
-                                modifier = Modifier.padding(8.dp),
-                                color =
-                                    if (selectedTab == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outline,
-                            )
+                        val started =
+                            tts.speak(
+                                speakText,
+                                onPlaybackStart = { isTtsLoading = false },
+                            ) {
+                                isSpeaking = false
+                                isTtsLoading = false
+                            }
+                        if (!started) {
+                            isSpeaking = false
+                            isTtsLoading = false
+                            android.widget.Toast.makeText(
+                                    context,
+                                    "Stimmen in den Einstellungen einschalten",
+                                    android.widget.Toast.LENGTH_SHORT,
+                                )
+                                .show()
                         }
                     }
+                }
+
+                if (hasImproved) {
+                    GoldenDetailTabs(selectedIndex = selectedTab, onSelected = { selectedTab = it })
                 }
 
                 val textFieldColors =
@@ -441,7 +500,9 @@ fun EntryDetailScreen(
                                 }
                             }
                         else Modifier,
-                    glowColor = NeonAmber,
+                    glowColor = MaterialTheme.colorScheme.primary,
+                    glowIntensity = 0.12f,
+                    cornerRadius = 18.dp,
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -457,13 +518,13 @@ fun EntryDetailScreen(
                                     Icons.Rounded.Book,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = NeonAmber,
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "Tagebucheintrag",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = NeonAmber,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                             IconButton(
@@ -521,6 +582,8 @@ fun EntryDetailScreen(
                                             },
                                     textStyle =
                                         MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = 15.sp,
+                                            lineHeight = 24.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
                                     colors = textFieldColors,
@@ -543,6 +606,8 @@ fun EntryDetailScreen(
                                             },
                                     textStyle =
                                         MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = 15.sp,
+                                            lineHeight = 24.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
                                     colors = textFieldColors,
@@ -598,6 +663,50 @@ fun EntryDetailScreen(
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                onClick = toggleSpeech,
+                                modifier = Modifier.size(36.dp),
+                                shape = CircleShape,
+                                color = designTokens.chipBackground,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    designTokens.chipBorder,
+                                ),
+                            ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
+                                        contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
+                                        tint = designTokens.warning,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = designTokens.textMuted,
+                            )
+                        }
+                        if (isTtsLoading) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Text-to-Speech wird erzeugt…",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -633,7 +742,9 @@ fun EntryDetailScreen(
                                     }
                                 else Modifier
                             ),
-                        glowColor = NeonAmber,
+                        glowColor = designTokens.warning,
+                        glowIntensity = 0.1f,
+                        cornerRadius = 18.dp,
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // ── Header row: title + delete ──
@@ -647,16 +758,16 @@ fun EntryDetailScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(
-                                        Icons.Rounded.Book,
+                                        Icons.Rounded.EditNote,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
-                                        tint = NeonAmber,
+                                        tint = designTokens.warning,
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         "Nachtrag ${germanNumberWord(index + 1)}",
                                         style = MaterialTheme.typography.titleSmall,
-                                        color = NeonAmber,
+                                        color = designTokens.warning,
                                     )
                                 }
                                 IconButton(
@@ -685,52 +796,11 @@ fun EntryDetailScreen(
                             )
 
                             if (fuHasImproved) {
-                                TabRow(
-                                    selectedTabIndex = selectedTabFu,
-                                    containerColor = Color.Transparent,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                    indicator = { tabPositions ->
-                                        if (selectedTabFu < tabPositions.size) {
-                                            SecondaryIndicator(
-                                                Modifier.tabIndicatorOffset(
-                                                    tabPositions[selectedTabFu]
-                                                ),
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    },
-                                ) {
-                                    Tab(
-                                        selected = selectedTabFu == 0,
-                                        onClick = {
-                                            selectedTabFu = 0
-                                        },
-                                    ) {
-                                        Text(
-                                            "Verbessert",
-                                            modifier = Modifier.padding(8.dp),
-                                            color =
-                                                if (selectedTabFu == 0)
-                                                    MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outline,
-                                        )
-                                    }
-                                    Tab(
-                                        selected = selectedTabFu == 1,
-                                        onClick = {
-                                            selectedTabFu = 1
-                                        },
-                                    ) {
-                                        Text(
-                                            "Original",
-                                            modifier = Modifier.padding(8.dp),
-                                            color =
-                                                if (selectedTabFu == 1)
-                                                    MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outline,
-                                        )
-                                    }
-                                }
+                                GoldenDetailTabs(
+                                    selectedIndex = selectedTabFu,
+                                    onSelected = { selectedTabFu = it },
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -815,7 +885,7 @@ fun EntryDetailScreen(
                 // is purely a control surface so the button always sits at the
                 // very bottom of the entry stack.
                 if (uiState.photos.isNotEmpty()) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 18.dp) {
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -843,8 +913,8 @@ fun EntryDetailScreen(
                                                 if (photo.isVideo) videoImageLoader
                                                 else coil3.ImageLoader(appContext),
                                             modifier =
-                                                Modifier.size(120.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                Modifier.size(74.dp)
+                                                    .clip(RoundedCornerShape(14.dp))
                                                     .clickable {
                                                         fullScreenPhotoPath = photo.filePath
                                                         fullScreenIsVideo = photo.isVideo
@@ -884,7 +954,12 @@ fun EntryDetailScreen(
                     }
                 }
 
-                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    glowColor = designTokens.warning,
+                    glowIntensity = 0.1f,
+                    cornerRadius = 18.dp,
+                ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -923,7 +998,7 @@ fun EntryDetailScreen(
 
                 // Add-media card: always at the bottom of the entry stack,
                 // purely a control surface with the add button.
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 18.dp) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -981,123 +1056,69 @@ fun EntryDetailScreen(
                     }
                 }
 
-                // Divider + TTS & Share actions
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(1.dp)
-                            .background(
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                            )
-                )
-
-                // Action icons + recording duration directly below divider
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    Surface(
+                        onClick = {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            viewModel.openNewFollowUpDialog()
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        color = designTokens.chipBackground,
+                        border =
+                            androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                designTokens.chipBorder,
+                            ),
                     ) {
-                        IconButton(
-                            onClick = {
-                                doHaptic(HapticFeedbackType.LongPress)
-                                if (isSpeaking || isTtsLoading) {
-                                    tts.stop()
-                                    isSpeaking = false
-                                    isTtsLoading = false
-                                } else {
-                                    isTtsLoading = true
-                                    isSpeaking = true
-                                    val baseText =
-                                        if (isShowingOriginal) entry.rawText
-                                        else entry.displayText
-                                    val speakText = buildString {
-                                        append(baseText)
-                                        uiState.followUps.forEachIndexed { index, followUp ->
-                                            append("\n\nNachtrag ")
-                                            append(germanNumberWord(index + 1))
-                                            append(". ")
-                                            append(followUp.text)
-                                        }
-                                    }
-                                    val started = tts.speak(
-                                        speakText,
-                                        onPlaybackStart = { isTtsLoading = false },
-                                    ) {
-                                        isSpeaking = false
-                                        isTtsLoading = false
-                                    }
-                                    if (!started) {
-                                        isSpeaking = false
-                                        isTtsLoading = false
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Stimmen in den Einstellungen einschalten",
-                                            android.widget.Toast.LENGTH_SHORT,
-                                        ).show()
-                                    }
-                                }
-                            },
-                            modifier = Modifier.size(36.dp),
+                        Row(
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
-                                if (isSpeaking) Icons.Rounded.Stop
-                                else Icons.Rounded.VolumeUp,
-                                contentDescription =
-                                    if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = FeatureAccentOrange,
-                                modifier = Modifier.size(22.dp),
+                                Icons.Rounded.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(19.dp),
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Schreiben", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(
-                            onClick = {
-                                doHaptic(HapticFeedbackType.LongPress)
-                                showShareDialog = true
-                            },
-                            modifier = Modifier.size(36.dp),
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        onClick = {
+                            viewModel.openNewFollowUpDialog()
+                            onFollowUpMicClick()
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        shadowElevation = 6.dp,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
-                                Icons.Rounded.Share,
-                                contentDescription = "Teilen",
-                                tint = FeatureAccentOrange,
-                                modifier = Modifier.size(22.dp),
+                                Icons.Rounded.Mic,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(19.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Einsprechen",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
                     }
-                    Text(
-                        text = "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(end = 34.dp),
-                    )
                 }
 
-                if (isTtsLoading) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color =
-                                if (isDark) Color(0xFF5C7AA3)
-                                else Color(0xFF1976D2),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Bitte warten, Text-to-Speech wird erzeugt\u2026",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(28.dp))
             }
         }
     }
@@ -1127,7 +1148,14 @@ fun EntryDetailScreen(
     if (uiState.showDeleteFollowUpDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showDeleteFollowUpDialog(false) },
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier =
+                Modifier.border(
+                    1.dp,
+                    designTokens.chipBorder,
+                    RoundedCornerShape(22.dp),
+                ),
+            shape = RoundedCornerShape(22.dp),
+            containerColor = designTokens.card,
             title = { Text("Nachtrag löschen?", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Text(
@@ -1158,7 +1186,14 @@ fun EntryDetailScreen(
         val nachtragTitle = "Nachtrag ${germanNumberWord(number)}"
         AlertDialog(
             onDismissRequest = { pendingInlineFollowUpDeletion = null },
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier =
+                Modifier.border(
+                    1.dp,
+                    designTokens.chipBorder,
+                    RoundedCornerShape(22.dp),
+                ),
+            shape = RoundedCornerShape(22.dp),
+            containerColor = designTokens.card,
             title = {
                 Text("$nachtragTitle löschen?", color = MaterialTheme.colorScheme.onSurface)
             },
@@ -1556,7 +1591,14 @@ fun EntryDetailScreen(
     if (uiState.showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showDeleteDialog(false) },
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier =
+                Modifier.border(
+                    1.dp,
+                    designTokens.chipBorder,
+                    RoundedCornerShape(22.dp),
+                ),
+            shape = RoundedCornerShape(22.dp),
+            containerColor = designTokens.card,
             title = { Text("Eintrag l\u00f6schen?", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Text(
@@ -1603,6 +1645,7 @@ private fun FollowUpDialog(
     onRecordClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
+    val designTokens = LocalJournalDesignTokens.current
     val isRecording = recordingState == RecordingState.RECORDING
     val isTranscribing = recordingState == RecordingState.TRANSCRIBING
     val showingImproved = isUsingImproved && improvedText != null
@@ -1641,7 +1684,14 @@ private fun FollowUpDialog(
                 onDismiss()
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        modifier =
+            Modifier.border(
+                1.dp,
+                designTokens.chipBorder,
+                RoundedCornerShape(22.dp),
+            ),
+        shape = RoundedCornerShape(22.dp),
+        containerColor = designTokens.card,
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1652,7 +1702,7 @@ private fun FollowUpDialog(
                     Icon(
                         Icons.Rounded.Book,
                         contentDescription = null,
-                        tint = NeonAmber,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1718,7 +1768,7 @@ private fun FollowUpDialog(
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                     Spacer(modifier = Modifier.height(10.dp))
-                                    WaveformVisualizer(amplitude = amplitude)
+                                    GoldenWaveform(amplitude = amplitude)
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Text(
                                         engineLabel,
@@ -1948,6 +1998,50 @@ private fun FollowUpDialog(
             }
         },
     )
+}
+
+@Composable
+private fun GoldenDetailTabs(
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val designTokens = LocalJournalDesignTokens.current
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(999.dp),
+        color = designTokens.chipBackground,
+        border =
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                designTokens.cardBorder,
+            ),
+    ) {
+        Row(modifier = Modifier.padding(4.dp)) {
+            listOf("Verbessert", "Original").forEachIndexed { index, label ->
+                Box(
+                    modifier =
+                        Modifier.weight(1f)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                if (selectedIndex == index) MaterialTheme.colorScheme.primary
+                                else Color.Transparent
+                            )
+                            .clickable { onSelected(index) }
+                            .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color =
+                            if (selectedIndex == index) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
 }
 
 // Spells a positive integer as a capitalised German word for display in

@@ -3,7 +3,10 @@ package com.entropyjournal.ui.screens.dashboard
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.rememberHapticAction
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +54,7 @@ import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialog as MaterialAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,30 +73,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.entropyjournal.domain.model.Advice
+import com.entropyjournal.domain.model.AdviceBlock
 import com.entropyjournal.domain.model.AdvicePriority
 import com.entropyjournal.domain.model.TopAction
-import com.entropyjournal.ui.components.AdviceCategoryCard
-import com.entropyjournal.ui.components.GlassCard
-import com.entropyjournal.ui.components.NeonDivider
 import com.entropyjournal.ui.components.ParticleBackground
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.TwinklingStars
-import com.entropyjournal.ui.theme.CustomPalette
-import com.entropyjournal.ui.theme.GoalPalette
-import com.entropyjournal.ui.theme.InsightPalette
-import com.entropyjournal.ui.theme.FeatureAccentOrange
-import com.entropyjournal.ui.theme.SummaryPalette
+import com.entropyjournal.ui.components.getIconForCategory
 import com.entropyjournal.util.TtsManager
 import android.content.Intent
 import androidx.compose.material.icons.rounded.Share
@@ -103,10 +106,227 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
-import com.entropyjournal.ui.theme.NeonAmber
-import com.entropyjournal.ui.theme.NeonCyan
-import com.entropyjournal.ui.theme.NeonEmerald
-import com.entropyjournal.ui.theme.NeonRed
+
+private val NeonRed: Color
+    @Composable get() = MaterialTheme.colorScheme.error
+
+private val NeonAmber: Color
+    @Composable get() = MaterialTheme.colorScheme.tertiary
+
+private val NeonCyan: Color
+    @Composable get() = MaterialTheme.colorScheme.secondary
+
+private val NeonEmerald: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+
+private val FeatureAccentOrange: Color
+    @Composable get() = MaterialTheme.colorScheme.tertiary
+
+private object SummaryPalette {
+    val primary: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val secondary: Color @Composable get() = MaterialTheme.colorScheme.tertiary
+    val accent: Color @Composable get() = MaterialTheme.colorScheme.secondary
+    val muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+private object InsightPalette {
+    val primary: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val secondary: Color @Composable get() = MaterialTheme.colorScheme.secondary
+    val accent: Color @Composable get() = MaterialTheme.colorScheme.tertiary
+    val muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+private object GoalPalette {
+    val primary: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val secondary: Color @Composable get() = MaterialTheme.colorScheme.tertiary
+    val accent: Color @Composable get() = MaterialTheme.colorScheme.secondary
+    val muted: Color @Composable get() = MaterialTheme.colorScheme.error
+}
+
+private object CustomPalette {
+    val primary: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val secondary: Color @Composable get() = MaterialTheme.colorScheme.tertiary
+    val accent: Color @Composable get() = MaterialTheme.colorScheme.secondary
+    val muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+@Composable
+private fun GlassCard(
+    modifier: Modifier = Modifier,
+    glowColor: Color = MaterialTheme.colorScheme.primary,
+    glowIntensity: Float = 0.15f,
+    cornerRadius: Dp = 18.dp,
+    contentPadding: Dp = 16.dp,
+    content: @Composable () -> Unit,
+) {
+    val shape = RoundedCornerShape(cornerRadius)
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surface,
+        border =
+            BorderStroke(
+                1.dp,
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.42f),
+                        glowColor.copy(alpha = (0.16f + glowIntensity * 0.3f).coerceAtMost(0.32f)),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                    )
+                ),
+            ),
+        shadowElevation = 5.dp,
+    ) {
+        Box(modifier = Modifier.padding(contentPadding)) { content() }
+    }
+}
+
+@Composable
+private fun NeonDivider() {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                            MaterialTheme.colorScheme.tertiary,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+    )
+}
+
+@Composable
+private fun LiteraryHeadline(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style =
+            MaterialTheme.typography.headlineMedium.copy(
+                fontFamily = FontFamily.Serif,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        color = MaterialTheme.colorScheme.onBackground,
+    )
+}
+
+private val GoldenSectionTitleStyle
+    @Composable get() =
+        MaterialTheme.typography.titleLarge.copy(
+            fontFamily = FontFamily.Serif,
+            fontSize = 19.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+@Composable
+private fun AlertDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: (@Composable () -> Unit)? = null,
+    title: (@Composable () -> Unit)? = null,
+    text: (@Composable () -> Unit)? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+) {
+    MaterialAlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = confirmButton,
+        modifier =
+            modifier.border(
+                BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                ),
+                RoundedCornerShape(22.dp),
+            ),
+        dismissButton = dismissButton,
+        title = title,
+        text = text,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = containerColor,
+        titleContentColor = MaterialTheme.colorScheme.primary,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        tonalElevation = 6.dp,
+    )
+}
+
+@Composable
+private fun AdviceCategoryCard(
+    block: AdviceBlock,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val categoryColor =
+        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
+    GlassCard(
+        modifier = modifier.width(104.dp).height(124.dp).clickable(onClick = onClick),
+        glowColor = categoryColor,
+        glowIntensity = if (isSelected) 0.22f else 0.06f,
+        cornerRadius = 16.dp,
+        contentPadding = 8.dp,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                modifier =
+                    Modifier.size(34.dp)
+                        .clip(CircleShape)
+                        .background(categoryColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = getIconForCategory(block.categoryIcon),
+                    contentDescription = block.categoryName,
+                    tint = categoryColor,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = block.categoryName,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            val levelColor =
+                when {
+                    block.entropyLevel < 0.33f -> NeonEmerald
+                    block.entropyLevel < 0.66f -> NeonAmber
+                    else -> NeonRed
+                }
+            val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+            Canvas(modifier = Modifier.size(36.dp, 18.dp)) {
+                drawArc(
+                    color = trackColor,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    style = Stroke(width = 3.dp.toPx()),
+                )
+                drawArc(
+                    color = levelColor,
+                    startAngle = 180f,
+                    sweepAngle = 180f * block.entropyLevel.coerceIn(0f, 1f),
+                    useCenter = false,
+                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
@@ -143,7 +363,9 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Fixed title bar (does not scroll)
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(start = 18.dp, end = 18.dp, top = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -151,39 +373,82 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Dashboard",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        LiteraryHeadline("Dashboard")
+                        Spacer(modifier = Modifier.width(10.dp))
                         com.entropyjournal.ui.components.SunMoonToggle()
                     }
-                    Row {
-                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); showLegendDialog = true }) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showLegendDialog = true
+                                },
+                                modifier = Modifier.size(38.dp),
+                            ) {
                             Icon(
                                 Icons.Rounded.Info,
                                 "Legende",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(19.dp),
                             )
+                        }
                         }
                         if (uiState.canUndo) {
-                            IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.undoDashboard() }) {
-                                Icon(Icons.Rounded.Undo, "R\u00fcckg\u00e4ngig", tint = NeonAmber)
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.undoDashboard()
+                                    },
+                                    modifier = Modifier.size(38.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Undo,
+                                        "R\u00fcckg\u00e4ngig",
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(19.dp),
+                                    )
+                                }
                             }
                         }
-                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
-                            Icon(
-                                Icons.Rounded.Refresh,
-                                "Aktualisieren",
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.refreshDashboard()
+                                },
+                                modifier = Modifier.size(38.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Refresh,
+                                    "Aktualisieren",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
                         }
                     }
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+                NeonDivider()
+
                 val lastUpdated = remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
                 if (lastUpdated != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = lastUpdated,
                         style = MaterialTheme.typography.labelSmall,
@@ -195,7 +460,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
             // Scrollable content
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // C1 — Profil-Header: zeigt das aktive Profil + Kurzfokus.
@@ -205,17 +470,51 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 if (uiState.activeProfileLabel.isNotBlank()) {
                     item {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                                ),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Aktives Profil: ${uiState.activeProfileLabel}",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(
+                                                        MaterialTheme.colorScheme.primary,
+                                                        MaterialTheme.colorScheme.tertiary,
+                                                    )
+                                                )
+                                            ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Psychology,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Aktives Profil: ${uiState.activeProfileLabel}",
+                                        style =
+                                            MaterialTheme.typography.titleSmall.copy(
+                                                fontFamily = FontFamily.Serif,
+                                                fontWeight = FontWeight.Bold,
+                                            ),
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
                                 // Bug-Fix 2026-05-15: customFokusKern stammt aus dem letzten
                                 // Custom-Profil-Refresh und ueberlebt in Prefs auch wenn der User
                                 // auf ein eingebautes Profil wechselt. Folge: alle Profile zeigen
@@ -228,17 +527,16 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     if (isCustomProfile && uiState.customFokusKern.isNotBlank())
                                         uiState.customFokusKern
                                     else uiState.activeProfileFocus
-                                if (focusText.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = focusText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        // Frank-Vorgabe 2026-05-15: max 3 Zeilen.
-                                        maxLines = 3,
-                                        overflow =
-                                            androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    )
+                                    if (focusText.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = focusText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -407,8 +705,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         "\u00dcberblick",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
+                                        style = GoldenSectionTitleStyle,
                                         color = SummaryPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center,
@@ -450,8 +747,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                             Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     itemsIndexed(blocks) { index, block ->
                                         AdviceCategoryCard(
@@ -473,8 +770,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 "Alle Beobachtungen",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = GoldenSectionTitleStyle,
                                 color = SummaryPalette.secondary,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
@@ -522,8 +818,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         "Innerer Spiegel",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
+                                        style = GoldenSectionTitleStyle,
                                         color = InsightPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center,
@@ -565,8 +860,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                             Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     itemsIndexed(blocks) { index, block ->
                                         AdviceCategoryCard(
@@ -588,8 +883,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 "Alle Einsichten",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = GoldenSectionTitleStyle,
                                 color = InsightPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
@@ -637,8 +931,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         "Ziel-\u00dcberblick",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
+                                        style = GoldenSectionTitleStyle,
                                         color = GoalPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center,
@@ -680,8 +973,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                             Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     itemsIndexed(blocks) { index, block ->
                                         AdviceCategoryCard(
@@ -703,8 +996,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 "Alle Ziele",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = GoldenSectionTitleStyle,
                                 color = GoalPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
@@ -759,8 +1051,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         customAnalyse,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
+                                        style = GoldenSectionTitleStyle,
                                         color = CustomPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center,
@@ -802,8 +1093,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                             Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     itemsIndexed(blocks) { index, block ->
                                         AdviceCategoryCard(
@@ -825,8 +1116,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 customErgebnisse,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = GoldenSectionTitleStyle,
                                 color = CustomPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
@@ -878,8 +1168,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     Text(
                                         "Gesamtanalyse",
                                         style =
-                                            MaterialTheme.typography.titleLarge.copy(
-                                                fontWeight = FontWeight.Bold,
+                                            GoldenSectionTitleStyle.copy(
                                                 textDecoration = TextDecoration.Underline,
                                             ),
                                         color = NeonAmber,
@@ -930,8 +1219,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                             Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     itemsIndexed(blocks) { index, block ->
                                         AdviceCategoryCard(
@@ -956,8 +1245,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Text(
                                 "Alle Empfehlungen",
                                 style =
-                                    MaterialTheme.typography.titleLarge.copy(
-                                        fontWeight = FontWeight.Bold,
+                                    GoldenSectionTitleStyle.copy(
                                         textDecoration = TextDecoration.Underline,
                                     ),
                                 color = NeonAmber,
@@ -1978,8 +2266,7 @@ private fun TopActionsBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContex
             Text(
                 "Top ${actions.size} Massnahmen",
                 style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
+                    GoldenSectionTitleStyle.copy(
                         textDecoration = TextDecoration.Underline,
                     ),
                 color = NeonAmber,
@@ -2136,8 +2423,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>, ttsCtx: DashboardT
         Column {
             Text(
                 "Kernerkenntnisse",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = GoldenSectionTitleStyle,
                 color = SummaryPalette.secondary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -2415,8 +2701,7 @@ private fun InsightKeyBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContex
         Column {
             Text(
                 "Tiefste Erkenntnisse",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = GoldenSectionTitleStyle,
                 color = InsightPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -2693,8 +2978,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>, ttsCtx: DashboardTtsCon
         Column {
             Text(
                 "N\u00e4chste Schritte",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = GoldenSectionTitleStyle,
                 color = GoalPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -2957,8 +3241,7 @@ private fun CustomInsightsBlock(
         Column {
             Text(
                 title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = GoldenSectionTitleStyle,
                 color = CustomPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -3296,7 +3579,7 @@ private fun AnalysisTtsShareRow(
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
-                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(

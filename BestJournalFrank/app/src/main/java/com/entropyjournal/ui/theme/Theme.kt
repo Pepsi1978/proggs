@@ -13,8 +13,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -71,9 +69,9 @@ private fun Color.mix(other: Color, ratio: Float): Color {
 fun profileColorScheme(accent: Color, isDark: Boolean): ColorScheme {
     return if (isDark) {
         // Dark mode: dunkler Hintergrund mit minimalem Akzent-Hauch.
-        val background = Color(0xFF121212).mix(accent, 0.04f)
-        val surface = Color(0xFF181818).mix(accent, 0.05f)
-        val surfaceVariant = Color(0xFF222222).mix(accent, 0.07f)
+        val background = Color(0xFF101825)
+        val surface = Color(0x14FFFFFF)
+        val surfaceVariant = Color(0x1FFFFFFF)
         darkColorScheme(
             primary = accent,
             onPrimary = Color.White,
@@ -92,13 +90,13 @@ fun profileColorScheme(accent: Color, isDark: Boolean): ColorScheme {
             errorContainer = Color(0xFF3B1010),
             onErrorContainer = NeonRed,
             background = background,
-            onBackground = TextPrimary,
+            onBackground = Color(0xFFF0F4F5),
             surface = surface,
-            onSurface = TextPrimary,
+            onSurface = Color(0xFFF0F4F5),
             surfaceVariant = surfaceVariant,
             onSurfaceVariant = TextSecondary,
             outline = TextMuted,
-            outlineVariant = Color(0xFF2A2A2A),
+            outlineVariant = accent.copy(alpha = 0.4f),
             inverseSurface = TextPrimary,
             inverseOnSurface = background,
             surfaceTint = accent,
@@ -146,7 +144,7 @@ fun profileColorScheme(accent: Color, isDark: Boolean): ColorScheme {
  */
 private val NeutralDarkScheme: ColorScheme =
     darkColorScheme(
-        primary = WarmCopper,
+        primary = Color(0xFFE8722A),
         onPrimary = Color.White,
         primaryContainer = Color(0xFF3D2800),
         onPrimaryContainer = Color(0xFFFFDDB3),
@@ -162,14 +160,14 @@ private val NeutralDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3B1010),
         onErrorContainer = NeonRed,
-        background = CosmosBlack,
-        onBackground = TextPrimary,
-        surface = CosmosBlack,
-        onSurface = TextPrimary,
-        surfaceVariant = CosmosDeep,
+        background = Color(0xFF0F0E0C),
+        onBackground = Color(0xFFEFE9E2),
+        surface = Color(0xFF1E1A16),
+        onSurface = Color(0xFFEFE9E2),
+        surfaceVariant = Color(0xFF141210),
         onSurfaceVariant = TextSecondary,
         outline = TextMuted,
-        outlineVariant = Color(0xFF2A2A2A),
+        outlineVariant = Color(0x66C25E00),
         inverseSurface = TextPrimary,
         inverseOnSurface = CosmosBlack,
         surfaceTint = WarmCopper,
@@ -211,13 +209,13 @@ fun EntropyJournalTheme(
     darkTheme: Boolean = true,
     profileIndex: Int = ProfileTheme.currentProfileIndex.intValue,
     appTheme: AppTheme = ProfileTheme.currentAppTheme.value,
+    fontPair: String = ProfileTheme.currentFontPair.value,
     content: @Composable () -> Unit,
 ) {
-    // Theme-Auswahl 1:1 wie BestJournalAndroid. Profilfarbe (Default) leitet die ganze App-Farbe
-    // vom aktiven KI-Dashboard-Profil ab. Die fuenf Klassiker-Themes nutzen ihre offiziellen
-    // Light/Dark Specs. Neutral nutzt Frank's Default-Cosmos-Farben.
+    // Alle 14 Themes besitzen ein Light-/Dark-Scheme; Goldener Faden ist der Fallback.
     val colorScheme =
         when (appTheme) {
+            AppTheme.GoldenThread -> if (darkTheme) GoldenThreadDarkScheme else GoldenThreadLightScheme
             AppTheme.Profile -> profileColorScheme(profileAccent(profileIndex), darkTheme)
             AppTheme.Solarized -> if (darkTheme) SolarizedDarkScheme else SolarizedLightScheme
             AppTheme.Dracula -> if (darkTheme) DraculaDarkScheme else DraculaLightScheme
@@ -227,89 +225,38 @@ fun EntropyJournalTheme(
             AppTheme.Cosmos -> if (darkTheme) CosmosDarkScheme else CosmosLightScheme
             AppTheme.Neutral -> if (darkTheme) NeutralDarkScheme else NeutralLightScheme
             AppTheme.Aurora -> if (darkTheme) AuroraDarkScheme else AuroraLightScheme
+            AppTheme.PolarLight -> if (darkTheme) PolarLightDarkScheme else PolarLightLightScheme
+            AppTheme.Nebula -> if (darkTheme) NebulaDarkScheme else NebulaLightScheme
+            AppTheme.EmeraldForest -> if (darkTheme) EmeraldForestDarkScheme else EmeraldForestLightScheme
+            AppTheme.SunEmber -> if (darkTheme) SunEmberDarkScheme else SunEmberLightScheme
         }
 
-    // Cosmos-Theme: 1:1 wie EntropieReductor — radialer (Dark) bzw. vertikaler (Light)
-    // Background-Brush als Box-Wrapper, plus transparente StatusBar/NavBar.
-    // Aurora-Theme: gleicher Mechanismus, aber mit 3-Stop-Diagonalgradient (Pastel-Aquarell).
-    val isCosmos = appTheme == AppTheme.Cosmos
-    val isAurora = appTheme == AppTheme.Aurora
-    val needsTransparentSystemBars = isCosmos || isAurora
-    if (needsTransparentSystemBars) {
-        val view = LocalView.current
-        if (!view.isInEditMode) {
-            SideEffect {
-                val window = (view.context as? Activity)?.window
-                if (window != null) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                    WindowCompat.getInsetsController(window, view).apply {
-                        isAppearanceLightStatusBars = !darkTheme
-                        isAppearanceLightNavigationBars = !darkTheme
-                    }
+    val designTokens = journalDesignTokens(appTheme, darkTheme, colorScheme)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
                 }
             }
         }
     }
 
-    val cosmosBrush: Brush? =
-        if (isCosmos) {
-            if (darkTheme) {
-                Brush.radialGradient(
-                    0f to ERBgDarkMid,
-                    0.6f to ERBgDark,
-                    1f to ERBgDark,
-                    center = Offset.Unspecified,
-                    radius = 1500f,
-                )
-            } else {
-                Brush.verticalGradient(
-                    0f to ERBgLight,
-                    1f to ERBgLightMid,
-                )
-            }
-        } else {
-            null
-        }
-
-    // Aurora: 3-Stop Linear-Gradient von oben-links nach unten-rechts.
-    // Light = pastellig (Mint → Lavendel → Rosa), Dark = Nachthimmel (Tiefblaugruen → Indigo → Bordeaux).
-    val auroraBrush: Brush? =
-        if (isAurora) {
-            if (darkTheme) {
-                Brush.linearGradient(
-                    0f to AuroraDarkGradientStart,
-                    0.5f to AuroraDarkGradientMid,
-                    1f to AuroraDarkGradientEnd,
-                    start = Offset.Zero,
-                    end = Offset.Infinite,
-                )
-            } else {
-                Brush.linearGradient(
-                    0f to AuroraLightGradientStart,
-                    0.5f to AuroraLightGradientMid,
-                    1f to AuroraLightGradientEnd,
-                    start = Offset.Zero,
-                    end = Offset.Infinite,
-                )
-            }
-        } else {
-            null
-        }
-
-    val backgroundBrush: Brush? = cosmosBrush ?: auroraBrush
-
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides darkTheme,
+        LocalJournalDesignTokens provides designTokens,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = AppTypography,
+            typography = appTypography(fontPair),
             shapes = AppShapes,
             content = {
-                if (backgroundBrush != null) {
-                    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
-                        content()
-                    }
-                } else {
+                Box(modifier = Modifier.fillMaxSize().background(designTokens.backgroundBrush)) {
                     content()
                 }
             },

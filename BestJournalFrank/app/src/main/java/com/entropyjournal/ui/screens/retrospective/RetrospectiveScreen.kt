@@ -5,9 +5,11 @@ import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
@@ -52,6 +55,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,21 +78,21 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import com.entropyjournal.ui.components.SunMoonToggle
-import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.util.TtsManager
 import java.util.Calendar
@@ -132,9 +136,9 @@ object RetrospectiveColors {
                 )
             } else {
                 listOf(
-                    accent.copy(alpha = 0.25f).compositeOver(Color.White),
-                    accent.copy(alpha = 0.15f).compositeOver(Color.White),
-                    accent.copy(alpha = 0.06f).compositeOver(Color.White),
+                    accent.copy(alpha = 0.25f).compositeOver(background),
+                    accent.copy(alpha = 0.15f).compositeOver(background),
+                    accent.copy(alpha = 0.06f).compositeOver(background),
                     surface,
                 )
             }
@@ -158,7 +162,7 @@ object RetrospectiveColors {
             return if (LocalIsDarkTheme.current) {
                 listOf(accent.copy(alpha = 0.22f).compositeOver(surface), surface)
             } else {
-                listOf(accent.copy(alpha = 0.12f).compositeOver(Color.White), Color.White)
+                listOf(accent.copy(alpha = 0.12f).compositeOver(surface), surface)
             }
         }
 
@@ -174,6 +178,102 @@ object RetrospectiveColors {
 }
 
 @Composable
+private fun GoldenHairline() {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                            MaterialTheme.colorScheme.tertiary,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+    )
+}
+
+@Composable
+private fun RetrospectiveInfoDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 6.dp,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "So entstehen Rückblicke",
+                    modifier = Modifier.weight(1f),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                RetrospectiveInfoRow(
+                    icon = Icons.Rounded.CalendarToday,
+                    text = "Wochenrückblick: sonntags, ab 2 Einträgen pro Woche",
+                )
+                RetrospectiveInfoRow(
+                    icon = Icons.Rounded.DateRange,
+                    text = "Monatsrückblick: am Monatsende aus den Wochenrückblicken",
+                )
+                RetrospectiveInfoRow(
+                    icon = Icons.Rounded.CalendarMonth,
+                    text = "Jahresrückblick: am 31. Dezember aus allen Monaten",
+                )
+                GoldenHairline()
+                Text(
+                    "Die KI fasst zusammen, was dich bewegt hat. Tippe einen Rückblick an, " +
+                        "um den ganzen Text, Medien, Vorlesen und Teilen zu öffnen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+            }
+        },
+    )
+}
+
+@Composable
+private fun RetrospectiveInfoRow(icon: ImageVector, text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     val doHaptic = rememberHapticAction()
     val weekly by viewModel.weeklySummaries.collectAsStateWithLifecycle()
@@ -185,7 +285,8 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     var selectedSummary by remember { mutableStateOf<RetrospectiveSummaryEntity?>(null) }
-    var weeklyExpanded by rememberSaveable { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var weeklyExpanded by rememberSaveable { mutableStateOf(true) }
     var monthlyExpanded by rememberSaveable { mutableStateOf(false) }
     var yearlyExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -197,12 +298,17 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
         )
     }
 
+    if (showInfoDialog) {
+        RetrospectiveInfoDialog(onDismiss = { showInfoDialog = false })
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(10.dp))
             // Fixed title bar (does not scroll)
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(start = 18.dp, end = 18.dp, top = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -212,22 +318,60 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Rückblick",
-                            style = MaterialTheme.typography.headlineMedium,
+                            style =
+                                MaterialTheme.typography.headlineMedium.copy(
+                                    fontSize = 27.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             color = MaterialTheme.colorScheme.onBackground,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         SunMoonToggle()
                     }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                GoldenHairline()
                 val lastUpdated = remember(weekly, monthly, yearly) {
                     viewModel.getLastUpdatedText()
                 }
-                if (lastUpdated != null) {
-                    Text(
-                        text = lastUpdated,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (lastUpdated != null) {
+                        Text(
+                            text = lastUpdated,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        border =
+                            BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            ),
+                    ) {
+                        IconButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                showInfoDialog = true
+                            },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Info,
+                                contentDescription = "So entstehen Rückblicke",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(17.dp),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -236,7 +380,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 modifier =
                     Modifier.fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (isWaitingForRestore || isGenerating) {
@@ -275,27 +419,52 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(22.dp))
                             .background(
                                 Brush.verticalGradient(colors = RetrospectiveColors.headerGradient)
                             )
-                            .padding(24.dp),
+                            .border(
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                ),
+                                RoundedCornerShape(22.dp),
+                            )
+                            .padding(horizontal = 22.dp, vertical = 26.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Rounded.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = RetrospectiveColors.monthDividerColor,
-                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                ),
+                            shadowElevation = 8.dp,
+                            modifier = Modifier.size(72.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = RetrospectiveColors.monthDividerColor,
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = "Dein persönlicher Rückblick",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
+                            style =
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontFamily = FontFamily.Serif,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
                         )
@@ -367,7 +536,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 CategoryButton(
                     title = "Wochenrückblick",
@@ -440,7 +609,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 CategoryButton(
                     title = "Monatsrückblick",
@@ -508,7 +677,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 CategoryButton(
                     title = "Jahresrückblick",
@@ -636,13 +805,13 @@ private fun ContinuousTimelineSection(
     lineColor: Color,
     dotColor: Color,
     modifier: Modifier = Modifier,
-    railWidth: Dp = 24.dp,
+    railWidth: Dp = 20.dp,
     dotSize: Dp = 8.dp,
     lineThickness: Dp = 2.dp,
     content: @Composable () -> Unit,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        modifier = modifier.fillMaxWidth().padding(start = 12.dp).height(IntrinsicSize.Min),
     ) {
         Canvas(
             modifier = Modifier.width(railWidth).fillMaxHeight(),
@@ -686,25 +855,29 @@ private fun CategoryButton(
     expanded: Boolean,
     onClick: () -> Unit,
 ) {
-    val isDark = LocalIsDarkTheme.current
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border =
+            BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.primary.copy(alpha = if (expanded) 0.45f else 0.28f),
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
                     .background(Brush.verticalGradient(RetrospectiveColors.categoryButtonGradient))
-                    .padding(20.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Box(
                 modifier =
-                    Modifier.size(52.dp)
+                    Modifier.size(44.dp)
                         .clip(CircleShape)
                         .background(RetrospectiveColors.categoryIconCircle),
                 contentAlignment = Alignment.Center,
@@ -712,25 +885,26 @@ private fun CategoryButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (isDark) Color.White else RetrospectiveColors.monthDividerColor,
+                    modifier = Modifier.size(21.dp),
+                    tint = RetrospectiveColors.monthDividerColor,
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface,
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color =
-                        if (isDark) Color.White.copy(alpha = 0.7f)
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -738,8 +912,8 @@ private fun CategoryButton(
                 imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                 contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
                 tint =
-                    if (isDark) Color.White.copy(alpha = 0.7f)
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    if (expanded) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -751,13 +925,17 @@ private fun SummaryEntryCard(
     color: Color,
     onClick: () -> Unit,
 ) {
-    val textColor = if (color.luminance() > 0.4f) Color.Black else Color.White
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = color),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        border =
+            BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Text(
@@ -769,15 +947,18 @@ private fun SummaryEntryCard(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = summary.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = textColor,
-                fontWeight = FontWeight.Bold,
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = summary.summaryText,
                 style = MaterialTheme.typography.bodySmall,
-                color = textColor.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -791,26 +972,20 @@ private fun MonthDivider(label: String) {
         modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(2.5.dp)
-                    .background(RetrospectiveColors.monthDividerColor)
-        )
+        GoldenHairline()
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style =
+                MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Bold,
+                ),
             color = RetrospectiveColors.monthDividerColor,
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(2.5.dp)
-                    .background(RetrospectiveColors.monthDividerColor)
-        )
+        GoldenHairline()
     }
 }
 
@@ -849,7 +1024,6 @@ private fun SummaryDetailDialog(
     viewModel: RetrospectiveViewModel,
     onDismiss: () -> Unit,
 ) {
-    val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
     val doHaptic = rememberHapticAction()
     var isSpeaking by remember { mutableStateOf(false) }
@@ -881,48 +1055,47 @@ private fun SummaryDetailDialog(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
+                    .background(MaterialTheme.colorScheme.background)
                     .statusBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Colored header with gradient in dark mode
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
-                            .then(
-                                if (isDark)
-                                    Modifier.background(
-                                        Brush.verticalGradient(
-                                            RetrospectiveColors.categoryButtonGradient
-                                        )
-                                    )
-                                else Modifier.background(Color.White)
+                            .background(
+                                Brush.verticalGradient(
+                                    RetrospectiveColors.categoryButtonGradient
+                                )
                             )
-                            .padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 20.dp)
+                            .padding(start = 18.dp, end = 8.dp, top = 16.dp, bottom = 16.dp)
                 ) {
-                    val detailTextColor = if (isDark) Color.White else Color.Black
                     Column(modifier = Modifier.padding(end = 44.dp)) {
                         Text(
-                            text = summary.periodLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = RetrospectiveColors.monthDividerColor,
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
                             text = summary.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = detailTextColor,
-                            fontWeight = FontWeight.Bold,
+                            style =
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontFamily = FontFamily.Serif,
+                                    fontSize = 21.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = summary.periodLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd)) {
                         Icon(
                             Icons.Rounded.Close,
                             contentDescription = "Schließen",
-                            tint = detailTextColor.copy(alpha = 0.8f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+                GoldenHairline()
 
                 // Body — structured rendering with bullet summary + timeline sections
                 val bodyScrollState = rememberScrollState()
@@ -932,12 +1105,10 @@ private fun SummaryDetailDialog(
                             .fillMaxWidth()
                             .drawVerticalScrollbar(
                                 bodyScrollState,
-                                color =
-                                    if (isDark) Color.White.copy(alpha = 0.4f)
-                                    else Color.Black.copy(alpha = 0.3f),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                             )
                             .verticalScroll(bodyScrollState)
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = 18.dp)
                             .padding(top = 24.dp, bottom = 120.dp)
                 ) {
                     // Bullet point summary card
@@ -947,16 +1118,23 @@ private fun SummaryDetailDialog(
                             shape = RoundedCornerShape(16.dp),
                             colors =
                                 CardDefaults.cardColors(
-                                    containerColor =
-                                        if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
                                 ),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     "Auf einen Blick",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style =
+                                        MaterialTheme.typography.titleSmall.copy(
+                                            fontFamily = FontFamily.Serif,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
                                     color = RetrospectiveColors.monthDividerColor,
-                                    fontWeight = FontWeight.Bold,
                                 )
                                 Spacer(modifier = Modifier.height(10.dp))
                                 parsed.bulletPoints.forEach { point ->
@@ -1021,8 +1199,11 @@ private fun SummaryDetailDialog(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         section.heading,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        style =
+                                            MaterialTheme.typography.titleMedium.copy(
+                                                fontFamily = FontFamily.Serif,
+                                                fontWeight = FontWeight.Bold,
+                                            ),
                                         color = RetrospectiveColors.monthDividerColor,
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
@@ -1091,18 +1272,22 @@ private fun SummaryDetailDialog(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // Divider + action buttons
-                    Box(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(1.dp)
-                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
-                    )
+                    GoldenHairline()
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Action buttons: Speaker + Share
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f),
+                                ),
+                        ) {
+                            IconButton(
                             onClick = {
                                 doHaptic(HapticFeedbackType.LongPress)
                                 if (isSpeaking || isTtsLoading) {
@@ -1141,20 +1326,31 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = FeatureAccentOrange,
-                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
-                        IconButton(
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f),
+                                ),
+                        ) {
+                            IconButton(
                             onClick = { doHaptic(HapticFeedbackType.LongPress); showShareDialog = true },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = FeatureAccentOrange,
-                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(20.dp),
                             )
+                        }
                         }
                     }
 
@@ -1168,7 +1364,7 @@ private fun SummaryDetailDialog(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+                                color = MaterialTheme.colorScheme.primary,
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -1190,7 +1386,17 @@ private fun SummaryDetailDialog(
 
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            title = {
+                Text(
+                    "Rückblick teilen",
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Text checkbox
@@ -1293,7 +1499,7 @@ private fun SummaryDetailDialog(
                     },
                     colors =
                         androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFF1976D2)
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                 ) {
                     Text("Teilen")

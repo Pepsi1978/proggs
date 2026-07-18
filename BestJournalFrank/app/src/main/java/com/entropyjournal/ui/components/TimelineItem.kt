@@ -2,6 +2,7 @@ package com.entropyjournal.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,10 +33,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.ui.theme.TextMuted
 import com.entropyjournal.util.DateTimeFormatter
@@ -66,11 +67,11 @@ fun TimelineItem(
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // Timeline rail: 52dp breit, durchgehende Linie + Lucide-Icon-Badge zentriert auf der Linie.
+        // Timeline rail follows the compact 46dp Goldener-Faden layout.
         // ONLY = keine Linie (einziger Eintrag in seiner Sektion), sonst durchgehende Linie.
         Box(
             modifier = Modifier
-                .width(52.dp)
+                .width(46.dp)
                 .fillMaxHeight(),
             contentAlignment = Alignment.Center,
         ) {
@@ -80,8 +81,8 @@ fun TimelineItem(
                 if (position == TimelinePosition.ONLY) return@Canvas
                 val cx = size.width / 2f
                 val midY = size.height / 2f
-                val gap = 18.dp.toPx() + 2.dp.toPx()
-                val strokePx = 2.dp.toPx()
+                val gap = 19.dp.toPx() + 1.dp.toPx()
+                val strokePx = 1.dp.toPx()
 
                 // FIRST: keine Linie ueber dem Badge — Bereich beginnt mit dem Symbol
                 // LAST: keine Linie unter dem Badge — Bereich endet mit dem Symbol
@@ -108,11 +109,11 @@ fun TimelineItem(
             }
             CircleIconBadge(
                 iconKey = iconKey,
-                size = 36.dp,
+                size = 38.dp,
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         // Entry card — internes vertikales Padding statt aeusserem Spacer,
         // damit die Linie zwischen Cards durchgehend laeuft.
@@ -122,15 +123,17 @@ fun TimelineItem(
                 .padding(vertical = 6.dp)
                 .clickable(onClick = onClick),
             glowColor = dotColor,
-            glowIntensity = 0.1f
+            glowIntensity = 0.1f,
+            cornerRadius = 18.dp,
+            contentPadding = 16.dp,
         ) {
             Column {
                 if (!entry.title.isNullOrBlank()) {
                     val highlightedTitle = remember(entry.title, searchQuery, highlightColor) { highlightMatches(entry.title, searchQuery, highlightColor) }
                     Text(
                         text = highlightedTitle,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -156,14 +159,14 @@ fun TimelineItem(
                     val highlighted = remember(snippetText, searchQuery, highlightColor) { highlightMatches(snippetText, searchQuery, highlightColor) }
                     Text(
                         text = highlighted,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 24.sp),
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
                     Text(
                         text = entry.displayText,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 24.sp),
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -177,14 +180,19 @@ fun TimelineItem(
                     ) {
                         entry.adviceCategoryTags.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { tag ->
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                modifier = Modifier.border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    RoundedCornerShape(50),
+                                ),
                             ) {
                                 Text(
                                     text = tag,
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                                 )
                             }
                         }

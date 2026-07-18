@@ -32,12 +32,12 @@ val SolarizedDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3F1010),
         onErrorContainer = Color(0xFFFFCDD2),
-        background = Color(0xFF002B36), // base03
-        onBackground = Color(0xFF839496), // base0
-        surface = Color(0xFF073642), // base02
-        onSurface = Color(0xFF93A1A1), // base1
-        surfaceVariant = Color(0xFF002B36),
-        onSurfaceVariant = Color(0xFF657B83), // base00
+        background = Color(0xFF00212B),
+        onBackground = Color(0xFFB8C4C4),
+        surface = Color(0xFF0A3B47),
+        onSurface = Color(0xFFB8C4C4),
+        surfaceVariant = Color(0xFF003545),
+        onSurfaceVariant = Color(0xFF93A1A1),
         outline = Color(0xFF586E75), // base01
         outlineVariant = Color(0xFF073642),
         surfaceTint = Color(0xFF268BD2),
@@ -91,9 +91,9 @@ val DraculaDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3F1010),
         onErrorContainer = Color(0xFFFFCDD2),
-        background = Color(0xFF282A36),
+        background = Color(0xFF1F2130),
         onBackground = Color(0xFFF8F8F2),
-        surface = Color(0xFF343746),
+        surface = Color(0xFF31344A),
         onSurface = Color(0xFFF8F8F2),
         surfaceVariant = Color(0xFF44475A),
         onSurfaceVariant = Color(0xFF6272A4), // comment
@@ -150,10 +150,10 @@ val OneDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3F1010),
         onErrorContainer = Color(0xFFFFCDD2),
-        background = Color(0xFF282C34),
-        onBackground = Color(0xFFABB2BF),
-        surface = Color(0xFF21252B),
-        onSurface = Color(0xFFABB2BF),
+        background = Color(0xFF1E222A),
+        onBackground = Color(0xFFC9D1DE),
+        surface = Color(0xFF2E3440),
+        onSurface = Color(0xFFC9D1DE),
         surfaceVariant = Color(0xFF3E4451),
         onSurfaceVariant = Color(0xFF5C6370), // comment
         outline = Color(0xFF5C6370),
@@ -209,9 +209,9 @@ val NordDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3F1010),
         onErrorContainer = Color(0xFFFFCDD2),
-        background = Color(0xFF2E3440), // polar night nord0
-        onBackground = Color(0xFFD8DEE9), // snow nord4
-        surface = Color(0xFF3B4252), // polar night nord1
+        background = Color(0xFF272E3B),
+        onBackground = Color(0xFFE5E9F0),
+        surface = Color(0xFF3D4658),
         onSurface = Color(0xFFE5E9F0), // snow nord5
         surfaceVariant = Color(0xFF434C5E), // polar night nord2
         onSurfaceVariant = Color(0xFF8FBCBB), // frost cyan
@@ -252,11 +252,11 @@ val NordLightScheme: ColorScheme =
 // ─── Gruvbox ────────────────────────────────────────────────────────────────
 val GruvboxDarkScheme: ColorScheme =
     darkColorScheme(
-        primary = Color(0xFFD79921), // yellow-orange
+        primary = Color(0xFFE8B93B),
         onPrimary = Color(0xFF282828),
         primaryContainer = Color(0xFF504945),
         onPrimaryContainer = Color(0xFFEBDBB2),
-        secondary = Color(0xFF98971A), // green
+        secondary = Color(0xFFD65D0E),
         onSecondary = Color(0xFF282828),
         secondaryContainer = Color(0xFF504945),
         onSecondaryContainer = Color(0xFFEBDBB2),
@@ -268,10 +268,10 @@ val GruvboxDarkScheme: ColorScheme =
         onError = Color.White,
         errorContainer = Color(0xFF3F1010),
         onErrorContainer = Color(0xFFFFCDD2),
-        background = Color(0xFF282828), // bg
-        onBackground = Color(0xFFEBDBB2), // fg
-        surface = Color(0xFF32302F),
-        onSurface = Color(0xFFEBDBB2),
+        background = Color(0xFF211D1A),
+        onBackground = Color(0xFFF0E4C8),
+        surface = Color(0xFF363029),
+        onSurface = Color(0xFFF0E4C8),
         surfaceVariant = Color(0xFF3C3836),
         onSurfaceVariant = Color(0xFFA89984), // gray
         outline = Color(0xFF7C6F64),
@@ -327,24 +327,24 @@ val CosmosDarkScheme: ColorScheme =
         tertiary = ERSuccess,
         background = ERBgDark,
         onBackground = ERTextPrimaryDark,
-        surface = ERBgDarkGlass,
+        surface = Color(0x14FFFFFF),
         onSurface = ERTextPrimaryDark,
         surfaceVariant = ERBgDarkGlassElevated,
         onSurfaceVariant = ERTextSecondaryDark,
         surfaceContainerLowest = ERBgDark,
-        surfaceContainerLow = ERBgDarkGlass,
-        surfaceContainer = ERBgDarkGlass,
+        surfaceContainerLow = Color(0x14FFFFFF),
+        surfaceContainer = Color(0x14FFFFFF),
         surfaceContainerHigh = ERBgDarkGlassElevated,
         surfaceContainerHighest = ERBgDarkGlassElevated,
         error = ERCritical,
         onError = ERTextPrimaryDark,
-        surfaceTint = ERBgDarkGlass,
+        surfaceTint = Color.Transparent,
         // outline wird in BottomNavBar.kt fuer inaktive Icons verwendet — daher
         // muss die Farbe deckend sein (nicht alpha-transparent), sonst sind die
         // Buttons unten unleserlich. outlineVariant bleibt transparent fuer den
         // Glas-Border-Schimmer auf Karten.
         outline = ERTextSecondaryDark,
-        outlineVariant = ERGlassDarkBorder,
+        outlineVariant = Color(0x7322D3EE),
     )
 
 val CosmosLightScheme: ColorScheme =
@@ -436,18 +436,168 @@ val AuroraDarkScheme: ColorScheme =
         onError = Color(0xFF2F0F0F),
         errorContainer = Color(0xFF5A2424),
         onErrorContainer = Color(0xFFFFE3E3),
-        background = AuroraDarkGradientMid,
-        onBackground = AuroraTextPrimaryDark,
-        surface = AuroraCardDark,
-        onSurface = AuroraTextPrimaryDark,
-        surfaceVariant = AuroraCardElevatedDark,
+        background = Color(0xFF2E2244),
+        onBackground = Color(0xFFEFF1F7),
+        surface = Color(0x17FFFFFF),
+        onSurface = Color(0xFFEFF1F7),
+        surfaceVariant = Color(0x24FFFFFF),
         onSurfaceVariant = AuroraTextSecondaryDark,
-        surfaceContainerLowest = AuroraCardDark,
-        surfaceContainerLow = AuroraCardDark,
-        surfaceContainer = AuroraCardDark,
+        surfaceContainerLowest = Color(0x0FFFFFFF),
+        surfaceContainerLow = Color(0x17FFFFFF),
+        surfaceContainer = Color(0x17FFFFFF),
         surfaceContainerHigh = AuroraCardElevatedDark,
         surfaceContainerHighest = AuroraCardElevatedDark,
         outline = AuroraOutlineDark,
-        outlineVariant = Color(0x33B5A8E8),
-        surfaceTint = AuroraCardDark,
+        outlineVariant = Color(0x73B5A8E8),
+        surfaceTint = Color.Transparent,
     )
+
+private fun designDarkColorScheme(
+    primary: Color,
+    secondary: Color,
+    tertiary: Color,
+    background: Color,
+    surface: Color,
+    text: Color,
+    muted: Color,
+    outline: Color,
+    error: Color = Color(0xFFFF6B5E),
+    onAccent: Color = background,
+): ColorScheme =
+    darkColorScheme(
+        primary = primary,
+        onPrimary = onAccent,
+        primaryContainer = surface,
+        onPrimaryContainer = text,
+        secondary = secondary,
+        onSecondary = onAccent,
+        secondaryContainer = surface,
+        onSecondaryContainer = text,
+        tertiary = tertiary,
+        onTertiary = onAccent,
+        tertiaryContainer = surface,
+        onTertiaryContainer = text,
+        error = error,
+        onError = Color.White,
+        errorContainer = error.copy(alpha = 0.16f),
+        onErrorContainer = text,
+        background = background,
+        onBackground = text,
+        surface = surface,
+        onSurface = text,
+        surfaceVariant = surface.copy(alpha = 0.14f),
+        onSurfaceVariant = muted,
+        outline = muted,
+        outlineVariant = outline,
+        inverseSurface = text,
+        inverseOnSurface = background,
+        inversePrimary = primary,
+        surfaceContainerLowest = background,
+        surfaceContainerLow = surface,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surface.copy(alpha = 0.12f),
+        surfaceContainerHighest = surface.copy(alpha = 0.16f),
+        surfaceTint = Color.Transparent,
+        scrim = Color.Black,
+    )
+
+private fun designLightColorScheme(
+    primary: Color,
+    secondary: Color,
+    tertiary: Color,
+    background: Color,
+    surface: Color,
+    text: Color,
+    muted: Color,
+    outline: Color,
+    error: Color = Color(0xFFC03A2B),
+    onAccent: Color = Color.White,
+): ColorScheme =
+    lightColorScheme(
+        primary = primary,
+        onPrimary = onAccent,
+        primaryContainer = primary.copy(alpha = 0.12f),
+        onPrimaryContainer = text,
+        secondary = secondary,
+        onSecondary = onAccent,
+        secondaryContainer = secondary.copy(alpha = 0.12f),
+        onSecondaryContainer = text,
+        tertiary = tertiary,
+        onTertiary = onAccent,
+        tertiaryContainer = tertiary.copy(alpha = 0.12f),
+        onTertiaryContainer = text,
+        error = error,
+        onError = Color.White,
+        errorContainer = error.copy(alpha = 0.12f),
+        onErrorContainer = text,
+        background = background,
+        onBackground = text,
+        surface = surface,
+        onSurface = text,
+        surfaceVariant = surface.copy(alpha = 0.86f),
+        onSurfaceVariant = muted,
+        outline = muted,
+        outlineVariant = outline,
+        inverseSurface = text,
+        inverseOnSurface = background,
+        inversePrimary = primary,
+        surfaceContainerLowest = Color.White,
+        surfaceContainerLow = surface,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surface,
+        surfaceContainerHighest = surface,
+        surfaceTint = Color.Transparent,
+        scrim = Color.Black,
+    )
+
+val GoldenThreadDarkScheme: ColorScheme =
+    designDarkColorScheme(
+        primary = Color(0xFFE8B547),
+        secondary = Color(0xFFDF741E),
+        tertiary = Color(0xFF9CBF7E),
+        background = Color(0xFF16110D),
+        surface = Color(0xFF221A13),
+        text = Color(0xFFEFE7DB),
+        muted = Color(0xFF9C8D77),
+        outline = Color(0x47E8B547),
+        error = Color(0xFFFF7B6B),
+        onAccent = Color(0xFF241505),
+    )
+
+val GoldenThreadLightScheme: ColorScheme =
+    designLightColorScheme(
+        primary = Color(0xFFB45309),
+        secondary = Color(0xFFD9A441),
+        tertiary = Color(0xFF5C8C4A),
+        background = Color(0xFFFBF5EA),
+        surface = Color(0xFFFFFDF8),
+        text = Color(0xFF33291C),
+        muted = Color(0xFF8C7B5F),
+        outline = Color(0x73D9A441),
+        error = Color(0xFFC03A2B),
+        onAccent = Color(0xFFFFF8EC),
+    )
+
+val PolarLightDarkScheme: ColorScheme =
+    designDarkColorScheme(Color(0xFF4CC9F0), Color(0xFF4361EE), Color(0xFF80FFDB), Color(0xFF081018), Color(0x0FFFFFFF), Color(0xFFE7F2FA), Color(0xFF5F7C93), Color(0x4D4CC9F0))
+
+val PolarLightLightScheme: ColorScheme =
+    designLightColorScheme(Color(0xFF0077B6), Color(0xFF3F5EDB), Color(0xFF0AA98F), Color(0xFFF2F8FC), Color(0xD9FFFFFF), Color(0xFF0B2536), Color(0xFF7B93A5), Color(0x330077B6))
+
+val NebulaDarkScheme: ColorScheme =
+    designDarkColorScheme(Color(0xFFC084FC), Color(0xFFF472B6), Color(0xFFFBBF24), Color(0xFF140A24), Color(0x0FFFFFFF), Color(0xFFF4EDFC), Color(0xFF8B7BA5), Color(0x59C084FC))
+
+val NebulaLightScheme: ColorScheme =
+    designLightColorScheme(Color(0xFF9333EA), Color(0xFFDB2777), Color(0xFFD97706), Color(0xFFFAF5FF), Color(0xE6FFFFFF), Color(0xFF2E1052), Color(0xFF9B87B5), Color(0x339333EA))
+
+val EmeraldForestDarkScheme: ColorScheme =
+    designDarkColorScheme(Color(0xFF34D399), Color(0xFFE8B547), Color(0xFF5EB4F0), Color(0xFF08120E), Color(0x0FFFFFFF), Color(0xFFEAF6EF), Color(0xFF6C8578), Color(0x5234D399))
+
+val EmeraldForestLightScheme: ColorScheme =
+    designLightColorScheme(Color(0xFF047857), Color(0xFFB45309), Color(0xFF0369A1), Color(0xFFF3F8F4), Color(0xE6FFFFFF), Color(0xFF12271C), Color(0xFF7F9488), Color(0x33047857))
+
+val SunEmberDarkScheme: ColorScheme =
+    designDarkColorScheme(Color(0xFFFF8C42), Color(0xFFFFB300), Color(0xFFD93636), Color(0xFF170E08), Color(0x0FFFFFFF), Color(0xFFF9EEE6), Color(0xFF93796B), Color(0x59FF8C42), Color(0xFFD93636))
+
+val SunEmberLightScheme: ColorScheme =
+    designLightColorScheme(Color(0xFFC2410C), Color(0xFFB45309), Color(0xFFB91C1C), Color(0xFFFDF6EE), Color(0xEBFFFFFF), Color(0xFF33200F), Color(0xFFA38B76), Color(0x38C2410C), Color(0xFFB91C1C))

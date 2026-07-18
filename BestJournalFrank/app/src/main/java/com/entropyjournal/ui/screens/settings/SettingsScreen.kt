@@ -14,10 +14,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +41,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Remove
@@ -46,6 +50,7 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -92,6 +97,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -112,12 +118,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -125,6 +136,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.CircleShape
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
+import com.entropyjournal.ui.components.NeonDivider
+import com.entropyjournal.ui.theme.AppTheme
+import com.entropyjournal.ui.theme.Caveat
 import com.entropyjournal.ui.theme.CustomPalette
 import com.entropyjournal.ui.theme.GoalPalette
 import com.entropyjournal.ui.theme.InsightPalette
@@ -132,11 +146,95 @@ import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.SummaryPalette
 import com.entropyjournal.ui.theme.WarmCopper
+import com.entropyjournal.ui.theme.fontProvider
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+private const val PREF_APP_FONT_PAIR = "app_font_pair"
+
+private data class ThemeChoice(
+    val label: String,
+    val colors: List<Color>,
+    val isNew: Boolean = false,
+)
+
+private val themeChoices =
+    listOf(
+        ThemeChoice("Goldener Faden", listOf(Color(0xFFE8B547), Color(0xFFDF741E)), true),
+        ThemeChoice("Profilfarbe", listOf(Color(0xFF14B8A6), Color(0xFF22D3EE))),
+        ThemeChoice("Neutral", listOf(Color(0xFFC25E00), Color(0xFFC25E00))),
+        ThemeChoice("Sonnenwende", listOf(Color(0xFF268BD2), Color(0xFF268BD2))),
+        ThemeChoice("Mitternacht", listOf(Color(0xFFBD93F9), Color(0xFFFF79C6))),
+        ThemeChoice("Atelier", listOf(Color(0xFF61AFEF), Color(0xFF4078F2))),
+        ThemeChoice("Polarnacht", listOf(Color(0xFF88C0D0), Color(0xFF5E81AC))),
+        ThemeChoice("Bernstein", listOf(Color(0xFFD79921), Color(0xFFB57614))),
+        ThemeChoice("Cosmos", listOf(Color(0xFF22D3EE), Color(0xFFA78BFA))),
+        ThemeChoice("Aurora", listOf(Color(0xFF7DD3A4), Color(0xFFB5A8E8))),
+        ThemeChoice("Polarlicht", listOf(Color(0xFF4CC9F0), Color(0xFF4361EE)), true),
+        ThemeChoice("Nebula", listOf(Color(0xFFC084FC), Color(0xFFF472B6)), true),
+        ThemeChoice("Smaragdwald", listOf(Color(0xFF34D399), Color(0xFFE8B547)), true),
+        ThemeChoice("Sonnenglut", listOf(Color(0xFFFF8C42), Color(0xFFD93636)), true),
+    )
+
+private data class FontPairChoice(
+    val label: String,
+    val description: String,
+    val headingFont: FontFamily,
+)
+
+private fun googleHeadingFont(name: String): FontFamily =
+    FontFamily(
+        Font(
+            googleFont = GoogleFont(name),
+            fontProvider = fontProvider,
+            weight = FontWeight.Bold,
+        )
+    )
+
+private val fontPairChoices =
+    listOf(
+        FontPairChoice("Playfair × Source Sans", "Elegant & literarisch — Standard", googleHeadingFont("Playfair Display")),
+        FontPairChoice("Lora × Manrope", "Ruhig & lesbar", googleHeadingFont("Lora")),
+        FontPairChoice("Sora × Source Sans", "Modern & klar", googleHeadingFont("Sora")),
+        FontPairChoice("Space Grotesk × IBM Plex", "Technisch & präzise", googleHeadingFont("Space Grotesk")),
+        FontPairChoice("Nunito × Nunito Sans", "Freundlich & rund", googleHeadingFont("Nunito")),
+        FontPairChoice("Caveat × Source Sans", "Handschrift — locker & persönlich", Caveat),
+        FontPairChoice("Great Vibes × Source Sans", "Kalligrafie — mit viel Schwung", googleHeadingFont("Great Vibes")),
+    )
+
+private fun themeChoiceFor(theme: AppTheme): ThemeChoice =
+    themeChoices[
+        when (theme) {
+            AppTheme.GoldenThread -> 0
+            AppTheme.Profile -> 1
+            AppTheme.Neutral -> 2
+            AppTheme.Solarized -> 3
+            AppTheme.Dracula -> 4
+            AppTheme.OneDark -> 5
+            AppTheme.Nord -> 6
+            AppTheme.Gruvbox -> 7
+            AppTheme.Cosmos -> 8
+            AppTheme.Aurora -> 9
+            AppTheme.PolarLight -> 10
+            AppTheme.Nebula -> 11
+            AppTheme.EmeraldForest -> 12
+            AppTheme.SunEmber -> 13
+        }
+    ]
+
+@Composable
+private fun goldenSwitchColors() =
+    SwitchDefaults.colors(
+        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+        checkedTrackColor = MaterialTheme.colorScheme.primary,
+        checkedBorderColor = Color.Transparent,
+        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+        uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    )
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -334,13 +432,18 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
             // Fixed title bar (does not scroll)
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)
             ) {
                 Text(
                     "Einstellungen",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 27.sp,
+                    ),
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                Spacer(modifier = Modifier.height(10.dp))
+                NeonDivider(horizontalPadding = 0.dp, thickness = 2.dp)
             }
 
             // Scrollable content
@@ -348,8 +451,8 @@ fun SettingsScreen(
                 modifier =
                     Modifier.fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
 
                 // 1. Konto
@@ -449,6 +552,7 @@ fun SettingsScreen(
                                         doHaptic(HapticFeedbackType.LongPress)
                                         viewModel.setBackupPhotos(it)
                                     },
+                                    colors = goldenSwitchColors(),
                                 )
                             }
                             Row(
@@ -476,6 +580,7 @@ fun SettingsScreen(
                                         doHaptic(HapticFeedbackType.LongPress)
                                         viewModel.setBackupVideos(it)
                                     },
+                                    colors = goldenSwitchColors(),
                                 )
                             }
                             Spacer(modifier = Modifier.height(12.dp))
@@ -603,10 +708,7 @@ fun SettingsScreen(
                                     if (uiState.followSystem) viewModel.updateFollowSystem(false)
                                     viewModel.updateDarkTheme(it)
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
@@ -642,10 +744,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     viewModel.updateFollowSystem(it)
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
@@ -743,124 +842,212 @@ fun SettingsScreen(
                                         viewModel.updateFollowSun(false)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Themes Manager — Dropdown 1:1 von BestJournalAndroid. Profilfarbe ist
-                        // Default (Frank-Verhalten), die fuenf Klassiker-Themes folgen ihren
-                        // offiziellen Light/Dark Specs, Neutral nutzt Frank's Cosmos-Default.
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            thickness = 1.dp,
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                }
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                GlassCard {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Palette,
                                 null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 "Themes Manager",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        var themeExpanded by remember { mutableStateOf(false) }
-                        val currentTheme = com.entropyjournal.ui.theme.ProfileTheme.currentAppTheme.value
-                        val themeDisplayName =
-                            when (currentTheme) {
-                                com.entropyjournal.ui.theme.AppTheme.Profile ->
-                                    "Profilfarbe — Farbe des Dashboard-Profils"
-                                com.entropyjournal.ui.theme.AppTheme.Neutral -> "Neutral"
-                                com.entropyjournal.ui.theme.AppTheme.Solarized -> "Sonnenwende"
-                                com.entropyjournal.ui.theme.AppTheme.Dracula -> "Mitternacht"
-                                com.entropyjournal.ui.theme.AppTheme.OneDark -> "Atelier"
-                                com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
-                                com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
-                                com.entropyjournal.ui.theme.AppTheme.Cosmos -> "Cosmos"
-                                com.entropyjournal.ui.theme.AppTheme.Aurora -> "Aurora"
-                            }
-
-                        ExposedDropdownMenuBox(
-                            expanded = themeExpanded,
-                            onExpandedChange = { themeExpanded = it },
+                        Spacer(modifier = Modifier.height(14.dp))
+                        val currentTheme =
+                            com.entropyjournal.ui.theme.ProfileTheme.currentAppTheme.value
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            TextField(
-                                value = themeDisplayName,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = {
-                                    Icon(
-                                        Icons.Rounded.KeyboardArrowDown,
-                                        "Theme",
-                                    )
-                                },
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                colors =
-                                    TextFieldDefaults.colors(
-                                        focusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        unfocusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                            ExposedDropdownMenu(
-                                expanded = themeExpanded,
-                                onDismissRequest = { themeExpanded = false },
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ) {
-                                com.entropyjournal.ui.theme.AppTheme.entries.forEach { theme ->
-                                    val label =
-                                        when (theme) {
-                                            com.entropyjournal.ui.theme.AppTheme.Profile ->
-                                                "Profilfarbe — Farbe des Dashboard-Profils"
-                                            com.entropyjournal.ui.theme.AppTheme.Neutral -> "Neutral"
-                                            com.entropyjournal.ui.theme.AppTheme.Solarized -> "Sonnenwende"
-                                            com.entropyjournal.ui.theme.AppTheme.Dracula -> "Mitternacht"
-                                            com.entropyjournal.ui.theme.AppTheme.OneDark -> "Atelier"
-                                            com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
-                                            com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
-                                            com.entropyjournal.ui.theme.AppTheme.Cosmos -> "Cosmos"
-                                            com.entropyjournal.ui.theme.AppTheme.Aurora -> "Aurora"
-                                        }
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                label,
-                                                color =
-                                                    if (theme == currentTheme)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                            )
-                                        },
-                                        onClick = {
+                            themeChoices.forEach { choice ->
+                                val matchingTheme =
+                                    AppTheme.entries.firstOrNull {
+                                        themeChoiceFor(it).label == choice.label
+                                    }
+                                val active = matchingTheme == currentTheme
+                                Surface(
+                                    modifier = Modifier.clickable {
+                                        matchingTheme?.let { theme ->
                                             doHaptic(HapticFeedbackType.LongPress)
                                             com.entropyjournal.ui.theme.ProfileTheme.updateTheme(
                                                 context,
                                                 theme,
                                             )
-                                            themeExpanded = false
-                                        },
-                                    )
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(50),
+                                    color =
+                                        if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    border =
+                                        BorderStroke(
+                                            1.dp,
+                                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                            else Color(0x47E8B547),
+                                        ),
+                                    shadowElevation = if (active) 4.dp else 0.dp,
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier.size(12.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Brush.linearGradient(choice.colors))
+                                        )
+                                        Text(
+                                            choice.label,
+                                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                                            color =
+                                                if (active) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                        )
+                                        if (choice.isNew) {
+                                            Text(
+                                                "NEU",
+                                                fontSize = 9.sp,
+                                                color = Color(0xFF9CBF7E),
+                                                modifier =
+                                                    Modifier.border(
+                                                        1.dp,
+                                                        Color(0xFF9CBF7E),
+                                                        RoundedCornerShape(4.dp),
+                                                    )
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                                            )
+                                        }
+                                        if (active) {
+                                            Icon(
+                                                Icons.Rounded.Check,
+                                                contentDescription = "Ausgewählt",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.AutoStories,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Schriftart",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        var selectedFontPair by remember {
+                            mutableStateOf(
+                                clickPrefs.getString(
+                                    PREF_APP_FONT_PAIR,
+                                    fontPairChoices.first().label,
+                                ) ?: fontPairChoices.first().label
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            fontPairChoices.forEach { pair ->
+                                val active = selectedFontPair == pair.label
+                                Row(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(
+                                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                                else Color(0x47E8B547),
+                                                RoundedCornerShape(14.dp),
+                                            )
+                                            .clickable {
+                                                doHaptic(HapticFeedbackType.LongPress)
+                                                selectedFontPair = pair.label
+                                                clickPrefs.edit()
+                                                    .putString(PREF_APP_FONT_PAIR, pair.label)
+                                                    .apply()
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(18.dp)
+                                                .border(
+                                                    2.dp,
+                                                    if (active) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.outline,
+                                                    CircleShape,
+                                                ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        if (active) {
+                                            Box(
+                                                modifier =
+                                                    Modifier.size(8.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.primary)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            pair.label,
+                                            fontFamily = pair.headingFont,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            pair.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1020,10 +1207,7 @@ fun SettingsScreen(
                                         } catch (_: Exception) {}
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1072,10 +1256,7 @@ fun SettingsScreen(
                                         doHaptic(HapticFeedbackType.LongPress)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1142,10 +1323,7 @@ fun SettingsScreen(
                                         .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
                                         .commit()
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1523,10 +1701,7 @@ fun SettingsScreen(
                                         viewModel.updateReminderEnabled(false)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1603,10 +1778,7 @@ fun SettingsScreen(
                                         viewModel.updateWeeklyReviewEnabled(false)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1667,10 +1839,7 @@ fun SettingsScreen(
                                         viewModel.updateMonthlyReviewEnabled(false)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -1731,10 +1900,7 @@ fun SettingsScreen(
                                         viewModel.updateYearlyReviewEnabled(false)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
 
@@ -2729,21 +2895,59 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
-                                Icons.Rounded.Tune,
+                                Icons.Rounded.Mic,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "KI-Automatisierungen",
+                                "Aufnahme",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             // Invisible counterbalance for icon+spacer so text is visually centered
                             Spacer(modifier = Modifier.width(28.dp))
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            "Maximale Aufnahmedauer",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(1, 3, 5, 10).forEach { minutes ->
+                                val active = uiState.maxRecordingDuration == minutes
+                                Surface(
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.updateMaxRecordingDuration(minutes)
+                                    },
+                                    shape = RoundedCornerShape(50),
+                                    color =
+                                        if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    border =
+                                        BorderStroke(
+                                            1.dp,
+                                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                            else Color(0x47E8B547),
+                                        ),
+                                ) {
+                                    Text(
+                                        "$minutes Min",
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                        color =
+                                            if (active) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -2751,12 +2955,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Textverbesserung",
+                                    "KI-Textverbesserung",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    "Standardm\u00e4\u00dfig aktivieren",
+                                    "Standard für neue Einträge",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -2767,10 +2971,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     viewModel.updateTextImprovementDefault(it)
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
@@ -2781,12 +2982,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Dashboard",
+                                    "Dashboard-Auto-Update",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    "Automatisch aktualisieren",
+                                    "Nach jedem neuen Eintrag",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -2797,10 +2998,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     viewModel.updateAutoUpdateDashboard(it)
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
@@ -2829,10 +3027,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     viewModel.updateVerboseDashboard(it)
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                     }
@@ -2881,12 +3076,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Fingerabdruck",
+                                        "Fingerabdruck / PIN",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "App beim Start entsperren",
+                                        "Sperrt nach 60 s im Hintergrund",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -2905,10 +3100,7 @@ fun SettingsScreen(
                                         viewModel.updateBiometricLock(enabled)
                                     }
                                 },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
+                                colors = goldenSwitchColors(),
                             )
                         }
                         if (uiState.biometricLock) {
@@ -3092,7 +3284,73 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     viewModel.updateDailyPromptEnabled(it)
                                 },
+                                colors = goldenSwitchColors(),
                             )
+                        }
+                    }
+                }
+
+                GlassCard {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Feedback,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Feedback",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            "Geht an dev.app.support@gmail.com — du erhältst eine Kopie",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = { showExportDialog = true },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text("Als PDF exportieren", fontSize = 13.sp)
+                            }
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                                onClick = {
+                                    val intent =
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_SENDTO,
+                                            android.net.Uri.parse(
+                                                "mailto:dev.app.support@gmail.com?subject=Entropy%20Journal%20Feedback"
+                                            ),
+                                        )
+                                    runCatching { context.startActivity(intent) }
+                                        .onFailure {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "Keine E-Mail-App verfügbar.",
+                                                android.widget.Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                }
+                            ) {
+                                Text("Feedback senden", fontSize = 13.sp)
+                            }
                         }
                     }
                 }
@@ -3126,20 +3384,20 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.19.9",
+                            "Entropy Journal v0.20.0 - 18.07.2026 14:20 Uhr",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                         Text(
-                            "Dein pers\u00f6nliches KI-Tagebuch",
+                            "Dein persönliches KI-Tagebuch",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "\u00a9 Barwandt Digital Labs",
+                            "© Frank Barwandt",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,

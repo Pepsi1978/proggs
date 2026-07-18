@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,7 +46,7 @@ import coil3.compose.AsyncImage
 import com.entropyjournal.data.local.entity.EntryFollowUpEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.domain.model.JournalEntry
-import com.entropyjournal.ui.theme.NeonEmerald
+import com.entropyjournal.ui.theme.LocalJournalDesignTokens
 import com.entropyjournal.util.DateTimeFormatter
 import java.io.File
 
@@ -56,6 +58,7 @@ fun ShareEntryDialog(
     context: Context,
     onDismiss: () -> Unit,
 ) {
+    val designTokens = LocalJournalDesignTokens.current
     val hasImproved = entry.isImproved && !entry.improvedText.isNullOrBlank()
     var includeEntry by remember { mutableStateOf(true) }
     val selectedFollowUps = remember { List(followUps.size) { true }.toMutableStateList() }
@@ -68,7 +71,30 @@ fun ShareEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Eintrag teilen", color = MaterialTheme.colorScheme.onSurface) },
+        modifier =
+            Modifier.border(
+                1.dp,
+                designTokens.chipBorder,
+                RoundedCornerShape(22.dp),
+            ),
+        shape = RoundedCornerShape(22.dp),
+        containerColor = designTokens.card,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Share,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Eintrag teilen",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
         text = {
             Column(
                 modifier =
@@ -179,13 +205,18 @@ fun ShareEntryDialog(
                     onDismiss()
                 },
                 enabled = anySelected,
-                colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald),
+                shape = RoundedCornerShape(999.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
             ) {
                 Text("Teilen")
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(999.dp)) {
                 Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
