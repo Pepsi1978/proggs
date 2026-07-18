@@ -1,4 +1,5 @@
 # install.ps1 — OpenCode-Umgebung aus dem plattformuebergreifenden Speicher installieren (Windows).
+# Installer v1.1.0 - 18.07.2026, 12:54 Uhr
 #
 # Kopiert ALLES aus opencode-setup\ an seinen Platz unter %USERPROFILE%\.config\opencode\, sodass
 # OpenCode auf einem frischen Rechner 1:1 dieselbe Umgebung hat: globale Config, globale Regeln
@@ -84,6 +85,13 @@ if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Fo
 
 $pluginDirs = Get-ChildItem (Join-Path $Src 'plugins') -Directory -ErrorAction SilentlyContinue
 if ($pluginDirs) { $pluginDirs | Copy-Item -Destination (Join-Path $Dst 'plugins') -Recurse -Force; Ok 'plugins/*/ (TUI-Plugin-Pakete)' } else { Warn 'keine plugins/*/' }
+
+$terminalTitle = Join-Path $Src 'plugins\windows\terminal-task-title.js'
+if (Test-Path -LiteralPath $terminalTitle) {
+  Copy-Item -LiteralPath $terminalTitle -Destination (Join-Path $Dst 'plugins\terminal-task-title.js') -Force
+  Remove-Item -LiteralPath (Join-Path $Dst 'plugins\terminal-task-title.ts') -Force -ErrorAction SilentlyContinue
+  Ok 'terminal-task-title.js (Windows, headless deaktiviert)'
+}
 
 # Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown
 # ausschliesslich die eingebauten OpenCode-Themes.

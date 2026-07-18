@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 
-import { createNotifierCompletionGuard } from "./notifier-completion-guard.js"
+import { createNotifierCompletionGuard } from "./lib/notifier-completion-guard-core.js"
 
 const sessionEvent = (type, id, properties = {}) => ({
   type,
@@ -85,6 +85,8 @@ test("setup has one guarded, auto-updated notifier and no intermediate-event sou
   assert.match(unixInstaller, /npm install --silent --save-exact/)
   assert.match(windowsInstaller, /-notlike '\*\.test\.mjs'/)
   assert.match(unixInstaller, /! -name '\*\.test\.mjs'/)
+  assert.match(windowsInstaller, /plugins\\windows\\terminal-task-title\.js/)
+  assert.match(windowsInstaller, /plugins\\terminal-task-title\.ts/)
   assert.match(guard, /notifier-auto-updater\.mjs/)
   assert.match(updater, /24 \* 60 \* 60 \* 1000/)
   assert.match(updater, /notifier-candidate-contract\.mjs/)

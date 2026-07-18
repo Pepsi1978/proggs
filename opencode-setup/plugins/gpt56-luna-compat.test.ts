@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { Gpt56LunaCompatibility, isGpt56LunaModel } from "./gpt56-luna-compat.js"
+import { Gpt56LunaCompatibility } from "./gpt56-luna-compat.js"
+import { isGpt56LunaModel } from "./lib/gpt56-luna-compat-core.js"
 
 describe("GPT-5.6 Luna compatibility headers", () => {
 	test("recognizes Luna model and API aliases only for OpenAI", () => {

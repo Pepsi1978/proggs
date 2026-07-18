@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { readdir } from "node:fs/promises"
 import {
   classifyAttribution,
   createAuditRecord,
@@ -6,7 +7,7 @@ import {
   resolveTokenUsageLogPath,
   shortSummary,
   systemIdentity,
-} from "../../token-usage-audit.js"
+} from "../../lib/token-usage-audit-core.js"
 
 describe("token usage audit", () => {
   test("writes one complete provider-reported model step", () => {
@@ -88,5 +89,22 @@ describe("token usage audit", () => {
     expect(initial.systemChanged).toBeFalse()
     expect(systemIdentity(["stable prefix"], initial).systemChanged).toBeFalse()
     expect(systemIdentity(["changed prefix"], initial)).toMatchObject({ systemChanged: true })
+  })
+
+  test("auto-loaded plugin entry points export exactly one plugin function", async () => {
+    const pluginsDirectory = new URL("../../", import.meta.url)
+    const entries = (await readdir(pluginsDirectory)).filter((name) => name.endsWith(".js"))
+    entries.push("windows/terminal-task-title.js")
+
+    for (const entry of entries) {
+      const source = await Bun.file(new URL(entry, pluginsDirectory)).text()
+      const exports = source.match(/^export\s+(?:(?:default\s+)?(?:async\s+)?function|const)\s+/gm) ?? []
+      expect(exports, entry).toHaveLength(1)
+    }
+  })
+
+  test("terminal title integration is inert in headless runs", async () => {
+    const { default: terminalTaskTitle } = await import("../../windows/terminal-task-title.js")
+    expect(await terminalTaskTitle({})).toEqual({})
   })
 })

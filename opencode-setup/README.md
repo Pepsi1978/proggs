@@ -175,7 +175,9 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 ## Lokale Plugins (Detail)
 
 `plugins/*.js` werden vom Installer kopiert und beim Start automatisch geladen (kein Eintrag in
-`opencode.jsonc` noetig). Aktuell:
+`opencode.jsonc` noetig). Jeder dieser Entry-Points exportiert exakt eine Plugin-Funktion; testbare
+Helper liegen unter `plugins/lib/`, weil OpenCode sonst jeden Helper als zusaetzliches Plugin ausfuehrt.
+Aktuell:
 - **`notifier-completion-guard.js`** — lädt den Notifier genau einmal und lässt einen Abschlussalarm nur
   nach einem Busy-Zyklus mit echter Schreib-/Build-Arbeit durch. Nur das `question`-Tool bleibt sofort
   hörbar; Eingaben, Freigaben, Fehler, Planwechsel, interne Unteraufgaben und Abbrüche bleiben stumm.
@@ -187,8 +189,11 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
   Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu
   warnen ("Laws"-Ebene). Hintergrund: `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
+- **`windows/terminal-task-title.js`** — Windows-spezifische Quelle fuer intelligente Drei-Wort-
+  Terminaltitel. Der Installer legt sie als Top-Level-Plugin ab und entfernt die alte `.ts`-Fassung;
+  in headless `opencode run`-Aufrufen bleibt sie deaktiviert.
 - **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
-  Input-, Output-, optionale Reasoning- und Gesamttokens sowie Kosten in Euro. Ein mit der Maus
+  Input-, Cache-Read-/Write-, Output- und Reasoning-Tokens sowie saemtliche Kosten in US-Dollar. Ein mit der Maus
   bedienbares Dropdown zeigt beim Navigieren per Maus oder Pfeiltasten sofort eine Theme-Vorschau und
   merkt sich die bestaetigte Auswahl; beim Abbrechen kehrt es zum vorherigen Theme zurueck.
   Direkt darunter schaltet eine kompakte Dunkel/Hell-Auswahl die Variante des gewaehlten Themes um.
@@ -215,7 +220,9 @@ cp ~/proggs/opencode-setup/tui.json          ~/.config/opencode/tui.json
 cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
 cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
 cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
+cp -R ~/proggs/opencode-setup/plugins/lib   ~/.config/opencode/plugins/
 cp -R ~/proggs/opencode-setup/plugins/token-cost-sidebar ~/.config/opencode/plugins/
+# Windows zusätzlich: plugins/windows/terminal-task-title.js als plugins/terminal-task-title.js kopieren.
 npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.15 @opentui/core@0.4.3 @opentui/solid@0.4.3 solid-js@1.9.12 @mohak34/opencode-notifier@0.2.8
 cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
 # opencode-notifier.json mit lokalen Pfaden von Hand anlegen (siehe install-Skript als Vorlage)

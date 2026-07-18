@@ -1,11 +1,8 @@
-const CODEX_USER_AGENT = "codex_cli_rs/0.0.0 (OpenCode)"
+// GPT-5.6 Luna Compatibility v1.1.0 - 18.07.2026, 12:54 Uhr
 
-export function isGpt56LunaModel(model) {
-	if (model?.providerID !== "openai") return false
-	return [model?.id, model?.api?.id]
-		.filter((id) => typeof id === "string")
-		.some((id) => id.toLowerCase().startsWith("gpt-5.6-luna"))
-}
+import { isGpt56LunaModel } from "./lib/gpt56-luna-compat-core.js"
+
+const CODEX_USER_AGENT = "codex_cli_rs/0.0.0 (OpenCode)"
 
 export const Gpt56LunaCompatibility = async () => ({
 	"chat.headers": async (input, output) => {
