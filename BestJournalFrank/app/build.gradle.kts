@@ -45,8 +45,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 146
-        versionName = "0.21.0"
+        versionCode = 147
+        versionName = "0.21.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -116,7 +116,6 @@ dependencies {
     implementation(libs.compose.material3.window)
     implementation(libs.compose.animation)
     implementation(libs.compose.material.icons)
-    implementation(libs.compose.google.fonts)
     debugImplementation(libs.compose.ui.tooling)
 
     // AndroidX

@@ -2,73 +2,57 @@ package com.entropyjournal.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.R
-
-val fontProvider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs
-)
-
-private val playfairDisplayFont = GoogleFont("Playfair Display")
-private val sourceSans3Font = GoogleFont("Source Sans 3")
-private val jetBrainsMonoFont = GoogleFont("JetBrains Mono")
-private val caveatFont = GoogleFont("Caveat")
 
 const val DEFAULT_HEADING_FONT_NAME = "Playfair Display"
 const val DEFAULT_BODY_FONT_NAME = "Source Sans 3"
 
 val PlayfairDisplay = FontFamily(
-    Font(googleFont = playfairDisplayFont, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = playfairDisplayFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(R.font.playfair_display_variable, weight = FontWeight.Medium),
+    Font(R.font.playfair_display_variable, weight = FontWeight.Bold),
     Font(
-        googleFont = playfairDisplayFont,
-        fontProvider = fontProvider,
+        R.font.playfair_display_italic_variable,
         weight = FontWeight.Medium,
         style = FontStyle.Italic,
     ),
 )
 
 val SourceSans3 = FontFamily(
-    Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = sourceSans3Font, fontProvider = fontProvider, weight = FontWeight.SemiBold),
+    Font(R.font.source_sans_3_variable, weight = FontWeight.Normal),
+    Font(R.font.source_sans_3_variable, weight = FontWeight.Medium),
+    Font(R.font.source_sans_3_variable, weight = FontWeight.SemiBold),
 )
 
 val Caveat = FontFamily(
-    Font(googleFont = caveatFont, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = caveatFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(R.font.caveat_variable, weight = FontWeight.Medium),
+    Font(R.font.caveat_variable, weight = FontWeight.Bold),
 )
 
 val JetBrainsMono = FontFamily(
-    Font(googleFont = jetBrainsMonoFont, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = jetBrainsMonoFont, fontProvider = fontProvider, weight = FontWeight.Medium),
+    Font(R.font.jetbrains_mono_variable, weight = FontWeight.Normal),
+    Font(R.font.jetbrains_mono_variable, weight = FontWeight.Medium),
 )
 
-private fun googleFontFamily(
-    name: String,
-    weights: List<FontWeight> = listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold),
-): FontFamily =
+private fun localFontFamily(resourceId: Int): FontFamily =
     FontFamily(
-        weights.map { weight ->
-            Font(googleFont = GoogleFont(name), fontProvider = fontProvider, weight = weight)
-        }
+        Font(resourceId, weight = FontWeight.Normal),
+        Font(resourceId, weight = FontWeight.Medium),
+        Font(resourceId, weight = FontWeight.Bold),
     )
 
-private val Lora = googleFontFamily("Lora")
-private val Manrope = googleFontFamily("Manrope")
-private val Sora = googleFontFamily("Sora")
-private val SpaceGrotesk = googleFontFamily("Space Grotesk")
-private val IbmPlexSans = googleFontFamily("IBM Plex Sans")
-private val Nunito = googleFontFamily("Nunito")
-private val NunitoSans = googleFontFamily("Nunito Sans")
-private val GreatVibes = googleFontFamily("Great Vibes")
+private val Lora = localFontFamily(R.font.lora_variable)
+private val Manrope = localFontFamily(R.font.manrope_variable)
+private val Sora = localFontFamily(R.font.sora_variable)
+private val SpaceGrotesk = localFontFamily(R.font.space_grotesk_variable)
+private val IbmPlexSans = localFontFamily(R.font.ibm_plex_sans_variable)
+private val Nunito = localFontFamily(R.font.nunito_variable)
+private val NunitoSans = localFontFamily(R.font.nunito_sans_variable)
+private val GreatVibes = localFontFamily(R.font.great_vibes_regular)
 
 val SourceSansPro = SourceSans3
 val Exo2 = PlayfairDisplay

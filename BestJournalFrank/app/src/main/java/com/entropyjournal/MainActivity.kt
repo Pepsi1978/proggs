@@ -142,6 +142,8 @@ class MainActivity : FragmentActivity() {
                     followSystem.value -> systemDark
                     else -> manualDark.value
                 }
+            val headingFont = ProfileTheme.currentHeadingFont.value
+            val bodyFont = ProfileTheme.currentBodyFont.value
 
             val initialTab =
                 when {
@@ -154,6 +156,8 @@ class MainActivity : FragmentActivity() {
                 darkTheme = isDark,
                 profileIndex = ProfileTheme.currentProfileIndex.intValue,
                 appTheme = ProfileTheme.currentAppTheme.value,
+                headingFont = headingFont,
+                bodyFont = bodyFont,
             ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)

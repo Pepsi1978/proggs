@@ -284,7 +284,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
 
             Spacer(Modifier.weight(1f))
             Text(
-                text = "v0.21.0 - 18.07.2026 21:56 Uhr · © Frank Barwandt",
+                text = "v0.21.1 - 18.07.2026 22:21 Uhr · © Frank Barwandt",
                 color = Color(0xFF8A7A5C),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(bottom = 18.dp),
