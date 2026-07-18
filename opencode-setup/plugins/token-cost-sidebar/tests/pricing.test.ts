@@ -3,6 +3,7 @@ import {
   calculateSessionCostBreakdown,
   calculateUsageCost,
   calculateSessionCost,
+  catalogModelCandidates,
   commitIfCurrent,
   findCatalogModel,
   hasKnownPricing,
@@ -55,9 +56,25 @@ describe("models.dev pricing", () => {
     expect(findCatalogModel(catalog, "openai", "other")).toBeUndefined()
   })
 
-  test("uses GPT-5.6 Sol pricing for the Fast launcher alias", () => {
-    const catalog = { openai: { models: { "gpt-5.6-sol": model } } }
-    expect(findCatalogModel(catalog, "openai", "gpt-5.6-sol-fast")).toBe(model)
+  test("uses base pricing for every OpenAI Fast launcher alias", () => {
+    const catalog = {
+      openai: {
+        models: {
+          "gpt-5.6-sol": { id: "sol" },
+          "gpt-5.6-terra": { id: "terra" },
+          "gpt-5.6-luna": { id: "luna" },
+          "gpt-5.5": { id: "5.5" },
+        },
+      },
+    }
+    for (const id of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]) {
+      expect(findCatalogModel(catalog, "openai", `${id}-fast`)).toBe(catalog.openai.models[id as keyof typeof catalog.openai.models])
+    }
+    expect(catalogModelCandidates("openai", "gpt-5.6-terra-fast")).toEqual([
+      "gpt-5.6-terra-fast",
+      "gpt-5.6-terra",
+    ])
+    expect(catalogModelCandidates("openrouter", "vendor/model-fast")).toEqual(["vendor/model-fast"])
   })
 
   test("normalizes per-million base prices", () => {

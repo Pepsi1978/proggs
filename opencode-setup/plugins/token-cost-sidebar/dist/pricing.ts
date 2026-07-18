@@ -213,10 +213,17 @@ export function calculateSessionCost(model: any, records: UsageRecord[]) {
 export function findCatalogModel(catalog: any, providerID?: string, modelID?: string): any {
   if (!providerID || !modelID) return undefined
   const models = catalog?.[providerID]?.models
-  const exact = models?.[modelID]
-  if (exact) return exact
-  if (providerID === "openai" && modelID === "gpt-5.6-sol-fast") return models?.["gpt-5.6-sol"]
+  for (const candidate of catalogModelCandidates(providerID, modelID)) {
+    const match = models?.[candidate]
+    if (match) return match
+  }
   return undefined
+}
+
+export function catalogModelCandidates(providerID: string, modelID: string): string[] {
+  const candidates = [modelID]
+  if (providerID === "openai" && modelID.endsWith("-fast")) candidates.push(modelID.slice(0, -"-fast".length))
+  return candidates
 }
 
 export function selectPricingModel(embeddedModel: any, catalogModel: any): any {
