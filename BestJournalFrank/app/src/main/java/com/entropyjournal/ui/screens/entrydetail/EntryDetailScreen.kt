@@ -164,6 +164,7 @@ fun EntryDetailScreen(
     var fullScreenIsVideo by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     var isSpeaking by remember { mutableStateOf(false) }
     var isTtsLoading by remember { mutableStateOf(false) }
     var pendingFollowUpMicStart by remember { mutableStateOf(false) }
@@ -434,7 +435,6 @@ fun EntryDetailScreen(
                 }
 
                 val hasImproved = entry.isImproved && entry.improvedText != null
-                var selectedTab by remember { mutableIntStateOf(0) }
                 val isShowingOriginal = selectedTab == 1 && hasImproved
                 val toggleSpeech: () -> Unit = {
                     doHaptic(HapticFeedbackType.LongPress)
@@ -1583,6 +1583,7 @@ fun EntryDetailScreen(
                 followUps = uiState.followUps,
                 photos = uiState.photos,
                 context = context,
+                useImproved = selectedTab == 0,
                 onDismiss = { showShareDialog = false },
             )
         }

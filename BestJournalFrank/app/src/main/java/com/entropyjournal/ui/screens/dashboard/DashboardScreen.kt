@@ -80,7 +80,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -94,6 +93,8 @@ import com.entropyjournal.domain.model.AdviceBlock
 import com.entropyjournal.domain.model.AdvicePriority
 import com.entropyjournal.domain.model.TopAction
 import com.entropyjournal.ui.components.ParticleBackground
+import com.entropyjournal.ui.components.JournalSharePayload
+import com.entropyjournal.ui.components.JournalShareSheet
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.TwinklingStars
 import com.entropyjournal.ui.components.getIconForCategory
@@ -208,7 +209,6 @@ private fun LiteraryHeadline(text: String, modifier: Modifier = Modifier) {
         modifier = modifier,
         style =
             MaterialTheme.typography.headlineMedium.copy(
-                fontFamily = FontFamily.Serif,
                 fontSize = 27.sp,
                 fontWeight = FontWeight.Bold,
             ),
@@ -219,7 +219,6 @@ private fun LiteraryHeadline(text: String, modifier: Modifier = Modifier) {
 private val GoldenSectionTitleStyle
     @Composable get() =
         MaterialTheme.typography.titleLarge.copy(
-            fontFamily = FontFamily.Serif,
             fontSize = 19.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -510,7 +509,6 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                         text = "Aktives Profil: ${uiState.activeProfileLabel}",
                                         style =
                                             MaterialTheme.typography.titleSmall.copy(
-                                                fontFamily = FontFamily.Serif,
                                                 fontWeight = FontWeight.Bold,
                                             ),
                                         color = MaterialTheme.colorScheme.primary,
@@ -3504,6 +3502,7 @@ private fun AnalysisTtsShareRow(
     doHaptic: (HapticFeedbackType) -> Unit,
     context: android.content.Context,
 ) {
+    var showShareSheet by remember { mutableStateOf(false) }
     Spacer(modifier = Modifier.height(12.dp))
     Box(
         modifier =
@@ -3553,12 +3552,7 @@ private fun AnalysisTtsShareRow(
         IconButton(
             onClick = {
                 doHaptic(HapticFeedbackType.LongPress)
-                val shareIntent =
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, text)
-                    }
-                context.startActivity(Intent.createChooser(shareIntent, "Analyse teilen"))
+                showShareSheet = true
             },
             modifier = Modifier.size(40.dp),
         ) {
@@ -3588,6 +3582,17 @@ private fun AnalysisTtsShareRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+    if (showShareSheet) {
+        JournalShareSheet(
+            payload =
+                JournalSharePayload(
+                    title = "Dashboard-Analyse",
+                    subtitle = "Dashboard · Überblick",
+                    text = text,
+                ),
+            onDismiss = { showShareSheet = false },
+        )
     }
 }
 

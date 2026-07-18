@@ -50,6 +50,8 @@ object Constants {
     const val PREF_THEME_FOLLOW_SYSTEM = "theme_follow_system"
     const val PREF_THEME_FOLLOW_SUN = "theme_follow_sun"
     const val PREF_APP_THEME = "app_theme"
+    const val PREF_HEADING_FONT = "app_heading_font"
+    const val PREF_BODY_FONT = "app_body_font"
     const val PREF_LATITUDE = "location_latitude"
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"

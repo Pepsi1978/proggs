@@ -127,8 +127,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,20 +136,21 @@ import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.components.NeonDivider
 import com.entropyjournal.ui.theme.AppTheme
-import com.entropyjournal.ui.theme.Caveat
 import com.entropyjournal.ui.theme.CustomPalette
+import com.entropyjournal.ui.theme.DEFAULT_BODY_FONT_NAME
+import com.entropyjournal.ui.theme.DEFAULT_HEADING_FONT_NAME
 import com.entropyjournal.ui.theme.GoalPalette
 import com.entropyjournal.ui.theme.InsightPalette
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.theme.ProfileTheme
 import com.entropyjournal.ui.theme.SummaryPalette
 import com.entropyjournal.ui.theme.WarmCopper
-import com.entropyjournal.ui.theme.fontProvider
+import com.entropyjournal.ui.theme.bodyFontFamily
+import com.entropyjournal.ui.theme.headingFontFamily
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
 import kotlinx.coroutines.launch
-
-private const val PREF_APP_FONT_PAIR = "app_font_pair"
 
 private data class ThemeChoice(
     val label: String,
@@ -177,30 +176,30 @@ private val themeChoices =
         ThemeChoice("Sonnenglut", listOf(Color(0xFFFF8C42), Color(0xFFD93636)), true),
     )
 
-private data class FontPairChoice(
-    val label: String,
+private data class FontChoice(
+    val name: String,
     val description: String,
-    val headingFont: FontFamily,
 )
 
-private fun googleHeadingFont(name: String): FontFamily =
-    FontFamily(
-        Font(
-            googleFont = GoogleFont(name),
-            fontProvider = fontProvider,
-            weight = FontWeight.Bold,
-        )
+private val headingFontChoices =
+    listOf(
+        FontChoice("Playfair Display", "Elegant & literarisch — Standard"),
+        FontChoice("Great Vibes", "Kalligrafie — mit viel Schwung"),
+        FontChoice("Caveat", "Handschrift — locker & persönlich"),
+        FontChoice("Lora", "Ruhige, klassische Serife"),
+        FontChoice("Sora", "Modern & klar"),
+        FontChoice("Space Grotesk", "Technisch & präzise"),
+        FontChoice("Nunito", "Freundlich & rund"),
     )
 
-private val fontPairChoices =
+private val bodyFontChoices =
     listOf(
-        FontPairChoice("Playfair × Source Sans", "Elegant & literarisch — Standard", googleHeadingFont("Playfair Display")),
-        FontPairChoice("Lora × Manrope", "Ruhig & lesbar", googleHeadingFont("Lora")),
-        FontPairChoice("Sora × Source Sans", "Modern & klar", googleHeadingFont("Sora")),
-        FontPairChoice("Space Grotesk × IBM Plex", "Technisch & präzise", googleHeadingFont("Space Grotesk")),
-        FontPairChoice("Nunito × Nunito Sans", "Freundlich & rund", googleHeadingFont("Nunito")),
-        FontPairChoice("Caveat × Source Sans", "Handschrift — locker & persönlich", Caveat),
-        FontPairChoice("Great Vibes × Source Sans", "Kalligrafie — mit viel Schwung", googleHeadingFont("Great Vibes")),
+        FontChoice("Source Sans 3", "Klar & neutral — Standard"),
+        FontChoice("Manrope", "Ruhig & lesbar"),
+        FontChoice("IBM Plex Sans", "Sachlich & präzise"),
+        FontChoice("Nunito Sans", "Weich & freundlich"),
+        FontChoice("Lora", "Serife — wie ein Buch"),
+        FontChoice("Caveat", "Handschrift — wie ein echtes Tagebuch"),
     )
 
 private fun themeChoiceFor(theme: AppTheme): ThemeChoice =
@@ -233,6 +232,117 @@ private fun goldenSwitchColors() =
         uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
         uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
     )
+
+@Composable
+private fun FontSelector(
+    label: String,
+    selectedName: String,
+    expanded: Boolean,
+    choices: List<FontChoice>,
+    fontFamily: (String) -> FontFamily,
+    onToggle: () -> Unit,
+    onSelected: (String) -> Unit,
+) {
+    Text(
+        label,
+        fontSize = 13.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    RoundedCornerShape(14.dp),
+                )
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            selectedName,
+            modifier = Modifier.weight(1f),
+            fontFamily = fontFamily(selectedName),
+            fontWeight = FontWeight.Bold,
+            fontSize = if (label == "Überschriften") 17.sp else 15.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Icon(
+            if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+            contentDescription = if (expanded) "Schließen" else "Öffnen",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+    if (expanded) {
+        Column(
+            modifier = Modifier.padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            choices.forEach { choice ->
+                val active = choice.name == selectedName
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                            )
+                            .border(
+                                1.dp,
+                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                else MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(14.dp),
+                            )
+                            .clickable { onSelected(choice.name) }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.size(18.dp)
+                                .border(
+                                    2.dp,
+                                    if (active) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline,
+                                    CircleShape,
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (active) {
+                            Box(
+                                modifier =
+                                    Modifier.size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            choice.name,
+                            fontFamily = fontFamily(choice.name),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            choice.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -978,79 +1088,49 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(14.dp))
-                        var selectedFontPair by remember {
-                            mutableStateOf(
-                                clickPrefs.getString(
-                                    PREF_APP_FONT_PAIR,
-                                    fontPairChoices.first().label,
-                                ) ?: fontPairChoices.first().label
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            fontPairChoices.forEach { pair ->
-                                val active = selectedFontPair == pair.label
-                                Row(
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(
-                                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
-                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                                                else Color(0x47E8B547),
-                                                RoundedCornerShape(14.dp),
-                                            )
-                                            .clickable {
-                                                doHaptic(HapticFeedbackType.LongPress)
-                                                selectedFontPair = pair.label
-                                                clickPrefs.edit()
-                                                    .putString(PREF_APP_FONT_PAIR, pair.label)
-                                                    .apply()
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.size(18.dp)
-                                                .border(
-                                                    2.dp,
-                                                    if (active) MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.outline,
-                                                    CircleShape,
-                                                ),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        if (active) {
-                                            Box(
-                                                modifier =
-                                                    Modifier.size(8.dp)
-                                                        .clip(CircleShape)
-                                                        .background(MaterialTheme.colorScheme.primary)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            pair.label,
-                                            fontFamily = pair.headingFont,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                        Text(
-                                            pair.description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        var headingOpen by remember { mutableStateOf(false) }
+                        var bodyOpen by remember { mutableStateOf(false) }
+                        val selectedHeading = ProfileTheme.currentHeadingFont.value
+                        val selectedBody = ProfileTheme.currentBodyFont.value
+                        FontSelector(
+                            label = "Überschriften",
+                            selectedName = selectedHeading.ifBlank { DEFAULT_HEADING_FONT_NAME },
+                            expanded = headingOpen,
+                            choices = headingFontChoices,
+                            fontFamily = ::headingFontFamily,
+                            onToggle = {
+                                headingOpen = !headingOpen
+                                bodyOpen = false
+                            },
+                            onSelected = { name ->
+                                doHaptic(HapticFeedbackType.LongPress)
+                                ProfileTheme.updateFonts(context, name, selectedBody)
+                                headingOpen = false
+                            },
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        FontSelector(
+                            label = "Fließtext",
+                            selectedName = selectedBody.ifBlank { DEFAULT_BODY_FONT_NAME },
+                            expanded = bodyOpen,
+                            choices = bodyFontChoices,
+                            fontFamily = ::bodyFontFamily,
+                            onToggle = {
+                                bodyOpen = !bodyOpen
+                                headingOpen = false
+                            },
+                            onSelected = { name ->
+                                doHaptic(HapticFeedbackType.LongPress)
+                                ProfileTheme.updateFonts(context, selectedHeading, name)
+                                bodyOpen = false
+                            },
+                        )
+                        Text(
+                            "Überschrift- und Textschrift wirken sofort auf alle Screens.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
                     }
                 }
 
@@ -3384,7 +3464,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v0.20.0 - 18.07.2026 14:20 Uhr",
+                            "Entropy Journal v0.21.0 - 18.07.2026 21:56 Uhr",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

@@ -28,8 +28,9 @@ object ProfileTheme {
     /** Compose-State — vom Themes Manager Dropdown gelesen. */
     val currentAppTheme = mutableStateOf(AppTheme.GoldenThread)
 
-    /** Compose-State für das im Design auswählbare app-weite Schriftpaar. */
-    val currentFontPair = mutableStateOf(DEFAULT_FONT_PAIR_LABEL)
+    /** Compose-States für die im Design unabhängig auswählbaren App-Schriften. */
+    val currentHeadingFont = mutableStateOf(DEFAULT_HEADING_FONT_NAME)
+    val currentBodyFont = mutableStateOf(DEFAULT_BODY_FONT_NAME)
 
     private fun openPrefs(context: Context) =
         EncryptedSharedPreferences.create(
@@ -45,8 +46,20 @@ object ProfileTheme {
         val prefs = openPrefs(context)
         currentProfileIndex.intValue = prefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         currentAppTheme.value = AppTheme.fromKey(prefs.getString(Constants.PREF_APP_THEME, null))
-        currentFontPair.value = prefs.getString(PREF_APP_FONT_PAIR, DEFAULT_FONT_PAIR_LABEL)
-            ?: DEFAULT_FONT_PAIR_LABEL
+        val storedHeading = prefs.getString(Constants.PREF_HEADING_FONT, null)
+        val storedBody = prefs.getString(Constants.PREF_BODY_FONT, null)
+        if (storedHeading != null && storedBody != null) {
+            currentHeadingFont.value = storedHeading
+            currentBodyFont.value = storedBody
+        } else {
+            val (heading, body) = legacyFonts(prefs.getString(PREF_APP_FONT_PAIR, null))
+            currentHeadingFont.value = heading
+            currentBodyFont.value = body
+            prefs.edit()
+                .putString(Constants.PREF_HEADING_FONT, heading)
+                .putString(Constants.PREF_BODY_FONT, body)
+                .apply()
+        }
     }
 
     /** Vom Settings-Screen aufgerufen: Prefs + Compose-State gemeinsam aktualisieren. */
@@ -67,11 +80,24 @@ object ProfileTheme {
         currentAppTheme.value = theme
     }
 
-    fun updateFontPair(context: Context, fontPairLabel: String) {
+    fun updateFonts(context: Context, headingFont: String, bodyFont: String) {
         openPrefs(context)
             .edit()
-            .putString(PREF_APP_FONT_PAIR, fontPairLabel)
+            .putString(Constants.PREF_HEADING_FONT, headingFont)
+            .putString(Constants.PREF_BODY_FONT, bodyFont)
             .apply()
-        currentFontPair.value = fontPairLabel
+        currentHeadingFont.value = headingFont
+        currentBodyFont.value = bodyFont
     }
+
+    private fun legacyFonts(fontPair: String?): Pair<String, String> =
+        when (fontPair) {
+            "Lora × Manrope" -> "Lora" to "Manrope"
+            "Sora × Source Sans" -> "Sora" to "Source Sans 3"
+            "Space Grotesk × IBM Plex" -> "Space Grotesk" to "IBM Plex Sans"
+            "Nunito × Nunito Sans" -> "Nunito" to "Nunito Sans"
+            "Caveat × Source Sans" -> "Caveat" to "Source Sans 3"
+            "Great Vibes × Source Sans" -> "Great Vibes" to "Source Sans 3"
+            else -> DEFAULT_HEADING_FONT_NAME to DEFAULT_BODY_FONT_NAME
+        }
 }

@@ -623,6 +623,9 @@ constructor(
                     Constants.DEFAULT_GEMINI_MODEL,
                 ) ?: Constants.DEFAULT_GEMINI_MODEL
             val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
+            val appTheme = encryptedPrefs.getString(Constants.PREF_APP_THEME, null)
+            val headingFont = encryptedPrefs.getString(Constants.PREF_HEADING_FONT, null)
+            val bodyFont = encryptedPrefs.getString(Constants.PREF_BODY_FONT, null)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
             val ttsFavorites = encryptedPrefs.getString(Constants.PREF_TTS_FAVORITES, "") ?: ""
 
@@ -640,6 +643,9 @@ constructor(
                 .putString(Constants.PREF_GOOGLE_TTS_VOICE, googleTtsVoice)
                 .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
+                .putString(Constants.PREF_APP_THEME, appTheme)
+                .putString(Constants.PREF_HEADING_FONT, headingFont)
+                .putString(Constants.PREF_BODY_FONT, bodyFont)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
                 .putString(Constants.PREF_TTS_FAVORITES, ttsFavorites)
                 .commit() // commit() is synchronous — guarantees write before restart

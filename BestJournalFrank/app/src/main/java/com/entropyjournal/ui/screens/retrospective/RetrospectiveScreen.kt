@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,6 +92,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import com.entropyjournal.ui.components.SunMoonToggle
+import com.entropyjournal.ui.components.JournalShareAttachment
+import com.entropyjournal.ui.components.JournalSharePayload
+import com.entropyjournal.ui.components.JournalShareSheet
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.util.TtsManager
 import java.util.Calendar
@@ -218,7 +220,6 @@ private fun RetrospectiveInfoDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     style =
                         MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = FontFamily.Serif,
                             fontWeight = FontWeight.Bold,
                         ),
                     color = MaterialTheme.colorScheme.primary,
@@ -461,7 +462,6 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             text = "Dein persönlicher Rückblick",
                             style =
                                 MaterialTheme.typography.headlineSmall.copy(
-                                    fontFamily = FontFamily.Serif,
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                 ),
@@ -895,7 +895,6 @@ private fun CategoryButton(
                     text = title,
                     style =
                         MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = FontFamily.Serif,
                             fontWeight = FontWeight.Bold,
                         ),
                     color = MaterialTheme.colorScheme.onSurface,
@@ -949,7 +948,6 @@ private fun SummaryEntryCard(
                 text = summary.title,
                 style =
                     MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
                     ),
                 color = MaterialTheme.colorScheme.onSurface,
@@ -978,7 +976,6 @@ private fun MonthDivider(label: String) {
             text = label,
             style =
                 MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = FontFamily.Serif,
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -1074,7 +1071,6 @@ private fun SummaryDetailDialog(
                             text = summary.title,
                             style =
                                 MaterialTheme.typography.headlineSmall.copy(
-                                    fontFamily = FontFamily.Serif,
                                     fontSize = 21.sp,
                                     fontWeight = FontWeight.Bold,
                                 ),
@@ -1131,7 +1127,6 @@ private fun SummaryDetailDialog(
                                     "Auf einen Blick",
                                     style =
                                         MaterialTheme.typography.titleSmall.copy(
-                                            fontFamily = FontFamily.Serif,
                                             fontWeight = FontWeight.Bold,
                                         ),
                                     color = RetrospectiveColors.monthDividerColor,
@@ -1201,7 +1196,6 @@ private fun SummaryDetailDialog(
                                         section.heading,
                                         style =
                                             MaterialTheme.typography.titleMedium.copy(
-                                                fontFamily = FontFamily.Serif,
                                                 fontWeight = FontWeight.Bold,
                                             ),
                                         color = RetrospectiveColors.monthDividerColor,
@@ -1379,135 +1373,66 @@ private fun SummaryDetailDialog(
         }
     }
 
-    // Share dialog with checkboxes — like diary entry sharing
     if (showShareDialog) {
         var shareText by remember { mutableStateOf(true) }
-        val selectedPhotos = remember { List(photos.size) { true }.toMutableStateList() }
-
-        AlertDialog(
-            onDismissRequest = { showShareDialog = false },
-            shape = RoundedCornerShape(22.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            title = {
-                Text(
-                    "Rückblick teilen",
-                    style =
-                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Text checkbox
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { shareText = !shareText },
-                    ) {
-                        androidx.compose.material3.Checkbox(
-                            checked = shareText,
-                            onCheckedChange = { shareText = it },
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Rückblick-Text", color = MaterialTheme.colorScheme.onSurface)
-                    }
-
-                    // Photo/Video checkboxes
-                    if (photos.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Fotos & Videos:",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        photos.forEachIndexed { index, photo ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier =
-                                    Modifier.fillMaxWidth().clickable {
-                                        selectedPhotos[index] = !selectedPhotos[index]
-                                    },
-                            ) {
-                                androidx.compose.material3.Checkbox(
-                                    checked = selectedPhotos[index],
-                                    onCheckedChange = { selectedPhotos[index] = it },
-                                )
-                                coil3.compose.AsyncImage(
-                                    model = photo.filePath,
-                                    contentDescription = null,
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                    modifier =
-                                        Modifier.size(48.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .padding(end = 8.dp),
-                                )
-                                Text(
-                                    if (photo.isVideo) "Video" else "Foto",
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                androidx.compose.material3.Button(
-                    onClick = {
-                        val textContent = if (shareText) buildShareText(summary, parsed) else null
-                        val photoUris =
-                            photos
-                                .filterIndexed { i, _ ->
-                                    i < selectedPhotos.size && selectedPhotos[i]
-                                }
-                                .map { photo ->
+        val selectedPhotos =
+            remember(photos.map { it.id }) { List(photos.size) { true }.toMutableStateList() }
+        val selectedMedia = photos.filterIndexed { index, _ -> selectedPhotos[index] }
+        JournalShareSheet(
+            payload =
+                JournalSharePayload(
+                    title = summary.title,
+                    subtitle = "Rückblick · ${summary.periodLabel}",
+                    text = if (shareText) buildShareText(summary, parsed) else "",
+                    attachments =
+                        selectedMedia.map { photo ->
+                            JournalShareAttachment(
+                                uri =
                                     androidx.core.content.FileProvider.getUriForFile(
                                         context,
                                         "${context.packageName}.fileprovider",
                                         java.io.File(photo.filePath),
-                                    )
-                                }
-                        val intent =
-                            if (photoUris.isNotEmpty()) {
-                                android.content
-                                    .Intent(android.content.Intent.ACTION_SEND_MULTIPLE)
-                                    .apply {
-                                        type = "image/*"
-                                        putParcelableArrayListExtra(
-                                            android.content.Intent.EXTRA_STREAM,
-                                            ArrayList(photoUris),
-                                        )
-                                        if (textContent != null) {
-                                            putExtra(android.content.Intent.EXTRA_TEXT, textContent)
-                                        }
-                                        addFlags(
-                                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        )
-                                    }
-                            } else if (textContent != null) {
-                                android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(android.content.Intent.EXTRA_TEXT, textContent)
-                                }
-                            } else null
-
-                        if (intent != null) {
-                            context.startActivity(
-                                android.content.Intent.createChooser(intent, "Rückblick teilen")
+                                    ),
+                                isVideo = photo.isVideo,
                             )
-                        }
-                        showShareDialog = false
-                    },
-                    colors =
-                        androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
+                        },
+                ),
+            onDismiss = { showShareDialog = false },
+            selectionContent = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { shareText = !shareText },
                 ) {
-                    Text("Teilen")
+                    androidx.compose.material3.Checkbox(
+                        checked = shareText,
+                        onCheckedChange = { shareText = it },
+                    )
+                    Text("Rückblick-Text", color = MaterialTheme.colorScheme.onSurface)
                 }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
-                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                photos.forEachIndexed { index, photo ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier.fillMaxWidth().clickable {
+                                selectedPhotos[index] = !selectedPhotos[index]
+                            },
+                    ) {
+                        androidx.compose.material3.Checkbox(
+                            checked = selectedPhotos[index],
+                            onCheckedChange = { selectedPhotos[index] = it },
+                        )
+                        coil3.compose.AsyncImage(
+                            model = photo.filePath,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(6.dp)),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            if (photo.isVideo) "Video ${index + 1}" else "Foto ${index + 1}",
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             },
         )

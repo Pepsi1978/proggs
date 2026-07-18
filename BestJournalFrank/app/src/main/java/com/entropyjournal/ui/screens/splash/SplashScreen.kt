@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,15 +47,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.R
-import com.entropyjournal.ui.theme.fontProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,15 +61,6 @@ private val SplashMuted = Color(0xFFB3A489)
 private val SplashGold = Color(0xFFE8B547)
 private val SplashCopper = Color(0xFFDF741E)
 private val SplashOnGold = Color(0xFF241505)
-private val SplashPlayfair =
-    FontFamily(
-        Font(
-            googleFont = GoogleFont("Playfair Display"),
-            fontProvider = fontProvider,
-            weight = FontWeight.Bold,
-        )
-    )
-
 @Composable
 fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
     val context = LocalContext.current
@@ -184,10 +172,12 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
             Text(
                 text = "Entropy Journal",
                 color = SplashText,
-                fontFamily = SplashPlayfair,
-                fontWeight = FontWeight.Bold,
-                fontSize = 36.sp,
-                lineHeight = 44.sp,
+                style =
+                    MaterialTheme.typography.displayLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 36.sp,
+                        lineHeight = 44.sp,
+                    ),
                 textAlign = TextAlign.Center,
             )
 
@@ -217,8 +207,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
             Text(
                 text = "Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung",
                 color = SplashMuted,
-                fontSize = 16.sp,
-                lineHeight = 25.6.sp,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 25.6.sp),
                 textAlign = TextAlign.Center,
             )
 
@@ -274,8 +263,11 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
                     Text(
                         text = if (viewModel.isSigningIn) "Anmeldung läuft …" else "Mit Google anmelden",
                         color = SplashOnGold,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
                     )
                 }
             }
@@ -292,7 +284,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
 
             Spacer(Modifier.weight(1f))
             Text(
-                text = "v0.20.0 - 18.07.2026 14:20 Uhr · © Frank Barwandt",
+                text = "v0.21.0 - 18.07.2026 21:56 Uhr · © Frank Barwandt",
                 color = Color(0xFF8A7A5C),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(bottom = 18.dp),

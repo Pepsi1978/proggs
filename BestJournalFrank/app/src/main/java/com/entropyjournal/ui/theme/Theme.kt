@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.entropyjournal.ui.components.GoldenDustOverlay
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
@@ -209,7 +210,8 @@ fun EntropyJournalTheme(
     darkTheme: Boolean = true,
     profileIndex: Int = ProfileTheme.currentProfileIndex.intValue,
     appTheme: AppTheme = ProfileTheme.currentAppTheme.value,
-    fontPair: String = ProfileTheme.currentFontPair.value,
+    headingFont: String = ProfileTheme.currentHeadingFont.value,
+    bodyFont: String = ProfileTheme.currentBodyFont.value,
     content: @Composable () -> Unit,
 ) {
     // Alle 14 Themes besitzen ein Light-/Dark-Scheme; Goldener Faden ist der Fallback.
@@ -253,11 +255,12 @@ fun EntropyJournalTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = appTypography(fontPair),
+            typography = appTypography(headingFont, bodyFont),
             shapes = AppShapes,
             content = {
                 Box(modifier = Modifier.fillMaxSize().background(designTokens.backgroundBrush)) {
                     content()
+                    GoldenDustOverlay(modifier = Modifier.fillMaxSize(), color = designTokens.glow)
                 }
             },
         )

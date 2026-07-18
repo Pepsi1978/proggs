@@ -21,7 +21,8 @@ private val sourceSans3Font = GoogleFont("Source Sans 3")
 private val jetBrainsMonoFont = GoogleFont("JetBrains Mono")
 private val caveatFont = GoogleFont("Caveat")
 
-const val DEFAULT_FONT_PAIR_LABEL = "Playfair × Source Sans"
+const val DEFAULT_HEADING_FONT_NAME = "Playfair Display"
+const val DEFAULT_BODY_FONT_NAME = "Source Sans 3"
 
 val PlayfairDisplay = FontFamily(
     Font(googleFont = playfairDisplayFont, fontProvider = fontProvider, weight = FontWeight.Medium),
@@ -169,17 +170,30 @@ val AppTypography = Typography(
     )
 )
 
-fun appTypography(fontPairLabel: String): Typography {
-    val (heading, body) =
-        when (fontPairLabel) {
-            "Lora × Manrope" -> Lora to Manrope
-            "Sora × Source Sans" -> Sora to SourceSans3
-            "Space Grotesk × IBM Plex" -> SpaceGrotesk to IbmPlexSans
-            "Nunito × Nunito Sans" -> Nunito to NunitoSans
-            "Caveat × Source Sans" -> Caveat to SourceSans3
-            "Great Vibes × Source Sans" -> GreatVibes to SourceSans3
-            else -> PlayfairDisplay to SourceSans3
-        }
+fun headingFontFamily(name: String): FontFamily =
+    when (name) {
+        "Great Vibes" -> GreatVibes
+        "Caveat" -> Caveat
+        "Lora" -> Lora
+        "Sora" -> Sora
+        "Space Grotesk" -> SpaceGrotesk
+        "Nunito" -> Nunito
+        else -> PlayfairDisplay
+    }
+
+fun bodyFontFamily(name: String): FontFamily =
+    when (name) {
+        "Manrope" -> Manrope
+        "IBM Plex Sans" -> IbmPlexSans
+        "Nunito Sans" -> NunitoSans
+        "Lora" -> Lora
+        "Caveat" -> Caveat
+        else -> SourceSans3
+    }
+
+fun appTypography(headingFontName: String, bodyFontName: String): Typography {
+    val heading = headingFontFamily(headingFontName)
+    val body = bodyFontFamily(bodyFontName)
 
     return AppTypography.copy(
         displayLarge = AppTypography.displayLarge.copy(fontFamily = heading),
