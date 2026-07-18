@@ -9,6 +9,7 @@ import {
   hasKnownPricing,
   hasPositivePricing,
   loadCatalogModel,
+  readAvailablePricingPerMillion,
   readPricing,
   readPricingPerMillion,
   selectPricingModel,
@@ -106,6 +107,10 @@ describe("models.dev pricing", () => {
       output: 75,
       cacheRead: 1.25,
       cacheWrite: 0,
+    })
+    expect(readAvailablePricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast"))).toMatchObject({
+      cacheRead: 1.25,
+      cacheWrite: undefined,
     })
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol")).toBe(base)
   })
@@ -207,6 +212,8 @@ describe("models.dev pricing", () => {
       breakdownAvailable: true,
     })
     expect(cost.inputUsd).toBeCloseTo(0.5)
+    expect(cost.cacheReadUsd).toBeCloseTo(0.05)
+    expect(cost.cacheWriteUsd).toBeCloseTo(0.0625)
     expect(cost.cacheUsd).toBeCloseTo(0.1125)
     expect(cost.outputUsd).toBeCloseTo(0.06)
     expect(cost.reasoningUsd).toBeCloseTo(0.03)
@@ -220,6 +227,8 @@ describe("models.dev pricing", () => {
     }])).toEqual({
       usd: 0.25,
       inputUsd: 0,
+      cacheReadUsd: 0,
+      cacheWriteUsd: 0,
       cacheUsd: 0,
       outputUsd: 0,
       reasoningUsd: 0,
@@ -399,16 +408,18 @@ describe("models.dev pricing", () => {
     )
   })
 
-  test("renders regular token rows without visible cache token details", async () => {
+  test("renders regular and cache token rows in the requested order", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Input"')
     expect(source).toContain("value={formatInt(totals().input)}")
     expect(source).not.toContain("totals().input + totals().cacheRead + totals().cacheWrite")
-    expect(source).not.toContain('label="Cache R/W"')
-    expect(source).not.toContain("`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`")
+    expect(source).toContain('label="Cache R/W"')
+    expect(source).toContain("`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`")
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
     expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Output"'))
+    expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Cache R/W"'))
+    expect(source.indexOf('label="Cache R/W"')).toBeLessThan(source.indexOf('label="Output"'))
     expect(source.indexOf('label="Output"')).toBeLessThan(source.indexOf('label="Reasoning"'))
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
@@ -600,16 +611,18 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("frank-light")
   })
 
-  test("renders only input and output model prices with an explicit unit", async () => {
+  test("renders input, output, and split cache model prices with an explicit unit", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Inputpreis"')
     expect(source).toContain('label="Outputpreis"')
-    expect(source).not.toContain('label="Cachepreis"')
+    expect(source).toContain('label="Cachepreis"')
     expect(source.indexOf('label="Inputpreis"')).toBeLessThan(source.indexOf('label="Outputpreis"'))
+    expect(source.indexOf('label="Outputpreis"')).toBeLessThan(source.indexOf('label="Cachepreis"'))
+    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Input"'))
     expect(source).toMatch(/label="Inputpreis"[\s\S]*?value=\{rateValue\("input"\)\}[\s\S]*?muted/)
     expect(source).toMatch(/label="Outputpreis"[\s\S]*?value=\{rateValue\("output"\)\}[\s\S]*?muted/)
-    expect(source).not.toContain("cacheRateValue")
-    expect(source).not.toContain("formatCacheUsdPerMillion")
+    expect(source).toContain("cacheRateValue")
+    expect(source).toContain('return `R/${value("cacheRead")} / W/${value("cacheWrite")} / 1M`')
     expect(source).not.toContain("compactUsd")
     expect(source).toContain('return `$${new Intl.NumberFormat("en-US"')
     expect(source).toContain("} / 1M`")
@@ -628,13 +641,13 @@ describe("models.dev pricing", () => {
     expect(source).toContain("formatEur(money().inputEur)")
     expect(source).toContain("formatEur(money().outputEur)")
     expect(source).toContain("formatEur(money().reasoningEur)")
-    expect(source).toContain("formatEur(money().cacheEur)")
+    expect(source).toContain("formatEur(money().cacheReadEur)")
+    expect(source).toContain("formatEur(money().cacheWriteEur)")
     expect(source).not.toContain('label="Kosten"')
     expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
     expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
     expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Cache-Kosten"'))
     expect(source.indexOf('label="Cache-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
-    expect(source).toMatch(/label="Output-Kosten"[^\n]*\n        <Row[^\n]*label="Cache-Kosten"[^\n]*\n        <Row[^\n]*label="Reasoning-Kosten"/)
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

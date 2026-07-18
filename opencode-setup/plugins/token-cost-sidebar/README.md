@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.9.6 - 18.07.2026, 11:56 Uhr
+Stand: v1.10.1 - 18.07.2026, 12:23 Uhr
 
 ## Funktionen
 
@@ -22,7 +22,7 @@ Stand: v1.9.6 - 18.07.2026, 11:56 Uhr
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten, getrennt nach Input,
-  Output und Reasoning. Cache-Read und Cache-Write zählen zu den Input-Kosten.
+  Cache-Read, Cache-Write, Output und Reasoning.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
@@ -52,18 +52,18 @@ Die Sidebar rechnet jeden abgeschlossenen Modellschritt mit dessen Modell und Ko
 
 ```text
 Input-Kosten     = regulärer Input × Inputpreis
-Cache-Kosten     = Cache-Read × Cache-Read-Preis
-                 + Cache-Write × Cache-Write-Preis
+Cache-Kosten R   = Cache-Read × Cache-Read-Preis
+Cache-Kosten W   = Cache-Write × Cache-Write-Preis
 Output-Kosten    = Output ohne Reasoning × Outputpreis
 Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
 Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
 ```
 
-Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read, Cache-Write und ihre
-Preise bleiben als Berechnungsgrundlage intern und werden nicht als eigene Token- oder Preiszeile
-angezeigt. Sichtbar bleibt ausschließlich `Cache-Kosten`, direkt zwischen `Output-Kosten` und
-`Reasoning-Kosten` und ohne Leerzeile dazwischen. Effort-Stufen haben keinen eigenen Multiplikator;
-sie beeinflussen nur die tatsächlich erzeugte Reasoning-Menge.
+Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Direkt darunter zeigt `Cache R/W`
+die gelesenen und geschriebenen Cachetokens getrennt; `Cachepreis` und `Cache-Kosten` verwenden
+dieselbe R/W-Reihenfolge. Fehlende Cachepreise erscheinen als `n/v` statt als erfundene Null.
+Effort-Stufen haben keinen eigenen Multiplikator; sie beeinflussen nur die tatsächlich erzeugte
+Reasoning-Menge.
 Die unter `Context` gezeigten Werte enthalten jeden API-Modellaufruf der Session; wiederverwendete
 Kontexttokens können daher über viele Aufrufe deutlich größer als das aktuelle Kontextfenster werden.
 Fehlt ein erforderlicher Preis, zeigt die Sidebar für die nicht belastbar aufteilbaren Werte
