@@ -659,14 +659,6 @@ function View(props: {
       responseServiceTier(),
     )
   })
-  const serviceTierLabel = createMemo(() => {
-    const tier = effectiveServiceTier()
-    if (props.quotaStore.authType() === "oauth" && tier === "priority") return "Fast (OAuth-Routing)"
-    if (tier === "priority") return "Priority"
-    if (tier === "flex") return "Flex"
-    return "Standard"
-  })
-
   const basePricingModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
 
   const pricedModel = createMemo(() => withOpenAIPriorityPricing(
@@ -718,15 +710,7 @@ function View(props: {
 
     return {
       usd: cost.usd,
-      inputUsd: cost.inputUsd,
-      cacheReadUsd: cost.cacheReadUsd,
-      cacheWriteUsd: cost.cacheWriteUsd,
-      outputUsd: cost.outputUsd,
-      reasoningUsd: cost.reasoningUsd,
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
-      breakdownAvailable: cost.breakdownAvailable && (
-        cost.usedCalculated || (t.records.length === 0 && cost.pricingAvailable)
-      ),
     }
   })
 
@@ -736,9 +720,6 @@ function View(props: {
     <Show when={hasAnything()}>
       <box>
         <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
-        <Show when={modelMeta().providerID === "openai"}>
-          <Row api={props.api} label="Service-Tier" value={serviceTierLabel()} muted />
-        </Show>
         <Row
           api={props.api}
           label="Inputpreis"
@@ -762,25 +743,9 @@ function View(props: {
           label="Input"
           value={formatInt(totals().input)}
         />
-        <Row
-          api={props.api}
-          label="Cache R/W"
-          value={`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`}
-        />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} />
-        <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatUsd(money().inputUsd) : "nicht verfügbar"} muted />
-        <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatUsd(money().outputUsd) : "nicht verfügbar"} muted />
-        <Row
-          api={props.api}
-          label="Cache-Kosten"
-          value={money().breakdownAvailable
-            ? `R/${formatUsd(money().cacheReadUsd)} / W/${formatUsd(money().cacheWriteUsd)}`
-            : "nicht verfügbar"}
-          muted
-        />
-        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatUsd(money().reasoningUsd) : "nicht verfügbar"} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>

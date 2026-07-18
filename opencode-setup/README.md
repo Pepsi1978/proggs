@@ -193,7 +193,8 @@ Aktuell:
   Terminaltitel. Der Installer legt sie als Top-Level-Plugin ab und entfernt die alte `.ts`-Fassung;
   in headless `opencode run`-Aufrufen bleibt sie deaktiviert.
 - **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
-  Input-, Cache-Read-/Write-, Output- und Reasoning-Tokens sowie saemtliche Kosten in US-Dollar. Ein mit der Maus
+  Input-, Output- und Reasoning-Tokens, drei Modellpreise sowie die Gesamtkosten in US-Dollar. Cache-R/W-
+  Tokens und Kosten-Einzelposten bleiben in der kompakten Anzeige verborgen. Ein mit der Maus
   bedienbares Dropdown zeigt beim Navigieren per Maus oder Pfeiltasten sofort eine Theme-Vorschau und
   merkt sich die bestaetigte Auswahl; beim Abbrechen kehrt es zum vorherigen Theme zurueck.
   Direkt darunter schaltet eine kompakte Dunkel/Hell-Auswahl die Variante des gewaehlten Themes um.

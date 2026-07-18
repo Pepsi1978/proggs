@@ -444,18 +444,26 @@ describe("models.dev pricing", () => {
     expect(latestServiceTier(records, "openai", "missing")).toBeUndefined()
   })
 
-  test("renders regular and cache token rows in the requested order", async () => {
+  test("renders only the requested Context rows without gaps", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    const contextBlock = source.match(/>Context<\/span><\/text>([\s\S]*?)<ThemeSelect/)?.[1] ?? ""
+    const labels = [...contextBlock.matchAll(/label="([^"]+)"/g)].map((match) => match[1])
+    expect(labels).toEqual([
+      "Inputpreis",
+      "Outputpreis",
+      "Cachepreis",
+      "Input",
+      "Output",
+      "Reasoning",
+      "Gesamtkosten",
+    ])
     expect(source).toContain('label="Input"')
     expect(source).toContain("value={formatInt(totals().input)}")
     expect(source).not.toContain("totals().input + totals().cacheRead + totals().cacheWrite")
-    expect(source).toContain('label="Cache R/W"')
-    expect(source).toContain("`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`")
+    expect(source).not.toContain('label="Cache R/W"')
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
     expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Output"'))
-    expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Cache R/W"'))
-    expect(source.indexOf('label="Cache R/W"')).toBeLessThan(source.indexOf('label="Output"'))
     expect(source.indexOf('label="Output"')).toBeLessThan(source.indexOf('label="Reasoning"'))
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
@@ -666,36 +674,33 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("MONEY_SOURCE_")
     expect(source).toContain("formatUsd(money().usd)")
     expect(source).toContain("effectiveServiceTier")
-    expect(source).toContain('"Fast (OAuth-Routing)"')
+    expect(source).not.toContain('label="Service-Tier"')
+    expect(source).not.toContain('"Fast (OAuth-Routing)"')
     expect(source).toContain("resolveOpenAIServiceTier")
     expect(source).toContain("basePricingModel")
     expect(source).toContain("latestServiceTier")
     expect(source).toContain("segment.serviceTier")
   })
 
-  test("renders every total and component cost in US dollars", async () => {
+  test("renders only the session total without component cost rows", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Gesamtkosten"')
-    expect(source).toContain('label="Input-Kosten"')
-    expect(source).toContain('label="Output-Kosten"')
-    expect(source).toContain('label="Reasoning-Kosten"')
-    expect(source).toContain('label="Cache-Kosten"')
+    expect(source).not.toContain('label="Input-Kosten"')
+    expect(source).not.toContain('label="Output-Kosten"')
+    expect(source).not.toContain('label="Reasoning-Kosten"')
+    expect(source).not.toContain('label="Cache-Kosten"')
     expect(source).toContain("formatUsd(money().usd)")
-    expect(source).toContain("formatUsd(money().inputUsd)")
-    expect(source).toContain("formatUsd(money().outputUsd)")
-    expect(source).toContain("formatUsd(money().reasoningUsd)")
-    expect(source).toContain("formatUsd(money().cacheReadUsd)")
-    expect(source).toContain("formatUsd(money().cacheWriteUsd)")
+    expect(source).not.toContain("money().inputUsd")
+    expect(source).not.toContain("money().outputUsd")
+    expect(source).not.toContain("money().reasoningUsd")
+    expect(source).not.toContain("money().cacheReadUsd")
+    expect(source).not.toContain("money().cacheWriteUsd")
     expect(source).not.toContain("formatEur")
     expect(source).not.toContain("eurPerUsd")
     expect(source).not.toContain("frankfurter.app")
     expect(source).not.toContain("EUR")
     expect(source).not.toContain("€")
     expect(source).not.toContain('label="Kosten"')
-    expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
-    expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
-    expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Cache-Kosten"'))
-    expect(source.indexOf('label="Cache-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

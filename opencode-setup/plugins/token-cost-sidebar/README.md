@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.12.0 - 18.07.2026, 20:48 Uhr
+Stand: v1.12.1 - 18.07.2026, 21:30 Uhr
 
 ## Funktionen
 
@@ -21,18 +21,19 @@ Stand: v1.12.0 - 18.07.2026, 20:48 Uhr
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
-- Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten, getrennt nach Input,
-  Cache-Read, Cache-Write, Output und Reasoning.
-- Sämtliche Preise, Teilkosten und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine
-  Wechselkursabfrage oder EUR-Umrechnung findet nicht statt.
+- Kompakte Context-Anzeige mit exakt drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
+  Tokenwerten `Input`, `Output`, `Reasoning` und den `Gesamtkosten`. Die sieben Zeilen stehen ohne
+  Zwischenzeile direkt untereinander; Cache-R/W-Tokens und Kosten-Einzelposten bleiben im TUI verborgen.
+- Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
+  EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
   Tarif. Bei ChatGPT-OAuth ist das finale Response-Feld laut OpenAI kein verlaesslicher Nachweis des
   serverseitigen Fast-Routings; dort bleibt deshalb die konfigurierte Fast-Auswahl massgeblich und wird
-  sichtbar als `Fast (OAuth-Routing)` gekennzeichnet. Bei API-Key-Auth wird weiterhin der vom Provider
+  intern für die Preisberechnung verwendet. Bei API-Key-Auth wird weiterhin der vom Provider
   bestaetigte Response-Tier verwendet; GPT-5.5-Write-Preise werden nicht erfunden.
-- Kumulative Session-Summen für Input, Output, Reasoning und Kosten, die durch Compress,
+- Kumulative Session-Summen für Input, Output, Reasoning und Gesamtkosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
 - Das aktive `AGENTS.md`-Profil bleibt vollständig gültig und hat bei Widersprüchen Vorrang.
@@ -64,9 +65,10 @@ Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
 Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
 ```
 
-Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Direkt darunter zeigt `Cache R/W`
-die gelesenen und geschriebenen Cachetokens getrennt; `Cachepreis` und `Cache-Kosten` verwenden
-dieselbe R/W-Reihenfolge. Fehlende Cachepreise erscheinen als `n/v` statt als erfundene Null.
+Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read und Cache-Write bleiben
+für die Berechnung der Gesamtkosten und für das lokale Audit erhalten, werden im TUI aber nicht als
+Token- oder Einzelkostenzeilen angezeigt. `Cachepreis` verwendet die R/W-Reihenfolge; fehlende
+Cachepreise erscheinen als `n/v` statt als erfundene Null.
 Effort-Stufen haben keinen eigenen Multiplikator; sie beeinflussen nur die tatsächlich erzeugte
 Reasoning-Menge.
 Die unter `Context` gezeigten Werte enthalten jeden API-Modellaufruf der Session; wiederverwendete
@@ -112,6 +114,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
+9. Unter `Context` stehen ohne Zwischenzeilen ausschließlich `Inputpreis`, `Outputpreis`, `Cachepreis`, `Input`, `Output`, `Reasoning` und `Gesamtkosten`.
 
 Tests im Repo:
 
