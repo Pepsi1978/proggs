@@ -199,6 +199,10 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
   Vor einer Einzelinstallation oder Aktualisierung muss
   **`plugins/token-cost-sidebar/README.md` vollständig gelesen werden**, weil Sidebar,
   `work-mode.js`, `tui.json` und npm-Abhängigkeiten nur gemeinsam die vollständige Funktion liefern.
+- **`token-usage-audit.js`** — schreibt jeden abgeschlossenen Modellschritt append-only nach
+  `opencode-setup/Tokenverbrauch.jsonl`. Das JSONL enthält Datum, Session-/Message-/Part-ID,
+  Launcher-Modell und Service-Tier, normalisierte Tokenwerte, Provider-Meldestatus und rohe
+  Usage-Metadaten. Die Datei bleibt lokal und ist bewusst von Git ausgeschlossen.
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh

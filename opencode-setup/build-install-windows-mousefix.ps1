@@ -1,16 +1,17 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "20",
+    [string]$PatchRevision = "21",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
 
-# Stand: windowsfix.20 - 17.07.2026 14:28 Uhr
+# Stand: windowsfix.21 - 18.07.2026 11:58 Uhr
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
 $runId = [Guid]::NewGuid().ToString("N")
 $patchPath = Join-Path $PSScriptRoot "patches\opencode-1.17.18-windows-mouse.patch"
+$cacheTelemetryPatchPath = Join-Path $PSScriptRoot "patches\opencode-1.18.3-cache-telemetry.patch"
 if (-not $InstallRoot) { $InstallRoot = Join-Path $HOME ".local\share\opencode-mousefix" }
 $versionsDir = Join-Path $InstallRoot "versions"
 $stagingDir = Join-Path $InstallRoot "staging"
@@ -95,6 +96,7 @@ function Publish-Candidate([string]$Built, [string]$UpstreamVersion, [string]$Cu
                 tuiVariantControl = "present"
                 runtimePluginToggle = "present"
                 tuiErrorHandlers = "present"
+                cacheTelemetry = "present"
             }
         }
         previous = $current.active
@@ -145,7 +147,7 @@ try {
 
     $current = Read-Json $pointerPath
     $activeExe = Resolve-PointerExe $current.active
-    if ($activeExe -and $current.active.upstreamVersion -eq $Version -and -not $Force) {
+    if ($activeExe -and $current.active.customVersion -eq $customVersion -and -not $Force) {
         Set-UpdateState "up-to-date" "OpenCode $customVersion ist bereits aktiv."
         "Bereits aktuell: $activeExe"
         return
@@ -159,7 +161,9 @@ try {
         }
     }
 
-    if (-not (Test-Path -LiteralPath $patchPath)) { throw "Patch nicht gefunden: $patchPath" }
+    foreach ($requiredPatch in @($patchPath, $cacheTelemetryPatchPath)) {
+        if (-not (Test-Path -LiteralPath $requiredPatch)) { throw "Patch nicht gefunden: $requiredPatch" }
+    }
     foreach ($command in @("git", "bun")) {
         if (-not (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Voraussetzung fehlt: $command" }
     }
@@ -175,6 +179,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Windows-Funktionen sind mit OpenCode v$Version noch nicht kompatibel." }
         git apply --ignore-space-change $patchPath
         if ($LASTEXITCODE -ne 0) { throw "Windows-Stabilitätspatch konnte nicht angewendet werden." }
+
+        git apply --check --ignore-space-change $cacheTelemetryPatchPath
+        if ($LASTEXITCODE -ne 0) { throw "Cache-Telemetriepatch ist mit OpenCode v$Version nicht kompatibel." }
+        git apply --ignore-space-change $cacheTelemetryPatchPath
+        if ($LASTEXITCODE -ne 0) { throw "Cache-Telemetriepatch konnte nicht angewendet werden." }
 
         bun install --ignore-scripts
         if ($LASTEXITCODE -ne 0) { throw "Bun-Abhängigkeiten konnten nicht installiert werden." }

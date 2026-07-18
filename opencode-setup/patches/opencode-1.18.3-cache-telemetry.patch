@@ -1,0 +1,182 @@
+diff --git a/packages/llm/src/protocols/openai-chat.ts b/packages/llm/src/protocols/openai-chat.ts
+index 9ac85b0..c548f21 100644
+--- a/packages/llm/src/protocols/openai-chat.ts
++++ b/packages/llm/src/protocols/openai-chat.ts
+@@ -121,6 +121,7 @@ const OpenAIChatUsage = Schema.Struct({
+   prompt_tokens_details: optionalNull(
+     Schema.Struct({
+       cached_tokens: Schema.optional(Schema.Number),
++      cache_write_tokens: Schema.optional(Schema.Number),
+     }),
+   ),
+   completion_tokens_details: optionalNull(
+@@ -391,13 +392,15 @@ const mapFinishReason = (reason: string | null | undefined): FinishReason => {
+ const mapUsage = (usage: OpenAIChatEvent["usage"]): Usage | undefined => {
+   if (!usage) return undefined
+   const cached = usage.prompt_tokens_details?.cached_tokens
++  const written = usage.prompt_tokens_details?.cache_write_tokens
+   const reasoning = usage.completion_tokens_details?.reasoning_tokens
+-  const nonCached = ProviderShared.subtractTokens(usage.prompt_tokens, cached)
++  const nonCached = ProviderShared.subtractTokens(usage.prompt_tokens, (cached ?? 0) + (written ?? 0))
+   return new Usage({
+     inputTokens: usage.prompt_tokens,
+     outputTokens: usage.completion_tokens,
+     nonCachedInputTokens: nonCached,
+     cacheReadInputTokens: cached,
++    cacheWriteInputTokens: written,
+     reasoningTokens: reasoning,
+     totalTokens: ProviderShared.totalTokens(usage.prompt_tokens, usage.completion_tokens, usage.total_tokens),
+     providerMetadata: { openai: usage },
+diff --git a/packages/llm/src/protocols/openai-responses.ts b/packages/llm/src/protocols/openai-responses.ts
+index 4936d31..06ffc54 100644
+--- a/packages/llm/src/protocols/openai-responses.ts
++++ b/packages/llm/src/protocols/openai-responses.ts
+@@ -167,7 +167,12 @@ const encodeWebSocketMessage = Schema.encodeSync(Schema.fromJsonString(OpenAIRes
+ 
+ const OpenAIResponsesUsage = Schema.Struct({
+   input_tokens: Schema.optional(Schema.Number),
+-  input_tokens_details: optionalNull(Schema.Struct({ cached_tokens: Schema.optional(Schema.Number) })),
++  input_tokens_details: optionalNull(
++    Schema.Struct({
++      cached_tokens: Schema.optional(Schema.Number),
++      cache_write_tokens: Schema.optional(Schema.Number),
++    }),
++  ),
+   output_tokens: Schema.optional(Schema.Number),
+   output_tokens_details: optionalNull(Schema.Struct({ reasoning_tokens: Schema.optional(Schema.Number) })),
+   total_tokens: Schema.optional(Schema.Number),
+@@ -507,13 +512,15 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
+ const mapUsage = (usage: OpenAIResponsesUsage | null | undefined) => {
+   if (!usage) return undefined
+   const cached = usage.input_tokens_details?.cached_tokens
++  const written = usage.input_tokens_details?.cache_write_tokens
+   const reasoning = usage.output_tokens_details?.reasoning_tokens
+-  const nonCached = ProviderShared.subtractTokens(usage.input_tokens, cached)
++  const nonCached = ProviderShared.subtractTokens(usage.input_tokens, (cached ?? 0) + (written ?? 0))
+   return new Usage({
+     inputTokens: usage.input_tokens,
+     outputTokens: usage.output_tokens,
+     nonCachedInputTokens: nonCached,
+     cacheReadInputTokens: cached,
++    cacheWriteInputTokens: written,
+     reasoningTokens: reasoning,
+     totalTokens: ProviderShared.totalTokens(usage.input_tokens, usage.output_tokens, usage.total_tokens),
+     providerMetadata: { openai: usage },
+diff --git a/packages/opencode/src/session/llm/ai-sdk.ts b/packages/opencode/src/session/llm/ai-sdk.ts
+index 8db8985..c50b584 100644
+--- a/packages/opencode/src/session/llm/ai-sdk.ts
++++ b/packages/opencode/src/session/llm/ai-sdk.ts
+@@ -51,18 +51,54 @@ function usage(value: unknown) {
+     cachedInputTokens?: number
+     inputTokenDetails?: { cacheReadTokens?: number; cacheWriteTokens?: number }
+     outputTokenDetails?: { reasoningTokens?: number }
++    raw?: unknown
+   }
++  const raw = item.raw && typeof item.raw === "object" ? (item.raw as Record<string, unknown>) : undefined
++  const rawDetailsValue = raw?.input_tokens_details ?? raw?.prompt_tokens_details
++  const rawDetails =
++    rawDetailsValue && typeof rawDetailsValue === "object"
++      ? (rawDetailsValue as Record<string, unknown>)
++      : undefined
++  const rawCacheRead = typeof rawDetails?.cached_tokens === "number" ? rawDetails.cached_tokens : undefined
++  const rawCacheWrite = typeof rawDetails?.cache_write_tokens === "number" ? rawDetails.cache_write_tokens : undefined
+   const entries = Object.entries({
+     inputTokens: item.inputTokens,
+     outputTokens: item.outputTokens,
+     totalTokens: item.totalTokens,
+     reasoningTokens: item.outputTokenDetails?.reasoningTokens ?? item.reasoningTokens,
+-    cacheReadInputTokens: item.inputTokenDetails?.cacheReadTokens ?? item.cachedInputTokens,
+-    cacheWriteInputTokens: item.inputTokenDetails?.cacheWriteTokens,
++    cacheReadInputTokens: item.inputTokenDetails?.cacheReadTokens ?? item.cachedInputTokens ?? rawCacheRead,
++    cacheWriteInputTokens: item.inputTokenDetails?.cacheWriteTokens ?? rawCacheWrite,
+   }).filter((entry) => entry[1] !== undefined)
+   return entries.length === 0 ? undefined : Object.fromEntries(entries)
+ }
+ 
++function usageMetadata(metadata: ProviderMetadata | undefined, value: unknown): ProviderMetadata {
++  const item = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
++  const raw = item.raw && typeof item.raw === "object" ? (item.raw as Record<string, unknown>) : undefined
++  const rawDetailsValue = raw?.input_tokens_details ?? raw?.prompt_tokens_details
++  const rawDetails =
++    rawDetailsValue && typeof rawDetailsValue === "object"
++      ? (rawDetailsValue as Record<string, unknown>)
++      : undefined
++  const normalizedDetails =
++    item.inputTokenDetails && typeof item.inputTokenDetails === "object"
++      ? (item.inputTokenDetails as Record<string, unknown>)
++      : undefined
++  const current = metadata?.opencode
++  const opencode = current && typeof current === "object" ? current : {}
++  return {
++    ...metadata,
++    opencode: {
++      ...opencode,
++      cacheReadReported:
++        normalizedDetails?.cacheReadTokens !== undefined || item.cachedInputTokens !== undefined || rawDetails?.cached_tokens !== undefined,
++      cacheWriteReported:
++        normalizedDetails?.cacheWriteTokens !== undefined || rawDetails?.cache_write_tokens !== undefined,
++      ...(raw ? { rawUsage: raw } : {}),
++    },
++  }
++}
++
+ function currentTextID(state: ReturnType<typeof adapterState>, id: string | undefined) {
+   state.currentTextID = id ?? state.currentTextID ?? `text-${state.text++}`
+   return state.currentTextID
+@@ -103,7 +139,7 @@ export function toLLMEvents(
+             index: state.step++,
+             reason: finishReason(event.finishReason),
+             usage: usage(event.usage),
+-            providerMetadata: metadata,
++            providerMetadata: usageMetadata(metadata, event.usage),
+           }),
+         ]
+       })
+diff --git a/packages/opencode/src/session/processor.ts b/packages/opencode/src/session/processor.ts
+index 20aa8a8..1073a8a 100644
+--- a/packages/opencode/src/session/processor.ts
++++ b/packages/opencode/src/session/processor.ts
+@@ -435,10 +435,22 @@ const layer = Layer.effect(
+           case "step-finish": {
+             const completedSnapshot = yield* snapshot.track()
+             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
++            const metadataKeys = new Set([
++              ...Object.keys(value.usage?.providerMetadata ?? {}),
++              ...Object.keys(value.providerMetadata ?? {}),
++            ])
++            const metadata = metadataKeys.size
++              ? Object.fromEntries(
++                  [...metadataKeys].map((key) => [
++                    key,
++                    { ...value.usage?.providerMetadata?.[key], ...value.providerMetadata?.[key] },
++                  ]),
++                )
++              : undefined
+             const usage = Session.getUsage({
+               model: ctx.model,
+               usage: value.usage ?? new Usage({}),
+-              metadata: value.providerMetadata,
++              metadata,
+             })
+             ctx.assistantMessage.finish = value.reason
+             ctx.assistantMessage.cost += usage.cost
+@@ -452,6 +464,7 @@ const layer = Layer.effect(
+               type: "step-finish",
+               tokens: usage.tokens,
+               cost: usage.cost,
++              metadata,
+             })
+             yield* session.updateMessage(ctx.assistantMessage)
+             if (ctx.snapshot) {
+diff --git a/packages/schema/src/v1/session.ts b/packages/schema/src/v1/session.ts
+index 75e9282..0f047fc 100644
+--- a/packages/schema/src/v1/session.ts
++++ b/packages/schema/src/v1/session.ts
+@@ -253,6 +253,7 @@ export const StepFinishPart = Schema.Struct({
+       write: Schema.Finite,
+     }),
+   }),
++  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+ }).annotate({ identifier: "StepFinishPart" })
+ export type StepFinishPart = Types.DeepMutable<Schema.Schema.Type<typeof StepFinishPart>>
+ 

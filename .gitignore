@@ -56,3 +56,6 @@ cowork-robustness-test.txt
 
 # proggs/AGENTS.md wird vom OpenCode Launcher pro Profil erzeugt (Quelle: Profiles/OpenCode/standard/agents-base.md + minimal.md)
 /AGENTS.md
+
+# Lokales, fortlaufendes OpenCode-Token-Audit; kann Prompt-Kurztexte enthalten.
+/opencode-setup/Tokenverbrauch.jsonl
