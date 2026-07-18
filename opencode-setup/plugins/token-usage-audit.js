@@ -1,4 +1,4 @@
-// Tokenverbrauch-Audit v1.2.0 - 18.07.2026, 12:54 Uhr
+// Tokenverbrauch-Audit v1.3.1 - 18.07.2026, 13:18 Uhr
 
 import { appendFile, mkdir } from "node:fs/promises"
 import { dirname } from "node:path"
@@ -6,6 +6,7 @@ import {
   createAuditRecord,
   hashValue,
   resolveTokenUsageLogPath,
+  shouldAuditAgent,
   shortSummary,
   systemIdentity,
 } from "./lib/token-usage-audit-core.js"
@@ -22,6 +23,7 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
   const requests = new Map()
   const messages = new Map()
   const systems = new Map()
+  const pendingSystems = new Map()
   const users = new Map()
   const tools = new Map()
   const sessions = new Map()
@@ -69,9 +71,10 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
   return {
     "experimental.chat.system.transform": async (input, output) => {
       if (!input.sessionID) return
-      const previous = systems.get(input.sessionID)
-      const current = systemIdentity(output.system, previous)
-      systems.set(input.sessionID, current)
+      pendingSystems.set(input.sessionID, {
+        ...modelIdentity(input.model),
+        system: [...output.system],
+      })
     },
     "chat.message": async (input, output) => {
       const text = (output.parts ?? [])
@@ -86,6 +89,19 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
     },
     "chat.params": async (input, output) => {
       const model = modelIdentity(input.model)
+      const pendingSystem = pendingSystems.get(input.sessionID)
+      pendingSystems.delete(input.sessionID)
+      if (!shouldAuditAgent(input.agent)) return
+      const previousSystem = systems.get(input.sessionID)
+      const matchingSystem = pendingSystem
+        && pendingSystem.providerID === model.providerID
+        && pendingSystem.modelID === model.modelID
+      const currentSystem = matchingSystem
+        ? systemIdentity(pendingSystem.system, previousSystem)
+        : previousSystem
+          ? { ...previousSystem, systemChanged: false }
+          : undefined
+      if (matchingSystem) systems.set(input.sessionID, currentSystem)
       const sequence = (sequences.get(input.sessionID) ?? 0) + 1
       const previous = previousRequests.get(input.sessionID)
       const promptCacheKeyHash = hashValue(output.options?.promptCacheKey ?? input.sessionID)
@@ -105,7 +121,7 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
         parentSessionID: sessions.get(input.sessionID)?.parentID,
         isSubagent: Boolean(sessions.get(input.sessionID)?.parentID),
         ...users.get(input.sessionID),
-        ...systems.get(input.sessionID),
+        ...currentSystem,
       }
       requests.set(input.sessionID, request)
       previousRequests.set(input.sessionID, request)
@@ -136,7 +152,10 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
       seenParts.add(part.id)
       const sessionID = event.properties?.sessionID ?? part.sessionID
       const message = await findMessage(sessionID, part.messageID)
-      await append(createAuditRecord({ part, message, request: requests.get(sessionID) }))
+      const request = requests.get(sessionID)
+      const agent = (message?.info ?? message)?.agent ?? request?.agent
+      if (!request || !shouldAuditAgent(agent)) return
+      await append(createAuditRecord({ part, message, request }))
     },
   }
 }

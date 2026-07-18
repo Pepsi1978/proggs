@@ -25,6 +25,10 @@ export function shortSummary(value, maxLength = 180) {
   return `${compact.slice(0, Math.max(0, maxLength - 3))}...`
 }
 
+export function shouldAuditAgent(agent) {
+  return agent !== "title"
+}
+
 export function systemIdentity(system, previous) {
   const text = (system ?? []).join("\n")
   const systemHash = hashValue(text)

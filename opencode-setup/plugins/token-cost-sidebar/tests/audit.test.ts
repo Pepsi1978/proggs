@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test"
-import { readdir } from "node:fs/promises"
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { TokenUsageAudit } from "../../token-usage-audit.js"
 import {
   classifyAttribution,
   createAuditRecord,
   hashValue,
   resolveTokenUsageLogPath,
+  shouldAuditAgent,
   shortSummary,
   systemIdentity,
 } from "../../lib/token-usage-audit-core.js"
@@ -89,6 +93,93 @@ describe("token usage audit", () => {
     expect(initial.systemChanged).toBeFalse()
     expect(systemIdentity(["stable prefix"], initial).systemChanged).toBeFalse()
     expect(systemIdentity(["changed prefix"], initial)).toMatchObject({ systemChanged: true })
+  })
+
+  test("excludes internal title requests from audit records and request state", async () => {
+    const worktree = await mkdtemp(join(tmpdir(), "token-audit-"))
+    const messages = new Map([
+      ["msg_title", { info: { id: "msg_title", agent: "title", providerID: "openai", modelID: "gpt-5.5" } }],
+      ["msg_main", { info: { id: "msg_main", agent: "build", providerID: "openai", modelID: "gpt-5.6-sol-fast" } }],
+    ])
+    const client = {
+      app: { log: async () => undefined },
+      session: { messages: async () => ({ data: [...messages.values()] }) },
+    }
+    const titleModel = { providerID: "openai", modelID: "gpt-5.5" }
+    const mainModel = { providerID: "openai", modelID: "gpt-5.6-sol-fast" }
+
+    try {
+      const hooks = await TokenUsageAudit({ client, directory: worktree, worktree })
+      await hooks["experimental.chat.system.transform"](
+        { sessionID: "ses_1", model: titleModel },
+        { system: ["title system"] },
+      )
+      await hooks["chat.params"](
+        { sessionID: "ses_1", agent: "title", model: titleModel },
+        { options: {} },
+      )
+      await hooks.event({
+        event: {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "ses_1",
+            part: {
+              id: "prt_title",
+              sessionID: "ses_1",
+              messageID: "msg_title",
+              type: "step-finish",
+              tokens: {},
+            },
+          },
+        },
+      })
+
+      await hooks["experimental.chat.system.transform"](
+        { sessionID: "ses_1", model: mainModel },
+        { system: ["main system"] },
+      )
+      await hooks["chat.params"](
+        { sessionID: "ses_1", agent: "build", model: mainModel },
+        { options: { serviceTier: "priority" } },
+      )
+      await hooks["experimental.chat.system.transform"](
+        { sessionID: "ses_1", model: titleModel },
+        { system: ["later title system"] },
+      )
+      await hooks["chat.params"](
+        { sessionID: "ses_1", agent: "title", model: titleModel },
+        { options: {} },
+      )
+      await hooks.event({
+        event: {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "ses_1",
+            part: {
+              id: "prt_main",
+              sessionID: "ses_1",
+              messageID: "msg_main",
+              type: "step-finish",
+              tokens: { input: 10, output: 2, cache: { read: 0, write: 0 } },
+            },
+          },
+        },
+      })
+
+      const lines = (await readFile(join(worktree, "opencode-setup", "Tokenverbrauch.jsonl"), "utf8"))
+        .trim()
+        .split("\n")
+      expect(lines).toHaveLength(1)
+      expect(JSON.parse(lines[0])).toMatchObject({
+        agent: "build",
+        request: { sequence: 1 },
+        attribution: { code: "cold_session" },
+      })
+      expect(shouldAuditAgent("title")).toBeFalse()
+      expect(shouldAuditAgent("build")).toBeTrue()
+    } finally {
+      await rm(worktree, { recursive: true, force: true })
+    }
   })
 
   test("auto-loaded plugin entry points export exactly one plugin function", async () => {

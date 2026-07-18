@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.10.6 - 18.07.2026, 12:59 Uhr
+Stand: v1.11.2 - 18.07.2026, 13:12 Uhr
 
 ## Funktionen
 
@@ -28,7 +28,9 @@ Stand: v1.10.6 - 18.07.2026, 12:59 Uhr
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
-  Tarif. Normale Aliase bleiben beim Standardtarif; GPT-5.5-Write-Preise werden nicht erfunden.
+  Tarif nur, wenn OpenAI ihn im abgeschlossenen Modellschritt tatsächlich als `priority` bestätigt.
+  Eine serverseitige Herabstufung auf `default` verwendet den Standardtarif; GPT-5.5-Write-Preise
+  werden nicht erfunden.
 - Kumulative Session-Summen für Input, Output, Reasoning und Kosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.

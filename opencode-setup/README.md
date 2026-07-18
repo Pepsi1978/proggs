@@ -200,7 +200,9 @@ Aktuell:
   Das Plugin bevorzugt die von
   OpenCode gespeicherte echte `cost`; bei fehlenden oder
   veralteten Nullpreisen laedt es den aktuellen Modellpreis von models.dev und beruecksichtigt
-  kontextabhaengige Preisstufen. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
+  kontextabhaengige Preisstufen. Bei Fast-Aliasnamen gilt der Priority-Tarif nur, wenn der Provider
+  den Modellschritt tatsächlich als `priority` bestätigt; `default` fällt auf den Standardtarif zurück.
+  Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
   Vor einer Einzelinstallation oder Aktualisierung muss
   **`plugins/token-cost-sidebar/README.md` vollständig gelesen werden**, weil Sidebar,
   `work-mode.js`, `tui.json` und npm-Abhängigkeiten nur gemeinsam die vollständige Funktion liefern.
@@ -210,7 +212,8 @@ Aktuell:
   Usage-Metadaten. Zusätzlich klassifiziert es Cold Starts, Subagenten, Compress, Modell-/Prefix-
   Wechsel, Tool-Fortsetzungen und Partial Hits und schreibt getrennte Read-/Write-Zusammenfassungen.
   Benutzertexte werden gekürzt und Secrets redigiert; Toolausgaben werden nicht kopiert. Die Datei
-  bleibt lokal und ist bewusst von Git ausgeschlossen.
+  bleibt lokal und ist bewusst von Git ausgeschlossen. Interne Title-Anfragen beeinflussen weder
+  Datensätze noch Sequenz- oder Änderungsursachen.
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh

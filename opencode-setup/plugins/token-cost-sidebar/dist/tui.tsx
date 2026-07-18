@@ -8,6 +8,7 @@ import {
   loadCatalogModel,
   readAvailablePricingPerMillion,
   selectPricingModel,
+  withOpenAIPriorityPricing,
 } from "./pricing"
 import {
   DEFAULT_WORK_MODE,
@@ -18,6 +19,7 @@ import {
 } from "./work-mode"
 import {
   createSessionUsageLedger,
+  latestServiceTier,
   observeAssistantMessage,
   observeAssistantMessages,
   serializeSessionUsage,
@@ -631,7 +633,18 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     return props.usageStore.snapshot(props.sessionID)
   })
 
-  const pricedModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
+  const effectiveServiceTier = createMemo(() => {
+    return latestServiceTier(totals().records, modelMeta().providerID, modelMeta().modelID)
+  })
+
+  const basePricingModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
+
+  const pricedModel = createMemo(() => withOpenAIPriorityPricing(
+    basePricingModel(),
+    modelMeta().providerID ?? "",
+    modelMeta().modelID ?? "",
+    effectiveServiceTier(),
+  ))
 
   const rates = createMemo(() => {
     const model = pricedModel()
@@ -658,13 +671,18 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     const cost = calculateSessionCostBreakdown(pricedModel(), t.records.flatMap((record) => {
       const provider = props.api.state.provider.find((item: any) => item?.id === record.providerID)
       const embeddedModel = provider?.models?.[record.modelID ?? ""]
-      const currentModel = record.providerID === modelMeta().providerID && record.modelID === modelMeta().modelID
-        ? pricedModel()
+      const baseModel = record.providerID === modelMeta().providerID && record.modelID === modelMeta().modelID
+        ? basePricingModel()
         : embeddedModel
       return (record.segments ?? [{ usage: record.usage, recordedCostUsd: record.recordedCostUsd }]).map((segment) => ({
         usage: segment.usage,
         recordedCostUsd: segment.recordedCostUsd,
-        pricingModel: currentModel,
+        pricingModel: withOpenAIPriorityPricing(
+          baseModel,
+          record.providerID ?? "",
+          record.modelID ?? "",
+          segment.serviceTier,
+        ),
       }))
     }))
 

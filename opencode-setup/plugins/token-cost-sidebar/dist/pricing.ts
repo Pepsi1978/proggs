@@ -253,13 +253,13 @@ export function findCatalogModel(catalog: any, providerID?: string, modelID?: st
   const models = catalog?.[providerID]?.models
   for (const candidate of catalogModelCandidates(providerID, modelID)) {
     const match = models?.[candidate]
-    if (match) return withOpenAIPriorityPricing(match, providerID, modelID)
+    if (match) return match
   }
   return undefined
 }
 
 export function withOpenAIPriorityPricing(model: any, providerID: string, modelID: string, serviceTier?: string): any {
-  if (providerID !== "openai" || (serviceTier !== "priority" && !modelID.endsWith("-fast"))) return model
+  if (providerID !== "openai" || serviceTier !== "priority") return model
   const baseID = modelID.endsWith("-fast") ? modelID.slice(0, -"-fast".length) : modelID
   const cost = OPENAI_PRIORITY_COST[baseID]
   if (!cost) return model
@@ -272,9 +272,10 @@ export function withOpenAIPriorityPricing(model: any, providerID: string, modelI
 }
 
 export function catalogModelCandidates(providerID: string, modelID: string): string[] {
-  const candidates = [modelID]
-  if (providerID === "openai" && modelID.endsWith("-fast")) candidates.push(modelID.slice(0, -"-fast".length))
-  return candidates
+  if (providerID === "openai" && modelID.endsWith("-fast")) {
+    return [modelID.slice(0, -"-fast".length), modelID]
+  }
+  return [modelID]
 }
 
 export function selectPricingModel(embeddedModel: any, catalogModel: any): any {

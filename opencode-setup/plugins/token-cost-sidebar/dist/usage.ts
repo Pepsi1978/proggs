@@ -9,6 +9,7 @@ export type SessionUsageRecord = {
   segments?: Array<{
     usage: TokenUsage
     recordedCostUsd: number
+    serviceTier?: string
   }>
 }
 
@@ -75,10 +76,14 @@ function usageOf(message: any): TokenUsage {
 function usageSegments(message: any): SessionUsageRecord["segments"] {
   const steps = stepFinishParts(message)
   if (steps.length === 0) return undefined
-  return steps.map((step) => ({
-    usage: usageOf(step),
-    recordedCostUsd: safeNumber(step?.cost),
-  }))
+  return steps.map((step) => {
+    const serviceTier = step?.metadata?.openai?.serviceTier
+    return {
+      usage: usageOf(step),
+      recordedCostUsd: safeNumber(step?.cost),
+      ...(typeof serviceTier === "string" && serviceTier ? { serviceTier } : {}),
+    }
+  })
 }
 
 function storedRecord(value: unknown): SessionUsageRecord | undefined {
@@ -92,6 +97,7 @@ function storedRecord(value: unknown): SessionUsageRecord | undefined {
       cache: { read: segment?.usage?.cacheRead, write: segment?.usage?.cacheWrite },
     } }),
     recordedCostUsd: safeNumber(segment?.recordedCostUsd),
+    ...(typeof segment?.serviceTier === "string" && segment.serviceTier ? { serviceTier: segment.serviceTier } : {}),
   })) : undefined
   return {
     id: record.id,
@@ -177,6 +183,23 @@ export function sessionUsageSnapshot(ledger: SessionUsageLedger): SessionUsageSn
     result.cacheWrite += record.usage.cacheWrite
   }
   return result
+}
+
+export function latestServiceTier(
+  records: readonly SessionUsageRecord[],
+  providerID?: string,
+  modelID?: string,
+): string | undefined {
+  for (let recordIndex = records.length - 1; recordIndex >= 0; recordIndex--) {
+    const record = records[recordIndex]
+    if (record.providerID !== providerID || record.modelID !== modelID) continue
+    const segments = record.segments ?? []
+    for (let segmentIndex = segments.length - 1; segmentIndex >= 0; segmentIndex--) {
+      const serviceTier = segments[segmentIndex]?.serviceTier
+      if (serviceTier) return serviceTier
+    }
+  }
+  return undefined
 }
 
 export function serializeSessionUsage(ledger: SessionUsageLedger): SessionUsageRecord[] {

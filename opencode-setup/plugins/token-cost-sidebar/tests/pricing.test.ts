@@ -24,6 +24,7 @@ import {
 } from "../dist/work-mode"
 import {
   createSessionUsageLedger,
+  latestServiceTier,
   observeAssistantMessage,
   observeAssistantMessages,
   serializeSessionUsage,
@@ -58,11 +59,12 @@ describe("models.dev pricing", () => {
     expect(findCatalogModel(catalog, "openai", "other")).toBeUndefined()
   })
 
-  test("uses base pricing for every OpenAI Fast launcher alias", () => {
+  test("resolves every OpenAI Fast launcher alias without inventing its effective service tier", () => {
     const catalog = {
       openai: {
         models: {
           "gpt-5.6-sol": { id: "sol" },
+          "gpt-5.6-sol-fast": { id: "unconfirmed-fast-price-must-not-win" },
           "gpt-5.6-terra": { id: "terra" },
           "gpt-5.6-luna": { id: "luna" },
           "gpt-5.5": { id: "5.5" },
@@ -70,49 +72,50 @@ describe("models.dev pricing", () => {
       },
     }
     for (const id of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]) {
-      expect(findCatalogModel(catalog, "openai", `${id}-fast`)).toMatchObject({
-        id: catalog.openai.models[id as keyof typeof catalog.openai.models].id,
-        pricingServiceTier: "priority",
-      })
+      expect(findCatalogModel(catalog, "openai", `${id}-fast`)).toBe(
+        catalog.openai.models[id as keyof typeof catalog.openai.models],
+      )
     }
     expect(catalogModelCandidates("openai", "gpt-5.6-terra-fast")).toEqual([
-      "gpt-5.6-terra-fast",
       "gpt-5.6-terra",
+      "gpt-5.6-terra-fast",
     ])
     expect(catalogModelCandidates("openrouter", "vendor/model-fast")).toEqual(["vendor/model-fast"])
   })
 
-  test("uses official Priority cache prices for Launcher Fast aliases", () => {
+  test("uses official Priority cache prices only for provider-confirmed Priority steps", () => {
     const base = { cost: { input: 5, output: 30, cache_read: 0.5, cache_write: 6.25 } }
-    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast"))).toMatchObject({
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast", "priority"))).toMatchObject({
       input: 10,
       output: 60,
       cacheRead: 1,
       cacheWrite: 12.5,
     })
-    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-terra-fast"))).toMatchObject({
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-terra-fast", "priority"))).toMatchObject({
       input: 5,
       output: 30,
       cacheRead: 0.5,
       cacheWrite: 6.25,
     })
-    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-luna-fast"))).toMatchObject({
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-luna-fast", "priority"))).toMatchObject({
       input: 2,
       output: 12,
       cacheRead: 0.2,
       cacheWrite: 2.5,
     })
-    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast"))).toMatchObject({
+    expect(readPricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast", "priority"))).toMatchObject({
       input: 12.5,
       output: 75,
       cacheRead: 1.25,
       cacheWrite: 0,
     })
-    expect(readAvailablePricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast"))).toMatchObject({
+    expect(readAvailablePricingPerMillion(withOpenAIPriorityPricing(base, "openai", "gpt-5.5-fast", "priority"))).toMatchObject({
       cacheRead: 1.25,
       cacheWrite: undefined,
     })
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol")).toBe(base)
+    expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast")).toBe(base)
+    expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast", "default")).toBe(base)
   })
 
   test("normalizes per-million base prices", () => {
@@ -374,6 +377,7 @@ describe("models.dev pricing", () => {
           type: "step-finish",
           cost: 0.5,
           tokens: { input: 100, output: 20, reasoning: 10, cache: { read: 5, write: 1 } },
+          metadata: { openai: { serviceTier: "priority" } },
         },
         { type: "tool", tokens: { input: 9_999 } },
         {
@@ -396,6 +400,7 @@ describe("models.dev pricing", () => {
     expect(sessionUsageSnapshot(ledger).records[0]?.segments).toEqual([
       {
         recordedCostUsd: 0.5,
+        serviceTier: "priority",
         usage: { input: 100, output: 20, reasoning: 10, cacheRead: 5, cacheWrite: 1 },
       },
       {
@@ -406,6 +411,30 @@ describe("models.dev pricing", () => {
     expect(sessionUsageSnapshot(createSessionUsageLedger(serializeSessionUsage(ledger)))).toEqual(
       sessionUsageSnapshot(ledger),
     )
+  })
+
+  test("selects the latest confirmed service tier only from the current model", () => {
+    const usage = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
+    const records = [
+      {
+        id: "1",
+        providerID: "openai",
+        modelID: "gpt-5.6-sol-fast",
+        usage,
+        recordedCostUsd: 0,
+        segments: [{ usage, recordedCostUsd: 0, serviceTier: "default" }],
+      },
+      {
+        id: "2",
+        providerID: "openai",
+        modelID: "gpt-5.5-fast",
+        usage,
+        recordedCostUsd: 0,
+        segments: [{ usage, recordedCostUsd: 0, serviceTier: "priority" }],
+      },
+    ]
+    expect(latestServiceTier(records, "openai", "gpt-5.6-sol-fast")).toBe("default")
+    expect(latestServiceTier(records, "openai", "missing")).toBeUndefined()
   })
 
   test("renders regular and cache token rows in the requested order", async () => {
@@ -629,6 +658,10 @@ describe("models.dev pricing", () => {
     expect(source).toContain('return "<$0.000001"')
     expect(source).not.toContain("MONEY_SOURCE_")
     expect(source).toContain("formatUsd(money().usd)")
+    expect(source).toContain("effectiveServiceTier")
+    expect(source).toContain("basePricingModel")
+    expect(source).toContain("latestServiceTier")
+    expect(source).toContain("segment.serviceTier")
   })
 
   test("renders every total and component cost in US dollars", async () => {
