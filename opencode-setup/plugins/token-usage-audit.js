@@ -1,4 +1,4 @@
-// Tokenverbrauch-Audit v1.3.1 - 18.07.2026, 13:18 Uhr
+// Tokenverbrauch-Audit v1.4.0 - 18.07.2026, 20:48 Uhr
 
 import { appendFile, mkdir } from "node:fs/promises"
 import { dirname } from "node:path"
@@ -113,6 +113,8 @@ export const TokenUsageAudit = async ({ client, directory, worktree }) => {
         startedAt: new Date().toISOString(),
         sequence,
         serviceTier: output.options?.serviceTier ?? process.env.OPENCODE_LAUNCHER_SERVICE_TIER ?? "standard",
+        serviceTierOption: output.options?.serviceTier ?? null,
+        serviceTierLauncher: process.env.OPENCODE_LAUNCHER_SERVICE_TIER ?? null,
         promptCacheKeyHash,
         promptCacheKeyChanged: Boolean(previous?.promptCacheKeyHash && previous.promptCacheKeyHash !== promptCacheKeyHash),
         modelChanged: Boolean(previous && (previous.providerID !== model.providerID || previous.modelID !== model.modelID)),

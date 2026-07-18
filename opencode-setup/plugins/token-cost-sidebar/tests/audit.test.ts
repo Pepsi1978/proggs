@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { OpenAIFastServiceTier } from "../../openai-fast-service-tier.js"
 import { TokenUsageAudit } from "../../token-usage-audit.js"
 import {
   classifyAttribution,
@@ -138,9 +139,15 @@ describe("token usage audit", () => {
         { sessionID: "ses_1", model: mainModel },
         { system: ["main system"] },
       )
+      const fastHooks = await OpenAIFastServiceTier()
+      const mainParams = { options: {} }
+      await fastHooks["chat.params"](
+        { sessionID: "ses_1", agent: "build", model: mainModel },
+        mainParams,
+      )
       await hooks["chat.params"](
         { sessionID: "ses_1", agent: "build", model: mainModel },
-        { options: { serviceTier: "priority" } },
+        mainParams,
       )
       await hooks["experimental.chat.system.transform"](
         { sessionID: "ses_1", model: titleModel },
@@ -172,7 +179,7 @@ describe("token usage audit", () => {
       expect(lines).toHaveLength(1)
       expect(JSON.parse(lines[0])).toMatchObject({
         agent: "build",
-        request: { sequence: 1 },
+        request: { sequence: 1, serviceTierOption: "priority" },
         attribution: { code: "cold_session" },
       })
       expect(shouldAuditAgent("title")).toBeFalse()

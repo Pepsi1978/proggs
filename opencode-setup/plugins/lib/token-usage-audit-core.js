@@ -142,10 +142,12 @@ export function createAuditRecord({ part, message, request, launcher = process.e
       source: launcher.OPENCODE_LAUNCHER_SOURCE ?? null,
       model: launcher.OPENCODE_LAUNCHER_MODEL ?? null,
       serviceTier: request?.serviceTier ?? launcher.OPENCODE_LAUNCHER_SERVICE_TIER ?? "standard",
+      requestedServiceTier: request?.serviceTierLauncher ?? launcher.OPENCODE_LAUNCHER_SERVICE_TIER ?? null,
     },
     request: {
       startedAt: request?.startedAt,
       sequence: request?.sequence,
+      serviceTierOption: request?.serviceTierOption ?? null,
       promptCacheKeyHash: request?.promptCacheKeyHash,
       systemHash: request?.systemHash,
       systemCharacters: request?.systemCharacters,
@@ -159,6 +161,8 @@ export function createAuditRecord({ part, message, request, launcher = process.e
     provider: {
       responseID: part?.metadata?.openai?.responseId ?? null,
       serviceTier: part?.metadata?.openai?.serviceTier ?? null,
+      responseServiceTier: part?.metadata?.openai?.serviceTier ?? null,
+      serviceTierSemantics: "raw-response-metadata",
       rawUsage: telemetry.rawUsage ?? part?.metadata?.openai ?? null,
     },
   }

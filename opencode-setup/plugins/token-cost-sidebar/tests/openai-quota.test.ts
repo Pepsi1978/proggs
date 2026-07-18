@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   isCompletedOpenAIMessage,
+  loadOpenAIAuthType,
   loadOpenAIWeeklyQuota,
   openAIAuthFileCandidates,
   parseWeeklyQuota,
@@ -68,6 +69,7 @@ describe("OpenAI weekly quota", () => {
         remainingPercent: 66,
         resetAt: 1_784_796_030,
       })
+      expect(await loadOpenAIAuthType(directory)).toBe("oauth")
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

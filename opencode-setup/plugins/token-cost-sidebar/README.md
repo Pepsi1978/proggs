@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.11.2 - 18.07.2026, 13:12 Uhr
+Stand: v1.12.0 - 18.07.2026, 20:48 Uhr
 
 ## Funktionen
 
@@ -28,9 +28,10 @@ Stand: v1.11.2 - 18.07.2026, 13:12 Uhr
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
-  Tarif nur, wenn OpenAI ihn im abgeschlossenen Modellschritt tatsächlich als `priority` bestätigt.
-  Eine serverseitige Herabstufung auf `default` verwendet den Standardtarif; GPT-5.5-Write-Preise
-  werden nicht erfunden.
+  Tarif. Bei ChatGPT-OAuth ist das finale Response-Feld laut OpenAI kein verlaesslicher Nachweis des
+  serverseitigen Fast-Routings; dort bleibt deshalb die konfigurierte Fast-Auswahl massgeblich und wird
+  sichtbar als `Fast (OAuth-Routing)` gekennzeichnet. Bei API-Key-Auth wird weiterhin der vom Provider
+  bestaetigte Response-Tier verwendet; GPT-5.5-Write-Preise werden nicht erfunden.
 - Kumulative Session-Summen für Input, Output, Reasoning und Kosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.

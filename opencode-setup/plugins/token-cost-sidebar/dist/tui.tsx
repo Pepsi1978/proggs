@@ -7,6 +7,7 @@ import {
   hasKnownPricing,
   loadCatalogModel,
   readAvailablePricingPerMillion,
+  resolveOpenAIServiceTier,
   selectPricingModel,
   withOpenAIPriorityPricing,
 } from "./pricing"
@@ -26,7 +27,13 @@ import {
   sessionUsageSnapshot,
   type SessionUsageLedger,
 } from "./usage"
-import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, type WeeklyQuota } from "./openai-quota"
+import {
+  isCompletedOpenAIMessage,
+  loadOpenAIAuthType,
+  loadOpenAIWeeklyQuota,
+  type OpenAIAuthType,
+  type WeeklyQuota,
+} from "./openai-quota"
 
 const QUOTA_POLL_MS = 60_000
 const QUOTA_RECHECK_DELAY_MS = 2_000
@@ -308,10 +315,12 @@ function EffortSelector(props: { api: TuiPluginApi }) {
 
 type OpenAIQuotaStore = {
   quota: () => WeeklyQuota | null | undefined
+  authType: () => OpenAIAuthType | undefined
 }
 
 function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
   const [quota, setQuota] = createSignal<WeeklyQuota | null | undefined>()
+  const [authType, setAuthType] = createSignal<OpenAIAuthType | undefined>()
   const delayedRefreshes = new Set<ReturnType<typeof setTimeout>>()
   let pollTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
@@ -339,6 +348,7 @@ function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
 
     inFlight = true
     try {
+      setAuthType(await loadOpenAIAuthType(api.state.path.state))
       const value = await loadOpenAIWeeklyQuota(api.state.path.state)
       if (!disposed) setQuota(value ?? null)
     } catch (error) {
@@ -385,7 +395,7 @@ function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
     delayedRefreshes.clear()
   })
 
-  return { quota }
+  return { quota, authType }
 }
 
 function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: OpenAIQuotaStore }) {
@@ -601,7 +611,12 @@ function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
   }
 }
 
-function View(props: { api: TuiPluginApi; sessionID: string; usageStore: SessionUsageStore }) {
+function View(props: {
+  api: TuiPluginApi
+  sessionID: string
+  usageStore: SessionUsageStore
+  quotaStore: OpenAIQuotaStore
+}) {
   const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
   const messages = createMemo(() => props.api.state.session.messages(props.sessionID).map((info) => ({
@@ -633,8 +648,23 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     return props.usageStore.snapshot(props.sessionID)
   })
 
+  const configuredServiceTier = createMemo(() => modelMeta().model?.options?.serviceTier as string | undefined)
+  const responseServiceTier = createMemo(() =>
+    latestServiceTier(totals().records, modelMeta().providerID, modelMeta().modelID),
+  )
   const effectiveServiceTier = createMemo(() => {
-    return latestServiceTier(totals().records, modelMeta().providerID, modelMeta().modelID)
+    return resolveOpenAIServiceTier(
+      props.quotaStore.authType(),
+      configuredServiceTier(),
+      responseServiceTier(),
+    )
+  })
+  const serviceTierLabel = createMemo(() => {
+    const tier = effectiveServiceTier()
+    if (props.quotaStore.authType() === "oauth" && tier === "priority") return "Fast (OAuth-Routing)"
+    if (tier === "priority") return "Priority"
+    if (tier === "flex") return "Flex"
+    return "Standard"
   })
 
   const basePricingModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
@@ -706,6 +736,9 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
     <Show when={hasAnything()}>
       <box>
         <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
+        <Show when={modelMeta().providerID === "openai"}>
+          <Row api={props.api} label="Service-Tier" value={serviceTierLabel()} muted />
+        </Show>
         <Row
           api={props.api}
           label="Inputpreis"
@@ -779,7 +812,7 @@ const tui: TuiPlugin = async (api) => {
         return <SidebarClock api={api} />
       },
       sidebar_content(_ctx, props) {
-        return <View api={api} sessionID={props.session_id} usageStore={usageStore} />
+        return <View api={api} sessionID={props.session_id} usageStore={usageStore} quotaStore={quotaStore} />
       },
     },
   })

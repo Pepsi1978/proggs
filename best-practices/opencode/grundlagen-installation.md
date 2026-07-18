@@ -1,4 +1,4 @@
-# Grundlagen & Installation — Best Practices (Stand 2026-07-10, OpenCode CLI 1.17.18)
+# Grundlagen & Installation — Best Practices (Stand 2026-07-18, OpenCode CLI 1.18.3)
 
 > Tool: **OpenCode** von SST/Anomaly (GitHub `anomalyco/opencode`, früher `sst/opencode`; Website
 > `opencode.ai`). NICHT verwechseln mit der Klon-Domain `open-code.ai` — im Zweifel ist `opencode.ai`
@@ -130,6 +130,27 @@ opencode auth logout         # Credentials löschen
 ```
 Credentials liegen in `~/.local/share/opencode/auth.json`. Beim Start lädt OpenCode Provider aus dieser
 Datei sowie aus Umgebungsvariablen / `.env` im Projekt.
+
+#### ChatGPT-OAuth Fast/Priority korrekt behandeln
+
+Bei ChatGPT-OAuth ist Fast kein separates Modell: Ein lokaler Fast-Alias zeigt auf das Basismodell und
+setzt `options.serviceTier:"priority"`. Der offizielle Codex-Katalog nennt diesen Tier `Fast` und beschreibt
+ihn als `1.5x speed, increased usage`; Sol, Terra, Luna und GPT-5.5 unterstützen ihn. `offiziell`
+
+Das finale Responses-Feld `service_tier:"default"` darf bei OAuth **nicht** wie bei API-Key-Requests als
+Beweis für Standardrouting interpretiert werden. Ein OpenAI-Contributor erklärt, Codex-Fast werde in diesem
+Modus serverseitig geroutet und sei über das finale Payloadfeld nicht zuverlässig verifizierbar. Deshalb:
+
+1. Auth-Art aus `auth.json` bestimmen.
+2. Bei OAuth die konfigurierte Requestoption `priority` und den Fast-fähigen Modellkatalog prüfen.
+3. Angeforderten Tier und rohes Response-Tier getrennt protokollieren.
+4. Fast als `Fast (OAuth-Routing)` anzeigen, nicht als durch das Responsefeld bestätigten API-Tier.
+5. Bei API-Key-Auth weiterhin den tatsächlich gemeldeten Response-Tier verwenden.
+
+Quellen: `offiziell` [Codex #32191](https://github.com/openai/codex/issues/32191),
+[Codex #30413](https://github.com/openai/codex/issues/30413),
+[Codex PR #19053](https://github.com/openai/codex/pull/19053),
+[OpenCode #7511](https://github.com/anomalyco/opencode/issues/7511).
 
 ### 3.3 OpenCode starten
 ```bash

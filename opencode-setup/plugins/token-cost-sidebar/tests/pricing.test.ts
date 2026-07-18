@@ -12,6 +12,7 @@ import {
   readAvailablePricingPerMillion,
   readPricing,
   readPricingPerMillion,
+  resolveOpenAIServiceTier,
   selectPricingModel,
   withOpenAIPriorityPricing,
 } from "../dist/pricing"
@@ -116,6 +117,12 @@ describe("models.dev pricing", () => {
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol")).toBe(base)
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast")).toBe(base)
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast", "default")).toBe(base)
+  })
+
+  test("keeps configured Fast routing authoritative for ChatGPT OAuth", () => {
+    expect(resolveOpenAIServiceTier("oauth", "priority", "default")).toBe("priority")
+    expect(resolveOpenAIServiceTier("api", "priority", "default")).toBe("default")
+    expect(resolveOpenAIServiceTier(undefined, "priority", "default")).toBe("priority")
   })
 
   test("normalizes per-million base prices", () => {
@@ -659,6 +666,8 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("MONEY_SOURCE_")
     expect(source).toContain("formatUsd(money().usd)")
     expect(source).toContain("effectiveServiceTier")
+    expect(source).toContain('"Fast (OAuth-Routing)"')
+    expect(source).toContain("resolveOpenAIServiceTier")
     expect(source).toContain("basePricingModel")
     expect(source).toContain("latestServiceTier")
     expect(source).toContain("segment.serviceTier")

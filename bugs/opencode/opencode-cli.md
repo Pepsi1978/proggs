@@ -4,12 +4,12 @@
 > bewährten, **funktionserhaltenden** Lösungen — damit der Fehler gar nicht erst passiert.
 >
 > **Stand:** recherchiert am 2026-06-18 für **OpenCode CLI v1.17.8**, lokal ergänzt am 2026-07-10
-> um den bestätigten Windows-Mausfix und am 2026-07-11 um den stderr-Stack-Trace-Leak (#14a)
-> für **OpenCode CLI v1.17.18** (Repo `anomalyco/opencode`,
+> um den bestätigten Windows-Mausfix, am 2026-07-11 um den stderr-Stack-Trace-Leak (#14a) und
+> am 2026-07-18 um ChatGPT-OAuth-Fast-Routing (#80a) für **OpenCode CLI v1.18.3** (Repo `anomalyco/opencode`,
 > früher `sst/opencode`; Doku `opencode.ai`). Recherche: 7 parallele Researcher (offizielle Doku +
 > Changelog v1.1.64→v1.17.8, GitHub-Issues, Community, Plattform-Fallen, Config/AGENTS.md,
 > Agents/Plugins/MCP/Skills, Token/Provider/OpenRouter). Quellen je Eintrag verlinkt.
-> **Anker:** opencode=1.17.18 (Mausfix lokal bestätigt); MCP-Lazy-Loading-Stand bestätigt für **1.17.11** (2026-06-26, #56 — weiterhin kein natives Lazy-Loading)
+> **Anker:** opencode=1.18.3; MCP-Lazy-Loading-Stand bestätigt für **1.17.11** (2026-06-26, #56 — weiterhin kein natives Lazy-Loading)
 >
 > Gegenstück (wie man es von vornherein richtig macht): `best-practices/opencode/` (8 Dateien).
 > Digest-Modell (Stufe A/B/C) siehe `bugs/SYSTEM.md` §11.
@@ -43,6 +43,7 @@
 | 16 | ⭐ Plugin deinstallieren / Plugin kommt nach Neustart wieder („loading plugins") | Es gibt **KEIN** `plugin remove`. Eintrag steht in MEHREREN Config-Dateien (auch `tui.json`, nicht nur `opencode.jsonc`) → **alle** entfernen; OpenCode **schließen** (sonst regeneriert es Cache+Config sofort); Cache `~/.cache/opencode/packages/<scope>` + plugin-eigene Config (z.B. `dcp.jsonc`) löschen; ggf. `~/.config/opencode/package.json` zurücksetzen (append-only). | §7 (#55d) |
 | 17 | ⭐ TUI sieht komplett kaputt aus (linke Spalte voller `??`/`M`, `[plugin] …`-Zeilen bluten rein) | Ein Plugin schreibt direkt aufs Terminal — Plugins laufen IM TUI-Prozess. Ursache: `$`-Shell-Aufruf **ohne `.quiet()`** (Bun echoed stdout ans TTY, z.B. `git status --porcelain`) und/oder `console.*` (schreibt auf stderr). **FIX:** an JEDEN `$`-Aufruf `.quiet()`; NIE `console.*`, nur `client.app.log`. | §6 (#48a) |
 | 18 | ⭐ TUI zerfällt sporadisch (Fragmente an falschen Positionen, Statuszeile vermischt), unten rohe `at … (B:/~BUN/root/chunk-…)`-Stack-Traces; Fenster-Resize heilt kurzfristig | Unbehandelte Fehler im TUI-Hauptthread (kein `unhandledRejection`/`uncaughtException`-Handler) → Bun druckt Stack-Trace auf stderr = TTY der TUI; Diff-Renderer merkt nichts. **FIX:** stderr beim Start in Log-Datei umleiten + Handler im TUI-Entry + Fehler-Trigger abstellen (`small_model` explizit setzen). | §2 (#14a) |
+| 19 | ⭐ OpenAI-Fast über ChatGPT-OAuth gewählt, Response meldet `service_tier=default` | Bei OAuth ist dieses finale Feld laut OpenAI kein verlässlicher Fast-Nachweis. Request-Option `priority` prüfen; Fast-Status aus konfiguriertem OAuth-Routing/Modellkatalog ableiten, nicht aus dem API-Key-Responsefeld. | §10 (#80a) |
 
 ---
 
@@ -834,6 +835,32 @@ streamable-http), §61 (kein Auto-Reconnect/Keepalive; Session-404 nach Server-N
 **Versionen:** per Design (Doku-„Caution").
 **FIX:** `OPENCODE_SERVER_PASSWORD=… opencode serve --hostname 0.0.0.0`.
 **Quelle:** https://opencode.ai/docs/windows-wsl#desktop-app--wsl-server
+
+### 80a. ⭐ ChatGPT-OAuth Fast: `response.service_tier=default` wird fälschlich als Standardbetrieb interpretiert
+**Symptom:** Ein lokaler Fast-Alias setzt `serviceTier:"priority"`, aber das finale Responses-Ereignis
+meldet `service_tier:"default"`. Eine Sidebar schaltet daraufhin auf Standardpreise um oder behauptet,
+Fast sei nicht aktiv. Ein reiner Latenzvergleich liefert widersprüchliche Ergebnisse.
+**Ursache:** API-Key- und ChatGPT-OAuth-Semantik wurden vermischt. Die öffentliche OpenAI-API beschreibt
+das Responsefeld als tatsächlich verwendeten Tier; für ChatGPT-authentifiziertes Codex erklärt ein
+OpenAI-Contributor dagegen ausdrücklich, Fast werde serverseitig durch Codex-Routing behandelt und das
+finale `default` sei kein zuverlässiger Gegenbeweis. Der offizielle Codex-Katalog führt Sol, Terra, Luna
+und GPT-5.5 mit Tier-ID `priority`, Name `Fast`, Beschreibung `1.5x speed, increased usage`; der Codex-
+Requestbuilder serialisiert Fast als `service_tier:"priority"` auch für ChatGPT-Auth. OpenCode transportiert
+Modellebene-`serviceTier` bis zum Request; Issue #7511 belegt dies mit Request-/Response-Logs für `flex`.
+**Versionen:** OpenCode 1.18.3; offizieller Codex-Stand 0.145.0-alpha.18 / Repo-Stand 18.07.2026.
+**FIX:** Bei OAuth den konfigurierten Modell-Tier (`options.serviceTier:"priority"`) am letzten
+`chat.params`-Hook absichern und sichtbar als `Fast (OAuth-Routing)` ausweisen. Das rohe Response-Tier
+nur diagnostisch speichern, nicht als tatsächlichen OAuth-Tier oder Preisumschalter verwenden. Bei
+API-Key-Auth bleibt die öffentliche Responses-API-Semantik maßgeblich. Tests müssen Requestoption und
+Auth-Art getrennt prüfen; Latenz allein ist kein Abnahmekriterium.
+**Defense in Depth:** Launcher-Alias → Basismodell plus Priorityoption; letzter Plugin-Guard erzwingt
+Priority; Audit speichert Requestoption separat vom rohen Responsewert; Sidebar verzweigt nach Auth-Art.
+**Quellen:** https://github.com/openai/codex/issues/32191 ·
+https://github.com/openai/codex/issues/30413 ·
+https://github.com/openai/codex/pull/19053 ·
+https://github.com/openai/codex/pull/29155 ·
+https://github.com/anomalyco/opencode/issues/7511 ·
+https://github.com/anomalyco/opencode/pull/19596
 
 ---
 

@@ -214,6 +214,10 @@ Aktuell:
   Benutzertexte werden gekürzt und Secrets redigiert; Toolausgaben werden nicht kopiert. Die Datei
   bleibt lokal und ist bewusst von Git ausgeschlossen. Interne Title-Anfragen beeinflussen weder
   Datensätze noch Sequenz- oder Änderungsursachen.
+- **`openai-fast-service-tier.js`** — erzwingt fuer die vier Launcher-Fast-Aliase `serviceTier:
+  "priority"` im letzten `chat.params`-Hook. Damit bleibt Fast auch nach Konfigurationsmigrationen
+  aktiv; das Audit trennt die Request-Option vom rohen Response-Tier. Bei ChatGPT-OAuth ist ein
+  Response-Wert `default` laut OpenAI kein verlaesslicher Gegenbeweis fuer serverseitiges Fast-Routing.
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh

@@ -11,6 +11,8 @@ export type WeeklyQuota = {
   resetAt: number
 }
 
+export type OpenAIAuthType = "oauth" | "api"
+
 type RateLimitWindow = {
   used_percent?: unknown
   limit_window_seconds?: unknown
@@ -62,19 +64,28 @@ export function openAIAuthFileCandidates(
   return [...new Set(candidates)]
 }
 
-export async function loadOpenAIWeeklyQuota(
-  stateDirectory: string,
-  fetcher: typeof fetch = fetch,
-): Promise<WeeklyQuota | undefined> {
-  let auth: any
+async function readOpenAIAuth(stateDirectory: string): Promise<any> {
   for (const authFile of openAIAuthFileCandidates(stateDirectory)) {
     try {
-      auth = JSON.parse(await readFile(authFile, "utf8"))?.openai
-      if (auth) break
+      const auth = JSON.parse(await readFile(authFile, "utf8"))?.openai
+      if (auth) return auth
     } catch (error: any) {
       if (error?.code !== "ENOENT") throw error
     }
   }
+  return undefined
+}
+
+export async function loadOpenAIAuthType(stateDirectory: string): Promise<OpenAIAuthType | undefined> {
+  const type = (await readOpenAIAuth(stateDirectory))?.type
+  return type === "oauth" || type === "api" ? type : undefined
+}
+
+export async function loadOpenAIWeeklyQuota(
+  stateDirectory: string,
+  fetcher: typeof fetch = fetch,
+): Promise<WeeklyQuota | undefined> {
+  const auth = await readOpenAIAuth(stateDirectory)
   if (auth?.type !== "oauth" || typeof auth.access !== "string" || typeof auth.accountId !== "string") {
     return undefined
   }

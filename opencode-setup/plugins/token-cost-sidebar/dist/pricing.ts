@@ -271,6 +271,16 @@ export function withOpenAIPriorityPricing(model: any, providerID: string, modelI
   }
 }
 
+export function resolveOpenAIServiceTier(
+  authType: "oauth" | "api" | undefined,
+  configuredServiceTier?: string,
+  responseServiceTier?: string,
+): string | undefined {
+  if (authType === "oauth") return configuredServiceTier
+  if (authType === "api") return responseServiceTier ?? configuredServiceTier
+  return configuredServiceTier ?? responseServiceTier
+}
+
 export function catalogModelCandidates(providerID: string, modelID: string): string[] {
   if (providerID === "openai" && modelID.endsWith("-fast")) {
     return [modelID.slice(0, -"-fast".length), modelID]
