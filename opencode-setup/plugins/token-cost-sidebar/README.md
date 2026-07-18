@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.10.1 - 18.07.2026, 12:23 Uhr
+Stand: v1.10.3 - 18.07.2026, 12:26 Uhr
 
 ## Funktionen
 
@@ -23,6 +23,8 @@ Stand: v1.10.1 - 18.07.2026, 12:23 Uhr
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Anzeige von Modell, Tokenverbrauch, Preisen und geschätzten Sitzungskosten, getrennt nach Input,
   Cache-Read, Cache-Write, Output und Reasoning.
+- Sämtliche Preise, Teilkosten und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine
+  Wechselkursabfrage oder EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen

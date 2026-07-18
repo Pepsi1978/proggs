@@ -26,7 +26,6 @@ import {
 } from "./usage"
 import { isCompletedOpenAIMessage, loadOpenAIWeeklyQuota, type WeeklyQuota } from "./openai-quota"
 
-const FALLBACK_EUR_PER_USD = 0.92
 const QUOTA_POLL_MS = 60_000
 const QUOTA_RECHECK_DELAY_MS = 2_000
 const VARIANT_LABELS: Record<string, string> = {
@@ -75,15 +74,6 @@ const THEME_PROFILES = [
   "vesper",
   "zenburn",
 ] as const
-
-function safeNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value !== "") {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return 0
-}
 
 function roleOf(message: any): string | undefined {
   return message?.role ?? message?.info?.role
@@ -164,19 +154,17 @@ function formatInt(value: number): string {
   return new Intl.NumberFormat("de-DE").format(Math.max(0, Math.round(value)))
 }
 
-function formatUsdPerMillion(value: number): string {
-  if (value > 0 && value < 0.000001) return "<$0.000001 / 1M"
-  const fractionDigits = value > 0 && value < 0.01 ? 6 : value < 1 ? 4 : 2
+function formatUsd(value: number): string {
+  if (value > 0 && value < 0.000001) return "<$0.000001"
+  const fractionDigits = value > 0 && value < 0.01 ? 6 : 2
   return `$${new Intl.NumberFormat("en-US", {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(Math.max(0, value))} / 1M`
+  }).format(Math.max(0, value))}`
 }
 
-function formatEur(value: number): string {
-  if (value <= 0) return "0,00 €"
-  if (value < 0.01) return "<0,01 €"
-  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value)
+function formatUsdPerMillion(value: number): string {
+  return `${formatUsd(value)} / 1M`
 }
 
 function Row(props: { label: string; value: string; muted?: boolean; api: TuiPluginApi }) {
@@ -612,7 +600,6 @@ function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
 }
 
 function View(props: { api: TuiPluginApi; sessionID: string; usageStore: SessionUsageStore }) {
-  const [eurPerUsd, setEurPerUsd] = createSignal(FALLBACK_EUR_PER_USD)
   const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
   const messages = createMemo(() => props.api.state.session.messages(props.sessionID).map((info) => ({
@@ -623,13 +610,6 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
 
   onMount(() => {
     props.usageStore.hydrateHistory(props.sessionID)
-    void fetch("https://api.frankfurter.app/latest?from=USD&to=EUR")
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then((data) => {
-        const rate = safeNumber(data?.rates?.EUR)
-        if (rate > 0) setEurPerUsd(rate)
-      })
-      .catch(() => {})
   })
 
   let catalogRequestKey = ""
@@ -690,12 +670,11 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
 
     return {
       usd: cost.usd,
-      eur: cost.usd * eurPerUsd(),
-      inputEur: cost.inputUsd * eurPerUsd(),
-      cacheReadEur: cost.cacheReadUsd * eurPerUsd(),
-      cacheWriteEur: cost.cacheWriteUsd * eurPerUsd(),
-      outputEur: cost.outputUsd * eurPerUsd(),
-      reasoningEur: cost.reasoningUsd * eurPerUsd(),
+      inputUsd: cost.inputUsd,
+      cacheReadUsd: cost.cacheReadUsd,
+      cacheWriteUsd: cost.cacheWriteUsd,
+      outputUsd: cost.outputUsd,
+      reasoningUsd: cost.reasoningUsd,
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
       breakdownAvailable: cost.breakdownAvailable && (
         cost.usedCalculated || (t.records.length === 0 && cost.pricingAvailable)
@@ -739,18 +718,18 @@ function View(props: { api: TuiPluginApi; sessionID: string; usageStore: Session
         />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
-        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
-        <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatEur(money().inputEur) : "nicht verfügbar"} muted />
-        <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatEur(money().outputEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} />
+        <Row api={props.api} label="Input-Kosten" value={money().breakdownAvailable ? formatUsd(money().inputUsd) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Output-Kosten" value={money().breakdownAvailable ? formatUsd(money().outputUsd) : "nicht verfügbar"} muted />
         <Row
           api={props.api}
           label="Cache-Kosten"
           value={money().breakdownAvailable
-            ? `R/${formatEur(money().cacheReadEur)} / W/${formatEur(money().cacheWriteEur)}`
+            ? `R/${formatUsd(money().cacheReadUsd)} / W/${formatUsd(money().cacheWriteUsd)}`
             : "nicht verfügbar"}
           muted
         />
-        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatEur(money().reasoningEur) : "nicht verfügbar"} muted />
+        <Row api={props.api} label="Reasoning-Kosten" value={money().breakdownAvailable ? formatUsd(money().reasoningUsd) : "nicht verfügbar"} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>
