@@ -6,7 +6,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-const val DESIGN_FOUNDATION_VERSION = "v0.21.1 - 18.07.2026 22:21 Uhr"
+const val DESIGN_FOUNDATION_VERSION = "v0.21.2 - 18.07.2026 22:48 Uhr"
 
 data class JournalDesignTokens(
     val backgroundBrush: Brush,

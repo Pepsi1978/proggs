@@ -3464,7 +3464,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v0.21.1 - 18.07.2026 22:21 Uhr",
+                            "Entropy Journal v0.21.2 - 18.07.2026 22:48 Uhr",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

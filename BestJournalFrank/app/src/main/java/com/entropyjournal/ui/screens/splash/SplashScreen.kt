@@ -213,16 +213,15 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
 
             Spacer(Modifier.height(38.dp))
             Box(
-                modifier = Modifier.widthIn(max = 340.dp).fillMaxWidth(),
+                modifier = Modifier.widthIn(max = 340.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
                     modifier =
                         Modifier.matchParentSize()
-                            .graphicsLayer { alpha = glowAlpha }
                             .blur(24.dp, BlurredEdgeTreatment.Unbounded)
                             .clip(RoundedCornerShape(50))
-                            .background(SplashGold)
+                            .background(SplashGold.copy(alpha = glowAlpha))
                 )
                 Row(
                     modifier =
@@ -284,7 +283,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
 
             Spacer(Modifier.weight(1f))
             Text(
-                text = "v0.21.1 - 18.07.2026 22:21 Uhr · © Frank Barwandt",
+                text = "v0.21.2 - 18.07.2026 22:48 Uhr · © Frank Barwandt",
                 color = Color(0xFF8A7A5C),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(bottom = 18.dp),
