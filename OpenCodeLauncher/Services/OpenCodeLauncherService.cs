@@ -656,6 +656,8 @@ $ErrorActionPreference = 'Continue'
 {{ProgrammerProcessPriorityScript}}
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
+$env:OPENCODE_LAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
+$env:OPENCODE_LAUNCHER_SOURCE = 'OpenCodeLauncher'
 $env:OPENCODE_LAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
 {{minimalEnv}}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'

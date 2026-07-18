@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.32 (18.07.2026, 11:56 Uhr)
+Stand: v1.17.33 (18.07.2026, 11:58 Uhr)
 
 ---
 
@@ -284,6 +284,11 @@ Fallback, Reasoning-Effort). Auf macOS gibt es (noch) keinen Launcher — man st
 `cd ~/proggs && opencode`. Provider-/Effort-Steuerung dort **manuell** in `~/.config/opencode/opencode.jsonc`
 oder OpenCode-nativ (`/models`, `Ctrl+T`-Variant). Sobald die macOS-Launcher-App (§5) existiert, kann
 sie diese Config-Patch-Logik übernehmen (Code-Vorlage: `OpenCodeLauncherService.ConfigureProvider`/`PatchProvider`).
+
+Unter Windows setzt der Launcher für jeden OpenCode-Prozess zusätzlich
+`OPENCODE_LAUNCHER_MODEL`, `OPENCODE_LAUNCHER_SOURCE` und
+`OPENCODE_LAUNCHER_SERVICE_TIER`. Preis- und Token-Audits können dadurch die tatsächliche
+Launcher-Auswahl einschließlich Priority-Tier eindeutig zuordnen.
 
 ---
 
