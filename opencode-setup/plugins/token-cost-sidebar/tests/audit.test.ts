@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { createAuditRecord, hashValue, resolveTokenUsageLogPath } from "../../token-usage-audit.js"
+import {
+  classifyAttribution,
+  createAuditRecord,
+  hashValue,
+  resolveTokenUsageLogPath,
+  shortSummary,
+  systemIdentity,
+} from "../../token-usage-audit.js"
 
 describe("token usage audit", () => {
   test("writes one complete provider-reported model step", () => {
@@ -11,7 +18,12 @@ describe("token usage audit", () => {
         OPENCODE_LAUNCHER_SERVICE_TIER: "priority",
       },
       message: { role: "assistant", providerID: "openai", modelID: "gpt-5.6-sol-fast", agent: "build" },
-      request: { sequence: 2, startedAt: "2026-07-18T09:59:59.000Z", promptCacheKeyHash: "abc" },
+      request: {
+        sequence: 2,
+        startedAt: "2026-07-18T09:59:59.000Z",
+        promptCacheKeyHash: "abc",
+        userPromptHash: "user-hash",
+      },
       part: {
         id: "prt_1",
         sessionID: "ses_1",
@@ -31,9 +43,11 @@ describe("token usage audit", () => {
       date: "2026-07-18",
       modelID: "gpt-5.6-sol-fast",
       launcher: { serviceTier: "priority" },
+      request: { userPromptHash: "user-hash" },
       usage: { cacheRead: 100, cacheWrite: 15, cacheReadReported: true, cacheWriteReported: true },
       recordedCostUsd: 1.25,
       provider: { responseID: "resp_1", serviceTier: "priority" },
+      attribution: { code: "partial_hit" },
     })
   })
 
@@ -49,5 +63,30 @@ describe("token usage audit", () => {
     )
     expect(hashValue("secret")).toHaveLength(64)
     expect(hashValue("secret")).not.toContain("secret")
+  })
+
+  test("redacts secrets and records only a bounded user summary", () => {
+    const summary = shortSummary("Nutze api_key=abcdef123456 und Bearer secret-token für diesen langen Auftrag", 60)
+    expect(summary).not.toContain("abcdef123456")
+    expect(summary).not.toContain("secret-token")
+    expect(summary.length).toBeLessThanOrEqual(60)
+  })
+
+  test("classifies structural write causes before heuristic causes", () => {
+    expect(classifyAttribution({ sequence: 1, isSubagent: true }, { cacheWrite: 100 }).code).toBe("new_subagent")
+    expect(classifyAttribution({ sequence: 1 }, { cacheWrite: 100 }).code).toBe("cold_session")
+    expect(classifyAttribution({ sequence: 2, compaction: true }, { cacheWrite: 100 }).code).toBe("compaction")
+    expect(classifyAttribution({ sequence: 2, modelChanged: true }, { cacheWrite: 100 }).code).toBe("model_or_variant_changed")
+    expect(classifyAttribution({ sequence: 2, systemChanged: true }, { cacheWrite: 100 }).code).toBe("stable_prefix_changed")
+    expect(classifyAttribution({ sequence: 2, tools: ["read", "bash"] }, { cacheWrite: 100 }).code).toBe("post_tool_continuation")
+    expect(classifyAttribution({ sequence: 2 }, { cacheRead: 100, cacheWrite: 10 }).code).toBe("partial_hit")
+    expect(classifyAttribution({ sequence: 2 }, { cacheRead: 100, cacheWrite: 0 }).code).toBe("cache_hit")
+  })
+
+  test("attributes a changed system prefix to the request created after the transform", () => {
+    const initial = systemIdentity(["stable prefix"])
+    expect(initial.systemChanged).toBeFalse()
+    expect(systemIdentity(["stable prefix"], initial).systemChanged).toBeFalse()
+    expect(systemIdentity(["changed prefix"], initial)).toMatchObject({ systemChanged: true })
   })
 })

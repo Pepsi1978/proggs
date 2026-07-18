@@ -202,7 +202,10 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 - **`token-usage-audit.js`** — schreibt jeden abgeschlossenen Modellschritt append-only nach
   `opencode-setup/Tokenverbrauch.jsonl`. Das JSONL enthält Datum, Session-/Message-/Part-ID,
   Launcher-Modell und Service-Tier, normalisierte Tokenwerte, Provider-Meldestatus und rohe
-  Usage-Metadaten. Die Datei bleibt lokal und ist bewusst von Git ausgeschlossen.
+  Usage-Metadaten. Zusätzlich klassifiziert es Cold Starts, Subagenten, Compress, Modell-/Prefix-
+  Wechsel, Tool-Fortsetzungen und Partial Hits und schreibt getrennte Read-/Write-Zusammenfassungen.
+  Benutzertexte werden gekürzt und Secrets redigiert; Toolausgaben werden nicht kopiert. Die Datei
+  bleibt lokal und ist bewusst von Git ausgeschlossen.
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh
