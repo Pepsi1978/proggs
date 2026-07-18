@@ -26,12 +26,15 @@ public partial class MainWindow : Window
     private const uint SWP_NOMOVE = 0x0002;
     private const uint SWP_SHOWWINDOW = 0x0040;
     private static readonly IntPtr HWND_TOP = IntPtr.Zero;
+    private static readonly IntPtr HWND_TOPMOST = new(-1);
+    private static readonly IntPtr HWND_NOTOPMOST = new(-2);
     private readonly LayoutSettings _layoutSettings;
     private int _providerResizeColumnIndex = -1;
     private double[]? _providerResizeStartWidths;
     private double _providerResizeTotalDelta;
     private bool _bringToForegroundQueued;
     private bool _isBringingToForeground;
+    private string _queuedActivationReason = "unspecified";
     private readonly System.Windows.Threading.DispatcherTimer _layoutSaveTimer;
 
     [DllImport("dwmapi.dll")]
@@ -72,6 +75,12 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hwnd, bool altTab);
 
     public MainViewModel ViewModel { get; }
 
@@ -118,53 +127,85 @@ public partial class MainWindow : Window
             MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
             ApplyWindowTheme();
             QueueSaveWindowLayout();
-            if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground();
+            if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground("state-changed");
         };
-        Activated += (_, _) => QueueBringToTaskbarForeground();
+        Activated += (_, _) => QueueBringToTaskbarForeground("activated");
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 
-    private void QueueBringToTaskbarForeground()
+    private void QueueBringToTaskbarForeground(string reason)
     {
-        if (_bringToForegroundQueued || _isBringingToForeground) return;
+        if (_isBringingToForeground) return;
 
+        _queuedActivationReason = reason;
+        if (_bringToForegroundQueued) return;
         _bringToForegroundQueued = true;
         Dispatcher.BeginInvoke(new Action(() =>
         {
             _bringToForegroundQueued = false;
-            BringToTaskbarForeground();
-        }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            BringToTaskbarForeground(_queuedActivationReason);
+        }), System.Windows.Threading.DispatcherPriority.Normal);
     }
 
     public void BringToForegroundFromExternalActivation()
     {
         Logger.Instance.Info("MainWindow", "BringToForegroundFromExternalActivation", "Aktivierung durch zweite Instanz empfangen");
-        QueueBringToTaskbarForeground();
+        QueueBringToTaskbarForeground("external-activation");
     }
 
-    private void BringToTaskbarForeground()
+    private void BringToTaskbarForeground(string reason)
     {
         if (_isBringingToForeground) return;
 
         _isBringingToForeground = true;
         try
         {
-            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
             if (!IsVisible) Show();
 
             var hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == IntPtr.Zero) return;
 
-            if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-            if (TryActivateWithForegroundThread(hwnd) || Activate()) return;
+            var foregroundBefore = GetForegroundWindow();
+            var wasMinimized = IsIconic(hwnd);
+            var restoreRequested = reason is "external-activation" or "system-restore";
+            // A queued Activated/StateChanged callback must never undo a later intentional minimize.
+            if (wasMinimized && !restoreRequested) return;
+            if (wasMinimized) ShowWindow(hwnd, SW_RESTORE);
+            var restored = !IsIconic(hwnd);
 
-            // Fallback gegen Windows-Foreground-Lock: aufmerksam machen, ohne still zu scheitern.
-            Topmost = true;
-            Topmost = false;
             SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            var activated = TryActivateWithForegroundThread(hwnd);
+            if (!activated)
+            {
+                Activate();
+                activated = GetForegroundWindow() == hwnd;
+            }
+            if (!activated) activated = TryForceForeground(hwnd);
+
+            var foregroundAfter = GetForegroundWindow();
+            if (wasMinimized || reason == "external-activation" || reason == "system-restore")
+            {
+                Logger.Instance.Info("MainWindow", "BringToTaskbarForeground", "Fensteraktivierung ausgeführt", new
+                {
+                    reason,
+                    wasMinimized,
+                    restored,
+                    activated,
+                    foregroundBefore = FormatHandle(foregroundBefore),
+                    foregroundAfter = FormatHandle(foregroundAfter),
+                    hwnd = FormatHandle(hwnd)
+                });
+            }
+            if (activated) return;
+
             FlashTaskbar(hwnd);
-            Logger.Instance.Warn("MainWindow", "BringToTaskbarForeground", "SetForegroundWindow blockiert; Taskleisten-Blinken als Fallback ausgelöst");
+            Logger.Instance.Warn("MainWindow", "BringToTaskbarForeground", "Vordergrundaktivierung nicht bestätigt; Taskleisten-Blinken als letzter Fallback", new
+            {
+                reason,
+                restored,
+                foreground = FormatHandle(foregroundAfter),
+                hwnd = FormatHandle(hwnd)
+            });
         }
         finally
         {
@@ -175,6 +216,8 @@ public partial class MainWindow : Window
     private static bool TryActivateWithForegroundThread(IntPtr hwnd)
     {
         var foreground = GetForegroundWindow();
+        if (foreground == hwnd) return true;
+
         var currentThread = GetCurrentThreadId();
         var foregroundThread = foreground == IntPtr.Zero ? 0 : GetWindowThreadProcessId(foreground, out _);
         var attached = false;
@@ -184,9 +227,10 @@ public partial class MainWindow : Window
             if (foregroundThread != 0 && foregroundThread != currentThread)
                 attached = AttachThreadInput(currentThread, foregroundThread, true);
 
-            var foregroundSet = SetForegroundWindow(hwnd);
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
             SetFocus(hwnd);
-            return foregroundSet;
+            return GetForegroundWindow() == hwnd;
         }
         finally
         {
@@ -194,6 +238,25 @@ public partial class MainWindow : Window
                 AttachThreadInput(currentThread, foregroundThread, false);
         }
     }
+
+    private bool TryForceForeground(IntPtr hwnd)
+    {
+        var restoreZOrder = Topmost ? HWND_TOPMOST : HWND_NOTOPMOST;
+        try
+        {
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+            SwitchToThisWindow(hwnd, true);
+            return GetForegroundWindow() == hwnd;
+        }
+        finally
+        {
+            SetWindowPos(hwnd, restoreZOrder, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        }
+    }
+
+    private static string FormatHandle(IntPtr hwnd) => $"0x{hwnd.ToInt64():X}";
 
     private static void FlashTaskbar(IntPtr hwnd)
     {
@@ -315,7 +378,7 @@ public partial class MainWindow : Window
         }
         else if (msg == WM_SYSCOMMAND && ((int)wParam & 0xFFF0) == SC_RESTORE)
         {
-            QueueBringToTaskbarForeground();
+            QueueBringToTaskbarForeground("system-restore");
         }
         return IntPtr.Zero;
     }
