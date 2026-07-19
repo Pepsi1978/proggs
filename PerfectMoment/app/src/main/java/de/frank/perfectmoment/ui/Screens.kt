@@ -138,6 +138,7 @@ fun PmTextArea(
     mono: Boolean = false,
     singleLine: Boolean = false,
     textSize: Int = if (mono) 13 else 15,
+    contentPadding: PaddingValues = PaddingValues(16.dp),
 ) {
     val colors = LocalPmColors.current
     val shape = RoundedCornerShape(if (singleLine) 16.dp else 20.dp)
@@ -153,7 +154,7 @@ fun PmTextArea(
             lineHeight = if (mono) (textSize * 1.6f).sp else (textSize * 1.55f).sp,
             fontWeight = if (singleLine) FontWeight.Medium else FontWeight.Normal,
         ),
-        modifier = modifier.background(colors.surface, shape).padding(16.dp),
+        modifier = modifier.background(colors.surface, shape).padding(contentPadding),
         decorationBox = { inner ->
             Box(Modifier.fillMaxSize()) {
                 if (value.isEmpty()) {
@@ -262,7 +263,8 @@ fun StartScreen(
                 value = viewModel.topic,
                 onValueChange = viewModel::updateTopic,
                 placeholder = "Was möchtest du hören?",
-                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp, max = 288.dp).padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp, max = 144.dp).padding(horizontal = 20.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
             )
             Row(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),

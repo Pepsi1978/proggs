@@ -13,10 +13,10 @@ android {
         applicationId = "de.frank.perfectmoment"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.1.24"
+        versionCode = 26
+        versionName = "0.1.25"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"20.07.2026, 01:21 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"20.07.2026, 01:29 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
