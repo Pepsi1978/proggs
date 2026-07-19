@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -49,13 +50,18 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
@@ -87,6 +93,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.text.TextStyle
@@ -231,7 +238,12 @@ fun StartScreen(
                             .pmClickable { viewModel.selectHook(hook) }
                             .padding(16.dp),
                     ) {
-                        Text(hook.emoji, fontSize = 32.sp, modifier = Modifier.scale(if (selected) 1.08f else 1f))
+                        Icon(
+                            hookDisplayIcon(hook),
+                            null,
+                            tint = if (selected) colors.goldHi else colors.goldDim,
+                            modifier = Modifier.size(32.dp).scale(if (selected) 1.08f else 1f),
+                        )
                         Text(
                             hook.text,
                             color = if (selected) colors.text1 else colors.text2,
@@ -973,7 +985,7 @@ fun HooksScreen(viewModel: AppViewModel) {
                     Modifier.fillMaxWidth().height(68.dp).pmClickable { viewModel.openHookEditor(hook) },
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(hook.emoji, fontSize = 26.sp)
+                        Icon(hookDisplayIcon(hook), null, tint = colors.goldDim, modifier = Modifier.size(26.dp))
                         Text(
                             hook.text,
                             color = colors.text1,
@@ -1011,6 +1023,15 @@ fun HooksScreen(viewModel: AppViewModel) {
             }
         }
     }
+}
+
+private fun hookDisplayIcon(hook: HookEntity): ImageVector = when (hook.sortIndex % 6) {
+    0 -> Icons.Outlined.SelfImprovement
+    1 -> Icons.Outlined.FavoriteBorder
+    2 -> Icons.Outlined.Psychology
+    3 -> Icons.Outlined.Explore
+    4 -> Icons.Outlined.Lightbulb
+    else -> Icons.Outlined.AutoAwesome
 }
 
 @Composable
