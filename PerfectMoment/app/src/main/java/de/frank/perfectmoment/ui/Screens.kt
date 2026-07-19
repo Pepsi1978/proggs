@@ -849,21 +849,12 @@ fun SettingsScreen(
                 }
             }
             SettingsSection("Über") {
-                SettingRow("Version", viewModel.versionName)
-                SettingRow("Stand", viewModel.versionStand)
                 SettingRow(
-                    "Paketname",
-                    viewModel.packageName,
+                    label = "Version ${viewModel.versionName}",
+                    value = viewModel.versionStand,
+                    divider = false,
                     valueFontFamily = JetBrainsMono,
                     valueFontSize = 12,
-                )
-                SettingRow(
-                    "Rohdaten",
-                    "Anzeigen",
-                    onClick = { viewModel.navigate(AppScreen.RAW_DATA) },
-                    divider = false,
-                    showChevron = true,
-                    valueColor = colors.gold,
                 )
             }
         }
