@@ -862,12 +862,12 @@ fun SettingsScreen(
                 }
             }
             SettingsSection("Über") {
-                SettingRow(
-                    label = "Version ${viewModel.versionName}",
-                    value = viewModel.versionStand,
-                    divider = false,
-                    valueFontFamily = JetBrainsMono,
-                    valueFontSize = 12,
+                Text(
+                    "V.${viewModel.versionName} (${viewModel.versionStand})",
+                    color = colors.text2,
+                    fontFamily = JetBrainsMono,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                 )
             }
         }
