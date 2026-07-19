@@ -63,6 +63,8 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -800,6 +802,7 @@ fun SettingsScreen(
                     onClick = { viewModel.navigate(AppScreen.VOICE) },
                     showChevron = true,
                 )
+                VoiceSpeedSlider(viewModel.ttsSpeechRate, viewModel::updateTtsSpeechRate)
                 SecureKeyRow(
                     label = "Google-API",
                     supporting = "TTS · Chirp 3 HD",
@@ -859,6 +862,34 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
+    val colors = LocalPmColors.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Geschwindigkeit", color = colors.text1, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(
+                String.format(Locale.GERMAN, "%.1f×", value),
+                color = colors.gold,
+                fontFamily = JetBrainsMono,
+                fontSize = 14.sp,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0.7f..1.3f,
+            steps = 5,
+            colors = SliderDefaults.colors(
+                thumbColor = colors.goldHi,
+                activeTrackColor = colors.gold,
+                inactiveTrackColor = colors.surface2,
+            ),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
     }
 }
 

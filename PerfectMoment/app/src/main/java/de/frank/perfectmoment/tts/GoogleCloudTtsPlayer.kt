@@ -44,6 +44,7 @@ class GoogleCloudTtsPlayer(context: Context) {
         text: String,
         apiKey: String,
         voiceName: String,
+        speechRate: Float = 1f,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -74,7 +75,12 @@ class GoogleCloudTtsPlayer(context: Context) {
                             .put("languageCode", "de-DE")
                             .put("name", voiceName),
                     )
-                    put("audioConfig", JSONObject().put("audioEncoding", "MP3"))
+                    put(
+                        "audioConfig",
+                        JSONObject()
+                            .put("audioEncoding", "MP3")
+                            .put("speakingRate", speechRate.coerceIn(0.7f, 1.3f).toDouble()),
+                    )
                 }
                 val url = GOOGLE_TTS_URL.toHttpUrl().newBuilder()
                     .addQueryParameter("key", apiKey)

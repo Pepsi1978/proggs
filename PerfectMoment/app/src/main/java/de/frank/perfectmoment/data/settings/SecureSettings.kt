@@ -65,6 +65,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GOOGLE_TTS_VOICE, Defaults.GOOGLE_TTS_VOICE)
         set(value) = writeString(Keys.GOOGLE_TTS_VOICE, value)
 
+    var ttsSpeechRate: Float
+        get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
+            ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE
+        set(value) {
+            preferences?.edit()?.putFloat(
+                Keys.TTS_SPEECH_RATE,
+                value.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE),
+            )?.apply()
+        }
+
     var favoriteTtsVoices: Set<String>
         get() = preferences?.getStringSet(Keys.FAVORITE_TTS_VOICES, emptySet())?.toSet().orEmpty()
         set(value) {
@@ -159,6 +169,7 @@ class SecureSettings(context: Context) : Closeable {
         const val EDGE_TTS_VOICE = "edge_tts_voice"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
+        const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
         const val PAUSE_REP_SECONDS = "pause_rep_seconds"
@@ -179,6 +190,7 @@ class SecureSettings(context: Context) : Closeable {
         const val EDGE_TTS_VOICE = "de-DE-SeraphinaMultilingualNeural"
         const val GOOGLE_TTS_API_KEY = ""
         const val GOOGLE_TTS_VOICE = "de-DE-Chirp3-HD-Kore"
+        const val TTS_SPEECH_RATE = 1f
         const val GROQ_API_KEY = ""
         const val PAUSE_REP_SECONDS = 8
         const val PAUSE_NEXT_SECONDS = 12
@@ -196,5 +208,7 @@ class SecureSettings(context: Context) : Closeable {
         const val STORE_NAME = "perfect_moment_secure_prefs"
         val ALLOWED_DURATIONS = setOf(10, 20, 30, 45, 60, 90, 120)
         val ALLOWED_THEMES = setOf("light", "dark", "system")
+        const val MIN_TTS_SPEECH_RATE = 0.7f
+        const val MAX_TTS_SPEECH_RATE = 1.3f
     }
 }

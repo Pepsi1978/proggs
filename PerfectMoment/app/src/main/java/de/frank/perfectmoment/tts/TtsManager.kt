@@ -74,12 +74,15 @@ class TtsManager(context: Context) {
                 TtsCatalog.DEFAULT_PROVIDER.id,
             ) ?: TtsCatalog.DEFAULT_PROVIDER.id
         activeProviderId = providerId
+        val speechRate = preferences?.getFloat(PREF_SPEECH_RATE, DEFAULT_SPEECH_RATE)
+            ?.coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE) ?: DEFAULT_SPEECH_RATE
         when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
                 text = spokenText,
                 voice = voiceOverride
                     ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
+                speechRate = speechRate,
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -92,6 +95,7 @@ class TtsManager(context: Context) {
                         PREF_GOOGLE_VOICE,
                         TtsCatalog.DEFAULT_GOOGLE_VOICE,
                     ) ?: TtsCatalog.DEFAULT_GOOGLE_VOICE,
+                speechRate = speechRate,
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -188,6 +192,10 @@ class TtsManager(context: Context) {
         const val PREF_EDGE_VOICE = "edge_tts_voice"
         const val PREF_GOOGLE_API_KEY = "google_tts_api_key"
         const val PREF_GOOGLE_VOICE = "google_tts_voice"
+        const val PREF_SPEECH_RATE = "tts_speech_rate"
+        const val DEFAULT_SPEECH_RATE = 1f
+        const val MIN_SPEECH_RATE = 0.7f
+        const val MAX_SPEECH_RATE = 1.3f
         val logger = Logger.getLogger(TtsManager::class.java.name)
     }
 }

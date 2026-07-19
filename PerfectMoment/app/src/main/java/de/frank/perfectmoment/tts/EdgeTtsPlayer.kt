@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Logger
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,6 +47,7 @@ class EdgeTtsPlayer(context: Context) {
     fun speak(
         text: String,
         voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
+        speechRate: Float = 1f,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -111,11 +113,14 @@ class EdgeTtsPlayer(context: Context) {
                     "Path:speech.config\r\n\r\n" +
                     """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
                 val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                val ratePercent = ((speechRate.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
+                val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
                 val ssml = "X-RequestId:$requestId\r\n" +
                     "Content-Type:application/ssml+xml\r\n" +
                     "Path:ssml\r\n\r\n" +
                     "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
-                    "xml:lang='de-DE'><voice name='$voice'>$escaped</voice></speak>"
+                    "xml:lang='de-DE'><voice name='$voice'><prosody rate='$formattedRate'>" +
+                    "$escaped</prosody></voice></speak>"
                 if (!webSocket.send(config) || !webSocket.send(ssml)) {
                     finishError(
                         requestGeneration,

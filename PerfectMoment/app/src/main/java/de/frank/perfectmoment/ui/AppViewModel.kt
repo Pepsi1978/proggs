@@ -33,6 +33,7 @@ import de.frank.perfectmoment.tts.TtsVoice
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
@@ -127,6 +128,8 @@ class AppViewModel(
     var edgeVoice by mutableStateOf(settings.edgeTtsVoice)
         private set
     var googleVoice by mutableStateOf(settings.googleTtsVoice)
+        private set
+    var ttsSpeechRate by mutableStateOf(settings.ttsSpeechRate)
         private set
     var googleApiKey by mutableStateOf(settings.googleTtsApiKey)
         private set
@@ -356,6 +359,11 @@ class AppViewModel(
     fun updateGroqApiKey(value: String) {
         groqApiKey = value
         settings.groqApiKey = value
+    }
+
+    fun updateTtsSpeechRate(value: Float) {
+        ttsSpeechRate = (value * 10f).roundToInt().div(10f).coerceIn(0.7f, 1.3f)
+        settings.ttsSpeechRate = ttsSpeechRate
     }
 
     fun toggleGoogleKeyVisibility() {
