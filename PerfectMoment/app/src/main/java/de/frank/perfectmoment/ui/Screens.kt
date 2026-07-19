@@ -800,7 +800,7 @@ fun SettingsScreen(
                     showChevron = true,
                 )
                 SecureKeyRow(
-                    label = "Google-API-Schlüssel",
+                    label = "Google-API",
                     supporting = "TTS · Chirp 3 HD",
                     value = viewModel.googleApiKey,
                     visible = viewModel.showGoogleKey,
@@ -808,7 +808,7 @@ fun SettingsScreen(
                     onToggleVisibility = viewModel::toggleGoogleKeyVisibility,
                 )
                 SecureKeyRow(
-                    label = "Groq-API-Schlüssel",
+                    label = "Groq-API",
                     supporting = "Whisper Large v3 · Spracheingabe",
                     value = viewModel.groqApiKey,
                     visible = viewModel.showGroqKey,
