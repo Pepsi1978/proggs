@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.3 - 19.07.2026, 14:30 Uhr
+Stand: v1.13.4 - 19.07.2026, 14:34 Uhr
 
 ## Funktionen
 
@@ -19,7 +19,7 @@ Stand: v1.13.3 - 19.07.2026, 14:30 Uhr
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
 - Versionszeile im Format `V.<Version> (<Datum>, <Uhrzeit>)` als erste Sidebar-Zeile direkt über Session.
-  `V.` ist orange, fett und unterstrichen; Nummer und Timestamp verwenden die normale Theme-Textfarbe.
+  Die vollständige Zeile verwendet einheitlich die normale Theme-Textfarbe ohne Hervorhebung.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.

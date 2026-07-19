@@ -281,9 +281,7 @@ function SidebarHeader(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   return (
     <box>
-      <text fg={theme().text}>
-        <span style={{ fg: theme().accent, bold: true, underline: true }}>V.</span>{`${packageMetadata.version} (${packageMetadata.updated})`}
-      </text>
+      <text fg={theme().text}>{`V.${packageMetadata.version} (${packageMetadata.updated})`}</text>
       <SidebarClock api={props.api} />
     </box>
   )

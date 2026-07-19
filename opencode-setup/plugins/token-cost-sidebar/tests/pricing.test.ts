@@ -536,12 +536,12 @@ describe("models.dev pricing", () => {
     expect(source).toContain("QUOTA_POLL_MS = 60_000")
   })
 
-  test("shows the accented V dot and normal version directly above Session", async () => {
+  test("shows the complete version in normal text directly above Session", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain("sidebar_title()")
     expect(source).toContain("return <SidebarHeader api={api} />")
-    expect(source).toContain('<span style={{ fg: theme().accent, bold: true, underline: true }}>V.</span>{`${packageMetadata.version} (${packageMetadata.updated})`}')
-    expect(source).toMatch(/<box>\s*<text fg=\{theme\(\)\.text\}>[\s\S]*?>V\.<\/span>\{`\$\{packageMetadata\.version\}/)
+    expect(source).toContain('<text fg={theme().text}>{`V.${packageMetadata.version} (${packageMetadata.updated})`}</text>')
+    expect(source).not.toMatch(/<span[^>]*>V\.<\/span>/)
     expect(source).not.toContain("V. ${packageMetadata.version}")
     expect(source).not.toContain('label="Version"')
     expect(source).toContain("const scheduleNextMinute = () =>")
