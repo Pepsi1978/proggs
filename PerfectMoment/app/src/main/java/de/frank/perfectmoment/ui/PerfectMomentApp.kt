@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -136,11 +135,7 @@ private fun AppBottomSheet(
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))
-                .clickable(
-                    interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = viewModel::closeSheet,
-                ),
+                .pmClickable(onClick = viewModel::closeSheet),
         )
         AnimatedVisibility(
             visibleState = visibility,
@@ -260,7 +255,7 @@ private fun OptionSheet(title: String, rows: List<OptionRow>) {
     SectionLabel(title, Modifier.padding(start = 8.dp, bottom = 12.dp))
     rows.forEachIndexed { index, row ->
         Row(
-            Modifier.fillMaxWidth().height(58.dp).clickable(onClick = row.onClick).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(58.dp).pmClickable(onClick = row.onClick).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(row.label, color = colors.text1, fontFamily = Inter, fontSize = 16.sp, modifier = Modifier.weight(1f))
@@ -303,7 +298,7 @@ private fun IntroAnswerSheet(
 private fun MessageOverlay(message: String, onDismiss: () -> Unit) {
     val colors = LocalPmColors.current
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable(onClick = onDismiss),
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).pmClickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         PmCard(Modifier.fillMaxWidth().padding(horizontal = 36.dp)) {

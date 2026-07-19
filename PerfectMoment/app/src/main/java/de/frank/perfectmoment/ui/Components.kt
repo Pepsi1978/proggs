@@ -8,10 +8,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,29 @@ import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
 import de.frank.perfectmoment.ui.theme.PmTextStyles
 
+fun Modifier.pmClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier = clickable(
+    interactionSource = null,
+    indication = null,
+    enabled = enabled,
+    onClick = onClick,
+)
+
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.pmCombinedClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+): Modifier = combinedClickable(
+    interactionSource = null,
+    indication = null,
+    enabled = enabled,
+    onClick = onClick,
+    onLongClick = onLongClick,
+)
+
 @Composable
 fun ScreenHeader(
     title: String,
@@ -74,7 +98,7 @@ fun ScreenHeader(
                 imageVector = Icons.Outlined.ArrowBack,
                 contentDescription = "Zurück",
                 tint = colors.text1,
-                modifier = Modifier.size(24.dp).clickable(onClick = onBack),
+                modifier = Modifier.size(24.dp).pmClickable(onClick = onBack),
             )
             Spacer(Modifier.width(12.dp))
         }
@@ -150,7 +174,7 @@ fun PrimaryButton(
                 spotColor = colors.gold.copy(alpha = 0.3f),
             )
             .background(background, RoundedCornerShape((height / 2).dp))
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (enabled) Modifier.pmClickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -174,7 +198,7 @@ fun OutlineButton(
     Box(
         modifier = modifier.fillMaxWidth().height(height.dp)
             .border(1.dp, color, RoundedCornerShape((height / 2).dp))
-            .clickable(onClick = onClick),
+            .pmClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = color, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
@@ -190,7 +214,7 @@ fun ParameterCard(
     compact: Boolean = false,
 ) {
     val colors = LocalPmColors.current
-    PmCard(modifier.clickable(onClick = onClick)) {
+    PmCard(modifier.pmClickable(onClick = onClick)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = if (compact) 10.dp else 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -222,7 +246,7 @@ fun PmSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Box(
         modifier = Modifier.size(width = 52.dp, height = 32.dp)
             .background(if (checked) colors.gold else colors.surface2, CircleShape)
-            .clickable { onCheckedChange(!checked) },
+            .pmClickable { onCheckedChange(!checked) },
     ) {
         Box(
             modifier = Modifier.padding(3.dp).size(26.dp)
@@ -250,7 +274,7 @@ fun SettingRow(
     Box {
         Row(
             modifier = Modifier.fillMaxWidth().height(if (supporting == null) 60.dp else 68.dp)
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .then(if (onClick != null) Modifier.pmClickable(onClick = onClick) else Modifier)
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -304,7 +328,7 @@ fun Segment(
         modifier = modifier.height(44.dp).background(
             if (selected) colors.gold else colors.surface2,
             RoundedCornerShape(22.dp),
-        ).clickable(onClick = onClick),
+        ).pmClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -369,7 +393,7 @@ fun RecorderControl(state: RecordingState, message: String?, onClick: () -> Unit
             }
             Box(
                 Modifier.size(72.dp).background(recorderBrush, CircleShape)
-                    .clickable(enabled = state != RecordingState.PROCESSING, onClick = onClick),
+                    .pmClickable(enabled = state != RecordingState.PROCESSING, onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
                 when (state) {
@@ -464,7 +488,7 @@ fun SpeakerButton(speaking: Boolean, enabled: Boolean, onClick: () -> Unit) {
         label = "Lautsprecherpuls",
     )
     Box(
-        Modifier.size(50.dp).clickable(enabled = enabled, onClick = onClick),
+        Modifier.size(50.dp).pmClickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (speaking) {

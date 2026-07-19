@@ -13,12 +13,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -192,13 +189,13 @@ fun StartScreen(
                         Icons.Outlined.LightMode,
                         "Helles Erscheinungsbild",
                         tint = if (theme == "light") colors.gold else colors.goldDim,
-                        modifier = Modifier.size(20.dp).clickable { viewModel.setTheme("light") },
+                        modifier = Modifier.size(20.dp).pmClickable { viewModel.setTheme("light") },
                     )
                     Icon(
                         Icons.Outlined.DarkMode,
                         "Dunkles Erscheinungsbild",
                         tint = if (theme == "dark") colors.gold else colors.goldDim,
-                        modifier = Modifier.size(20.dp).clickable { viewModel.setTheme("dark") },
+                        modifier = Modifier.size(20.dp).pmClickable { viewModel.setTheme("dark") },
                     )
                 }
                 Spacer(Modifier.width(18.dp))
@@ -206,14 +203,14 @@ fun StartScreen(
                     Icons.Outlined.History,
                     "Verlauf",
                     tint = colors.goldDim,
-                    modifier = Modifier.size(24.dp).clickable { viewModel.navigate(AppScreen.HISTORY) },
+                    modifier = Modifier.size(24.dp).pmClickable { viewModel.navigate(AppScreen.HISTORY) },
                 )
                 Spacer(Modifier.width(18.dp))
                 Icon(
                     Icons.Outlined.Settings,
                     "Einstellungen",
                     tint = colors.goldDim,
-                    modifier = Modifier.size(24.dp).clickable { viewModel.navigate(AppScreen.SETTINGS) },
+                    modifier = Modifier.size(24.dp).pmClickable { viewModel.navigate(AppScreen.SETTINGS) },
                 )
             }
             LazyRow(
@@ -228,7 +225,7 @@ fun StartScreen(
                         Modifier.size(168.dp)
                             .background(if (selected) colors.surface2 else colors.surface, shape)
                             .border(1.5.dp, if (selected) colors.gold else Color.Transparent, shape)
-                            .clickable { viewModel.selectHook(hook) }
+                            .pmClickable { viewModel.selectHook(hook) }
                             .padding(16.dp),
                     ) {
                         Text(hook.emoji, fontSize = 32.sp, modifier = Modifier.scale(if (selected) 1.08f else 1f))
@@ -290,7 +287,7 @@ fun StartScreen(
                     fontFamily = Inter,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(bottom = 10.dp).then(
-                        if (!connected) Modifier.clickable { viewModel.navigate(AppScreen.CHAT_GPT) } else Modifier,
+                        if (!connected) Modifier.pmClickable { viewModel.navigate(AppScreen.CHAT_GPT) } else Modifier,
                     ),
                 )
             }
@@ -363,7 +360,7 @@ fun SessionScreen(
         viewModel.sessionError?.let { SessionErrorOverlay(viewModel, it) }
         if (state?.phase == Phase.ENDED) {
             Box(
-                Modifier.fillMaxSize().background(colors.background).clickable { viewModel.finishEndedSession() },
+                Modifier.fillMaxSize().background(colors.background).pmClickable { viewModel.finishEndedSession() },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
@@ -384,10 +381,7 @@ fun SessionScreen(
         if (dimAlpha > 0.001f && state?.phase != Phase.ENDED) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = dimAlpha))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
+                    .pmClickable {
                         dimmed = false
                         interactionTick++
                     },
@@ -496,7 +490,7 @@ private fun SessionQuestions(
         if (state != null) {
             Box(
                 Modifier.size(48.dp).align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-24).dp)
-                    .border(1.dp, colors.goldDim, CircleShape).clickable(onClick = onStop),
+                    .border(1.dp, colors.goldDim, CircleShape).pmClickable(onClick = onStop),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Stop, "Sitzung stoppen", tint = colors.text2, modifier = Modifier.size(16.dp))
@@ -569,14 +563,9 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
 @Composable
 private fun SessionIntroOverlay(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
-    val interactionSource = remember { MutableInteractionSource() }
     Column(
         Modifier.fillMaxSize().background(colors.background)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = { viewModel.beginAiSession("") },
-            )
+            .pmClickable { viewModel.beginAiSession("") }
             .padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
     ) {
@@ -677,7 +666,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
 @Composable
 private fun HistoryRow(session: SessionEntity, onClick: () -> Unit) {
     val colors = LocalPmColors.current
-    PmCard(Modifier.fillMaxWidth().height(92.dp).clickable(onClick = onClick)) {
+    PmCard(Modifier.fillMaxWidth().height(92.dp).pmClickable(onClick = onClick)) {
         Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
@@ -724,7 +713,7 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)
                         ParameterCard("Dauer", "${viewModel.durationMinutes} min", { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
                     }
-                    PmCard(Modifier.fillMaxWidth().padding(top = 12.dp).clickable { viewModel.toggleRandomReplay() }) {
+                    PmCard(Modifier.fillMaxWidth().padding(top = 12.dp).pmClickable { viewModel.toggleRandomReplay() }) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Zufällige Reihenfolge", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
@@ -907,7 +896,7 @@ private fun SecureKeyRow(
                 if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                 if (visible) "Schlüssel verbergen" else "Schlüssel anzeigen",
                 tint = colors.goldDim,
-                modifier = Modifier.padding(start = 10.dp).size(20.dp).clickable(onClick = onToggleVisibility),
+                modifier = Modifier.padding(start = 10.dp).size(20.dp).pmClickable(onClick = onToggleVisibility),
             )
         }
         if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface2).align(Alignment.BottomCenter))
@@ -926,7 +915,7 @@ fun HooksScreen(viewModel: AppViewModel) {
                     Icons.Outlined.Add,
                     "Aufhänger hinzufügen",
                     tint = colors.gold,
-                    modifier = Modifier.size(26.dp).clickable { viewModel.openHookEditor(null) },
+                    modifier = Modifier.size(26.dp).pmClickable { viewModel.openHookEditor(null) },
                 )
             },
             titleSize = 24,
@@ -938,7 +927,7 @@ fun HooksScreen(viewModel: AppViewModel) {
             itemsIndexed(viewModel.hooks, key = { _, hook -> hook.id }) { index, hook ->
                 var dragY by remember(hook.id) { mutableStateOf(0f) }
                 PmCard(
-                    Modifier.fillMaxWidth().height(68.dp).clickable { viewModel.openHookEditor(hook) },
+                    Modifier.fillMaxWidth().height(68.dp).pmClickable { viewModel.openHookEditor(hook) },
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(hook.emoji, fontSize = 26.sp)
@@ -1023,7 +1012,7 @@ fun SkillsScreen(viewModel: AppViewModel) {
                     Icons.Outlined.Add,
                     "Skill hinzufügen",
                     tint = colors.gold,
-                    modifier = Modifier.size(26.dp).clickable { viewModel.openSkillEditor(null) },
+                    modifier = Modifier.size(26.dp).pmClickable { viewModel.openSkillEditor(null) },
                 )
             },
         )
@@ -1032,7 +1021,7 @@ fun SkillsScreen(viewModel: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(viewModel.skills, key = SkillEntity::id) { skill ->
-                PmCard(Modifier.fillMaxWidth().clickable { viewModel.selectSkill(skill) }) {
+                PmCard(Modifier.fillMaxWidth().pmClickable { viewModel.selectSkill(skill) }) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(skill.name, color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 16.sp)
@@ -1050,7 +1039,7 @@ fun SkillsScreen(viewModel: AppViewModel) {
                             Icons.Outlined.Edit,
                             "Skill bearbeiten",
                             tint = colors.text3,
-                            modifier = Modifier.size(20.dp).clickable { viewModel.openSkillEditor(skill) },
+                            modifier = Modifier.size(20.dp).pmClickable { viewModel.openSkillEditor(skill) },
                         )
                         Spacer(Modifier.width(14.dp))
                         CheckMark(viewModel.activeSkill?.id == skill.id)
@@ -1089,7 +1078,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
             PmCard(Modifier.fillMaxWidth()) {
                 Column {
                     Row(
-                        Modifier.fillMaxWidth().clickable { viewModel.toggleOperatingMode() }.padding(16.dp),
+                        Modifier.fillMaxWidth().pmClickable { viewModel.toggleOperatingMode() }.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
@@ -1133,7 +1122,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
         if (noKey) {
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)
-                    .background(colors.surface2, RoundedCornerShape(16.dp)).clickable { viewModel.navigate(AppScreen.SETTINGS) }
+                    .background(colors.surface2, RoundedCornerShape(16.dp)).pmClickable { viewModel.navigate(AppScreen.SETTINGS) }
                     .padding(16.dp),
             ) {
                 Text(
@@ -1154,7 +1143,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
                 val selected = if (isGoogle) viewModel.googleVoice == voice.id else viewModel.edgeVoice == voice.id
                 val starred = voice.name in setOf("Seraphina", "Florian") || voice.id in viewModel.favoriteVoiceIds
                 PmCard(
-                    Modifier.fillMaxWidth().height(60.dp).combinedClickable(
+                    Modifier.fillMaxWidth().height(60.dp).pmCombinedClickable(
                         enabled = !noKey,
                         onClick = { viewModel.selectVoice(voice) },
                         onLongClick = { viewModel.toggleFavoriteVoice(voice) },
@@ -1181,7 +1170,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
                             Modifier.size(36.dp).background(
                                 if (viewModel.playingVoiceId == voice.id) colors.amber else colors.surface2,
                                 CircleShape,
-                            ).clickable(enabled = !noKey) { viewModel.previewVoice(voice) },
+                            ).pmClickable(enabled = !noKey) { viewModel.previewVoice(voice) },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -1192,7 +1181,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
                             )
                         }
                         Spacer(Modifier.width(10.dp))
-                        Box(Modifier.clickable(enabled = !noKey) { viewModel.selectVoice(voice) }) { CheckMark(selected) }
+                        Box(Modifier.pmClickable(enabled = !noKey) { viewModel.selectVoice(voice) }) { CheckMark(selected) }
                     }
                 }
             }
@@ -1356,7 +1345,7 @@ private fun WaitingSpinner() {
 private fun SmallPill(text: String, onClick: () -> Unit) {
     val colors = LocalPmColors.current
     Box(
-        Modifier.height(48.dp).background(colors.surface2, RoundedCornerShape(24.dp)).clickable(onClick = onClick).padding(horizontal = 20.dp),
+        Modifier.height(48.dp).background(colors.surface2, RoundedCornerShape(24.dp)).pmClickable(onClick = onClick).padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp) }
 }
