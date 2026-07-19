@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.5 - 19.07.2026, 14:36 Uhr
+Stand: v1.13.6 - 19.07.2026, 14:49 Uhr
 
 ## Funktionen
 
@@ -25,8 +25,9 @@ Stand: v1.13.5 - 19.07.2026, 14:36 Uhr
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
   Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`, `Reasoning Token` sowie
-  den Einzelposten `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und abschließend
-  den vollständig fett hervorgehobenen `Gesamtkosten` einschließlich Dollarwert.
+  einer Leerzeile vor den Einzelposten `Cachekosten`, `Inputkosten`, `Outputkosten`,
+  `Reasoningkosten` und abschließend den vollständig fett hervorgehobenen `Gesamtkosten`
+  einschließlich Dollarwert.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
@@ -119,7 +120,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
-9. Unter `Context` stehen ohne Zwischenzeilen `Inputpreis`, `Outputpreis`, `Cachepreis`, die vier Tokenzeilen, `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und ganz unten fett `Gesamtkosten`.
+9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier Tokenzeilen; eine Leerzeile trennt `Reasoning Token` von `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und der ganz unten fett dargestellten Zeile `Gesamtkosten`.
 
 Tests im Repo:
 

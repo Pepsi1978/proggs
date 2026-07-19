@@ -470,7 +470,7 @@ describe("models.dev pricing", () => {
     expect(latestServiceTier(records, "openai", "missing")).toBeUndefined()
   })
 
-  test("renders only the requested Context rows without gaps", async () => {
+  test("renders the requested Context rows with a gap before costs", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const contextBlock = source.match(/>Context<\/span><\/text>([\s\S]*?)<ThemeSelect/)?.[1] ?? ""
     const labels = [...contextBlock.matchAll(/label="([^"]+)"/g)].map((match) => match[1])
@@ -498,6 +498,8 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Reasoning Token"')
     expect(source.indexOf('label="Input Token"')).toBeLessThan(source.indexOf('label="Output Token"'))
     expect(source.indexOf('label="Output Token"')).toBeLessThan(source.indexOf('label="Reasoning Token"'))
+    expect(contextBlock.indexOf('label="Reasoning Token"')).toBeLessThan(contextBlock.indexOf('<box height={1} />'))
+    expect(contextBlock.indexOf('<box height={1} />')).toBeLessThan(contextBlock.indexOf('label="Cachekosten"'))
     expect(source).not.toContain('label="Reasoning Token" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
     expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Cache Token"'))

@@ -781,6 +781,7 @@ function View(props: {
         />
         <Row api={props.api} label="Output Token" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning Token" value={formatInt(totals().reasoning)} />
+        <box height={1} />
         <Row api={props.api} label="Cachekosten" value={componentCost("cacheUsd")} />
         <Row api={props.api} label="Inputkosten" value={componentCost("inputUsd")} />
         <Row api={props.api} label="Outputkosten" value={componentCost("outputUsd")} />
