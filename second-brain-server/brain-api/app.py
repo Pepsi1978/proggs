@@ -509,6 +509,7 @@ VERSION = "1.35.0 (14.07.2026, 11:58 Uhr)"  # 1.35.0 (Cortex-Debugging-Loop 1): 
 VERSION = "1.36.0 (14.07.2026, 13:55 Uhr)"  # 1.36.0 (Cortex-Debugging-Loop 2): (a) /entry/categories/add nutzt optimistische Nebenlaeufigkeit (require_current_keys + Retry, max 4) statt @serialized_entry_write — das (bei grossen Docs minutenlange) Kategorie-Embedding von set_entry_categories lief bisher INNERHALB des globalen Schreib-Locks (reentranter RLock), wodurch ein paralleler /store-Mirror in den 15s-Lock-Timeout (503) lief; jetzt bleibt das Embedding IMMER ausserhalb des Locks, ein frischer category_key-Vergleich unter dem Guard sichert die Read-Modify-Write-Atomarität (kein verlorenes paralleles Hinzufuegen wie 1.32.1); (b) /by-parent bekommt denselben Ladefenster-/ready-Schutz wie /by-category (1.34.2): waehrend Neuaufbau/Reindex nie eine partielle Liste als vollstaendig, ready:False + sofort leer bei not-ready, Antwortfeld ready aus Vor-/Nachpruefung; (c) /entities/docs Self-Healing faengt except Exception statt nur den Guard-Timeout (HTTPException) — ein Qdrant-/Netzfehler bei set_payload kippt den bereits erfolgreichen Lese-Endpoint nicht mehr in 500 (best-effort wie purge); (d) /trash/restore zieht VOR delete+upsert unter dem Guard einen Payload+Vektor-Snapshot und rollt bei Upsert-Fehler exakt zurueck (Muster wie /store) — ein evtl. aktiver Eintrag gleicher doc_id (per /store neu angelegt) geht bei Teilfehler nicht mehr unwiederbringlich verloren; (e) /category-counts zaehlt kategorielose Nutz-Eintraege in total_distinct mit (any([]) war faelschlich False); (f) /entities/upsert: das EINE kurze Entity-Profil-Embedding laeuft bewusst weiter unter dem Lock (RMW auf aliases erschwert das Rausziehen, geringe Lock-Haltezeit) — Kommentar ergaenzt. Alt: 1.35.0.
 VERSION = "1.37.0 (14.07.2026, 14:19 Uhr)"  # 1.37.0 (Cortex-Debugging-Loop 3): (a) FIX Regression aus 1.36.0 — require_current_keys war ueber Query(include_in_schema=False) DOCH extern bindbar (POST /entry/categories?require_current_keys=… → _CategoryConflict wird dort nicht gefangen → HTTP 500). Jetzt in eine interne Funktion _set_entry_categories_impl ausgelagert (KEINE FastAPI-Signatur → echt intern, nicht bindbar); der HTTP-Endpoint ist ein duenner Wrapper; add_entry_category ruft die Impl direkt. (b) WIEDERAUFERSTEHUNGS-Schutz: set_entry_categories/set_entry_category/update_entry prueften unter dem Guard nicht neu, ob der Eintrag noch existiert — ein nebenlaeufiger DELETE zwischen dem Lesen und dem Guard liess den Eintrag durch den deterministischen Upsert (Embedding-vor-Guard, 1.35.0) wiederauferstehen (User-Delete still rueckgaengig). Jetzt Existenz-Neupruefung unter dem Guard → 409 (bzw. _CategoryConflict→Retry→404 im add-Pfad) statt Neu-Anlage. (c) _entity_get Alias-Pfad: ungeschuetzter [0]-Zugriff auf einen frischen Scroll → IndexError/500 bei nebenlaeufigem /entities-DELETE zwischen den beiden Scrolls; jetzt if hit-Guard + weitersuchen. Alt: 1.36.0.
 VERSION = "1.38.0 (14.07.2026, 15:00 Uhr)"  # 1.38.0 (Cortex-Debugging-Loop 5): (a) LOST-UPDATE-Schutz ueber optimistische Nebenlaeufigkeit (updated_at-Versionstoken + begrenzter Retry, max 4) auf allen drei Schreibwegen, die zu ERHALTENDE Felder AUSSERHALB des Guards lesen+embedden — set_entry_category (POST /entry/category), _set_entry_categories_impl (POST /entry/categories + /entry/categories/add) und update_entry (PUT /entry). Bisher pruefte der Guard nur die Existenz (Loop-3) bzw. im add-Pfad die Kategorie-Schluessel, NICHT ob sich der Dokumentinhalt (full_text/Titel/erhaltene Kategorien) waehrend des minutenlangen Embeddings aenderte: ersetzte ein paralleler /store oder PUT denselben Eintrag (Text V1→V2), schrieb die danach committende Operation den stalen full_text (V1) mit deterministischen Chunk-IDs zurueck → frischer Text V2 still weg. Neue interne _WriteConflict-Exception (analog _CategoryConflict, nie ungefangen — Loop-3-Lehre): unter dem Guard wird updated_at frisch nachgelesen; weicht es vom base_updated_at des ausserhalb gelesenen Standes ab → _WriteConflict → frisch neu lesen+embedden+neu versuchen (Embedding bleibt IMMER ausserhalb des Guards); nach den Retries HTTP 409. Impl bekommt Parameter expected_updated_at (Default None → kein Check → nie ungefangen); beide Wrapper kapseln den Aufruf in die Retry-Schleife; require_current_keys bleibt zusaetzlich (schuetzt gegen verlorene parallele Kategorie-ADDITION, gerade im Sub-Sekunden-Fenster gleicher updated_at). update_entry: Versionscheck VOR dem Upsert (direkt nach source_snapshot-Existenz) → Konflikt ohne Teil-Schreibvorgang zum Retry; Rollback-Logik unveraendert. Normalfall (kein Parallelschreiber) exakt unveraendert: updated_at gleich → genau ein Durchlauf. (b) /search: Datumsfeld GESETZT (date/date_from/date_to nicht-leer), aber _date_bounds leitet KEINE Grenze ab (kalendarisch unmoegliches Datum wie 2026-02-30 → (None,None)) → jetzt konsistent zu /by-date sofort leer (count 0) statt ungefiltert zu suchen und die Treffer faelschlich als datumsgefiltert auszugeben; Teil-Gueltigkeit (eine Seite gueltig) ergibt >=1 Grenze und ist NICHT betroffen. Alt: 1.37.0.
+VERSION = "1.38.1 (19.07.2026, 13:06 Uhr)"  # 1.38.1: Kategorie-Listen koennen mit include_text=false nur Metadaten plus kurzen Vorschautext liefern; dadurch entfallen bis zu N serielle Volltext-Nachladeaufrufe fuer das Cortex-Dashboard. Standard bleibt include_text=true und damit abwaertskompatibel. Alt: 1.38.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1529,12 +1530,12 @@ def _load_full_texts(items: list[dict]) -> list[dict]:
 
 
 @app.get("/by-category", dependencies=[Depends(require_auth)])
-def by_category(category: str, user_id: str = "frank", limit: int = 0) -> dict:
+def by_category(category: str, user_id: str = "frank", limit: int = 0,
+                include_text: bool = True) -> dict:
     """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1.
-    limit>0 (NEU, rein additiv): liefert nur die N AKTUELLSTEN Eintraege — und laedt dann auch nur
-    deren Volltexte (das Dashboard holte bisher ALLE Volltexte einer Kategorie und warf alles bis
-    auf 40 weg). limit=0 = alle (bisheriges Verhalten unveraendert). 'total' nennt immer die
-    Gesamtzahl der Eintraege der Kategorie."""
+    limit>0 liefert nur die N AKTUELLSTEN Eintraege. include_text=false liefert fuer schnelle
+    Listenansichten nur Metadaten plus Vorschautext und spart das serielle Volltext-Nachladen;
+    Default true behaelt das bisherige 1:1-Verhalten. 'total' nennt immer die Gesamtzahl."""
     _require_store()
     cat = canonical_category(category)
     ready_before = True
@@ -1555,9 +1556,9 @@ def by_category(category: str, user_id: str = "frank", limit: int = 0) -> dict:
     ])
     # Bei limit>0: erst NUR Metadaten laden (kein full_text), sortieren, deckeln — Volltexte danach
     # gezielt fuer die Top-N. Bei limit=0 wie bisher alles inkl. Volltext in einem Scroll.
-    meta_only = limit > 0
+    meta_only = limit > 0 or not include_text
     payload_fields = ["doc_id", "title", "category", "categories", "source", "layer",
-                      "created_at", "updated_at"] if meta_only else True
+                      "created_at", "updated_at"] + (["chunk_text"] if not include_text else []) if meta_only else True
     points = _scroll(flt, with_payload=payload_fields)
     seen: dict[str, dict] = {}
     for p in points:
@@ -1565,6 +1566,7 @@ def by_category(category: str, user_id: str = "frank", limit: int = 0) -> dict:
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                           "text": "" if meta_only else p.payload.get("full_text", ""),
+                          "match": (p.payload.get("chunk_text") or "") if not include_text else None,
                           "category": canonical_category(p.payload.get("category")) or None,
                           "categories": cats_from_payload(p.payload),
                           "source": p.payload.get("source") or None,
@@ -1574,8 +1576,10 @@ def by_category(category: str, user_id: str = "frank", limit: int = 0) -> dict:
                           "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     total = len(items)
-    if meta_only:
-        items = _load_full_texts(items[:limit])
+    if limit > 0:
+        items = items[:limit]
+    if include_text and meta_only:
+        items = _load_full_texts(items)
     ready_after = True
     try:
         ready_after = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")
@@ -1630,10 +1634,12 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
-def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
+def by_parent(parent: str, user_id: str = "frank", limit: int = 0,
+              include_text: bool = True) -> dict:
     """Alle Eintraege UNTER einer Hauptkategorie (= 'Haupt' und alle 'Haupt/Unter'), via parent-Feld
     (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1.
-    limit>0 (NEU, rein additiv): nur die N aktuellsten Eintraege + nur deren Volltexte (s. by_category)."""
+    limit>0 liefert nur die N aktuellsten Eintraege. include_text=false liefert Metadaten plus
+    Vorschautext ohne N serielle Volltextabrufe (s. by_category)."""
     _require_store()
     par = canonical_category(parent)
     # Ladefenster-/ready-Schutz wie by_category (1.34.2): waehrend eines Neuaufbaus/Reindex nie eine
@@ -1645,9 +1651,9 @@ def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
         pass
     if not ready_before:
         return {"ok": True, "ready": False, "parent": par, "count": 0, "total": 0, "items": []}
-    meta_only = limit > 0
+    meta_only = limit > 0 or not include_text
     payload_fields = ["doc_id", "title", "category", "categories", "parent", "source", "layer",
-                      "created_at", "updated_at"] if meta_only else True
+                      "created_at", "updated_at"] + (["chunk_text"] if not include_text else []) if meta_only else True
     points = _scroll(Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         # NUR Chunk 0 je Dokument (full_text 1:1 in jedem Chunk) -> OOM-Schutz bei grossen Docs (s. by_category).
@@ -1660,7 +1666,8 @@ def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "text": "" if meta_only else p.payload.get("full_text", ""),
+                          "text": "" if meta_only else p.payload.get("full_text", ""),
+                          "match": (p.payload.get("chunk_text") or "") if not include_text else None,
                           "category": canonical_category(p.payload.get("category")) or None,
                           "categories": cats_from_payload(p.payload),
                           "parent": canonical_category(p.payload.get("parent")) or None,
@@ -1670,8 +1677,10 @@ def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
                           "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
     total = len(items)
-    if meta_only:
-        items = _load_full_texts(items[:limit])
+    if limit > 0:
+        items = items[:limit]
+    if include_text and meta_only:
+        items = _load_full_texts(items)
     ready_after = True
     try:
         ready_after = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")

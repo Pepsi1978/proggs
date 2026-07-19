@@ -1827,8 +1827,8 @@ button{font-family:inherit;cursor:pointer}
   });
 
   /* ── API mit Demo-Fallback ────────────────────────────────────────────── */
-  async function api(path){
-    const r = await fetch(path,{headers:{Accept:"application/json"}});
+  async function api(path, options={}){
+    const r = await fetch(path,{...options,headers:{Accept:"application/json",...(options.headers||{})}});
     if(!r.ok) throw new Error(r.status);
     return r.json();
   }
@@ -2027,6 +2027,8 @@ button{font-family:inherit;cursor:pointer}
   /* ── Gehirn: Suche / Chips / Liste ────────────────────────────────────── */
   let curCategory = null, curQuery = "", searchTimer = null;
   let curParent = null;          // Gehirn-Drilldown: alle Einträge UNTER diesem Kategoriepfad (inkl. Unterpfade)
+  let entriesRequestId = 0, entriesAbortController = null;
+  const entriesCache = new Map(); // Pro Kategorie/Suche getrennt; alte Antworten koennen nie fremde Pfade fuellen.
   let brainCatRoot = { children:new Map() };
   let LAST_OVERVIEW = null;       // letzter Overview-Datensatz (für Re-Render beim Auf-/Zuklappen)
   let overviewSortMode = "alpha"; // Standard: alphabetisch, damit die Übersicht sofort planbar gelesen wird.
@@ -2143,33 +2145,36 @@ button{font-family:inherit;cursor:pointer}
       return `<span class="tag" style="color:${c};background:${c}22">${escapeHtml(cap(name))}</span>`;
     }).join("");
   }
-  async function loadEntries(){
-    const box = document.getElementById("results");
-    box.innerHTML = `<div class="state-msg"><div class="spin"></div>lädt…</div>`;
-    let data;
-    try{
-      if(curParent){
-        data = await api("/api/by-parent?parent="+encodeURIComponent(curParent)+"&limit=500");
-      }else{
-        const params = new URLSearchParams();
-        if(curCategory) params.set("category",curCategory);
-        else if(curQuery) params.set("q",curQuery);
-        params.set("limit","50");
-        data = await api("/api/entries?"+params.toString());
-      }
-    }catch(e){
-      try{ data = DEMO.entries(curQuery,curCategory); }
-      catch(_){ box.innerHTML = `<div class="state-msg">Fehler beim Laden.</div>`; return; }
+  function entriesCacheKey(state){
+    return JSON.stringify([state.parent||"",state.category||"",state.query||""]);
+  }
+  function itemInCategoryTree(it, path){
+    const prefix = path + "/";
+    return entryCats(it).some(cat=>cat===path || cat.startsWith(prefix));
+  }
+  function cachedEntriesFor(state){
+    const exact = entriesCache.get(entriesCacheKey(state));
+    if(exact || !state.parent) return exact;
+    let ancestor = parentPathOf(state.parent);
+    while(ancestor){
+      const broader = entriesCache.get(entriesCacheKey({parent:ancestor,category:null,query:""}));
+      if(broader) return {...broader,parent:state.parent,items:(broader.items||[]).filter(it=>itemInCategoryTree(it,state.parent))};
+      ancestor = parentPathOf(ancestor);
     }
+    return null;
+  }
+  function invalidateEntriesCache(){ entriesCache.clear(); }
+  function renderEntries(data, state){
+    const box = document.getElementById("results");
     const items = data.items||[];
-    const isSearch = data.mode==="search" || (!!curQuery && !curCategory);
+    const isSearch = data.mode==="search" || (!!state.query && !state.category);
     if(!items.length){ box.innerHTML = `<div class="state-msg">Nichts gefunden.</div>`; return; }
-    box.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     items.forEach((it,i)=>{
       const color = colorFor(it.category);
       const snippet = escapeHtml((it.match || it.text || "").slice(0,260));
       const el = document.createElement("div");
-      el.className = "result"; el.style.animationDelay = (i*35)+"ms";
+      el.className = "result"; el.style.animationDelay = (Math.min(i,12)*35)+"ms";
       el.innerHTML = `
         <span class="result-accent" style="background:${color}"></span>
         <div class="result-body">
@@ -2184,8 +2189,41 @@ button{font-family:inherit;cursor:pointer}
           ${resultDateHtml(entryStamp(it))}
         </div>`;
       el.addEventListener("click",()=> openEntry(it));
-      box.appendChild(el);
+      fragment.appendChild(el);
     });
+    box.replaceChildren(fragment);
+  }
+  async function loadEntries(){
+    const box = document.getElementById("results");
+    const state = {parent:curParent, category:curCategory, query:curQuery};
+    const cacheKey = entriesCacheKey(state), cached = cachedEntriesFor(state);
+    const requestId = ++entriesRequestId;
+    if(cached) renderEntries(cached,state);
+    else box.innerHTML = `<div class="state-msg"><div class="spin"></div>lädt…</div>`;
+
+    if(entriesAbortController) entriesAbortController.abort();
+    const controller = new AbortController();
+    entriesAbortController = controller;
+    let data;
+    try{
+      if(state.parent){
+        data = await api("/api/by-parent?parent="+encodeURIComponent(state.parent)+"&limit=500",{signal:controller.signal});
+      }else{
+        const params = new URLSearchParams();
+        if(state.category) params.set("category",state.category);
+        else if(state.query) params.set("q",state.query);
+        params.set("limit","50");
+        data = await api("/api/entries?"+params.toString(),{signal:controller.signal});
+      }
+    }catch(e){
+      if(e.name==="AbortError" || requestId!==entriesRequestId) return;
+      if(cached) return; // Stale-while-Revalidate: letzter korrekter Stand bleibt sichtbar.
+      try{ data = DEMO.entries(state.query,state.category); }
+      catch(_){ box.innerHTML = `<div class="state-msg">Fehler beim Laden.</div>`; return; }
+    }
+    if(requestId!==entriesRequestId) return; // Zweite Schutzschicht gegen spaet eintreffende Altantworten.
+    entriesCache.set(cacheKey,data);
+    renderEntries(data,state);
   }
   function entryStamp(it){ return (it && (it.updated_at || it.created_at || it.when)) || ""; }
   function hasClock(s){ return /T\d{2}:\d{2}/.test(s||"") || /\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(s||""); }
@@ -2317,7 +2355,7 @@ button{font-family:inherit;cursor:pointer}
         document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(curEntry));
         setDrawerEditMode(false);
         flash("drawerStatus", r.title_changed ? "Gespeichert — Titel & Text aktualisiert" : "Gespeichert — alter Vektor durch neuen ersetzt");
-        loadEntries();   // Liste mit neuem Titel auffrischen
+        invalidateEntriesCache(); loadEntries();   // Liste mit neuem Titel auffrischen
       }
       else { flash("drawerStatus",(r&&r.detail)||"Speichern fehlgeschlagen",false); }
     }catch(e){ flash("drawerStatus","Speichern fehlgeschlagen",false); }
@@ -2465,7 +2503,7 @@ button{font-family:inherit;cursor:pointer}
         curEntry.category = curEntry.categories[0];   // primäre Kategorie mitführen
         renderDrawerCats();
         flash("drawerStatus","Kategorien gespeichert");
-        loadEntries(); loadOverview();   // Liste + Übersicht/Spektrum auffrischen
+        invalidateEntriesCache(); loadEntries(); loadOverview();   // Liste + Übersicht/Spektrum auffrischen
       }else{ flash("drawerStatus",(r&&r.detail)||"Speichern fehlgeschlagen",false); }
     }catch(e){ flash("drawerStatus","Speichern fehlgeschlagen",false); }
   }
@@ -2484,7 +2522,7 @@ button{font-family:inherit;cursor:pointer}
     const yes = document.getElementById("deleteYes"); yes.disabled = true;
     try{
       const r = await apiSend("/api/entry?doc_id="+encodeURIComponent(curEntry.doc_id),"DELETE",undefined,30000);
-      if(r && r.ok!==false){ closeDrawer(); loadEntries(); loadOverview(); }
+      if(r && r.ok!==false){ closeDrawer(); invalidateEntriesCache(); loadEntries(); loadOverview(); }
       else { flash("drawerStatus",(r&&r.detail)||"Löschen fehlgeschlagen",false); }
     }catch(e){ flash("drawerStatus","Löschen fehlgeschlagen",false); }
     finally{ yes.disabled = false; }
@@ -4416,7 +4454,7 @@ button{font-family:inherit;cursor:pointer}
       }
       if(status) status.textContent = `${saved} Cortex-Wissenseinträge gespeichert.`;
       loadOverview();
-      if(activeTab === "brain") loadEntries();
+      if(activeTab === "brain"){ invalidateEntriesCache(); loadEntries(); }
     }catch(e){
       if(status) status.textContent = `${saved}/${feats.length} gespeichert — Abbruch: ${e.message || e}`;
     }finally{

@@ -78,6 +78,7 @@ VERSION = "0.84.0 (14.07.2026, 13:14 Uhr)"  # 0.84.0 (Tiefen-Debugging 2026-07-1
 VERSION = "0.84.1 (14.07.2026, 13:30 Uhr)"  # 0.84.1 (Loop-1-Verifikation): buendelt zusaetzlich agent 0.82.0, mcp-server 1.4.3, brain-api-Datums-ValueError-Fix (ungueltige Kalenderdaten -> leer statt HTTP 500) und librarian 0.15.1 (Aktivitaets-Gate gegen Thread-Start-Fehler gehaertet). Alt: 0.84.0.
 VERSION = "0.85.0 (14.07.2026, 13:55 Uhr)"  # 0.85.0 (Loop 2): 2 Dashboard-Funde behoben + buendelt die Loop-2-Server-Fixes. (5) features.json-Persistenz ueber einen threading.RLock serialisiert, den ALLE Schreiber halten (der Seed-Merge-Write im synchronen GET-Pfad _read_features_data UND die PUT/DELETE-Mutationen) — der bisherige asyncio-Lock konnte den Threadpool-GET nicht schuetzen -> Lost Update moeglich, jetzt nicht mehr; reentrant, weil _read intern _write ruft. (6) /api/chat und /api/chat/stream pruefen jetzt die Content-Length ZUERST (_too_large, MAX_STORE_CHARS*4+65536) und antworten bei riesigen Bodies sofort mit 413, BEVOR request.json() alles in den RAM liest — konsistent zum OOM-Vorabcheck in /api/store; der praezise Zeichen-Check bleibt als zweite Sicherung. Buendelt librarian 0.16.0 (Loop-2: Phone-only-Guard komplett + Vorschlagsfilter, LLM-Titel raus aus dem Mutations-Lock, ehrliche Bilanz nach 2. Lauf, Veraltet-Budget nach Block-Check). Alt: 0.84.1.
 VERSION = "0.86.0 (14.07.2026, 15:10 Uhr)"  # 0.86.0 (Cortex-Debugging Loops 3-5, sichtbarer Gesamtzaehler): buendelt den FINALEN Deploy-Stand des mehrstufigen Debugging-Laufs (5 gruendliche Review-Loops, ~115 Code-/Logik-/Performance-Bugs ueber alle Schichten gefixt, Erfolgsbedingung 2 aufeinanderfolgende saubere Loops). Server: brain-api 1.38.0 (Delete-before-Embed beseitigt, OOM-Snapshot/text_len-Verifikation, Europe/Berlin-Datumsfilter + Datums-Validierung, NFC-doc_id, BM25-Generationszaehler, Entity-Serialisierung + MatchAny, /search categories, /by-category|/by-parent limit+total, Wiederauferstehungs-Schutz, LOST-UPDATE-Schutz per updated_at-Versionscheck+Retry auf allen Schreibwegen), agent 0.83.0 (Logbuch-Flush-Datenverlust + Session-Reuse-Race via mirror_id, Codex-Fallback, Retry-/Token-Refresh-Haertung u.v.m.), librarian 0.16.1 (Aktivitaets-Gate, Stempel nach Urteil, LLM raus aus Lock, ehrliche AUTO-Bilanz-Akkumulation, Phone-only-Guard), mcp-server 1.4.3 (Traceback-Durchreichung). Apps (separater Build/Install): CortexAndroid 0.8.7, EntropieReductor 0.28.18 (Sync-Datenverlust-Schutz Pull+Push, VPN-Reconnect-Zaehler, null-Flow, Cache-/ready-Behandlung). Alt: 0.85.0.
+VERSION = "0.86.1 (19.07.2026, 13:06 Uhr)"  # 0.86.1: Kategorie-Navigation zeigt keine veralteten Antworten mehr und aktualisiert besuchte Kategorien aus einem getrennten Sofort-Cache. Dashboard-Listen laden ueber brain-api 1.38.1 nur Metadaten plus Vorschau statt hunderter Volltexte; tiefe Pfade pruefen alle Kategorien eines Eintrags. Alt: 0.86.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -530,10 +531,10 @@ def vitals() -> dict:
 def entries(q: str = "", category: str = "", limit: int = 40) -> dict:
     limit = max(1, min(limit, 200))
     if category.strip():
-        # limit an brain-api durchreichen -> nur die N aktuellsten Eintraege inkl. Volltexte (frueher
-        # holte das Dashboard ALLE Volltexte und warf lokal alles ab; brain-api >=1.35.0). Das lokale
-        # [:limit] bleibt als abwaertskompatible Absicherung (altes brain ohne limit-Parameter).
-        d = _bget("/by-category", category=category.strip(), user_id=USER_ID, limit=limit)
+        # limit an brain-api durchreichen -> nur die N aktuellsten Metadaten samt Vorschautext,
+        # keine seriell nachgeladenen Volltexte. Das lokale [:limit] bleibt als Absicherung.
+        d = _bget("/by-category", category=category.strip(), user_id=USER_ID, limit=limit,
+                  include_text=False)
         return {"mode": "category", "items": d.get("items", [])[:limit], "total": d.get("total")}
     if q.strip():
         d = _bpost("/search", {"query": q.strip(), "user_id": USER_ID, "limit": limit})
@@ -555,12 +556,15 @@ def entries_by_parent(parent: str = "", limit: int = 200) -> dict:
         if "/" in p:
             # Tieferer Unterpfad wird hier per Prefix gefiltert -> BREIT lesen: ein brain-seitiges limit
             # (nur N aktuellste der Hauptebene) wuerde die passenden Unterpfad-Treffer wegschneiden.
-            d = _bget("/by-parent", parent=top, user_id=USER_ID)
+            d = _bget("/by-parent", parent=top, user_id=USER_ID, include_text=False)
             prefix = p + "/"
-            items = [it for it in d.get("items", []) if (it.get("category") or "") == p or (it.get("category") or "").startswith(prefix)]
+            items = [it for it in d.get("items", []) if any(
+                cat == p or cat.startswith(prefix)
+                for cat in (it.get("categories") or [it.get("category") or ""])
+            )]
             return {"mode": "parent", "parent": p, "items": items[:limit]}
-        # Hauptebene ohne Unterpfad-Filter -> limit direkt an brain-api durchreichen (nur N aktuellste inkl. Volltexte)
-        d = _bget("/by-parent", parent=top, user_id=USER_ID, limit=limit)
+        # Hauptebene ohne Unterpfad-Filter -> limit direkt an brain-api durchreichen (nur N Metadaten + Vorschau)
+        d = _bget("/by-parent", parent=top, user_id=USER_ID, limit=limit, include_text=False)
         return {"mode": "parent", "parent": p, "items": d.get("items", [])[:limit], "total": d.get("total")}
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "by-parent fehlgeschlagen", err=str(e), parent=p)
