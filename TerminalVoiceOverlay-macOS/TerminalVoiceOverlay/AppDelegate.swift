@@ -165,6 +165,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             geminiEnabled = false
         }
+        if GeminiClient.upgradeLegacyMinimalInterventionPrompts() {
+            GeminiPromptSync.tryUpload()
+        }
 
         // Share the audio/STT/Gemini stack with secondary surfaces
         // (e.g. PBPromptEditDialog's mic + G buttons). Single AudioRecorder

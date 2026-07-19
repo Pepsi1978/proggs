@@ -479,6 +479,9 @@ namespace TerminalVoiceOverlay.Views
             if (config.GeminiAvailable)
                 _geminiClient = new GeminiClient(config.GeminiApiKey!, config.GeminiModel, config.GeminiThinkingLevel);
 
+            if (GeminiClient.UpgradeLegacyMinimalInterventionPrompts())
+                GeminiPromptDriveSync.TryUpload();
+
             // Share the audio/STT/Gemini stack with secondary surfaces
             // (e.g. PromptEditDialog's mic + G buttons). Single AudioRecorder
             // instance is critical — only one process can hold the microphone.

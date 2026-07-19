@@ -42,7 +42,11 @@ final class GeminiClient {
         if FileManager.default.fileExists(atPath: profileURL.path),
            let text = try? String(contentsOf: profileURL, encoding: .utf8) {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty { return trimmed }
+            if !trimmed.isEmpty {
+                return isLegacyMinimalInterventionPrompt(profile: profile, text: trimmed)
+                    ? defaultCorrectionPrompt(profile: profile)
+                    : trimmed
+            }
         }
 
         // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
@@ -77,7 +81,7 @@ final class GeminiClient {
     /// sonst Legacy-Sammeldatei, sonst eingebauter Default. So sieht der Editor
     /// immer genau das, was Gemini fuer dieses Profil gerade bekommt.
     static func effectivePrompt(profile: Int) -> String {
-        loadCorrectionPrompt(profile: profile) ?? defaultCorrectionTemplate
+        loadCorrectionPrompt(profile: profile) ?? defaultCorrectionPrompt(profile: profile)
     }
 
     /// Speichert die bearbeitete Vorlage eines Profils in seine SK-Datei.
@@ -86,6 +90,18 @@ final class GeminiClient {
         let url = profilePromptURL(profile)
         try? FileManager.default.createDirectory(at: geminiPromptDir, withIntermediateDirectories: true)
         try? text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    static func upgradeLegacyMinimalInterventionPrompts() -> Bool {
+        var changed = false
+        for profile in 1...2 {
+            let url = profilePromptURL(profile)
+            guard let text = try? String(contentsOf: url, encoding: .utf8),
+                  isLegacyMinimalInterventionPrompt(profile: profile, text: text) else { continue }
+            saveProfilePrompt(profile: profile, text: defaultCorrectionPrompt(profile: profile))
+            changed = true
+        }
+        return changed
     }
 
     /// Dateiname der persoenlichen Vokabular-Liste. Liegt im selben SK-Ordner
@@ -168,7 +184,7 @@ final class GeminiClient {
         // sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-Sammeldatei,
         // dann eingebauter Default-Template.
         let template = Self.loadCorrectionPrompt(profile: profile)
-            ?? GeminiClient.defaultCorrectionTemplate
+            ?? GeminiClient.defaultCorrectionPrompt(profile: profile)
         // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
         // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
         let vocab = Self.loadPersonalVocabularyBlock()
@@ -216,6 +232,62 @@ final class GeminiClient {
 
     TEXT_START
     """
+
+    private static let standardImprovementPrompt = """
+    ROLLE:
+    Du bist ein professioneller deutscher Textredakteur für Spracheingaben.
+
+    AUFGABE:
+    Überarbeite das Whisper-Transkript zu einem klaren, flüssigen und präzisen Text. Die Bedeutung und alle Informationen des Originals müssen vollständig erhalten bleiben.
+
+    VERBINDLICHES VORGEHEN:
+    1) Entferne Fülllaute, Stotterer, Wortwiederholungen und abgebrochene Satzanfänge.
+    2) Korrigiere erkennbare Transkriptionsfehler, Grammatik, Zeichensetzung sowie Groß- und Kleinschreibung.
+    3) Formuliere umständliche oder unklare gesprochene Sätze als natürliches, gut verständliches Schriftdeutsch.
+    4) Ordne zusammengehörige Aussagen sinnvoll, ohne neue Inhalte, Vermutungen oder Anforderungen hinzuzufügen.
+    5) Bewahre Namen, Zahlen, Fachbegriffe und die Absicht des Sprechers exakt.
+
+    AUSGABE:
+    Nur den vollständig überarbeiteten Text ausgeben. Keine Erklärung, kein Präfix und keine Anführungszeichen.
+
+    TEXT_START
+    """
+
+    private static let programmingImprovementPrompt = """
+    ROLLE:
+    Du bist ein technischer Redakteur für deutschsprachige Programmier-Diktate und KI-Coding-Prompts.
+
+    AUFGABE:
+    Überarbeite das Whisper-Transkript zu einer klaren, präzisen und direkt ausführbaren Programmier-Anweisung. Die technische Absicht und alle genannten Details müssen vollständig erhalten bleiben.
+
+    VERBINDLICHES VORGEHEN:
+    1) Entferne Fülllaute, Stotterer, Wiederholungen und irrelevante Diktat-Artefakte.
+    2) Korrigiere phonetisch falsch erkannte englische Fachbegriffe, Tool-Namen, APIs, Dateinamen und CLI-Befehle anhand des Kontexts.
+    3) Korrigiere Grammatik und Zeichensetzung und strukturiere gesprochene Satzketten zu klaren Arbeitsaufträgen.
+    4) Formuliere Ziel, erwartetes Verhalten und erkennbare Akzeptanzkriterien präzise, ohne neue Anforderungen zu erfinden.
+    5) Bewahre Code, Pfade, Variablen, Versionsnummern und technische Eigennamen exakt und übersetze sie nicht.
+
+    AUSGABE:
+    Nur den vollständig überarbeiteten Text ausgeben. Keine Erklärung, kein Präfix und keine Anführungszeichen.
+
+    TEXT_START
+    """
+
+    private static func defaultCorrectionPrompt(profile: Int) -> String {
+        switch profile {
+        case 1: return standardImprovementPrompt
+        case 2: return programmingImprovementPrompt
+        default: return defaultCorrectionTemplate
+        }
+    }
+
+    private static func isLegacyMinimalInterventionPrompt(profile: Int, text: String) -> Bool {
+        guard profile == 1 || profile == 2,
+              text.contains("WICHTIGSTE REGEL — MINIMAL-INTERVENTION") else { return false }
+        return text.contains(profile == 1
+            ? "Spracherkennungs-Korrektor für alltägliche deutsche Diktate"
+            : "Spracherkennungs-Korrektor für Programmier-Diktate")
+    }
 
     /// Wandelt einen roh-transkribierten Whisper-Text in einen
     /// kopierfertigen Claude-Code-CLI-Prompt um. Wird vom PromptBoard-

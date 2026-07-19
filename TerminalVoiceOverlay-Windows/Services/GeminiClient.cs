@@ -59,6 +59,58 @@ AUSGABEFORMAT:
 TEXT_START
 ";
 
+        private const string StandardImprovementPrompt = @"ROLLE:
+Du bist ein professioneller deutscher Textredakteur für Spracheingaben.
+
+AUFGABE:
+Überarbeite das Whisper-Transkript zu einem klaren, flüssigen und präzisen Text. Die Bedeutung und alle Informationen des Originals müssen vollständig erhalten bleiben.
+
+VERBINDLICHES VORGEHEN:
+1) Entferne Fülllaute, Stotterer, Wortwiederholungen und abgebrochene Satzanfänge.
+2) Korrigiere erkennbare Transkriptionsfehler, Grammatik, Zeichensetzung sowie Groß- und Kleinschreibung.
+3) Formuliere umständliche oder unklare gesprochene Sätze als natürliches, gut verständliches Schriftdeutsch.
+4) Ordne zusammengehörige Aussagen sinnvoll, ohne neue Inhalte, Vermutungen oder Anforderungen hinzuzufügen.
+5) Bewahre Namen, Zahlen, Fachbegriffe und die Absicht des Sprechers exakt.
+
+AUSGABE:
+Nur den vollständig überarbeiteten Text ausgeben. Keine Erklärung, kein Präfix und keine Anführungszeichen.
+
+TEXT_START
+";
+
+        private const string ProgrammingImprovementPrompt = @"ROLLE:
+Du bist ein technischer Redakteur für deutschsprachige Programmier-Diktate und KI-Coding-Prompts.
+
+AUFGABE:
+Überarbeite das Whisper-Transkript zu einer klaren, präzisen und direkt ausführbaren Programmier-Anweisung. Die technische Absicht und alle genannten Details müssen vollständig erhalten bleiben.
+
+VERBINDLICHES VORGEHEN:
+1) Entferne Fülllaute, Stotterer, Wiederholungen und irrelevante Diktat-Artefakte.
+2) Korrigiere phonetisch falsch erkannte englische Fachbegriffe, Tool-Namen, APIs, Dateinamen und CLI-Befehle anhand des Kontexts.
+3) Korrigiere Grammatik und Zeichensetzung und strukturiere gesprochene Satzketten zu klaren Arbeitsaufträgen.
+4) Formuliere Ziel, erwartetes Verhalten und erkennbare Akzeptanzkriterien präzise, ohne neue Anforderungen zu erfinden.
+5) Bewahre Code, Pfade, Variablen, Versionsnummern und technische Eigennamen exakt und übersetze sie nicht.
+
+AUSGABE:
+Nur den vollständig überarbeiteten Text ausgeben. Keine Erklärung, kein Präfix und keine Anführungszeichen.
+
+TEXT_START
+";
+
+        private static string DefaultCorrectionPrompt(int profile) => profile switch
+        {
+            1 => StandardImprovementPrompt,
+            2 => ProgrammingImprovementPrompt,
+            _ => PromptTemplate,
+        };
+
+        private static bool IsLegacyMinimalInterventionPrompt(int profile, string text) =>
+            profile is 1 or 2 &&
+            text.Contains("WICHTIGSTE REGEL — MINIMAL-INTERVENTION", StringComparison.Ordinal) &&
+            text.Contains(profile == 1
+                ? "Spracherkennungs-Korrektor für alltägliche deutsche Diktate"
+                : "Spracherkennungs-Korrektor für Programmier-Diktate", StringComparison.Ordinal);
+
         // Prompt-Engineer-Template fuer den PromptBoard-Edit-Dialog (G-Button).
         // Wandelt einen roh-transkribierten Whisper-Text in einen kopierfertigen
         // Claude-Code-CLI-Prompt um. Bewusst getrennt vom Diktat-Cleanup-Template
@@ -168,7 +220,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
         /// immer genau das, was Gemini fuer dieses Profil gerade bekommt.
         /// </summary>
         public static string EffectivePrompt(int profile) =>
-            LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
+            LoadGeminiCorrectionPrompt(profile) ?? DefaultCorrectionPrompt(profile);
 
         /// <summary>
         /// Speichert die bearbeitete Vorlage eines Profils in seine SK-Datei.
@@ -179,6 +231,23 @@ Der zu verarbeitende Whisper-Text folgt nun:
             var path = ProfilePromptPath(profile);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, text ?? string.Empty);
+            _promptCache.TryRemove(path, out _);
+        }
+
+        public static bool UpgradeLegacyMinimalInterventionPrompts()
+        {
+            bool changed = false;
+            for (int profile = 1; profile <= 2; profile++)
+            {
+                var path = ProfilePromptPath(profile);
+                var text = ReadPromptFileCached(path);
+                if (string.IsNullOrWhiteSpace(text) || !IsLegacyMinimalInterventionPrompt(profile, text))
+                    continue;
+
+                SaveProfilePrompt(profile, DefaultCorrectionPrompt(profile));
+                changed = true;
+            }
+            return changed;
         }
 
         /// <summary>Der aktuell WIRKSAME Woerterbuch-Einleitungstext: editierbare Datei oder Default.</summary>
@@ -240,7 +309,10 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 // 1) Profil-spezifische Datei
                 var profilePath = Path.Combine(GeminiPromptDir, ProfilePromptFileName(profile));
                 var text = ReadPromptFileCached(profilePath);
-                if (!string.IsNullOrWhiteSpace(text)) return text;
+                if (!string.IsNullOrWhiteSpace(text))
+                    return IsLegacyMinimalInterventionPrompt(profile, text)
+                        ? DefaultCorrectionPrompt(profile)
+                        : text;
 
                 // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
                 var legacyPath = Path.Combine(GeminiPromptDir, "gemini-correction-prompt.txt");
@@ -317,7 +389,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
             // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank
             // kann sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-
             // Sammeldatei, dann eingebauter Template.
-            var template = LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
+            var template = LoadGeminiCorrectionPrompt(profile) ?? DefaultCorrectionPrompt(profile);
             // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
             // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
             var vocab = LoadPersonalVocabularyBlock();
