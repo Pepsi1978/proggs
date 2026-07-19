@@ -715,6 +715,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Whisper Undo
 
     private func whisperUndo() {
+        geminiEnabled = false
+        panel.setGeminiEnabled(false)
+        tvoDebug("[App] Gemini aus, Whisper-Rohmodus durch W-Button aktiv")
         guard let rawTranscript = lastRawTranscript else { return }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -1304,11 +1307,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func toggleGemini() {
         guard config.geminiAvailable else { return }
-        geminiEnabled.toggle()
-        panel.setGeminiEnabled(geminiEnabled)
-        // setGeminiEnabled triggert intern auch refreshProfileTiles —
-        // bei G=off werden alle Profile-Kästchen dunkel, bei G=on leuchtet
-        // das gespeicherte aktive Profil wieder goldgelb.
+        geminiEnabled = true
+        if activeProfile == 0 { activeProfile = 1 }
+        panel.setGeminiEnabled(true)
+        panel.setActiveProfile(activeProfile)
+        tvoDebug("[App] Gemini durch G-Button aktiv, Profil \(activeProfile)")
     }
 
     /// Wechselt das aktive Korrektur-Profil. Schaltet Gemini auto-ein wenn

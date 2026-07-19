@@ -2957,9 +2957,10 @@ namespace TerminalVoiceOverlay.Views
         // zweiter Klick beim if-Check oben rausfaellt.
         private bool _whisperUndoBusy;
 
-        /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
+        /// <summary>W button — select raw Whisper mode and restore the last raw text when available.</summary>
         private async void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
         {
+            SetGeminiMode(false, "W-Button");
             if (_whisperUndoBusy) return;
             if (lastRawTranscript == null) return;
 
@@ -2983,31 +2984,25 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>G button — toggle Gemini on/off.
-        /// G=on → GButton green, WButton dark, aktives Profil leuchtet goldgelb.
-        /// G=off → GButton dark, WButton green (Whisper-raw active), ALLE Profil-
-        /// Tiles werden dunkel weil ohne Gemini kein Profil wirken kann.</summary>
-        private void BtnGemini_Click(object sender, RoutedEventArgs e)
+        /// <summary>G button — select Gemini correction mode.</summary>
+        private async void BtnGemini_Click(object sender, RoutedEventArgs e)
         {
-            if (_geminiClient == null) return;
-            geminiEnabled = !geminiEnabled;
-
-            if (geminiEnabled)
+            if (await GetActiveGeminiClientAsync() == null)
             {
-                GButton.Background = ToggleOn;
-                WButton.Background = ToggleOff;
+                DiagLog.Warn("GeminiMode", "enable_rejected_no_key", ("source", "G-Button"));
+                return;
             }
-            else
-            {
-                GButton.Background = ToggleOff;
-                WButton.Background = ToggleOn;
-            }
+            SetGeminiMode(true, "G-Button");
+        }
 
-            // Profil-Tiles synchron zum G-Status updaten: bei G=off werden
-            // alle dunkel, bei G=on leuchtet das gespeicherte aktive Profil.
+        private void SetGeminiMode(bool enabled, string source)
+        {
+            geminiEnabled = enabled;
+            GButton.Background = enabled ? ToggleOn : ToggleOff;
+            WButton.Background = enabled ? ToggleOff : ToggleOn;
+            if (enabled && _activeProfile == 0) _activeProfile = 1;
             SetActiveProfile(_activeProfile);
-
-            Console.WriteLine($"Gemini {(geminiEnabled ? "ON" : "OFF")}");
+            DiagLog.Write("GeminiMode", enabled ? "enabled" : "disabled", ("source", source), ("profile", _activeProfile));
         }
 
         /// <summary>
@@ -3335,14 +3330,12 @@ namespace TerminalVoiceOverlay.Views
         /// bleibt unveraendert und kann spaeter per Linksklick auf irgendein
         /// Profil-Tile noch durchgeschickt werden.
         /// </summary>
-        private void SwitchProfileWithoutReCorrect(int newProfile)
+        private async void SwitchProfileWithoutReCorrect(int newProfile)
         {
             Interlocked.Increment(ref _reCorrectGeneration);
-            if (!geminiEnabled && _geminiClient != null)
+            if (!geminiEnabled && await GetActiveGeminiClientAsync() != null)
             {
-                geminiEnabled = true;
-                GButton.Background = ToggleOn;
-                WButton.Background = ToggleOff;
+                SetGeminiMode(true, "Profil-Rechtsklick");
                 Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Rechtsklick");
             }
             SetActiveProfile(newProfile);
@@ -3379,12 +3372,10 @@ namespace TerminalVoiceOverlay.Views
             // Korrektur zu wollen. Falls G gerade aus war (W-Modus, Default
             // seit Whisper-First), schalten wir Gemini automatisch ein.
             bool didAutoEnableGemini = false;
-            if (!geminiEnabled && _geminiClient != null)
+            if (!geminiEnabled && await GetActiveGeminiClientAsync() != null)
             {
-                geminiEnabled = true;
+                SetGeminiMode(true, "Profil-Klick");
                 didAutoEnableGemini = true;
-                GButton.Background = ToggleOn;
-                WButton.Background = ToggleOff;
                 Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Klick");
             }
 

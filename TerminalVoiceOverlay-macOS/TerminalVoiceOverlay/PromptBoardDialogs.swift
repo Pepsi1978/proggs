@@ -1019,8 +1019,13 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             PBDarkTheme.styleField(field)
         }
 
-        groqField.stringValue = settings.groqApiKey ?? ""
-        geminiField.stringValue = settings.geminiApiKey ?? ""
+        // The active voice clients may read their keys from the central SK
+        // .env while the PromptBoard DB is empty. Display those effective keys.
+        let fileConfig = try? Config.load()
+        groqField.stringValue = settings.groqApiKey.flatMap { $0.isEmpty ? nil : $0 }
+            ?? fileConfig?.groqApiKey ?? ""
+        geminiField.stringValue = settings.geminiApiKey.flatMap { $0.isEmpty ? nil : $0 }
+            ?? fileConfig?.geminiApiKey ?? ""
         separatorField.stringValue = settings.separatorTemplate
         clientIdField.stringValue = settings.googleClientId ?? ""
         clientSecretField.stringValue = settings.googleClientSecret ?? ""

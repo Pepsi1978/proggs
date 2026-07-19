@@ -30,9 +30,16 @@ public partial class SettingsDialog : Window
         _settingsSnapshot = current;
         _secretStore = PromptBoardHost.Get<PromptBoardSecretStore>();
 
-        // Non-secret settings stay in the SQLite DB (they sync via Drive backup).
-        GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
-        GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
+        // API keys may still live exclusively in the central SK .env. Show the
+        // effective values instead of making a working configuration look empty.
+        Config? fileConfig = null;
+        try { fileConfig = Config.Load(); } catch { }
+        GroqKeyBox.Text = string.IsNullOrWhiteSpace(current.GroqApiKey)
+            ? fileConfig?.GroqApiKey ?? string.Empty
+            : current.GroqApiKey;
+        GeminiKeyBox.Text = string.IsNullOrWhiteSpace(current.GeminiApiKey)
+            ? fileConfig?.GeminiApiKey ?? string.Empty
+            : current.GeminiApiKey;
         VocabularyBox.Text = LoadPersonalVocabulary();
         UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
         PreambleBox.Text = GeminiClient.EffectiveVocabularyPreamble();
