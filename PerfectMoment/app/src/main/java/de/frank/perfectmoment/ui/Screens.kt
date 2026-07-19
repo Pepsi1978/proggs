@@ -1227,8 +1227,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Skill bearbeiten", viewModel::back, titleSize = 24)
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             PmTextArea(
@@ -1244,7 +1243,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
                 onValueChange = viewModel::updateSkillText,
                 placeholder = "Vollständiger Skill-Text",
                 mono = true,
-                modifier = Modifier.fillMaxWidth().height(340.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f),
             )
             PmCard(Modifier.fillMaxWidth()) {
                 Column {
@@ -1264,7 +1263,8 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
                             onValueChange = viewModel::updateOperatingMode,
                             placeholder = "Betriebsmodus",
                             mono = true,
-                            modifier = Modifier.fillMaxWidth().height(180.dp).padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            modifier = Modifier.fillMaxWidth().height(180.dp)
+                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                             textSize = 12,
                         )
                     }
