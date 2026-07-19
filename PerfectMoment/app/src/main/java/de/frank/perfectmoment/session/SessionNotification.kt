@@ -34,8 +34,8 @@ object SessionNotification {
         runtime: SessionRuntime?,
         state: SessionState?,
     ): Notification {
-        val isPlaying = state?.speakerOn == true
-        val toggleIntent = serviceIntent(context, SessionForegroundService.ACTION_TOGGLE, 1)
+        val isPlaying = state?.speakerOn == true && state.paused != true
+        val toggleIntent = serviceIntent(context, SessionForegroundService.ACTION_PAUSE_RESUME, 1)
         val stopIntent = serviceIntent(context, SessionForegroundService.ACTION_STOP, 2)
         val openIntent = PendingIntent.getActivity(
             context,

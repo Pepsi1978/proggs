@@ -195,6 +195,10 @@ class SessionController(
         ContextCompat.startForegroundService(appContext, intent)
     }
 
+    fun togglePause() {
+        engine?.togglePause()
+    }
+
     internal fun setSpeakerOn(enabled: Boolean) {
         engine?.setSpeakerOn(enabled)
     }
@@ -302,5 +306,7 @@ class SessionController(
         }
 
         override fun stop() = manager.stop()
+        override fun pause(): Boolean = manager.pause()
+        override fun resume(): Boolean = manager.resume()
     }
 }

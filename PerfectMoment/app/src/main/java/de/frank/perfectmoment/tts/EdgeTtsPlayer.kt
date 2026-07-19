@@ -254,6 +254,28 @@ class EdgeTtsPlayer(context: Context) {
         cleanupCurrent()
     }
 
+    fun pause(): Boolean = synchronized(lock) {
+        val player = mediaPlayer ?: return@synchronized false
+        try {
+            if (player.isPlaying) player.pause()
+            true
+        } catch (error: Exception) {
+            logger.warning("Edge TTS pause failed: ${error.message}")
+            false
+        }
+    }
+
+    fun resume(): Boolean = synchronized(lock) {
+        val player = mediaPlayer ?: return@synchronized false
+        try {
+            player.start()
+            true
+        } catch (error: Exception) {
+            logger.warning("Edge TTS resume failed: ${error.message}")
+            false
+        }
+    }
+
     fun shutdown() {
         stop()
         scope.cancel()

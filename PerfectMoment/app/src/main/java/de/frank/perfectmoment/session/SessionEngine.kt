@@ -46,10 +46,15 @@ class SessionEngine(
     private var timerExpired = false
     private var timerJob: Job? = null
     private var cadenceJob: Job? = null
+    private var cadenceDeadlineMs = 0L
+    private var cadenceContinuation: (() -> Unit)? = null
     private var refillJob: Job? = null
     private var refillRetryJob: Job? = null
     private var offlineMonitorJob: Job? = null
     private var speechGeneration = 0L
+    private var pausedAudioAtPosition = false
+    private var pausedCadenceRemainingMs = 0L
+    private var pausedCadenceContinuation: (() -> Unit)? = null
     private var ttsErrorsForCurrentQuestion = 0
     private var offlineNoticePending = false
     private var offlineNoticeInProgress = false
@@ -82,7 +87,7 @@ class SessionEngine(
             val wasWaitingAtEnd = current.phase == Phase.WAITING_NETWORK &&
                 current.currentIndex >= current.questions.size
             _state.value = current.copy(questions = current.questions + questions)
-            if (wasWaitingAtEnd) {
+            if (wasWaitingAtEnd && !current.paused) {
                 if (current.speakerOn) {
                     afterOfflineNotice(::speakCurrentQuestion)
                 } else {
@@ -105,6 +110,12 @@ class SessionEngine(
         scope.launch { setSpeakerOnInternal(enabled) }
     }
 
+    fun togglePause() {
+        scope.launch {
+            if (_state.value.paused) resumeSessionInternal() else pauseSessionInternal()
+        }
+    }
+
     fun toggleSpeaker() {
         scope.launch { setSpeakerOnInternal(!_state.value.speakerOn) }
     }
@@ -112,6 +123,15 @@ class SessionEngine(
     private fun setSpeakerOnInternal(enabled: Boolean) {
         val current = _state.value
         if (current.phase == Phase.ENDED || current.speakerOn == enabled) return
+        if (current.paused) {
+            if (!enabled && pausedAudioAtPosition) {
+                speechGeneration++
+                pausedAudioAtPosition = false
+                ttsPort.stop()
+            }
+            _state.value = current.copy(speakerOn = enabled)
+            return
+        }
         if (!enabled && timerExpired) {
             endSession()
             return
@@ -120,6 +140,8 @@ class SessionEngine(
         speechGeneration++
         cadenceJob?.cancel()
         cadenceJob = null
+        cadenceDeadlineMs = 0L
+        cadenceContinuation = null
         if (!enabled) {
             offlineNoticeInProgress = false
             ttsPort.stop()
@@ -145,6 +167,82 @@ class SessionEngine(
         scope.launch { endSession() }
     }
 
+    private fun pauseSessionInternal() {
+        val current = _state.value
+        if (current.phase == Phase.ENDED || current.paused) return
+
+        val remaining = max(0L, deadlineMs - clock.nowMillis())
+        timerJob?.cancel()
+        timerJob = null
+        when (current.phase) {
+            Phase.SPEAKING -> {
+                pausedAudioAtPosition = ttsPort.pause()
+                if (!pausedAudioAtPosition) {
+                    speechGeneration++
+                    ttsPort.stop()
+                }
+            }
+            Phase.PAUSE_REP, Phase.PAUSE_NEXT -> {
+                pausedCadenceRemainingMs = max(0L, cadenceDeadlineMs - clock.nowMillis())
+                pausedCadenceContinuation = cadenceContinuation
+                cadenceJob?.cancel()
+                cadenceJob = null
+            }
+            Phase.WAITING_NETWORK -> if (offlineNoticeInProgress) {
+                pausedAudioAtPosition = ttsPort.pause()
+                if (!pausedAudioAtPosition) {
+                    speechGeneration++
+                    ttsPort.stop()
+                    offlineNoticeInProgress = false
+                    offlineNoticePending = true
+                }
+            }
+            else -> Unit
+        }
+        _state.value = current.copy(paused = true, remainingMs = remaining)
+    }
+
+    private fun resumeSessionInternal() {
+        val current = _state.value
+        if (!current.paused || current.phase == Phase.ENDED) return
+        if (current.remainingMs <= 0L) {
+            endSession()
+            return
+        }
+
+        timerExpired = false
+        deadlineMs = clock.nowMillis() + current.remainingMs
+        _state.value = current.copy(paused = false)
+        startTimer()
+        when (current.phase) {
+            Phase.SPEAKING -> {
+                if (!current.speakerOn) {
+                    _state.value = _state.value.copy(phase = Phase.IDLE_MUTED)
+                } else if (!pausedAudioAtPosition || !ttsPort.resume()) {
+                    pausedAudioAtPosition = false
+                    speakCurrentQuestion()
+                } else {
+                    pausedAudioAtPosition = false
+                }
+            }
+            Phase.PAUSE_REP, Phase.PAUSE_NEXT -> {
+                val next = pausedCadenceContinuation
+                val remaining = pausedCadenceRemainingMs
+                pausedCadenceContinuation = null
+                pausedCadenceRemainingMs = 0L
+                if (next != null) schedulePause(current.phase, remaining, next)
+            }
+            Phase.WAITING_NETWORK -> when {
+                pausedAudioAtPosition && ttsPort.resume() -> pausedAudioAtPosition = false
+                current.speakerOn && current.currentIndex < current.questions.size -> {
+                    pausedAudioAtPosition = false
+                    afterOfflineNotice(::speakCurrentQuestion)
+                }
+            }
+            else -> Unit
+        }
+    }
+
     override fun close() {
         ttsPort.stop()
         scope.cancel()
@@ -168,7 +266,7 @@ class SessionEngine(
 
     private fun speakCurrentQuestion() {
         val current = _state.value
-        if (!current.speakerOn || current.phase == Phase.ENDED) return
+        if (!current.speakerOn || current.paused || current.phase == Phase.ENDED) return
         if (timerExpired) {
             endSession()
             return
@@ -204,7 +302,7 @@ class SessionEngine(
     }
 
     private fun handleTtsComplete(token: Long) {
-        if (token != speechGeneration || _state.value.phase != Phase.SPEAKING) return
+        if (token != speechGeneration || _state.value.paused || _state.value.phase != Phase.SPEAKING) return
         markNetworkSuccess(NetworkOperation.TTS)
         if (timerExpired) {
             endSession()
@@ -225,7 +323,7 @@ class SessionEngine(
     }
 
     private fun handleTtsError(token: Long) {
-        if (token != speechGeneration || _state.value.phase != Phase.SPEAKING) return
+        if (token != speechGeneration || _state.value.paused || _state.value.phase != Phase.SPEAKING) return
         markNetworkFailure(NetworkOperation.TTS)
         if (timerExpired) {
             endSession()
@@ -273,9 +371,13 @@ class SessionEngine(
         }
         _state.value = _state.value.copy(phase = phase)
         cadenceJob?.cancel()
+        cadenceDeadlineMs = clock.nowMillis() + durationMs
+        cadenceContinuation = next
         cadenceJob = scope.launch {
             delay(durationMs)
             cadenceJob = null
+            cadenceDeadlineMs = 0L
+            cadenceContinuation = null
             if (_state.value.speakerOn && _state.value.phase != Phase.ENDED) next()
         }
     }
@@ -313,7 +415,8 @@ class SessionEngine(
                     refillInFlight = false,
                 )
                 markNetworkSuccess(NetworkOperation.REFILL)
-                if (_state.value.speakerOn && _state.value.currentIndex < _state.value.questions.size &&
+                if (_state.value.speakerOn && !_state.value.paused &&
+                    _state.value.currentIndex < _state.value.questions.size &&
                     _state.value.phase == Phase.WAITING_NETWORK && !offlineNoticeInProgress
                 ) {
                     afterOfflineNotice(::speakCurrentQuestion)
@@ -391,7 +494,7 @@ class SessionEngine(
                     offlineNoticeDelivered = true
                     offlineNoticePending = true
                 }
-                if (shouldAnnounce && _state.value.speakerOn &&
+                if (shouldAnnounce && _state.value.speakerOn && !_state.value.paused &&
                     _state.value.phase == Phase.WAITING_NETWORK &&
                     !offlineNoticeInProgress
                 ) {
@@ -452,11 +555,15 @@ class SessionEngine(
         _state.value = _state.value.copy(
             phase = Phase.ENDED,
             speakerOn = false,
+            paused = false,
             remainingMs = max(0L, _state.value.remainingMs),
             refillInFlight = false,
         )
         ttsPort.stop()
         cadenceJob?.cancel()
+        cadenceDeadlineMs = 0L
+        cadenceContinuation = null
+        pausedCadenceContinuation = null
         refillJob?.cancel()
         refillRetryJob?.cancel()
         offlineMonitorJob?.cancel()

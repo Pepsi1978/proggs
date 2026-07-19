@@ -46,8 +46,8 @@ class SessionForegroundService : Service() {
             .build()
         mediaSession = MediaSession(this, "PerfectMomentSession").apply {
             setCallback(object : MediaSession.Callback() {
-                override fun onPlay() = play()
-                override fun onPause() = pause()
+                override fun onPlay() = resumeSession()
+                override fun onPause() = pauseSession()
                 override fun onStop() = stopSession()
             })
             isActive = true
@@ -65,7 +65,8 @@ class SessionForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_TOGGLE -> if (controller.state.value?.speakerOn == true) pause() else play()
+            ACTION_TOGGLE -> if (controller.state.value?.speakerOn == true) muteSpeaker() else enableSpeaker()
+            ACTION_PAUSE_RESUME -> if (controller.state.value?.paused == true) resumeSession() else pauseSession()
             ACTION_STOP -> stopSession()
         }
         return START_NOT_STICKY
@@ -90,17 +91,33 @@ class SessionForegroundService : Service() {
         }
     }
 
-    private fun play() {
+    private fun enableSpeaker() {
         if (audioManager.requestAudioFocus(focusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             resumeAfterFocusGain = false
             controller.setSpeakerOn(true)
         }
     }
 
-    private fun pause() {
+    private fun muteSpeaker() {
         resumeAfterFocusGain = false
         controller.setSpeakerOn(false)
         audioManager.abandonAudioFocusRequest(focusRequest)
+    }
+
+    private fun pauseSession() {
+        if (controller.state.value?.paused != true) controller.togglePause()
+        audioManager.abandonAudioFocusRequest(focusRequest)
+    }
+
+    private fun resumeSession() {
+        if (audioManager.requestAudioFocus(focusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            resumeAfterFocusGain = false
+            if (controller.state.value?.paused == true) {
+                controller.togglePause()
+            } else {
+                controller.setSpeakerOn(true)
+            }
+        }
     }
 
     private fun stopSession() {
@@ -115,16 +132,17 @@ class SessionForegroundService : Service() {
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
             -> {
-                resumeAfterFocusGain = controller.state.value?.speakerOn == true
-                controller.setSpeakerOn(false)
+                resumeAfterFocusGain = controller.state.value?.speakerOn == true &&
+                    controller.state.value?.paused != true
+                if (resumeAfterFocusGain) controller.togglePause()
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
                 resumeAfterFocusGain = false
-                controller.setSpeakerOn(false)
+                if (controller.state.value?.paused != true) controller.togglePause()
             }
             AudioManager.AUDIOFOCUS_GAIN -> if (resumeAfterFocusGain) {
                 resumeAfterFocusGain = false
-                controller.setSpeakerOn(true)
+                resumeSession()
             }
         }
     }
@@ -132,6 +150,7 @@ class SessionForegroundService : Service() {
     private fun updateNotification(runtime: SessionRuntime?, state: SessionState?) {
         val playbackState = when {
             state?.phase == Phase.ENDED -> PlaybackState.STATE_STOPPED
+            state?.paused == true -> PlaybackState.STATE_PAUSED
             state?.speakerOn == true -> PlaybackState.STATE_PLAYING
             else -> PlaybackState.STATE_PAUSED
         }
@@ -165,6 +184,7 @@ class SessionForegroundService : Service() {
     companion object {
         const val ACTION_START = "de.frank.perfectmoment.session.START"
         const val ACTION_TOGGLE = "de.frank.perfectmoment.session.TOGGLE"
+        const val ACTION_PAUSE_RESUME = "de.frank.perfectmoment.session.PAUSE_RESUME"
         const val ACTION_STOP = "de.frank.perfectmoment.session.STOP"
         private const val MAX_SESSION_DURATION_MS = 120 * 60_000L
         private const val WAKE_LOCK_RESERVE_MS = 5 * 60_000L

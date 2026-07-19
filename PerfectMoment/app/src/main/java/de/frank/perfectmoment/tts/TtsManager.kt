@@ -13,6 +13,7 @@ class TtsManager(context: Context) {
     private val edgePlayer = EdgeTtsPlayer(appContext)
     private val googlePlayer = GoogleCloudTtsPlayer(appContext)
     private val generation = AtomicLong(0)
+    private var activeProviderId: String? = null
 
     private val preferences: SharedPreferences? by lazy {
         try {
@@ -68,12 +69,12 @@ class TtsManager(context: Context) {
             return
         }
 
-        when (
-            providerOverride?.id ?: preferences?.getString(
+        val providerId = providerOverride?.id ?: preferences?.getString(
                 PREF_TTS_PROVIDER,
                 TtsCatalog.DEFAULT_PROVIDER.id,
             ) ?: TtsCatalog.DEFAULT_PROVIDER.id
-        ) {
+        activeProviderId = providerId
+        when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
                 text = spokenText,
                 voice = voiceOverride
@@ -101,8 +102,21 @@ class TtsManager(context: Context) {
 
     fun stop() {
         generation.incrementAndGet()
+        activeProviderId = null
         edgePlayer.stop()
         googlePlayer.stop()
+    }
+
+    fun pause(): Boolean = when (activeProviderId) {
+        TtsProvider.EDGE.id -> edgePlayer.pause()
+        TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.pause()
+        else -> false
+    }
+
+    fun resume(): Boolean = when (activeProviderId) {
+        TtsProvider.EDGE.id -> edgePlayer.resume()
+        TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.resume()
+        else -> false
     }
 
     fun shutdown() {

@@ -465,6 +465,7 @@ class AppViewModel(
     }
 
     fun toggleSpeaker() = sessionController.toggleSpeaker()
+    fun togglePause() = sessionController.togglePause()
 
     fun stopSession() {
         cancelVoiceInput()

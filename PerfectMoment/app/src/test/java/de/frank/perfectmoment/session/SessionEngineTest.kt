@@ -266,6 +266,75 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `Pause friert Audio und Sitzungstimer bis Play ein`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(durationMs = 10_000, reps = 1),
+        )
+        fixture.startSpeaking()
+        advanceTimeBy(500)
+        runCurrent()
+
+        fixture.engine.togglePause()
+        runCurrent()
+        val pausedRemaining = fixture.engine.state.value.remainingMs
+        advanceTimeBy(5_000)
+        runCurrent()
+
+        assertTrue(fixture.engine.state.value.paused)
+        assertEquals(pausedRemaining, fixture.engine.state.value.remainingMs)
+        assertEquals(1, fixture.tts.pauseCount)
+
+        fixture.engine.togglePause()
+        runCurrent()
+        assertFalse(fixture.engine.state.value.paused)
+        assertEquals(1, fixture.tts.resumeCount)
+        assertEquals(listOf("Frage 1"), fixture.tts.spokenTexts)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Pause setzt Rest der Zwischenpause positionsgetreu fort`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1), question(2)),
+            config = config(pauseNextMs = 2_000, reps = 1),
+        )
+        fixture.startSpeaking()
+        fixture.tts.completeCurrent()
+        runCurrent()
+        advanceTimeBy(500)
+
+        fixture.engine.togglePause()
+        runCurrent()
+        advanceTimeBy(5_000)
+        fixture.engine.togglePause()
+        runCurrent()
+        advanceTimeBy(1_499)
+        runCurrent()
+        assertEquals(listOf("Frage 1"), fixture.tts.spokenTexts)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(listOf("Frage 1", "Frage 2"), fixture.tts.spokenTexts)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Pause vor Audiostart beginnt aktuelle Frage bei Play erneut`() = runTest {
+        val fixture = fixture(listOf(question(1)))
+        fixture.tts.canPause = false
+        fixture.startSpeaking()
+
+        fixture.engine.togglePause()
+        runCurrent()
+        fixture.engine.togglePause()
+        runCurrent()
+
+        assertEquals(listOf("Frage 1", "Frage 1"), fixture.tts.spokenTexts)
+        fixture.engine.close()
+    }
+
+    @Test
     fun `drei TTS Fehler ueberspringen die Frage`() = runTest {
         val fixture = fixture(
             questions = listOf(question(1), question(2)),
@@ -350,6 +419,9 @@ class SessionEngineTest {
         val offlineNoticeCount: Int
             get() = spokenTexts.count { it == SessionEngine.OFFLINE_MESSAGE }
         var stopCount = 0
+        var pauseCount = 0
+        var resumeCount = 0
+        var canPause = true
 
         override fun speak(text: String, listener: SessionTtsPort.Listener) {
             calls += Call(text, listener)
@@ -358,6 +430,16 @@ class SessionEngineTest {
 
         override fun stop() {
             stopCount++
+        }
+
+        override fun pause(): Boolean {
+            pauseCount++
+            return canPause
+        }
+
+        override fun resume(): Boolean {
+            resumeCount++
+            return canPause
         }
 
         fun completeCurrent() = calls.last().listener.onComplete()

@@ -21,6 +21,7 @@ data class SessionState(
     val currentRep: Int = 1,
     val phase: Phase = Phase.IDLE_MUTED,
     val speakerOn: Boolean = false,
+    val paused: Boolean = false,
     val remainingMs: Long,
     val refillInFlight: Boolean = false,
     val offline: Boolean = false,
@@ -57,6 +58,8 @@ data class SessionConfig(
 interface SessionTtsPort {
     fun speak(text: String, listener: Listener)
     fun stop()
+    fun pause(): Boolean = false
+    fun resume(): Boolean = false
 
     interface Listener {
         fun onStart() = Unit

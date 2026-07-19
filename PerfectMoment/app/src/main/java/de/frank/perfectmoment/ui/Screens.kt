@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.OpenInBrowser
+import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Stop
@@ -340,14 +342,24 @@ fun SessionScreen(
             runtime = runtime,
             state = state,
             onToggleSpeaker = viewModel::toggleSpeaker,
+            onTogglePause = viewModel::togglePause,
             onStop = viewModel::stopSession,
         )
         if (viewModel.introVisible) SessionIntroOverlay(viewModel)
         if (!viewModel.introVisible && state == null && viewModel.sessionError == null) {
             Box(Modifier.fillMaxSize()) {
-                ScreenHeader("", viewModel::stopSession)
+                PreparationBackButton(
+                    onClick = viewModel::stopSession,
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 8.dp),
+                )
+                Icon(
+                    Icons.Outlined.VolumeUp,
+                    "Lautsprecher",
+                    tint = LocalPmColors.current.gold,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 32.dp, top = 20.dp).size(26.dp),
+                )
                 Column(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     LoadingDots()
@@ -399,6 +411,7 @@ private fun SessionQuestions(
     runtime: SessionRuntime?,
     state: SessionState?,
     onToggleSpeaker: () -> Unit,
+    onTogglePause: () -> Unit,
     onStop: () -> Unit,
 ) {
     val colors = LocalPmColors.current
@@ -475,32 +488,65 @@ private fun SessionQuestions(
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                runtime?.topic.orEmpty(),
-                color = colors.text2,
-                fontFamily = Inter,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Spacer(Modifier.weight(1f))
             Box(
                 Modifier.size(8.dp).border(1.5.dp, colors.goldDim, CircleShape)
                     .then(if (state?.offline == true) Modifier else Modifier.background(colors.goldDim, CircleShape)),
             )
             Spacer(Modifier.width(4.dp))
-            SpeakerButton(state?.speakerOn == true, state != null, onToggleSpeaker)
+            SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
         }
         if (state != null) {
-            Box(
-                Modifier.size(48.dp).align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-24).dp)
-                    .border(1.dp, colors.goldDim, CircleShape).pmClickable(onClick = onStop),
-                contentAlignment = Alignment.Center,
+            Row(
+                Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-24).dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(Icons.Outlined.Stop, "Sitzung stoppen", tint = colors.text2, modifier = Modifier.size(16.dp))
+                Box(
+                    Modifier.size(48.dp).background(colors.surface2, RoundedCornerShape(14.dp))
+                        .pmClickable(onClick = onTogglePause),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (state.paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                        if (state.paused) "Sitzung fortsetzen" else "Sitzung pausieren",
+                        tint = colors.gold,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Box(
+                    Modifier.size(48.dp).border(1.dp, colors.goldDim, RoundedCornerShape(14.dp))
+                        .pmClickable(onClick = onStop),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Stop, "Sitzung stoppen", tint = colors.text2, modifier = Modifier.size(16.dp))
+                }
             }
         }
+        if (runtime?.generating == true && state != null) {
+            Text(
+                "Fragen werden vorbereitet…",
+                color = colors.text3,
+                fontFamily = Inter,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 166.dp),
+            )
+        }
         SessionProgress(state, runtime)
+    }
+}
+
+@Composable
+private fun PreparationBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = LocalPmColors.current
+    Row(
+        modifier = modifier.background(colors.surface2, RoundedCornerShape(14.dp))
+            .pmClickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = colors.gold, modifier = Modifier.size(18.dp))
+        Text("Zurück", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp)
     }
 }
 
@@ -510,7 +556,8 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
     val progress = remember { Animatable(0f) }
-    LaunchedEffect(state.phase, state.currentIndex, state.currentRep) {
+    LaunchedEffect(state.phase, state.currentIndex, state.currentRep, state.paused) {
+        if (state.paused) return@LaunchedEffect
         progress.snapTo(if (state.phase == Phase.SPEAKING) 1f else 0f)
         val pause = when (state.phase) {
             Phase.PAUSE_REP -> runtime.config.pauseRepMs
