@@ -70,6 +70,10 @@ pubkey > pub` erzeugen, in `/etc/wireguard/wg0.conf` einen `[Peer]` mit `PublicK
 `AllowedIPs = 10.8.0.X/32` ergänzen, `wg syncconf wg0 <(wg-quick strip wg0)` (oder `systemctl restart
 wg-quick@wg0`), Client-`.conf` (Address `10.8.0.X/24`, `Endpoint 168.231.83.205:51820`,
 `AllowedIPs = 10.8.0.0/24`, `PersistentKeepalive = 25`) erzeugen und ans Gerät geben.
+**Nie eine Client-Konfiguration auf ein zweites Gerät kopieren:** Jedes Gerät braucht zwingend ein
+eigenes Schlüsselpaar und eine eigene `10.8.0.X`-Adresse. Zwei Geräte mit derselben Peer-Identität
+lassen den Server-Endpoint fortlaufend umspringen; Antworten und SSE-Heartbeats landen dann am
+falschen Gerät.
 
 ## Observability
 brain-api schreibt strukturierte JSON-Lines nach `/app/logs/brain-api.jsonl` (Host: `./brain-logs/`,

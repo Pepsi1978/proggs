@@ -145,6 +145,13 @@ object ApiClient {
             .build()
     }
 
+    /** Verwirft Verbindungen, deren TCP-Route nach einem VPN-/Mobilfunkwechsel nicht mehr stimmt. */
+    fun resetAgentConnections(reason: String) {
+        authClient.connectionPool.evictAll()
+        CortexLog.info("HTTP", "resetConnections", "Agent-Verbindungspool geleert",
+            mapOf("reason" to reason))
+    }
+
     // Dashboard: kein Auth
     private val dashboardClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -295,9 +302,9 @@ object ApiClient {
     private val streamingClient: OkHttpClient by lazy {
         authClient.newBuilder()
             .callTimeout(600, TimeUnit.SECONDS)
-            // Der Server sendet alle 15 s einen Heartbeat. 60 s erkennt einen wirklich toten
-            // Kanal schnell, ohne lange Web-/Reasoning-Phasen als Fehler zu behandeln.
-            .readTimeout(60, TimeUnit.SECONDS)
+            // Zwei verpasste 15-s-Heartbeats plus 5 s Toleranz beweisen einen stummen Kanal.
+            // Idempotenz + frische Fallback-Verbindung retten die laufende Server-Antwort.
+            .readTimeout(35, TimeUnit.SECONDS)
             .build()
     }
 
@@ -319,6 +326,9 @@ object ApiClient {
             var heartbeatCount = 0
             CortexLog.info("ChatStream", "start", "SSE-Chat gestartet",
                 mapOf("request_id" to requestId.take(12)))
+            // Ein Chat darf nie einen Socket wiederverwenden, dessen Route vor dem letzten
+            // WireGuard-/Mobilfunkwechsel aufgebaut wurde.
+            resetAgentConnections("chat_stream_start")
             val body = chatRequestAdapter.toJson(request).toRequestBody(jsonMediaType)
             val httpReq = Request.Builder()
                 .url(SettingsStore.agentUrl() + "/chat/stream")

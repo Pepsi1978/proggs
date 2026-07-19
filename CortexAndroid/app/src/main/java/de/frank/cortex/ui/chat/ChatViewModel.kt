@@ -685,7 +685,9 @@ class ChatViewModel : ViewModel() {
                                 "same_request_id" to true))
                         ttsChannel = null
                         // Fallback-Client mit 600s-Dach: /chat sendet bis zur fertigen Antwort
-                        // KEIN Byte — lange Server-Laeufe sprengten das 120s-readTimeout.
+                        // KEIN Byte — lange Server-Laeufe sprengten das 120s-readTimeout. Vorher
+                        // tote VPN-/Mobilfunk-Routen aus dem gemeinsamen OkHttp-Pool entfernen.
+                        ApiClient.resetAgentConnections("chat_stream_fallback")
                         ApiClient.agentChatFallbackApi().chat(request)
                     } else {
                         throw e

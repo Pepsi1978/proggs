@@ -4,6 +4,7 @@ import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,11 +45,15 @@ object WireGuardManager {
     private val tunnelImpl = object : Tunnel {
         override fun getName(): String = "cortex"
         override fun onStateChange(newState: Tunnel.State) {
-            _state.value = when (newState) {
+            val mappedState = when (newState) {
                 Tunnel.State.UP -> TunnelState.CONNECTED
                 Tunnel.State.DOWN -> TunnelState.DISCONNECTED
                 Tunnel.State.TOGGLE -> _state.value
             }
+            if (mappedState != _state.value) {
+                ApiClient.resetAgentConnections("wireguard_${newState.name.lowercase()}")
+            }
+            _state.value = mappedState
             CortexLog.info("WireGuard", "onStateChange", "State: $newState")
         }
     }
