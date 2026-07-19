@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.1 - 19.07.2026, 14:22 Uhr
+Stand: v1.13.2 - 19.07.2026, 14:23 Uhr
 
 ## Funktionen
 
@@ -23,8 +23,9 @@ Stand: v1.13.1 - 19.07.2026, 14:22 Uhr
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
-  Tokenwerten `Cache` (`Read | Write`), `Input`, `Output`, `Reasoning`, den `Gesamtkosten` sowie den
-  Einzelposten in der Reihenfolge Cache, Input, Output und Reasoning.
+  Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`, `Reasoning Token` sowie
+  den Einzelposten `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und abschließend
+  den fett hervorgehobenen `Gesamtkosten`.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
@@ -117,7 +118,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
-9. Unter `Context` stehen ohne Zwischenzeilen `Inputpreis`, `Outputpreis`, `Cachepreis`, `Cache`, `Input`, `Output`, `Reasoning`, `Gesamtkosten` und danach die Kostenzeilen für Cache, Input, Output und Reasoning.
+9. Unter `Context` stehen ohne Zwischenzeilen `Inputpreis`, `Outputpreis`, `Cachepreis`, die vier Tokenzeilen, `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und ganz unten fett `Gesamtkosten`.
 
 Tests im Repo:
 

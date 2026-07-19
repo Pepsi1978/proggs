@@ -478,30 +478,30 @@ describe("models.dev pricing", () => {
       "Inputpreis",
       "Outputpreis",
       "Cachepreis",
-      "Cache",
-      "Input",
-      "Output",
-      "Reasoning",
+      "Cache Token",
+      "Input Token",
+      "Output Token",
+      "Reasoning Token",
+      "Cachekosten",
+      "Inputkosten",
+      "Outputkosten",
+      "Reasoningkosten",
       "Gesamtkosten",
-      "Cache-Kosten",
-      "Input-Kosten",
-      "Output-Kosten",
-      "Reasoning-Kosten",
     ])
-    expect(source).toContain('label="Input"')
+    expect(source).toContain('label="Input Token"')
     expect(source).toContain("value={formatInt(totals().input)}")
     expect(source).not.toContain("totals().input + totals().cacheRead + totals().cacheWrite")
-    expect(source).toContain('label="Cache"')
+    expect(source).toContain('label="Cache Token"')
     expect(source).toContain('value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}')
-    expect(source).toMatch(/label="Cache"[\s\S]*?bold/)
-    expect(source).toContain('label="Output"')
-    expect(source).toContain('label="Reasoning"')
-    expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Output"'))
-    expect(source.indexOf('label="Output"')).toBeLessThan(source.indexOf('label="Reasoning"'))
-    expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
+    expect(source).not.toMatch(/label="Cache Token"[^>]*\bbold/)
+    expect(source).toContain('label="Output Token"')
+    expect(source).toContain('label="Reasoning Token"')
+    expect(source.indexOf('label="Input Token"')).toBeLessThan(source.indexOf('label="Output Token"'))
+    expect(source.indexOf('label="Output Token"')).toBeLessThan(source.indexOf('label="Reasoning Token"'))
+    expect(source).not.toContain('label="Reasoning Token" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
-    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Cache"'))
-    expect(source.indexOf('label="Cache"')).toBeLessThan(source.indexOf('label="Input"'))
+    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Cache Token"'))
+    expect(source.indexOf('label="Cache Token"')).toBeLessThan(source.indexOf('label="Input Token"'))
     expect(source).toContain('api.event.on("message.updated"')
     expect(source).toContain('api.event.on("message.part.updated"')
     expect(source).toContain("parts: props.api.state.part(info.id)")
@@ -699,7 +699,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Cachepreis"')
     expect(source.indexOf('label="Inputpreis"')).toBeLessThan(source.indexOf('label="Outputpreis"'))
     expect(source.indexOf('label="Outputpreis"')).toBeLessThan(source.indexOf('label="Cachepreis"'))
-    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Input"'))
+    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Input Token"'))
     expect(source).toMatch(/label="Inputpreis"[\s\S]*?value=\{rateValue\("input"\)\}[\s\S]*?muted/)
     expect(source).toMatch(/label="Outputpreis"[\s\S]*?value=\{rateValue\("output"\)\}[\s\S]*?muted/)
     expect(source).toContain("cacheRateValue")
@@ -719,17 +719,18 @@ describe("models.dev pricing", () => {
     expect(source).toContain("segment.serviceTier")
   })
 
-  test("renders the cost components below the session total in the requested order", async () => {
+  test("renders compact cost labels and the bold session total last", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Gesamtkosten"')
-    expect(source).toContain('label="Input-Kosten"')
-    expect(source).toContain('label="Output-Kosten"')
-    expect(source).toContain('label="Reasoning-Kosten"')
-    expect(source).toContain('label="Cache-Kosten"')
-    expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Cache-Kosten"'))
-    expect(source.indexOf('label="Cache-Kosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
-    expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
-    expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
+    expect(source).toContain('label="Inputkosten"')
+    expect(source).toContain('label="Outputkosten"')
+    expect(source).toContain('label="Reasoningkosten"')
+    expect(source).toContain('label="Cachekosten"')
+    expect(source.indexOf('label="Cachekosten"')).toBeLessThan(source.indexOf('label="Inputkosten"'))
+    expect(source.indexOf('label="Inputkosten"')).toBeLessThan(source.indexOf('label="Outputkosten"'))
+    expect(source.indexOf('label="Outputkosten"')).toBeLessThan(source.indexOf('label="Reasoningkosten"'))
+    expect(source.indexOf('label="Reasoningkosten"')).toBeLessThan(source.indexOf('label="Gesamtkosten"'))
+    expect(source).toMatch(/label="Gesamtkosten"[\s\S]*?bold/)
     expect(source).toContain("formatUsd(money().usd)")
     expect(source).toContain('componentCost("inputUsd")')
     expect(source).toContain('componentCost("outputUsd")')

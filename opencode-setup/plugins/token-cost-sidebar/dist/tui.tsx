@@ -769,22 +769,21 @@ function View(props: {
         />
         <Row
           api={props.api}
-          label="Cache"
+          label="Cache Token"
           value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}
-          bold
         />
         <Row
           api={props.api}
-          label="Input"
+          label="Input Token"
           value={formatInt(totals().input)}
         />
-        <Row api={props.api} label="Output" value={formatInt(totals().output)} />
-        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
-        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} />
-        <Row api={props.api} label="Cache-Kosten" value={componentCost("cacheUsd")} />
-        <Row api={props.api} label="Input-Kosten" value={componentCost("inputUsd")} />
-        <Row api={props.api} label="Output-Kosten" value={componentCost("outputUsd")} />
-        <Row api={props.api} label="Reasoning-Kosten" value={componentCost("reasoningUsd")} />
+        <Row api={props.api} label="Output Token" value={formatInt(totals().output)} />
+        <Row api={props.api} label="Reasoning Token" value={formatInt(totals().reasoning)} />
+        <Row api={props.api} label="Cachekosten" value={componentCost("cacheUsd")} />
+        <Row api={props.api} label="Inputkosten" value={componentCost("inputUsd")} />
+        <Row api={props.api} label="Outputkosten" value={componentCost("outputUsd")} />
+        <Row api={props.api} label="Reasoningkosten" value={componentCost("reasoningUsd")} />
+        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} bold />
         <ThemeSelect api={props.api} />
       </box>
     </Show>
