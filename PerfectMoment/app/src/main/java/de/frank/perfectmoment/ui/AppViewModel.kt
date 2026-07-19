@@ -719,9 +719,9 @@ class AppViewModel(
                 if (transcript.isBlank()) {
                     recordingMessage = "Ich habe nichts verstanden."
                 } else if (target == RecordingTarget.START) {
-                    updateTopic(transcript)
+                    updateTopic(appendDictation(topic, transcript))
                 } else {
-                    updateIntroText(transcript)
+                    updateIntroText(appendDictation(introText, transcript))
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
