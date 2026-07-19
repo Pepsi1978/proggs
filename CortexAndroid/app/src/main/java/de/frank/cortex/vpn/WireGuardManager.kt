@@ -37,6 +37,7 @@ object WireGuardManager {
     // VPN-Toggle + onStart-Trigger): zwei konkurrierende backend.setState(UP) racen sonst
     // auf _state/lastError und der zweite kann den ersten faelschlich auf ERROR setzen.
     private val connectInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val configReconnectInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
     // disconnect() waehrend eines laufenden Connect-Versuchs (z.B. Tipp auf "Verbinde…" = Abbruch
     // oder App geht in den Hintergrund): ohne dieses Signal fuehrte der Retry nach dem delay(500)
     // den Aufbau trotzdem zu Ende und ueberschrieb den gewollten Disconnect (Tunnel blieb an).
@@ -106,6 +107,24 @@ object WireGuardManager {
             return false
         }
         return parseConfig(saved)
+    }
+
+    /** Uebernimmt eine bereits geparste neue Config auch in einen laufenden Tunnel. */
+    fun reconnectAfterConfigChange() {
+        if (_state.value != TunnelState.CONNECTED && _state.value != TunnelState.CONNECTING) return
+        if (!configReconnectInFlight.compareAndSet(false, true)) return
+
+        scope.launch {
+            try {
+                if (!disconnect()) return@launch
+                // Ein paralleler alter Connect muss seinen Abbruch erst im finally quittieren,
+                // bevor der neue Aufbau die frisch geparste Config sicher erfassen kann.
+                while (connectInFlight.get()) delay(25)
+                connectInternal()
+            } finally {
+                configReconnectInFlight.set(false)
+            }
+        }
     }
 
     /**

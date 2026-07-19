@@ -222,11 +222,18 @@ private fun SecondBrainConnectorCard(
                 status = state.secondBrainStatus,
             )
             Spacer(Modifier.height(12.dp))
+            Text(
+                "Jede App und jedes Gerät braucht eine eigene WireGuard-Konfiguration " +
+                    "mit eigenem Schlüsselpaar und eigener Tunnel-IP.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.warn,
+            )
+            Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.secondBrainWireGuardConfig,
                 onValueChange = onWireGuardConfigChange,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
-                placeholder = { Text("WireGuard-Konfiguration aus Cortex einfügen", color = cosmos.textSecondary) },
+                placeholder = { Text("Eigene WireGuard-Konfiguration einfügen", color = cosmos.textSecondary) },
                 minLines = 4,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,

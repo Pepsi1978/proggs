@@ -10,6 +10,8 @@ import de.frank.entropyreducer.data.remote.drive.GoogleSignInHelper
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
+import de.frank.entropyreducer.data.remote.brain.SecondBrainVpnConnector
+import de.frank.entropyreducer.data.remote.brain.SecondBrainVpnState
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoice
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices
 import de.frank.entropyreducer.data.repository.EntryRepository
@@ -83,6 +85,7 @@ constructor(
     private val settings: AppSettings,
     private val ttsPlayer: TtsPlayer,
     private val secondBrainIdeaConnector: SecondBrainIdeaConnector,
+    private val secondBrainVpnConnector: SecondBrainVpnConnector,
 ) : ViewModel() {
     private val _state =
         MutableStateFlow(
@@ -167,8 +170,23 @@ constructor(
     }
 
     fun saveSecondBrainWireGuardConfig() {
-        secrets.secondBrainWireGuardConfig = state.value.secondBrainWireGuardConfig.trim().ifBlank { null }
-        _state.update { it.copy(secondBrainWireGuardSaved = state.value.secondBrainWireGuardConfig.isNotBlank()) }
+        val config = state.value.secondBrainWireGuardConfig.trim()
+        if (config.isBlank()) {
+            secrets.secondBrainWireGuardConfig = null
+            _state.update { it.copy(secondBrainWireGuardSaved = false) }
+            if (secondBrainVpnConnector.state == SecondBrainVpnState.CONNECTED) {
+                viewModelScope.launch { secondBrainVpnConnector.disconnect() }
+            }
+            return
+        }
+        if (!secondBrainVpnConnector.parseConfig(config)) return
+
+        val reconnect = secondBrainVpnConnector.state == SecondBrainVpnState.CONNECTED
+        secrets.secondBrainWireGuardConfig = config
+        _state.update { it.copy(secondBrainWireGuardSaved = true) }
+        if (reconnect) {
+            viewModelScope.launch { secondBrainVpnConnector.connect() }
+        }
     }
 
     fun testGemini() {

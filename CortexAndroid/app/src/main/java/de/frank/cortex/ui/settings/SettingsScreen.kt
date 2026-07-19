@@ -203,6 +203,7 @@ fun SettingsScreen(
             if (text != null && WireGuardManager.parseConfig(text)) {
                 SettingsStore.wgConfig = text
                 wgConfig = text
+                WireGuardManager.reconnectAfterConfigChange()
             }
         }
     }
