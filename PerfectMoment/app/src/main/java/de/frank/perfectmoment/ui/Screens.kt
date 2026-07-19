@@ -88,6 +88,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -108,6 +109,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
@@ -1011,6 +1013,7 @@ private fun SecureKeyRow(
 @Composable
 fun HooksScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    var draggedHookId by remember { mutableStateOf<Long?>(null) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Gesprächsaufhänger",
@@ -1029,10 +1032,27 @@ fun HooksScreen(viewModel: AppViewModel) {
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            itemsIndexed(viewModel.hooks, key = { _, hook -> hook.id }) { index, hook ->
+            items(viewModel.hooks, key = HookEntity::id) { hook ->
                 var dragY by remember(hook.id) { mutableStateOf(0f) }
+                val isDragging = draggedHookId == hook.id
+                val cardAlpha by animateFloatAsState(
+                    if (draggedHookId == null || isDragging) 1f else 0.45f,
+                    label = "Aufhänger Deckkraft",
+                )
+                val cardScale by animateFloatAsState(
+                    if (isDragging) 1.035f else 1f,
+                    label = "Aufhänger Größe",
+                )
                 PmCard(
-                    Modifier.fillMaxWidth().height(68.dp).pmClickable { viewModel.openHookEditor(hook) },
+                    Modifier.fillMaxWidth().height(68.dp)
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = if (isDragging) dragY else 0f
+                            alpha = cardAlpha
+                            scaleX = cardScale
+                            scaleY = cardScale
+                        }
+                        .pmClickable { viewModel.openHookEditor(hook) },
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(hookDisplayIcon(hook), null, tint = colors.goldDim, modifier = Modifier.size(26.dp))
@@ -1051,19 +1071,33 @@ fun HooksScreen(viewModel: AppViewModel) {
                             Icons.Outlined.DragIndicator,
                             "Zum Sortieren halten und ziehen",
                             tint = colors.text3,
-                            modifier = Modifier.size(24.dp).pointerInput(viewModel.hooks, index) {
+                            modifier = Modifier.size(24.dp).pointerInput(hook.id) {
                                 detectDragGesturesAfterLongPress(
-                                    onDragEnd = { dragY = 0f },
-                                    onDragCancel = { dragY = 0f },
+                                    onDragStart = { draggedHookId = hook.id },
+                                    onDragEnd = {
+                                        dragY = 0f
+                                        draggedHookId = null
+                                        viewModel.persistHookOrder()
+                                    },
+                                    onDragCancel = {
+                                        dragY = 0f
+                                        draggedHookId = null
+                                        viewModel.persistHookOrder()
+                                    },
                                 ) { change, amount ->
                                     change.consume()
                                     dragY += amount.y
-                                    if (dragY > 48f && index < viewModel.hooks.lastIndex) {
-                                        viewModel.moveHook(index, index + 1)
-                                        dragY = 0f
-                                    } else if (dragY < -48f && index > 0) {
-                                        viewModel.moveHook(index, index - 1)
-                                        dragY = 0f
+                                    val itemStep = 78.dp.toPx()
+                                    var currentIndex = viewModel.hooks.indexOfFirst { it.id == hook.id }
+                                    while (dragY > itemStep / 2f && currentIndex < viewModel.hooks.lastIndex) {
+                                        viewModel.moveHook(currentIndex, currentIndex + 1)
+                                        dragY -= itemStep
+                                        currentIndex++
+                                    }
+                                    while (dragY < -itemStep / 2f && currentIndex > 0) {
+                                        viewModel.moveHook(currentIndex, currentIndex - 1)
+                                        dragY += itemStep
+                                        currentIndex--
                                     }
                                 }
                             },

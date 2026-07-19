@@ -296,8 +296,7 @@ fun SettingRow(
                     textAlign = TextAlign.End,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = if (statusColor == null) 12.dp else 8.dp)
-                        .weight(0.8f, fill = false),
+                    modifier = Modifier.padding(start = if (statusColor == null) 12.dp else 8.dp),
                 )
             }
             trailing?.invoke()

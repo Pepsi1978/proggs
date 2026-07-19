@@ -574,8 +574,13 @@ class AppViewModel(
 
     fun moveHook(from: Int, to: Int) {
         if (from !in hooks.indices || to !in hooks.indices || from == to) return
-        val reordered = hooks.toMutableList().apply { add(to, removeAt(from)) }
-        viewModelScope.launch { contentRepository.reorderHooks(reordered.map(HookEntity::id)) }
+        hooks = hooks.toMutableList().apply { add(to, removeAt(from)) }
+            .mapIndexed { index, hook -> hook.copy(sortIndex = index) }
+    }
+
+    fun persistHookOrder() {
+        val hookIds = hooks.map(HookEntity::id)
+        viewModelScope.launch { contentRepository.reorderHooks(hookIds) }
     }
 
     fun openSkillEditor(skill: SkillEntity?) {
