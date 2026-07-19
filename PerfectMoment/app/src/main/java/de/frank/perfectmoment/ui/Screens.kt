@@ -41,6 +41,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -795,14 +796,16 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         }
                     }
                     PmCard(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                        Text(
-                            detail.session.topic,
-                            color = colors.text1,
-                            fontFamily = Inter,
-                            fontSize = 16.sp,
-                            lineHeight = 24.sp,
-                            modifier = Modifier.fillMaxWidth().padding(18.dp),
-                        )
+                        SelectionContainer {
+                            Text(
+                                detail.session.topic,
+                                color = colors.text1,
+                                fontFamily = Inter,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp,
+                                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                            )
+                        }
                     }
                     Spacer(Modifier.height(24.dp))
                 }
