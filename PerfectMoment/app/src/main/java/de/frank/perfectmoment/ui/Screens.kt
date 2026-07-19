@@ -765,7 +765,7 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
     val detail = viewModel.historyDetail
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(detail?.session?.topic ?: "Sitzungsansicht", viewModel::back, titleSize = 20)
+        ScreenHeader("", viewModel::back)
         if (detail == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingDots() }
         } else {
@@ -785,6 +785,16 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                             }
                             PmSwitch(viewModel.randomReplay) { viewModel.toggleRandomReplay() }
                         }
+                    }
+                    PmCard(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                        Text(
+                            detail.session.topic,
+                            color = colors.text1,
+                            fontFamily = Inter,
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp,
+                            modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        )
                     }
                     Spacer(Modifier.height(24.dp))
                 }
