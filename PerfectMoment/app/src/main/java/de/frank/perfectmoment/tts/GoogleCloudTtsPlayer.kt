@@ -1,5 +1,6 @@
 package de.frank.perfectmoment.tts
 
+import de.frank.perfectmoment.network.shutdownSafely
 import android.content.Context
 import android.media.MediaPlayer
 import android.util.Base64
@@ -187,9 +188,7 @@ class GoogleCloudTtsPlayer(context: Context) {
     fun shutdown() {
         stop()
         scope.cancel()
-        client.dispatcher.cancelAll()
-        client.dispatcher.executorService.shutdown()
-        client.connectionPool.evictAll()
+        client.shutdownSafely(logger)
     }
 
     private fun signalStart(requestGeneration: Long, callbacks: PlaybackCallbacks) {

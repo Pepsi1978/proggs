@@ -1,5 +1,6 @@
 package de.frank.perfectmoment.tts
 
+import de.frank.perfectmoment.network.shutdownSafely
 import android.content.Context
 import android.media.MediaPlayer
 import java.io.File
@@ -256,9 +257,7 @@ class EdgeTtsPlayer(context: Context) {
     fun shutdown() {
         stop()
         scope.cancel()
-        client.dispatcher.cancelAll()
-        client.dispatcher.executorService.shutdown()
-        client.connectionPool.evictAll()
+        client.shutdownSafely(logger)
     }
 
     private fun startWatchdog(

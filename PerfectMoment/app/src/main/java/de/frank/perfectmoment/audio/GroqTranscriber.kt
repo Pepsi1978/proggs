@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import de.frank.perfectmoment.network.shutdownSafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -92,9 +93,7 @@ class GroqTranscriber(
     }
 
     fun shutdown() {
-        client.dispatcher.cancelAll()
-        client.dispatcher.executorService.shutdown()
-        client.connectionPool.evictAll()
+        client.shutdownSafely(logger)
     }
 
     private fun JSONObject.optDoubleOrNull(name: String): Double? =
