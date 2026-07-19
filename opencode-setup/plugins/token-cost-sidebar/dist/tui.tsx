@@ -277,6 +277,16 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
   )
 }
 
+function SidebarHeader(props: { api: TuiPluginApi }) {
+  const theme = () => props.api.theme.current
+  return (
+    <box>
+      <text fg={theme().textMuted}>{`v. ${packageMetadata.version} (${packageMetadata.updated})`}</text>
+      <SidebarClock api={props.api} />
+    </box>
+  )
+}
+
 function EffortSelector(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   const model = () => liveModel(props.api)
@@ -775,7 +785,6 @@ function View(props: {
         <Row api={props.api} label="Input-Kosten" value={componentCost("inputUsd")} />
         <Row api={props.api} label="Output-Kosten" value={componentCost("outputUsd")} />
         <Row api={props.api} label="Reasoning-Kosten" value={componentCost("reasoningUsd")} />
-        <Row api={props.api} label="Version" value={`${packageMetadata.version} (${packageMetadata.updated})`} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>
@@ -804,7 +813,7 @@ const tui: TuiPlugin = async (api) => {
     order: 110,
     slots: {
       sidebar_title() {
-        return <SidebarClock api={api} />
+        return <SidebarHeader api={api} />
       },
       sidebar_content(_ctx, props) {
         return <View api={api} sessionID={props.session_id} usageStore={usageStore} quotaStore={quotaStore} />

@@ -487,7 +487,6 @@ describe("models.dev pricing", () => {
       "Input-Kosten",
       "Output-Kosten",
       "Reasoning-Kosten",
-      "Version",
     ])
     expect(source).toContain('label="Input"')
     expect(source).toContain("value={formatInt(totals().input)}")
@@ -537,10 +536,13 @@ describe("models.dev pricing", () => {
     expect(source).toContain("QUOTA_POLL_MS = 60_000")
   })
 
-  test("replaces the sidebar title with a live German date and time", async () => {
+  test("shows the muted version directly above the live session title without a gap", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain("sidebar_title()")
-    expect(source).toContain("return <SidebarClock api={api} />")
+    expect(source).toContain("return <SidebarHeader api={api} />")
+    expect(source).toContain('<text fg={theme().textMuted}>{`v. ${packageMetadata.version} (${packageMetadata.updated})`}</text>')
+    expect(source).toMatch(/<box>\s*<text fg=\{theme\(\)\.textMuted\}>\{`v\. \$\{packageMetadata\.version\} \(\$\{packageMetadata\.updated\}\)`\}<\/text>\s*<SidebarClock api=\{props\.api\} \/>\s*<\/box>/)
+    expect(source).not.toContain('label="Version"')
     expect(source).toContain("const scheduleNextMinute = () =>")
     expect(source).toContain("60_000 - current.getSeconds() * 1_000 - current.getMilliseconds() + 25")
     expect(source).toContain("timer = setTimeout(() =>")
