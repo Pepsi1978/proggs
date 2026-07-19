@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.4 - 19.07.2026, 14:34 Uhr
+Stand: v1.13.5 - 19.07.2026, 14:36 Uhr
 
 ## Funktionen
 
@@ -26,7 +26,7 @@ Stand: v1.13.4 - 19.07.2026, 14:34 Uhr
 - Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
   Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`, `Reasoning Token` sowie
   den Einzelposten `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und abschließend
-  den fett hervorgehobenen `Gesamtkosten`.
+  den vollständig fett hervorgehobenen `Gesamtkosten` einschließlich Dollarwert.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase

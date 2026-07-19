@@ -186,7 +186,9 @@ function Row(props: { label: string; value: string; muted?: boolean; bold?: bool
         <span style={{ bold: props.bold }}>{props.label}</span>
       </text>
       <box flexGrow={1} />
-      <text fg={props.muted ? theme().textMuted : theme().text}>{props.value}</text>
+      <text fg={props.muted ? theme().textMuted : theme().text}>
+        <span style={{ bold: props.bold }}>{props.value}</span>
+      </text>
     </box>
   )
 }

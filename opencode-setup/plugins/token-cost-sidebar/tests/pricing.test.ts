@@ -732,6 +732,7 @@ describe("models.dev pricing", () => {
     expect(source.indexOf('label="Outputkosten"')).toBeLessThan(source.indexOf('label="Reasoningkosten"'))
     expect(source.indexOf('label="Reasoningkosten"')).toBeLessThan(source.indexOf('label="Gesamtkosten"'))
     expect(source).toMatch(/label="Gesamtkosten"[\s\S]*?bold/)
+    expect(source).toContain('<span style={{ bold: props.bold }}>{props.value}</span>')
     expect(source).toContain("formatUsd(money().usd)")
     expect(source).toContain('componentCost("inputUsd")')
     expect(source).toContain('componentCost("outputUsd")')
