@@ -33,7 +33,8 @@ data class StoredChatMessage(
     val options: List<ChatOption> = emptyList(),
     val stored: Boolean,
     val timestamp: Long,
-    val responseTimeMs: Long? = null
+    val responseTimeMs: Long? = null,
+    val sourceUsage: List<String>? = null
 )
 
 /** Ein gemerkter Speicher-Auftrag (Offline-Outbox, Frank-Wunsch 2026-07-02): wird ohne VPN
@@ -97,7 +98,7 @@ object ChatSessionStore {
 
     fun loadMessages(sessionId: String): List<StoredChatMessage> = helper.readableDatabase.query(
         "messages",
-        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "options", "stored", "timestamp", "response_time_ms"),
+        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "options", "stored", "timestamp", "response_time_ms", "source_usage"),
         "session_id = ?",
         arrayOf(sessionId),
         null,
@@ -123,7 +124,8 @@ object ChatSessionStore {
                         options = decodeOptions(cursor.getStringOrNull(12)),
                         stored = cursor.getInt(13) == 1,
                         timestamp = cursor.getLong(14),
-                        responseTimeMs = if (cursor.isNull(15)) null else cursor.getLong(15)
+                        responseTimeMs = if (cursor.isNull(15)) null else cursor.getLong(15),
+                        sourceUsage = decodeSourceUsage(cursor.getStringOrNull(16))
                     )
                 )
             }
@@ -266,6 +268,7 @@ object ChatSessionStore {
                     put("stored", if (message.stored) 1 else 0)
                     put("timestamp", message.timestamp)
                     put("response_time_ms", message.responseTimeMs)
+                    put("source_usage", encodeSourceUsage(message.sourceUsage))
                 },
                 SQLiteDatabase.CONFLICT_REPLACE
             )
@@ -354,7 +357,7 @@ object ChatSessionStore {
         )
     """
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 7) {
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 8) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -392,6 +395,7 @@ object ChatSessionStore {
                     stored INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
                     response_time_ms INTEGER,
+                    source_usage TEXT,
                     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
                 """.trimIndent()
@@ -434,6 +438,9 @@ object ChatSessionStore {
             if (oldVersion < 7) {
                 db.execSQL("ALTER TABLE messages ADD COLUMN response_time_ms INTEGER")
             }
+            if (oldVersion < 8) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN source_usage TEXT")
+            }
         }
     }
 
@@ -443,6 +450,14 @@ object ChatSessionStore {
 
     private fun decodeCategories(value: String?): List<String> =
         value?.split('\u001F')?.map(String::trim)?.filter(String::isNotEmpty)?.distinct().orEmpty()
+
+    // null bleibt "Metadaten unbekannt" fuer Altbestand; der leere String bedeutet bewusst
+    // "ohne Suche". So behauptet die Migration nichts ueber historische Antworten.
+    private fun encodeSourceUsage(sourceUsage: List<String>?): String? =
+        sourceUsage?.filter { it == "memory" || it == "internet" }?.distinct()?.joinToString("\u001F")
+
+    private fun decodeSourceUsage(value: String?): List<String>? =
+        value?.split('\u001F')?.map(String::trim)?.filter(String::isNotEmpty)?.distinct()
 
     private fun encodeOptions(options: List<ChatOption>): String? = options.takeIf { it.isNotEmpty() }?.let { list ->
         JSONArray().apply {

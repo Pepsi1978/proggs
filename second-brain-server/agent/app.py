@@ -90,6 +90,7 @@ VERSION = "0.81.2 (13.07.2026, 11:12 Uhr)"  # 0.81.2: Automatische Programmier-S
 VERSION = "0.81.3 (14.07.2026, 00:57 Uhr)"  # 0.81.3 (Debugging-Laeufe App+Server, 6 Runden 2026-07-13/14): Sanitizer-Regexes repariert — Quellen-Block loescht nur noch bei reiner Ueberschrift-Zeile ("Quellensteuer..." verlor sonst die KOMPLETTE Antwort, eine Quellen-Zeile mitten im Text riss alle Folgeabsaetze mit), Inline-Quellen-Zeile loescht nur sich selbst, Attributions-Tail nur ":"-Formen + Singular-Kopula ("Quellen sind <Inhalt>" bleibt erhalten; identische Logik wie ChatSpeechSanitizer.kt der Android-App). get_brain_limits liefert None statt {} (App/Cockpit erkennen "Brain-Stand unbekannt" -> kein Lost Update der Brain-Limits mehr). /health-Brain-Check 3s statt 8s (Dashboard-Agent-Kachel flackerte faelschlich offline). /codex/auth/poll behandelt 429/5xx/Netzfehler als pending statt HTTP 500 (Verbindungsassistent der App brach sonst ab). save_brain_limits meldet Netzfehler als sauberes 502. Alt: 0.81.2.
 VERSION = "0.82.0 (14.07.2026, 13:07 Uhr)"  # 0.82.0 (Cortex-Debugging-Loop 1): flush_session_to_logbook gibt Erfolg (bool) zurueck -> Platten-Spiegel wird NUR nach erfolgreichem .txt-Schreiben geloescht (kein Gespraechsverlust bei totem LOGBOOK-Mount; Sitzung bleibt fuer Retry erhalten) in _flush_loop UND /end. Tool-Agent faellt bei Nicht-Codex-Hauptmodell ODER ohne Codex-Login auf werkzeuglosen llm_generate-Pfad zurueck (Gemini/Smalltalk endet nicht mehr im Fehler). lifespan bindet + cancelt den Flush-Loop-Task sauber (Shutdown-NameError weg). codex_generate erhaelt 4xx-Statuscodes 1:1 (nur echte 5xx -> 502) + _retryable_code mit Wortgrenzen -> echte 400/401/403/404 werden NIE 3x retryt. llm_generate retryt httpx-Transportfehler (Stream-Abrisse/ConnectError). speicheragent_decide + leseagent_select: LLM-Call im try (Provider-Ausfall crasht die Speicher-Bestaetigung nicht mehr; Leseagent reicht bei Ausfall alle Treffer durch). /chat/stream: Abschnitt Claim->Turn-Start abgesichert (request_id haengt nie 'inflight') + Finalisierung tracked Task und loest finalize_fut in JEDEM Pfad auf. _maybe_compress_history snapshottet die Nachrichtenzahl VOR dem LLM-Call (neue Nachrichten verschwinden nicht mehr). Codex-Token-Refresh Single-Flight (modulweiter Lock, double-checked). /eval-run Doppelstart-Lock; _codex_pending-GC (kein unbegrenztes Wachstum); codex_auth_poll Code->Token-Tausch gegen transiente Fehler abgesichert. store_clarify-"ja" registriert die neue Kategorie. Saison-Regex: "im Fruehjahr 2025" matcht jetzt. _rrf_fuse_hits erhaelt dense_score als Maximum. GET /feedback mit (mtime,size)-Parse-Cache. codex_generate: Kommentar, dass max_tokens/temperature beim Codex-Backend bewusst nicht wirken. Alt: 0.81.3.
 VERSION = "0.83.0 (14.07.2026, 13:54 Uhr)"  # 0.83.0 (Cortex-Debugging-Loop 2): Session-Reuse-Race beim Out-of-Lock-Flush geschlossen — jede Session-Instanz erhaelt beim Anlegen eine eindeutige mirror_id; der Platten-Spiegel-Pfad (_session_file) haengt jetzt daran statt allein an der sid (die fuer ALLE Gespraeche auf "frank" zurueckfaellt). Dadurch teilen zwei gleichzeitige Gespraeche NIE denselben Spiegel; _drop_session_file loescht nur die konkret geflushte Instanz; bei Flush-Fehler bleibt der instanz-eigene Spiegel liegen und wird beim Start wiederhergestellt (kein Ueberschreiben/Loeschen durch ein neu begonnenes Gespraech mehr). Start-Wiederherstellung keyt bei sid-Kollision (Race-Rest) kollisionsfrei -> ALLE liegengebliebenen Spiegel ueberleben. write_logbook meldet written jetzt wahrheitsgemaess (did_write = not target.exists(); bereits vorhandene .txt -> False statt faelschlich True). Alt: 0.82.0.
+VERSION = "0.84.0 (19.07.2026, 14:47 Uhr)"  # 0.84.0: Jede Chat-Antwort meldet source_usage aus den tatsaechlich erfolgreichen Turn-Schritten (memory, internet oder beides), damit Cortex Android die benutzten Wissensquellen ehrlich im Antwort-Footer zeigt. Alt: 0.83.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -476,6 +477,27 @@ def _trace_start(user_text: str, context_mode: str, context_prompt: str, session
     }
     _current_trace.set(tr)
     return tr
+
+
+def _source_usage_from_trace(tr: dict | None) -> list[str]:
+    """Leitet die sichtbare Quellenangabe aus erfolgreichen Turn-Schritten ab.
+
+    Die Reihenfolge ist Teil des API-Vertrags: persoenliches Gedaechtnis zuerst, Internet danach.
+    Fehlgeschlagene Suchversuche gelten nicht als benutzte Quelle.
+    """
+    events = tr.get("events", []) if isinstance(tr, dict) else []
+    successful_steps = {str(event.get("step") or "") for event in events if event.get("ok") is True}
+    memory_steps = {
+        "recall_search", "auto_parallel_memory", "recall", "recall_full",
+        "category_full", "category_count", "projektstand",
+    }
+    web_steps = {"internet", "native_web", "internet_answer", "recall_internet"}
+    usage = []
+    if successful_steps & memory_steps:
+        usage.append("memory")
+    if successful_steps & web_steps:
+        usage.append("internet")
+    return usage
 
 
 def _trace_event(step: str, msg: str, ok: bool, ctx: dict) -> None:
@@ -7938,9 +7960,10 @@ async def chat(req: ChatReq) -> dict:
                  "memory_text": outcome.get("memory_text"), "stored_text": outcome.get("stored_text"),
                  "memory_editable": outcome.get("memory_editable", False),
                 "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
-                "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
-                "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
-                "context_limit_reached": limit_hit}
+                 "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
+                 "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
+                 "source_usage": _source_usage_from_trace(tr),
+                 "context_limit_reached": limit_hit}
     if tr is not None:
         await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))
     if rid:
@@ -8064,6 +8087,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                     "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
                     "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
                     "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
+                    "source_usage": _source_usage_from_trace(tr),
                     "context_limit_reached": limit_hit}
                 if rid:
                     await _dedup_store(rid, response)

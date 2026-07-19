@@ -46,7 +46,10 @@ data class ChatResponse(
     val stored: Boolean = false,
     val replaced: Boolean = false,
     val recall_hits: Int? = null,
-    val options: List<ChatOption>? = null
+    val options: List<ChatOption>? = null,
+    // Vom Agenten aus den tatsaechlich erfolgreichen Turn-Schritten abgeleitet.
+    // null = alter Server/alte Nachricht ohne Metadaten; [] = bewusst ohne Suche beantwortet.
+    val source_usage: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)

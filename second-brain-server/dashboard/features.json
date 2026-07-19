@@ -1,7 +1,15 @@
 {
-	"stand": "13.07.2026, 13:43 Uhr",
+	"stand": "19.07.2026, 14:47 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "chat-antwort-quellenstatus",
+			"eingebaut": "19.07.2026, 14:47 Uhr",
+			"dienst": "agent 0.84.0 + Cortex Android 0.9.0",
+			"name": "Jede Chat-Antwort zeigt ihre benutzten Wissensquellen",
+			"kurz": "Unter jeder neuen Agentenantwort steht vor der Antwortzeit, ob Cortex das Gedächtnis, das Internet, beides oder keine Suche benutzt hat.",
+			"erklaerung": "Der Agent leitet source_usage direkt aus den erfolgreichen Schritten des jeweiligen Turns ab. Eine Qdrant-Suche oder eine gezielte Gedächtnisabfrage ergibt Gedächtnis; Tavily oder die modellnative Websuche ergibt Internet; beide zusammen ergeben Gedächtnis + Internet. Cortex Android speichert diese Angabe mit der Nachricht in SQLite, sodass sie nach Neustarts und beim erneuten Öffnen eines Gesprächs erhalten bleibt. Antworten ohne Suche zeigen Ohne Suche. Alte Nachrichten ohne diese Metadaten werden nicht nachträglich geraten und behalten deshalb nur ihre bisherige Zeitangabe."
+		},
 		{
 			"id": "spektrum-kategorien-ausblenden",
 			"eingebaut": "13.07.2026, 13:43 Uhr",

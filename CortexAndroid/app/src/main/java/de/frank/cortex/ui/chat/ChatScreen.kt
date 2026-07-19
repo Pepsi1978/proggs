@@ -584,6 +584,19 @@ private fun formatResponseTime(responseTimeMs: Long): String {
     }
 }
 
+internal fun formatSourceUsage(sourceUsage: List<String>?): String? {
+    if (sourceUsage == null) return null
+    val memoryUsed = "memory" in sourceUsage
+    val internetUsed = "internet" in sourceUsage
+    return when {
+        memoryUsed && internetUsed -> "Gedächtnis + Internet"
+        memoryUsed -> "Gedächtnis"
+        internetUsed -> "Internet"
+        sourceUsage.isEmpty() -> "Ohne Suche"
+        else -> null
+    }
+}
+
 @Composable
 private fun ChatBubble(
     message: ChatMessage,
@@ -678,9 +691,13 @@ private fun ChatBubble(
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            message.responseTimeMs?.let { responseTimeMs ->
+                            val sourceAndTime = listOfNotNull(
+                                formatSourceUsage(message.sourceUsage),
+                                message.responseTimeMs?.let(::formatResponseTime)
+                            ).joinToString(" · ")
+                            if (sourceAndTime.isNotBlank()) {
                                 Text(
-                                    text = formatResponseTime(responseTimeMs),
+                                    text = sourceAndTime,
                                     fontFamily = JetBrainsMono,
                                     fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

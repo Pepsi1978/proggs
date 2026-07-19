@@ -81,6 +81,7 @@ VERSION = "0.86.0 (14.07.2026, 15:10 Uhr)"  # 0.86.0 (Cortex-Debugging Loops 3-5
 VERSION = "0.86.1 (19.07.2026, 13:06 Uhr)"  # 0.86.1: Kategorie-Navigation zeigt keine veralteten Antworten mehr und aktualisiert besuchte Kategorien aus einem getrennten Sofort-Cache. Dashboard-Listen laden ueber brain-api 1.38.1 nur Metadaten plus Vorschau statt hunderter Volltexte; tiefe Pfade pruefen alle Kategorien eines Eintrags. Alt: 0.86.0.
 VERSION = "0.86.2 (19.07.2026, 13:17 Uhr)"  # 0.86.2: Sichtbarer Gesamtzaehler fuer brain-api 1.38.2; Listenvorschauen sind auf 320 Zeichen begrenzt, statt unnoetig mehrere Tausend Zeichen je Karte zu uebertragen. Alt: 0.86.1.
 VERSION = "0.86.3 (19.07.2026, 13:40 Uhr)"  # 0.86.3: Browser-Zurueck/Vor stellt im Gehirn jede Kategorieebene einzeln wieder her, statt aus einer tiefen Unterkategorie direkt zur Uebersicht zu springen. Alt: 0.86.2.
+VERSION = "0.87.0 (19.07.2026, 14:47 Uhr)"  # 0.87.0: Sichtbarer Gesamtzaehler fuer agent 0.84.0 und Cortex Android 0.9.0; jede neue Agentenantwort zeigt Gedächtnis, Internet, Gedächtnis + Internet oder Ohne Suche vor ihrer Antwortzeit. Alt: 0.86.3.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

@@ -54,7 +54,8 @@ data class ChatMessage(
     val options: List<ChatOption>? = null,
     val stored: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
-    val responseTimeMs: Long? = null
+    val responseTimeMs: Long? = null,
+    val sourceUsage: List<String>? = null
 )
 
 data class ChatUiState(
@@ -2052,7 +2053,8 @@ private fun ChatResponse.toChatMessage(
     recallHits = recall_hits,
     options = options,
     stored = stored,
-    responseTimeMs = responseTimeMs
+    responseTimeMs = responseTimeMs,
+    sourceUsage = source_usage
 )
 
 private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage(
@@ -2071,7 +2073,8 @@ private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage
     options = options.orEmpty(),
     stored = stored,
     timestamp = timestamp,
-    responseTimeMs = responseTimeMs
+    responseTimeMs = responseTimeMs,
+    sourceUsage = sourceUsage
 )
 
 private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
@@ -2090,5 +2093,6 @@ private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
     options = options.takeIf { it.isNotEmpty() },
     stored = stored,
     timestamp = timestamp,
-    responseTimeMs = responseTimeMs
+    responseTimeMs = responseTimeMs,
+    sourceUsage = sourceUsage
 )
