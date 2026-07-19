@@ -1809,12 +1809,22 @@ button{font-family:inherit;cursor:pointer}
     if(tab==="settings") scheduleUserContextTextGrowth();
     if(tab==="chat"){ if(typeof loadChatCategories==="function") loadChatCategories(); setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
-  /* ── Browser-Navigation (Zurueck/Vor): jeder Tab-Wechsel = ein History-Eintrag (#tab); die
-     Zurueck-Taste/Maustaste wechselt zwischen den Menues wie auf einer echten Webseite, statt die
-     Seite zu verlassen. Offene Drawer/Dialoge schliesst Zurueck zuerst. Frank-Wunsch (Bild #9). */
-  function navTo(tab, push){
+  /* ── Browser-Navigation (Zurueck/Vor): Tab-Wechsel UND jeder Kategorie-Drilldown bekommen einen
+     eigenen History-State. Die Maustaste geht dadurch denselben Pfad stufenweise zurueck.
+     Offene Drawer/Dialoge schliesst Zurueck zuerst. */
+  function writeHistoryState(state, hash, replace){
+    try{
+      if(replace) history.replaceState(state, "", hash); else history.pushState(state, "", hash);
+      return true;
+    }catch(error){
+      console.warn("Cortex-Browserverlauf konnte nicht aktualisiert werden", error);
+      return false;
+    }
+  }
+  function navTo(tab, push, details){
     if(!TABS[tab] || tab===activeTab) return;
-    if(push!==false){ try{ history.pushState({tab:tab}, "", "#"+tab); }catch(_){ } }
+    const state = {tab:tab,...(tab==="brain" ? {parent:curParent} : {}),...(details||{})};
+    if(push!==false) writeHistoryState(state,"#"+tab,false);
     setTab(tab);
   }
   document.querySelectorAll("[data-tab]").forEach(b=> b.addEventListener("click",()=>navTo(b.dataset.tab)));
@@ -1822,8 +1832,16 @@ button{font-family:inherit;cursor:pointer}
     // Wie eine echte Webseite: Zurueck schliesst zuerst offene Overlays, danach erst den Tab-Wechsel.
     if(confirmOverlay.classList.contains("open")){ closeConfirm(); return; }
     if(drawer.classList.contains("open")){ closeDrawerNow(); return; }
-    const tab = (e.state && e.state.tab) || (location.hash||"").replace(/^#/,"") || "overview";
-    setTab(TABS[tab] ? tab : "overview");
+    const requestedTab = (e.state && e.state.tab) || (location.hash||"").replace(/^#/,"") || "overview";
+    const tab = TABS[requestedTab] ? requestedTab : "overview";
+    if(tab==="brain"){
+      curParent = e.state && typeof e.state.parent==="string" ? (e.state.parent||null) : null;
+      curCategory = null; curQuery = "";
+      const input = document.getElementById("search"); if(input) input.value="";
+      setTab(tab); updateChips(); loadEntries();
+    }else{
+      setTab(tab);
+    }
   });
 
   /* ── API mit Demo-Fallback ────────────────────────────────────────────── */
@@ -2061,9 +2079,16 @@ button{font-family:inherit;cursor:pointer}
     arr.forEach(g=> g.subs.sort((a,b)=> (b.count||0)-(a.count||0) || catSubName(a.name).localeCompare(catSubName(b.name),"de")));
     return arr;
   }
-  function goToParent(name){            // Übersicht/Gehirn: Kategoriepfad -> alles darunter anzeigen
-    curParent = name; curCategory = null; curQuery = "";
-    navTo("brain");
+  function goToParent(name, push){       // Übersicht/Gehirn: Kategoriepfad -> alles darunter anzeigen
+    const nextParent = name || null;
+    if(activeTab==="brain" && curParent===nextParent && !curCategory && !curQuery) return;
+    curParent = nextParent; curCategory = null; curQuery = "";
+    const switchedTab = activeTab!=="brain";
+    if(switchedTab){
+      navTo("brain",push,{parent:curParent});
+    }else if(push!==false){
+      writeHistoryState({tab:"brain",parent:curParent},"#brain",false);
+    }
     const inp = document.getElementById("search"); if(inp) inp.value="";
     updateChips(); loadEntries();
   }
@@ -2110,7 +2135,7 @@ button{font-family:inherit;cursor:pointer}
     // Kategorienamen escapen (Tiefen-Debugging 2026-07-02): Namen koennen via Speicheragent aus
     // untrusted Text vorgeschlagen werden -> nie roh in innerHTML (Injection-Flaeche).
     b.innerHTML = `<span class="cdot"></span>${escapeHtml(label)}`;
-    b.addEventListener("click",()=>{ curParent = path || null; curCategory = null; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
+    b.addEventListener("click",()=>goToParent(path||null));
     return b;
   }
   function updateChips(){
@@ -2270,7 +2295,7 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("drawerLogbookDeleteBtn").style.display = curEntry && curEntry.logbook ? "grid" : "none";
     overlay.classList.add("open"); drawer.classList.add("open");
     // History-Eintrag fuer den offenen Drawer, damit die Zurueck-Taste ihn schliesst (statt die Seite zu verlassen)
-    if(!drawerHist){ drawerHist = true; try{ history.pushState({tab:activeTab, drawer:true}, "", location.hash||("#"+activeTab)); }catch(_){ } }
+    if(!drawerHist){ drawerHist = true; writeHistoryState({tab:activeTab,parent:activeTab==="brain"?curParent:null,drawer:true},location.hash||("#"+activeTab),false); }
     /* Volltext + doc_id nachladen (nur fuer editierbare Gehirn-Eintraege mit Titel) */
     if(editable !== false && it.title){
       try{
@@ -4896,7 +4921,7 @@ button{font-family:inherit;cursor:pointer}
     // Basis-State setzen (damit Zurueck einen Zustand hat) und Tab aus #hash wiederherstellen (Reload bleibt im Menue).
     const start = (location.hash||"").replace(/^#/,"");
     const tab = TABS[start] ? start : "overview";
-    try{ history.replaceState({tab:tab}, "", "#"+tab); }catch(_){ }
+    writeHistoryState({tab:tab,parent:tab==="brain"?curParent:null},"#"+tab,true);
     // Hash-Start nach dem kompletten Skript aktivieren: Bibliothekar-State/Listener stehen weiter unten.
     // Sonst startet loadLibrarian() beim Reload auf #librarian zu frueh und Listen bleiben leer.
     setTimeout(()=>{ if(tab!==activeTab) setTab(tab); },0);

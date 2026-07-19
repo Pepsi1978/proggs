@@ -66,6 +66,10 @@ def verify_frontend_race_guards_and_cache() -> None:
         "if(requestId!==entriesRequestId) return;",
         "entriesCache.set(cacheKey,data);",
         "box.replaceChildren(fragment);",
+        'writeHistoryState({tab:"brain",parent:curParent},"#brain",false)',
+        'typeof e.state.parent==="string" ? (e.state.parent||null) : null',
+        'b.addEventListener("click",()=>goToParent(path||null));',
+        'writeHistoryState({tab:tab,parent:tab==="brain"?curParent:null},"#"+tab,true)',
     )
     missing = [snippet for snippet in required if snippet not in HTML]
     assert not missing, f"Category navigation safeguards are incomplete: {missing}"
@@ -73,6 +77,57 @@ def verify_frontend_race_guards_and_cache() -> None:
     assert node, "Node.js is required to parse the dashboard JavaScript"
     script = HTML[HTML.index("<script>") + len("<script>"):HTML.rindex("</script>")]
     subprocess.run([node, "--check", "-"], input=script, text=True, encoding="utf-8", check=True)
+
+    history_start = HTML.index("  function writeHistoryState(")
+    history_source = HTML[history_start:HTML.index("\n  function navTo", history_start)]
+    nav_start = HTML.index("  function navTo(")
+    nav_source = HTML[nav_start:HTML.index("\n  document.querySelectorAll", nav_start)]
+    pop_start = HTML.index('  window.addEventListener("popstate"')
+    pop_source = HTML[pop_start:HTML.index("\n\n  /* ── API", pop_start)]
+    parent_start = HTML.index("  function goToParent(")
+    parent_source = HTML[parent_start:HTML.index("\n\n  function renderChips", parent_start)]
+    history_cases = """
+const pushed = [];
+const warnings = [];
+const console = {warn: (...args) => warnings.push(args)};
+const history = {pushState: state => pushed.push({...state}), replaceState:()=>{}};
+const TABS = {overview:{},brain:{}};
+let activeTab = "overview", curParent = null, curCategory = null, curQuery = "";
+let popHandler = null, loads = 0;
+const search = {value:""};
+const document = {getElementById: () => search, querySelectorAll: () => []};
+const location = {hash:"#brain"};
+const window = {addEventListener: (name, fn) => { if(name === "popstate") popHandler = fn; }};
+const confirmOverlay = {classList:{contains:()=>false}};
+const drawer = {classList:{contains:()=>false}};
+function closeConfirm(){}
+function closeDrawerNow(){}
+function setTab(tab){ activeTab = tab; }
+function updateChips(){}
+function loadEntries(){ loads += 1; }
+%s
+%s
+%s
+%s
+goToParent("Programmierung");
+goToParent("Programmierung/Best Practices");
+goToParent("Programmierung/Best Practices/Opencode");
+const paths = pushed.map(state => state.parent);
+if(JSON.stringify(paths) !== JSON.stringify(["Programmierung","Programmierung/Best Practices","Programmierung/Best Practices/Opencode"])) {
+  throw new Error("Drilldown states wrong: " + JSON.stringify(paths));
+}
+popHandler({state:pushed[1]});
+if(activeTab !== "brain" || curParent !== "Programmierung/Best Practices") throw new Error("First back step not restored");
+popHandler({state:pushed[0]});
+if(curParent !== "Programmierung") throw new Error("Second back step not restored");
+popHandler({state:{tab:"overview"}});
+if(activeTab !== "overview") throw new Error("Overview state not restored");
+if(loads < 5) throw new Error("Restored category levels were not reloaded");
+history.pushState = () => { throw new Error("blocked"); };
+goToParent("Programmierung");
+if(activeTab !== "brain" || warnings.length !== 1) throw new Error("History failure did not degrade gracefully");
+""" % (history_source, nav_source, pop_source, parent_source)
+    subprocess.run([node, "-e", history_cases], text=True, encoding="utf-8", check=True)
 
 
 def verify_brain_summary_mode() -> None:
