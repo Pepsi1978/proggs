@@ -233,6 +233,7 @@ fun StartScreen(
                 items(viewModel.hooks, key = HookEntity::id) { hook ->
                     val selected = hook.id == viewModel.selectedHookId
                     val shape = RoundedCornerShape(20.dp)
+                    val iconColor = hookDisplayColor(hook, colors.dark)
                     Column(
                         Modifier.size(168.dp)
                             .background(if (selected) colors.surface2 else colors.surface, shape)
@@ -240,12 +241,17 @@ fun StartScreen(
                             .pmClickable { viewModel.selectHook(hook) }
                             .padding(16.dp),
                     ) {
-                        Icon(
-                            hookDisplayIcon(hook),
-                            null,
-                            tint = if (selected) colors.goldHi else colors.goldDim,
-                            modifier = Modifier.size(32.dp).scale(if (selected) 1.08f else 1f),
-                        )
+                        Box(
+                            Modifier.size(42.dp).background(iconColor.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                hookDisplayIcon(hook),
+                                null,
+                                tint = iconColor,
+                                modifier = Modifier.size(27.dp).scale(if (selected) 1.08f else 1f),
+                            )
+                        }
                         Text(
                             hook.text,
                             color = if (selected) colors.text1 else colors.text2,
@@ -1034,6 +1040,7 @@ fun HooksScreen(viewModel: AppViewModel) {
         ) {
             items(viewModel.hooks, key = HookEntity::id) { hook ->
                 var dragY by remember(hook.id) { mutableStateOf(0f) }
+                val iconColor = hookDisplayColor(hook, colors.dark)
                 val isDragging = draggedHookId == hook.id
                 val cardAlpha by animateFloatAsState(
                     if (draggedHookId == null || isDragging) 1f else 0.45f,
@@ -1055,7 +1062,12 @@ fun HooksScreen(viewModel: AppViewModel) {
                         .pmClickable { viewModel.openHookEditor(hook) },
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(hookDisplayIcon(hook), null, tint = colors.goldDim, modifier = Modifier.size(26.dp))
+                        Box(
+                            Modifier.size(38.dp).background(iconColor.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(hookDisplayIcon(hook), null, tint = iconColor, modifier = Modifier.size(23.dp))
+                        }
                         Text(
                             hook.text,
                             color = colors.text1,
@@ -1109,13 +1121,25 @@ fun HooksScreen(viewModel: AppViewModel) {
     }
 }
 
-private fun hookDisplayIcon(hook: HookEntity): ImageVector = when (hook.sortIndex % 6) {
+private fun hookVisualIndex(hook: HookEntity): Int =
+    ((hook.id.takeIf { it > 0L } ?: hook.sortIndex.toLong()) % 6L).toInt()
+
+private fun hookDisplayIcon(hook: HookEntity): ImageVector = when (hookVisualIndex(hook)) {
     0 -> Icons.Outlined.SelfImprovement
     1 -> Icons.Outlined.FavoriteBorder
     2 -> Icons.Outlined.Psychology
     3 -> Icons.Outlined.Explore
     4 -> Icons.Outlined.Lightbulb
     else -> Icons.Outlined.AutoAwesome
+}
+
+private fun hookDisplayColor(hook: HookEntity, dark: Boolean): Color = when (hookVisualIndex(hook)) {
+    0 -> if (dark) Color(0xFFFF9E80) else Color(0xFFB94B32)
+    1 -> if (dark) Color(0xFFC4A7E7) else Color(0xFF7954A1)
+    2 -> if (dark) Color(0xFF75C8B2) else Color(0xFF2A7D69)
+    3 -> if (dark) Color(0xFF8AB4F8) else Color(0xFF3F6FA8)
+    4 -> if (dark) Color(0xFFFFC66D) else Color(0xFFA66B00)
+    else -> if (dark) Color(0xFFF28BA8) else Color(0xFFA54462)
 }
 
 @Composable
