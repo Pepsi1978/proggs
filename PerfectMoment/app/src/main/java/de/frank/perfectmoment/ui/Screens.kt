@@ -344,8 +344,12 @@ fun SessionScreen(
         )
         if (viewModel.introVisible) SessionIntroOverlay(viewModel)
         if (!viewModel.introVisible && state == null && viewModel.sessionError == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxSize()) {
+                ScreenHeader("", viewModel::stopSession)
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     LoadingDots()
                     Text(
                         "Fragen werden vorbereitet…",

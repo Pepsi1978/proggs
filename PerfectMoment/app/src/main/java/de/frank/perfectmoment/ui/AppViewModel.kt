@@ -74,6 +74,8 @@ class AppViewModel(
     private var transcriptionJob: Job? = null
     private var activeTranscriber: GroqTranscriber? = null
     private var recordingGeneration = 0L
+    private var sessionStartJob: Job? = null
+    private var sessionStartGeneration = 0L
     private var hadActiveSession = sessionController.runtime.value != null
 
     val sessionRuntime: StateFlow<SessionRuntime?> = sessionController.runtime
@@ -437,13 +439,23 @@ class AppViewModel(
 
     fun beginAiSession(context: String = introText) {
         cancelVoiceInput()
+        sessionStartJob?.cancel()
+        authManager.cancelQuestionGeneration()
         sheet = null
         introVisible = false
         sessionError = null
         val topicValue = pendingSessionTopic
-        viewModelScope.launch {
-            runCatching { sessionController.startNewSession(topicValue, context.trim()) }
-                .onFailure(::handleSessionFailure)
+        val generation = ++sessionStartGeneration
+        sessionStartJob = viewModelScope.launch {
+            try {
+                sessionController.startNewSession(topicValue, context.trim())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                handleSessionFailure(error)
+            } finally {
+                if (generation == sessionStartGeneration) sessionStartJob = null
+            }
         }
     }
 
@@ -455,8 +467,13 @@ class AppViewModel(
 
     fun stopSession() {
         cancelVoiceInput()
+        sessionStartGeneration++
+        sessionStartJob?.cancel()
+        sessionStartJob = null
+        authManager.cancelQuestionGeneration()
         sessionController.stopAndClear()
         introVisible = false
+        sessionError = null
         screen = AppScreen.START
     }
 
@@ -790,6 +807,10 @@ class AppViewModel(
 
     override fun onCleared() {
         cancelVoiceInput()
+        sessionStartGeneration++
+        sessionStartJob?.cancel()
+        sessionStartJob = null
+        authManager.cancelQuestionGeneration()
         previewTts.shutdown()
         super.onCleared()
     }

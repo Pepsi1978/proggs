@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -187,6 +188,7 @@ class CodexAuthManager(context: Context) {
     private val refreshMutex = Mutex()
     private val loginMutex = Mutex()
     private val activeLoginJob = AtomicReference<Job?>()
+    private val activeQuestionCall = ActiveCallTracker()
     private val store by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         val masterKey = MasterKey.Builder(appContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -223,6 +225,10 @@ class CodexAuthManager(context: Context) {
         activeLoginJob.getAndSet(null)?.cancel()
     }
 
+    fun cancelQuestionGeneration() {
+        activeQuestionCall.cancel()
+    }
+
     suspend fun generateQuestions(request: CodexQuestionRequest): List<String> = withContext(Dispatchers.IO) {
         try {
             if (request.topic.isBlank()) {
@@ -246,17 +252,23 @@ class CodexAuthManager(context: Context) {
                 .header("ChatGPT-Account-ID", requestAccountId)
                 .build()
             val accumulator = CodexSseAccumulator()
-            executeWithDnsRetry(RESPONSES_HTTP_CLIENT, httpRequest).use { response ->
-                val responseBody = response.body
-                if (!response.isSuccessful) {
-                    classifyHttpError(response.code, responseBody?.string().orEmpty())
+            val trackedResponse = executeQuestionRequest(httpRequest)
+            try {
+                trackedResponse.response.use { response ->
+                    val responseBody = response.body
+                    if (!response.isSuccessful) {
+                        classifyHttpError(response.code, responseBody?.string().orEmpty())
+                    }
+                    val reader = responseBody?.charStream()?.buffered()
+                        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
+                    reader.use { readSseData(it, accumulator::accept) { accumulator.isCompleted } }
                 }
-                val reader = responseBody?.charStream()?.buffered()
-                    ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
-                reader.use { readSseData(it, accumulator::accept) { accumulator.isCompleted } }
+            } finally {
+                activeQuestionCall.clear(trackedResponse.call)
             }
             parseQuestionResponse(accumulator.result())
         } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
             throw networkException("Die OpenAI-Antwort konnte nicht vollständig empfangen werden.", error)
         }
     }
@@ -429,6 +441,17 @@ class CodexAuthManager(context: Context) {
     private suspend fun executeWithDnsRetry(client: OkHttpClient, request: Request): Response =
         withDnsRetry { client.newCall(request).awaitResponse() }
 
+    private suspend fun executeQuestionRequest(request: Request): TrackedResponse = withDnsRetry {
+        val call = RESPONSES_HTTP_CLIENT.newCall(request)
+        activeQuestionCall.track(call)
+        try {
+            TrackedResponse(call, call.awaitResponse())
+        } catch (error: Throwable) {
+            activeQuestionCall.clear(call)
+            throw error
+        }
+    }
+
     private suspend fun <T> withDnsRetry(block: suspend () -> T): T {
         var lastError: UnknownHostException? = null
         repeat(DNS_RETRY_DELAYS_MS.size + 1) { attempt ->
@@ -562,6 +585,7 @@ class CodexAuthManager(context: Context) {
         System.currentTimeMillis() + json.optLong("expires_in", DEFAULT_TOKEN_LIFETIME_SECONDS) * 1_000L
 
     private data class HttpResult(val code: Int, val body: String)
+    private data class TrackedResponse(val call: Call, val response: Response)
 
     companion object {
         private const val CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
