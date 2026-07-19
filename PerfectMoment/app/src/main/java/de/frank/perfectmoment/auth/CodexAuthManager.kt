@@ -73,7 +73,9 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
         .put("additionalProperties", false)
         .put("required", JSONArray().put("fragen"))
         .put("properties", JSONObject().put("fragen", questionSchema))
-    val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim()
+    val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
+        "\n\nDie Eingangsfrage \"${IntroQuestionPolicy.QUESTION}\" ist nur eine Eingabehilfe. " +
+        "Gib sie niemals als erzeugte Frage aus."
 
     return JSONObject()
         .put("model", request.model.apiId)

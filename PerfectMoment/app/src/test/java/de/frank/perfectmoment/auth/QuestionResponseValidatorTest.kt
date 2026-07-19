@@ -2,6 +2,7 @@ package de.frank.perfectmoment.auth
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class QuestionResponseValidatorTest {
@@ -51,5 +52,53 @@ class QuestionResponseValidatorTest {
         assertEquals(CodexQuestion("👩🏽‍⚕️", "Was stärkt heute deine Gesundheit?"), result[1])
         assertEquals(CodexQuestion("🇩🇪", "Was bedeutet Heimat für dich?"), result[2])
         assertEquals(CodexQuestion("✨", "Welche Ruhe spürst du bereits?"), result[3])
+    }
+
+    @Test
+    fun removesEntranceQuestionFromGeneratedQuestions() {
+        val raw = listOf("🎯 ${IntroQuestionPolicy.QUESTION}") +
+            (1..29).map { "🌟 Eigenständige Frage $it?" }
+
+        val result = QuestionResponseValidator.validate(raw)
+
+        assertEquals(29, result.size)
+        assertEquals(false, result.any { IntroQuestionPolicy.isEntranceQuestion(it.text) })
+    }
+
+    @Test
+    fun entrancePromptUsesAnswerAsSessionTopic() {
+        val prompt = IntroQuestionPolicy.resolve(
+            topic = "Frage mich immer zuerst: „${IntroQuestionPolicy.QUESTION}“ Danach beginne.",
+            introContext = "Wie finde ich mehr innere Ruhe? ",
+        )
+
+        assertEquals("Wie finde ich mehr innere Ruhe?", prompt.topic)
+        assertEquals("", prompt.introContext)
+    }
+
+    @Test
+    fun regularTopicKeepsIntroAsAdditionalContext() {
+        val prompt = IntroQuestionPolicy.resolve(
+            topic = "Wie fühlt sich ein schönes Leben an?",
+            introContext = "Mit mehr Gelassenheit",
+        )
+
+        assertEquals("Wie fühlt sich ein schönes Leben an?", prompt.topic)
+        assertEquals("Mit mehr Gelassenheit", prompt.introContext)
+    }
+
+    @Test
+    fun payloadExplicitlyForbidsEntranceQuestion() {
+        val payload = codexQuestionsPayload(
+            CodexQuestionRequest(
+                topic = "Mein Thema",
+                skillText = "Skill",
+                operatingModeText = "Erzeuge Fragen",
+            ),
+        )
+
+        val instructions = payload.getString("instructions")
+        assertTrue(instructions.contains(IntroQuestionPolicy.QUESTION))
+        assertTrue(instructions.contains("niemals als erzeugte Frage"))
     }
 }

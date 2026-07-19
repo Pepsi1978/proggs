@@ -15,6 +15,7 @@ import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.DeviceAuthInfo
+import de.frank.perfectmoment.auth.IntroQuestionPolicy
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
@@ -444,11 +445,11 @@ class AppViewModel(
         sheet = null
         introVisible = false
         sessionError = null
-        val topicValue = pendingSessionTopic
+        val prompt = IntroQuestionPolicy.resolve(pendingSessionTopic, context)
         val generation = ++sessionStartGeneration
         sessionStartJob = viewModelScope.launch {
             try {
-                sessionController.startNewSession(topicValue, context.trim())
+                sessionController.startNewSession(prompt.topic, prompt.introContext)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {

@@ -24,7 +24,11 @@ object QuestionResponseValidator {
         val accepted = rawQuestions.mapNotNull { raw ->
             val question = splitLeadingEmoji(raw) ?: return@mapNotNull null
             val normalized = normalizeQuestion(question.text)
-            if (normalized.isEmpty() || !seen.add(normalized)) null else question
+            if (normalized.isEmpty() || IntroQuestionPolicy.isEntranceQuestion(question.text) || !seen.add(normalized)) {
+                null
+            } else {
+                question
+            }
         }
 
         if (accepted.size < MIN_ACCEPTED_COUNT) {
