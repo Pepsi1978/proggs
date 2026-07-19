@@ -14,6 +14,7 @@ import {
   readPricingPerMillion,
   resolveOpenAIServiceTier,
   selectPricingModel,
+  withOpenAICacheReadMarkup,
   withOpenAIPriorityPricing,
 } from "../dist/pricing"
 import {
@@ -117,6 +118,31 @@ describe("models.dev pricing", () => {
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol")).toBe(base)
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast")).toBe(base)
     expect(withOpenAIPriorityPricing(base, "openai", "gpt-5.6-sol-fast", "default")).toBe(base)
+  })
+
+  test("adds 20 percent to cache-read pricing only for OpenAI models", () => {
+    const base = {
+      cost: {
+        input: 5,
+        output: 30,
+        cache_read: 0.5,
+        cache_write: 6.25,
+        tiers: [{ cache_read: 1, cache_write: 12.5, tier: { type: "context", size: 272_000 } }],
+      },
+    }
+    expect(readPricingPerMillion(withOpenAICacheReadMarkup(base, "openai"))).toMatchObject({
+      cacheRead: 0.6,
+      cacheWrite: 6.25,
+    })
+    expect(readPricingPerMillion(withOpenAICacheReadMarkup(base, "openai"), 300_000)).toMatchObject({
+      cacheRead: 1.2,
+      cacheWrite: 12.5,
+    })
+    expect(withOpenAICacheReadMarkup(base, "anthropic")).toBe(base)
+    expect(readPricingPerMillion(withOpenAICacheReadMarkup(base, "anthropic")).cacheRead).toBe(0.5)
+    const cacheOnlyUsage = { input: 0, output: 0, reasoning: 0, cacheRead: 100_000, cacheWrite: 0 }
+    expect(calculateUsageCost(withOpenAICacheReadMarkup(base, "openai"), cacheOnlyUsage)).toBeCloseTo(0.06)
+    expect(calculateUsageCost(withOpenAICacheReadMarkup(base, "anthropic"), cacheOnlyUsage)).toBeCloseTo(0.05)
   })
 
   test("keeps configured Fast routing authoritative for ChatGPT OAuth", () => {
@@ -452,22 +478,31 @@ describe("models.dev pricing", () => {
       "Inputpreis",
       "Outputpreis",
       "Cachepreis",
+      "Cache",
       "Input",
       "Output",
       "Reasoning",
       "Gesamtkosten",
+      "Cache-Kosten",
+      "Input-Kosten",
+      "Output-Kosten",
+      "Reasoning-Kosten",
+      "Version",
     ])
     expect(source).toContain('label="Input"')
     expect(source).toContain("value={formatInt(totals().input)}")
     expect(source).not.toContain("totals().input + totals().cacheRead + totals().cacheWrite")
-    expect(source).not.toContain('label="Cache R/W"')
+    expect(source).toContain('label="Cache"')
+    expect(source).toContain('value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}')
+    expect(source).toMatch(/label="Cache"[\s\S]*?bold/)
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
     expect(source.indexOf('label="Input"')).toBeLessThan(source.indexOf('label="Output"'))
     expect(source.indexOf('label="Output"')).toBeLessThan(source.indexOf('label="Reasoning"'))
     expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
-    expect(source).not.toContain('label="Cache"')
+    expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Cache"'))
+    expect(source.indexOf('label="Cache"')).toBeLessThan(source.indexOf('label="Input"'))
     expect(source).toContain('api.event.on("message.updated"')
     expect(source).toContain('api.event.on("message.part.updated"')
     expect(source).toContain("parts: props.api.state.part(info.id)")
@@ -682,19 +717,22 @@ describe("models.dev pricing", () => {
     expect(source).toContain("segment.serviceTier")
   })
 
-  test("renders only the session total without component cost rows", async () => {
+  test("renders the cost components below the session total in the requested order", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Gesamtkosten"')
-    expect(source).not.toContain('label="Input-Kosten"')
-    expect(source).not.toContain('label="Output-Kosten"')
-    expect(source).not.toContain('label="Reasoning-Kosten"')
-    expect(source).not.toContain('label="Cache-Kosten"')
+    expect(source).toContain('label="Input-Kosten"')
+    expect(source).toContain('label="Output-Kosten"')
+    expect(source).toContain('label="Reasoning-Kosten"')
+    expect(source).toContain('label="Cache-Kosten"')
+    expect(source.indexOf('label="Gesamtkosten"')).toBeLessThan(source.indexOf('label="Cache-Kosten"'))
+    expect(source.indexOf('label="Cache-Kosten"')).toBeLessThan(source.indexOf('label="Input-Kosten"'))
+    expect(source.indexOf('label="Input-Kosten"')).toBeLessThan(source.indexOf('label="Output-Kosten"'))
+    expect(source.indexOf('label="Output-Kosten"')).toBeLessThan(source.indexOf('label="Reasoning-Kosten"'))
     expect(source).toContain("formatUsd(money().usd)")
-    expect(source).not.toContain("money().inputUsd")
-    expect(source).not.toContain("money().outputUsd")
-    expect(source).not.toContain("money().reasoningUsd")
-    expect(source).not.toContain("money().cacheReadUsd")
-    expect(source).not.toContain("money().cacheWriteUsd")
+    expect(source).toContain('componentCost("inputUsd")')
+    expect(source).toContain('componentCost("outputUsd")')
+    expect(source).toContain('componentCost("reasoningUsd")')
+    expect(source).toContain('componentCost("cacheUsd")')
     expect(source).not.toContain("formatEur")
     expect(source).not.toContain("eurPerUsd")
     expect(source).not.toContain("frankfurter.app")

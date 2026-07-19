@@ -31,6 +31,8 @@ const OPENAI_PRIORITY_COST: Record<string, Record<string, number>> = {
   "gpt-5.5": { input: 12.5, output: 75, cache_read: 1.25 },
 }
 
+const OPENAI_CACHE_READ_MARKUP = 1.2
+
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (typeof value === "string" && value !== "") {
@@ -48,6 +50,18 @@ function normalizePrice(value: unknown): number {
 
 function priceSource(model: any): any {
   return model?.cost ?? model?.pricing ?? model?.price ?? model?.info?.cost
+}
+
+function markUpCacheRead(price: any): any {
+  if (!price || typeof price !== "object") return price
+  const result = { ...price }
+  if (hasPrice(price.cache_read)) result.cache_read = safeNumber(price.cache_read) * OPENAI_CACHE_READ_MARKUP
+  else if (hasPrice(price.cacheRead)) result.cacheRead = safeNumber(price.cacheRead) * OPENAI_CACHE_READ_MARKUP
+  else if (price.cache && typeof price.cache === "object" && hasPrice(price.cache.read)) {
+    result.cache = { ...price.cache, read: safeNumber(price.cache.read) * OPENAI_CACHE_READ_MARKUP }
+  }
+  if (Array.isArray(price.tiers)) result.tiers = price.tiers.map(markUpCacheRead)
+  return result
 }
 
 function contextualPrice(model: any, contextTokens: number): any {
@@ -269,6 +283,19 @@ export function withOpenAIPriorityPricing(model: any, providerID: string, modelI
     pricingServiceTier: "priority",
     pricingUnsupportedAbove: 272_000,
   }
+}
+
+export function withOpenAICacheReadMarkup(model: any, providerID: string): any {
+  if (providerID !== "openai" || !model || model.pricingCacheReadMarkup === OPENAI_CACHE_READ_MARKUP) return model
+  const source = priceSource(model)
+  const markedUp = markUpCacheRead(source)
+  if (markedUp === source) return model
+  const key = model.cost === source ? "cost" : model.pricing === source ? "pricing" : model.price === source ? "price" : undefined
+  if (key) return { ...model, [key]: markedUp, pricingCacheReadMarkup: OPENAI_CACHE_READ_MARKUP }
+  if (model.info?.cost === source) {
+    return { ...model, info: { ...model.info, cost: markedUp }, pricingCacheReadMarkup: OPENAI_CACHE_READ_MARKUP }
+  }
+  return model
 }
 
 export function resolveOpenAIServiceTier(

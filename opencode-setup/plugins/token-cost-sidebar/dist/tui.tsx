@@ -9,8 +9,10 @@ import {
   readAvailablePricingPerMillion,
   resolveOpenAIServiceTier,
   selectPricingModel,
+  withOpenAICacheReadMarkup,
   withOpenAIPriorityPricing,
 } from "./pricing"
+import packageMetadata from "../package.json" with { type: "json" }
 import {
   DEFAULT_WORK_MODE,
   readWorkMode,
@@ -176,11 +178,13 @@ function formatUsdPerMillion(value: number): string {
   return `${formatUsd(value)} / 1M`
 }
 
-function Row(props: { label: string; value: string; muted?: boolean; api: TuiPluginApi }) {
+function Row(props: { label: string; value: string; muted?: boolean; bold?: boolean; api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   return (
     <box flexDirection="row">
-      <text fg={props.muted ? theme().textMuted : theme().text}>{props.label}</text>
+      <text fg={props.muted ? theme().textMuted : theme().text}>
+        <span style={{ bold: props.bold }}>{props.label}</span>
+      </text>
       <box flexGrow={1} />
       <text fg={props.muted ? theme().textMuted : theme().text}>{props.value}</text>
     </box>
@@ -661,11 +665,14 @@ function View(props: {
   })
   const basePricingModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
 
-  const pricedModel = createMemo(() => withOpenAIPriorityPricing(
-    basePricingModel(),
+  const pricedModel = createMemo(() => withOpenAICacheReadMarkup(
+    withOpenAIPriorityPricing(
+      basePricingModel(),
+      modelMeta().providerID ?? "",
+      modelMeta().modelID ?? "",
+      effectiveServiceTier(),
+    ),
     modelMeta().providerID ?? "",
-    modelMeta().modelID ?? "",
-    effectiveServiceTier(),
   ))
 
   const rates = createMemo(() => {
@@ -699,20 +706,32 @@ function View(props: {
       return (record.segments ?? [{ usage: record.usage, recordedCostUsd: record.recordedCostUsd }]).map((segment) => ({
         usage: segment.usage,
         recordedCostUsd: segment.recordedCostUsd,
-        pricingModel: withOpenAIPriorityPricing(
-          baseModel,
+        pricingModel: withOpenAICacheReadMarkup(
+          withOpenAIPriorityPricing(
+            baseModel,
+            record.providerID ?? "",
+            record.modelID ?? "",
+            segment.serviceTier,
+          ),
           record.providerID ?? "",
-          record.modelID ?? "",
-          segment.serviceTier,
         ),
       }))
     }))
 
     return {
       usd: cost.usd,
+      inputUsd: cost.inputUsd,
+      cacheUsd: cost.cacheUsd,
+      outputUsd: cost.outputUsd,
+      reasoningUsd: cost.reasoningUsd,
+      breakdownAvailable: cost.breakdownAvailable,
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
     }
   })
+
+  const componentCost = (kind: "inputUsd" | "cacheUsd" | "outputUsd" | "reasoningUsd") => {
+    return money().breakdownAvailable ? formatUsd(money()[kind]) : "nicht verfügbar"
+  }
 
   const hasAnything = createMemo(() => modelMeta().fullID !== "unbekannt" || totals().matchedMessages > 0)
 
@@ -740,12 +759,23 @@ function View(props: {
         />
         <Row
           api={props.api}
+          label="Cache"
+          value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}
+          bold
+        />
+        <Row
+          api={props.api}
           label="Input"
           value={formatInt(totals().input)}
         />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} />
+        <Row api={props.api} label="Cache-Kosten" value={componentCost("cacheUsd")} />
+        <Row api={props.api} label="Input-Kosten" value={componentCost("inputUsd")} />
+        <Row api={props.api} label="Output-Kosten" value={componentCost("outputUsd")} />
+        <Row api={props.api} label="Reasoning-Kosten" value={componentCost("reasoningUsd")} />
+        <Row api={props.api} label="Version" value={`${packageMetadata.version} (${packageMetadata.updated})`} muted />
         <ThemeSelect api={props.api} />
       </box>
     </Show>

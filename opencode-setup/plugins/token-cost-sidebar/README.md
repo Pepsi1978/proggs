@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.12.1 - 18.07.2026, 21:30 Uhr
+Stand: v1.13.0 - 19.07.2026, 14:07 Uhr
 
 ## Funktionen
 
@@ -21,9 +21,9 @@ Stand: v1.12.1 - 18.07.2026, 21:30 Uhr
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
-- Kompakte Context-Anzeige mit exakt drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
-  Tokenwerten `Input`, `Output`, `Reasoning` und den `Gesamtkosten`. Die sieben Zeilen stehen ohne
-  Zwischenzeile direkt untereinander; Cache-R/W-Tokens und Kosten-Einzelposten bleiben im TUI verborgen.
+- Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
+  Tokenwerten `Cache` (`Read | Write`), `Input`, `Output`, `Reasoning`, den `Gesamtkosten` sowie den
+  Einzelposten in der Reihenfolge Cache, Input, Output und Reasoning.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
@@ -65,9 +65,11 @@ Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
 Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
 ```
 
-Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read und Cache-Write bleiben
-für die Berechnung der Gesamtkosten und für das lokale Audit erhalten, werden im TUI aber nicht als
-Token- oder Einzelkostenzeilen angezeigt. `Cachepreis` verwendet die R/W-Reihenfolge; fehlende
+Für OpenAI-Modelle wird der Cache-Read-Preis vor der Berechnung um 20 % erhöht. Andere Provider
+verwenden unverändert ihre eigenen Cache-Read- und Cache-Write-Preise.
+
+Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read und Cache-Write werden
+separat im Format `Read | Write` angezeigt. `Cachepreis` verwendet die R/W-Reihenfolge; fehlende
 Cachepreise erscheinen als `n/v` statt als erfundene Null.
 Effort-Stufen haben keinen eigenen Multiplikator; sie beeinflussen nur die tatsächlich erzeugte
 Reasoning-Menge.
@@ -114,7 +116,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
-9. Unter `Context` stehen ohne Zwischenzeilen ausschließlich `Inputpreis`, `Outputpreis`, `Cachepreis`, `Input`, `Output`, `Reasoning` und `Gesamtkosten`.
+9. Unter `Context` stehen ohne Zwischenzeilen `Inputpreis`, `Outputpreis`, `Cachepreis`, `Cache`, `Input`, `Output`, `Reasoning`, `Gesamtkosten` und danach die Kostenzeilen für Cache, Input, Output und Reasoning.
 
 Tests im Repo:
 
