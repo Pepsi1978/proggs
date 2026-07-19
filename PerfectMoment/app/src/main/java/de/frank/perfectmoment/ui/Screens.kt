@@ -61,7 +61,6 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VolumeOff
-import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
@@ -352,12 +351,6 @@ fun SessionScreen(
                     onClick = viewModel::stopSession,
                     modifier = Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 8.dp),
                 )
-                Icon(
-                    Icons.Outlined.VolumeUp,
-                    "Lautsprecher",
-                    tint = LocalPmColors.current.gold,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 32.dp, top = 20.dp).size(26.dp),
-                )
                 Column(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -489,18 +482,15 @@ private fun SessionQuestions(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Spacer(Modifier.weight(1f))
-            Box(
-                Modifier.size(8.dp).border(1.5.dp, colors.goldDim, CircleShape)
-                    .then(if (state?.offline == true) Modifier else Modifier.background(colors.goldDim, CircleShape)),
-            )
-            Spacer(Modifier.width(4.dp))
             SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
         }
         if (state != null) {
             Row(
                 Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-24).dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                SessionProgress(state, runtime)
                 Box(
                     Modifier.size(48.dp).background(colors.surface2, RoundedCornerShape(14.dp))
                         .pmClickable(onClick = onTogglePause),
@@ -531,7 +521,6 @@ private fun SessionQuestions(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 166.dp),
             )
         }
-        SessionProgress(state, runtime)
     }
 }
 
@@ -566,47 +555,19 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
         }
         if (pause > 0) progress.animateTo(1f, tween(if (reduced) 200 else pause.toInt()))
     }
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 64.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(colors.surface2, style = Stroke(2.5.dp.toPx()))
-                    drawArc(
-                        color = if (state.phase == Phase.SPEAKING) colors.amber else colors.gold,
-                        startAngle = -90f,
-                        sweepAngle = 360f * progress.value,
-                        useCenter = false,
-                        style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
-                    )
-                }
-                val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
-                Text(
-                    "%d:%02d".format(totalSeconds / 60, totalSeconds % 60),
-                    color = colors.text2,
-                    fontFamily = Inter,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp,
-                )
-            }
-            Text(
-                "Frage ${state.currentIndex + 1} · Wiederholung ${state.currentRep} von ${runtime.config.repsPerQuestion}",
-                color = colors.text3,
-                fontFamily = Inter,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp),
+    Box(
+        Modifier.size(64.dp).background(colors.surface2, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawCircle(colors.goldDim.copy(alpha = 0.45f), style = Stroke(2.5.dp.toPx()))
+            drawArc(
+                color = if (state.phase == Phase.SPEAKING) colors.amber else colors.gold,
+                startAngle = -90f,
+                sweepAngle = 360f * progress.value,
+                useCenter = false,
+                style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
             )
-            if (state.offline) {
-                Text(
-                    "Keine Verbindung — die Sitzung wartet.",
-                    color = colors.text3,
-                    fontFamily = Inter,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
         }
     }
 }
