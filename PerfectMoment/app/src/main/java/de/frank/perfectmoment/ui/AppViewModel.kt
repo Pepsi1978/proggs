@@ -288,8 +288,13 @@ class AppViewModel(
     }
 
     fun selectHook(hook: HookEntity) {
-        selectedHookId = hook.id
-        topic = hook.text
+        if (selectedHookId == hook.id) {
+            selectedHookId = null
+            topic = ""
+        } else {
+            selectedHookId = hook.id
+            topic = hook.text
+        }
         recordingMessage = null
     }
 
