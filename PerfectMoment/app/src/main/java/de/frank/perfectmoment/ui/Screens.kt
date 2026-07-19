@@ -107,6 +107,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
@@ -635,6 +636,7 @@ private fun SessionErrorOverlay(viewModel: AppViewModel, error: String) {
 @Composable
 fun HistoryScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    var pendingDelete by remember { mutableStateOf<SessionEntity?>(null) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Verlauf", viewModel::back)
         if (viewModel.sessions.isEmpty()) {
@@ -657,7 +659,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                 items(viewModel.sessions, key = SessionEntity::id) { session ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) viewModel.deleteSession(session.id)
+                            if (value == SwipeToDismissBoxValue.EndToStart) pendingDelete = session
                             false
                         },
                     )
@@ -681,6 +683,40 @@ fun HistoryScreen(viewModel: AppViewModel) {
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
+                }
+            }
+        }
+    }
+    pendingDelete?.let { session ->
+        Dialog(onDismissRequest = { pendingDelete = null }) {
+            PmCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(22.dp)) {
+                    Text(
+                        "Eintrag wirklich löschen?",
+                        color = colors.text1,
+                        fontFamily = Inter,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 20.sp,
+                    )
+                    Text(
+                        "Möchten Sie diesen Eintrag wirklich löschen?",
+                        color = colors.text2,
+                        fontFamily = Inter,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 20.dp),
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlineButton("Nein", colors.text2, { pendingDelete = null }, Modifier.weight(1f), height = 48)
+                        PrimaryButton(
+                            "Ja",
+                            onClick = {
+                                viewModel.deleteSession(session.id)
+                                pendingDelete = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            height = 48,
+                        )
+                    }
                 }
             }
         }
