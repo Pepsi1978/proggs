@@ -27,6 +27,7 @@ class SessionEngine(
     dispatcher: CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1),
     private val clock: SessionClock = MonotonicSessionClock,
     private val replay: Boolean = false,
+    private var initialGenerationInFlight: Boolean = false,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
 ) : Closeable {
@@ -70,7 +71,33 @@ class SessionEngine(
                 remainingMs = config.durationMs,
             )
             if (_state.value.phase != Phase.ENDED) startTimer()
-            if (_state.value.questions.isEmpty() && !replay) requestRefill()
+            if (_state.value.questions.isEmpty() && !replay && !initialGenerationInFlight) requestRefill()
+        }
+    }
+
+    fun appendQuestions(questions: List<Question>) {
+        if (questions.isEmpty()) return
+        scope.launch {
+            val current = _state.value
+            val wasWaitingAtEnd = current.phase == Phase.WAITING_NETWORK &&
+                current.currentIndex >= current.questions.size
+            _state.value = current.copy(questions = current.questions + questions)
+            if (wasWaitingAtEnd) {
+                if (current.speakerOn) {
+                    afterOfflineNotice(::speakCurrentQuestion)
+                } else {
+                    _state.value = _state.value.copy(phase = Phase.IDLE_MUTED)
+                }
+            }
+        }
+    }
+
+    fun completeInitialGeneration() {
+        scope.launch {
+            initialGenerationInFlight = false
+            if (_state.value.currentIndex >= _state.value.questions.size && !replay) {
+                handleQuestionsExhausted()
+            }
         }
     }
 
@@ -110,7 +137,7 @@ class SessionEngine(
             endSession()
         } else {
             _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
-            requestRefill()
+            if (!initialGenerationInFlight) requestRefill()
         }
     }
 
@@ -261,7 +288,9 @@ class SessionEngine(
     }
 
     private fun requestRefill() {
-        if (replay || refillPort == null || _state.value.refillInFlight || _state.value.phase == Phase.ENDED) {
+        if (initialGenerationInFlight || replay || refillPort == null || _state.value.refillInFlight ||
+            _state.value.phase == Phase.ENDED
+        ) {
             return
         }
         refillRetryJob?.cancel()
@@ -323,7 +352,7 @@ class SessionEngine(
             endSession()
         } else {
             _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
-            requestRefill()
+            if (!initialGenerationInFlight) requestRefill()
         }
     }
 

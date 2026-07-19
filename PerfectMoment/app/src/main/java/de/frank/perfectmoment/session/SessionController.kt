@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import de.frank.perfectmoment.auth.CodexAuthManager
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.CodexQuestionRequest
+import de.frank.perfectmoment.auth.IncrementalQuestionValidator
 import de.frank.perfectmoment.auth.QuestionResponseValidator
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.data.local.SessionEntity
@@ -83,11 +84,6 @@ class SessionController(
                 model = CodexModel.fromLabel(settings.model),
                 reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
             )
-            val initial = QuestionResponseValidator.validate(
-                codexAuthManager.generateQuestions(requestBase),
-            ).map { Question(emoji = it.emoji, text = it.text) }
-            sessionRepository.appendQuestions(sessionId, initial)
-
             val refillPort = QuestionRefillPort { existing ->
                 val raw = codexAuthManager.generateQuestions(
                     requestBase.copy(previousQuestions = existing.map(Question::text)),
@@ -95,15 +91,71 @@ class SessionController(
                 QuestionResponseValidator.validate(raw, existing.map(Question::text))
                     .map { "${it.emoji} ${it.text}" }
             }
-            createEngine(
-                runtime = runtime,
-                questions = initial,
-                refillPort = refillPort,
-                persistencePort = QuestionPersistencePort { questions ->
-                    sessionRepository.appendQuestions(sessionId, questions)
-                },
-            )
+            val persistencePort = QuestionPersistencePort { questions ->
+                sessionRepository.appendQuestions(sessionId, questions)
+            }
+            val streamedValidator = IncrementalQuestionValidator()
+            val streamedQuestions = mutableListOf<Question>()
+            val rawInitial = codexAuthManager.generateQuestions(requestBase) { rawQuestion ->
+                streamedValidator.accept(rawQuestion)?.let { parsed ->
+                    val question = Question(emoji = parsed.emoji, text = parsed.text)
+                    sessionRepository.appendQuestions(sessionId, listOf(question))
+                    withContext(Dispatchers.Main.immediate) {
+                        if (_runtime.value?.sessionId != sessionId) return@withContext
+                        streamedQuestions += question
+                        val activeEngine = engine
+                        if (activeEngine == null) {
+                            createEngine(
+                                runtime = runtime,
+                                questions = listOf(question),
+                                refillPort = refillPort,
+                                persistencePort = persistencePort,
+                                initialGenerationInFlight = true,
+                            )
+                        } else {
+                            activeEngine.appendQuestions(listOf(question))
+                        }
+                    }
+                }
+            }
+            val validatedInitial = QuestionResponseValidator.validate(rawInitial)
+                .map { Question(emoji = it.emoji, text = it.text) }
+            val streamedTexts = streamedQuestions
+                .mapTo(mutableSetOf()) { QuestionResponseValidator.normalizeQuestion(it.text) }
+            val missingQuestions = validatedInitial.filter {
+                QuestionResponseValidator.normalizeQuestion(it.text) !in streamedTexts
+            }
+            if (missingQuestions.isNotEmpty()) {
+                sessionRepository.appendQuestions(sessionId, missingQuestions)
+                withContext(Dispatchers.Main.immediate) {
+                    if (_runtime.value?.sessionId != sessionId) return@withContext
+                    val activeEngine = engine
+                    if (activeEngine == null) {
+                        createEngine(
+                            runtime = runtime.copy(generating = false),
+                            questions = missingQuestions,
+                            refillPort = refillPort,
+                            persistencePort = persistencePort,
+                        )
+                    } else {
+                        activeEngine.appendQuestions(missingQuestions)
+                    }
+                }
+            }
+            withContext(Dispatchers.Main.immediate) {
+                if (_runtime.value?.sessionId != sessionId) return@withContext
+                engine?.completeInitialGeneration()
+                _runtime.value = _runtime.value?.copy(generating = false)
+            }
         } catch (error: Throwable) {
+            if (error !is kotlinx.coroutines.CancellationException &&
+                _runtime.value?.sessionId == sessionId &&
+                _state.value?.questions?.isNotEmpty() == true
+            ) {
+                engine?.completeInitialGeneration()
+                _runtime.value = _runtime.value?.copy(generating = false)
+                return@withLock
+            }
             withContext(NonCancellable) {
                 releaseEngine()
                 appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
@@ -165,6 +217,7 @@ class SessionController(
         questions: List<Question>,
         refillPort: QuestionRefillPort?,
         persistencePort: QuestionPersistencePort,
+        initialGenerationInFlight: Boolean = false,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
@@ -176,9 +229,10 @@ class SessionController(
             coroutineScope = scope,
             dispatcher = Dispatchers.Main.immediate,
             replay = runtime.replay,
+            initialGenerationInFlight = initialGenerationInFlight,
         )
         engine = created
-        _runtime.value = runtime.copy(generating = false)
+        _runtime.value = runtime.copy(generating = initialGenerationInFlight)
         _state.value = created.state.value
         stateJob = scope.launch {
             created.state.collect { next ->

@@ -18,18 +18,8 @@ object QuestionResponseValidator {
             )
         }
 
-        val seen = previousQuestions
-            .mapTo(mutableSetOf(), ::normalizeQuestion)
-            .apply { remove("") }
-        val accepted = rawQuestions.mapNotNull { raw ->
-            val question = splitLeadingEmoji(raw) ?: return@mapNotNull null
-            val normalized = normalizeQuestion(question.text)
-            if (normalized.isEmpty() || IntroQuestionPolicy.isEntranceQuestion(question.text) || !seen.add(normalized)) {
-                null
-            } else {
-                question
-            }
-        }
+        val validator = IncrementalQuestionValidator(previousQuestions)
+        val accepted = rawQuestions.mapNotNull(validator::accept)
 
         if (accepted.size < MIN_ACCEPTED_COUNT) {
             throw QuestionValidationException(
@@ -139,4 +129,20 @@ object QuestionResponseValidator {
     private const val ZERO_WIDTH_JOINER = 0x200D
     private const val KEYCAP = 0x20E3
     private const val CANCEL_TAG = 0xE007F
+}
+
+internal class IncrementalQuestionValidator(previousQuestions: Collection<String> = emptyList()) {
+    private val seen = previousQuestions
+        .mapTo(mutableSetOf(), QuestionResponseValidator::normalizeQuestion)
+        .apply { remove("") }
+
+    fun accept(raw: String): CodexQuestion? {
+        val question = QuestionResponseValidator.splitLeadingEmoji(raw) ?: return null
+        val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
+        return if (normalized.isEmpty() || IntroQuestionPolicy.isEntranceQuestion(question.text) || !seen.add(normalized)) {
+            null
+        } else {
+            question
+        }
+    }
 }

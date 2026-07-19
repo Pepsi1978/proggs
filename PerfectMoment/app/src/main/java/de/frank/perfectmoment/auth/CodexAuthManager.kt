@@ -107,21 +107,26 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
 
 internal class CodexSseAccumulator {
     private val deltas = StringBuilder()
+    private val questionDecoder = StreamingQuestionDecoder()
     private var completedText: String? = null
     private var completed = false
 
     val isCompleted: Boolean get() = completed
 
-    fun accept(data: String) {
-        if (data.isBlank() || data == "[DONE]") return
+    fun accept(data: String): List<String> {
+        if (data.isBlank() || data == "[DONE]") return emptyList()
         val event = runCatching { JSONObject(data) }.getOrElse {
             throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat ein ungültiges Streaming-Ereignis geliefert.", it)
         }
-        when (event.optString("type")) {
-            "response.output_text.delta" -> event.optString("delta").takeIf(String::isNotEmpty)?.let(deltas::append)
+        return when (event.optString("type")) {
+            "response.output_text.delta" -> event.optString("delta").takeIf(String::isNotEmpty)?.let { delta ->
+                deltas.append(delta)
+                questionDecoder.append(delta)
+            }.orEmpty()
             "response.completed" -> {
                 completed = true
                 completedText = event.optJSONObject("response")?.let(::extractOutputText)
+                emptyList()
             }
             "response.incomplete" -> throw CodexAuthException(
                 AuthErrorKind.NETWORK,
@@ -129,6 +134,7 @@ internal class CodexSseAccumulator {
             )
             "response.failed" -> throw streamException(event.optJSONObject("response")?.optJSONObject("error"))
             "error" -> throw streamException(event.optJSONObject("error") ?: event)
+            else -> emptyList()
         }
     }
 
@@ -158,13 +164,13 @@ internal fun extractOutputText(response: JSONObject): String? {
     }.takeIf(String::isNotBlank)
 }
 
-internal fun readSseData(
+internal suspend fun readSseData(
     reader: BufferedReader,
-    onData: (String) -> Unit,
+    onData: suspend (String) -> Unit,
     shouldStop: () -> Boolean = { false },
 ) {
     val dataLines = mutableListOf<String>()
-    fun dispatch() {
+    suspend fun dispatch() {
         if (dataLines.isNotEmpty()) {
             onData(dataLines.joinToString("\n"))
             dataLines.clear()
@@ -231,7 +237,10 @@ class CodexAuthManager(context: Context) {
         activeQuestionCall.cancel()
     }
 
-    suspend fun generateQuestions(request: CodexQuestionRequest): List<String> = withContext(Dispatchers.IO) {
+    suspend fun generateQuestions(
+        request: CodexQuestionRequest,
+        onQuestion: suspend (String) -> Unit = {},
+    ): List<String> = withContext(Dispatchers.IO) {
         try {
             if (request.topic.isBlank()) {
                 throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Fragenerzeugung fehlt das Sitzungsthema.")
@@ -263,7 +272,13 @@ class CodexAuthManager(context: Context) {
                     }
                     val reader = responseBody?.charStream()?.buffered()
                         ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
-                    reader.use { readSseData(it, accumulator::accept) { accumulator.isCompleted } }
+                    reader.use {
+                        readSseData(
+                            reader = it,
+                            onData = { data -> accumulator.accept(data).forEach { question -> onQuestion(question) } },
+                            shouldStop = { accumulator.isCompleted },
+                        )
+                    }
                 }
             } finally {
                 activeQuestionCall.clear(trackedResponse.call)

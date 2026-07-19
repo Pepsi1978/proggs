@@ -28,6 +28,51 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `erste Stream Frage ist sofort sichtbar und vorlesbar`() = runTest {
+        val refill = FakeRefill()
+        val fixture = fixture(
+            questions = emptyList(),
+            config = config(reps = 1),
+            refill = refill,
+            initialGenerationInFlight = true,
+        )
+        fixture.engine.start()
+        runCurrent()
+        fixture.engine.setSpeakerOn(true)
+        runCurrent()
+
+        fixture.engine.appendQuestions(listOf(question(1)))
+        runCurrent()
+
+        assertEquals(listOf("Frage 1"), fixture.tts.spokenTexts)
+        assertEquals(0, refill.requests)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Stream Ende wartet auf naechste Frage statt zweiten Request zu starten`() = runTest {
+        val refill = FakeRefill()
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseNextMs = 0, reps = 1),
+            refill = refill,
+            initialGenerationInFlight = true,
+        )
+        fixture.startSpeaking()
+        fixture.tts.completeCurrent()
+        runCurrent()
+
+        assertEquals(Phase.WAITING_NETWORK, fixture.engine.state.value.phase)
+        assertEquals(0, refill.requests)
+
+        fixture.engine.appendQuestions(listOf(question(2)))
+        runCurrent()
+
+        assertEquals(listOf("Frage 1", "Frage 2"), fixture.tts.spokenTexts)
+        fixture.engine.close()
+    }
+
+    @Test
     fun `Takt wartet ab onComplete zwischen Wiederholungen und Fragen`() = runTest {
         val fixture = fixture(
             questions = listOf(question(1), question(2)),
@@ -267,6 +312,7 @@ class SessionEngineTest {
         config: SessionConfig = config(),
         refill: FakeRefill? = null,
         replay: Boolean = false,
+        initialGenerationInFlight: Boolean = false,
     ): Fixture {
         val tts = FakeTts()
         val engine = SessionEngine(
@@ -278,6 +324,7 @@ class SessionEngineTest {
             dispatcher = StandardTestDispatcher(testScheduler),
             clock = SessionClock { testScheduler.currentTime },
             replay = replay,
+            initialGenerationInFlight = initialGenerationInFlight,
         )
         return Fixture(engine, tts, this)
     }
