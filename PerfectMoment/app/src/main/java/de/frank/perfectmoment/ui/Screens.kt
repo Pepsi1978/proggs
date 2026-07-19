@@ -840,10 +840,10 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
             SettingsSection("Ablauf") {
-                SettingRow("Pause zwischen Wiederholungen", "${viewModel.pauseRep} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) })
-                SettingRow("Pause bis zur nächsten Frage", "${viewModel.pauseNext} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) })
-                SettingRow("Wiederholungen pro Frage", "${viewModel.repetitions}×", onClick = { viewModel.openSheet(AppSheet.REPETITIONS) })
-                SettingRow("Sitzungsdauer", "${viewModel.durationMinutes} min", onClick = { viewModel.openSheet(AppSheet.DURATION) }, divider = false)
+                SettingRow("Pause zwischen Wiederholungen", "${viewModel.pauseRep} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) }, showChevron = true)
+                SettingRow("Pause bis zur nächsten Frage", "${viewModel.pauseNext} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) }, showChevron = true)
+                SettingRow("Wiederholungen pro Frage", "${viewModel.repetitions}×", onClick = { viewModel.openSheet(AppSheet.REPETITIONS) }, showChevron = true)
+                SettingRow("Sitzungsdauer", "${viewModel.durationMinutes} min", onClick = { viewModel.openSheet(AppSheet.DURATION) }, divider = false, showChevron = true)
             }
             SettingsSection("Inhalt") {
                 SettingRow(
@@ -865,6 +865,7 @@ fun SettingsScreen(
                     "Anbieter",
                     if (viewModel.ttsProvider == TtsProvider.EDGE.id) "Microsoft Edge" else "Google Chirp 3 HD",
                     onClick = { viewModel.openSheet(AppSheet.PROVIDER) },
+                    showChevron = true,
                 )
                 SettingRow(
                     "Stimme",
@@ -901,8 +902,8 @@ fun SettingsScreen(
                     valueColor = if (viewModel.chatGptState == ChatGptState.CONNECTED) colors.text2 else colors.text3,
                     valueFontSize = if (viewModel.chatGptState == ChatGptState.CONNECTED) 13 else 14,
                 )
-                SettingRow("Modell", viewModel.model.label, onClick = { viewModel.openSheet(AppSheet.MODEL) })
-                SettingRow("Denkstärke", viewModel.reasoning.label, onClick = { viewModel.openSheet(AppSheet.REASONING) }, divider = false)
+                SettingRow("Modell", viewModel.model.label, onClick = { viewModel.openSheet(AppSheet.MODEL) }, showChevron = true)
+                SettingRow("Denkstärke", viewModel.reasoning.label, onClick = { viewModel.openSheet(AppSheet.REASONING) }, divider = false, showChevron = true)
             }
             SettingsSection("Sicherheit") {
                 SettingRow(
@@ -912,14 +913,11 @@ fun SettingsScreen(
                     divider = false,
                 )
             }
-            Column {
-                SectionLabel("Darstellung", Modifier.padding(bottom = 10.dp))
-                PmCard(Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Segment("Hell", theme == "light", { viewModel.setTheme("light") }, Modifier.weight(1f))
-                        Segment("Dunkel", theme == "dark", { viewModel.setTheme("dark") }, Modifier.weight(1f))
-                        Segment("Wie System", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
-                    }
+            SettingsSection("Darstellung") {
+                Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Segment("Hell", theme == "light", { viewModel.setTheme("light") }, Modifier.weight(1f))
+                    Segment("Dunkel", theme == "dark", { viewModel.setTheme("dark") }, Modifier.weight(1f))
+                    Segment("Wie System", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
                 }
             }
             SettingsSection("Über") {
@@ -961,6 +959,7 @@ private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
     }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface2))
 }
 
 @Composable
