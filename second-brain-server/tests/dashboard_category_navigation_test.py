@@ -80,7 +80,7 @@ def verify_brain_summary_mode() -> None:
         "include_text: bool = True",
         "meta_only = limit > 0 or not include_text",
         '(["chunk_text"] if not include_text else [])',
-        '"match": (p.payload.get("chunk_text") or "") if not include_text else None',
+        '"match": (p.payload.get("chunk_text") or "")[:320] if not include_text else None',
         "if include_text and meta_only:",
     )
     missing = [snippet for snippet in required if snippet not in BRAIN_APP]
