@@ -300,7 +300,11 @@ private fun IntroAnswerSheet(
         },
     )
     Spacer(Modifier.height(12.dp))
-    PrimaryButton("Beginnen", onClick = { viewModel.beginAiSession() })
+    PrimaryButton(
+        "Beginnen",
+        onClick = { viewModel.beginAiSession() },
+        enabled = viewModel.introText.isNotBlank(),
+    )
 }
 
 @Composable

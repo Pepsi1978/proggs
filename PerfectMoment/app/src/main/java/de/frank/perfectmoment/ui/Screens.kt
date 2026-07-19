@@ -605,9 +605,7 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
 private fun SessionIntroOverlay(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
     Column(
-        Modifier.fillMaxSize().background(colors.background)
-            .pmClickable { viewModel.beginAiSession("") }
-            .padding(horizontal = 32.dp),
+        Modifier.fillMaxSize().background(colors.background).padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         SectionLabel("Die KI fragt zuerst")

@@ -281,7 +281,8 @@ class AppViewModel(
 
     fun closeSheet() {
         if (sheet == AppSheet.INTRO) {
-            beginAiSession("")
+            cancelVoiceInput()
+            sheet = null
         } else {
             sheet = null
         }
@@ -437,9 +438,10 @@ class AppViewModel(
         cancelVoiceInput()
         pendingSessionTopic = topic.trim()
         introText = ""
-        introVisible = true
+        introVisible = IntroQuestionPolicy.requiresAnswer(pendingSessionTopic)
         sessionError = null
         screen = AppScreen.SESSION
+        if (!introVisible) beginAiSession("")
     }
 
     fun openIntroSheet() {

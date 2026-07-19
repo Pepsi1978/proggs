@@ -77,6 +77,17 @@ class QuestionResponseValidatorTest {
     }
 
     @Test
+    fun onlyExplicitAskMeFirstInstructionRequiresAnswer() {
+        assertTrue(
+            IntroQuestionPolicy.requiresAnswer(
+                "Frage mich immer zuerst: „${IntroQuestionPolicy.QUESTION}“ Danach beginne.",
+            ),
+        )
+        assertEquals(false, IntroQuestionPolicy.requiresAnswer("Wie fühlt sich ein schönes Leben an?"))
+        assertEquals(false, IntroQuestionPolicy.requiresAnswer(IntroQuestionPolicy.QUESTION))
+    }
+
+    @Test
     fun regularTopicKeepsIntroAsAdditionalContext() {
         val prompt = IntroQuestionPolicy.resolve(
             topic = "Wie fühlt sich ein schönes Leben an?",
