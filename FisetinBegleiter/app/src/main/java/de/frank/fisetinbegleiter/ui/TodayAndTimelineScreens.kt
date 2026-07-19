@@ -210,7 +210,11 @@ fun TodayScreen(
         if (active) {
             item {
                 DesignOutlineButton(
-                    text = "Kur abbrechen und zurücksetzen",
+                    text = if (state.completedDayCount > 0) {
+                        "Kur nach ${dayLabel(state.completedDayCount)} beenden"
+                    } else {
+                        "Kur abbrechen und zurücksetzen"
+                    },
                     onClick = { showCancelConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
                     contentColor = colors.bad,
@@ -245,10 +249,24 @@ fun TodayScreen(
         )
     }
     if (showCancelConfirmation) {
+        val completedDays = state.completedDayCount
         FbPopDialog(onDismiss = { showCancelConfirmation = false }) {
-            Text("Vollständig zurücksetzen?", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht.",
+                if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Vollständig zurücksetzen?",
+                color = colors.text,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                if (completedDays > 0) {
+                    if (completedDays == 1) {
+                        "Der vollständige Tag bleibt als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
+                    } else {
+                        "Die $completedDays vollständigen Tage bleiben als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
+                    }
+                } else {
+                    "Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht."
+                },
                 modifier = Modifier.padding(top = 10.dp),
                 color = colors.sub,
                 fontSize = 13.5.sp,
@@ -257,7 +275,7 @@ fun TodayScreen(
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 DesignOutlineButton("Behalten", { showCancelConfirmation = false }, Modifier.weight(1f), verticalPadding = 13.dp)
                 FlatDesignButton(
-                    text = "Löschen",
+                    text = if (completedDays > 0) "Als Kur speichern" else "Löschen",
                     onClick = {
                         onCancelCure()
                         showCancelConfirmation = false
@@ -464,7 +482,7 @@ private fun SetupSheet(
     onDismiss: () -> Unit,
     onConfirm: (Int, String, String, LocalDate, Int) -> Unit,
 ) {
-    var duration by remember { mutableIntStateOf(defaultDuration.coerceIn(2, 3)) }
+    var duration by remember { mutableIntStateOf(defaultDuration.coerceIn(1, 3)) }
     var liquid by remember { mutableStateOf("Wasser") }
     var fat by remember { mutableStateOf("MCT-Öl") }
     var startDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -478,8 +496,8 @@ private fun SetupSheet(
         Text("Kur einrichten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         SheetLabel("Dauer")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(2, 3).forEach { value ->
-                SelectionButton("$value Tage", duration == value, { duration = value }, Modifier.weight(1f))
+            listOf(1, 2, 3).forEach { value ->
+                SelectionButton(dayLabel(value), duration == value, { duration = value }, Modifier.weight(1f))
             }
         }
         SheetLabel("Trägerflüssigkeit")
@@ -674,10 +692,12 @@ fun TimelineScreen(
     onMealDone: () -> Unit,
     onSpermidinDone: () -> Unit,
     onCompleteDay: () -> Unit,
+    onFinishCureAfterDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val day = state.currentDay
+    var showCompletionChoice by remember(day?.id) { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(bottom = 18.dp),
@@ -716,7 +736,12 @@ fun TimelineScreen(
                 }
             }
             item {
-                AccentGradientButton(onClick = onCompleteDay, enabled = state.canCompleteDay, modifier = Modifier.fillMaxWidth()) {
+                val hasAnotherDay = day.dayNumber < (state.activeCure?.cure?.plannedDurationDays ?: day.dayNumber)
+                AccentGradientButton(
+                    onClick = { if (hasAnotherDay) showCompletionChoice = true else onCompleteDay() },
+                    enabled = state.canCompleteDay,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(if (day.dayNumber == state.activeCure?.cure?.plannedDurationDays) "Kur abschließen" else "Tag ${day.dayNumber} abschließen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -734,7 +759,40 @@ fun TimelineScreen(
             }
         }
     }
+
+    if (showCompletionChoice && day != null) {
+        FbPopDialog(onDismiss = { showCompletionChoice = false }) {
+            Text("Tag ${day.dayNumber} vollständig", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Möchtest du die Kur jetzt nach ${dayLabel(day.dayNumber)} abschließen oder mit Tag ${day.dayNumber + 1} fortfahren?",
+                modifier = Modifier.padding(top = 10.dp),
+                color = colors.sub,
+                fontSize = 13.5.sp,
+                lineHeight = 20.925.sp,
+            )
+            AccentGradientButton(
+                onClick = {
+                    onCompleteDay()
+                    showCompletionChoice = false
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+            ) {
+                Text("Weiter mit Tag ${day.dayNumber + 1}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            DesignOutlineButton(
+                text = "Kur nach ${dayLabel(day.dayNumber)} beenden",
+                onClick = {
+                    onFinishCureAfterDay()
+                    showCompletionChoice = false
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalPadding = 13.dp,
+            )
+        }
+    }
 }
+
+private fun dayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tage"
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

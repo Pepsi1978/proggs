@@ -74,6 +74,9 @@ interface FisetinDao {
     @Query("SELECT * FROM cure_days WHERE id = :id")
     suspend fun getCureDay(id: Long): CureDayEntity?
 
+    @Query("DELETE FROM cure_days WHERE cureId = :cureId AND dayNumber > :lastDayNumber")
+    suspend fun deleteCureDaysAfter(cureId: Long, lastDayNumber: Int)
+
     @Transaction
     @Query("SELECT * FROM cures WHERE status != 'ABGESCHLOSSEN' ORDER BY id DESC LIMIT 1")
     fun observeActiveCure(): Flow<CureWithDays?>

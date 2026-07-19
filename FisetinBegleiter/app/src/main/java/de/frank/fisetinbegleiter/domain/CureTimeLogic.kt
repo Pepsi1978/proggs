@@ -35,6 +35,15 @@ fun currentDay(cure: CureWithDays?): CureDayEntity? = cure?.days
     ?.firstOrNull { it.completedAt == null }
     ?: cure?.days?.maxByOrNull { it.dayNumber }
 
+fun completedThroughDay(cure: CureWithDays?): Int {
+    var expectedDay = 1
+    for (day in cure?.days.orEmpty().sortedBy { it.dayNumber }) {
+        if (day.dayNumber != expectedDay || day.completedAt == null) break
+        expectedDay++
+    }
+    return expectedDay - 1
+}
+
 fun cureState(cure: CureWithDays?, protocol: ProtocolTemplateEntity, now: Long): AppCureState {
     if (cure == null) return AppCureState.KEINE_KUR
     if (cure.cure.completedAt != null) return AppCureState.KUR_ABGESCHLOSSEN

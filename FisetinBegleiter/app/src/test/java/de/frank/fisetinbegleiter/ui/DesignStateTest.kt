@@ -37,4 +37,11 @@ class DesignStateTest {
         assertEquals(30, validated.spermidinStartMinutes)
         assertEquals(240, validated.spermidinReminderMinutes)
     }
+
+    @Test
+    fun oneDayProtocolRemainsValid() {
+        val validated = ProtocolTemplateEntity(standardDurationDays = 1).validatedForDesign()
+
+        assertEquals(1, validated.standardDurationDays)
+    }
 }

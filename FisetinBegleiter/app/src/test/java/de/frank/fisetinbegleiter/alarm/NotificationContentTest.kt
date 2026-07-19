@@ -40,4 +40,9 @@ class NotificationContentTest {
         assertTrue(notificationContent(AlarmType.SPERMIDIN_OPEN, 0, protocol).text.contains("120 Minuten"))
         assertTrue(notificationContent(AlarmType.SPERMIDIN_REMINDER, 0, protocol).text.contains("30 Minuten"))
     }
+
+    @Test
+    fun `one day cure completion uses singular wording`() {
+        assertTrue(notificationContent(AlarmType.CURE_ENDED, 1).text.contains("1 Tag"))
+    }
 }

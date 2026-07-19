@@ -57,7 +57,7 @@ fun notificationContent(
     )
     AlarmType.CURE_ENDED -> NotificationContent(
         title = "Kur abgeschlossen",
-        text = "Kur abgeschlossen ($targetDay Tage). Der Eintrag ist im Protokoll gespeichert.",
+        text = "Kur abgeschlossen (${if (targetDay == 1) "1 Tag" else "$targetDay Tage"}). Der Eintrag ist im Protokoll gespeichert.",
         destination = "history",
     )
     AlarmType.CURE_START -> NotificationContent(

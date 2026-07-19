@@ -55,6 +55,16 @@ class CureTimeLogicTest {
     }
 
     @Test
+    fun `completed through day only counts continuous finished days`() {
+        val first = day(dayNumber = 1).copy(completedAt = t0)
+        val second = day(dayNumber = 2)
+        val corruptThird = day(dayNumber = 3).copy(completedAt = t0)
+
+        assertEquals(1, completedThroughDay(activeCure(first, second, corruptThird)))
+        assertEquals(0, completedThroughDay(activeCure(second)))
+    }
+
+    @Test
     fun `planned start combines selected date and minute in device zone`() {
         val zone = ZoneId.of("Europe/Berlin")
         val date = LocalDate.of(2026, 7, 20)

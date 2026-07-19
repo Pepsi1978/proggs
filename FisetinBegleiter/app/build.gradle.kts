@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.fisetinbegleiter"
         minSdk = 29
         targetSdk = 35
-        versionCode = 26
-        versionName = "1.0.25"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.07.2026, 17:20 Uhr\"")
+        versionCode = 27
+        versionName = "1.0.26"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.07.2026, 20:43 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }

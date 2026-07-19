@@ -91,7 +91,7 @@ fun MoreScreen(
             }
         }
         item {
-            ProtocolNumberRow("Standarddauer (Tage)", protocol.standardDurationDays, 1, 2, 3, !locked) {
+            ProtocolNumberRow("Standarddauer (Tage)", protocol.standardDurationDays, 1, 1, 3, !locked) {
                 protocol = protocol.copy(standardDurationDays = it)
             }
         }
@@ -430,7 +430,7 @@ private fun DesignTextField(value: String, onValueChange: (String) -> Unit, plac
 internal fun ingredientListKey(id: Long): String = "ingredient:$id"
 
 internal fun ProtocolTemplateEntity.validatedForDesign(): ProtocolTemplateEntity = copy(
-    standardDurationDays = standardDurationDays.coerceIn(2, 3),
+    standardDurationDays = standardDurationDays.coerceIn(1, 3),
     antioxidantBlockMinutes = antioxidantBlockMinutes.coerceIn(60, 480),
     mealDeadlineMinutes = mealDeadlineMinutes.coerceIn(5, 120),
     mealWarningMinutes = mealWarningMinutes.coerceIn(0, 120),

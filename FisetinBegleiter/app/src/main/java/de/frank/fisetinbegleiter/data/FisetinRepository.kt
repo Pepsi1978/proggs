@@ -26,10 +26,11 @@ class FisetinRepository(private val database: FisetinDatabase) {
         fatCarrier: String,
         preferredStartMinuteOfDay: Int,
     ): Long = database.withTransaction {
+        val validDurationDays = durationDays.coerceIn(1, 3)
         val cureId = dao.insertCure(
             CureEntity(
                 startEpochDay = startDate.toEpochDay(),
-                plannedDurationDays = durationDays,
+                plannedDurationDays = validDurationDays,
                 status = CureStatus.GEPLANT,
                 carrierLiquid = carrierLiquid,
                 fatCarrier = fatCarrier,
@@ -38,7 +39,7 @@ class FisetinRepository(private val database: FisetinDatabase) {
             ),
         )
         val dayIds = dao.insertCureDays(
-            (1..durationDays).map { day ->
+            (1..validDurationDays).map { day ->
                 CureDayEntity(
                     cureId = cureId,
                     dayNumber = day,
@@ -68,6 +69,30 @@ class FisetinRepository(private val database: FisetinDatabase) {
         if (day.dayNumber == cure.plannedDurationDays) {
             dao.updateCure(cure.copy(status = CureStatus.ABGESCHLOSSEN, completedAt = timestamp))
         }
+    }
+
+    suspend fun completeCureAfterDay(cure: CureEntity, day: CureDayEntity, timestamp: Long) = database.withTransaction {
+        dao.updateCureDay(day.copy(completedAt = timestamp))
+        dao.deleteCureDaysAfter(cure.id, day.dayNumber)
+        dao.updateCure(
+            cure.copy(
+                plannedDurationDays = day.dayNumber,
+                status = CureStatus.ABGESCHLOSSEN,
+                completedAt = timestamp,
+            ),
+        )
+    }
+
+    suspend fun finishCureAtDay(cure: CureEntity, lastCompletedDay: Int, timestamp: Long) = database.withTransaction {
+        require(lastCompletedDay in 1..cure.plannedDurationDays) { "Die Kur benötigt mindestens einen vollständigen Tag" }
+        dao.deleteCureDaysAfter(cure.id, lastCompletedDay)
+        dao.updateCure(
+            cure.copy(
+                plannedDurationDays = lastCompletedDay,
+                status = CureStatus.ABGESCHLOSSEN,
+                completedAt = timestamp,
+            ),
+        )
     }
 
     suspend fun updateNote(cure: CureEntity, note: String) = dao.updateCure(cure.copy(note = note))

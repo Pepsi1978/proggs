@@ -166,7 +166,7 @@ fun FisetinApp(
                                 state = state,
                                 onCreateCure = viewModel::createCure,
                                 onDrinkNow = viewModel::drinkNow,
-                                onCancelCure = viewModel::cancelAllActiveCures,
+                                onCancelCure = viewModel::stopActiveCure,
                                 onGoTimeline = { screen = MainScreen.TIMELINE },
                                 onGoStack = { screen = MainScreen.STACK },
                                 onOpenExactAlarmSettings = onOpenExactAlarmSettings,
@@ -180,13 +180,14 @@ fun FisetinApp(
                                 onMealDone = viewModel::markMeal,
                                 onSpermidinDone = viewModel::markSpermidin,
                                 onCompleteDay = viewModel::completeDay,
+                                onFinishCureAfterDay = viewModel::finishCureAfterCurrentDay,
                                 modifier = contentModifier,
                             )
                             MainScreen.STACK -> StackScreen(state, contentModifier)
                             MainScreen.HISTORY -> HistoryScreen(
                                 state = state,
                                 onUpdateNote = viewModel::updateNote,
-                                onCancelCure = viewModel::cancelAllActiveCures,
+                                onCancelCure = viewModel::stopActiveCure,
                                 modifier = contentModifier,
                             )
                             MainScreen.MORE -> MoreScreen(

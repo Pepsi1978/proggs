@@ -35,6 +35,7 @@ import de.frank.fisetinbegleiter.data.CureStatus
 import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.StackCategory
 import de.frank.fisetinbegleiter.data.StackItemEntity
+import de.frank.fisetinbegleiter.domain.completedThroughDay
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -194,6 +195,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
     }
     val allSteps = cure.days.size * 4
     val completed = cure.cure.status == CureStatus.ABGESCHLOSSEN
+    val completedDays = completedThroughDay(cure)
 
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
@@ -217,7 +219,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             )
         }
         Text(
-            "${cure.cure.plannedDurationDays} Tage · $doneSteps von $allSteps Schritten dokumentiert",
+            "${historyDayLabel(cure.cure.plannedDurationDays)} · $doneSteps von $allSteps Schritten dokumentiert",
             modifier = Modifier.padding(top = 10.dp),
             color = colors.sub,
             fontSize = 13.sp,
@@ -235,7 +237,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             SmallActionButton("Notiz speichern", { onUpdateNote(cure, note) }, enabled = note != cure.cure.note)
             if (!completed) {
                 DesignOutlineButton(
-                    "Abbrechen & zurücksetzen",
+                    if (completedDays > 0) "Nach ${historyDayLabel(completedDays)} beenden" else "Abbrechen & zurücksetzen",
                     { showCancelConfirmation = true },
                     contentColor = colors.bad,
                     borderColor = colors.badBg,
@@ -247,9 +249,22 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
 
     if (showCancelConfirmation) {
         FbPopDialog(onDismiss = { showCancelConfirmation = false }) {
-            Text("Aktiven Ablauf löschen?", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht.",
+                if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Aktiven Ablauf löschen?",
+                color = colors.text,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                if (completedDays > 0) {
+                    if (completedDays == 1) {
+                        "Der vollständige Tag bleibt als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
+                    } else {
+                        "Die $completedDays vollständigen Tage bleiben als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
+                    }
+                } else {
+                    "Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht."
+                },
                 modifier = Modifier.padding(top = 10.dp),
                 color = colors.sub,
                 fontSize = 13.5.sp,
@@ -258,7 +273,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 DesignOutlineButton("Behalten", { showCancelConfirmation = false }, Modifier.weight(1f), verticalPadding = 13.dp)
                 FlatDesignButton(
-                    "Vollständig löschen",
+                    if (completedDays > 0) "Als Kur speichern" else "Vollständig löschen",
                     {
                         onCancelCure()
                         showCancelConfirmation = false
@@ -271,6 +286,8 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
         }
     }
 }
+
+private fun historyDayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tage"
 
 @Composable
 private fun NoteEditor(value: String, onValueChange: (String) -> Unit) {

@@ -12,6 +12,7 @@ import de.frank.fisetinbegleiter.data.IngredientEntity
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import de.frank.fisetinbegleiter.data.StackItemEntity
 import de.frank.fisetinbegleiter.domain.canComplete
+import de.frank.fisetinbegleiter.domain.completedThroughDay
 import de.frank.fisetinbegleiter.domain.cureState
 import de.frank.fisetinbegleiter.domain.currentDay
 import de.frank.fisetinbegleiter.domain.plannedStartAt
@@ -40,6 +41,8 @@ data class MainUiState(
     val blockEnd: Long? get() = currentDay?.t0?.let { timeline(it, protocol).blockEnd }
     val blockActive: Boolean get() = blockEnd?.let { now < it } == true
     val canCompleteDay: Boolean get() = canComplete(currentDay, now, protocol)
+    val completedDayCount: Int
+        get() = completedThroughDay(activeCure).coerceAtMost(activeCure?.cure?.plannedDurationDays ?: 0)
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -90,7 +93,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (startAt <= System.currentTimeMillis()) return
         viewModelScope.launch {
             val firstDayId = repository.createCure(
-                durationDays = duration,
+                durationDays = duration.coerceIn(1, 3),
                 startDate = startDate,
                 carrierLiquid = liquid,
                 fatCarrier = fat,
@@ -139,18 +142,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (day.blockEndedAt == null) repository.markBlockEnded(day.id, timestamp)
             repository.completeDay(cure, day.copy(blockEndedAt = day.blockEndedAt ?: timestamp), timestamp)
             if (day.dayNumber == cure.plannedDurationDays) {
+                state.activeCure.days.forEach { cureDay -> scheduler.cancelDay(cureDay.id) }
                 NotificationHelper.show(app, AlarmType.CURE_ENDED, day.id, cure.plannedDurationDays)
             }
         }
     }
 
+    fun finishCureAfterCurrentDay() {
+        val state = uiState.value
+        val activeCure = state.activeCure ?: return
+        val day = state.currentDay ?: return
+        if (!state.canCompleteDay) return
+        viewModelScope.launch {
+            val timestamp = System.currentTimeMillis()
+            val completedDay = day.copy(blockEndedAt = day.blockEndedAt ?: timestamp)
+            repository.completeCureAfterDay(activeCure.cure, completedDay, timestamp)
+            activeCure.days.forEach { cureDay -> scheduler.cancelDay(cureDay.id) }
+            NotificationHelper.show(app, AlarmType.CURE_ENDED, day.id, day.dayNumber)
+        }
+    }
+
     fun canScheduleExactAlarms(): Boolean = scheduler.canScheduleExact()
 
-    fun cancelAllActiveCures() {
-        val activeCures = uiState.value.history.filter { it.cure.status != de.frank.fisetinbegleiter.data.CureStatus.ABGESCHLOSSEN }
+    fun stopActiveCure() {
+        val state = uiState.value
+        val activeCure = state.activeCure ?: return
+        val completedDayCount = completedThroughDay(activeCure).coerceAtMost(activeCure.cure.plannedDurationDays)
+        val lastCompletedDay = activeCure.days.firstOrNull { it.dayNumber == completedDayCount }
         viewModelScope.launch {
-            activeCures.flatMap { it.days }.forEach { day -> scheduler.cancelDay(day.id) }
-            repository.deleteAllActiveCures()
+            if (completedDayCount > 0) {
+                val timestamp = System.currentTimeMillis()
+                repository.finishCureAtDay(activeCure.cure, completedDayCount, timestamp)
+                activeCure.days.forEach { day -> scheduler.cancelDay(day.id) }
+                val notificationId = lastCompletedDay?.id ?: activeCure.cure.id
+                NotificationHelper.show(app, AlarmType.CURE_ENDED, notificationId, completedDayCount)
+            } else {
+                repository.deleteAllActiveCures()
+                state.history
+                    .filter { it.cure.status != de.frank.fisetinbegleiter.data.CureStatus.ABGESCHLOSSEN }
+                    .flatMap { it.days }
+                    .forEach { day -> scheduler.cancelDay(day.id) }
+            }
         }
     }
 
