@@ -690,8 +690,8 @@ fun HistoryScreen(viewModel: AppViewModel) {
 @Composable
 private fun HistoryRow(session: SessionEntity, onClick: () -> Unit) {
     val colors = LocalPmColors.current
-    PmCard(Modifier.fillMaxWidth().height(92.dp).pmClickable(onClick = onClick)) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+    PmCard(Modifier.fillMaxWidth().pmClickable(onClick = onClick)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
                     session.topic,
@@ -700,8 +700,6 @@ private fun HistoryRow(session: SessionEntity, onClick: () -> Unit) {
                     fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     lineHeight = 21.6.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     "${formatSessionDate(session.startedAt)} · ${session.durationMin} min · ${session.questionCount} Fragen · ${voiceDisplayName(session.voiceName)}",
