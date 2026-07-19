@@ -16,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -175,6 +176,7 @@ fun StartScreen(
 ) {
     val colors = LocalPmColors.current
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val darkThemeActive = theme == "dark" || theme == "system" && isSystemInDarkTheme()
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 108.dp),
@@ -191,21 +193,16 @@ fun StartScreen(
                     fontSize = 18.sp,
                     modifier = Modifier.weight(1f),
                 )
-                Row(
-                    Modifier.background(colors.surface, RoundedCornerShape(16.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                Box(
+                    Modifier.size(36.dp).background(colors.surface, RoundedCornerShape(12.dp))
+                        .pmClickable { viewModel.setTheme(if (darkThemeActive) "light" else "dark") },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        Icons.Outlined.LightMode,
-                        "Helles Erscheinungsbild",
-                        tint = if (theme == "light") colors.gold else colors.goldDim,
-                        modifier = Modifier.size(20.dp).pmClickable { viewModel.setTheme("light") },
-                    )
-                    Icon(
-                        Icons.Outlined.DarkMode,
-                        "Dunkles Erscheinungsbild",
-                        tint = if (theme == "dark") colors.gold else colors.goldDim,
-                        modifier = Modifier.size(20.dp).pmClickable { viewModel.setTheme("dark") },
+                        if (darkThemeActive) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                        if (darkThemeActive) "Zum hellen Erscheinungsbild wechseln" else "Zum dunklen Erscheinungsbild wechseln",
+                        tint = colors.gold,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(18.dp))
