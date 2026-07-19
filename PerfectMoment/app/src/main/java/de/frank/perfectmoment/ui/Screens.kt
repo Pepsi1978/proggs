@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -260,7 +261,7 @@ fun StartScreen(
                 value = viewModel.topic,
                 onValueChange = viewModel::updateTopic,
                 placeholder = "Was möchtest du hören?",
-                modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp, max = 288.dp).padding(horizontal = 20.dp),
             )
             Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
                 RecorderControl(

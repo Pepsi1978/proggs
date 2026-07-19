@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -284,7 +285,7 @@ private fun IntroAnswerSheet(
         value = viewModel.introText,
         onValueChange = viewModel::updateIntroText,
         placeholder = "Welche Frage hast du und welches Gefühl möchtest du damit verstärken?",
-        modifier = Modifier.fillMaxWidth().height(110.dp).padding(top = 12.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp, max = 330.dp).padding(top = 12.dp),
     )
     Spacer(Modifier.height(8.dp))
     RecorderControl(
