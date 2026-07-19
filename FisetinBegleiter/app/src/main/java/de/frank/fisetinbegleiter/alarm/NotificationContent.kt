@@ -65,6 +65,11 @@ fun notificationContent(
         text = "Deine geplante Kur beginnt jetzt. Öffne die Drink-Checkliste und starte T0, wenn du bereit bist.",
         destination = "today",
     )
+    AlarmType.CURE_PREPARATION -> NotificationContent(
+        title = "Morgen beginnt eine Fisetin-Kur",
+        text = "Deine geplante Kur startet in 24 Stunden. Halte dir den nüchternen Morgen und den Freiblock frei.",
+        destination = "today",
+    )
 }
 
 private fun minuteLabel(minutes: Int): String = if (minutes == 1) "1 Minute" else "$minutes Minuten"

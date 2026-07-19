@@ -15,6 +15,7 @@ class NotificationContentTest {
         assertEquals("today", notificationContent(AlarmType.NEXT_DAY, 2).destination)
         assertEquals("history", notificationContent(AlarmType.CURE_ENDED, 3).destination)
         assertEquals("today", notificationContent(AlarmType.CURE_START, 1).destination)
+        assertEquals("today", notificationContent(AlarmType.CURE_PREPARATION, 1).destination)
     }
 
     @Test
@@ -44,5 +45,13 @@ class NotificationContentTest {
     @Test
     fun `one day cure completion uses singular wording`() {
         assertTrue(notificationContent(AlarmType.CURE_ENDED, 1).text.contains("1 Tag"))
+    }
+
+    @Test
+    fun `preparation reminder is exactly 24 hours before cure start`() {
+        val cureStart = 2_000_000_000L
+
+        assertEquals(cureStart - 86_400_000L, curePreparationAt(cureStart))
+        assertEquals("Morgen beginnt eine Fisetin-Kur", notificationContent(AlarmType.CURE_PREPARATION, 1).title)
     }
 }

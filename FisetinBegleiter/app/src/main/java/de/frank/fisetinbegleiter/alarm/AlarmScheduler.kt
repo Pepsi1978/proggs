@@ -22,7 +22,12 @@ enum class AlarmType {
     NEXT_DAY,
     CURE_ENDED,
     CURE_START,
+    CURE_PREPARATION,
 }
+
+internal const val CURE_PREPARATION_LEAD_MILLIS = 24 * 60 * 60 * 1_000L
+
+internal fun curePreparationAt(cureStartAt: Long): Long = cureStartAt - CURE_PREPARATION_LEAD_MILLIS
 
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
@@ -47,6 +52,7 @@ class AlarmScheduler(private val context: Context) {
 
     fun scheduleDay(cure: CureEntity, day: CureDayEntity, protocol: ProtocolTemplateEntity, t0: Long) {
         if (!protocol.remindersEnabled) return
+        cancel(day.id, AlarmType.CURE_PREPARATION)
         cancel(day.id, AlarmType.CURE_START)
         cancel(day.id, AlarmType.NEXT_DAY)
         if (day.mealDoneAt == null) {
@@ -68,6 +74,9 @@ class AlarmScheduler(private val context: Context) {
     }
 
     fun scheduleCureStart(firstDayId: Long, triggerAt: Long) {
+        cancel(firstDayId, AlarmType.CURE_PREPARATION)
+        cancel(firstDayId, AlarmType.CURE_START)
+        schedule(firstDayId, AlarmType.CURE_PREPARATION, curePreparationAt(triggerAt), targetDay = 1)
         schedule(firstDayId, AlarmType.CURE_START, triggerAt, targetDay = 1)
     }
 
@@ -83,7 +92,17 @@ class AlarmScheduler(private val context: Context) {
             LocalDate.ofEpochDay(day.plannedEpochDay),
             cureWithDays.cure.preferredStartMinuteOfDay,
         )
-        val type = if (day.dayNumber == 1) AlarmType.CURE_START else AlarmType.NEXT_DAY
+        if (day.dayNumber == 1) {
+            cancel(day.id, AlarmType.CURE_PREPARATION)
+            cancel(day.id, AlarmType.CURE_START)
+            if (triggerAt <= System.currentTimeMillis()) {
+                NotificationHelper.show(context, AlarmType.CURE_START, day.id, day.dayNumber, protocol)
+            } else {
+                scheduleCureStart(day.id, triggerAt)
+            }
+            return
+        }
+        val type = AlarmType.NEXT_DAY
         if (triggerAt <= System.currentTimeMillis()) {
             NotificationHelper.show(context, type, day.id, day.dayNumber, protocol)
         } else {

@@ -91,6 +91,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.frank.fisetinbegleiter.data.AppCureState
+import de.frank.fisetinbegleiter.data.CureEntity
+import de.frank.fisetinbegleiter.data.CureStatus
 import de.frank.fisetinbegleiter.data.IngredientEntity
 import de.frank.fisetinbegleiter.data.IngredientPhase
 import de.frank.fisetinbegleiter.domain.timeline
@@ -138,7 +140,7 @@ fun TodayScreen(
         contentPadding = PaddingValues(bottom = 18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { SectionTitle("Heute", "Dein persönliches Protokoll, Schritt für Schritt.") }
+        item { SectionTitle(todaySectionTitle(state.activeCure?.cure), "Dein persönliches Protokoll, Schritt für Schritt.") }
         item { TodayHero(state) }
 
         if (active && day?.t0 != null) {
@@ -287,6 +289,15 @@ fun TodayScreen(
             }
         }
     }
+}
+
+internal fun todaySectionTitle(cure: CureEntity?, today: LocalDate = LocalDate.now()): String {
+    if (cure?.status != CureStatus.GEPLANT) return "Heute"
+    val startDate = LocalDate.ofEpochDay(cure.startEpochDay)
+    if (startDate == today) return "Heute"
+    val startMinute = cure.preferredStartMinuteOfDay.coerceIn(0, 1_439)
+    val startTime = "%02d:%02d".format(startMinute / 60, startMinute % 60)
+    return "Geplante Kur am ${startDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))} um $startTime Uhr"
 }
 
 @Composable
