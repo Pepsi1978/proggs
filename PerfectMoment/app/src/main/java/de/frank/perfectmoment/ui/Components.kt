@@ -342,7 +342,13 @@ fun Segment(
 }
 
 @Composable
-fun RecorderControl(state: RecordingState, message: String?, onClick: () -> Unit) {
+fun RecorderControl(
+    state: RecordingState,
+    message: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    scale: Float = 1f,
+) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
     val transition = rememberInfiniteTransition(label = "Aufnahme")
@@ -375,10 +381,12 @@ fun RecorderControl(state: RecordingState, message: String?, onClick: () -> Unit
         RecordingState.RECORDING -> Brush.linearGradient(listOf(colors.amber, colors.amber))
         RecordingState.PROCESSING -> Brush.linearGradient(listOf(colors.surface2, colors.surface2))
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
+    val outerSize = (104f * scale).dp
+    val buttonSize = (72f * scale).dp
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(outerSize), contentAlignment = Alignment.Center) {
             if (!reduced && state != RecordingState.PROCESSING) {
-                Canvas(Modifier.size(104.dp)) {
+                Canvas(Modifier.size(outerSize)) {
                     drawCircle(colors.gold.copy(alpha = 0.13f * pulse), radius = size.minDimension * 0.5f)
                     drawArc(
                         brush = Brush.sweepGradient(
@@ -392,28 +400,28 @@ fun RecorderControl(state: RecordingState, message: String?, onClick: () -> Unit
                 }
             }
             Box(
-                Modifier.size(72.dp).background(recorderBrush, CircleShape)
+                Modifier.size(buttonSize).background(recorderBrush, CircleShape)
                     .pmClickable(enabled = state != RecordingState.PROCESSING, onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
                 when (state) {
-                    RecordingState.IDLE -> Icon(Icons.Outlined.Mic, "Aufnehmen", tint = colors.background, modifier = Modifier.size(28.dp))
+                    RecordingState.IDLE -> Icon(Icons.Outlined.Mic, "Aufnehmen", tint = colors.background, modifier = Modifier.size((28f * scale).dp))
                     RecordingState.RECORDING -> {
                         if (!reduced) {
-                            Canvas(Modifier.size(104.dp)) {
+                            Canvas(Modifier.size(outerSize)) {
                                 repeat(3) { index ->
                                     val phase = (ringPhase + index / 3f) % 1f
                                     drawCircle(
                                         colors.amber.copy(alpha = 0.35f * (1f - phase)),
-                                        radius = 36.dp.toPx() + 40.dp.toPx() * phase,
+                                        radius = (36f * scale).dp.toPx() + (40f * scale).dp.toPx() * phase,
                                         style = Stroke(1.5.dp.toPx()),
                                     )
                                 }
                             }
                         }
-                        Icon(Icons.Outlined.Stop, "Aufnahme stoppen", tint = colors.background, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Outlined.Stop, "Aufnahme stoppen", tint = colors.background, modifier = Modifier.size((24f * scale).dp))
                     }
-                    RecordingState.PROCESSING -> Canvas(Modifier.size(32.dp)) {
+                    RecordingState.PROCESSING -> Canvas(Modifier.size((32f * scale).dp)) {
                         drawArc(
                             colors.gold,
                             startAngle = spinnerRotation,

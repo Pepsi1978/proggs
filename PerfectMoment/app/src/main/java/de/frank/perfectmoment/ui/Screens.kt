@@ -264,7 +264,19 @@ fun StartScreen(
                 placeholder = "Was möchtest du hören?",
                 modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp, max = 288.dp).padding(horizontal = 20.dp),
             )
-            Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f))
+                ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f))
+                ParameterCard("Dauer", "${viewModel.durationMinutes} min", { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f))
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 38.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Spacer(Modifier.weight(3f))
                 RecorderControl(
                     state = if (viewModel.recordingTarget == RecordingTarget.START) viewModel.recordingState else RecordingState.IDLE,
                     message = viewModel.recordingMessage,
@@ -275,15 +287,9 @@ fun StartScreen(
                             requestMicrophonePermission,
                         )
                     },
+                    scale = 4f / 3f,
                 )
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f))
-                ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f))
-                ParameterCard("Dauer", "${viewModel.durationMinutes} min", { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
         }
         val connected = viewModel.chatGptState == ChatGptState.CONNECTED
