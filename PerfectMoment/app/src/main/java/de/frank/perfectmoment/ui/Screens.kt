@@ -521,8 +521,10 @@ private fun SessionQuestions(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SessionProgress(state, runtime)
+                val controlShape = RoundedCornerShape(14.dp)
                 Box(
-                    Modifier.size(48.dp).background(colors.surface2, RoundedCornerShape(14.dp))
+                    Modifier.size(48.dp).background(colors.surface2, controlShape)
+                        .border(1.dp, colors.goldDim, controlShape)
                         .pmClickable(onClick = onTogglePause),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -534,22 +536,14 @@ private fun SessionQuestions(
                     )
                 }
                 Box(
-                    Modifier.size(48.dp).border(1.dp, colors.goldDim, RoundedCornerShape(14.dp))
+                    Modifier.size(48.dp).background(colors.surface2, controlShape)
+                        .border(1.dp, colors.goldDim, controlShape)
                         .pmClickable(onClick = onStop),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Outlined.Stop, "Sitzung stoppen", tint = colors.text2, modifier = Modifier.size(16.dp))
                 }
             }
-        }
-        if (runtime?.generating == true && state != null) {
-            Text(
-                "Fragen werden vorbereitet…",
-                color = colors.text3,
-                fontFamily = Inter,
-                fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 166.dp),
-            )
         }
     }
 }
@@ -599,6 +593,14 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
                 style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
             )
         }
+        val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
+        Text(
+            "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
+            color = colors.text2,
+            fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Medium,
+            fontSize = 12.sp,
+        )
     }
 }
 
