@@ -6,6 +6,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps ./apps
 COPY packages ./packages
+COPY docker ./docker
 RUN corepack pnpm install --frozen-lockfile
 USER node
 CMD ["corepack", "pnpm", "--filter", "@werft/api", "exec", "tsx", "src/server.ts"]
