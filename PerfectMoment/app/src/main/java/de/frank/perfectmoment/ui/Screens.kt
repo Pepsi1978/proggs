@@ -658,29 +658,35 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
 @Composable
 private fun SessionIntroOverlay(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
-    Column(
-        Modifier.fillMaxSize().background(colors.background).padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        SectionLabel("Die KI fragt zuerst")
-        Text(
-            "„${viewModel.introQuestion}“",
-            color = colors.goldHi,
-            fontFamily = Newsreader,
-            fontWeight = FontWeight.Light,
-            fontSize = 28.sp,
-            lineHeight = 42.sp,
-            modifier = Modifier.padding(top = 22.dp, bottom = 22.dp),
+    Box(Modifier.fillMaxSize().background(colors.background)) {
+        PreparationBackButton(
+            onClick = viewModel::stopSession,
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 8.dp),
         )
-        PrimaryButton("Antworten & beginnen", viewModel::openIntroSheet)
-        Text(
-            "Danach beginnt die Routine des Skills.",
-            color = colors.text3,
-            fontFamily = Inter,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
-        )
+        Column(
+            Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            SectionLabel("Die KI fragt zuerst")
+            Text(
+                "„${viewModel.introQuestion}“",
+                color = colors.goldHi,
+                fontFamily = Newsreader,
+                fontWeight = FontWeight.Light,
+                fontSize = 28.sp,
+                lineHeight = 42.sp,
+                modifier = Modifier.padding(top = 22.dp, bottom = 22.dp),
+            )
+            PrimaryButton("Antworten & beginnen", viewModel::openIntroSheet)
+            Text(
+                "Danach beginnt die Routine des Skills.",
+                color = colors.text3,
+                fontFamily = Inter,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+            )
+        }
     }
 }
 

@@ -64,15 +64,14 @@ fun PerfectMomentApp(
     val reduced = LocalReducedMotion.current
     val duration = if (reduced) 200 else 450
     val screenOffset = with(LocalDensity.current) { 14.dp.roundToPx() }
-    val canCancelQuestionGeneration = viewModel.screen == AppScreen.SESSION &&
+    val canCancelSessionPreparation = viewModel.screen == AppScreen.SESSION &&
         viewModel.sheet == null &&
-        !viewModel.introVisible &&
         sessionState == null &&
         viewModel.sessionError == null
 
     BackHandler(enabled = viewModel.screen != AppScreen.START || viewModel.sheet != null) {
         when {
-            canCancelQuestionGeneration -> viewModel.stopSession()
+            canCancelSessionPreparation -> viewModel.stopSession()
             viewModel.screen != AppScreen.SESSION || viewModel.sheet != null -> viewModel.back()
         }
     }
