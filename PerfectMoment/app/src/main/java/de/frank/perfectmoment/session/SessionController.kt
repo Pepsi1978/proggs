@@ -178,10 +178,8 @@ class SessionController(
         val questions = source.questions.map {
             Question(id = it.id, emoji = it.emoji, text = it.text)
         }.let { if (shuffle) it.shuffled() else it }
-        val sessionId = sessionRepository.createSession(newSessionEntity(source.session.topic, config))
-        sessionRepository.appendQuestions(sessionId, questions)
         createEngine(
-            runtime = SessionRuntime(source.session.topic, sessionId, config, replay = true),
+            runtime = SessionRuntime(source.session.topic, sourceSessionId, config, replay = true),
             questions = questions,
             refillPort = null,
             persistencePort = QuestionPersistencePort { },
