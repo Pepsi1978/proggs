@@ -1,0 +1,3 @@
+const secretPattern=/(authorization|cookie|password|credential|api[-_]?key|token)/i;
+export function redact(value:unknown):unknown{if(Array.isArray(value))return value.map(redact);if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,secretPattern.test(k)?"[REDACTED]":redact(v)]));return value}
+export function log(service:string,level:"info"|"warn"|"error",message:string,fields:Record<string,unknown>={}){const safe=redact(fields);console[level](JSON.stringify({time:new Date().toISOString(),service,level,message,...(safe&&typeof safe==="object"&&!Array.isArray(safe)?safe:{})}))}

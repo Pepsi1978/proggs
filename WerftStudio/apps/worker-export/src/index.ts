@@ -1,0 +1,2 @@
+import{startWorker}from"@werft/worker-runtime";
+const formats=new Set(["zip","html","pdf","pptx","png","svg","specification","handoff"]);startWorker("export",async(job)=>{if(!formats.has(job.data.format))throw Object.assign(new Error("Nicht unterstütztes Exportformat"),{name:"VALIDATION_FAILED"});return{status:"completed",format:job.data.format,versionId:job.data.versionId,qualityReport:{warnings:[]}}});

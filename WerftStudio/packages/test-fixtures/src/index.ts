@@ -1,0 +1,2 @@
+export const fixtureIds={organization:"0190f3d8-5800-7000-8000-000000000001",frank:"0190f3d8-5800-7000-8000-000000000002",fluss:"0190f3d8-5800-7000-8000-000000000003"} as const;
+export const fixedNow="2026-07-20T18:00:00.000Z";

@@ -1,0 +1,17 @@
+{
+  "name": "@werft/database",
+  "version": "0.1.0-20260720.2000",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": { "@node-rs/argon2": "2.0.2", "@werft/contracts": "workspace:*", "drizzle-orm": "0.45.2", "postgres": "3.4.9", "uuid": "13.0.0" },
+  "devDependencies": { "drizzle-kit": "0.31.10", "tsx": "4.23.1", "typescript": "7.0.2", "vitest": "4.1.10" }
+}

@@ -1,0 +1,189 @@
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service: &service
+  build:
+    context: .
+    dockerfile: docker/service.Dockerfile
+  restart: unless-stopped
+  env_file: .env
+  networks: [werft-internal]
+  logging: *logging
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: werft-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: werft
+      POSTGRES_USER: werft
+      POSTGRES_PASSWORD: ${WERFT_POSTGRES_PASSWORD}
+    volumes: [werft-postgres:/var/lib/postgresql/data]
+    networks: [werft-internal]
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U werft"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 768M, cpus: "1.0" }
+        reservations: { memory: 256M, cpus: "0.25" }
+
+  redis:
+    image: redis:8-alpine
+    container_name: werft-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "noeviction"]
+    volumes: [werft-redis:/data]
+    networks: [werft-internal]
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.5" }
+        reservations: { memory: 64M, cpus: "0.1" }
+
+  minio:
+    image: minio/minio:latest
+    container_name: werft-minio
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${WERFT_S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${WERFT_S3_SECRET_KEY}
+    volumes: [werft-minio:/data]
+    networks: [werft-internal]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "0.75" }
+        reservations: { memory: 128M, cpus: "0.1" }
+
+  api:
+    <<: *service
+    container_name: werft-api
+    user: root
+    command: ["sh", "docker/api-entrypoint.sh"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      API_PORT: "4100"
+      WEB_ORIGIN: https://10.8.0.1:8443
+      DATABASE_URL: postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: werft
+      S3_ACCESS_KEY: ${WERFT_S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${WERFT_S3_SECRET_KEY}
+      SESSION_SECRET: ${WERFT_SESSION_SECRET}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "1.0" }
+        reservations: { memory: 128M, cpus: "0.25" }
+
+  realtime:
+    <<: *service
+    container_name: werft-realtime
+    command: ["corepack", "pnpm", "--filter", "@werft/realtime", "exec", "tsx", "src/server.ts"]
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      REALTIME_PORT: "4101"
+      DATABASE_URL: postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft
+      REDIS_URL: redis://redis:6379
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.5" }
+        reservations: { memory: 64M, cpus: "0.1" }
+
+  worker-ai:
+    <<: *service
+    container_name: werft-worker-ai
+    command: ["corepack", "pnpm", "--filter", "@werft/worker-ai", "exec", "tsx", "src/index.ts"]
+    depends_on: [api]
+    environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379", AI_PROVIDER: "disabled" }
+    deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
+
+  worker-build:
+    <<: *service
+    container_name: werft-worker-build
+    command: ["corepack", "pnpm", "--filter", "@werft/worker-build", "exec", "tsx", "src/index.ts"]
+    depends_on: [api]
+    environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
+    deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
+
+  worker-render:
+    <<: *service
+    container_name: werft-worker-render
+    command: ["corepack", "pnpm", "--filter", "@werft/worker-render", "exec", "tsx", "src/index.ts"]
+    depends_on: [api]
+    environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
+    deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
+
+  worker-export:
+    <<: *service
+    container_name: werft-worker-export
+    command: ["corepack", "pnpm", "--filter", "@werft/worker-export", "exec", "tsx", "src/index.ts"]
+    depends_on: [api]
+    environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
+    deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
+
+  worker-import:
+    <<: *service
+    container_name: werft-worker-import
+    command: ["corepack", "pnpm", "--filter", "@werft/worker-import", "exec", "tsx", "src/index.ts"]
+    depends_on: [api]
+    environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
+    deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: werft-web
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+      realtime: { condition: service_started }
+    ports:
+      - "10.8.0.1:8443:8443"
+    volumes:
+      - werft-caddy-data:/data
+      - werft-caddy-config:/config
+    networks: [werft-internal]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { memory: 128M, cpus: "0.5" }
+        reservations: { memory: 32M, cpus: "0.1" }
+
+networks:
+  werft-internal:
+    name: werft-internal
+    internal: true
+
+volumes:
+  werft-postgres:
+  werft-redis:
+  werft-minio:
+  werft-caddy-data:
+  werft-caddy-config:

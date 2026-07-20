@@ -1,0 +1,31 @@
+{
+  admin off
+  default_sni 10.8.0.1
+}
+
+https://10.8.0.1:8443 {
+  tls internal
+  encode zstd gzip
+
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+    Permissions-Policy "camera=(), geolocation=(), microphone=()"
+  }
+
+  handle /api/* {
+    reverse_proxy api:4100
+  }
+
+  handle /socket* {
+    reverse_proxy realtime:4101
+  }
+
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+}

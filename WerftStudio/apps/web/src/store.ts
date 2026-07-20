@@ -1,0 +1,4 @@
+import { create } from "zustand";
+export type ToolMode = "interact"|"select"|"comment"|"edit"|"draw";
+type UiState = { theme: "light"|"dark"; leftOpen: boolean; rightOpen: boolean; mode: ToolMode; zoom: number; modal: string|null; setTheme(theme: "light"|"dark"): void; toggleLeft(): void; toggleRight(): void; setMode(mode: ToolMode): void; setZoom(zoom: number): void; setModal(modal: string|null): void };
+export const useUi = create<UiState>((set) => ({ theme: "light", leftOpen: true, rightOpen: true, mode: "interact", zoom: .72, modal: null, setTheme: (theme) => set({ theme }), toggleLeft: () => set((state) => ({ leftOpen: !state.leftOpen })), toggleRight: () => set((state) => ({ rightOpen: !state.rightOpen })), setMode: (mode) => set({ mode }), setZoom: (zoom) => set({ zoom: Math.max(.25, Math.min(4, zoom)) }), setModal: (modal) => set({ modal }) }));

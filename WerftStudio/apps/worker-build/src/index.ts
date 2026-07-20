@@ -1,0 +1,2 @@
+import{compilePreview}from"@werft/compiler";import{designDocumentSchema}from"@werft/contracts";import{startWorker}from"@werft/worker-runtime";import{createHash}from"node:crypto";
+startWorker("build",async(job)=>{const document=designDocumentSchema.parse(job.data.document);const html=compilePreview(document);return{status:"ready",sha256:createHash("sha256").update(html).digest("hex"),bytes:Buffer.byteLength(html)}});

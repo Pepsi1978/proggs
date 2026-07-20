@@ -1,0 +1,4 @@
+.statusbar::after {
+  content: "Werft v0.1.1 · 20.07.2026 20:08 Uhr";
+  white-space: nowrap;
+}

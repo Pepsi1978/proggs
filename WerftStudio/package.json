@@ -1,0 +1,23 @@
+{
+  "name": "werft-studio",
+  "version": "0.1.1-20260720.2008",
+  "private": true,
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "build": "turbo --dangerously-disable-package-manager-check build --concurrency=4",
+    "dev": "turbo --dangerously-disable-package-manager-check dev --parallel",
+    "lint": "turbo --dangerously-disable-package-manager-check lint --concurrency=4",
+    "test": "turbo --dangerously-disable-package-manager-check test --concurrency=4",
+    "typecheck": "turbo --dangerously-disable-package-manager-check typecheck --concurrency=4",
+    "db:generate": "pnpm --filter @werft/database generate",
+    "db:migrate": "pnpm --filter @werft/database migrate",
+    "db:seed": "pnpm --filter @werft/database seed"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "pnpm": "11.15.1",
+    "turbo": "2.10.5",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
