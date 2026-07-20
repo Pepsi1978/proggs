@@ -7,7 +7,8 @@ import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string };
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; previewPath: string };
+type ImportFile = { path: string; size: number; mime: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewPath: string };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
 const examples = [
   ["Banking App „Fluss“", "iOS · Android", "Konten, Zahlungen und Tagesüberblick mit ruhiger Typografie.", "Prototyp"],
@@ -993,7 +994,7 @@ function Studio() {
               </NavLink>
             ))}
           </nav>
-          {tab === "canvas" && <Canvas accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files />}
+          {tab === "canvas" && <Canvas accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
           {tab === "questions" && <Questions />}
           {tab === "variants" && (
             <Variants
@@ -1371,9 +1372,10 @@ function WebFrame({ accent, dark }: { accent: string; dark: boolean }) {
     </div>
   );
 }
-function Files() {
+function Files({ projectId, imported }: { projectId: string; imported: ProjectImport | undefined }) {
   const files = ["onboarding.screen", "dashboard.screen", "balance-card.cmp", "tx-row.cmp", "tabbar.cmp", "tokens.css", "typography.css", "logo.svg", "karten-visual.png"];
   const [selected, setSelected] = useState(files[1]!);
+  if (imported?.imported) return <ImportedFiles projectId={projectId} imported={imported} />;
   return (
     <div className="files-view">
       <aside>
@@ -1405,6 +1407,16 @@ function Files() {
       </main>
     </div>
   );
+}
+function ImportedFiles({ projectId, imported }: { projectId: string; imported: Extract<ProjectImport, { imported: true }> }) {
+  const client = useQueryClient();
+  const editable = imported.files.filter((file) => file.mime.startsWith("text/") || file.mime.startsWith("application/json") || file.mime.startsWith("image/svg+xml"));
+  const [selected, setSelected] = useState(editable[0]?.path ?? "");
+  const source = useQuery({ queryKey: ["import-file", projectId, selected, imported.revision], queryFn: () => api<{ path: string; content: string; revision: number }>(`/projects/${projectId}/import/file?path=${encodeURIComponent(selected)}`), enabled: Boolean(selected) });
+  const [content, setContent] = useState("");
+  useEffect(() => { if (source.data) setContent(source.data.content); }, [source.data]);
+  const save = useMutation({ mutationFn: () => api<{ revision: number }>(`/projects/${projectId}/import/file`, { method: "PUT", body: JSON.stringify({ path: selected, content, baseRevision: imported.revision }) }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ["project-import", projectId] }); await client.invalidateQueries({ queryKey: ["import-file", projectId] }); } });
+  return <div className="files-view imported-files"><aside><div className="search"><Search/><input placeholder="Dateien durchsuchen …" readOnly/></div>{imported.files.map((file) => { const canEdit=editable.some((item)=>item.path===file.path); return <button className={selected===file.path?"active":""} disabled={!canEdit} title={canEdit?"Bearbeiten":`${file.mime} bleibt unverändert erhalten`} onClick={()=>setSelected(file.path)} key={file.path}><FileText/>{file.path}</button> })}</aside><main><Card title={selected || "Keine Textdatei"}>{source.isLoading?<div className="empty">Datei wird geladen …</div>:source.isError?<p className="field-error">Die Datei konnte nicht geladen werden.</p>:selected?<textarea className="source-editor" value={content} spellCheck={false} onChange={(event)=>setContent(event.target.value)}/>:<div className="empty">Dieses Projekt enthält keine direkt bearbeitbare Textdatei.</div>}<div className="modal-actions"><Status kind={content!==source.data?.content?"warning":"success"}>{content!==source.data?.content?"Ungespeichert":"Gespeichert"}</Status><span/><Button variant="primary" disabled={!selected||content===source.data?.content||save.isPending} onClick={()=>save.mutate()}>{save.isPending?"Speichert …":"Speichern & Vorschau aktualisieren"}</Button></div>{save.error&&<p className="field-error">{save.error instanceof ApiError?save.error.message:"Speichern fehlgeschlagen."}</p>}</Card></main></div>;
 }
 function Questions() {
   const qs = ["Welche Aufgabe steht im Mittelpunkt?", "Welche Stimmung soll die Oberfläche vermitteln?", "Brauchst du von Beginn an einen Dunkelmodus?", "Wie viele Screens im ersten Wurf?"];
