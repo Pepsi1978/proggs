@@ -1,11 +1,11 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "21",
+    [string]$PatchRevision = "22",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
 
-# Stand: windowsfix.21 - 18.07.2026 11:58 Uhr
+# Stand: windowsfix.22 - 20.07.2026 12:35 Uhr
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
@@ -278,7 +278,8 @@ try {
                 # Beide Suites verändern prozessglobale Config-/Temp-Zustände und bleiben deshalb getrennt.
                 bun test --timeout 15000 "test/plugin/install.test.ts"
                 if ($LASTEXITCODE -ne 0) { throw "Plugin-Install-Regressionstests fehlgeschlagen." }
-                bun test --timeout 15000 "test/config/config.test.ts"
+                # Git Bash/MSYS2 process startup exceeded 15 s under a full Windows build on 2026-07-20.
+                bun test --timeout 30000 "test/config/config.test.ts"
                 if ($LASTEXITCODE -ne 0) { throw "Config-Regressionstests fehlgeschlagen." }
             } finally { Pop-Location }
         } finally {
