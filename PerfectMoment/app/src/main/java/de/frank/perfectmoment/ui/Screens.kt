@@ -112,6 +112,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SkillEntity
@@ -859,9 +860,9 @@ fun SettingsScreen(
                     "Skills",
                     viewModel.activeSkill?.name ?: "",
                     onClick = { viewModel.navigate(AppScreen.SKILLS) },
-                    divider = false,
                     showChevron = true,
                 )
+                QuestionPerspectiveSetting(viewModel)
             }
             SettingsSection("Stimme") {
                 SettingRow(
@@ -932,6 +933,35 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun QuestionPerspectiveSetting(viewModel: AppViewModel) {
+    val colors = LocalPmColors.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Text("Frageperspektive", color = colors.text1, fontFamily = Inter, fontSize = 15.sp)
+        Text(
+            "Wie die KI ihre Fragen formuliert",
+            color = colors.text3,
+            fontFamily = Inter,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Segment(
+                "Ich-Person",
+                viewModel.questionPerspective == QuestionPerspective.FIRST_PERSON,
+                { viewModel.updateQuestionPerspective(QuestionPerspective.FIRST_PERSON) },
+                Modifier.weight(1f),
+            )
+            Segment(
+                "Du-Person",
+                viewModel.questionPerspective == QuestionPerspective.SECOND_PERSON,
+                { viewModel.updateQuestionPerspective(QuestionPerspective.SECOND_PERSON) },
+                Modifier.weight(1f),
+            )
         }
     }
 }

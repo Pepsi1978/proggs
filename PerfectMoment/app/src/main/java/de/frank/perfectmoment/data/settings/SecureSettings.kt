@@ -127,6 +127,10 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.OPERATING_MODE_TEXT, Defaults.OPERATING_MODE_TEXT)
         set(value) = writeString(Keys.OPERATING_MODE_TEXT, value)
 
+    var questionPerspective: String
+        get() = readString(Keys.QUESTION_PERSPECTIVE, Defaults.QUESTION_PERSPECTIVE)
+        set(value) = writeString(Keys.QUESTION_PERSPECTIVE, value)
+
     var model: String
         get() = readString(Keys.MODEL, Defaults.MODEL)
         set(value) = writeString(Keys.MODEL, value)
@@ -179,6 +183,7 @@ class SecureSettings(context: Context) : Closeable {
         const val THEME = "theme"
         const val ACTIVE_SKILL_ID = "active_skill_id"
         const val OPERATING_MODE_TEXT = "operating_mode_text"
+        const val QUESTION_PERSPECTIVE = "question_perspective"
         const val MODEL = "model"
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"
@@ -199,6 +204,7 @@ class SecureSettings(context: Context) : Closeable {
         const val THEME = "dark"
         const val ACTIVE_SKILL_ID = 1L
         const val OPERATING_MODE_TEXT = """Erzeuge genau 30 Fragen als Liste. Jede Frage beginnt mit einem passenden Emoji, ist offen formuliert, wird nicht beantwortet und richtet sich direkt an den Hörer („du"). Keine Nummerierung, keine Erklärungen, nur die Fragen."""
+        const val QUESTION_PERSPECTIVE = "second_person"
         const val MODEL = "gpt-5.6-terra"
         const val REASONING = "medium"
         const val APP_LOCK_ENABLED = false

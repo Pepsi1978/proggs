@@ -27,6 +27,16 @@ enum class ReasoningEffort(val label: String, val apiValue: String) {
     }
 }
 
+enum class QuestionPerspective(val id: String, val label: String) {
+    FIRST_PERSON("first_person", "Ich-Person"),
+    SECOND_PERSON("second_person", "Du-Person"),
+    ;
+
+    companion object {
+        fun fromId(value: String): QuestionPerspective = entries.firstOrNull { it.id == value } ?: SECOND_PERSON
+    }
+}
+
 data class CodexQuestionRequest(
     val topic: String,
     val introContext: String = "",
@@ -34,6 +44,7 @@ data class CodexQuestionRequest(
     val previousQuestions: List<String> = emptyList(),
     val skillText: String,
     val operatingModeText: String,
+    val perspective: QuestionPerspective = QuestionPerspective.SECOND_PERSON,
     val model: CodexModel = CodexModel.TERRA,
     val reasoningEffort: ReasoningEffort = ReasoningEffort.MEDIUM,
 )

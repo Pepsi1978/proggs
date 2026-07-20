@@ -16,6 +16,7 @@ import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.DeviceAuthInfo
 import de.frank.perfectmoment.auth.IntroQuestionPolicy
+import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.auth.SessionPromptDecision
 import de.frank.perfectmoment.data.local.HookEntity
@@ -122,6 +123,8 @@ class AppViewModel(
     var repetitions by mutableStateOf(settings.repsPerQuestion)
         private set
     var durationMinutes by mutableStateOf(settings.sessionDurationMin)
+        private set
+    var questionPerspective by mutableStateOf(QuestionPerspective.fromId(settings.questionPerspective))
         private set
 
     var ttsProvider by mutableStateOf(settings.ttsProvider)
@@ -334,6 +337,11 @@ class AppViewModel(
         settings.theme = value
     }
 
+    fun updateQuestionPerspective(value: QuestionPerspective) {
+        questionPerspective = value
+        settings.questionPerspective = value.id
+    }
+
     fun setProvider(value: TtsProvider) {
         if (value == TtsProvider.GOOGLE_CLOUD && googleApiKey.isBlank()) {
             message = "Bitte zuerst einen Google-API-Schlüssel hinterlegen."
@@ -524,9 +532,19 @@ class AppViewModel(
         val id = historyDetail?.session?.id ?: return
         sessionError = null
         screen = AppScreen.SESSION
-        viewModelScope.launch {
-            runCatching { sessionController.replaySession(id, randomReplay) }
-                .onFailure { sessionError = it.message ?: "Die Sitzung konnte nicht abgespielt werden." }
+        sessionStartJob?.cancel()
+        authManager.cancelQuestionGeneration()
+        val generation = ++sessionStartGeneration
+        sessionStartJob = viewModelScope.launch {
+            try {
+                sessionController.replaySession(id, randomReplay)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                handleSessionFailure(error)
+            } finally {
+                if (generation == sessionStartGeneration) sessionStartJob = null
+            }
         }
     }
 

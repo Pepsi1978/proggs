@@ -8,6 +8,7 @@ import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.CodexQuestionRequest
 import de.frank.perfectmoment.auth.IncrementalQuestionValidator
 import de.frank.perfectmoment.auth.QuestionResponseValidator
+import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.repository.ContentRepository
@@ -86,6 +87,7 @@ class SessionController(
                 entranceQuestion = entranceQuestion,
                 skillText = skill.text,
                 operatingModeText = settings.operatingModeText,
+                perspective = QuestionPerspective.fromId(settings.questionPerspective),
                 model = CodexModel.fromLabel(settings.model),
                 reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
             )
@@ -187,8 +189,14 @@ class SessionController(
             "Die gespeicherte Sitzung wurde nicht gefunden."
         }
         val config = currentConfig()
-        val questions = source.questions.map {
-            Question(id = it.id, emoji = it.emoji, text = it.text)
+        val perspectiveQuestions = codexAuthManager.rewriteQuestionsForPerspective(
+            questions = source.questions.map { it.text },
+            perspective = QuestionPerspective.fromId(settings.questionPerspective),
+            model = CodexModel.fromLabel(settings.model),
+            reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
+        )
+        val questions = source.questions.zip(perspectiveQuestions) { entity, text ->
+            Question(id = entity.id, emoji = entity.emoji, text = text)
         }.let { if (shuffle) it.shuffled() else it }
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config, replay = true),

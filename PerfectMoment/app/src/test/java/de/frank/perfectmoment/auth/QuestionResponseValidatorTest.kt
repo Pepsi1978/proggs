@@ -128,6 +128,33 @@ class QuestionResponseValidatorTest {
         val instructions = payload.getString("instructions")
         assertTrue(instructions.contains(IntroQuestionPolicy.QUESTION))
         assertTrue(instructions.contains("niemals als erzeugte Frage erscheinen"))
+        assertTrue(instructions.contains("Du-Person"))
+    }
+
+    @Test
+    fun firstPersonOverridesConflictingOperatingMode() {
+        val payload = codexQuestionsPayload(
+            CodexQuestionRequest(
+                topic = "Mein Thema",
+                skillText = "Skill",
+                operatingModeText = "Sprich den Hörer mit du an.",
+                perspective = QuestionPerspective.FIRST_PERSON,
+            ),
+        )
+
+        val instructions = payload.getString("instructions")
+        assertTrue(instructions.contains("Vorrang"))
+        assertTrue(instructions.contains("Ich-Person"))
+        assertTrue(instructions.contains("Warum genieße ich"))
+    }
+
+    @Test
+    fun perspectiveRewriteKeepsQuestionCountAndOrder() {
+        val raw = """{"fragen":["Warum genieße ich den Moment?","Was stärkt mich?"]}"""
+
+        val result = parsePerspectiveQuestions(raw, expectedCount = 2)
+
+        assertEquals(listOf("Warum genieße ich den Moment?", "Was stärkt mich?"), result)
     }
 
     @Test

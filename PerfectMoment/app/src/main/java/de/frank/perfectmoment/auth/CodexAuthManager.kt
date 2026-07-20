@@ -76,7 +76,16 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
     val excludedEntranceQuestions = listOf(IntroQuestionPolicy.QUESTION, request.entranceQuestion)
         .filter(String::isNotBlank)
         .distinct()
+    val perspectiveInstruction = when (request.perspective) {
+        QuestionPerspective.FIRST_PERSON ->
+            "Formuliere ausnahmslos jede Frage in der Ich-Person, als würde der Hörer sie sich selbst stellen. " +
+                "Beispiel: 'Warum genieße ich jeden Tag jedes Hier und Jetzt?'"
+        QuestionPerspective.SECOND_PERSON ->
+            "Formuliere ausnahmslos jede Frage in der Du-Person und sprich den Hörer direkt an. " +
+                "Beispiel: 'Warum genießt du jeden Tag jedes Hier und Jetzt?'"
+    }
     val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
+        "\n\nDiese Perspektivvorgabe hat Vorrang vor allen widersprüchlichen Angaben: $perspectiveInstruction" +
         "\n\nDiese Eingangsfragen sind nur Eingabehilfen und dürfen niemals als erzeugte Frage erscheinen: " +
         JSONArray(excludedEntranceQuestions).toString()
 
@@ -106,6 +115,79 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
                     .put("schema", schema),
             ),
         )
+}
+
+internal fun codexPerspectiveRewritePayload(
+    questions: List<String>,
+    perspective: QuestionPerspective,
+    model: CodexModel,
+    reasoningEffort: ReasoningEffort,
+): JSONObject {
+    val questionSchema = JSONObject()
+        .put("type", "array")
+        .put("minItems", questions.size)
+        .put("maxItems", questions.size)
+        .put("items", JSONObject().put("type", "string"))
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("required", JSONArray().put("fragen"))
+        .put("properties", JSONObject().put("fragen", questionSchema))
+    val target = when (perspective) {
+        QuestionPerspective.FIRST_PERSON ->
+            "die Ich-Person, als würde der Hörer jede Frage sich selbst stellen"
+        QuestionPerspective.SECOND_PERSON ->
+            "die Du-Person, die den Hörer direkt anspricht"
+    }
+    return JSONObject()
+        .put("model", model.apiId)
+        .put("service_tier", "priority")
+        .put("stream", true)
+        .put("store", false)
+        .put(
+            "instructions",
+            "Formuliere jede deutsche Frage grammatikalisch natürlich in $target um. Erhalte Bedeutung, " +
+                "Reihenfolge und Anzahl exakt. Ergänze keine Antworten, Erklärungen, Nummern oder Emojis.",
+        )
+        .put(
+            "input",
+            JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", "Umzuformulierende Fragen:\n${JSONArray(questions).toString()}"),
+            ),
+        )
+        .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
+        .put(
+            "text",
+            JSONObject().put(
+                "format",
+                JSONObject()
+                    .put("type", "json_schema")
+                    .put("name", "perfect_moment_perspektive")
+                    .put("strict", true)
+                    .put("schema", schema),
+            ),
+        )
+}
+
+internal fun parsePerspectiveQuestions(rawOutput: String, expectedCount: Int): List<String> {
+    val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+    val json = runCatching { JSONObject(output) }.getOrElse {
+        throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keine gültige Perspektivantwort geliefert.", it)
+    }
+    val questions = json.optJSONArray("fragen")
+        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "In der OpenAI-Perspektivantwort fehlt das Feld „fragen“.")
+    if (questions.length() != expectedCount) {
+        throw CodexAuthException(
+            AuthErrorKind.NETWORK,
+            "OpenAI hat ${questions.length()} statt $expectedCount umformulierte Fragen geliefert.",
+        )
+    }
+    return (0 until questions.length()).map { index ->
+        (questions.opt(index) as? String)?.trim()?.takeIf(String::isNotEmpty)
+            ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat eine leere Perspektivfrage geliefert.")
+    }
 }
 
 internal fun codexSessionPromptPayload(
@@ -335,6 +417,27 @@ class CodexAuthManager(context: Context) {
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die OpenAI-Startentscheidung konnte nicht vollständig empfangen werden.", error)
+        }
+    }
+
+    suspend fun rewriteQuestionsForPerspective(
+        questions: List<String>,
+        perspective: QuestionPerspective,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+    ): List<String> = withContext(Dispatchers.IO) {
+        if (questions.isEmpty()) return@withContext emptyList()
+        try {
+            parsePerspectiveQuestions(
+                requestCodexResponse(
+                    codexPerspectiveRewritePayload(questions, perspective, model, reasoningEffort),
+                    false,
+                ),
+                questions.size,
+            )
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Die Fragen konnten nicht in die gewählte Perspektive übertragen werden.", error)
         }
     }
 
