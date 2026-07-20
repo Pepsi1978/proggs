@@ -4,3 +4,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) { const body = await response.json().catch(() => ({ code: "NETWORK_ERROR", message: "Serverantwort konnte nicht gelesen werden." })) as { code: string; message: string }; throw new ApiError(body.code, body.message, response.status); }
   return response.json() as Promise<T>;
 }
+
+export async function apiForm<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`/api/v1${path}`, { method: "POST", body, credentials: "include" });
+  if (!response.ok) { const error = await response.json().catch(() => ({ code: "NETWORK_ERROR", message: "Serverantwort konnte nicht gelesen werden." })) as { code: string; message: string }; throw new ApiError(error.code, error.message, response.status); }
+  return response.json() as Promise<T>;
+}

@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.1.1 - 20.07.2026 20:08 Uhr
+Version: v0.1.9 - 20.07.2026 21:01 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -12,5 +12,6 @@ Version: v0.1.1 - 20.07.2026 20:08 Uhr
 | Realtime | `apps/realtime` | Sequenz- und Reconnecttests |
 | KI | `packages/ai-gateway`, `apps/worker-ai` | Provider- und Schema-Evals |
 | Preview/Export | Worker-Apps | Sandbox- und Exporttests |
+| Projektimport | `apps/web`, `apps/api`, `project_imports`, MinIO | Pfadguard-Tests sowie echter HTML-Ordner- und ZIP-Import |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.

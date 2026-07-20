@@ -29,3 +29,20 @@ https://10.8.0.1:8443 {
     file_server
   }
 }
+
+https://10.8.0.1:8444 {
+  tls internal
+  encode zstd gzip
+
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+  }
+
+  handle /api/v1/previews/* {
+    reverse_proxy api:4100
+  }
+
+  respond 404
+}

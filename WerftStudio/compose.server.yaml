@@ -166,6 +166,7 @@ services:
       realtime: { condition: service_started }
     ports:
       - "10.8.0.1:8443:8443"
+      - "10.8.0.1:8444:8444"
     volumes:
       - werft-caddy-data:/data
       - werft-caddy-config:/config
