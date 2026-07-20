@@ -42,6 +42,42 @@ abstract class SessionDao {
 
     @Query("UPDATE sessions SET questionCount = :questionCount WHERE id = :sessionId")
     abstract suspend fun updateQuestionCount(sessionId: Long, questionCount: Int)
+
+    @Query("DELETE FROM questions WHERE sessionId = :sessionId")
+    abstract suspend fun deleteQuestions(sessionId: Long)
+
+    @Query(
+        """UPDATE sessions SET
+            durationMin = :durationMin,
+            pauseRep = :pauseRep,
+            pauseNext = :pauseNext,
+            reps = :reps,
+            questionCount = :questionCount,
+            resumeQuestionIndex = :questionIndex,
+            resumeRepetition = :repetition,
+            resumeRemainingMs = :remainingMs
+            WHERE id = :sessionId""",
+    )
+    abstract suspend fun saveProgress(
+        sessionId: Long,
+        durationMin: Int,
+        pauseRep: Int,
+        pauseNext: Int,
+        reps: Int,
+        questionCount: Int,
+        questionIndex: Int,
+        repetition: Int,
+        remainingMs: Long,
+    )
+
+    @Query(
+        """UPDATE sessions SET
+            resumeQuestionIndex = NULL,
+            resumeRepetition = NULL,
+            resumeRemainingMs = NULL
+            WHERE id = :sessionId""",
+    )
+    abstract suspend fun clearProgress(sessionId: Long)
 }
 
 @Dao

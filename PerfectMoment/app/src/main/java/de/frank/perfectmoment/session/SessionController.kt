@@ -207,6 +207,34 @@ class SessionController(
         startForegroundSessionService()
     }
 
+    suspend fun resumeSession(sourceSessionId: Long) = operationMutex.withLock {
+        releaseEngine()
+        val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
+            "Die gespeicherte Sitzung wurde nicht gefunden."
+        }
+        val questionIndex = requireNotNull(source.session.resumeQuestionIndex) {
+            "Für diese Sitzung ist kein Fortsetzungspunkt gespeichert."
+        }
+        val config = SessionConfig.fromSeconds(
+            pauseRepSeconds = source.session.pauseRep,
+            pauseNextSeconds = source.session.pauseNext,
+            repsPerQuestion = source.session.reps,
+            durationMinutes = source.session.durationMin,
+        )
+        createEngine(
+            runtime = SessionRuntime(source.session.topic, sourceSessionId, config, replay = true),
+            questions = source.questions.map { Question(it.id, it.emoji, it.text) },
+            refillPort = null,
+            persistencePort = QuestionPersistencePort { },
+            checkpoint = SessionCheckpoint(
+                currentIndex = questionIndex,
+                currentRep = source.session.resumeRepetition ?: 1,
+                remainingMs = source.session.resumeRemainingMs ?: config.durationMs,
+            ),
+        )
+        startForegroundSessionService()
+    }
+
     fun toggleSpeaker() {
         val intent = Intent(appContext, SessionForegroundService::class.java)
             .setAction(SessionForegroundService.ACTION_TOGGLE)
@@ -222,7 +250,18 @@ class SessionController(
     }
 
     fun stopAndClear() {
+        val sessionId = _runtime.value?.sessionId
         engine?.stopSession()
+        releaseEngine()
+        appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
+        if (sessionId != null) scope.launch { sessionRepository.clearProgress(sessionId) }
+    }
+
+    suspend fun saveAndClear() = operationMutex.withLock {
+        val runtime = requireNotNull(_runtime.value)
+        val sessionId = requireNotNull(runtime.sessionId)
+        val state = requireNotNull(_state.value)
+        sessionRepository.saveProgress(sessionId, state, runtime.config)
         releaseEngine()
         appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
     }
@@ -240,6 +279,7 @@ class SessionController(
         refillPort: QuestionRefillPort?,
         persistencePort: QuestionPersistencePort,
         initialGenerationInFlight: Boolean = false,
+        checkpoint: SessionCheckpoint? = null,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
@@ -252,6 +292,7 @@ class SessionController(
             dispatcher = Dispatchers.Main.immediate,
             replay = runtime.replay,
             initialGenerationInFlight = initialGenerationInFlight,
+            checkpoint = checkpoint,
         )
         engine = created
         _runtime.value = runtime.copy(generating = initialGenerationInFlight)
@@ -262,6 +303,9 @@ class SessionController(
                 _state.value = next
                 if (next.phase == Phase.ENDED) {
                     appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
+                    runtime.sessionId?.let { sessionId ->
+                        scope.launch { sessionRepository.clearProgress(sessionId) }
+                    }
                 }
             }
         }

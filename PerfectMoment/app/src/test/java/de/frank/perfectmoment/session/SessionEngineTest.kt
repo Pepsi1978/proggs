@@ -335,6 +335,36 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `gespeicherter Stand startet pausiert bei gleicher Frage und Wiederholung`() = runTest {
+        val tts = FakeTts()
+        val engine = SessionEngine(
+            initialQuestions = listOf(question(1), question(2)),
+            config = config(durationMs = 10_000, reps = 3),
+            ttsPort = tts,
+            coroutineScope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            clock = SessionClock { testScheduler.currentTime },
+            replay = true,
+            checkpoint = SessionCheckpoint(currentIndex = 1, currentRep = 2, remainingMs = 4_200),
+        )
+
+        engine.start()
+        runCurrent()
+
+        assertTrue(engine.state.value.paused)
+        assertTrue(engine.state.value.speakerOn)
+        assertEquals(1, engine.state.value.currentIndex)
+        assertEquals(2, engine.state.value.currentRep)
+        assertEquals(4_200, engine.state.value.remainingMs)
+        assertTrue(tts.spokenTexts.isEmpty())
+
+        engine.togglePause()
+        runCurrent()
+        assertEquals(listOf("Frage 2"), tts.spokenTexts)
+        engine.close()
+    }
+
+    @Test
     fun `drei TTS Fehler ueberspringen die Frage`() = runTest {
         val fixture = fixture(
             questions = listOf(question(1), question(2)),

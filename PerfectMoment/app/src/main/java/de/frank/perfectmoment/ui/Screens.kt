@@ -344,6 +344,8 @@ fun SessionScreen(
     val reduced = LocalReducedMotion.current
     var dimmed by remember { mutableStateOf(false) }
     var interactionTick by remember { mutableIntStateOf(0) }
+    var showStopDialog by remember { mutableStateOf(false) }
+    var resumeAfterStopDialog by remember { mutableStateOf(false) }
     val dimAlpha by animateFloatAsState(
         if (dimmed) 0.88f else 0f,
         tween(if (reduced) 200 else if (dimmed) 4_000 else 300),
@@ -373,7 +375,11 @@ fun SessionScreen(
             state = state,
             onToggleSpeaker = viewModel::toggleSpeaker,
             onTogglePause = viewModel::togglePause,
-            onStop = viewModel::stopSession,
+            onStop = {
+                resumeAfterStopDialog = state?.paused == false
+                if (resumeAfterStopDialog) viewModel.togglePause()
+                showStopDialog = true
+            },
         )
         if (viewModel.introVisible) SessionIntroOverlay(viewModel)
         if (!viewModel.introVisible && state == null && viewModel.sessionError == null) {
@@ -426,6 +432,50 @@ fun SessionScreen(
                         interactionTick++
                     },
             )
+        }
+        if (showStopDialog) {
+            SessionStopDialog(
+                onDismiss = {
+                    showStopDialog = false
+                    if (resumeAfterStopDialog) viewModel.togglePause()
+                },
+                onEnd = viewModel::stopSession,
+                onSave = viewModel::saveSession,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionStopDialog(
+    onDismiss: () -> Unit,
+    onEnd: () -> Unit,
+    onSave: () -> Unit,
+) {
+    val colors = LocalPmColors.current
+    Dialog(onDismissRequest = onDismiss) {
+        PmCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(22.dp)) {
+                Text(
+                    "Sitzung stoppen?",
+                    color = colors.text1,
+                    fontFamily = Inter,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                )
+                Text(
+                    "Möchten Sie die Sitzung komplett beenden oder an diesem Punkt speichern?",
+                    color = colors.text2,
+                    fontFamily = Inter,
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 20.dp),
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlineButton("Beenden", colors.text2, onEnd, Modifier.weight(1f), height = 48)
+                    PrimaryButton("Speichern", onSave, Modifier.weight(1f), height = 48)
+                }
+            }
         }
     }
 }
@@ -783,7 +833,15 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
         } else {
             LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp)) {
                 item {
-                    PrimaryButton("Erneut abspielen", viewModel::replayHistory)
+                    val resumable = detail.session.resumeQuestionIndex != null
+                    PrimaryButton(
+                        if (resumable) "Sitzung fortsetzen" else "Erneut abspielen",
+                        if (resumable) viewModel::resumeHistory else viewModel::replayHistory,
+                    )
+                    if (resumable) {
+                        Spacer(Modifier.height(10.dp))
+                        OutlineButton("Von vorne abspielen", colors.gold, viewModel::replayHistory)
+                    }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), compact = true)
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)

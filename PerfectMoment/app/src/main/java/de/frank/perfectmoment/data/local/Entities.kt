@@ -22,6 +22,9 @@ data class SessionEntity(
     val pauseNext: Int,
     val reps: Int,
     val questionCount: Int = 0,
+    val resumeQuestionIndex: Int? = null,
+    val resumeRepetition: Int? = null,
+    val resumeRemainingMs: Long? = null,
 )
 
 @Entity(

@@ -28,6 +28,7 @@ class SessionEngine(
     private val clock: SessionClock = MonotonicSessionClock,
     private val replay: Boolean = false,
     private var initialGenerationInFlight: Boolean = false,
+    private val checkpoint: SessionCheckpoint? = null,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
 ) : Closeable {
@@ -37,7 +38,12 @@ class SessionEngine(
     private val _state = MutableStateFlow(
         SessionState(
             questions = initialQuestions,
-            remainingMs = config.durationMs,
+            currentIndex = checkpoint?.currentIndex?.coerceIn(0, initialQuestions.lastIndex.coerceAtLeast(0)) ?: 0,
+            currentRep = checkpoint?.currentRep?.coerceIn(1, config.repsPerQuestion) ?: 1,
+            phase = if (checkpoint != null && initialQuestions.isNotEmpty()) Phase.SPEAKING else Phase.IDLE_MUTED,
+            speakerOn = checkpoint != null && initialQuestions.isNotEmpty(),
+            paused = checkpoint != null && initialQuestions.isNotEmpty(),
+            remainingMs = checkpoint?.remainingMs?.coerceIn(1L, config.durationMs) ?: config.durationMs,
         ),
     )
     val state: StateFlow<SessionState> = _state.asStateFlow()
@@ -65,17 +71,20 @@ class SessionEngine(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            deadlineMs = clock.nowMillis() + config.durationMs
+            val restored = checkpoint != null && _state.value.questions.isNotEmpty()
+            deadlineMs = clock.nowMillis() + _state.value.remainingMs
             _state.value = _state.value.copy(
                 phase = if (_state.value.questions.isEmpty()) {
                     if (replay) Phase.ENDED else Phase.WAITING_NETWORK
+                } else if (restored) {
+                    Phase.SPEAKING
                 } else {
                     Phase.IDLE_MUTED
                 },
-                speakerOn = false,
-                remainingMs = config.durationMs,
+                speakerOn = restored,
+                paused = restored,
             )
-            if (_state.value.phase != Phase.ENDED) startTimer()
+            if (_state.value.phase != Phase.ENDED && !_state.value.paused) startTimer()
             if (_state.value.questions.isEmpty() && !replay && !initialGenerationInFlight) requestRefill()
         }
     }

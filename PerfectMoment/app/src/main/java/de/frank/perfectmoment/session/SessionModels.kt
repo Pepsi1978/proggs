@@ -27,6 +27,12 @@ data class SessionState(
     val offline: Boolean = false,
 )
 
+data class SessionCheckpoint(
+    val currentIndex: Int,
+    val currentRep: Int,
+    val remainingMs: Long,
+)
+
 data class SessionConfig(
     val pauseRepMs: Long,
     val pauseNextMs: Long,

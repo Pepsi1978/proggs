@@ -503,6 +503,26 @@ class AppViewModel(
         screen = AppScreen.START
     }
 
+    fun saveSession() {
+        cancelVoiceInput()
+        sessionStartGeneration++
+        sessionStartJob?.cancel()
+        sessionStartJob = null
+        authManager.cancelQuestionGeneration()
+        viewModelScope.launch {
+            try {
+                sessionController.saveAndClear()
+                introVisible = false
+                introQuestion = ""
+                pendingSessionDecision = null
+                sessionError = null
+                screen = AppScreen.START
+            } catch (error: Throwable) {
+                message = error.message ?: "Der Fortsetzungspunkt konnte nicht gespeichert werden."
+            }
+        }
+    }
+
     fun finishEndedSession() {
         sessionController.dismissEnded()
         screen = AppScreen.START
@@ -530,6 +550,26 @@ class AppViewModel(
         sessionStartJob = viewModelScope.launch {
             try {
                 sessionController.replaySession(id, randomReplay)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                handleSessionFailure(error)
+            } finally {
+                if (generation == sessionStartGeneration) sessionStartJob = null
+            }
+        }
+    }
+
+    fun resumeHistory() {
+        val id = historyDetail?.session?.id ?: return
+        sessionError = null
+        screen = AppScreen.SESSION
+        sessionStartJob?.cancel()
+        authManager.cancelQuestionGeneration()
+        val generation = ++sessionStartGeneration
+        sessionStartJob = viewModelScope.launch {
+            try {
+                sessionController.resumeSession(id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
