@@ -1,6 +1,6 @@
 # Werft Studio - verbindliche Implementierungsspezifikation
 
-Version: v0.1.9 - 20.07.2026 21:01 Uhr
+Version: v0.1.10 - 20.07.2026 21:05 Uhr
 
 Die im Auftrag vom 20.07.2026 vollständig übergebene Spezifikation mit den Kapiteln 0 bis 34 ist
 verbindlich. Visuelle Quelle der Wahrheit ist `../Designs/Design-App für Browser/Studio.dc.html`;
