@@ -9,6 +9,11 @@ const projectId = "0190f3d8-5800-7000-8000-000000000003";
 const pageId = "0190f3d8-5800-7000-8000-000000000004";
 const frameId = "0190f3d8-5800-7000-8000-000000000005";
 const nodeId = "0190f3d8-5800-7000-8000-000000000006";
+const production = process.env.NODE_ENV === "production";
+const adminEmail = process.env.WERFT_ADMIN_EMAIL ?? (production ? undefined : "frank@example.de");
+const adminPassword = process.env.WERFT_ADMIN_PASSWORD ?? (production ? undefined : "werft-local-demo");
+if (!adminEmail || !adminPassword) throw new Error("WERFT_ADMIN_EMAIL und WERFT_ADMIN_PASSWORD sind in Produktion erforderlich");
+const passwordHash = await hash(adminPassword, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
 const document: DesignDocument = {
   schemaVersion: 1, projectId, projectType: "prototype", fidelity: "high_fidelity", platforms: ["ios", "android", "windows", "web"], designSystemVersionId: null,
   themes: [{ id: "light", name: "Hell", tokens: { "color.bg": "#F5F7FA", "color.surface": "#FFFFFF", "color.accent": "#3157D5" } }, { id: "dark", name: "Dunkel", tokens: { "color.bg": "#12181F", "color.surface": "#1A222C", "color.accent": "#3157D5" } }],
@@ -18,10 +23,10 @@ const document: DesignDocument = {
   assets: [], interactions: [], metadata: { createdAt: "2026-07-20T18:00:00.000Z", compilerVersion: "0.1.0" }
 };
 await db.insert(organizations).values({ id: organizationId, name: "Werft Demo", slug: "werft-demo" }).onConflictDoNothing();
-await db.insert(users).values({ id: userId, email: "frank@example.de", displayName: "Frank K.", passwordHash: await hash("werft-local-demo", { memoryCost: 19456, timeCost: 2, parallelism: 1 }) }).onConflictDoNothing();
+await db.insert(users).values({ id: userId, email: adminEmail, displayName: "Frank K.", passwordHash }).onConflictDoUpdate({ target: users.id, set: { email: adminEmail, passwordHash } });
 await db.insert(memberships).values({ organizationId, userId, role: "organization_admin" }).onConflictDoNothing();
 await db.insert(projects).values({ id: projectId, organizationId, name: "Fluss – Mobile Banking", type: "prototype", fidelity: "high_fidelity", platforms: ["ios", "android", "windows", "web"], ownerId: userId, activeVersion: 14 }).onConflictDoNothing();
 await db.insert(drafts).values({ id: "0190f3d8-5800-7000-8000-000000000007", projectId, organizationId, revision: 0, document, updatedBy: userId }).onConflictDoNothing();
 await db.insert(versions).values({ id: "0190f3d8-5800-7000-8000-000000000008", organizationId, projectId, number: 14, reason: "Referenzfixture", authorId: userId, document, snapshotHash: "209b09aeae0b7fafc1b4d86805283d6e3d9a8f0ad1ef08ea18ae41040cb3ec25" }).onConflictDoNothing();
-console.log(`Seed ${uuidv7()}: frank@example.de / werft-local-demo (nur lokale Entwicklung)`);
+console.log(`Seed ${uuidv7()}: Administratorkonto ${adminEmail} aktualisiert`);
 await client.end();

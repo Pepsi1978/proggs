@@ -18,6 +18,13 @@ if [ ! -f .env ]; then
   } > .env
 fi
 
+if ! grep -q '^WERFT_ADMIN_EMAIL=' .env; then
+  printf 'WERFT_ADMIN_EMAIL=frank@example.de\n' >> .env
+fi
+if ! grep -q '^WERFT_ADMIN_PASSWORD=' .env; then
+  printf 'WERFT_ADMIN_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+fi
+
 chmod 600 .env
 docker compose -f compose.server.yaml config --quiet
 docker compose -f compose.server.yaml up -d --build
