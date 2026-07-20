@@ -1,4 +1,5 @@
 #!/bin/sh
+# Server-first deployment; never modifies the Cortex stack.
 set -eu
 
 cd /opt/werft-studio

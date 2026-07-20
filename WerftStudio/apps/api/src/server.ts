@@ -57,7 +57,7 @@ app.addHook("preHandler", async (request) => {
 function actorOf(request: FastifyRequest): Actor { if (!request.actor) fail("AUTH_REQUIRED", 401, "Bitte anmelden."); return request.actor; }
 function requireActorPermission(request: FastifyRequest, permission: Parameters<typeof can>[1]) { const actor = actorOf(request); if (!can(actor.role, permission)) fail("FORBIDDEN", 403, "Diese Aktion ist für deine Rolle nicht erlaubt."); return actor; }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.2-20260720.2012" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.3-20260720.2012" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 
 app.post("/api/v1/auth/login", { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } }, async (request, reply) => {
