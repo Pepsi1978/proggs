@@ -613,7 +613,7 @@ private fun SessionIntroOverlay(viewModel: AppViewModel) {
     ) {
         SectionLabel("Die KI fragt zuerst")
         Text(
-            "„Welche Frage hast du und welches Gefühl möchtest du damit verstärken?“",
+            "„${viewModel.introQuestion}“",
             color = colors.goldHi,
             fontFamily = Newsreader,
             fontWeight = FontWeight.Light,

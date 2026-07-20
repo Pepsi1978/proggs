@@ -70,6 +70,7 @@ class QuestionResponseValidatorTest {
         val prompt = IntroQuestionPolicy.resolve(
             topic = "Frage mich immer zuerst: „${IntroQuestionPolicy.QUESTION}“ Danach beginne.",
             introContext = "Wie finde ich mehr innere Ruhe? ",
+            answerRequired = true,
         )
 
         assertEquals("Wie finde ich mehr innere Ruhe?", prompt.topic)
@@ -77,14 +78,29 @@ class QuestionResponseValidatorTest {
     }
 
     @Test
-    fun onlyExplicitAskMeFirstInstructionRequiresAnswer() {
-        assertTrue(
-            IntroQuestionPolicy.requiresAnswer(
-                "Frage mich immer zuerst: „${IntroQuestionPolicy.QUESTION}“ Danach beginne.",
-            ),
+    fun sessionPromptPayloadRequiresSemanticClassification() {
+        val payload = codexSessionPromptPayload(
+            "Welches Gefühl möchtest du stärker wahrnehmen? Danach beginnt die Routine.",
+            CodexModel.TERRA,
+            ReasoningEffort.MEDIUM,
         )
-        assertEquals(false, IntroQuestionPolicy.requiresAnswer("Wie fühlt sich ein schönes Leben an?"))
-        assertEquals(false, IntroQuestionPolicy.requiresAnswer(IntroQuestionPolicy.QUESTION))
+
+        assertTrue(payload.getString("instructions").contains("semantisch"))
+        assertTrue(payload.getJSONArray("input").getJSONObject(0).getString("content").contains("Gefühl"))
+        val properties = payload.getJSONObject("text").getJSONObject("format")
+            .getJSONObject("schema").getJSONObject("properties")
+        assertEquals("boolean", properties.getJSONObject("requires_answer").getString("type"))
+        assertEquals("string", properties.getJSONObject("question").getString("type"))
+    }
+
+    @Test
+    fun parsesDynamicSessionPromptDecision() {
+        val decision = parseSessionPromptDecision(
+            """{"requires_answer":true,"question":"„Welchen Wunsch oder welches Ziel hast du?“"}""",
+        )
+
+        assertEquals(true, decision.requiresAnswer)
+        assertEquals("Welchen Wunsch oder welches Ziel hast du?", decision.question)
     }
 
     @Test
@@ -92,6 +108,7 @@ class QuestionResponseValidatorTest {
         val prompt = IntroQuestionPolicy.resolve(
             topic = "Wie fühlt sich ein schönes Leben an?",
             introContext = "Mit mehr Gelassenheit",
+            answerRequired = false,
         )
 
         assertEquals("Wie fühlt sich ein schönes Leben an?", prompt.topic)
@@ -110,6 +127,18 @@ class QuestionResponseValidatorTest {
 
         val instructions = payload.getString("instructions")
         assertTrue(instructions.contains(IntroQuestionPolicy.QUESTION))
-        assertTrue(instructions.contains("niemals als erzeugte Frage"))
+        assertTrue(instructions.contains("niemals als erzeugte Frage erscheinen"))
+    }
+
+    @Test
+    fun removesDynamicallyDetectedEntranceQuestion() {
+        val entranceQuestion = "Welches Gefühl möchtest du stärker wahrnehmen?"
+        val raw = listOf("🎯 $entranceQuestion") +
+            (1..29).map { "🌟 Eigenständige Frage $it?" }
+
+        val result = QuestionResponseValidator.validate(raw, excludedQuestions = listOf(entranceQuestion))
+
+        assertEquals(29, result.size)
+        assertEquals(false, result.any { it.text == entranceQuestion })
     }
 }

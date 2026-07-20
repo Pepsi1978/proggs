@@ -73,9 +73,12 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
         .put("additionalProperties", false)
         .put("required", JSONArray().put("fragen"))
         .put("properties", JSONObject().put("fragen", questionSchema))
+    val excludedEntranceQuestions = listOf(IntroQuestionPolicy.QUESTION, request.entranceQuestion)
+        .filter(String::isNotBlank)
+        .distinct()
     val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
-        "\n\nDie Eingangsfrage \"${IntroQuestionPolicy.QUESTION}\" ist nur eine Eingabehilfe. " +
-        "Gib sie niemals als erzeugte Frage aus."
+        "\n\nDiese Eingangsfragen sind nur Eingabehilfen und dürfen niemals als erzeugte Frage erscheinen: " +
+        JSONArray(excludedEntranceQuestions).toString()
 
     return JSONObject()
         .put("model", request.model.apiId)
@@ -105,9 +108,74 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
         )
 }
 
-internal class CodexSseAccumulator {
+internal fun codexSessionPromptPayload(
+    prompt: String,
+    model: CodexModel,
+    reasoningEffort: ReasoningEffort,
+): JSONObject {
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("required", JSONArray().put("requires_answer").put("question"))
+        .put(
+            "properties",
+            JSONObject()
+                .put("requires_answer", JSONObject().put("type", "boolean"))
+                .put("question", JSONObject().put("type", "string")),
+        )
+    return JSONObject()
+        .put("model", model.apiId)
+        .put("service_tier", "priority")
+        .put("stream", true)
+        .put("store", false)
+        .put(
+            "instructions",
+            "Prüfe, ob der Text zuerst eine Rückfrage an den Nutzer verlangt und die eigentliche Routine " +
+                "ausdrücklich erst nach dessen Antwort beginnen soll. Erkenne jede Formulierung semantisch, " +
+                "nicht nur Schlüsselwörter wie 'frage mich zuerst'. Beispiele sind Fragen nach einem Gefühl, " +
+                "Thema, Wunsch oder Ziel mit anschließendem Start der Routine. Dann requires_answer=true und " +
+                "question enthält genau die eine natürliche Rückfrage ohne Anführungszeichen. Bei einer normalen " +
+                "Frage, einem Thema oder Arbeitsauftrag gilt requires_answer=false und question ist leer.",
+        )
+        .put(
+            "input",
+            JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", "Zu klassifizierender Text:\n${prompt.trim()}"),
+            ),
+        )
+        .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
+        .put(
+            "text",
+            JSONObject().put(
+                "format",
+                JSONObject()
+                    .put("type", "json_schema")
+                    .put("name", "perfect_moment_startentscheidung")
+                    .put("strict", true)
+                    .put("schema", schema),
+            ),
+        )
+}
+
+internal fun parseSessionPromptDecision(rawOutput: String): SessionPromptDecision {
+    val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+    val json = runCatching { JSONObject(output) }.getOrElse {
+        throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keine gültige Startentscheidung geliefert.", it)
+    }
+    val requiresAnswer = json.opt("requires_answer") as? Boolean
+        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "In der OpenAI-Startentscheidung fehlt die Rückfrage-Kennzeichnung.")
+    val question = json.optString("question").trim().trim('„', '“', '"')
+    if (requiresAnswer && question.isBlank()) {
+        throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat die erforderliche Rückfrage nicht geliefert.")
+    }
+    return SessionPromptDecision(requiresAnswer, question.takeIf { requiresAnswer }.orEmpty())
+}
+
+internal class CodexSseAccumulator(private val decodeQuestions: Boolean = true) {
     private val deltas = StringBuilder()
-    private val questionDecoder = StreamingQuestionDecoder()
+    private val questionDecoder = StreamingQuestionDecoder().takeIf { decodeQuestions }
     private var completedText: String? = null
     private var completed = false
 
@@ -121,7 +189,7 @@ internal class CodexSseAccumulator {
         return when (event.optString("type")) {
             "response.output_text.delta" -> event.optString("delta").takeIf(String::isNotEmpty)?.let { delta ->
                 deltas.append(delta)
-                questionDecoder.append(delta)
+                questionDecoder?.append(delta).orEmpty()
             }.orEmpty()
             "response.completed" -> {
                 completed = true
@@ -245,48 +313,28 @@ class CodexAuthManager(context: Context) {
             if (request.topic.isBlank()) {
                 throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Fragenerzeugung fehlt das Sitzungsthema.")
             }
-            val token = validAccessToken()
-            val tokenAccountId = jwtAccountId(token)
-            if (tokenAccountId != null && tokenAccountId != accountId) {
-                store.edit().putString(KEY_ACCOUNT_ID, tokenAccountId).apply()
-            }
-            val requestAccountId = tokenAccountId ?: accountId
-                ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
-            val body = codexQuestionsPayload(request).toString().toRequestBody(JSON_MEDIA_TYPE)
-            val httpRequest = Request.Builder()
-                .url(RESPONSES_URL)
-                .post(body)
-                .header("Accept", "text/event-stream")
-                .header("Authorization", "Bearer $token")
-                .header("originator", "codex_cli_rs")
-                .header("User-Agent", "codex_cli_rs/0.0.0 (Perfect Moment)")
-                .header("ChatGPT-Account-ID", requestAccountId)
-                .build()
-            val accumulator = CodexSseAccumulator()
-            val trackedResponse = executeQuestionRequest(httpRequest)
-            try {
-                trackedResponse.response.use { response ->
-                    val responseBody = response.body
-                    if (!response.isSuccessful) {
-                        classifyHttpError(response.code, responseBody?.string().orEmpty())
-                    }
-                    val reader = responseBody?.charStream()?.buffered()
-                        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
-                    reader.use {
-                        readSseData(
-                            reader = it,
-                            onData = { data -> accumulator.accept(data).forEach { question -> onQuestion(question) } },
-                            shouldStop = { accumulator.isCompleted },
-                        )
-                    }
-                }
-            } finally {
-                activeQuestionCall.clear(trackedResponse.call)
-            }
-            parseQuestionResponse(accumulator.result())
+            parseQuestionResponse(requestCodexResponse(codexQuestionsPayload(request), true, onQuestion))
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die OpenAI-Antwort konnte nicht vollständig empfangen werden.", error)
+        }
+    }
+
+    suspend fun classifySessionPrompt(
+        prompt: String,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+    ): SessionPromptDecision = withContext(Dispatchers.IO) {
+        try {
+            if (prompt.isBlank()) {
+                throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Startentscheidung fehlt die Eingabe.")
+            }
+            parseSessionPromptDecision(
+                requestCodexResponse(codexSessionPromptPayload(prompt, model, reasoningEffort), false),
+            )
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Die OpenAI-Startentscheidung konnte nicht vollständig empfangen werden.", error)
         }
     }
 
@@ -467,6 +515,49 @@ class CodexAuthManager(context: Context) {
             activeQuestionCall.clear(call)
             throw error
         }
+    }
+
+    private suspend fun requestCodexResponse(
+        payload: JSONObject,
+        decodeQuestions: Boolean,
+        onQuestion: suspend (String) -> Unit = {},
+    ): String {
+        val token = validAccessToken()
+        val tokenAccountId = jwtAccountId(token)
+        if (tokenAccountId != null && tokenAccountId != accountId) {
+            store.edit().putString(KEY_ACCOUNT_ID, tokenAccountId).apply()
+        }
+        val requestAccountId = tokenAccountId ?: accountId
+            ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
+        val httpRequest = Request.Builder()
+            .url(RESPONSES_URL)
+            .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .header("Accept", "text/event-stream")
+            .header("Authorization", "Bearer $token")
+            .header("originator", "codex_cli_rs")
+            .header("User-Agent", "codex_cli_rs/0.0.0 (Perfect Moment)")
+            .header("ChatGPT-Account-ID", requestAccountId)
+            .build()
+        val accumulator = CodexSseAccumulator(decodeQuestions)
+        val trackedResponse = executeQuestionRequest(httpRequest)
+        try {
+            trackedResponse.response.use { response ->
+                val responseBody = response.body
+                if (!response.isSuccessful) classifyHttpError(response.code, responseBody?.string().orEmpty())
+                val reader = responseBody?.charStream()?.buffered()
+                    ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
+                reader.use {
+                    readSseData(
+                        reader = it,
+                        onData = { data -> accumulator.accept(data).forEach { question -> onQuestion(question) } },
+                        shouldStop = { accumulator.isCompleted },
+                    )
+                }
+            }
+        } finally {
+            activeQuestionCall.clear(trackedResponse.call)
+        }
+        return accumulator.result()
     }
 
     private suspend fun <T> withDnsRetry(block: suspend () -> T): T {

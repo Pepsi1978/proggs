@@ -59,7 +59,11 @@ class SessionController(
     private val _state = MutableStateFlow<SessionState?>(null)
     val state: StateFlow<SessionState?> = _state.asStateFlow()
 
-    suspend fun startNewSession(topic: String, introContext: String) = operationMutex.withLock {
+    suspend fun startNewSession(
+        topic: String,
+        introContext: String,
+        entranceQuestion: String = "",
+    ) = operationMutex.withLock {
         releaseEngine()
         val config = currentConfig()
         _state.value = null
@@ -79,6 +83,7 @@ class SessionController(
             val requestBase = CodexQuestionRequest(
                 topic = topic,
                 introContext = introContext,
+                entranceQuestion = entranceQuestion,
                 skillText = skill.text,
                 operatingModeText = settings.operatingModeText,
                 model = CodexModel.fromLabel(settings.model),
@@ -88,13 +93,17 @@ class SessionController(
                 val raw = codexAuthManager.generateQuestions(
                     requestBase.copy(previousQuestions = existing.map(Question::text)),
                 )
-                QuestionResponseValidator.validate(raw, existing.map(Question::text))
+                QuestionResponseValidator.validate(
+                    raw,
+                    existing.map(Question::text),
+                    listOf(entranceQuestion),
+                )
                     .map { "${it.emoji} ${it.text}" }
             }
             val persistencePort = QuestionPersistencePort { questions ->
                 sessionRepository.appendQuestions(sessionId, questions)
             }
-            val streamedValidator = IncrementalQuestionValidator()
+            val streamedValidator = IncrementalQuestionValidator(excludedQuestions = listOf(entranceQuestion))
             val streamedQuestions = mutableListOf<Question>()
             val rawInitial = codexAuthManager.generateQuestions(requestBase) { rawQuestion ->
                 streamedValidator.accept(rawQuestion)?.let { parsed ->
@@ -118,7 +127,10 @@ class SessionController(
                     }
                 }
             }
-            val validatedInitial = QuestionResponseValidator.validate(rawInitial)
+            val validatedInitial = QuestionResponseValidator.validate(
+                rawInitial,
+                excludedQuestions = listOf(entranceQuestion),
+            )
                 .map { Question(emoji = it.emoji, text = it.text) }
             val streamedTexts = streamedQuestions
                 .mapTo(mutableSetOf()) { QuestionResponseValidator.normalizeQuestion(it.text) }

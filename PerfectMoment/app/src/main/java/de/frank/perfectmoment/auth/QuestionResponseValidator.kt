@@ -11,6 +11,7 @@ object QuestionResponseValidator {
     fun validate(
         rawQuestions: List<String>,
         previousQuestions: Collection<String> = emptyList(),
+        excludedQuestions: Collection<String> = emptyList(),
     ): List<CodexQuestion> {
         if (rawQuestions.size != REQUIRED_INPUT_COUNT) {
             throw QuestionValidationException(
@@ -18,7 +19,7 @@ object QuestionResponseValidator {
             )
         }
 
-        val validator = IncrementalQuestionValidator(previousQuestions)
+        val validator = IncrementalQuestionValidator(previousQuestions, excludedQuestions)
         val accepted = rawQuestions.mapNotNull(validator::accept)
 
         if (accepted.size < MIN_ACCEPTED_COUNT) {
@@ -131,15 +132,18 @@ object QuestionResponseValidator {
     private const val CANCEL_TAG = 0xE007F
 }
 
-internal class IncrementalQuestionValidator(previousQuestions: Collection<String> = emptyList()) {
-    private val seen = previousQuestions
+internal class IncrementalQuestionValidator(
+    previousQuestions: Collection<String> = emptyList(),
+    excludedQuestions: Collection<String> = emptyList(),
+) {
+    private val seen = (previousQuestions + excludedQuestions + IntroQuestionPolicy.QUESTION)
         .mapTo(mutableSetOf(), QuestionResponseValidator::normalizeQuestion)
         .apply { remove("") }
 
     fun accept(raw: String): CodexQuestion? {
         val question = QuestionResponseValidator.splitLeadingEmoji(raw) ?: return null
         val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
-        return if (normalized.isEmpty() || IntroQuestionPolicy.isEntranceQuestion(question.text) || !seen.add(normalized)) {
+        return if (normalized.isEmpty() || !seen.add(normalized)) {
             null
         } else {
             question

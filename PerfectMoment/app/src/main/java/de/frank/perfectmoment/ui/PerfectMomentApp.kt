@@ -284,7 +284,7 @@ private fun IntroAnswerSheet(
     PmTextArea(
         value = viewModel.introText,
         onValueChange = viewModel::updateIntroText,
-        placeholder = "Welche Frage hast du und welches Gefühl möchtest du damit verstärken?",
+        placeholder = viewModel.introQuestion,
         modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp, max = 330.dp).padding(top = 12.dp),
     )
     Spacer(Modifier.height(8.dp))

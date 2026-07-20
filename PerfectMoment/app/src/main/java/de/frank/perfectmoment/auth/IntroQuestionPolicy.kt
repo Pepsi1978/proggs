@@ -12,19 +12,10 @@ internal object IntroQuestionPolicy {
     fun isEntranceQuestion(value: String): Boolean =
         QuestionResponseValidator.normalizeQuestion(value) == normalizedQuestion
 
-    fun requiresAnswer(topic: String): Boolean {
-        val normalizedTopic = QuestionResponseValidator.normalizeQuestion(topic)
-        val questionIndex = normalizedTopic.indexOf(normalizedQuestion)
-        if (questionIndex < 0) return false
-        val instruction = normalizedTopic.take(questionIndex)
-        return instruction.contains("frage mich") && instruction.contains("zuerst")
-    }
-
-    fun resolve(topic: String, introContext: String): ResolvedSessionPrompt {
+    fun resolve(topic: String, introContext: String, answerRequired: Boolean): ResolvedSessionPrompt {
         val cleanTopic = topic.trim()
         val cleanContext = introContext.trim()
-        val isEntrancePrompt = requiresAnswer(cleanTopic)
-        return if (isEntrancePrompt && cleanContext.isNotEmpty()) {
+        return if (answerRequired && cleanContext.isNotEmpty()) {
             ResolvedSessionPrompt(topic = cleanContext, introContext = "")
         } else {
             ResolvedSessionPrompt(topic = cleanTopic, introContext = cleanContext)

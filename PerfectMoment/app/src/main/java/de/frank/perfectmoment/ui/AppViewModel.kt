@@ -17,6 +17,7 @@ import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.DeviceAuthInfo
 import de.frank.perfectmoment.auth.IntroQuestionPolicy
 import de.frank.perfectmoment.auth.ReasoningEffort
+import de.frank.perfectmoment.auth.SessionPromptDecision
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
@@ -169,8 +170,11 @@ class AppViewModel(
         private set
     var introText by mutableStateOf("")
         private set
+    var introQuestion by mutableStateOf("")
+        private set
     var pendingSessionTopic by mutableStateOf("")
         private set
+    private var pendingSessionDecision: SessionPromptDecision? = null
     var sessionError by mutableStateOf<String?>(null)
         private set
     var randomReplay by mutableStateOf(false)
@@ -438,10 +442,12 @@ class AppViewModel(
         cancelVoiceInput()
         pendingSessionTopic = topic.trim()
         introText = ""
-        introVisible = IntroQuestionPolicy.requiresAnswer(pendingSessionTopic)
+        introQuestion = ""
+        pendingSessionDecision = null
+        introVisible = false
         sessionError = null
         screen = AppScreen.SESSION
-        if (!introVisible) beginAiSession("")
+        classifyAndStartPendingSession()
     }
 
     fun openIntroSheet() {
@@ -460,11 +466,12 @@ class AppViewModel(
         sheet = null
         introVisible = false
         sessionError = null
-        val prompt = IntroQuestionPolicy.resolve(pendingSessionTopic, context)
+        val decision = pendingSessionDecision ?: SessionPromptDecision(false, "")
+        val prompt = IntroQuestionPolicy.resolve(pendingSessionTopic, context, decision.requiresAnswer)
         val generation = ++sessionStartGeneration
         sessionStartJob = viewModelScope.launch {
             try {
-                sessionController.startNewSession(prompt.topic, prompt.introContext)
+                sessionController.startNewSession(prompt.topic, prompt.introContext, decision.question)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
@@ -476,7 +483,7 @@ class AppViewModel(
     }
 
     fun retrySession() {
-        beginAiSession(introText)
+        if (pendingSessionDecision == null) classifyAndStartPendingSession() else beginAiSession(introText)
     }
 
     fun toggleSpeaker() = sessionController.toggleSpeaker()
@@ -490,6 +497,8 @@ class AppViewModel(
         authManager.cancelQuestionGeneration()
         sessionController.stopAndClear()
         introVisible = false
+        introQuestion = ""
+        pendingSessionDecision = null
         sessionError = null
         screen = AppScreen.START
     }
@@ -809,6 +818,33 @@ class AppViewModel(
             chatGptError = authError.message
         }
         sessionError = error.message ?: "Die Fragen konnten nicht erzeugt werden."
+    }
+
+    private fun classifyAndStartPendingSession() {
+        sessionStartJob?.cancel()
+        authManager.cancelQuestionGeneration()
+        sessionError = null
+        val generation = ++sessionStartGeneration
+        sessionStartJob = viewModelScope.launch {
+            try {
+                val decision = authManager.classifySessionPrompt(pendingSessionTopic, model, reasoning)
+                if (generation != sessionStartGeneration) return@launch
+                pendingSessionDecision = decision
+                introQuestion = decision.question
+                if (decision.requiresAnswer) {
+                    introVisible = true
+                } else {
+                    val prompt = IntroQuestionPolicy.resolve(pendingSessionTopic, "", false)
+                    sessionController.startNewSession(prompt.topic, prompt.introContext)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                handleSessionFailure(error)
+            } finally {
+                if (generation == sessionStartGeneration) sessionStartJob = null
+            }
+        }
     }
 
     fun clearMessage() {

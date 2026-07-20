@@ -30,11 +30,17 @@ enum class ReasoningEffort(val label: String, val apiValue: String) {
 data class CodexQuestionRequest(
     val topic: String,
     val introContext: String = "",
+    val entranceQuestion: String = "",
     val previousQuestions: List<String> = emptyList(),
     val skillText: String,
     val operatingModeText: String,
     val model: CodexModel = CodexModel.TERRA,
     val reasoningEffort: ReasoningEffort = ReasoningEffort.MEDIUM,
+)
+
+data class SessionPromptDecision(
+    val requiresAnswer: Boolean,
+    val question: String,
 )
 
 data class CodexQuestion(
