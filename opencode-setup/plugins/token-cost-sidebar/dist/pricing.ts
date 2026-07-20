@@ -177,6 +177,11 @@ export function calculateUsageCost(model: any, usage: TokenUsage): number {
   return calculateUsageCostBreakdown(model, usage).usd
 }
 
+export function formatCacheToInputCostRatio(cacheUsd: number, inputUsd: number): string {
+  if (!Number.isFinite(cacheUsd) || !Number.isFinite(inputUsd) || cacheUsd < 0 || inputUsd <= 0) return "n/v"
+  return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(cacheUsd / inputUsd)} zu 1`
+}
+
 export function calculateSessionCostBreakdown(model: any, records: UsageRecord[]) {
   let pricingAvailable = hasKnownPricing(model)
   let breakdownAvailable = true

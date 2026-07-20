@@ -6,6 +6,7 @@ import {
   catalogModelCandidates,
   commitIfCurrent,
   findCatalogModel,
+  formatCacheToInputCostRatio,
   hasKnownPricing,
   hasPositivePricing,
   loadCatalogModel,
@@ -254,6 +255,14 @@ describe("models.dev pricing", () => {
     expect(cost.outputUsd).toBeCloseTo(0.06)
     expect(cost.reasoningUsd).toBeCloseTo(0.03)
     expect(cost.usd).toBeCloseTo(0.7025)
+  })
+
+  test("formats the live cache-to-input cost ratio with input normalized to one", () => {
+    expect(formatCacheToInputCostRatio(3, 1)).toBe("3 zu 1")
+    expect(formatCacheToInputCostRatio(7, 2)).toBe("3,5 zu 1")
+    expect(formatCacheToInputCostRatio(7.2, 1)).toBe("7,2 zu 1")
+    expect(formatCacheToInputCostRatio(0, 2)).toBe("0 zu 1")
+    expect(formatCacheToInputCostRatio(2, 0)).toBe("n/v")
   })
 
   test("falls back to the recorded total without inventing unavailable components", () => {
@@ -729,6 +738,9 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Outputkosten"')
     expect(source).toContain('label="Reasoningkosten"')
     expect(source).toContain('label="Cachekosten"')
+    expect(source).toContain('detail={`(${cacheToInputCostRatio()})`}')
+    expect(source).toContain('formatCacheToInputCostRatio(money().cacheUsd, money().inputUsd)')
+    expect(source).toContain('{props.detail ? ` ${props.detail}` : ""}')
     expect(source.indexOf('label="Cachekosten"')).toBeLessThan(source.indexOf('label="Inputkosten"'))
     expect(source.indexOf('label="Inputkosten"')).toBeLessThan(source.indexOf('label="Outputkosten"'))
     expect(source.indexOf('label="Outputkosten"')).toBeLessThan(source.indexOf('label="Reasoningkosten"'))

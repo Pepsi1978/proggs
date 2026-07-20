@@ -4,6 +4,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plug
 import {
   calculateSessionCostBreakdown,
   commitIfCurrent,
+  formatCacheToInputCostRatio,
   hasKnownPricing,
   loadCatalogModel,
   readAvailablePricingPerMillion,
@@ -178,12 +179,12 @@ function formatUsdPerMillion(value: number): string {
   return `${formatUsd(value)} / 1M`
 }
 
-function Row(props: { label: string; value: string; muted?: boolean; bold?: boolean; api: TuiPluginApi }) {
+function Row(props: { label: string; detail?: string; value: string; muted?: boolean; bold?: boolean; api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   return (
     <box flexDirection="row">
       <text fg={props.muted ? theme().textMuted : theme().text}>
-        <span style={{ bold: props.bold }}>{props.label}</span>
+        <span style={{ bold: props.bold }}>{props.label}</span>{props.detail ? ` ${props.detail}` : ""}
       </text>
       <box flexGrow={1} />
       <text fg={props.muted ? theme().textMuted : theme().text}>
@@ -745,6 +746,12 @@ function View(props: {
     return money().breakdownAvailable ? formatUsd(money()[kind]) : "nicht verfügbar"
   }
 
+  const cacheToInputCostRatio = createMemo(() => {
+    return money().breakdownAvailable
+      ? formatCacheToInputCostRatio(money().cacheUsd, money().inputUsd)
+      : "n/v"
+  })
+
   const hasAnything = createMemo(() => modelMeta().fullID !== "unbekannt" || totals().matchedMessages > 0)
 
   return (
@@ -782,7 +789,12 @@ function View(props: {
         <Row api={props.api} label="Output Token" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning Token" value={formatInt(totals().reasoning)} />
         <box height={1} />
-        <Row api={props.api} label="Cachekosten" value={componentCost("cacheUsd")} />
+        <Row
+          api={props.api}
+          label="Cachekosten"
+          detail={`(${cacheToInputCostRatio()})`}
+          value={componentCost("cacheUsd")}
+        />
         <Row api={props.api} label="Inputkosten" value={componentCost("inputUsd")} />
         <Row api={props.api} label="Outputkosten" value={componentCost("outputUsd")} />
         <Row api={props.api} label="Reasoningkosten" value={componentCost("reasoningUsd")} />

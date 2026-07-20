@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.6 - 19.07.2026, 14:49 Uhr
+Stand: v1.13.7 - 20.07.2026, 12:27 Uhr
 
 ## Funktionen
 
@@ -25,7 +25,8 @@ Stand: v1.13.6 - 19.07.2026, 14:49 Uhr
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
   Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`, `Reasoning Token` sowie
-  einer Leerzeile vor den Einzelposten `Cachekosten`, `Inputkosten`, `Outputkosten`,
+  einer Leerzeile vor den Einzelposten `Cachekosten` samt live aktualisiertem Verhältnis zu den
+  Inputkosten im Format `(3,5 zu 1)`, `Inputkosten`, `Outputkosten`,
   `Reasoningkosten` und abschließend den vollständig fett hervorgehobenen `Gesamtkosten`
   einschließlich Dollarwert.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
@@ -67,6 +68,7 @@ Cache-Kosten W   = Cache-Write × Cache-Write-Preis
 Output-Kosten    = Output ohne Reasoning × Outputpreis
 Reasoning-Kosten = Reasoning × Reasoningpreis, sonst Outputpreis
 Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Kosten
+Cache-Verhältnis = Cache-Kosten / Input-Kosten zu 1
 ```
 
 Für OpenAI-Modelle wird der Cache-Read-Preis vor der Berechnung um 20 % erhöht. Andere Provider
@@ -81,6 +83,8 @@ Die unter `Context` gezeigten Werte enthalten jeden API-Modellaufruf der Session
 Kontexttokens können daher über viele Aufrufe deutlich größer als das aktuelle Kontextfenster werden.
 Fehlt ein erforderlicher Preis, zeigt die Sidebar für die nicht belastbar aufteilbaren Werte
 `nicht verfügbar`, statt einen Preis zu erfinden.
+Sind keine positiven Inputkosten vorhanden oder ist die Kostenaufteilung nicht verfügbar, erscheint
+das Verhältnis als `(n/v)`.
 
 ## Empfohlene Installation
 
@@ -120,7 +124,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
-9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier Tokenzeilen; eine Leerzeile trennt `Reasoning Token` von `Cachekosten`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und der ganz unten fett dargestellten Zeile `Gesamtkosten`.
+9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier Tokenzeilen; eine Leerzeile trennt `Reasoning Token` von `Cachekosten (<Verhältnis> zu 1)`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und der ganz unten fett dargestellten Zeile `Gesamtkosten`.
 
 Tests im Repo:
 
