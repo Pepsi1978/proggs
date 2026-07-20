@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.1.12 - 20.07.2026 21:24 Uhr
+Version: v0.1.13 - 20.07.2026 21:28 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -14,5 +14,6 @@ Version: v0.1.12 - 20.07.2026 21:24 Uhr
 | Preview/Export | Worker-Apps | Sandbox- und Exporttests |
 | Projektimport | `apps/web`, `apps/api`, `project_imports`, MinIO | Pfadguard-Tests sowie echter HTML-Ordner- und ZIP-Import |
 | OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
+| GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, Effort-, Priority- und Live-Verbindungstest |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.

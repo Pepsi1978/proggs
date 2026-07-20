@@ -705,11 +705,15 @@ function ProviderSettings() {
   const [open, setOpen] = useState(false);
   const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
   const client = useQueryClient();
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string }>("/providers/openai") });
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
+  const [model,setModel]=useState("gpt-5.6-sol"),[effort,setEffort]=useState("high"),[fast,setFast]=useState(false);
   const start = useMutation({ mutationFn: () => api<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>("/providers/openai/auth/start", { method: "POST", body: "{}" }), onSuccess: (data) => { setDevice(data); window.open(data.verificationUri, "_blank", "noopener,noreferrer"); } });
   const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setOpen(false); await client.invalidateQueries({ queryKey: ["provider", "openai"] }); } else if (data.status === "expired") setDevice(undefined); } });
   const disconnect = useMutation({ mutationFn: () => api<{ connected: boolean }>("/providers/openai", { method: "DELETE" }), onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] }) });
+  const saveSettings=useMutation({mutationFn:()=>api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort,fast})}),onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
+  const testProvider=useMutation({mutationFn:async()=>{await api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort,fast})});return api<{ok:boolean;elapsedMs:number}>("/providers/openai/test",{method:"POST",body:"{}"})}});
   useEffect(() => { if (!device || poll.isPending) return; const timer=setTimeout(()=>poll.mutate(device.authId),device.interval*1000); return()=>clearTimeout(timer); },[device,poll.isPending,poll.mutate]);
+  useEffect(()=>{const settings=connection.data?.settings;if(settings?.model)setModel(settings.model);if(settings?.effort)setEffort(settings.effort);if(typeof settings?.fast==="boolean")setFast(settings.fast)},[connection.data?.settings]);
   return (
     <>
       <div className="section-head">
@@ -742,13 +746,14 @@ function ProviderSettings() {
           </Card>
         ))}
       </div>
+      {connection.data?.connected&&<Card title="GPT-5.6 Modell & Thinking" sub="Gilt für Planung, Design, Code und visuelle Prüfung über deine Codex-Verbindung."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Thinking / Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">Extra High</option></select></label></div><div className="setting-row"><span><strong>Fast / Priority</strong><small>Verwendet dasselbe Modell mit service_tier=priority.</small></span><button className={`switch ${fast?"on":""}`} onClick={()=>setFast(!fast)}><i/></button></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
       <Card title="Routing-Matrix" sub="Welches Modell übernimmt welche Aufgabe.">
         {["Planung", "Design", "Code", "Visuelle Prüfung", "Bildgenerierung"].map((x) => (
           <div className="routing-row" key={x}>
             <strong>{x}</strong>
             <select>
               <option>Werft Intern</option>
-              <option>GPT-Endpunkt</option>
+              {connection.data?.connected&&<option>{model.replace("gpt-5.6-","GPT-5.6 ")}{fast?" Fast":""} · {effort}</option>}
               <option>Lokal · Ollama</option>
             </select>
           </div>

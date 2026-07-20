@@ -6,8 +6,16 @@ export const codexAuth = {
   deviceTokenUrl: "https://auth.openai.com/api/accounts/deviceauth/token",
   verificationUrl: "https://auth.openai.com/codex/device",
   redirectUrl: "https://auth.openai.com/deviceauth/callback",
-  tokenUrl: "https://auth.openai.com/oauth/token"
+  tokenUrl: "https://auth.openai.com/oauth/token",
+  responsesUrl: "https://chatgpt.com/backend-api/codex/responses"
 } as const;
+
+export const codexModels = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const;
+export const codexEfforts = ["none", "low", "medium", "high", "xhigh"] as const;
+
+export function codexModelFields(model: typeof codexModels[number], fast: boolean): { model: string; service_tier?: "priority" } {
+  return fast ? { model, service_tier: "priority" } : { model };
+}
 
 export type CodexCredentials = { accessToken: string; refreshToken?: string; idToken?: string };
 
