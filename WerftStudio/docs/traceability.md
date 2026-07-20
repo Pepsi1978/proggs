@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.1.11 - 20.07.2026 21:17 Uhr
+Version: v0.1.12 - 20.07.2026 21:24 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -13,5 +13,6 @@ Version: v0.1.11 - 20.07.2026 21:17 Uhr
 | KI | `packages/ai-gateway`, `apps/worker-ai` | Provider- und Schema-Evals |
 | Preview/Export | Worker-Apps | Sandbox- und Exporttests |
 | Projektimport | `apps/web`, `apps/api`, `project_imports`, MinIO | Pfadguard-Tests sowie echter HTML-Ordner- und ZIP-Import |
+| OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.

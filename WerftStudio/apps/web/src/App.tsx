@@ -703,6 +703,13 @@ function SettingsPage() {
 }
 function ProviderSettings() {
   const [open, setOpen] = useState(false);
+  const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
+  const client = useQueryClient();
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string }>("/providers/openai") });
+  const start = useMutation({ mutationFn: () => api<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>("/providers/openai/auth/start", { method: "POST", body: "{}" }), onSuccess: (data) => { setDevice(data); window.open(data.verificationUri, "_blank", "noopener,noreferrer"); } });
+  const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setOpen(false); await client.invalidateQueries({ queryKey: ["provider", "openai"] }); } else if (data.status === "expired") setDevice(undefined); } });
+  const disconnect = useMutation({ mutationFn: () => api<{ connected: boolean }>("/providers/openai", { method: "DELETE" }), onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] }) });
+  useEffect(() => { if (!device || poll.isPending) return; const timer=setTimeout(()=>poll.mutate(device.authId),device.interval*1000); return()=>clearTimeout(timer); },[device,poll.isPending,poll.mutate]);
   return (
     <>
       <div className="section-head">
@@ -712,9 +719,15 @@ function ProviderSettings() {
         </Button>
       </div>
       <div className="provider-grid">
+        <Card title="OpenAI · Codex OAuth">
+          <small>ChatGPT-Anmeldung · Tokens nur verschlüsselt auf dem Server</small>
+          <Status kind={connection.data?.connected ? "success" : "neutral"}>{connection.data?.connected ? "Verbunden" : "Nicht verbunden"}</Status>
+          {connection.data?.connected && <small>{connection.data.email || connection.data.accountId || "OpenAI-Konto"}</small>}
+          <div className="caps"><span>GPT-5.6</span><span>Reasoning</span><span>Tools</span></div>
+          {connection.data?.connected ? <Button variant="danger" onClick={()=>disconnect.mutate()}>Verbindung trennen</Button> : <Button onClick={()=>setOpen(true)}>Mit OpenAI verbinden</Button>}
+        </Card>
         {[
           ["Werft Intern", "Eigenes Modell · EU-Region", "Verbunden", "success"],
-          ["GPT-Endpunkt", "OpenAI-kompatibel · EU-West", "Rate Limit", "warning"],
           ["Lokal · Ollama", "Selbst gehostet", "Ungültig", "error"],
         ].map(([name, kind, status, tone]) => (
           <Card title={name!} key={name}>
@@ -742,34 +755,13 @@ function ProviderSettings() {
         ))}
       </Card>
       {open && (
-        <Modal title="Verbindung hinzufügen" onClose={() => setOpen(false)}>
-          <div className="modal-body">
-            <label>
-              Anbieterart
-              <select>
-                <option>OpenAI / GPT</option>
-                <option>OpenAI-kompatibel</option>
-                <option>Intern</option>
-                <option>Selbst gehostet</option>
-              </select>
-            </label>
-            <label>
-              Endpunkt
-              <input placeholder="https://api.firma.de/v1" />
-            </label>
-            <label>
-              Credential
-              <input type="password" placeholder="Nach Speicherung nur maskiert sichtbar" />
-            </label>
-            <label className="check">
-              <input type="checkbox" /> Datenpolitik bestätigt
-            </label>
+        <Modal title="OpenAI mit Codex verbinden" onClose={() => {setOpen(false);setDevice(undefined)}}>
+          <div className="modal-body oauth-dialog">
+            {!device ? <><p>Werft öffnet die offizielle OpenAI-Geräteseite. Dein Passwort wird niemals an Werft übermittelt.</p><Button variant="primary" disabled={start.isPending} onClick={()=>start.mutate()}>{start.isPending?"Code wird angefordert …":"Browser-Code anfordern"}</Button></> : <><p>Gib diesen Code auf der geöffneten OpenAI-Seite ein:</p><button className="device-code" onClick={()=>navigator.clipboard.writeText(device.userCode)} title="Code kopieren">{device.userCode}</button><a href={device.verificationUri} target="_blank" rel="noreferrer">auth.openai.com/codex/device erneut öffnen</a><Status kind="info">Warte auf Bestätigung im Browser …</Status><small>Der Code läuft um {new Date(device.expiresAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr ab.</small></>}
+            {(start.error||poll.error)&&<p className="field-error">{(start.error||poll.error) instanceof ApiError?(start.error||poll.error)?.message:"OpenAI-Anmeldung fehlgeschlagen."}</p>}
           </div>
           <div className="modal-actions">
-            <Button>Verbindung testen</Button>
-            <Button variant="primary" disabled>
-              Speichern & Rollen zuweisen
-            </Button>
+            <Button onClick={() => {setOpen(false);setDevice(undefined)}}>Schließen</Button>
           </div>
         </Modal>
       )}

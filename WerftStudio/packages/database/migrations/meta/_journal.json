@@ -15,6 +15,13 @@
       "when": 1784573167157,
       "tag": "0001_flat_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784575145338,
+      "tag": "0002_unusual_kronos",
+      "breakpoints": true
     }
   ]
 }
