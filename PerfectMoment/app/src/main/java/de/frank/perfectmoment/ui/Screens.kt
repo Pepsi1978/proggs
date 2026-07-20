@@ -23,11 +23,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -100,6 +102,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -1322,55 +1326,70 @@ fun SkillsScreen(viewModel: AppViewModel) {
 @Composable
 fun SkillEditorScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    var skillTextFocused by remember { mutableStateOf(false) }
+    val skillTextEditing = skillTextFocused && WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Skill bearbeiten", viewModel::back, titleSize = 24)
+        if (!skillTextEditing) {
+            ScreenHeader("Skill bearbeiten", viewModel::back, titleSize = 24)
+        }
         Column(
-            Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            Modifier.fillMaxSize().padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 8.dp,
+                bottom = if (skillTextEditing) 8.dp else 24.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PmTextArea(
-                value = viewModel.skillEditorName,
-                onValueChange = viewModel::updateSkillName,
-                placeholder = "Name des Skills",
-                singleLine = true,
-                textSize = 16,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            )
+            if (!skillTextEditing) {
+                PmTextArea(
+                    value = viewModel.skillEditorName,
+                    onValueChange = viewModel::updateSkillName,
+                    placeholder = "Name des Skills",
+                    singleLine = true,
+                    textSize = 16,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                )
+            }
             PmTextArea(
                 value = viewModel.skillEditorText,
                 onValueChange = viewModel::updateSkillText,
                 placeholder = "Vollständiger Skill-Text",
                 mono = true,
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f).onFocusChanged {
+                    skillTextFocused = it.isFocused
+                },
             )
-            PmCard(Modifier.fillMaxWidth()) {
-                Column {
-                    Row(
-                        Modifier.fillMaxWidth().pmClickable { viewModel.toggleOperatingMode() }.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Betriebsmodus (automatischer Anhang)", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                            Text("Wird unter jeden Skill gehängt und steuert das Frage-Format.", color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            if (!skillTextEditing) {
+                PmCard(Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(
+                            Modifier.fillMaxWidth().pmClickable { viewModel.toggleOperatingMode() }.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Betriebsmodus (automatischer Anhang)", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+                                Text("Wird unter jeden Skill gehängt und steuert das Frage-Format.", color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                            }
+                            Text(if (viewModel.operatingModeOpen) "−" else "+", color = colors.goldDim, fontSize = 22.sp)
                         }
-                        Text(if (viewModel.operatingModeOpen) "−" else "+", color = colors.goldDim, fontSize = 22.sp)
-                    }
-                    if (viewModel.operatingModeOpen) {
-                        PmTextArea(
-                            value = viewModel.operatingModeText,
-                            onValueChange = viewModel::updateOperatingMode,
-                            placeholder = "Betriebsmodus",
-                            mono = true,
-                            modifier = Modifier.fillMaxWidth().height(180.dp)
-                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                            textSize = 12,
-                        )
+                        if (viewModel.operatingModeOpen) {
+                            PmTextArea(
+                                value = viewModel.operatingModeText,
+                                onValueChange = viewModel::updateOperatingMode,
+                                placeholder = "Betriebsmodus",
+                                mono = true,
+                                modifier = Modifier.fillMaxWidth().height(180.dp)
+                                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                                textSize = 12,
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.height(4.dp))
+                PrimaryButton("Speichern", viewModel::saveSkill)
+                OutlineButton("Löschen", colors.warning, viewModel::deleteSkill)
             }
-            Spacer(Modifier.height(4.dp))
-            PrimaryButton("Speichern", viewModel::saveSkill)
-            OutlineButton("Löschen", colors.warning, viewModel::deleteSkill)
         }
     }
 }

@@ -22,6 +22,7 @@
 >
 > **Ergaenzt 2026-07-02:** §6.8 (`weight(0f)`-Crash aus dynamischen Daten) und §9.6
 > (unbedingt erzeugte InfiniteTransition tickt in jedem Zustand — Energie) — CortexAndroid-Funde.
+> **Ergaenzt 2026-07-20:** §8.8 (gewichteter Langtext-Editor kollabiert bei `adjustResize` + IME).
 >
 > **Versions-Horizont (Re-Recherche 2026-06-24):** BOM ist inzwischen bei **2026.06.00** (2026-06-17):
 > Compose UI/foundation/animation/runtime **1.11.3**, **Material3 1.4.0** (stabil), **1.12.0-beta01** in
@@ -593,6 +594,12 @@ APIs aus der stabilen Linie entfernt (Expressive nur in der Alpha-Linie). Neue 1
 SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
 **Versionen:** Material3 1.4.0 (released 2025-09-24). EntropieReductor ist bereits auf 1.4.0.
 **Quelle:** developer.android.com/jetpack/androidx/releases/compose-material3 (1.4.0 Release-Notes)
+
+### 8.8 Gewichteter Langtext-Editor kollabiert bei `adjustResize` + IME
+**Symptom:** Nach dem Fokussieren eines langen `BasicTextField` öffnet sich die Tastatur, das Textfeld schrumpft auf wenige Zeilen und die angetippte Cursorstelle ist nicht mehr sichtbar.
+**Ursache:** `adjustResize` reduziert die verfügbare Fensterhöhe, während feste Geschwister wie Kopfzeile, Namensfeld, Zusatzkarten und Aktionsbuttons ihre Höhe behalten. Ein per `weight(1f)` dimensioniertes Textfeld erhält nur den verbleibenden, nahezu aufgebrauchten Platz.
+**FIX (funktionserhaltend):** Bei fokussiertem Langtextfeld und sichtbarer `WindowInsets.ime` die festen Geschwister ausblenden und dieselbe Textfeld-Instanz den verfügbaren Bereich oberhalb der Tastatur ausfüllen lassen. Beim Schließen der IME die Aktionen wieder einblenden. Das Textfeld nicht durch eine zweite Instanz ersetzen, damit Cursor, Auswahl und interner Scrollzustand erhalten bleiben.
+**Quelle:** eigener Vorfall PerfectMoment 2026-07-20.
 
 ---
 
