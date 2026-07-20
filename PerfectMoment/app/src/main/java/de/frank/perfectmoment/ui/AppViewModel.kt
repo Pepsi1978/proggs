@@ -73,7 +73,6 @@ class AppViewModel(
     private val sessionController: SessionController = container.sessionController
     private val micRecorder = MicRecorder(appContext)
     private val previewTts = TtsManager(appContext)
-    private var hooksInitialized = false
     private var pendingRecordingTarget: RecordingTarget? = null
     private var transcriptionJob: Job? = null
     private var activeTranscriber: GroqTranscriber? = null
@@ -220,13 +219,6 @@ class AppViewModel(
         viewModelScope.launch {
             contentRepository.observeHooks().collect { next ->
                 hooks = next
-                if (!hooksInitialized) {
-                    hooksInitialized = true
-                    next.firstOrNull()?.let {
-                        selectedHookId = it.id
-                        topic = it.text
-                    }
-                }
             }
         }
         viewModelScope.launch {
