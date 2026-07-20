@@ -939,11 +939,12 @@ fun SettingsScreen(
 @Composable
 private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
     val colors = LocalPmColors.current
+    val displayValue = String.format(Locale.GERMAN, "%.2f", value).trimEnd('0').trimEnd(',')
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Geschwindigkeit", color = colors.text1, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Text(
-                String.format(Locale.GERMAN, "%.1f×", value),
+                "$displayValue×",
                 color = colors.gold,
                 fontFamily = JetBrainsMono,
                 fontSize = 14.sp,
@@ -953,7 +954,7 @@ private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
             value = value,
             onValueChange = onValueChange,
             valueRange = 0.7f..1.3f,
-            steps = 5,
+            steps = 11,
             colors = SliderDefaults.colors(
                 thumbColor = colors.goldHi,
                 activeTrackColor = colors.gold,

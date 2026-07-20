@@ -368,7 +368,7 @@ class AppViewModel(
     }
 
     fun updateTtsSpeechRate(value: Float) {
-        ttsSpeechRate = (value * 10f).roundToInt().div(10f).coerceIn(0.7f, 1.3f)
+        ttsSpeechRate = (value * 20f).roundToInt().div(20f).coerceIn(0.7f, 1.3f)
         settings.ttsSpeechRate = ttsSpeechRate
     }
 
