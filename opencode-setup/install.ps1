@@ -1,5 +1,5 @@
 # install.ps1 — OpenCode-Umgebung aus dem plattformuebergreifenden Speicher installieren (Windows).
-# Installer v1.1.0 - 18.07.2026, 12:54 Uhr
+# Installer v1.1.1 - 20.07.2026, 12:39 Uhr
 #
 # Kopiert ALLES aus opencode-setup\ an seinen Platz unter %USERPROFILE%\.config\opencode\, sodass
 # OpenCode auf einem frischen Rechner 1:1 dieselbe Umgebung hat: globale Config, globale Regeln
@@ -207,10 +207,25 @@ if (-not $SkipLauncherBuild) {
   $launcherDir = Join-Path (Split-Path $Src -Parent) 'OpenCodeLauncher'
   $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
   if ($dotnet -and (Test-Path -LiteralPath $launcherDir)) {
+    $runningLaunchers = @(Get-Process -Name 'OpenCodeLauncher' -ErrorAction SilentlyContinue)
+    foreach ($launcher in $runningLaunchers) {
+      if (-not $launcher.HasExited -and -not $launcher.CloseMainWindow()) {
+        throw 'Der laufende OpenCode Launcher konnte nicht kontrolliert geschlossen werden.'
+      }
+      if (-not $launcher.HasExited -and -not $launcher.WaitForExit(10000)) {
+        throw 'Der OpenCode Launcher wurde nicht innerhalb von 10 Sekunden geschlossen.'
+      }
+    }
     & dotnet build (Join-Path $launcherDir 'OpenCodeLauncher.csproj') -c Release
     if ($LASTEXITCODE -ne 0) { throw 'OpenCode Launcher konnte nicht gebaut werden.' }
     & (Join-Path $launcherDir 'create_shortcut.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Launcher-Verknüpfung konnte nicht erstellt werden.' }
+    if ($runningLaunchers.Count -gt 0) {
+      $launcherExe = Join-Path $launcherDir 'bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenCodeLauncher.exe'
+      $restartedLauncher = Start-Process -FilePath $launcherExe -PassThru
+      Start-Sleep -Seconds 1
+      if ($restartedLauncher.HasExited) { throw 'Der aktualisierte OpenCode Launcher wurde sofort wieder beendet.' }
+    }
     Ok 'OpenCode Launcher + Desktop-Verknüpfung'
   } else {
     Warn 'dotnet 8 oder OpenCodeLauncher fehlt -> Launcher nicht gebaut'
