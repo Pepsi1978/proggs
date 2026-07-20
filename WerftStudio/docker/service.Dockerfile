@@ -9,4 +9,4 @@ COPY packages ./packages
 COPY docker ./docker
 RUN corepack pnpm install --frozen-lockfile
 USER node
-CMD ["corepack", "pnpm", "--filter", "@werft/api", "exec", "tsx", "src/server.ts"]
+CMD ["node_modules/.bin/pnpm", "--filter", "@werft/api", "exec", "tsx", "src/server.ts"]

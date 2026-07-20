@@ -102,7 +102,7 @@ services:
   realtime:
     <<: *service
     container_name: werft-realtime
-    command: ["corepack", "pnpm", "--filter", "@werft/realtime", "exec", "tsx", "src/server.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/realtime", "exec", "tsx", "src/server.ts"]
     depends_on:
       api: { condition: service_healthy }
     environment:
@@ -118,7 +118,7 @@ services:
   worker-ai:
     <<: *service
     container_name: werft-worker-ai
-    command: ["corepack", "pnpm", "--filter", "@werft/worker-ai", "exec", "tsx", "src/index.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/worker-ai", "exec", "tsx", "src/index.ts"]
     depends_on: [api]
     environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379", AI_PROVIDER: "disabled" }
     deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
@@ -126,7 +126,7 @@ services:
   worker-build:
     <<: *service
     container_name: werft-worker-build
-    command: ["corepack", "pnpm", "--filter", "@werft/worker-build", "exec", "tsx", "src/index.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/worker-build", "exec", "tsx", "src/index.ts"]
     depends_on: [api]
     environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
     deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
@@ -134,7 +134,7 @@ services:
   worker-render:
     <<: *service
     container_name: werft-worker-render
-    command: ["corepack", "pnpm", "--filter", "@werft/worker-render", "exec", "tsx", "src/index.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/worker-render", "exec", "tsx", "src/index.ts"]
     depends_on: [api]
     environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
     deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
@@ -142,7 +142,7 @@ services:
   worker-export:
     <<: *service
     container_name: werft-worker-export
-    command: ["corepack", "pnpm", "--filter", "@werft/worker-export", "exec", "tsx", "src/index.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/worker-export", "exec", "tsx", "src/index.ts"]
     depends_on: [api]
     environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
     deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
@@ -150,7 +150,7 @@ services:
   worker-import:
     <<: *service
     container_name: werft-worker-import
-    command: ["corepack", "pnpm", "--filter", "@werft/worker-import", "exec", "tsx", "src/index.ts"]
+    command: ["node_modules/.bin/pnpm", "--filter", "@werft/worker-import", "exec", "tsx", "src/index.ts"]
     depends_on: [api]
     environment: { DATABASE_URL: "postgres://werft:${WERFT_POSTGRES_PASSWORD}@postgres:5432/werft", REDIS_URL: "redis://redis:6379" }
     deploy: { resources: { limits: { memory: 256M, cpus: "0.5" }, reservations: { memory: 64M, cpus: "0.1" } } }
