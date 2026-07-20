@@ -169,7 +169,7 @@ services:
     volumes:
       - werft-caddy-data:/data
       - werft-caddy-config:/config
-    networks: [werft-internal]
+    networks: [werft-edge, werft-internal]
     logging: *logging
     deploy:
       resources:
@@ -177,6 +177,8 @@ services:
         reservations: { memory: 32M, cpus: "0.1" }
 
 networks:
+  werft-edge:
+    name: werft-edge
   werft-internal:
     name: werft-internal
     internal: true
