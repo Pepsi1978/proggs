@@ -12,7 +12,9 @@ https://10.8.0.1:8443 {
     X-Content-Type-Options "nosniff"
     X-Frame-Options "DENY"
     Referrer-Policy "no-referrer"
-    Permissions-Policy "camera=(), geolocation=(), microphone=()"
+    # microphone=(self): Voice-Overlay-Erweiterungen (Einsprechen) laufen im Seitenkontext
+    # und brauchen Mikrofonzugriff; Zugriff bleibt auf die eigene WireGuard-Origin beschraenkt.
+    Permissions-Policy "camera=(), geolocation=(), microphone=(self)"
   }
 
   handle /api/* {
