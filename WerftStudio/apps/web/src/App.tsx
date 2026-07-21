@@ -362,7 +362,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
             <i />
           </button>
         </div>
-        <p className="subtle">Maximal 5.000 Dateien, 100 MB pro Datei und 300 MB insgesamt. ZIP-Pfade werden vor dem Entpacken geprüft.</p>
+        <p className="subtle">Es zählen nur übernommene Dateien: maximal 5.000 Dateien, 100 MB pro Datei, 1 GB insgesamt. Mit Frontend-Filter darf der Ordner selbst beliebig groß sein (bis 8 GB Upload).</p>
         {upload.error && <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>}
       </div>
       <div className="modal-actions">

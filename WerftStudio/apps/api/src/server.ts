@@ -43,9 +43,10 @@ let bucketReady: Promise<void> | undefined;
 const pendingCodexAuth = new Map<string, PendingCodexAuth>();
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
-// parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts
-// und grosse Claude-Designs-Ordner scheitern mit "reach parts limit".
-await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxFiles, fileSize: importLimits.maxFileBytes, fields: 10, parts: importLimits.maxFiles + 10 } });
+// parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts.
+// Es duerfen deutlich mehr Dateien ANKOMMEN als uebernommen werden — der Frontend-Filter
+// sortiert direkt im Upload-Strom aus, ohne die Grenzen zu belasten.
+await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxUploadFiles, fileSize: importLimits.maxFileBytes, fields: 10, parts: importLimits.maxUploadFiles + 10 } });
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 await app.register(sensible);
 await app.register(swagger, { openapi: { info: { title: "Werft Studio API", version: "1.0.0" }, servers: [{ url: "/api/v1" }] } });
@@ -155,11 +156,18 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
       if (part.fieldname === "frontendOnly" && part.value === "true") frontendOnly = true;
       continue;
     }
+    // Frontend-Filter direkt im Upload-Strom: aussortierte Dateien werden verworfen,
+    // ohne zu den Grenzen (Anzahl/Gesamtgroesse) zu zaehlen — grosse Programme bleiben so importierbar.
+    const candidatePath = (part.filename ?? "").replaceAll("\\", "/");
+    if (frontendOnly && candidatePath && !candidatePath.toLowerCase().endsWith(".zip") && !isFrontendFile(candidatePath)) {
+      for await (const chunk of part.file) void chunk;
+      continue;
+    }
     const chunks: Buffer[] = [];
     for await (const chunk of part.file) {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       totalBytes += buffer.byteLength;
-      if (totalBytes > importLimits.maxTotalBytes) fail("IMPORT_TOO_LARGE", 413, "Das Importpaket ist größer als 300 MB.");
+      if (totalBytes > importLimits.maxTotalBytes) fail("IMPORT_TOO_LARGE", 413, "Die übernommenen Dateien sind zusammen größer als 1 GB.");
       chunks.push(buffer);
     }
     if (part.file.truncated) fail("IMPORT_FILE_TOO_LARGE", 413, `Die Datei „${part.filename}“ ist größer als 100 MB.`);
@@ -177,7 +185,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.0-20260721.2024" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.1-20260721.2032" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -269,7 +277,9 @@ app.post("/api/v1/projects", async (request, reply) => {
   return reply.status(201).send({ projectId, version: 1, revision: 0 });
 });
 
-app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 1024 }, async (request, reply) => {
+// Transport-Limit bewusst hoch (8 GB Rohdaten): beim Frontend-Filter zaehlen nur die UEBERNOMMENEN
+// Dateien gegen die Grenzen — das ganze Programm darf durch den Upload-Strom laufen.
+app.post("/api/v1/imports", { bodyLimit: 8 * 1024 * 1024 * 1024 }, async (request, reply) => {
   const actor = requireActorPermission(request, "project.update");
   if (!request.isMultipart()) fail("IMPORT_MULTIPART_REQUIRED", 415, "Bitte Dateien oder ein ZIP-Paket auswählen.");
   const { name, platform, projectType, files } = await readImportParts(request);

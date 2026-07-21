@@ -99,8 +99,8 @@ services:
       start_period: 40s
     deploy:
       resources:
-        # 1,5 GB: Projektimporte bis 300 MB werden im Speicher gepuffert (Multipart + Entpacken + MinIO-Upload).
-        limits: { memory: 1536M, cpus: "1.5" }
+        # 3 GB: uebernommene Importe bis 1 GB werden im Speicher gepuffert (Multipart + Entpacken + MinIO-Upload).
+        limits: { memory: 3072M, cpus: "1.5" }
         reservations: { memory: 256M, cpus: "0.25" }
 
   realtime:
