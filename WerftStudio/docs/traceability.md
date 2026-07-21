@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.1.23 - 21.07.2026 19:13 Uhr
+Version: v0.1.24 - 21.07.2026 19:19 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|

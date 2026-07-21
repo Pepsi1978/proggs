@@ -149,10 +149,12 @@ function Hub() {
   const [filter, setFilter] = useState("Alle");
   const [newOpen, setNewOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const client = useQueryClient();
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: () => api<Project[]>("/projects"),
   });
+  const remove = useMutation({ mutationFn: (id: string) => api<{ deleted: boolean }>(`/projects/${id}`, { method: "DELETE" }), onSuccess: () => client.invalidateQueries({ queryKey: ["projects"] }) });
   const list = (projects.data ?? []).filter((p) => (filter === "Alle" || labels[p.type] === filter || p.platforms.some((x) => labels[x] === filter)) && p.name.toLowerCase().includes(query.toLowerCase()));
   return (
     <HubShell
@@ -189,6 +191,18 @@ function Hub() {
           <div className="project-grid">
             {list.map((project) => (
               <Link to={`/app/projects/${project.id}/studio/canvas`} className="project-card" key={project.id}>
+                <button
+                  className="card-delete"
+                  title="Projekt löschen"
+                  disabled={remove.isPending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (window.confirm(`Projekt „${project.name}“ wirklich löschen? Importierte Dateien werden mit entfernt.`)) remove.mutate(project.id);
+                  }}
+                >
+                  <X size={14} />
+                </button>
                 <div className="preview">
                   <span>preview: {project.name.toLowerCase()}</span>
                 </div>
