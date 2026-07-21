@@ -559,7 +559,6 @@ function SettingsPage() {
           {[
             ["personal", "Persönlich"],
             ["models", "Modelle & Provider"],
-            ["organization", "Organisation"],
             ["usage", "Nutzung & Audit"],
           ].map(([id, label]) => (
             <NavLink key={id} to={`/app/settings/${id}`}>
@@ -641,7 +640,6 @@ function SettingsPage() {
             </>
           )}
           {page === "models" && <ProviderSettings />}
-          {page === "organization" && <OrganizationSettings />}
           {page === "usage" && <UsageSettings />}
         </div>
       </div>
@@ -717,49 +715,6 @@ function ProviderSettings() {
           </div>
         </Modal>
       )}
-    </>
-  );
-}
-function OrganizationSettings() {
-  return (
-    <>
-      <Card title="Mitglieder">
-        <div className="invite">
-          <input placeholder="Suchen oder per E-Mail einladen …" />
-          <Button variant="primary">Einladen</Button>
-        </div>
-        {[
-          ["FK", "Frank K.", "Verwalten"],
-          ["MT", "Miriam T.", "Bearbeiten"],
-          ["JR", "Jonas R.", "Kommentieren"],
-          ["LB", "Lena B.", "Anzeigen"],
-        ].map(([initial, name, role]) => (
-          <div className="member" key={name}>
-            <b>{initial}</b>
-            <span>
-              <strong>{name}</strong>
-              <small>{name?.toLowerCase().replace(" ", ".")}@example.de</small>
-            </span>
-            <em>{role}</em>
-            <Status kind={name === "Lena B." ? "warning" : "success"}>{name === "Lena B." ? "Eingeladen" : "Aktiv"}</Status>
-          </div>
-        ))}
-      </Card>
-      <Card title="Richtlinien">
-        <div className="setting-row">
-          <span>Erlaubte KI-Provider</span>
-          <select>
-            <option>Nur EU-Region</option>
-            <option>Alle Verbindungen</option>
-            <option>Nur selbst gehostet</option>
-          </select>
-        </div>
-        <div className="setting-row">
-          <span>Budget pro Mitglied</span>
-          <strong>50 € / Monat · Warnung bei 80 %</strong>
-        </div>
-        <p className="warning-box">Die letzte Person mit Verwalten-Rolle kann nicht entfernt werden.</p>
-      </Card>
     </>
   );
 }
