@@ -864,7 +864,7 @@ function Studio() {
               </NavLink>
             ))}
           </nav>
-          {tab === "canvas" && <Canvas accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
+          {tab === "canvas" && <Canvas projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
           {tab === "questions" && <Questions />}
           {tab === "variants" && (
             <Variants
@@ -959,7 +959,12 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
+  const client = useQueryClient();
+  const reconstruct = useMutation({
+    mutationFn: () => api<{ entryPath: string; revision: number }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
+  });
   if (imported?.imported) {
     const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
     const looksLikeDesktopApp = imported.files.some((file) => /\.(xaml|csproj|sln|kt|swift)$/i.test(file.path));
@@ -982,7 +987,11 @@ function Canvas({ accent, radius, dark, zoom, setZoom, mode, setMode, imported }
                 ? "Es sieht nach einer Desktop- oder Mobil-App aus (z. B. WPF/XAML, Kotlin oder Swift) — deren Oberfläche kann der Browser nicht direkt darstellen. Alle Dateien wurden trotzdem vollständig importiert."
                 : "Es wurde keine geeignete HTML-Startseite gefunden. Alle Dateien wurden trotzdem vollständig importiert."}
             </span>
-            <span>Unter „Design Files“ kannst du jede HTML-Datei öffnen und „Als Startseite verwenden“ wählen — oder importiere den Claude-Designs-Ordner des Projekts, um das Design hier zu bearbeiten.</span>
+            <span>Unter „Design Files“ kannst du jede HTML-Datei öffnen und „Als Startseite verwenden“ wählen — oder lass die KI das Design direkt aus dem App-Quellcode nachbauen:</span>
+            <Button variant="primary" disabled={reconstruct.isPending} onClick={() => reconstruct.mutate()}>
+              {reconstruct.isPending ? "KI rekonstruiert das Design … (bis zu einigen Minuten)" : "Design mit KI aus dem App-Code rekonstruieren"}
+            </Button>
+            {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}
       </div>
