@@ -183,6 +183,7 @@ function Hub() {
           ))}
         </div>
         <h2 className="eyebrow">Zuletzt bearbeitet</h2>
+        {remove.error && <p className="field-error">{remove.error instanceof ApiError ? remove.error.message : "Das Projekt konnte nicht gelöscht werden."}</p>}
         {projects.isLoading ? (
           <div className="empty">Projekte werden geladen …</div>
         ) : projects.isError ? (
