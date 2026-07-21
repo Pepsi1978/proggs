@@ -38,14 +38,31 @@ export function stripCommonRoot(files: ImportedFile[]): ImportedFile[] {
   return files.map((file) => ({ ...file, path: file.path.slice(root.length + 1) }));
 }
 
+// Frontend-Erkennung per Scoring: echte Einstiegsseiten (index.html, Claude-Designs .dc.html,
+// dist/public/web-Ordner) gewinnen; Werkzeug- und Hilfs-HTML (node_modules, plugins, skills,
+// tests, review/template/viewer …) wird stark abgewertet, damit nie zufaellige Beifang-Dateien
+// als Projekt-Frontend erscheinen.
+const entryNegativeSegments = new Set(["node_modules", ".git", "obj", "bin", "test", "tests", "__tests__", "coverage", "plugins", "skills", "samples", "examples", "fixtures", "temp", "tmp", "backup", "docs", "doc"]);
+const entryPositiveSegments = new Set(["dist", "build", "public", "web", "www", "frontend", "site", "app", "ui", "out", "html"]);
+const entryNegativeNames = ["review", "template", "viewer", "eval", "report", "test", "changelog", "readme"];
+
+export function scoreEntryPath(filePath: string): number {
+  const segments = filePath.toLowerCase().split("/");
+  const base = segments.at(-1)!;
+  let score = 0;
+  if (base === "index.html" || base === "index.htm") score += 100;
+  if (base.endsWith(".dc.html")) score += 80;
+  if (segments.some((segment) => entryPositiveSegments.has(segment))) score += 40;
+  if (segments.some((segment) => entryNegativeSegments.has(segment))) score -= 80;
+  if (entryNegativeNames.some((name) => base.includes(name))) score -= 40;
+  return score - segments.length * 2;
+}
+
 export function chooseEntryPath(files: ImportedFile[]): string | undefined {
   return files
     .map((file) => file.path)
     .filter((filePath) => /\.html?$/i.test(filePath))
-    .sort((left, right) => {
-      const rank = (filePath: string) => path.posix.basename(filePath).toLowerCase() === "index.html" ? 0 : filePath.toLowerCase().endsWith(".dc.html") ? 1 : 2;
-      return rank(left) - rank(right) || left.split("/").length - right.split("/").length || left.localeCompare(right);
-    })[0];
+    .sort((left, right) => scoreEntryPath(right) - scoreEntryPath(left) || left.localeCompare(right))[0];
 }
 
 export function validateImportFiles(files: ImportedFile[]): ImportedFile[] {

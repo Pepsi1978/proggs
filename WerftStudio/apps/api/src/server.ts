@@ -147,7 +147,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.21-20260721.1910" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.22-20260721.1925" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -302,6 +302,18 @@ app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024
     if (wroteObject && previous && objectKey) await objectStore.putObject(env.S3_BUCKET, objectKey, previous, previous.byteLength);
     throw error;
   }
+});
+app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const body = z.object({ path: z.string().min(1).max(512) }).strict().parse(request.body);
+  const row = (await db.select().from(projectImports).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+  const item = row.manifest.find((file) => file.path === body.path);
+  if (!item || !/\.html?$/i.test(item.path)) fail("IMPORT_ENTRY_INVALID", 400, "Als Startseite eignet sich nur eine HTML-Datei aus dem Import.");
+  await db.update(projectImports).set({ entryPath: item.path }).where(eq(projectImports.projectId, projectId));
+  await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "import.entry.updated", targetType: "project", targetId: projectId, result: "success", metadata: { entryPath: item.path }, correlationId: request.id });
+  return { entryPath: item.path };
 });
 app.get("/api/v1/projects/:projectId/design-document", async (request) => { const actor = requireActorPermission(request, "design.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select({ revision: drafts.revision, document: drafts.document }).from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Design nicht gefunden."); return { revision: rows[0].revision, document: designDocumentSchema.parse(rows[0].document) }; });
 app.post("/api/v1/projects/:projectId/design-operations", async (request) => {

@@ -735,7 +735,7 @@ function Studio() {
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
   const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState(["Erstelle Onboarding und Dashboard für die Banking-App.", "Beide Screens stehen auf der Leinwand. Feineinstellungen rechts wirken sofort."]);
+  const [messages, setMessages] = useState<string[]>([]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).matches("input,textarea,select,[contenteditable]")) return;
@@ -795,26 +795,12 @@ function Studio() {
               <button>Verlauf</button>
             </div>
             <div className="messages">
+              {messages.length === 0 && <div className="empty">Noch keine Nachrichten. Beschreibe unten eine Änderung am Design.</div>}
               {messages.map((m, i) => (
-                <div className={i % 2 === 0 ? "user-message" : "assistant-message"} key={i}>
+                <div className="user-message" key={i}>
                   {m}
                 </div>
               ))}
-              <div className="run-card">
-                <header>
-                  <Status kind="success">KI-Lauf abgeschlossen</Status>
-                </header>
-                {["Plan · 2 Screens", "Datei gelesen · tokens.css", "Datei geändert · 4 Dateien", "Vorschau · 1,8 s", "Prüfung · Kontrast AA"].map((x) => (
-                  <span key={x}>
-                    <Check /> {x}
-                  </span>
-                ))}
-                <footer>
-                  <code>v14</code>
-                  <small>0,06 € · 42 s</small>
-                  <Button>Rückgängig</Button>
-                </footer>
-              </div>
             </div>
             <form
               className="composer"
@@ -924,11 +910,10 @@ function Studio() {
       </div>
       <footer className="statusbar">
         <span>Zoom {Math.round(zoom * 100)} %</span>
-        <code>Fluss / screens / 5 Frames</code>
+        <code>{project.data?.name ?? "Projekt"}</code>
         <span />
         <Status kind="success">KI-Lauf: bereit</Status>
         <span>Vorschau aktuell</span>
-        <span>Kosten heute: 1,46 €</span>
         <button onClick={() => setModal("keys")}>?</button>
       </footer>
       {modal === "keys" && <KeyboardModal onClose={() => setModal(null)} />} {modal === "share" && <ShareModal onClose={() => setModal(null)} />} {modal === "export" && <ExportModal onClose={() => setModal(null)} />} {modal === "present" && <Present accent={accent} onClose={() => setModal(null)} />}
@@ -1269,7 +1254,9 @@ function ImportedFiles({ projectId, imported }: { projectId: string; imported: E
   const [content, setContent] = useState("");
   useEffect(() => { if (source.data) setContent(source.data.content); }, [source.data]);
   const save = useMutation({ mutationFn: () => api<{ revision: number }>(`/projects/${projectId}/import/file`, { method: "PUT", body: JSON.stringify({ path: selected, content, baseRevision: imported.revision }) }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ["project-import", projectId] }); await client.invalidateQueries({ queryKey: ["import-file", projectId] }); } });
-  return <div className="files-view imported-files"><aside><div className="search"><Search/><input placeholder="Dateien durchsuchen …" readOnly/></div>{imported.files.map((file) => { const canEdit=editable.some((item)=>item.path===file.path); return <button className={selected===file.path?"active":""} disabled={!canEdit} title={canEdit?"Bearbeiten":`${file.mime} bleibt unverändert erhalten`} onClick={()=>setSelected(file.path)} key={file.path}><FileText/>{file.path}</button> })}</aside><main><Card title={selected || "Keine Textdatei"}>{source.isLoading?<div className="empty">Datei wird geladen …</div>:source.isError?<p className="field-error">Die Datei konnte nicht geladen werden.</p>:selected?<textarea className="source-editor" value={content} spellCheck={false} onChange={(event)=>setContent(event.target.value)}/>:<div className="empty">Dieses Projekt enthält keine direkt bearbeitbare Textdatei.</div>}<div className="modal-actions"><Status kind={content!==source.data?.content?"warning":"success"}>{content!==source.data?.content?"Ungespeichert":"Gespeichert"}</Status><span/><Button variant="primary" disabled={!selected||content===source.data?.content||save.isPending} onClick={()=>save.mutate()}>{save.isPending?"Speichert …":"Speichern & Vorschau aktualisieren"}</Button></div>{save.error&&<p className="field-error">{save.error instanceof ApiError?save.error.message:"Speichern fehlgeschlagen."}</p>}</Card></main></div>;
+  const setEntry = useMutation({ mutationFn: (path: string) => api<{ entryPath: string }>(`/projects/${projectId}/import/entry`, { method: "PATCH", body: JSON.stringify({ path }) }), onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] }) });
+  const selectedIsHtml = /\.html?$/i.test(selected);
+  return <div className="files-view imported-files"><aside><div className="search"><Search/><input placeholder="Dateien durchsuchen …" readOnly/></div>{imported.files.map((file) => { const canEdit=editable.some((item)=>item.path===file.path); const isEntry=file.path===imported.entryPath; return <button className={selected===file.path?"active":""} disabled={!canEdit} title={isEntry?"Aktuelle Startseite":canEdit?"Bearbeiten":`${file.mime} bleibt unverändert erhalten`} onClick={()=>setSelected(file.path)} key={file.path}><FileText/>{file.path}{isEntry?" ★":""}</button> })}</aside><main><Card title={selected || "Keine Textdatei"}>{source.isLoading?<div className="empty">Datei wird geladen …</div>:source.isError?<p className="field-error">Die Datei konnte nicht geladen werden.</p>:selected?<textarea className="source-editor" value={content} spellCheck={false} onChange={(event)=>setContent(event.target.value)}/>:<div className="empty">Dieses Projekt enthält keine direkt bearbeitbare Textdatei.</div>}<div className="modal-actions"><Status kind={content!==source.data?.content?"warning":"success"}>{content!==source.data?.content?"Ungespeichert":"Gespeichert"}</Status>{selectedIsHtml&&selected===imported.entryPath&&<Status kind="info">Startseite der Vorschau</Status>}<span/>{selectedIsHtml&&selected!==imported.entryPath&&<Button disabled={setEntry.isPending} onClick={()=>setEntry.mutate(selected)}>{setEntry.isPending?"Wird gesetzt …":"Als Startseite verwenden"}</Button>}<Button variant="primary" disabled={!selected||content===source.data?.content||save.isPending} onClick={()=>save.mutate()}>{save.isPending?"Speichert …":"Speichern & Vorschau aktualisieren"}</Button></div>{(save.error||setEntry.error)&&<p className="field-error">{(save.error||setEntry.error) instanceof ApiError?(save.error||setEntry.error)?.message:"Aktion fehlgeschlagen."}</p>}</Card></main></div>;
 }
 function Questions() {
   const qs = ["Welche Aufgabe steht im Mittelpunkt?", "Welche Stimmung soll die Oberfläche vermitteln?", "Brauchst du von Beginn an einen Dunkelmodus?", "Wie viele Screens im ersten Wurf?"];

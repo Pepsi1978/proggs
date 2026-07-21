@@ -18,6 +18,11 @@ describe("project import validation", () => {
     expect(chooseEntryPath([file("pages/demo.html"), file("Studio.dc.html"), file("app/index.html")])).toBe("app/index.html");
   });
 
+  it("never prefers tooling leftovers like skill reviews over real pages", () => {
+    expect(chooseEntryPath([file("Profiles/skills/cowork-workspace/iteration-1/review.html"), file("start.html")])).toBe("start.html");
+    expect(chooseEntryPath([file("plugins/foo/template.html"), file("web/dashboard.html")])).toBe("web/dashboard.html");
+  });
+
   it("rejects duplicate paths independent of case", () => {
     expect(() => validateImportFiles([file("Logo.svg"), file("logo.svg")])).toThrow(/mehrfach/);
   });
