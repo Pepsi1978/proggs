@@ -41,7 +41,9 @@ let bucketReady: Promise<void> | undefined;
 const pendingCodexAuth = new Map<string, PendingCodexAuth>();
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
-await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxFiles, fileSize: importLimits.maxFileBytes, fields: 10 } });
+// parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts
+// und grosse Claude-Designs-Ordner scheitern mit "reach parts limit".
+await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxFiles, fileSize: importLimits.maxFileBytes, fields: 10, parts: importLimits.maxFiles + 10 } });
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 await app.register(sensible);
 await app.register(swagger, { openapi: { info: { title: "Werft Studio API", version: "1.0.0" }, servers: [{ url: "/api/v1" }] } });
@@ -144,7 +146,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.18-20260721.1840" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.19-20260721.1850" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
