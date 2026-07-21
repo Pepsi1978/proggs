@@ -2,9 +2,9 @@ import path from "node:path";
 import { Open } from "unzipper";
 
 export const importLimits = {
-  maxFiles: 2_000,
-  maxFileBytes: 50 * 1024 * 1024,
-  maxTotalBytes: 100 * 1024 * 1024
+  maxFiles: 5_000,
+  maxFileBytes: 100 * 1024 * 1024,
+  maxTotalBytes: 300 * 1024 * 1024
 } as const;
 
 export type ImportedFile = { path: string; data: Buffer; mime: string };
@@ -55,9 +55,9 @@ export function validateImportFiles(files: ImportedFile[]): ImportedFile[] {
   const paths = new Set<string>();
   for (const file of files) {
     file.path = normalizeImportPath(file.path);
-    if (file.data.byteLength > importLimits.maxFileBytes) throw new Error(`Die Datei „${file.path}“ ist größer als 50 MB.`);
+    if (file.data.byteLength > importLimits.maxFileBytes) throw new Error(`Die Datei „${file.path}“ ist größer als 100 MB.`);
     totalBytes += file.data.byteLength;
-    if (totalBytes > importLimits.maxTotalBytes) throw new Error("Das entpackte Projekt ist größer als 100 MB.");
+    if (totalBytes > importLimits.maxTotalBytes) throw new Error("Das entpackte Projekt ist größer als 300 MB.");
     const key = file.path.toLocaleLowerCase("en-US");
     if (paths.has(key)) throw new Error(`Der Dateipfad „${file.path}“ kommt mehrfach vor.`);
     paths.add(key);
@@ -71,7 +71,7 @@ export async function expandZip(archive: Buffer): Promise<ImportedFile[]> {
   if (entries.length > importLimits.maxFiles) throw new Error(`Das ZIP enthält mehr als ${importLimits.maxFiles} Dateien.`);
   if (entries.some((entry) => (entry.flags & 1) !== 0)) throw new Error("Passwortgeschützte ZIP-Dateien werden nicht unterstützt.");
   const declaredBytes = entries.reduce((sum, entry) => sum + entry.uncompressedSize, 0);
-  if (declaredBytes > importLimits.maxTotalBytes) throw new Error("Das entpackte ZIP ist größer als 100 MB.");
+  if (declaredBytes > importLimits.maxTotalBytes) throw new Error("Das entpackte ZIP ist größer als 300 MB.");
   const files: ImportedFile[] = [];
   for (const entry of entries) {
     const safePath = normalizeImportPath(entry.path);

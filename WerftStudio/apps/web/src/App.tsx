@@ -294,7 +294,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
             </span>
           </div>
         )}
-        <p className="subtle">Maximal 2.000 Dateien, 50 MB pro Datei und 100 MB insgesamt. ZIP-Pfade werden vor dem Entpacken geprüft.</p>
+        <p className="subtle">Maximal 5.000 Dateien, 100 MB pro Datei und 300 MB insgesamt. ZIP-Pfade werden vor dem Entpacken geprüft.</p>
         {upload.error && <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>}
       </div>
       <div className="modal-actions">

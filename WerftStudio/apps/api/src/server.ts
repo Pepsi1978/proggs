@@ -34,7 +34,8 @@ const env = z.object({
 }).parse(process.env);
 if (env.NODE_ENV === "production" && env.SESSION_SECRET === localSecret) throw new Error("SESSION_SECRET muss in Produktion explizit gesetzt sein");
 const { db, client } = createDatabase(env.DATABASE_URL);
-const app = Fastify({ logger: { redact: ["req.headers.authorization", "req.headers.cookie", "body.password", "body.credential"] }, genReqId: () => uuidv7() });
+// bodyLimit 32 MB: grosse Design-Dokumente und Operations-Batches sprengen sonst das 1-MB-Fastify-Standardlimit.
+const app = Fastify({ logger: { redact: ["req.headers.authorization", "req.headers.cookie", "body.password", "body.credential"] }, genReqId: () => uuidv7(), bodyLimit: 32 * 1024 * 1024 });
 const s3Endpoint = new URL(env.S3_ENDPOINT);
 const objectStore = new MinioClient({ endPoint: s3Endpoint.hostname, port: Number(s3Endpoint.port || (s3Endpoint.protocol === "https:" ? 443 : 80)), useSSL: s3Endpoint.protocol === "https:", accessKey: env.S3_ACCESS_KEY, secretKey: env.S3_SECRET_KEY });
 let bucketReady: Promise<void> | undefined;
@@ -134,10 +135,10 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
     for await (const chunk of part.file) {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       totalBytes += buffer.byteLength;
-      if (totalBytes > importLimits.maxTotalBytes) fail("IMPORT_TOO_LARGE", 413, "Das Importpaket ist größer als 100 MB.");
+      if (totalBytes > importLimits.maxTotalBytes) fail("IMPORT_TOO_LARGE", 413, "Das Importpaket ist größer als 300 MB.");
       chunks.push(buffer);
     }
-    if (part.file.truncated) fail("IMPORT_FILE_TOO_LARGE", 413, `Die Datei „${part.filename}“ ist größer als 50 MB.`);
+    if (part.file.truncated) fail("IMPORT_FILE_TOO_LARGE", 413, `Die Datei „${part.filename}“ ist größer als 100 MB.`);
     const filePath = normalizeImportPath(part.filename);
     files.push({ path: filePath, data: Buffer.concat(chunks), mime: part.mimetype || mimeForPath(filePath) });
   }
@@ -146,7 +147,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.19-20260721.1850" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.20-20260721.1900" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -272,10 +273,10 @@ app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 102
 app.get("/api/v1/projects/:projectId", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId), isNull(projects.deletedAt))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); return rows[0]; });
 app.get("/api/v1/projects/:projectId/import", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; if (!row) return { imported: false as const }; return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` }; });
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
-app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 5 * 1024 * 1024 }, async (request) => {
+app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const body = z.object({ path: z.string().min(1).max(512), content: z.string().max(5 * 1024 * 1024), baseRevision: z.number().int().nonnegative() }).strict().parse(request.body);
+  const body = z.object({ path: z.string().min(1).max(512), content: z.string().max(20 * 1024 * 1024), baseRevision: z.number().int().nonnegative() }).strict().parse(request.body);
   let previous: Buffer | undefined, objectKey: string | undefined, wroteObject = false;
   try {
     return await db.transaction(async (tx) => {

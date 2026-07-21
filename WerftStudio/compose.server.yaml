@@ -99,8 +99,9 @@ services:
       start_period: 40s
     deploy:
       resources:
-        limits: { memory: 512M, cpus: "1.0" }
-        reservations: { memory: 128M, cpus: "0.25" }
+        # 1,5 GB: Projektimporte bis 300 MB werden im Speicher gepuffert (Multipart + Entpacken + MinIO-Upload).
+        limits: { memory: 1536M, cpus: "1.5" }
+        reservations: { memory: 256M, cpus: "0.25" }
 
   realtime:
     <<: *service
