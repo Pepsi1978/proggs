@@ -5,7 +5,8 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, usePa
 import { api, apiForm, ApiError } from "./api";
 import { type ToolMode, useUi } from "./store";
 
-type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string };
+type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
+const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
 type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewPath?: string };
@@ -118,7 +119,7 @@ function AppRail() {
         <Palette />
       </NavLink>
       <span />
-      <NavLink to="/app/settings/personal" title="Einstellungen">
+      <NavLink to="/app/settings/models" title="Einstellungen">
         <Settings />
       </NavLink>
     </nav>
@@ -205,7 +206,11 @@ function Hub() {
                   <X size={14} />
                 </button>
                 <div className="preview">
-                  <span>preview: {project.name.toLowerCase()}</span>
+                  {project.previewPath ? (
+                    <iframe className="card-preview" title={`Vorschau ${project.name}`} src={`${previewOriginFor()}${project.previewPath}`} loading="lazy" tabIndex={-1} sandbox="allow-scripts allow-same-origin" />
+                  ) : (
+                    <span>preview: {project.name.toLowerCase()}</span>
+                  )}
                 </div>
                 <div className="card-body">
                   <div>
@@ -247,6 +252,9 @@ function ImportProject({ onClose }: { onClose(): void }) {
   const nav = useNavigate();
   const client = useQueryClient();
   const [name, setName] = useState("Importiertes Design");
+  const [platform, setPlatform] = useState("web");
+  const [projectType, setProjectType] = useState("prototype");
+  const [frontendOnly, setFrontendOnly] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
   const selectFiles = (selected: FileList | null) => {
     const next = Array.from(selected ?? []);
@@ -261,6 +269,9 @@ function ImportProject({ onClose }: { onClose(): void }) {
     mutationFn: () => {
       const form = new FormData();
       form.append("name", name);
+      form.append("platform", platform);
+      form.append("type", projectType);
+      form.append("frontendOnly", frontendOnly ? "true" : "false");
       for (const file of files) form.append("files", file, file.webkitRelativePath || file.name);
       return apiForm<{ projectId: string }>("/imports", form);
     },
@@ -277,6 +288,39 @@ function ImportProject({ onClose }: { onClose(): void }) {
         <label>
           Projektname
           <input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        </label>
+        <label>
+          Um was für eine App handelt es sich?
+          <div className="chips">
+            {[
+              ["android", "Android"],
+              ["ios", "iOS"],
+              ["windows", "Windows"],
+              ["web", "Web"],
+              ["macos", "macOS"],
+              ["ipados", "iPadOS"],
+            ].map(([id, label]) => (
+              <button type="button" className={platform === id ? "active" : ""} key={id} onClick={() => setPlatform(id!)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </label>
+        <label>
+          Projektart
+          <div className="chips">
+            {[
+              ["prototype", "App / Prototyp"],
+              ["presentation", "Präsentation"],
+              ["document", "Dokument"],
+              ["template", "Vorlage"],
+              ["canvas", "Freie Fläche"],
+            ].map(([id, label]) => (
+              <button type="button" className={projectType === id ? "active" : ""} key={id} onClick={() => setProjectType(id!)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </label>
         <div className="import-choices">
           <label className="import-choice">
@@ -309,6 +353,15 @@ function ImportProject({ onClose }: { onClose(): void }) {
             </span>
           </div>
         )}
+        <div className="setting-row">
+          <span>
+            <strong>Nur Frontend übernehmen</strong>
+            <small>Erkennt Design-Dateien (HTML, CSS, XAML, Compose, SwiftUI, Bilder, Fonts …) und lässt Backend, Build-Ordner und Werkzeug-Dateien weg — empfohlen für App-Quellcode.</small>
+          </span>
+          <button type="button" className={`switch ${frontendOnly ? "on" : ""}`} onClick={() => setFrontendOnly(!frontendOnly)}>
+            <i />
+          </button>
+        </div>
         <p className="subtle">Maximal 5.000 Dateien, 100 MB pro Datei und 300 MB insgesamt. ZIP-Pfade werden vor dem Entpacken geprüft.</p>
         {upload.error && <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>}
       </div>
@@ -561,96 +614,14 @@ function Card({ title, sub, children }: { title: string; sub?: string; children:
 
 function SettingsPage() {
   const nav = useNavigate();
-  const location = useLocation();
-  const page = location.pathname.split("/").at(-1) ?? "personal";
-  const { theme, setTheme } = useUi();
   return (
     <BackPage title="Einstellungen" onBack={() => nav("/app/designs")}>
       <div className="settings-layout">
         <nav>
-          {[
-            ["personal", "Persönlich"],
-            ["models", "Modelle & Provider"],
-          ].map(([id, label]) => (
-            <NavLink key={id} to={`/app/settings/${id}`}>
-              {label}
-            </NavLink>
-          ))}
+          <NavLink to="/app/settings/models">Modelle & Provider</NavLink>
         </nav>
         <div className="settings-content">
-          {page === "personal" && (
-            <>
-              <Card title="Profil">
-                <div className="form-grid">
-                  <label>
-                    Name
-                    <input defaultValue="Frank K." />
-                  </label>
-                  <label>
-                    E-Mail
-                    <input value="frank@example.de" readOnly />
-                  </label>
-                  <label>
-                    Sprache
-                    <select>
-                      <option>Deutsch</option>
-                      <option>English</option>
-                    </select>
-                  </label>
-                  <label>
-                    Zeitzone
-                    <select>
-                      <option>Europe/Berlin</option>
-                      <option>UTC</option>
-                    </select>
-                  </label>
-                </div>
-              </Card>
-              <Card title="Erscheinung">
-                <div className="setting-row">
-                  <span>Modus</span>
-                  <div className="segments">
-                    <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>
-                      Hell
-                    </button>
-                    <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>
-                      Dunkel
-                    </button>
-                    <button>System</button>
-                  </div>
-                </div>
-                <div className="setting-row">
-                  <span>Dichte</span>
-                  <div className="segments">
-                    <button className="active">Komfortabel</button>
-                    <button>Kompakt</button>
-                  </div>
-                </div>
-                <div className="setting-row">
-                  <span>Reduzierte Bewegung</span>
-                  <button className="switch">
-                    <i />
-                  </button>
-                </div>
-              </Card>
-              <Card title="KI-Standard">
-                <div className="setting-row">
-                  <span>Modellprofil</span>
-                  <select>
-                    <option>Standard</option>
-                    <option>Sparsam</option>
-                    <option>Höchste Qualität</option>
-                    <option>Lokal</option>
-                  </select>
-                </div>
-                <div className="setting-row">
-                  <span>Budgetwarnung ab</span>
-                  <input defaultValue="25 € / Monat" />
-                </div>
-              </Card>
-            </>
-          )}
-          {page === "models" && <ProviderSettings />}
+          <ProviderSettings />
         </div>
       </div>
     </BackPage>
@@ -751,7 +722,14 @@ function Studio() {
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
   const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([]);
+  const [panelTab, setPanelTab] = useState<"chat" | "comments" | "history">("chat");
+  const chatStorageKey = `werft-chat-${projectId}`;
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>(() => {
+    try { return JSON.parse(localStorage.getItem(`werft-chat-${projectId}`) ?? "[]") as Array<{ role: "user" | "assistant"; text: string }>; }
+    catch { return []; }
+  });
+  useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
+  const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: panelTab === "history" });
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
   const chatRun = useMutation({
     mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message }) }),
@@ -819,11 +797,23 @@ function Studio() {
         {leftOpen && (
           <aside className="left-panel">
             <div className="panel-tabs">
-              <button className="active">Gespräch</button>
-              <button>Kommentare</button>
-              <button>Verlauf</button>
+              <button className={panelTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
+              <button className={panelTab === "comments" ? "active" : ""} onClick={() => setPanelTab("comments")}>Kommentare</button>
+              <button className={panelTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
-            <div className="messages">
+            {panelTab === "comments" && <div className="messages"><div className="empty">Noch keine Kommentare.</div></div>}
+            {panelTab === "history" && (
+              <div className="messages">
+                {versions.isLoading ? <div className="empty">Verlauf wird geladen …</div> : (versions.data ?? []).length === 0 ? <div className="empty">Noch keine gespeicherten Versionen.</div> : (versions.data ?? []).map((version) => (
+                  <div className="assistant-message" key={version.id}>
+                    v{version.number} · {version.reason}
+                    {"\n"}{new Date(version.createdAt).toLocaleString("de-DE")}
+                  </div>
+                ))}
+                <div className="empty">Das Gespräch bleibt unter „Gespräch“ dauerhaft gespeichert — du kannst dort jederzeit weitermachen.</div>
+              </div>
+            )}
+            {panelTab === "chat" && <div className="messages">
               {messages.length === 0 && !chatRun.isPending && <div className="empty">Noch keine Nachrichten. Beschreibe unten eine Änderung am Design.</div>}
               {messages.map((m, i) => (
                 <div className={m.role === "user" ? "user-message" : "assistant-message"} key={i}>
@@ -831,8 +821,8 @@ function Studio() {
                 </div>
               ))}
               {chatRun.isPending && <div className="assistant-message">Die KI arbeitet am Design … das kann je nach Modell ein bis zwei Minuten dauern.</div>}
-            </div>
-            <form
+            </div>}
+            {panelTab === "chat" && <form
               className="composer"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -848,7 +838,7 @@ function Studio() {
                 <span>Modell: {connection.data?.connected ? `${connection.data.settings?.model ?? "GPT-5.6"}${connection.data.settings?.fast ? " · Fast" : ""}` : "kein Provider verbunden"}</span>
                 <Button variant="primary" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "KI-Lauf läuft …" : "Senden"}</Button>
               </footer>
-            </form>
+            </form>}
           </aside>
         )}
         <section className="workspace">

@@ -11,3 +11,7 @@
 .project-card .card-delete{position:absolute;top:8px;right:8px;z-index:2;display:none;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;border:1px solid var(--color-line-subtle,rgba(0,0,0,.15));background:var(--color-surface,#fff);color:inherit;cursor:pointer;opacity:.9}
 .project-card:hover .card-delete{display:inline-flex}
 .project-card .card-delete:hover{background:#9B1C1C;border-color:#9B1C1C;color:#fff}
+
+/* Echte Mini-Vorschau auf Projektkarten */
+.project-card .preview{overflow:hidden;position:relative}
+.project-card .card-preview{width:400%;height:400%;transform:scale(.25);transform-origin:0 0;border:0;pointer-events:none;background:#fff}

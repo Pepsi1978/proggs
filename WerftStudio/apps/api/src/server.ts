@@ -112,24 +112,47 @@ app.addHook("preHandler", async (request) => {
 
 function actorOf(request: FastifyRequest): Actor { if (!request.actor) fail("AUTH_REQUIRED", 401, "Bitte anmelden."); return request.actor; }
 function requireActorPermission(request: FastifyRequest, permission: Parameters<typeof can>[1]) { const actor = actorOf(request); if (!can(actor.role, permission)) fail("FORBIDDEN", 403, "Diese Aktion ist für deine Rolle nicht erlaubt."); return actor; }
-function importedDesignDocument(projectId: string, name: string): DesignDocument {
+type ImportPlatform = "web" | "android" | "ios" | "ipados" | "macos" | "windows";
+type ImportType = "prototype" | "presentation" | "document" | "template" | "canvas";
+function importedDesignDocument(projectId: string, name: string, platform: ImportPlatform, projectType: ImportType): DesignDocument {
   const pageId = uuidv7(), frameId = uuidv7(), nodeId = uuidv7();
+  const pageType = projectType === "presentation" ? "slide" : projectType === "document" ? "document-page" : projectType === "canvas" ? "canvas" : "screen";
   return {
-    schemaVersion: 1, projectId, projectType: "prototype", fidelity: "high_fidelity", platforms: ["web"], designSystemVersionId: null,
+    schemaVersion: 1, projectId, projectType, fidelity: "high_fidelity", platforms: [platform], designSystemVersionId: null,
     themes: [{ id: "light", name: "Original", tokens: { "color.bg": "#F5F7FA", "color.surface": "#FFFFFF", "color.accent": "#3157D5" } }],
-    pages: [{ id: pageId, name, type: "screen", frameIds: [frameId] }],
-    frames: [{ id: frameId, pageId, name, platform: "web", device: "Importierte Originalgröße", width: 1440, height: 900, theme: "light", locale: "de-DE", rootNodeId: nodeId, canvasX: 0, canvasY: 0 }],
+    pages: [{ id: pageId, name, type: pageType, frameIds: [frameId] }],
+    frames: [{ id: frameId, pageId, name, platform, device: "Importierte Originalgröße", width: 1440, height: 900, theme: "light", locale: "de-DE", rootNodeId: nodeId, canvasX: 0, canvasY: 0 }],
     nodes: [{ id: nodeId, name: "Interaktive HTML-Vorschau", parentId: null, childIds: [], bounds: { x: 0, y: 0, width: 1440, height: 900 }, visible: true, locked: false, tokenBindings: {}, semantics: { role: "main", label: name }, type: "container", layout: "absolute", gap: 0, padding: [0, 0, 0, 0], fill: "color.surface" }],
     assets: [], interactions: [], metadata: { createdAt: new Date().toISOString(), compilerVersion: "0.1.0" }
   };
 }
 
-async function readImportParts(request: FastifyRequest): Promise<{ name: string; files: ImportedFile[] }> {
+// Frontend-Extraktion beim Import: aus App-Quellcode nur die designrelevanten Dateien uebernehmen
+// (Markup, Styles, Themes, UI-Code, Bilder/Fonts/Medien) — Backend, Build-Artefakte und Werkzeug-
+// Ordner bleiben draussen. So bleiben auch grosse Programme schlank importierbar.
+const frontendDropSegments = /(^|\/)(node_modules|\.git|bin|obj|build|out|target|dist-info|__pycache__|\.gradle|\.idea|\.vs|coverage|logs?|test|tests|__tests__)(\/|$)/i;
+const frontendDropNames = /(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.map)$/i;
+const frontendKeepExtensions = /\.(html?|css|scss|sass|less|svg|png|jpe?g|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|m4a|mp4|webm|xaml|axaml|jsx|tsx|vue|svelte|dart|json|xml)$/i;
+const frontendCodeExtensions = /\.(js|ts|kt|kts|swift|cs)$/i;
+const frontendCodeHint = /(ui|view|screen|page|window|theme|style|layout|design|compose|component|frontend|wwwroot|assets|public|static|res\/|resources)/i;
+export function isFrontendFile(path: string): boolean {
+  if (frontendDropSegments.test(path) || frontendDropNames.test(path)) return false;
+  if (frontendKeepExtensions.test(path)) return true;
+  if (frontendCodeExtensions.test(path)) return frontendCodeHint.test(path);
+  return false;
+}
+async function readImportParts(request: FastifyRequest): Promise<{ name: string; platform: ImportPlatform; projectType: ImportType; frontendOnly: boolean; files: ImportedFile[] }> {
   let name = "Importiertes Design", totalBytes = 0;
+  let platform: ImportPlatform = "web", projectType: ImportType = "prototype", frontendOnly = false;
+  const platformValues = ["web", "android", "ios", "ipados", "macos", "windows"] as const;
+  const typeValues = ["prototype", "presentation", "document", "template", "canvas"] as const;
   const files: ImportedFile[] = [];
   for await (const part of request.parts()) {
     if (part.type === "field") {
       if (part.fieldname === "name" && typeof part.value === "string") name = part.value.trim().slice(0, 120) || name;
+      if (part.fieldname === "platform" && typeof part.value === "string" && (platformValues as readonly string[]).includes(part.value)) platform = part.value as ImportPlatform;
+      if (part.fieldname === "type" && typeof part.value === "string" && (typeValues as readonly string[]).includes(part.value)) projectType = part.value as ImportType;
+      if (part.fieldname === "frontendOnly" && part.value === "true") frontendOnly = true;
       continue;
     }
     const chunks: Buffer[] = [];
@@ -143,25 +166,36 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
     const filePath = normalizeImportPath(part.filename);
     files.push({ path: filePath, data: Buffer.concat(chunks), mime: part.mimetype || mimeForPath(filePath) });
   }
-  if (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".zip")) return { name, files: await expandZip(files[0]!.data) };
+  const selectFrontend = (all: ImportedFile[]) => {
+    if (!frontendOnly) return all;
+    const kept = all.filter((file) => isFrontendFile(file.path));
+    // Sicherheitsnetz: findet der Filter nichts, lieber alles behalten als leer importieren.
+    return kept.length ? kept : all;
+  };
+  if (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".zip")) return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(await expandZip(files[0]!.data))) };
   // ZIPs innerhalb eines Projektordners sind normale Dateien: nur ein einzeln ausgewaehltes ZIP wird entpackt.
-  return { name, files: validateImportFiles(files) };
+  return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.2.2-20260721.1958" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.0-20260721.2024" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
   if (!validPreviewToken(params.projectId, params.token)) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
-  const imported = (await db.select().from(projectImports).where(eq(projectImports.projectId, params.projectId)).limit(1))[0];
-  if (!imported) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
+  const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(eq(projectImports.projectId, params.projectId)).limit(1))[0];
+  if (!row) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
+  const imported = row.imported;
   const rawRequestedPath = params["*"] || imported.entryPath;
   if (!rawRequestedPath) fail("PREVIEW_FILE_NOT_FOUND", 404, "Für dieses Projekt ist keine Startseite festgelegt.");
   const requestedPath = normalizeImportPath(rawRequestedPath);
   let item = imported.manifest.find((file) => file.path === requestedPath);
   if (!item && imported.entryPath && !requestedPath.split("/").at(-1)?.includes(".")) item = imported.manifest.find((file) => file.path === imported.entryPath);
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
-  reply.headers({ "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
+  // ETag pro Projektrevision: Browser darf cachen und bekommt 304 statt kompletter Neu-Downloads;
+  // nach jeder KI-/Editor-Aenderung steigt die Revision und die Vorschau wird frisch geladen.
+  const etag = `W/"${params.projectId}:${row.revision}:${item.path}"`;
+  if (request.headers["if-none-match"] === etag) return reply.code(304).header("etag", etag).header("cache-control", "private, no-cache").send();
+  reply.headers({ "cache-control": "private, no-cache", etag, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
   if (item.mime.startsWith("text/html")) reply.header("content-security-policy", "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' blob: https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: wss: ws:; frame-src 'self' blob: https: http:; frame-ancestors https://10.8.0.1:8443 http://localhost:5173");
   return reply.send(await objectStore.getObject(env.S3_BUCKET, `${imported.objectPrefix}${item.path}`));
 });
@@ -223,7 +257,11 @@ app.post("/api/v1/providers/openai/auth/poll", { config: { rateLimit: { max: 120
 });
 app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); return { connected: false }; });
 
-app.get("/api/v1/projects", async (request) => { const actor = requireActorPermission(request, "project.read"); return db.select().from(projects).where(and(eq(projects.organizationId, actor.organizationId), isNull(projects.deletedAt))).orderBy(desc(projects.updatedAt)).limit(100); });
+app.get("/api/v1/projects", async (request) => {
+  const actor = requireActorPermission(request, "project.read");
+  const rows = await db.select({ project: projects, entryPath: projectImports.entryPath }).from(projects).leftJoin(projectImports, eq(projectImports.projectId, projects.id)).where(and(eq(projects.organizationId, actor.organizationId), isNull(projects.deletedAt))).orderBy(desc(projects.updatedAt)).limit(100);
+  return rows.map(({ project, entryPath }) => ({ ...project, ...(entryPath ? { previewPath: `/api/v1/previews/${project.id}/${previewToken(project.id)}/${entryPath}?revision=${project.revision}` } : {}) }));
+});
 app.post("/api/v1/projects", async (request, reply) => {
   const actor = requireActorPermission(request, "project.update"); const input = createProjectSchema.parse(request.body); const projectId = uuidv7(), pageId = uuidv7(), frameId = uuidv7(), nodeId = uuidv7(), draftId = uuidv7(), versionId = uuidv7();
   const document: DesignDocument = { schemaVersion: 1, projectId, projectType: input.type, fidelity: input.fidelity, platforms: input.platforms, designSystemVersionId: input.designSystemVersionId, themes: [{ id: "light", name: "Hell", tokens: { "color.bg": "#F5F7FA", "color.surface": "#FFFFFF", "color.accent": "#3157D5" } }], pages: [{ id: pageId, name: "Start", type: input.type === "presentation" ? "slide" : input.type === "document" ? "document-page" : input.type === "canvas" ? "canvas" : "screen", frameIds: [frameId] }], frames: [{ id: frameId, pageId, name: "Start", platform: input.platforms[0]!, device: "Standard", width: 390, height: 760, theme: "light", locale: "de-DE", rootNodeId: nodeId, canvasX: 0, canvasY: 0 }], nodes: [{ id: nodeId, name: "Start", parentId: null, childIds: [], bounds: { x: 0, y: 0, width: 390, height: 760 }, visible: true, locked: false, tokenBindings: {}, semantics: { role: "main", label: "Start" }, type: "container", layout: "column", gap: 16, padding: [24, 24, 24, 24], fill: "color.surface" }], assets: [], interactions: [], metadata: { createdAt: new Date().toISOString(), compilerVersion: "0.1.0" } };
@@ -234,7 +272,7 @@ app.post("/api/v1/projects", async (request, reply) => {
 app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 1024 }, async (request, reply) => {
   const actor = requireActorPermission(request, "project.update");
   if (!request.isMultipart()) fail("IMPORT_MULTIPART_REQUIRED", 415, "Bitte Dateien oder ein ZIP-Paket auswählen.");
-  const { name, files } = await readImportParts(request);
+  const { name, platform, projectType, files } = await readImportParts(request);
   const projectId = uuidv7(), draftId = uuidv7(), versionId = uuidv7();
   const nativeFile = files.find((file) => /(^|\/)(design-document\.json|[^/]+\.werft)$/i.test(file.path)) ?? (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".json") ? files[0] : undefined);
   let candidate: unknown;
@@ -249,7 +287,7 @@ app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 102
   // die Leinwand zeigt dann eine ehrliche Meldung und die Startseite laesst sich manuell setzen.
   const storeAsFiles = !nativeDocument;
   const entryPath = storeAsFiles ? chooseEntryPath(files) ?? "" : undefined;
-  const document = nativeDocument ?? importedDesignDocument(projectId, name);
+  const document = nativeDocument ?? importedDesignDocument(projectId, name, platform, projectType);
   const storedKeys: string[] = [];
   const objectPrefix = `${actor.organizationId}/${projectId}/`;
   try {
