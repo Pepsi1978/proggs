@@ -1,6 +1,4 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { verify } from "@node-rs/argon2";
-import cookie from "@fastify/cookie";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
@@ -9,7 +7,7 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { can, type Role } from "@werft/authz";
 import { applyOperationsSchema, createProjectSchema, designDocumentSchema, type DesignDocument } from "@werft/contracts";
-import { auditEvents, createDatabase, designOperations, drafts, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, sessions, userPreferences, users, versions } from "@werft/database";
+import { auditEvents, createDatabase, designOperations, drafts, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
 import { applyDesignOperations, validateDesignReferences } from "@werft/design-model";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
@@ -44,13 +42,11 @@ const pendingCodexAuth = new Map<string, PendingCodexAuth>();
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
 await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxFiles, fileSize: importLimits.maxFileBytes, fields: 10 } });
-await app.register(cookie, { secret: env.SESSION_SECRET, hook: "onRequest" });
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 await app.register(sensible);
 await app.register(swagger, { openapi: { info: { title: "Werft Studio API", version: "1.0.0" }, servers: [{ url: "/api/v1" }] } });
 await app.register(swaggerUi, { routePrefix: "/docs" });
 
-const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const hashJson = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const previewToken = (projectId: string) => createHmac("sha256", env.SESSION_SECRET).update(`preview:${projectId}`).digest("base64url");
 const validPreviewToken = (projectId: string, token: string) => { const expected = Buffer.from(previewToken(projectId)); const actual = Buffer.from(token); return expected.length === actual.length && timingSafeEqual(expected, actual); };
@@ -88,14 +84,19 @@ app.setErrorHandler((error, request, reply) => {
 });
 
 app.addHook("onSend", async (request, reply) => { reply.header("x-correlation-id", request.id); });
+// Einzelbenutzer-Betrieb hinter WireGuard: keine Anmeldung, der Akteur kommt aus der Seed-Mitgliedschaft.
+let defaultActor: Actor | undefined;
+async function resolveDefaultActor(): Promise<Actor> {
+  if (defaultActor) return defaultActor;
+  const rows = await db.select({ userId: memberships.userId, organizationId: memberships.organizationId, role: memberships.role }).from(memberships).where(eq(memberships.status, "active")).orderBy(sql`case when ${memberships.role} = 'organization_admin' then 0 else 1 end`, memberships.createdAt).limit(1);
+  const row = rows[0];
+  if (!row) fail("SETUP_REQUIRED", 503, "Kein Benutzerkonto vorhanden. Bitte den Seed ausführen.", true);
+  defaultActor = { userId: row.userId, organizationId: row.organizationId, role: row.role as Role };
+  return defaultActor;
+}
 app.addHook("preHandler", async (request) => {
-  if (!request.url.startsWith("/api/v1/") || request.url.startsWith("/api/v1/previews/") || ["/api/v1/auth/login", "/api/v1/health/live", "/api/v1/health/ready"].includes(request.url.split("?")[0]!)) return;
-  const raw = request.cookies.werft_session;
-  if (!raw) fail("AUTH_REQUIRED", 401, "Bitte erneut anmelden.");
-  const rows = await db.select({ userId: sessions.userId, organizationId: sessions.organizationId, role: memberships.role }).from(sessions).innerJoin(memberships, and(eq(memberships.userId, sessions.userId), eq(memberships.organizationId, sessions.organizationId))).where(and(eq(sessions.tokenHash, hashToken(raw)), isNull(sessions.revokedAt), sql`${sessions.expiresAt} > now()`, eq(memberships.status, "active"))).limit(1);
-  const actor = rows[0];
-  if (!actor) fail("SESSION_EXPIRED", 401, "Die Sitzung ist abgelaufen.");
-  request.actor = { userId: actor.userId, organizationId: actor.organizationId, role: actor.role as Role };
+  if (!request.url.startsWith("/api/v1/") || request.url.startsWith("/api/v1/previews/") || ["/api/v1/health/live", "/api/v1/health/ready"].includes(request.url.split("?")[0]!)) return;
+  request.actor = await resolveDefaultActor();
 });
 
 function actorOf(request: FastifyRequest): Actor { if (!request.actor) fail("AUTH_REQUIRED", 401, "Bitte anmelden."); return request.actor; }
@@ -136,7 +137,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.13-20260720.2128" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.14-20260721.1820" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -152,18 +153,6 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   return reply.send(await objectStore.getObject(env.S3_BUCKET, `${imported.objectPrefix}${item.path}`));
 });
 
-app.post("/api/v1/auth/login", { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } }, async (request, reply) => {
-  const body = z.object({ email: z.string().email(), password: z.string().min(1) }).strict().parse(request.body);
-  const rows = await db.select({ userId: users.id, organizationId: memberships.organizationId, passwordHash: users.passwordHash }).from(users).innerJoin(memberships, eq(memberships.userId, users.id)).where(and(eq(users.email, body.email.toLowerCase()), eq(memberships.status, "active"))).limit(1);
-  const account = rows[0];
-  if (!account?.passwordHash || !(await verify(account.passwordHash, body.password))) fail("AUTH_INVALID", 401, "E-Mail oder Passwort ist ungültig.");
-  const token = randomBytes(32).toString("base64url");
-  await db.insert(sessions).values({ id: uuidv7(), userId: account.userId, organizationId: account.organizationId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) });
-  reply.setCookie("werft_session", token, { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: 8 * 60 * 60 });
-  return reply.send({ authenticated: true });
-});
-
-app.post("/api/v1/auth/logout", async (request, reply) => { const raw = request.cookies.werft_session; if (raw) await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.tokenHash, hashToken(raw))); reply.clearCookie("werft_session", { path: "/" }); return { authenticated: false }; });
 app.get("/api/v1/me", async (request) => { const actor = actorOf(request); const rows = await db.select({ id: users.id, email: users.email, name: users.displayName, locale: users.locale, timeZone: users.timeZone, organizationName: organizations.name }).from(users).innerJoin(organizations, eq(organizations.id, actor.organizationId)).where(eq(users.id, actor.userId)).limit(1); return { ...rows[0], role: actor.role }; });
 app.get("/api/v1/me/preferences", async (request) => { const actor = actorOf(request); const rows = await db.select().from(userPreferences).where(and(eq(userPreferences.userId, actor.userId), eq(userPreferences.organizationId, actor.organizationId))).limit(1); return rows[0] ?? { revision: 0, values: {} }; });
 app.patch("/api/v1/me/preferences", async (request) => { const actor = actorOf(request); const body = z.object({ baseRevision: z.number().int().nonnegative(), values: z.record(z.string(), z.unknown()) }).parse(request.body); const updated = await db.insert(userPreferences).values({ userId: actor.userId, organizationId: actor.organizationId, revision: 1, values: body.values }).onConflictDoUpdate({ target: [userPreferences.userId, userPreferences.organizationId], set: { revision: sql`${userPreferences.revision} + 1`, values: body.values, updatedAt: new Date() }, setWhere: eq(userPreferences.revision, body.baseRevision) }).returning(); if (!updated[0]) fail("REVISION_CONFLICT", 409, "Einstellungen wurden in einer anderen Sitzung geändert."); return updated[0]; });

@@ -57,56 +57,6 @@ function Modal({ title, children, width = "540px", onClose }: { title: string; c
   );
 }
 
-function Login() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("frank@example.de");
-  const [password, setPassword] = useState("werft-local-demo");
-  const [error, setError] = useState("");
-  const login = useMutation({ mutationFn: () => api<{ authenticated: boolean }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }), onSuccess: () => navigate("/onboarding"), onError: (e) => setError(e instanceof ApiError ? e.message : "Anmeldung fehlgeschlagen.") });
-  return (
-    <main className="center-page">
-      <form
-        className="auth-card"
-        onSubmit={(e) => {
-          e.preventDefault();
-          login.mutate();
-        }}
-      >
-        <div className="brand-lockup">
-          <b>W</b>
-          <div>
-            <strong>Werft Studio</strong>
-            <span>KI-Designstudio · selbst gehostet</span>
-          </div>
-        </div>
-        <label>
-          E-Mail
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
-        </label>
-        <label>
-          Passwort
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" />
-        </label>
-        {error && <p className="field-error">{error}</p>}
-        <Button variant="primary" type="submit" disabled={login.isPending}>
-          {login.isPending ? "Anmeldung läuft …" : "Anmelden"}
-        </Button>
-        <Button type="button">Magic Link senden</Button>
-        <div className="or">
-          <span />
-          oder
-          <span />
-        </div>
-        <Button type="button">Mit SSO der Organisation anmelden</Button>
-        <footer>
-          <a href="/hilfe">Hilfe</a>
-          <a href="/datenschutz">Datenschutz</a>
-        </footer>
-      </form>
-    </main>
-  );
-}
-
 function Onboarding() {
   const nav = useNavigate();
   const [step, setStep] = useState(0);
@@ -174,9 +124,6 @@ function AppRail() {
       <NavLink to="/app/settings/personal" title="Einstellungen">
         <Settings />
       </NavLink>
-      <Link className="avatar" to="/login" title="Abmelden">
-        FK
-      </Link>
     </nav>
   );
 }
@@ -1627,7 +1574,6 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/app/designs" />} />
-      <Route path="/login" element={<Login />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/app/designs" element={<Hub />} />
       <Route path="/app/examples" element={<Examples />} />
