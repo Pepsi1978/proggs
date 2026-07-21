@@ -143,11 +143,11 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
     files.push({ path: filePath, data: Buffer.concat(chunks), mime: part.mimetype || mimeForPath(filePath) });
   }
   if (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".zip")) return { name, files: await expandZip(files[0]!.data) };
-  if (files.some((file) => file.path.toLowerCase().endsWith(".zip"))) fail("IMPORT_ARCHIVE_MIXED", 400, "Ein ZIP muss einzeln ausgewählt werden; Ordnerdateien bitte ohne zusätzliches ZIP importieren.");
+  // ZIPs innerhalb eines Projektordners sind normale Dateien: nur ein einzeln ausgewaehltes ZIP wird entpackt.
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.20-20260721.1900" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.21-20260721.1910" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);

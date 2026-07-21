@@ -16,7 +16,7 @@ const mimeByExtension: Record<string, string> = {
   ".m4a": "audio/mp4", ".map": "application/json; charset=utf-8", ".mp3": "audio/mpeg", ".mp4": "video/mp4",
   ".ogg": "audio/ogg", ".otf": "font/otf", ".pdf": "application/pdf", ".png": "image/png",
   ".svg": "image/svg+xml", ".ts": "text/plain; charset=utf-8", ".ttf": "font/ttf", ".txt": "text/plain; charset=utf-8",
-  ".wav": "audio/wav", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2"
+  ".wav": "audio/wav", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2", ".zip": "application/zip"
 };
 
 export function mimeForPath(filePath: string): string {
