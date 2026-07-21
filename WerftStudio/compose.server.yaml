@@ -74,6 +74,9 @@ services:
     container_name: werft-api
     user: root
     command: ["sh", "docker/api-entrypoint.sh"]
+    # werft-egress zusätzlich zum internen Netz: die API braucht Außenzugang für den
+    # OpenAI-Geräte-Login (auth.openai.com) und die Codex-Responses (chatgpt.com).
+    networks: [werft-internal, werft-egress]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -180,6 +183,8 @@ services:
 networks:
   werft-edge:
     name: werft-edge
+  werft-egress:
+    name: werft-egress
   werft-internal:
     name: werft-internal
     internal: true
