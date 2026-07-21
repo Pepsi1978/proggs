@@ -59,10 +59,13 @@ export function scoreEntryPath(filePath: string): number {
 }
 
 export function chooseEntryPath(files: ImportedFile[]): string | undefined {
-  return files
+  const best = files
     .map((file) => file.path)
     .filter((filePath) => /\.html?$/i.test(filePath))
     .sort((left, right) => scoreEntryPath(right) - scoreEntryPath(left) || left.localeCompare(right))[0];
+  // Deutlich negatives Scoring = nur Werkzeug-Beifang (z.B. Skill-Reviews in einer Desktop-App):
+  // dann lieber KEINE Startseite melden statt eine irrefuehrende Fremd-Seite anzuzeigen.
+  return best !== undefined && scoreEntryPath(best) > -20 ? best : undefined;
 }
 
 export function validateImportFiles(files: ImportedFile[]): ImportedFile[] {

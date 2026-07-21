@@ -23,6 +23,11 @@ describe("project import validation", () => {
     expect(chooseEntryPath([file("plugins/foo/template.html"), file("web/dashboard.html")])).toBe("web/dashboard.html");
   });
 
+  it("reports no entry when only tooling leftovers exist (e.g. desktop apps)", () => {
+    expect(chooseEntryPath([file("Profiles/skills/cowork-workspace/iteration-1/review.html"), file("plugins/foo/template.html")])).toBeUndefined();
+    expect(chooseEntryPath([file("App.xaml"), file("Models/Config.cs")])).toBeUndefined();
+  });
+
   it("rejects duplicate paths independent of case", () => {
     expect(() => validateImportFiles([file("Logo.svg"), file("logo.svg")])).toThrow(/mehrfach/);
   });

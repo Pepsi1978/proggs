@@ -147,16 +147,18 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.22-20260721.1925" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.23-20260721.1913" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
   if (!validPreviewToken(params.projectId, params.token)) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
   const imported = (await db.select().from(projectImports).where(eq(projectImports.projectId, params.projectId)).limit(1))[0];
   if (!imported) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
-  const requestedPath = normalizeImportPath(params["*"] || imported.entryPath);
+  const rawRequestedPath = params["*"] || imported.entryPath;
+  if (!rawRequestedPath) fail("PREVIEW_FILE_NOT_FOUND", 404, "Für dieses Projekt ist keine Startseite festgelegt.");
+  const requestedPath = normalizeImportPath(rawRequestedPath);
   let item = imported.manifest.find((file) => file.path === requestedPath);
-  if (!item && !requestedPath.split("/").at(-1)?.includes(".")) item = imported.manifest.find((file) => file.path === imported.entryPath);
+  if (!item && imported.entryPath && !requestedPath.split("/").at(-1)?.includes(".")) item = imported.manifest.find((file) => file.path === imported.entryPath);
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
   reply.headers({ "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
   if (item.mime.startsWith("text/html")) reply.header("content-security-policy", "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' blob: https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: wss: ws:; frame-src 'self' blob: https: http:; frame-ancestors https://10.8.0.1:8443 http://localhost:5173");
@@ -242,13 +244,15 @@ app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 102
   const parsedNative = candidate === undefined ? undefined : designDocumentSchema.safeParse(typeof candidate === "object" && candidate !== null && "document" in candidate ? (candidate as { document: unknown }).document : candidate);
   if (parsedNative && !parsedNative.success) fail("IMPORT_DOCUMENT_INVALID", 400, "Die Werft-/JSON-Datei ist kein gültiges DesignDocument.");
   const nativeDocument = parsedNative?.success ? designDocumentSchema.parse({ ...parsedNative.data, projectId }) : undefined;
-  const entryPath = nativeDocument ? undefined : chooseEntryPath(files);
-  if (!nativeDocument && !entryPath) fail("IMPORT_ENTRY_MISSING", 400, "Kein startbares HTML gefunden. Wähle den vollständigen Claude-Designs-Ordner oder ein ZIP mit mindestens einer HTML-Datei.");
+  // Ohne eindeutiges Frontend wird trotzdem vollstaendig importiert (entryPath leer):
+  // die Leinwand zeigt dann eine ehrliche Meldung und die Startseite laesst sich manuell setzen.
+  const storeAsFiles = !nativeDocument;
+  const entryPath = storeAsFiles ? chooseEntryPath(files) ?? "" : undefined;
   const document = nativeDocument ?? importedDesignDocument(projectId, name);
   const storedKeys: string[] = [];
   const objectPrefix = `${actor.organizationId}/${projectId}/`;
   try {
-    if (entryPath) {
+    if (storeAsFiles) {
       await ensureBucket();
       for (const file of files) {
         const key = `${objectPrefix}${file.path}`;
@@ -260,18 +264,18 @@ app.post("/api/v1/imports", { bodyLimit: importLimits.maxTotalBytes + 1024 * 102
       await tx.insert(projects).values({ id: projectId, organizationId: actor.organizationId, name, type: document.projectType, fidelity: document.fidelity, platforms: document.platforms, ownerId: actor.userId });
       await tx.insert(drafts).values({ id: draftId, projectId, organizationId: actor.organizationId, document, updatedBy: actor.userId });
       await tx.insert(versions).values({ id: versionId, organizationId: actor.organizationId, projectId, number: 1, reason: "Projekt importiert", authorId: actor.userId, document, snapshotHash: hashJson(document) });
-      if (entryPath) await tx.insert(projectImports).values({ projectId, organizationId: actor.organizationId, format: "html-project", entryPath, objectPrefix, manifest: files.map((file) => ({ path: file.path, size: file.data.byteLength, mime: file.mime })), fileCount: files.length, totalBytes: files.reduce((sum, file) => sum + file.data.byteLength, 0) });
-      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.imported", targetType: "project", targetId: projectId, result: "success", metadata: { format: entryPath ? "html-project" : "design-document", fileCount: files.length }, correlationId: request.id });
+      if (storeAsFiles) await tx.insert(projectImports).values({ projectId, organizationId: actor.organizationId, format: "html-project", entryPath: entryPath ?? "", objectPrefix, manifest: files.map((file) => ({ path: file.path, size: file.data.byteLength, mime: file.mime })), fileCount: files.length, totalBytes: files.reduce((sum, file) => sum + file.data.byteLength, 0) });
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.imported", targetType: "project", targetId: projectId, result: "success", metadata: { format: storeAsFiles ? "html-project" : "design-document", fileCount: files.length, entryDetected: Boolean(entryPath) }, correlationId: request.id });
     });
   } catch (error) {
     await Promise.allSettled(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
     throw error;
   }
-  return reply.status(201).send({ projectId, kind: entryPath ? "html" : "native" });
+  return reply.status(201).send({ projectId, kind: storeAsFiles ? (entryPath ? "html" : "files") : "native" });
 });
 
 app.get("/api/v1/projects/:projectId", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId), isNull(projects.deletedAt))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); return rows[0]; });
-app.get("/api/v1/projects/:projectId/import", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; if (!row) return { imported: false as const }; return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` }; });
+app.get("/api/v1/projects/:projectId/import", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; if (!row) return { imported: false as const }; return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) }; });
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
 app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");

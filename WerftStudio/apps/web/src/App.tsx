@@ -8,7 +8,7 @@ import { type ToolMode, useUi } from "./store";
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string };
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewPath: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewPath?: string };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
 const examples = [
   ["Banking App „Fluss“", "iOS · Android", "Konten, Zahlungen und Tagesüberblick mit ruhiger Typografie.", "Prototyp"],
@@ -931,16 +931,29 @@ const tools: [ToolMode, string, ReactNode][] = [
 function Canvas({ accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
   if (imported?.imported) {
     const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
+    const looksLikeDesktopApp = imported.files.some((file) => /\.(xaml|csproj|sln|kt|swift)$/i.test(file.path));
     return (
       <div className="canvas imported-canvas">
         <div className="canvas-toolbar imported-toolbar">
-          <Status kind="success">Original importiert</Status>
-          <span>{imported.entryPath}</span>
+          <Status kind={imported.previewPath ? "success" : "warning"}>{imported.previewPath ? "Original importiert" : "Kein Web-Frontend erkannt"}</Status>
+          <span>{imported.entryPath || "Keine Startseite festgelegt"}</span>
           <small>
             {imported.fileCount} Dateien · {(imported.totalBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB
           </small>
         </div>
-        <iframe title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+        {imported.previewPath ? (
+          <iframe title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+        ) : (
+          <div className="empty">
+            <strong>Dieses Projekt enthält keine eindeutige Web-Startseite.</strong>
+            <span>
+              {looksLikeDesktopApp
+                ? "Es sieht nach einer Desktop- oder Mobil-App aus (z. B. WPF/XAML, Kotlin oder Swift) — deren Oberfläche kann der Browser nicht direkt darstellen. Alle Dateien wurden trotzdem vollständig importiert."
+                : "Es wurde keine geeignete HTML-Startseite gefunden. Alle Dateien wurden trotzdem vollständig importiert."}
+            </span>
+            <span>Unter „Design Files“ kannst du jede HTML-Datei öffnen und „Als Startseite verwenden“ wählen — oder importiere den Claude-Designs-Ordner des Projekts, um das Design hier zu bearbeiten.</span>
+          </div>
+        )}
       </div>
     );
   }
