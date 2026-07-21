@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, BarChart3, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, MessageSquare, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, MessageSquare, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiForm, ApiError } from "./api";
@@ -116,9 +116,6 @@ function AppRail() {
       </NavLink>
       <NavLink to="/app/design-systems" title="Designsysteme">
         <Palette />
-      </NavLink>
-      <NavLink to="/app/settings/usage" title="Nutzung">
-        <BarChart3 />
       </NavLink>
       <span />
       <NavLink to="/app/settings/personal" title="Einstellungen">
@@ -559,7 +556,6 @@ function SettingsPage() {
           {[
             ["personal", "Persönlich"],
             ["models", "Modelle & Provider"],
-            ["usage", "Nutzung & Audit"],
           ].map(([id, label]) => (
             <NavLink key={id} to={`/app/settings/${id}`}>
               {label}
@@ -640,7 +636,6 @@ function SettingsPage() {
             </>
           )}
           {page === "models" && <ProviderSettings />}
-          {page === "usage" && <UsageSettings />}
         </div>
       </div>
     </BackPage>
@@ -718,47 +713,6 @@ function ProviderSettings() {
     </>
   );
 }
-function UsageSettings() {
-  const audit = useQuery({ queryKey: ["audit"], queryFn: () => api<Array<{ id: string; action: string; createdAt: string }>>("/audit-events") });
-  return (
-    <>
-      <div className="metric-grid">
-        {[
-          ["Kosten Juli", "38,20 €"],
-          ["KI-Läufe", "214"],
-          ["Buildzeit", "1,9 h"],
-          ["Exporte", "12"],
-        ].map(([label, value]) => (
-          <Card title={value!} key={label}>
-            <small>{label}</small>
-          </Card>
-        ))}
-      </div>
-      <Card title="Kosten pro Tag">
-        <div className="bars">
-          {[42, 58, 30, 74, 92, 22, 12].map((h, i) => (
-            <i key={i} style={{ height: `${h}%` }}>
-              <span>{["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][i]}</span>
-            </i>
-          ))}
-        </div>
-      </Card>
-      <Card title="Audit-Ereignisse">
-        {audit.isError ? (
-          <p className="field-error">Audit benötigt Organisationsadminrechte.</p>
-        ) : (
-          (audit.data ?? []).map((row) => (
-            <div className="audit-row" key={row.id}>
-              <Status kind="info">{row.action}</Status>
-              <time>{new Date(row.createdAt).toLocaleString("de-DE")}</time>
-            </div>
-          ))
-        )}
-      </Card>
-    </>
-  );
-}
-
 function Studio() {
   const { projectId = "" } = useParams();
   const nav = useNavigate();
