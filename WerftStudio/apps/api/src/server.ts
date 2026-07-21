@@ -147,7 +147,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.1.26-20260721.1932" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.2.0-20260721.1939" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -332,6 +332,92 @@ app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
   await db.update(projectImports).set({ entryPath: item.path }).where(eq(projectImports.projectId, projectId));
   await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "import.entry.updated", targetType: "project", targetId: projectId, result: "success", metadata: { entryPath: item.path }, correlationId: request.id });
   return { entryPath: item.path };
+});
+const chatEditableMime = (mime: string) => mime.startsWith("text/") || mime.startsWith("application/json") || mime.startsWith("image/svg+xml");
+const chatInstructions = [
+  "Du bist der Design-Editor von Werft Studio, einem selbst gehosteten Designwerkzeug.",
+  "Du erhältst die Textdateien eines importierten HTML-Design-Projekts und einen Änderungswunsch des Benutzers.",
+  "Setze den Wunsch direkt in den Dateien um und erhalte dabei Struktur, Funktionen und alle nicht betroffenen Inhalte vollständig.",
+  "Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt ohne Markdown und ohne Codefences:",
+  '{"reply": "kurze deutsche Zusammenfassung der Änderungen", "files": [{"path": "pfad/wie/geliefert", "content": "VOLLSTÄNDIGER neuer Dateiinhalt"}]}',
+  "Führe nur tatsächlich geänderte Dateien im files-Array auf und verwende die Pfade exakt wie geliefert."
+].join(" ");
+app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const { message } = z.object({ message: z.string().min(1).max(8000) }).strict().parse(request.body);
+  const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
+  const connection = await validCodexConnection(actor.organizationId);
+  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("high"), fast: z.boolean().default(false) }).parse(connection.settings);
+  const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
+  if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
+  const texts: Array<{ path: string; content: string }> = [];
+  let budget = 700_000;
+  const candidates = [...row.imported.manifest].filter((file) => chatEditableMime(file.mime)).sort((a, b) => (a.path === row.imported.entryPath ? -1 : b.path === row.imported.entryPath ? 1 : a.size - b.size));
+  for (const file of candidates) {
+    if (file.size > 300_000 || file.size > budget) continue;
+    texts.push({ path: file.path, content: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") });
+    budget -= file.size;
+  }
+  if (!texts.length) fail("CHAT_NO_TEXT_FILES", 400, "Dieses Projekt enthält keine bearbeitbaren Textdateien.");
+  const inputText = `Änderungswunsch:\n${message}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
+  const body: Record<string, unknown> = { ...codexModelFields(settings.model, settings.fast), instructions: chatInstructions, input: [{ role: "user", content: inputText }], store: false, stream: true };
+  if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
+  let response: Response;
+  try {
+    response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(300_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
+  } catch (error) {
+    request.log.warn({ err: error }, "KI-Lauf: OpenAI nicht erreichbar");
+    fail("CHAT_UPSTREAM", 502, "OpenAI ist vom Server aus nicht erreichbar. Bitte gleich erneut versuchen.", true);
+  }
+  const raw = await response.text();
+  if (!response.ok) fail("CHAT_UPSTREAM", 502, `OpenAI hat den KI-Lauf abgelehnt (HTTP ${response.status}).`, true);
+  let outputText = "";
+  for (const line of raw.split("\n")) {
+    if (!line.startsWith("data:")) continue;
+    try {
+      const event = JSON.parse(line.slice(5).trim()) as { type?: string; delta?: string };
+      if (event.type === "response.output_text.delta" && typeof event.delta === "string") outputText += event.delta;
+    } catch { /* Nicht-JSON-Zeilen im Stream ignorieren */ }
+  }
+  if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
+  const cleaned = outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  let parsed: { reply?: string; files?: Array<{ path?: string; content?: string }> };
+  try { parsed = JSON.parse(cleaned) as typeof parsed; }
+  catch { return { reply: outputText.trim().slice(0, 4000), changedFiles: [], revision: row.revision }; }
+  const changes = (parsed.files ?? []).filter((file): file is { path: string; content: string } => typeof file?.path === "string" && typeof file?.content === "string" && file.content.length <= 20 * 1024 * 1024);
+  if (!changes.length) return { reply: parsed.reply?.trim() || "Es war keine Dateiänderung nötig.", changedFiles: [], revision: row.revision };
+  const applied: string[] = [];
+  const previous: Array<{ key: string; mime: string; data: Buffer }> = [];
+  try {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
+      const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+      if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+      let manifest = current.imported.manifest;
+      for (const change of changes) {
+        const item = manifest.find((file) => file.path === change.path);
+        if (!item || !chatEditableMime(item.mime)) continue;
+        const key = `${current.imported.objectPrefix}${item.path}`;
+        const data = Buffer.from(change.content, "utf8");
+        previous.push({ key, mime: item.mime, data: await readObject(key) });
+        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": item.mime });
+        manifest = manifest.map((file) => (file.path === item.path ? { ...file, size: data.byteLength } : file));
+        applied.push(item.path);
+      }
+      if (!applied.length) return { revision: current.revision };
+      const revision = current.revision + 1;
+      await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
+      await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, revision, model: settings.model }, correlationId: request.id });
+      return { revision };
+    });
+    return { reply: parsed.reply?.trim() || `Änderungen umgesetzt (${applied.length} Datei(en)).`, changedFiles: applied, revision: result.revision };
+  } catch (error) {
+    await Promise.allSettled(previous.map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
+    throw error;
+  }
 });
 app.get("/api/v1/projects/:projectId/design-document", async (request) => { const actor = requireActorPermission(request, "design.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select({ revision: drafts.revision, document: drafts.document }).from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Design nicht gefunden."); return { revision: rows[0].revision, document: designDocumentSchema.parse(rows[0].document) }; });
 app.post("/api/v1/projects/:projectId/design-operations", async (request) => {

@@ -732,6 +732,7 @@ function Studio() {
   const { projectId = "" } = useParams();
   const nav = useNavigate();
   const location = useLocation();
+  const client = useQueryClient();
   const tab = location.pathname.split("/").at(-1) ?? "canvas";
   const { theme, leftOpen, rightOpen, toggleLeft, toggleRight, mode, setMode, zoom, setZoom, setTheme, setModal, modal } = useUi();
   const project = useQuery({
@@ -750,7 +751,17 @@ function Studio() {
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
   const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([]);
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
+  const chatRun = useMutation({
+    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message }) }),
+    onSuccess: async (data) => {
+      setMessages((all) => [...all, { role: "assistant", text: data.changedFiles.length ? `${data.reply}\n\nGeänderte Dateien: ${data.changedFiles.join(", ")}` : data.reply }]);
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+      await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+    },
+    onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }])
+  });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).matches("input,textarea,select,[contenteditable]")) return;
@@ -810,27 +821,29 @@ function Studio() {
               <button>Verlauf</button>
             </div>
             <div className="messages">
-              {messages.length === 0 && <div className="empty">Noch keine Nachrichten. Beschreibe unten eine Änderung am Design.</div>}
+              {messages.length === 0 && !chatRun.isPending && <div className="empty">Noch keine Nachrichten. Beschreibe unten eine Änderung am Design.</div>}
               {messages.map((m, i) => (
-                <div className="user-message" key={i}>
-                  {m}
+                <div className={m.role === "user" ? "user-message" : "assistant-message"} key={i}>
+                  {m.text}
                 </div>
               ))}
+              {chatRun.isPending && <div className="assistant-message">Die KI arbeitet am Design … das kann je nach Modell ein bis zwei Minuten dauern.</div>}
             </div>
             <form
               className="composer"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (chat.trim()) {
-                  setMessages([...messages, chat]);
-                  setChat("");
-                }
+                const message = chat.trim();
+                if (!message || chatRun.isPending) return;
+                setMessages((all) => [...all, { role: "user", text: message }]);
+                setChat("");
+                chatRun.mutate(message);
               }}
             >
               <textarea value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
               <footer>
-                <span>Modell: Standard</span>
-                <Button variant="primary">Senden</Button>
+                <span>Modell: {connection.data?.connected ? `${connection.data.settings?.model ?? "GPT-5.6"}${connection.data.settings?.fast ? " · Fast" : ""}` : "kein Provider verbunden"}</span>
+                <Button variant="primary" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "KI-Lauf läuft …" : "Senden"}</Button>
               </footer>
             </form>
           </aside>
@@ -927,7 +940,7 @@ function Studio() {
         <span>Zoom {Math.round(zoom * 100)} %</span>
         <code>{project.data?.name ?? "Projekt"}</code>
         <span />
-        <Status kind="success">KI-Lauf: bereit</Status>
+        <Status kind={chatRun.isPending ? "info" : "success"}>{chatRun.isPending ? "KI-Lauf: läuft …" : "KI-Lauf: bereit"}</Status>
         <span>Vorschau aktuell</span>
         <button onClick={() => setModal("keys")}>?</button>
       </footer>
