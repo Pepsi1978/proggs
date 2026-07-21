@@ -754,9 +754,12 @@ function Studio() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([]);
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
   const chatRun = useMutation({
-    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message }) }),
+    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message }) }),
     onSuccess: async (data) => {
-      setMessages((all) => [...all, { role: "assistant", text: data.changedFiles.length ? `${data.reply}\n\nGeänderte Dateien: ${data.changedFiles.join(", ")}` : data.reply }]);
+      const parts = [data.reply];
+      if (data.changedFiles.length) parts.push(`✓ Geänderte Dateien: ${data.changedFiles.join(", ")}`);
+      if (data.skipped?.length) parts.push(`⚠ Nicht angewendet:\n${data.skipped.join("\n")}`);
+      setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
     },
@@ -803,7 +806,7 @@ function Studio() {
         <IconButton label="Theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun /> : <Moon />}
         </IconButton>
-        <IconButton label="Export" onClick={() => setModal("export")}>
+        <IconButton label="Projekt als ZIP herunterladen" onClick={() => { if (imported.data?.imported) window.open(`/api/v1/projects/${projectId}/export.zip`, "_blank"); else setModal("export"); }}>
           <Download />
         </IconButton>
         <Button onClick={() => setModal("present")}>Präsentieren</Button>

@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import archiver from "archiver";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
@@ -147,7 +148,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, files: validateImportFiles(files) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.2.0-20260721.1939" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.2.1-20260721.1952" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -321,6 +322,17 @@ app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024
     throw error;
   }
 });
+app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
+  const actor = requireActorPermission(request, "project.export");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ imported: projectImports, name: projects.name }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("EXPORT_NOT_AVAILABLE", 404, "Für dieses Projekt liegt kein importiertes Dateipaket vor.");
+  const fileName = `${row.name.replaceAll(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 80) || "werft-projekt"}.zip`;
+  const archive = archiver("zip", { zlib: { level: 6 } });
+  for (const file of row.imported.manifest) archive.append(await readObject(`${row.imported.objectPrefix}${file.path}`), { name: file.path });
+  void archive.finalize();
+  return reply.header("content-type", "application/zip").header("content-disposition", `attachment; filename="${encodeURIComponent(fileName)}"`).send(archive);
+});
 app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
@@ -337,11 +349,16 @@ const chatEditableMime = (mime: string) => mime.startsWith("text/") || mime.star
 const chatInstructions = [
   "Du bist der Design-Editor von Werft Studio, einem selbst gehosteten Designwerkzeug.",
   "Du erhältst die Textdateien eines importierten HTML-Design-Projekts und einen Änderungswunsch des Benutzers.",
-  "Setze den Wunsch direkt in den Dateien um und erhalte dabei Struktur, Funktionen und alle nicht betroffenen Inhalte vollständig.",
-  "Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt ohne Markdown und ohne Codefences:",
-  '{"reply": "kurze deutsche Zusammenfassung der Änderungen", "files": [{"path": "pfad/wie/geliefert", "content": "VOLLSTÄNDIGER neuer Dateiinhalt"}]}',
-  "Führe nur tatsächlich geänderte Dateien im files-Array auf und verwende die Pfade exakt wie geliefert."
+  "Setze den Wunsch als praezise Suchen/Ersetzen-Edits um. Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt ohne Markdown und ohne Codefences:",
+  '{"reply": "kurze deutsche Zusammenfassung", "changes": [{"path": "pfad/wie/geliefert", "edits": [{"find": "exakter vorhandener Ausschnitt", "replace": "neuer Ausschnitt"}]}]}',
+  "Regeln: find muss WOERTLICH so im aktuellen Dateiinhalt vorkommen und durch genug Kontext EINDEUTIG sein.",
+  "Nutze viele kleine Edits statt grosser Bloecke. Gib NIEMALS komplette Dateien zurueck.",
+  "Erhalte Struktur, Funktionen und alle nicht betroffenen Inhalte vollstaendig. Pfade exakt wie geliefert."
 ].join(" ");
+function extractJsonObject(text: string): string {
+  const start = text.indexOf("{"), end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? text.slice(start, end + 1) : text;
+}
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
@@ -366,10 +383,10 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
   if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
   let response: Response;
   try {
-    response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(300_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
+    response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(540_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
   } catch (error) {
     request.log.warn({ err: error }, "KI-Lauf: OpenAI nicht erreichbar");
-    fail("CHAT_UPSTREAM", 502, "OpenAI ist vom Server aus nicht erreichbar. Bitte gleich erneut versuchen.", true);
+    fail("CHAT_UPSTREAM", 502, "OpenAI hat nicht rechtzeitig geantwortet oder ist nicht erreichbar. Bitte erneut versuchen.", true);
   }
   const raw = await response.text();
   if (!response.ok) fail("CHAT_UPSTREAM", 502, `OpenAI hat den KI-Lauf abgelehnt (HTTP ${response.status}).`, true);
@@ -377,18 +394,21 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
   for (const line of raw.split("\n")) {
     if (!line.startsWith("data:")) continue;
     try {
-      const event = JSON.parse(line.slice(5).trim()) as { type?: string; delta?: string };
+      const event = JSON.parse(line.slice(5).trim()) as { type?: string; delta?: string; response?: { output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> } };
       if (event.type === "response.output_text.delta" && typeof event.delta === "string") outputText += event.delta;
+      else if (event.type === "response.completed" && !outputText) outputText = (event.response?.output ?? []).flatMap((item) => item.content ?? []).map((part) => part.text ?? "").join("");
     } catch { /* Nicht-JSON-Zeilen im Stream ignorieren */ }
   }
   if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
-  const cleaned = outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  let parsed: { reply?: string; files?: Array<{ path?: string; content?: string }> };
+  const cleaned = extractJsonObject(outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
+  let parsed: { reply?: string; changes?: Array<{ path?: string; edits?: Array<{ find?: string; replace?: string }> }>; files?: Array<{ path?: string; content?: string }> };
   try { parsed = JSON.parse(cleaned) as typeof parsed; }
-  catch { return { reply: outputText.trim().slice(0, 4000), changedFiles: [], revision: row.revision }; }
-  const changes = (parsed.files ?? []).filter((file): file is { path: string; content: string } => typeof file?.path === "string" && typeof file?.content === "string" && file.content.length <= 20 * 1024 * 1024);
-  if (!changes.length) return { reply: parsed.reply?.trim() || "Es war keine Dateiänderung nötig.", changedFiles: [], revision: row.revision };
+  catch { return { reply: outputText.trim().slice(0, 4000), changedFiles: [], skipped: ["Antwort der KI war kein gültiges JSON — es wurde nichts geändert."], revision: row.revision }; }
+  const editChanges = (parsed.changes ?? []).filter((change): change is { path: string; edits: Array<{ find: string; replace: string }> } => typeof change?.path === "string" && Array.isArray(change?.edits) && change.edits.every((edit) => typeof edit?.find === "string" && edit.find.length > 0 && typeof edit?.replace === "string"));
+  const fullChanges = (parsed.files ?? []).filter((file): file is { path: string; content: string } => typeof file?.path === "string" && typeof file?.content === "string" && file.content.length <= 20 * 1024 * 1024);
+  if (!editChanges.length && !fullChanges.length) return { reply: parsed.reply?.trim() || "Es war keine Dateiänderung nötig.", changedFiles: [], skipped: [], revision: row.revision };
   const applied: string[] = [];
+  const skipped: string[] = [];
   const previous: Array<{ key: string; mime: string; data: Buffer }> = [];
   try {
     const result = await db.transaction(async (tx) => {
@@ -396,24 +416,39 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
       const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
       if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
       let manifest = current.imported.manifest;
-      for (const change of changes) {
+      const writeFile = async (path: string, mime: string, data: Buffer, previousData: Buffer) => {
+        const key = `${current.imported.objectPrefix}${path}`;
+        previous.push({ key, mime, data: previousData });
+        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": mime });
+        manifest = manifest.map((file) => (file.path === path ? { ...file, size: data.byteLength } : file));
+        applied.push(path);
+      };
+      for (const change of editChanges) {
         const item = manifest.find((file) => file.path === change.path);
-        if (!item || !chatEditableMime(item.mime)) continue;
-        const key = `${current.imported.objectPrefix}${item.path}`;
-        const data = Buffer.from(change.content, "utf8");
-        previous.push({ key, mime: item.mime, data: await readObject(key) });
-        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": item.mime });
-        manifest = manifest.map((file) => (file.path === item.path ? { ...file, size: data.byteLength } : file));
-        applied.push(item.path);
+        if (!item || !chatEditableMime(item.mime)) { skipped.push(`${change.path}: Datei nicht bearbeitbar oder unbekannt.`); continue; }
+        const before = await readObject(`${current.imported.objectPrefix}${item.path}`);
+        let content = before.toString("utf8");
+        let editsApplied = 0;
+        for (const edit of change.edits) {
+          if (content.includes(edit.find)) { content = content.replace(edit.find, edit.replace); editsApplied += 1; }
+          else skipped.push(`${change.path}: Ein Edit fand seine Textstelle nicht („${edit.find.slice(0, 60)}…“).`);
+        }
+        if (editsApplied > 0) await writeFile(item.path, item.mime, Buffer.from(content, "utf8"), before);
+      }
+      for (const change of fullChanges) {
+        const item = manifest.find((file) => file.path === change.path);
+        if (!item || !chatEditableMime(item.mime)) { skipped.push(`${change.path}: Datei nicht bearbeitbar oder unbekannt.`); continue; }
+        const before = await readObject(`${current.imported.objectPrefix}${item.path}`);
+        await writeFile(item.path, item.mime, Buffer.from(change.content, "utf8"), before);
       }
       if (!applied.length) return { revision: current.revision };
       const revision = current.revision + 1;
       await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
       await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, revision, model: settings.model }, correlationId: request.id });
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, skipped: skipped.length, revision, model: settings.model }, correlationId: request.id });
       return { revision };
     });
-    return { reply: parsed.reply?.trim() || `Änderungen umgesetzt (${applied.length} Datei(en)).`, changedFiles: applied, revision: result.revision };
+    return { reply: parsed.reply?.trim() || `Änderungen umgesetzt (${applied.length} Datei(en)).`, changedFiles: [...new Set(applied)], skipped, revision: result.revision };
   } catch (error) {
     await Promise.allSettled(previous.map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
     throw error;
