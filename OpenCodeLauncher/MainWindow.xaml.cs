@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     private const int DWMWCP_DONOTROUND = 1;
     private const int DWMWCP_ROUND = 2;
     private const int WM_GETMINMAXINFO = 0x0024;
+    private const int WM_SIZE = 0x0005;
+    private const int SIZE_MINIMIZED = 1;
     private const int WM_SYSCOMMAND = 0x0112;
     private const int SC_RESTORE = 0xF120;
     private const int MONITOR_DEFAULTTONEAREST = 2;
@@ -32,10 +34,22 @@ public partial class MainWindow : Window
     private int _providerResizeColumnIndex = -1;
     private double[]? _providerResizeStartWidths;
     private double _providerResizeTotalDelta;
-    private bool _bringToForegroundQueued;
-    private bool _isBringingToForeground;
+    // Zeitbasierte Sperren statt boolescher Flags: ein Flag, dessen Reset durch einen verschluckten
+    // Dispatcher-Callback, eine Ausnahme oder einen Abbruch ausfaellt, blockiert die Fensteraktivierung
+    // dauerhaft bis zum Prozess-Neustart — genau das gemeldete Symptom. Ein Zeitstempel laeuft immer
+    // von selbst ab und kann nicht haengen bleiben (gleiche Lehre wie beim Hotkey-Debounce-Bug 21.06.).
+    private const int ForegroundGuardMs = 1500;
+    private const int MinimizeStuckCheckMs = 400;
+    private DateTime _foregroundQueuedUntilUtc = DateTime.MinValue;
+    private DateTime _foregroundRunningUntilUtc = DateTime.MinValue;
+    // Zeitpunkt der letzten NATIVEN Minimierung (WM_SIZE/SIZE_MINIMIZED). WPFs WindowState hinkt der
+    // nativen Wahrheit hinterher: kurz nach einem gewollten Minimieren meldet WPF noch einen
+    // sichtbaren Zustand, waehrend IsIconic bereits true ist. Ohne diesen Zeitstempel wuerde die
+    // Selbstheilung unten ein absichtlich minimiertes Fenster sofort wieder hochreissen.
+    private DateTime _lastNativeMinimizeUtc = DateTime.MinValue;
     private string _queuedActivationReason = "unspecified";
     private readonly System.Windows.Threading.DispatcherTimer _layoutSaveTimer;
+    private readonly System.Windows.Threading.DispatcherTimer _minimizeStuckTimer;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -97,6 +111,19 @@ public partial class MainWindow : Window
             _layoutSaveTimer.Stop();
             SaveWindowLayout();
         };
+        // Selbstheilung fuer den dokumentierten Fehlerzustand "WPF meldet Normal, das Fenster haengt
+        // aber nativ minimiert bei -16000/-16000": kurz nach dem Zustandswechsel nachsehen und rein
+        // nativ nachrestaurieren. Bewusst OHNE Vordergrund-Erzwingung — nur der haengende
+        // Minimierungszustand wird geloest, die Aktivierung bleibt Sache von Windows.
+        _minimizeStuckTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(MinimizeStuckCheckMs)
+        };
+        _minimizeStuckTimer.Tick += (_, _) =>
+        {
+            _minimizeStuckTimer.Stop();
+            RepairStuckNativeMinimize();
+        };
         RestoreWindowLayout();
         ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
         ViewModel = new MainViewModel();
@@ -107,6 +134,7 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _layoutSaveTimer.Stop();
+            _minimizeStuckTimer.Stop();
             SaveWindowLayout();
             ThemeManager.ThemeChanged -= OnThemeChanged;
         };
@@ -127,24 +155,69 @@ public partial class MainWindow : Window
             MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
             ApplyWindowTheme();
             QueueSaveWindowLayout();
-            if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground("state-changed");
+            // Kein Vordergrund-Erzwingen aus StateChanged/Activated mehr — nur die reine
+            // Selbstheilungs-Kontrolle auf einen nativ haengenden Minimierungszustand.
+            if (WindowState != WindowState.Minimized)
+            {
+                _minimizeStuckTimer.Stop();
+                _minimizeStuckTimer.Start();
+            }
+            else
+            {
+                _minimizeStuckTimer.Stop();
+            }
         };
-        Activated += (_, _) => QueueBringToTaskbarForeground("activated");
+        // BEWUSST KEIN Activated-Handler, der die Vordergrund-Sequenz nachschiebt:
+        // Beim Klick auf den Taskleisten-Button restauriert und aktiviert Windows das Fenster selbst
+        // (die Shell ruft ShowWindow/SetForegroundWindow direkt auf — es kommt KEIN WM_SYSCOMMAND/
+        // SC_RESTORE an). Ein verzoegerter Aktivierungs-Callback funkt genau in diese laufende
+        // Sequenz hinein und koppelt per AttachThreadInput die Eingabewarteschlange an den
+        // Shell-Thread (explorer.exe). Loest sich das Paar durch ein Race nicht, laesst sich der
+        // Prozess bis zum Neustart nicht mehr in den Vordergrund holen. Die Vordergrund-Sequenz
+        // laeuft daher ausschliesslich noch bei echten externen Anforderungen (zweite Instanz,
+        // SC_RESTORE aus Systemmenue/Titelleiste), nicht bei jedem gewoehnlichen Fensterwechsel.
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 
     private void QueueBringToTaskbarForeground(string reason)
     {
-        if (_isBringingToForeground) return;
+        var now = DateTime.UtcNow;
+        if (now < _foregroundRunningUntilUtc) return;
 
         _queuedActivationReason = reason;
-        if (_bringToForegroundQueued) return;
-        _bringToForegroundQueued = true;
+        if (now < _foregroundQueuedUntilUtc) return;
+        _foregroundQueuedUntilUtc = now.AddMilliseconds(ForegroundGuardMs);
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            _bringToForegroundQueued = false;
+            _foregroundQueuedUntilUtc = DateTime.MinValue;
             BringToTaskbarForeground(_queuedActivationReason);
         }), System.Windows.Threading.DispatcherPriority.Normal);
+    }
+
+    /// <summary>
+    /// Loest den dokumentierten Fehlerzustand, in dem WPF bereits Normal/Maximized meldet, das
+    /// Fenster aber nativ minimiert stehen bleibt. Rein nativer Restore ohne Vordergrund-Erzwingung:
+    /// die Aktivierung selbst bleibt Sache von Windows.
+    /// </summary>
+    private void RepairStuckNativeMinimize()
+    {
+        if (WindowState == WindowState.Minimized) return;
+        // Frisch und absichtlich minimiert: das ist kein Fehlerzustand, sondern der Normalfall, bei
+        // dem WPFs Zustand nur noch nicht nachgezogen hat. Hier eingreifen hiesse, das Minimieren
+        // des Benutzers rueckgaengig zu machen.
+        if ((DateTime.UtcNow - _lastNativeMinimizeUtc).TotalMilliseconds < ForegroundGuardMs) return;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || !IsIconic(hwnd)) return;
+
+        ShowWindow(hwnd, SW_RESTORE);
+        Logger.Instance.Warn("MainWindow", "RepairStuckNativeMinimize",
+            "Fenster war nativ minimiert obwohl WPF einen sichtbaren Zustand meldete; nativ nachrestauriert", new
+            {
+                windowState = WindowState.ToString(),
+                stillMinimized = IsIconic(hwnd),
+                hwnd = FormatHandle(hwnd)
+            });
     }
 
     public void BringToForegroundFromExternalActivation()
@@ -155,9 +228,11 @@ public partial class MainWindow : Window
 
     private void BringToTaskbarForeground(string reason)
     {
-        if (_isBringingToForeground) return;
+        var now = DateTime.UtcNow;
+        if (now < _foregroundRunningUntilUtc) return;
 
-        _isBringingToForeground = true;
+        // Die Sperre laeuft auch dann von selbst ab, wenn dieser Aufruf nie zum finally kommt.
+        _foregroundRunningUntilUtc = now.AddMilliseconds(ForegroundGuardMs);
         try
         {
             if (!IsVisible) Show();
@@ -167,9 +242,8 @@ public partial class MainWindow : Window
 
             var foregroundBefore = GetForegroundWindow();
             var wasMinimized = IsIconic(hwnd);
-            var restoreRequested = reason is "external-activation" or "system-restore";
-            // A queued Activated/StateChanged callback must never undo a later intentional minimize.
-            if (wasMinimized && !restoreRequested) return;
+            // Restore ausschliesslich nativ per SW_RESTORE: WindowState.Normal wuerde einen
+            // maximierten Launcher auf Normalgroesse zuruecksetzen.
             if (wasMinimized) ShowWindow(hwnd, SW_RESTORE);
             var restored = !IsIconic(hwnd);
 
@@ -183,19 +257,19 @@ public partial class MainWindow : Window
             if (!activated) activated = TryForceForeground(hwnd);
 
             var foregroundAfter = GetForegroundWindow();
-            if (wasMinimized || reason == "external-activation" || reason == "system-restore")
+            // Immer protokollieren: dieser Pfad laeuft nur noch bei echten externen Anforderungen und
+            // ist damit selten. Eine Bedingung davor wuerde genau die Faelle verschweigen, in denen
+            // die Aktivierung still scheitert.
+            Logger.Instance.Info("MainWindow", "BringToTaskbarForeground", "Fensteraktivierung ausgeführt", new
             {
-                Logger.Instance.Info("MainWindow", "BringToTaskbarForeground", "Fensteraktivierung ausgeführt", new
-                {
-                    reason,
-                    wasMinimized,
-                    restored,
-                    activated,
-                    foregroundBefore = FormatHandle(foregroundBefore),
-                    foregroundAfter = FormatHandle(foregroundAfter),
-                    hwnd = FormatHandle(hwnd)
-                });
-            }
+                reason,
+                wasMinimized,
+                restored,
+                activated,
+                foregroundBefore = FormatHandle(foregroundBefore),
+                foregroundAfter = FormatHandle(foregroundAfter),
+                hwnd = FormatHandle(hwnd)
+            });
             if (activated) return;
 
             FlashTaskbar(hwnd);
@@ -209,7 +283,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            _isBringingToForeground = false;
+            _foregroundRunningUntilUtc = DateTime.MinValue;
         }
     }
 
@@ -234,8 +308,25 @@ public partial class MainWindow : Window
         }
         finally
         {
+            // Ein nicht geloestes AttachThreadInput koppelt die Eingabewarteschlange dauerhaft an einen
+            // fremden Thread — typisch explorer.exe hinter der Taskleiste. Danach laesst sich der
+            // Prozess bis zum Neustart nicht mehr aktivieren. Das Loesen wird deshalb geprueft und ein
+            // Fehlschlag protokolliert, statt still durchzulaufen.
             if (attached)
-                AttachThreadInput(currentThread, foregroundThread, false);
+            {
+                var detached = AttachThreadInput(currentThread, foregroundThread, false);
+                var detachError = detached ? 0 : Marshal.GetLastWin32Error();
+                if (!detached)
+                {
+                    Logger.Instance.Warn("MainWindow", "TryActivateWithForegroundThread",
+                        "AttachThreadInput konnte nicht gelöst werden; Eingabekopplung bleibt bestehen", new
+                        {
+                            currentThread,
+                            foregroundThread,
+                            error = detachError
+                        });
+                }
+            }
         }
     }
 
@@ -375,6 +466,13 @@ public partial class MainWindow : Window
         {
             AdjustMaximizedSize(hwnd, lParam);
             handled = true;
+        }
+        else if (msg == WM_SIZE && (int)wParam == SIZE_MINIMIZED)
+        {
+            // Native Wahrheit, synchron zum Minimieren zugestellt — im Gegensatz zu WPFs StateChanged,
+            // das erst spaeter feuert. Stoppt die Selbstheilung, bevor sie den Zustand missdeutet.
+            _lastNativeMinimizeUtc = DateTime.UtcNow;
+            _minimizeStuckTimer.Stop();
         }
         else if (msg == WM_SYSCOMMAND && ((int)wParam & 0xFFF0) == SC_RESTORE)
         {
