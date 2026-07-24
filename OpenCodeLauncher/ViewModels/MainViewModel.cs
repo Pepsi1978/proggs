@@ -55,8 +55,16 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.36";
-        Version = $"Version {version} (24.07.2026, 21.30 Uhr)";
+        // Version UND Zeitstempel kommen aus der Assembly: die Uhrzeit setzt MSBuild beim Compile
+        // (Target "SetBuildTimestamp"), damit hier nie wieder ein von Hand getippter - und damit
+        // moeglicherweise falscher - Zeitpunkt steht. Fallback nur, falls das Attribut fehlt.
+        var assembly = Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version?.ToString(3) ?? "?";
+        var buildTimestamp = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(attribute => attribute.Key == "BuildTimestamp")?.Value;
+        Version = string.IsNullOrWhiteSpace(buildTimestamp)
+            ? $"Version {version}"
+            : $"Version {version} ({buildTimestamp} Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();

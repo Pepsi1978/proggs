@@ -11,9 +11,9 @@
     <AssemblyName>OpenCodeLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.17.36</Version>
-    <FileVersion>1.17.36.0</FileVersion>
-    <AssemblyVersion>1.17.36.0</AssemblyVersion>
+    <Version>1.17.37</Version>
+    <FileVersion>1.17.37.0</FileVersion>
+    <AssemblyVersion>1.17.37.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
     <Product>OpenCode Launcher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
@@ -26,6 +26,22 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
   </ItemGroup>
+
+  <!-- Build-Zeitstempel sekundengenau in die Assembly schreiben. Frueher stand die Uhrzeit als
+       Literal im MainViewModel und musste von Hand gepflegt werden - genau da entstanden falsche
+       (sogar in der Zukunft liegende) Stempel. Jetzt liefert MSBuild den echten Build-Zeitpunkt;
+       von Hand eintragen ist nicht mehr moeglich. Wird bei jedem Compile neu gesetzt. -->
+  <Target Name="SetBuildTimestamp" BeforeTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <BuildTimestamp>$([System.DateTime]::Now.ToString("dd.MM.yyyy, HH:mm:ss"))</BuildTimestamp>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildTimestamp</_Parameter1>
+        <_Parameter2>$(BuildTimestamp)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 
   <!-- Profil-Quellen (Profiles/OpenCode/<id>/AGENTS.md, Profiles/ClaudeCode/sources/<id>.md) werden
        zur Laufzeit direkt aus dem Repo gelesen, nicht aus dem Build-Output -> kein Content-Eintrag noetig. -->
