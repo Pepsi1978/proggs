@@ -27,6 +27,10 @@ public static class OpenCodeVariantCatalog
 
     private static IReadOnlyList<string> GetAnthropicLevels(string slug)
     {
+        // "claude-opus-5[1m]" waehlt nur das 1M-Kontextfenster desselben Modells — die
+        // Effort-Stufen sind identisch, deshalb das Suffix vor dem Vergleich abschneiden.
+        if (slug.EndsWith("[1m]", StringComparison.Ordinal)) slug = slug[..^"[1m]".Length];
+
         if (slug is "claude-opus-5" or "claude-fable-5" or "claude-opus-4-8" or "claude-opus-4-7" or "claude-sonnet-5" or "claude-haiku-4-5")
             return ["low", "medium", "high", "xhigh", "max"];
         if (slug is "claude-opus-4-6" or "claude-sonnet-4-6") return ["low", "medium", "high", "max"];

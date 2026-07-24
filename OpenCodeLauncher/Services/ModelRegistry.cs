@@ -21,7 +21,7 @@ public sealed class ModelRegistry
     private const string Gpt56LunaSlug = "gpt-5.6-luna";
     private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
 
-    private const string ClaudeOpus5Slug = "claude-opus-5";
+    private const string ClaudeOpus5Slug = "claude-opus-5[1m]";
 
     /// <summary>
     /// Anthropic-Modelle, die auch in bereits gespeicherte models.json nachgetragen werden
@@ -29,8 +29,26 @@ public sealed class ModelRegistry
     /// </summary>
     private static readonly (string Slug, string DisplayName)[] AnthropicModels =
     [
-        (ClaudeOpus5Slug, "Claude Opus 5"),
+        (ClaudeOpus5Slug, "Claude Opus 5 (1M)"),
     ];
+
+    /// <summary>
+    /// Hebt die grossen Anthropic-Modelle auf ihre 1M-Kontext-Variante. Der Launcher reicht den
+    /// Slug unveraendert an "claude --model" weiter; ohne "[1m]" startet Claude Code mit dem
+    /// Standard-Kontextfenster. Laeuft wie der Nachtrag genau einmal (Merker = neuer Slug in
+    /// KnownSyncedModelSlugs), damit eine spaetere manuelle Rueckstellung bestehen bleibt.
+    /// </summary>
+    private static readonly (string OldSlug, string NewSlug, string DisplayName)[] AnthropicOneMillionMigrations =
+    [
+        ("claude-opus-5", ClaudeOpus5Slug, "Claude Opus 5 (1M)"),
+        ("claude-fable-5", "claude-fable-5[1m]", "Claude Fable 5 (1M)"),
+        ("claude-sonnet-5", "claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)"),
+        ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)"),
+    ];
+
+    private static IEnumerable<string> AnthropicManagedSlugs =>
+        AnthropicModels.Select(definition => definition.Slug)
+            .Concat(AnthropicOneMillionMigrations.Select(migration => migration.NewSlug));
 
     private static readonly (string Slug, string DisplayName)[] Gpt56Models =
     [
@@ -359,6 +377,24 @@ public sealed class ModelRegistry
 
             if (string.Equals(group.Id, "entropic", StringComparison.OrdinalIgnoreCase))
             {
+                // Zuerst die 1M-Umstellung, danach der Nachtrag: beide teilen sich den Merker
+                // (neuer Slug in KnownSyncedModelSlugs), sonst legte der Nachtrag Opus 5 nach
+                // der Umstellung ein zweites Mal an.
+                foreach (var migration in AnthropicOneMillionMigrations)
+                {
+                    if (group.KnownSyncedModelSlugs.Contains(migration.NewSlug, StringComparer.OrdinalIgnoreCase)) continue;
+
+                    var outdated = group.Models.FirstOrDefault(model => string.Equals(model.Slug, migration.OldSlug, StringComparison.OrdinalIgnoreCase));
+                    var alreadyPresent = group.Models.Any(model => string.Equals(model.Slug, migration.NewSlug, StringComparison.OrdinalIgnoreCase));
+                    if (outdated != null && !alreadyPresent)
+                    {
+                        outdated.Slug = migration.NewSlug;
+                        outdated.DisplayName = migration.DisplayName;
+                        Logger.Instance.Info("ModelRegistry", "RepairAndNormalize", $"1M-Variante gesetzt: {migration.OldSlug} -> {migration.NewSlug}");
+                    }
+                    AddUnique(group.KnownSyncedModelSlugs, migration.NewSlug);
+                }
+
                 foreach (var definition in AnthropicModels)
                 {
                     if (!group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase))
@@ -380,10 +416,10 @@ public sealed class ModelRegistry
         CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
         CreateGroup("entropic", "Anthropic", "anthropic", "Anthropic", new[]
         {
-            Model(ClaudeOpus5Slug, "Claude Opus 5", "anthropic", "Anthropic"),
-            Model("claude-fable-5", "Claude Fable 5", "anthropic", "Anthropic"),
-            Model("claude-opus-4-8", "Claude Opus 4.8", "anthropic", "Anthropic"),
-            Model("claude-sonnet-5", "Claude Sonnet 5", "anthropic", "Anthropic"),
+            Model(ClaudeOpus5Slug, "Claude Opus 5 (1M)", "anthropic", "Anthropic"),
+            Model("claude-fable-5[1m]", "Claude Fable 5 (1M)", "anthropic", "Anthropic"),
+            Model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
+            Model("claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)", "anthropic", "Anthropic"),
             Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
             Model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Anthropic"),
             Model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Anthropic"),
@@ -498,8 +534,8 @@ public sealed class ModelRegistry
                     .Select(model => model.Slug)
                     .ToList()
             : string.Equals(id, "entropic", StringComparison.OrdinalIgnoreCase)
-                ? models.Where(model => AnthropicModels.Any(definition =>
-                    string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                ? models.Where(model => AnthropicManagedSlugs.Any(slug =>
+                    string.Equals(model.Slug, slug, StringComparison.OrdinalIgnoreCase)))
                     .Select(model => model.Slug)
                     .ToList()
             : new List<string>()

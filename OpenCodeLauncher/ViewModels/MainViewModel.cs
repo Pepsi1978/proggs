@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.35";
-        Version = $"Version {version} (24.07.2026, 12.30 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.36";
+        Version = $"Version {version} (24.07.2026, 21.30 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
