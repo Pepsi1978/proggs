@@ -21,6 +21,17 @@ public sealed class ModelRegistry
     private const string Gpt56LunaSlug = "gpt-5.6-luna";
     private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
 
+    private const string ClaudeOpus5Slug = "claude-opus-5";
+
+    /// <summary>
+    /// Anthropic-Modelle, die auch in bereits gespeicherte models.json nachgetragen werden
+    /// (einmalig, per KnownSyncedModelSlugs gemerkt — manuell entfernte Modelle bleiben weg).
+    /// </summary>
+    private static readonly (string Slug, string DisplayName)[] AnthropicModels =
+    [
+        (ClaudeOpus5Slug, "Claude Opus 5"),
+    ];
+
     private static readonly (string Slug, string DisplayName)[] Gpt56Models =
     [
         (Gpt56SolSlug, "GPT-5.6 Sol"),
@@ -345,6 +356,22 @@ public sealed class ModelRegistry
                     if (model != null) model.DisplayName = definition.DisplayName;
                 }
             }
+
+            if (string.Equals(group.Id, "entropic", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var definition in AnthropicModels)
+                {
+                    if (!group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase))
+                    {
+                        if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                            group.Models.Insert(0, Model(definition.Slug, definition.DisplayName, "anthropic", "Anthropic"));
+                        AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
+                    }
+
+                    var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
+                    if (model != null) model.DisplayName = definition.DisplayName;
+                }
+            }
         }
     }
 
@@ -353,6 +380,7 @@ public sealed class ModelRegistry
         CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
         CreateGroup("entropic", "Anthropic", "anthropic", "Anthropic", new[]
         {
+            Model(ClaudeOpus5Slug, "Claude Opus 5", "anthropic", "Anthropic"),
             Model("claude-fable-5", "Claude Fable 5", "anthropic", "Anthropic"),
             Model("claude-opus-4-8", "Claude Opus 4.8", "anthropic", "Anthropic"),
             Model("claude-sonnet-5", "Claude Sonnet 5", "anthropic", "Anthropic"),
@@ -466,6 +494,11 @@ public sealed class ModelRegistry
             ? models.Select(m => m.Slug).ToList()
             : string.Equals(id, "openai", StringComparison.OrdinalIgnoreCase)
                 ? models.Where(model => Gpt56Models.Any(definition =>
+                    string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                    .Select(model => model.Slug)
+                    .ToList()
+            : string.Equals(id, "entropic", StringComparison.OrdinalIgnoreCase)
+                ? models.Where(model => AnthropicModels.Any(definition =>
                     string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
                     .Select(model => model.Slug)
                     .ToList()
