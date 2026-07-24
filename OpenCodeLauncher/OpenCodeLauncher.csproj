@@ -11,9 +11,9 @@
     <AssemblyName>OpenCodeLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.17.37</Version>
-    <FileVersion>1.17.37.0</FileVersion>
-    <AssemblyVersion>1.17.37.0</AssemblyVersion>
+    <Version>1.17.38</Version>
+    <FileVersion>1.17.38.0</FileVersion>
+    <AssemblyVersion>1.17.38.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
     <Product>OpenCode Launcher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
@@ -33,7 +33,7 @@
        von Hand eintragen ist nicht mehr moeglich. Wird bei jedem Compile neu gesetzt. -->
   <Target Name="SetBuildTimestamp" BeforeTargets="GetAssemblyAttributes">
     <PropertyGroup>
-      <BuildTimestamp>$([System.DateTime]::Now.ToString("dd.MM.yyyy, HH:mm:ss"))</BuildTimestamp>
+      <BuildTimestamp>$([System.DateTime]::Now.ToString("dd.MM.yyyy, HH.mm"))</BuildTimestamp>
     </PropertyGroup>
     <ItemGroup>
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
