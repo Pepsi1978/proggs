@@ -1127,6 +1127,10 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         if (id && previous && previous !== id) setHistory((entries) => [...entries, previous]);
         activeRef.current = id;
         onScreenChange(typeof data.screenName === "string" ? data.screenName : null);
+        // Jeder Bildschirm wird wieder vollstaendig gezeigt — ein hoeherer Folgebildschirm darf
+        // nicht unten abgeschnitten sein, nur weil vorher hineingezoomt wurde.
+        userAdjusted.current = false;
+        requestAnimationFrame(() => { if (!userAdjusted.current) fitStage(); });
         return;
       }
       if (data.source !== "werft-preview-canvas") return;
