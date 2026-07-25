@@ -443,21 +443,34 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `Replay endet direkt nach der letzten Frage ohne Nachschub`() = runTest {
-        val refill = FakeRefill().apply { responses += listOf("✨ Darf nicht geladen werden") }
+    fun `Sitzung aus dem Verlauf laeuft nach der letzten Frage mit Nachschub weiter`() = runTest {
+        val refill = FakeRefill().apply { responses += listOf("✨ Nachgeladene Frage") }
         val fixture = fixture(
             questions = listOf(question(1)),
-            config = config(reps = 1),
+            config = config(pauseNextMs = 0, reps = 1),
             refill = refill,
-            replay = true,
         )
         fixture.startSpeaking()
 
         fixture.tts.completeCurrent()
         runCurrent()
 
-        assertEquals(Phase.ENDED, fixture.engine.state.value.phase)
-        assertEquals(0, refill.requests)
+        assertEquals(1, refill.requests)
+        assertEquals(2, fixture.engine.state.value.questions.size)
+        assertEquals("Nachgeladene Frage", fixture.tts.spokenTexts.last())
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Sitzung ohne Nachschubquelle endet nicht sondern wartet`() = runTest {
+        val fixture = fixture(questions = listOf(question(1)), config = config(reps = 1))
+        fixture.startSpeaking()
+
+        fixture.tts.completeCurrent()
+        runCurrent()
+
+        assertEquals(Phase.WAITING_NETWORK, fixture.engine.state.value.phase)
         fixture.engine.close()
     }
 
@@ -465,7 +478,6 @@ class SessionEngineTest {
         questions: List<Question>,
         config: SessionConfig = config(),
         refill: FakeRefill? = null,
-        replay: Boolean = false,
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
     ): Fixture {
@@ -478,7 +490,6 @@ class SessionEngineTest {
             coroutineScope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
             clock = SessionClock { testScheduler.currentTime },
-            replay = replay,
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
         )

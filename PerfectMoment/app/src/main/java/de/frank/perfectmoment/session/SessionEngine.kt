@@ -26,7 +26,6 @@ class SessionEngine(
     coroutineScope: CoroutineScope,
     dispatcher: CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1),
     private val clock: SessionClock = MonotonicSessionClock,
-    private val replay: Boolean = false,
     private var initialGenerationInFlight: Boolean = false,
     private val checkpoint: SessionCheckpoint? = null,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
@@ -74,18 +73,16 @@ class SessionEngine(
             val restored = checkpoint != null && _state.value.questions.isNotEmpty()
             deadlineMs = clock.nowMillis() + _state.value.remainingMs
             _state.value = _state.value.copy(
-                phase = if (_state.value.questions.isEmpty()) {
-                    if (replay) Phase.ENDED else Phase.WAITING_NETWORK
-                } else if (restored) {
-                    Phase.SPEAKING
-                } else {
-                    Phase.IDLE_MUTED
+                phase = when {
+                    _state.value.questions.isEmpty() -> Phase.WAITING_NETWORK
+                    restored -> Phase.SPEAKING
+                    else -> Phase.IDLE_MUTED
                 },
                 speakerOn = restored,
                 paused = restored,
             )
-            if (_state.value.phase != Phase.ENDED && !_state.value.paused) startTimer()
-            if (_state.value.questions.isEmpty() && !replay && !initialGenerationInFlight) {
+            if (!_state.value.paused) startTimer()
+            if (_state.value.questions.isEmpty() && !initialGenerationInFlight) {
                 requestRefill()
             } else if (restored) {
                 refillIfResumedStockIsLow()
@@ -113,9 +110,7 @@ class SessionEngine(
     fun completeInitialGeneration() {
         scope.launch {
             initialGenerationInFlight = false
-            if (_state.value.currentIndex >= _state.value.questions.size && !replay) {
-                handleQuestionsExhausted()
-            }
+            if (_state.value.currentIndex >= _state.value.questions.size) handleQuestionsExhausted()
         }
     }
 
@@ -168,11 +163,8 @@ class SessionEngine(
         _state.value = current.copy(speakerOn = true)
         if (_state.value.currentIndex < _state.value.questions.size) {
             speakCurrentQuestion()
-        } else if (replay) {
-            endSession()
         } else {
-            _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
-            if (!initialGenerationInFlight) requestRefill()
+            handleQuestionsExhausted()
         }
     }
 
@@ -356,17 +348,13 @@ class SessionEngine(
     private fun advanceToNextQuestion() {
         val nextIndex = _state.value.currentIndex + 1
         if (nextIndex >= _state.value.questions.size) {
-            if (replay) {
-                endSession()
-            } else {
-                _state.value = _state.value.copy(
-                    currentIndex = nextIndex,
-                    currentRep = 1,
-                    phase = Phase.WAITING_NETWORK,
-                )
-                ttsErrorsForCurrentQuestion = 0
-                requestRefill()
-            }
+            _state.value = _state.value.copy(
+                currentIndex = nextIndex,
+                currentRep = 1,
+                phase = Phase.WAITING_NETWORK,
+            )
+            ttsErrorsForCurrentQuestion = 0
+            requestRefill()
             return
         }
 
@@ -408,14 +396,12 @@ class SessionEngine(
     }
 
     private fun triggerRefillIfNeeded(index: Int) {
-        if (replay || index < FIRST_REFILL_INDEX || (index - FIRST_REFILL_INDEX) % BLOCK_SIZE != 0) {
-            return
-        }
+        if (index < FIRST_REFILL_INDEX || (index - FIRST_REFILL_INDEX) % BLOCK_SIZE != 0) return
         if (refillTriggers.add(index)) requestRefill()
     }
 
     private fun requestRefill() {
-        if (initialGenerationInFlight || replay || refillPort == null || _state.value.refillInFlight ||
+        if (initialGenerationInFlight || refillPort == null || _state.value.refillInFlight ||
             _state.value.phase == Phase.ENDED
         ) {
             return
@@ -463,11 +449,7 @@ class SessionEngine(
     }
 
     private fun scheduleRefillRetry() {
-        if (replay || refillPort == null || refillRetryJob?.isActive == true ||
-            _state.value.phase == Phase.ENDED
-        ) {
-            return
-        }
+        if (refillPort == null || refillRetryJob?.isActive == true || _state.value.phase == Phase.ENDED) return
         refillRetryJob = scope.launch {
             delay(refillRetryMs)
             refillRetryJob = null
@@ -475,13 +457,13 @@ class SessionEngine(
         }
     }
 
+    /**
+     * Am Listenende endet die Sitzung nie von selbst — sie wartet auf Nachschub. Das gilt für
+     * jede Sitzung, auch für gespeicherte aus dem Verlauf.
+     */
     private fun handleQuestionsExhausted() {
-        if (replay) {
-            endSession()
-        } else {
-            _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
-            if (!initialGenerationInFlight) requestRefill()
-        }
+        _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
+        if (!initialGenerationInFlight) requestRefill()
     }
 
     private fun markNetworkFailure(operation: NetworkOperation) {
