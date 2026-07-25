@@ -18,33 +18,22 @@
 
 /* Leinwand-Navigation */
 .canvas-viewport{position:relative;overflow:hidden;min-width:0;min-height:0}.canvas-viewport.panning{cursor:grabbing}.canvas-pan-content{transform-origin:0 0;will-change:transform}.frame-scroller.canvas-viewport{overflow:hidden}.frame-content{width:max-content;min-width:100%;min-height:100%}.imported-canvas>.canvas-viewport{width:100%;height:100%}
-/* Zeichenbrett: die Leinwand nimmt die ganze Flaeche ein, die Bildschirme liegen als Rahmen darauf. */
-.board-viewport{position:absolute;inset:0;width:auto;height:auto}
-.design-board{display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start}
-.board-frame{display:flex;flex-direction:column;gap:9px}
-.board-frame>header{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-text-subtle)}
-.board-frame>header strong{font-size:15px;color:var(--color-text)}
-.board-frame>header em{font-style:normal;font-size:11px;font-weight:650;padding:3px 9px;border-radius:999px;background:var(--color-accent);color:#fff}
-.board-frame>header>span{flex:1}
-.board-frame>header small{font-size:11.5px;color:var(--color-disabled);white-space:nowrap}
-.board-frame>header button{width:28px;height:28px;border:1px solid var(--color-line);border-radius:9px;background:var(--color-surface);display:grid;place-items:center;cursor:pointer;color:var(--color-text)}
-.board-frame>header button svg{width:13px}
-.board-frame-body{border-radius:16px;overflow:hidden;background:#fff;outline:1px solid var(--color-line);box-shadow:0 18px 46px rgba(18,32,47,.16)}
-.board-frame.start .board-frame-body{outline:2px solid var(--color-accent)}
-.board-frame.focused .board-frame-body{outline:3px solid var(--color-accent);box-shadow:0 0 0 9px color-mix(in srgb,var(--color-accent) 20%,transparent),0 18px 46px rgba(18,32,47,.2)}
-.board-frame iframe{display:block;border:0;background:#fff}
-.board-probe{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;border:0;pointer-events:none}
-.board-loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--color-text-subtle)}
-.board-toolbar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:25;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:6px;border:1px solid var(--color-line);border-radius:14px;background:color-mix(in srgb,var(--color-surface) 92%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px)}
-.board-toolbar button{height:32px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--color-text);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer}
-.board-toolbar button:disabled{opacity:.45;cursor:default}
-.board-toolbar button.active{background:var(--color-accent);color:#fff}
-.board-toolbar button svg{width:14px}
-.board-toolbar .icon-button{width:32px;height:32px}
-.board-toolbar b{min-width:48px;text-align:center;font-size:12px}
-.board-toolbar>i{width:1px;height:22px;background:var(--color-line)}
-.board-toolbar select{height:32px;max-width:220px;border:1px solid var(--color-line);border-radius:9px;background:var(--color-surface);color:var(--color-text);font-size:12px;padding:0 8px}
-.board-hint{font-size:11.5px;color:#b4530a;padding:0 8px}
+/* Buehne: nur das Design, formatfuellend und vollstaendig sichtbar. */
+.stage-viewport{position:absolute;inset:0;width:auto;height:auto}
+.stage-surface{border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(18,32,47,.18)}
+.stage-surface iframe{display:block;border:0;background:#fff}
+/* Zurueck und Start stoeren das Design nicht: sie erscheinen erst, wenn die Maus in die Ecke faehrt. */
+.stage-hint{position:absolute;left:12px;top:12px;z-index:26;display:flex;gap:6px;opacity:0;transition:opacity .15s}
+.stage-hint:hover,.imported-canvas:hover .stage-hint{opacity:.5}
+.stage-hint:hover{opacity:1}
+.stage-hint button{width:34px;height:34px;border:1px solid var(--color-line);border-radius:10px;background:var(--color-surface);color:var(--color-text);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow-lg)}
+.stage-hint button svg{width:16px}
+.stage-tools{position:absolute;right:12px;top:12px;z-index:26;opacity:0;transition:opacity .15s}
+.imported-canvas:hover .stage-tools{opacity:.55}
+.stage-tools:hover{opacity:1}
+.stage-tools button{height:34px;padding:0 12px;border:1px solid var(--color-line);border-radius:10px;background:var(--color-surface);color:var(--color-text);font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;cursor:pointer;box-shadow:var(--shadow-lg)}
+.stage-tools button svg{width:14px}
+.stage-progress{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:27;width:min(560px,calc(100% - 32px));display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--color-line);border-radius:14px;background:color-mix(in srgb,var(--color-surface) 94%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px);font-size:12px}
 
 /* Leinwand-Vollbild */
 .studio.canvas-fullscreen{position:fixed;inset:0;z-index:1000}.canvas-fullscreen .project-header,.canvas-fullscreen .workspace-tabs,.canvas-fullscreen .statusbar{display:none}.canvas-fullscreen .workspace,.canvas-fullscreen .canvas{height:100%}.canvas-fullscreen-controls{position:fixed;top:12px;right:12px;z-index:70;display:flex;gap:6px;padding:6px;border:1px solid var(--color-line);border-radius:12px;background:color-mix(in srgb,var(--color-surface) 88%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px)}

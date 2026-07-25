@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
@@ -821,6 +821,8 @@ function Studio() {
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
   const [canvasFullscreen, setCanvasFullscreen] = useState(false);
+  // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
+  const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
   const [panelTab, setPanelTab] = useState<"chat" | "comments" | "history">("chat");
   const chatStorageKey = `werft-chat-${projectId}`;
@@ -832,7 +834,7 @@ function Studio() {
   const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: panelTab === "history" });
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
   const chatRun = useMutation({
-    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message }) }),
+    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message, ...(visibleScreen ? { screen: visibleScreen } : {}) }) }),
     onSuccess: async (data) => {
       const parts = [data.reply];
       if (data.changedFiles.length) parts.push(`✓ Geänderte Dateien: ${data.changedFiles.join(", ")}`);
@@ -890,7 +892,6 @@ function Studio() {
       {canvasFullscreen && (
         <div className="canvas-fullscreen-controls">
           <IconButton label="Gesprächspanel ein- oder ausblenden" onClick={toggleLeft}><PanelLeft /></IconButton>
-          <IconButton label="Inspektor ein- oder ausblenden" onClick={toggleRight}><PanelRight /></IconButton>
           <IconButton label="Vollbild beenden" onClick={exitCanvasFullscreen}><Minimize2 /></IconButton>
         </div>
       )}
@@ -899,17 +900,11 @@ function Studio() {
           <ArrowLeft />
         </IconButton>
         <strong>{project.data?.name ?? "Projekt wird geladen …"}</strong>
-        <Status kind="success">Gespeichert</Status>
-        <span className="platform-chip">{project.data?.platforms.map((p) => labels[p]).join(" · ")}</span>
-        <code>v{project.data?.activeVersion ?? 1}</code>
         <span />
-        <IconButton label="Gesprächspanel" onClick={toggleLeft}>
+        <IconButton label="Bearbeitungsleiste ein- oder ausblenden" onClick={toggleLeft}>
           <PanelLeft />
         </IconButton>
-        <IconButton label="Inspektor" onClick={toggleRight}>
-          <PanelRight />
-        </IconButton>
-        <IconButton label="Leinwand im Vollbild anzeigen" onClick={enterCanvasFullscreen}>
+        <IconButton label="Design im Vollbild anzeigen" onClick={enterCanvasFullscreen}>
           <Maximize2 />
         </IconButton>
         <IconButton label="Theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
@@ -918,21 +913,14 @@ function Studio() {
         <IconButton label="Projekt als ZIP herunterladen" onClick={() => { if (imported.data?.imported) window.open(`/api/v1/projects/${projectId}/export.zip`, "_blank"); else setModal("export"); }}>
           <Download />
         </IconButton>
-        <Button onClick={() => setModal("present")}>Präsentieren</Button>
-        <Button variant="primary" onClick={() => setModal("share")}>
-          Teilen
-        </Button>
-        <b className="avatar">FK</b>
       </header>
       <div className="studio-body">
         {leftOpen && (
           <aside className="left-panel">
             <div className="panel-tabs">
               <button className={panelTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
-              <button className={panelTab === "comments" ? "active" : ""} onClick={() => setPanelTab("comments")}>Kommentare</button>
               <button className={panelTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
-            {panelTab === "comments" && <div className="messages"><div className="empty">Noch keine Kommentare.</div></div>}
             {panelTab === "history" && (
               <div className="messages">
                 {versions.isLoading ? <div className="empty">Verlauf wird geladen …</div> : (versions.data ?? []).length === 0 ? <div className="empty">Noch keine gespeicherten Versionen.</div> : (versions.data ?? []).map((version) => (
@@ -973,32 +961,9 @@ function Studio() {
           </aside>
         )}
         <section className="workspace">
-          <nav className="workspace-tabs">
-            {[
-              ["canvas", "Leinwand"],
-              ["files", "Design Files"],
-              ["variants", "Varianten"],
-              ["questions", "Rückfragen"],
-            ].map(([id, label]) => (
-              <NavLink key={id} to={`/app/projects/${projectId}/studio/${id}`}>
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-          {tab === "canvas" && <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
-          {tab === "questions" && <Questions />}
-          {tab === "variants" && (
-            <Variants
-              onAdopt={(a, r, d) => {
-                setAccent(a);
-                setRadius(r);
-                setDarkPreview(d);
-                nav(`/app/projects/${projectId}/studio/canvas`);
-              }}
-            />
-          )}
+          <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} onScreenChange={setVisibleScreen} />
         </section>
-        {rightOpen && (
+        {rightOpen && !imported.data?.imported && (
           <aside className="right-panel">
             <header>
               <div>
@@ -1060,90 +1025,74 @@ function Studio() {
           </aside>
         )}
       </div>
-      <footer className="statusbar">
-        <span>Zoom {Math.round(zoom * 100)} %</span>
-        <code>{project.data?.name ?? "Projekt"}</code>
-        <span />
-        <Status kind={chatRun.isPending ? "info" : "success"}>{chatRun.isPending ? "KI-Lauf: läuft …" : "KI-Lauf: bereit"}</Status>
-        <span>Vorschau aktuell</span>
-        <button onClick={() => setModal("keys")}>?</button>
-      </footer>
       {modal === "keys" && <KeyboardModal onClose={() => setModal(null)} />} {modal === "share" && <ShareModal onClose={() => setModal(null)} />} {modal === "export" && <ExportModal onClose={() => setModal(null)} />} {modal === "present" && <Present accent={accent} onClose={() => setModal(null)} />}
     </div>
   );
 }
 
 type PreviewScreen = { id: string; name: string; isStart: boolean; links: string[] };
-type FrameSize = { width: number; height: number };
-// Bis vier Bildschirme steht alles in einer Reihe; darueber wird gerastert, damit das Board nicht
-// zu einem endlos breiten Band wird, das man nur noch scrollend absuchen kann.
-const boardColumns = (count: number) => (count <= 4 ? Math.max(1, count) : count <= 9 ? 3 : 4);
-const boardGap = 72;
-const fallbackScreen: PreviewScreen = { id: "__design__", name: "Design", isStart: true, links: [] };
 const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
 const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate)/i;
 
 // Ein Sperr- oder Anmeldebildschirm ist ein Zwischenzustand, kein Einstieg. Steht er im Design als
-// Startbildschirm, wird hier der eigentliche Einstieg gezeigt — sonst beginnt jeder Rundgang durch
-// die App vor einer verschlossenen Tür. Der Startbildschirm liegt immer als erster Rahmen.
-function withCorrectedStart(list: PreviewScreen[]): PreviewScreen[] {
-  if (list.length < 2) return list;
+// Startbildschirm, wird trotzdem der eigentliche Einstieg gezeigt — sonst beginnt jeder Rundgang
+// durch die App vor einer verschlossenen Tür.
+function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
+  if (!list.length) return undefined;
   const marked = list.find((screen) => screen.isStart);
-  const better = !marked || gateNamePattern.test(marked.name)
-    ? list.find((screen) => entryNamePattern.test(screen.name)) ?? list.find((screen) => !gateNamePattern.test(screen.name))
-    : marked;
-  const start = better ?? marked ?? list[0]!;
-  return [start, ...list.filter((screen) => screen.id !== start.id)].map((screen) => (screen.isStart === (screen.id === start.id) ? screen : { ...screen, isStart: screen.id === start.id }));
+  if (marked && !gateNamePattern.test(marked.name)) return marked;
+  return list.find((screen) => entryNamePattern.test(screen.name)) ?? list.find((screen) => !gateNamePattern.test(screen.name)) ?? marked ?? list[0];
 }
 
-// Die Leinwand ist ein Zeichenbrett: die Flaeche gehoert der App, nicht dem Rahmen. Mausrad
-// vergroessert, gedrueckte mittlere Maustaste (oder Ziehen auf freier Flaeche) verschiebt, und jeder
-// Bildschirm liegt als eigener Rahmen darauf — der Startbildschirm zuerst.
-function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreensChange }: {
+// Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
+// durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
   previewHeight: number;
   zoom: number;
   setZoom(value: number): void;
-  onScreensChange(state: { screens: PreviewScreen[]; active: string | null; links: number }): void;
+  onScreenChange(name: string | null): void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const frames = useRef(new Map<string, HTMLIFrameElement>());
-  const wrappers = useRef(new Map<string, HTMLDivElement>());
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const pointerPan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const previewPan = useRef<CanvasPoint | null>(null);
   const userAdjusted = useRef(false);
+  const activeRef = useRef<string | null>(null);
+  const sizeRef = useRef({ width: previewWidth, height: previewHeight });
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
+  const [size, setSize] = useState({ width: previewWidth, height: previewHeight });
   const [screens, setScreens] = useState<PreviewScreen[]>([]);
-  const [probed, setProbed] = useState(false);
-  const [sizes, setSizes] = useState<Record<string, FrameSize>>({});
-  const [highlight, setHighlight] = useState(true);
-  const [view, setView] = useState<"board" | "flow">("board");
-  const [flowScreen, setFlowScreen] = useState<string | null>(null);
-  const [flowHistory, setFlowHistory] = useState<string[]>([]);
-  const [focused, setFocused] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
 
-  const visibleScreens = screens.length ? screens : probed ? [fallbackScreen] : [];
-  const startScreen = visibleScreens.find((screen) => screen.isStart) ?? visibleScreens[0];
-  const flowTarget = flowScreen ?? startScreen?.id ?? null;
-  const boardScreens = view === "flow" ? visibleScreens.filter((screen) => screen.id === flowTarget) : visibleScreens;
-  const columns = view === "flow" ? 1 : boardColumns(boardScreens.length);
-  const sizeOf = (id: string): FrameSize => sizes[id] ?? { width: previewWidth, height: previewHeight };
-
-  const frameUrl = (screenId?: string) => {
-    const separator = previewPath.includes("?") ? "&" : "?";
-    const frameMode = view === "board" ? "1" : "0";
-    const screenPart = screenId && screenId !== fallbackScreen.id ? `&werftScreen=${encodeURIComponent(screenId)}` : "";
-    const hash = screenId && screenId !== fallbackScreen.id ? `#${screenId}` : "";
-    return `${previewOrigin}${previewPath}${separator}werftFrame=${frameMode}${screenPart}${hash}`;
-  };
-  const tellFrame = (frame: HTMLIFrameElement | undefined, message: Record<string, unknown>) => {
-    try { frame?.contentWindow?.postMessage({ source: "werft-studio-canvas", ...message }, "*"); }
+  const separator = previewPath.includes("?") ? "&" : "?";
+  const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
+  const tellFrame = (message: Record<string, unknown>) => {
+    try { frameRef.current?.contentWindow?.postMessage({ source: "werft-studio-canvas", ...message }, "*"); }
     catch (error) { console.warn("Vorschau nicht erreichbar", error); }
   };
+  // Der ganze Bildschirm muss immer hineinpassen — oben, unten, links und rechts nichts abgeschnitten.
+  const fitStage = () => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect || !rect.width || !rect.height) return;
+    const result = fitZoomAndOffset({ width: rect.width, height: rect.height }, sizeRef.current, 20);
+    setZoom(result.zoom);
+    setOffset(result.offset);
+  };
+  const resetView = () => { userAdjusted.current = false; fitStage(); };
+
+  useEffect(() => { sizeRef.current = size; if (!userAdjusted.current) fitStage(); }, [size.width, size.height]);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(() => { if (!userAdjusted.current) fitStage(); });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -1152,113 +1101,65 @@ function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, 
     setOffset((current) => offsetForZoomAtPoint(current, point, zoom, nextZoom));
     setZoom(nextZoom);
   };
-  const zoomAtCenter = (nextZoom: number) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, Math.max(0.04, Math.min(4, nextZoom)));
-    else setZoom(nextZoom);
+  const goBack = () => {
+    const previous = history.at(-1);
+    if (!previous) return;
+    setHistory((entries) => entries.slice(0, -1));
+    // Vorher setzen: der zurückgemeldete Wechsel darf nicht erneut in den Verlauf wandern.
+    activeRef.current = previous;
+    tellFrame({ action: "screen", screenId: previous });
   };
-  const centerOn = (id: string, nextZoom?: number) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    const wrapper = wrappers.current.get(id);
-    if (!rect || !wrapper) return false;
-    const scale = nextZoom ?? zoom;
-    setZoom(scale);
-    setOffset({
-      x: rect.width / 2 - (wrapper.offsetLeft + wrapper.offsetWidth / 2) * scale,
-      y: rect.height / 2 - (wrapper.offsetTop + wrapper.offsetHeight / 2) * scale
-    });
-    return true;
+  const goStart = () => {
+    const start = startScreenOf(screens);
+    if (!start) return;
+    setHistory([]);
+    activeRef.current = start.id;
+    tellFrame({ action: "screen", screenId: start.id });
   };
-  const fitScreen = (id: string) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    const wrapper = wrappers.current.get(id);
-    if (!rect || !wrapper) return false;
-    const fit = fitZoomAndOffset({ width: rect.width, height: rect.height }, { width: wrapper.offsetWidth, height: wrapper.offsetHeight }, 40);
-    return centerOn(id, fit.zoom);
-  };
-  const fitBoard = () => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    const board = boardRef.current;
-    if (!rect || !board) return;
-    userAdjusted.current = true;
-    const fit = fitZoomAndOffset({ width: rect.width, height: rect.height }, { width: board.offsetWidth, height: board.offsetHeight });
-    setZoom(fit.zoom);
-    setOffset(fit.offset);
-  };
-  const revealScreen = (id: string, fromUser = true) => {
-    if (fromUser) userAdjusted.current = true;
-    setFocused(id);
-    if (view === "flow") { setFlowScreen(id); return; }
-    if (!wrappers.current.has(id)) return;
-    centerOn(id, Math.max(zoom, 0.5));
-  };
-  const openInFlow = (id: string) => {
-    userAdjusted.current = true;
-    setView("flow");
-    setFlowScreen(id);
-    setFlowHistory([]);
-    setFocused(id);
-  };
-
-  // Der erste Rahmen zeigt den Startbildschirm formatfuellend. Solange der Benutzer nichts selbst
-  // verschoben hat, wird beim Eintreffen der echten Bildschirmhoehe nachjustiert.
-  useEffect(() => {
-    if (!startScreen || userAdjusted.current) return;
-    const frame = requestAnimationFrame(() => { fitScreen(startScreen.id); });
-    return () => cancelAnimationFrame(frame);
-  }, [startScreen?.id, sizes[startScreen?.id ?? ""]?.height, view]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setProbed(true), 5_000);
-    return () => clearTimeout(timer);
-  }, [previewPath]);
-
-  useEffect(() => {
-    onScreensChange({ screens: visibleScreens, active: view === "flow" ? flowTarget : focused, links: visibleScreens.reduce((sum, screen) => sum + screen.links.length, 0) });
-  }, [visibleScreens.length, focused, flowTarget, view, screens]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const data = event.data as { source?: string; action?: string; screens?: PreviewScreen[]; screenId?: string; width?: number; height?: number; x?: number; y?: number; deltaY?: number; to?: string } | null;
-      if (!data || data.source !== "werft-preview-canvas") return;
-      const entry = [...frames.current.entries()].find(([, frame]) => frame.contentWindow === event.source);
-      const sourceId = entry?.[0];
-      const frame = entry?.[1];
+      const data = event.data as { source?: string; action?: string; screens?: PreviewScreen[]; screenId?: string; screenName?: string; width?: number; height?: number; x?: number; y?: number; deltaY?: number } | null;
+      if (!data || event.source !== frameRef.current?.contentWindow) return;
+      if (data.source === "werft-preview-screen") {
+        const id = typeof data.screenId === "string" ? data.screenId : null;
+        const previous = activeRef.current;
+        if (id && previous && previous !== id) setHistory((entries) => [...entries, previous]);
+        activeRef.current = id;
+        onScreenChange(typeof data.screenName === "string" ? data.screenName : null);
+        return;
+      }
+      if (data.source !== "werft-preview-canvas") return;
       if (data.action === "screens") {
-        setProbed(true);
-        const list = withCorrectedStart((data.screens ?? []).filter((screen) => screen && typeof screen.id === "string"));
-        if (list.length) setScreens((current) => (current.length === list.length && current.every((screen, index) => screen.id === list[index]!.id) ? current : list));
+        const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
+        setScreens(list);
+        // Beim Öffnen steht der Startbildschirm — nicht der, den das Dokument zufällig zuerst führt.
+        const start = startScreenOf(list);
+        if (start && activeRef.current === null) { activeRef.current = start.id; tellFrame({ action: "screen", screenId: start.id }); }
         return;
       }
-      if (data.action === "size" && sourceId && Number.isFinite(data.width) && Number.isFinite(data.height)) {
-        const key = sourceId === "__probe__" ? null : sourceId;
-        if (!key) return;
-        setSizes((current) => (current[key]?.height === Math.round(data.height!) && current[key]?.width === Math.round(data.width!) ? current : { ...current, [key]: { width: Math.round(data.width!), height: Math.round(data.height!) } }));
+      if (data.action === "size" && Number.isFinite(data.width) && Number.isFinite(data.height)) {
+        const next = { width: Math.round(data.width!), height: Math.round(data.height!) };
+        setSize((current) => (current.width === next.width && current.height === next.height ? current : next));
         return;
       }
-      if (data.action === "navigate" && typeof data.to === "string") {
-        if (view === "flow") { setFlowHistory((history) => [...history, flowTarget ?? ""].filter(Boolean)); setFlowScreen(data.to); setFocused(data.to); }
-        else revealScreen(data.to);
-        return;
-      }
-      if (data.action === "focus" && sourceId) { setFocused(sourceId); return; }
+      const frame = frameRef.current;
       if (!frame || !Number.isFinite(data.x) || !Number.isFinite(data.y) || !frame.offsetWidth || !frame.offsetHeight) return;
       const rect = frame.getBoundingClientRect();
       const point = { x: rect.left + data.x! * (rect.width / frame.offsetWidth), y: rect.top + data.y! * (rect.height / frame.offsetHeight) };
       if (data.action === "wheel" && Number.isFinite(data.deltaY)) zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, data.deltaY!));
       else if (data.action === "pan-start") { previewPan.current = point; setPanning(true); }
       else if (data.action === "pan-move" && previewPan.current) {
-        const previous = previewPan.current;
+        const start = previewPan.current;
         userAdjusted.current = true;
-        setOffset((current) => ({ x: current.x + point.x - previous.x, y: current.y + point.y - previous.y }));
+        setOffset((current) => ({ x: current.x + point.x - start.x, y: current.y + point.y - start.y }));
         previewPan.current = point;
       } else if (data.action === "pan-end") { previewPan.current = null; setPanning(false); }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [zoom, view, flowTarget]);
+  }, [zoom, history.length]);
 
-  // Mausrad vergroessert und verkleinert die Leinwand — ohne Zusatztaste, wie auf einem Zeichenbrett.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -1270,13 +1171,20 @@ function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, 
     return () => viewport.removeEventListener("wheel", handleWheel);
   }, [zoom]);
 
+  // Zurück und Start ohne sichtbare Leiste: die Tastatur genügt, die Schaltflächen erscheinen nur,
+  // wenn die Maus in die Ecke fährt.
   useEffect(() => {
-    for (const [id, frame] of frames.current) if (id !== "__probe__") tellFrame(frame, { action: "highlight", on: highlight });
-  }, [highlight, screens.length, view, flowTarget]);
+    const handleKey = (event: KeyboardEvent) => {
+      if ((event.target as HTMLElement | null)?.matches?.("input,textarea,select,[contenteditable]")) return;
+      if (event.key === "Backspace" || (event.altKey && event.key === "ArrowLeft")) { event.preventDefault(); goBack(); }
+      if (event.key === "Home") { event.preventDefault(); goStart(); }
+    };
+    addEventListener("keydown", handleKey);
+    return () => removeEventListener("keydown", handleKey);
+  }, [history, screens]);
 
   const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
-    // Mittlere Maustaste immer, linke nur auf freier Flaeche — sonst waeren Rahmen nicht bedienbar.
-    const onEmptySurface = event.button === 0 && (event.target === viewportRef.current || event.target === boardRef.current);
+    const onEmptySurface = event.button === 0 && event.target === viewportRef.current;
     if (event.button !== 1 && !onEmptySurface) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -1297,93 +1205,32 @@ function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, 
     setPanning(false);
   };
 
-  const boardWidth = columns * previewWidth + (columns - 1) * boardGap;
-  const totalLinks = visibleScreens.reduce((sum, screen) => sum + screen.links.length, 0);
   return (
-    <>
-      <div
-        ref={viewportRef}
-        className={`canvas-viewport board-viewport${panning ? " panning" : ""}`}
-        onPointerDown={startPan}
-        onPointerMove={movePan}
-        onPointerUp={endPan}
-        onPointerCancel={endPan}
-        onAuxClick={(event) => { if (event.button === 1) event.preventDefault(); }}
-      >
-        <div ref={boardRef} className="canvas-pan-content design-board" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: boardWidth, gap: boardGap }}>
-          {boardScreens.map((screen) => {
-            const size = sizeOf(screen.id);
-            return (
-              <div
-                key={screen.id}
-                ref={(element) => { if (element) wrappers.current.set(screen.id, element); else wrappers.current.delete(screen.id); }}
-                className={`board-frame${focused === screen.id ? " focused" : ""}${screen.isStart ? " start" : ""}`}
-                style={{ width: previewWidth }}
-                onDoubleClick={() => fitScreen(screen.id)}
-              >
-                <header>
-                  <strong>{screen.name}</strong>
-                  {screen.isStart && <em>Startbildschirm</em>}
-                  <span />
-                  {view === "board" && <button type="button" onClick={() => openInFlow(screen.id)} title="Diesen Bildschirm durchklicken"><Play /></button>}
-                  <small>{screen.links.length ? `${screen.links.length} Verknüpfung${screen.links.length === 1 ? "" : "en"}` : "keine Verknüpfung"}</small>
-                </header>
-                <div className="board-frame-body" style={{ width: previewWidth, height: Math.max(size.height, 120) }}>
-                  <iframe
-                    ref={(element) => { if (element) frames.current.set(screen.id, element); else frames.current.delete(screen.id); }}
-                    title={`Bildschirm ${screen.name}`}
-                    src={frameUrl(screen.id)}
-                    loading="lazy"
-                    style={{ width: previewWidth, height: Math.max(size.height, 120) }}
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
-                    allow="autoplay; fullscreen"
-                    onLoad={(event) => tellFrame(event.currentTarget, { action: "highlight", on: highlight })}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {!probed && (
-          <iframe
-            ref={(element) => { if (element) frames.current.set("__probe__", element); else frames.current.delete("__probe__"); }}
-            className="board-probe"
-            title="Bildschirme werden gelesen"
-            src={frameUrl()}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        )}
-        {!visibleScreens.length && <div className="board-loading">Bildschirme werden gelesen …</div>}
+    <div
+      ref={viewportRef}
+      className={`canvas-viewport stage-viewport${panning ? " panning" : ""}`}
+      onPointerDown={startPan}
+      onPointerMove={movePan}
+      onPointerUp={endPan}
+      onPointerCancel={endPan}
+      onDoubleClick={resetView}
+      onAuxClick={(event) => { if (event.button === 1) event.preventDefault(); }}
+    >
+      <div className="canvas-pan-content stage-surface" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: size.width, height: size.height }}>
+        <iframe
+          ref={frameRef}
+          title="Design"
+          src={stageUrl}
+          style={{ width: size.width, height: size.height }}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
+          allow="autoplay; fullscreen"
+        />
       </div>
-      <div className="board-toolbar">
-        <button type="button" className={view === "board" ? "active" : ""} onClick={() => { setView("board"); setFlowHistory([]); }} title="Alle Bildschirme nebeneinander">
-          <Grid2X2 />Übersicht
-        </button>
-        <button type="button" className={view === "flow" ? "active" : ""} onClick={() => openInFlow(flowTarget ?? startScreen?.id ?? fallbackScreen.id)} title="Einen Bildschirm groß durchklicken">
-          <Play />Durchklicken
-        </button>
-        {view === "flow" && (
-          <button type="button" disabled={!flowHistory.length} onClick={() => { const previous = flowHistory.at(-1); setFlowHistory((history) => history.slice(0, -1)); if (previous) { setFlowScreen(previous); setFocused(previous); } }}>
-            <ChevronLeft />Zurück
-          </button>
-        )}
-        <i />
-        <button type="button" className={highlight ? "active" : ""} onClick={() => setHighlight(!highlight)} title="Alle klickbaren Stellen im Design hervorheben">
-          <MousePointer2 />Interaktionen
-        </button>
-        <select value={(view === "flow" ? flowTarget : focused) ?? ""} onChange={(event) => { const id = event.target.value; if (!id) return; setFocused(id); if (view === "flow") setFlowScreen(id); else if (!centerOn(id, Math.max(zoom, 0.5))) fitScreen(id); }}>
-          <option value="">Bildschirm wählen …</option>
-          {visibleScreens.map((screen) => <option value={screen.id} key={screen.id}>{screen.isStart ? `▶ ${screen.name}` : screen.name}</option>)}
-        </select>
-        <i />
-        <IconButton label="Verkleinern" onClick={() => zoomAtCenter(zoom * 0.8)}><ZoomOut /></IconButton>
-        <b>{Math.round(zoom * 100)} %</b>
-        <IconButton label="Vergrößern" onClick={() => zoomAtCenter(zoom * 1.25)}><ZoomIn /></IconButton>
-        <button type="button" onClick={fitBoard} title="Alles einpassen"><Maximize2 />Einpassen</button>
-        <button type="button" onClick={() => { userAdjusted.current = true; if (startScreen) fitScreen(startScreen.id); }} title="Zum Startbildschirm springen">Start</button>
-        {!totalLinks && visibleScreens.length > 1 && <small className="board-hint">Keine Verknüpfungen im Design — „Design aus den Quellen aufbauen“ erzeugt sie.</small>}
+      <div className="stage-hint">
+        {history.length > 0 && <button type="button" onClick={goBack} title="Zurück (Rücktaste)"><ChevronLeft /></button>}
+        {screens.length > 1 && <button type="button" onClick={goStart} title="Zum Startbildschirm (Pos 1)"><Home /></button>}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1394,7 +1241,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1402,12 +1249,6 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
-  const [boardState, setBoardStateRaw] = useState<{ screens: PreviewScreen[]; active: string | null; links: number }>({ screens: [], active: null, links: 0 });
-  // Das Board meldet seinen Stand bei jedem Rendern. Ohne diesen Gleichheitsvergleich wuerde jede
-  // Meldung ein neues Rendern ausloesen und die beiden Komponenten schaukelten sich endlos auf.
-  const setBoardState = (next: { screens: PreviewScreen[]; active: string | null; links: number }) => setBoardStateRaw((current) =>
-    current.active === next.active && current.links === next.links && current.screens.length === next.screens.length && current.screens.every((screen, index) => screen.id === next.screens[index]?.id) ? current : next);
-  const activeScreen = boardState.screens.find((screen) => screen.id === boardState.active)?.name ?? null;
   const reconstruct = useMutation({
     mutationFn: ({ retryFailed, force }: { retryFailed: boolean; force?: boolean }) => reconstructProject(projectId, setReconstructionProgress, retryFailed, force ?? false),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
@@ -1473,27 +1314,8 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   if (imported?.imported) {
     return (
       <div className="canvas imported-canvas">
-        <div className="canvas-toolbar imported-toolbar">
-          <Status kind={imported.reconstructed ? "success" : imported.previewPath ? "info" : reconstruct.error ? "error" : "info"}>{imported.reconstructed ? "Aus den Quellen originalgetreu aufgebaut" : imported.previewPath ? "Gefundene HTML-Datei" : reconstruct.error ? "Rekonstruktion unterbrochen" : "UI wird vollständig rekonstruiert"}</Status>
-          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}${boardState.screens.length ? ` · ${boardState.screens.length} Bildschirm${boardState.screens.length === 1 ? "" : "e"}` : ""}${activeScreen ? ` · ${activeScreen}` : ""}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
-          <small>
-            {imported.fileCount} Dateien · {(imported.totalBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB
-          </small>
-          {/* Zeigt die Leinwand nur eine gefundene Fremd-HTML statt des echten Designs, muss der
-              Aufbau aus den Quellen jederzeit nachholbar sein — auch für früher importierte Projekte. */}
-          {/* Auch ein fertiges Design muss neu aufgebaut werden koennen: erkennt die Quellenauswertung
-              inzwischen mehr (Startbildschirm, Verknuepfungen), bliebe das Projekt sonst fuer immer
-              auf dem Stand seines ersten Laufs. */}
-          {imported.previewPath && <Button disabled={reconstruct.isPending} onClick={() => reconstruct.mutate({ retryFailed: true, force: imported.reconstructed })} title="Baut alle Bildschirme neu aus dem Quellcode auf — dauert je nach Projektgröße einige Minuten.">{reconstruct.isPending ? `Design wird aufgebaut … ${Math.round(reconstructionProgress?.progress ?? 0)} %` : imported.reconstructed ? "Design neu aufbauen" : "Design aus den Quellen aufbauen"}</Button>}
-        </div>
-        {!imported.reconstructed && imported.previewPath && reconstruct.isPending && (
-          <div className="canvas-toolbar imported-toolbar">
-            <span>{reconstructionProgress?.result?.message ?? "UI-Quellen werden ausgewertet."}</span>
-            <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
-          </div>
-        )}
         {imported.previewPath ? (
-          <DesignBoard
+          <DesignStage
             key={`${projectId}:${imported.revision}`}
             previewOrigin={previewOrigin}
             previewPath={imported.previewPath}
@@ -1501,7 +1323,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             previewHeight={imported.previewHeight}
             zoom={zoom}
             setZoom={setZoom}
-            onScreensChange={setBoardState}
+            onScreenChange={onScreenChange}
           />
         ) : (
           <div className="empty reconstruction-state">
@@ -1513,6 +1335,21 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
             {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate({ retryFailed: true })}>Rekonstruktion erneut starten</Button>}
             {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
+          </div>
+        )}
+        {/* Der Aufbau laeuft in Minuten und muss sichtbar bleiben — aber nur waehrend er laeuft.
+            Sonst steht ueber dem Design dauerhaft Text, der nicht zum Design gehoert. */}
+        {imported.previewPath && reconstruct.isPending && (
+          <div className="stage-progress">
+            <span>{reconstructionProgress?.result?.message ?? "Design wird aus den Quellen aufgebaut."}</span>
+            <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
+          </div>
+        )}
+        {imported.previewPath && !reconstruct.isPending && (
+          <div className="stage-tools">
+            <button type="button" onClick={() => reconstruct.mutate({ retryFailed: true, force: imported.reconstructed })} title="Baut alle Bildschirme neu aus dem Quellcode auf — dauert je nach Projektgröße einige Minuten.">
+              <RotateCcw />{imported.reconstructed ? "Neu aufbauen" : "Aus Quellen aufbauen"}
+            </button>
           </div>
         )}
       </div>
@@ -1891,15 +1728,11 @@ function KeyboardModal({ onClose }: { onClose(): void }) {
       <div className="modal-body key-list">
         {[
           ["Vergrößern / verkleinern", "Mausrad"],
-          ["Leinwand verschieben", "Mittlere Maustaste ziehen"],
-          ["Leinwand verschieben (Alternative)", "Ziehen auf freier Fläche"],
-          ["Bildschirm formatfüllend zeigen", "Doppelklick auf den Rahmen"],
-          ["Klick im Design", "springt zum Zielbildschirm"],
-          ["Interagieren / Auswählen", "V · S"],
-          ["Kommentar / Bearbeiten / Zeichnen", "C · E · D"],
-          ["Zoom 100 %", "0"],
-          ["Gesprächspanel", "1"],
-          ["Inspektor", "2"],
+          ["Design verschieben", "Mittlere Maustaste ziehen"],
+          ["Wieder vollständig einpassen", "Doppelklick daneben"],
+          ["Einen Schritt zurück", "Rücktaste"],
+          ["Zum Startbildschirm", "Pos 1"],
+          ["Bearbeitungsleiste", "1"],
           ["Übersicht", "?"],
         ].map(([x, y]) => (
           <div key={x}>

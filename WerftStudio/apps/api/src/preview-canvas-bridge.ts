@@ -7,6 +7,10 @@ const bridgeScript = `<script ${bridgeMarker}>
 (() => {
   const params = new URLSearchParams(location.search);
   const frameMode = params.get("werftFrame") === "1";
+  // Buehnen-Modus: das Design steht allein und wird ECHT durchgeklickt — keine Leiste, keine
+  // abgefangenen Klicks. Genau so, wie die App auf dem Geraet startet.
+  const stageMode = params.get("werftStage") === "1";
+  const chromeless = frameMode || stageMode;
   const rawWanted = params.get("werftScreen") || location.hash.slice(1) || "";
   let wantedScreen = rawWanted;
   try { wantedScreen = decodeURIComponent(rawWanted); } catch (error) { wantedScreen = rawWanted; }
@@ -24,8 +28,8 @@ const bridgeScript = `<script ${bridgeMarker}>
     "[data-werft-navigate] { cursor: pointer; }",
     "[data-werft-navigate]:hover { outline: 2px solid rgba(49, 87, 213, 0.55); outline-offset: 1px; }",
     "html[data-werft-highlight=\\"on\\"] [data-werft-navigate] { outline: 2px solid #3157d5; outline-offset: 1px; background-image: linear-gradient(rgba(49, 87, 213, 0.14), rgba(49, 87, 213, 0.14)); }",
-    frameMode ? "html, body { overflow: hidden !important; }" : "",
-    frameMode ? ".werft-screen-switcher { display: none !important; }" : "",
+    chromeless ? "html, body { overflow: hidden !important; }" : "",
+    chromeless ? ".werft-screen-switcher { display: none !important; }" : "",
     frameMode ? "html[data-werft-frame=\\"single\\"] .werft-screen { display: block !important; }" : ""
   ].filter(Boolean).join("\\n");
   (document.head || document.documentElement).appendChild(style);
@@ -80,7 +84,7 @@ const bridgeScript = `<script ${bridgeMarker}>
   })).filter((screen) => screen.id);
 
   const publishScreens = () => {
-    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode });
+    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode, stageMode });
     measure();
   };
 

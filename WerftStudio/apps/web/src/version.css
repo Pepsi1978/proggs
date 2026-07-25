@@ -1,11 +1,16 @@
 :root {
-  --werft-version: "Werft v0.7.0";
-  --werft-build-time: "25.07.2026 19:57 Uhr";
+  --werft-version: "Werft v0.8.0";
+  --werft-build-time: "25.07.2026 21:40 Uhr";
 }
 
-.statusbar::after {
+/* Die Statusleiste unter dem Design ist entfallen; sichtbar bleibt der Stand im Projektkopf. */
+.project-header::after {
   content: var(--werft-version) " · " var(--werft-build-time);
   white-space: nowrap;
+  font: 11px/1 var(--font-mono);
+  color: var(--color-disabled);
+  order: 99;
+  margin-left: 4px;
 }
 
 .settings-layout > nav::after {

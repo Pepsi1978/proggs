@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.7.0-20260725.1957" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.8.0-20260725.2140" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -486,7 +486,9 @@ const chatInstructions = [
   '{"reply": "kurze deutsche Zusammenfassung", "changes": [{"path": "pfad/wie/geliefert", "edits": [{"find": "exakter vorhandener Ausschnitt", "replace": "neuer Ausschnitt"}]}]}',
   "Regeln: find muss WOERTLICH so im aktuellen Dateiinhalt vorkommen und durch genug Kontext EINDEUTIG sein.",
   "Nutze viele kleine Edits statt grosser Bloecke. Gib NIEMALS komplette Dateien zurueck.",
-  "Erhalte Struktur, Funktionen und alle nicht betroffenen Inhalte vollstaendig. Pfade exakt wie geliefert."
+  "Erhalte Struktur, Funktionen und alle nicht betroffenen Inhalte vollstaendig. Pfade exakt wie geliefert.",
+  "Ist der Wunsch mehrdeutig (unklar WELCHES Element, WELCHER Wert oder WELCHER Bildschirm gemeint ist), aendere NICHTS und stelle stattdessen in \"reply\" hoechstens drei kurze, nummerierte Rueckfragen. Lieber einmal nachfragen als am falschen Element arbeiten.",
+  "Bezieht sich der Wunsch erkennbar auf den gerade angezeigten Bildschirm, aendere NUR dessen Abschnitt (die passende <section class=\"werft-screen\">) und keinen anderen."
 ].join(" ");
 function extractJsonObject(text: string): string {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
@@ -533,7 +535,7 @@ async function codexRun(organizationId: string, instructions: string, input: str
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message } = z.object({ message: z.string().min(1).max(8000) }).strict().parse(request.body);
+  const { message, screen } = z.object({ message: z.string().min(1).max(8000), screen: z.string().max(200).optional() }).strict().parse(request.body);
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
   const texts: Array<{ path: string; content: string }> = [];
