@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyFacts, type DesignFacts } from "./design-facts.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, mapWithConcurrency, reconstructionSourceFiles } from "./import-reconstruction.js";
-import { composeScreens, extractScreenFragment, orderScreensByFlow, screenPlanFrom, themeStyles } from "./screen-composer.js";
+import { composeScreens, extractScreenFragment, orderScreensByFlow, resolveNavigationTarget, screenPlanFrom, themeStyles } from "./screen-composer.js";
 
 const facts = (patch: Partial<DesignFacts> = {}): DesignFacts => ({ ...emptyFacts("android"), ...patch });
 const options = (overrides: Partial<Parameters<typeof composeScreens>[1]> = {}) => ({ title: "Acme", platform: "android", width: 412, height: 915, device: "Pixel 9", density: 2.625, facts: facts(), ...overrides });
@@ -51,6 +51,22 @@ describe("Bildschirm-Zusammenbau", () => {
   it("liefert einen Ersatzbildschirm, wenn keine Screens erkannt wurden", () => {
     expect(screenPlanFrom(facts(), "Acme")).toHaveLength(1);
     expect(screenPlanFrom(facts(), "Acme")[0]).toMatchObject({ name: "Acme", isStart: true });
+  });
+
+  it("führt verkürzte Verknüpfungen auf die echte Bildschirm-Kennung zurück", () => {
+    // Genau dieser Fall stand im ausgelieferten Design: 50 Verknüpfungen auf „HistoryScreen",
+    // während die Bildschirme „compose:HistoryScreen" heissen — jeder Klick lief ins Leere.
+    const screens = [{ id: "compose:HistoryScreen", name: "HistoryScreen" }, { id: "compose:StartScreen", name: "StartScreen" }];
+    expect(resolveNavigationTarget("HistoryScreen", screens)).toBe("compose:HistoryScreen");
+    expect(resolveNavigationTarget("compose:StartScreen", screens)).toBe("compose:StartScreen");
+    expect(resolveNavigationTarget("history_screen", screens)).toBe("compose:HistoryScreen");
+    // Unbekannte Ziele bleiben unverändert, statt auf einen zufälligen Bildschirm zu zeigen.
+    expect(resolveNavigationTarget("Unbekannt", screens)).toBe("Unbekannt");
+    const html = composeScreens([
+      { id: "compose:StartScreen", name: "StartScreen", markup: '<button data-werft-navigate="HistoryScreen">Verlauf</button>', isStart: true },
+      { id: "compose:HistoryScreen", name: "HistoryScreen", markup: "<div>Verlauf</div>", isStart: false }
+    ], options());
+    expect(html).toContain('data-werft-navigate="compose:HistoryScreen"');
   });
 
   it("stellt den Startbildschirm nach vorn und ordnet danach nach Navigationsfluss", () => {

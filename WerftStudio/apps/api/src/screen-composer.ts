@@ -115,9 +115,31 @@ const shellScript = `
 
 export type ComposeOptions = { title: string; platform: string; width: number; height: number; device: string; density: number; facts: DesignFacts; sharedCss?: string };
 
+// Die Bildschirm-Kennungen heissen `compose:HistoryScreen`; die KI verlinkt aber gern die Kurzform
+// `HistoryScreen`. Beides sieht im Markup gleich gut aus — nur klickt sich das Design dann NICHT
+// durch, weil kein Ziel gefunden wird. Deshalb wird jede Verknuepfung auf die echte Kennung
+// zurueckgefuehrt, statt sich auf ein Modell zu verlassen.
+export function resolveNavigationTarget(target: string, screens: Array<{ id: string; name: string }>): string {
+  const value = target.trim();
+  if (!value) return target;
+  if (screens.some((screen) => screen.id === value)) return value;
+  const normalized = (text: string) => text.toLowerCase().replace(/^[a-z]+:/, "").replace(/[^a-z0-9]+/g, "");
+  const wanted = normalized(value);
+  const match = screens.find((screen) => screen.id.endsWith(`:${value}`))
+    ?? screens.find((screen) => screen.name === value)
+    ?? screens.find((screen) => normalized(screen.id) === wanted)
+    ?? screens.find((screen) => normalized(screen.name) === wanted);
+  return match ? match.id : target;
+}
+
+export function repairNavigationTargets(markup: string, screens: Array<{ id: string; name: string }>): string {
+  return markup.replace(/(\bdata-werft-navigate\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix: string, quote: string, value: string) =>
+    `${prefix}${quote}${escapeAttribute(resolveNavigationTarget(value, screens))}${quote}`);
+}
+
 export function composeScreens(screens: ComposedScreen[], options: ComposeOptions): string {
   const preview = JSON.stringify({ platform: options.platform, width: options.width, height: options.height, device: options.device, density: options.density });
-  const sections = orderScreensByFlow(screens).map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${screen.markup}\n</section>`).join("\n");
+  const sections = orderScreensByFlow(screens).map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${repairNavigationTargets(screen.markup, screens)}\n</section>`).join("\n");
   return `<!doctype html>
 <html lang="de">
 <head>

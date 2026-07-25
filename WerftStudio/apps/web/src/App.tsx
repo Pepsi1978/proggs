@@ -1080,6 +1080,21 @@ type FrameSize = { width: number; height: number };
 const boardColumns = (count: number) => (count <= 4 ? Math.max(1, count) : count <= 9 ? 3 : 4);
 const boardGap = 72;
 const fallbackScreen: PreviewScreen = { id: "__design__", name: "Design", isStart: true, links: [] };
+const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
+const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate)/i;
+
+// Ein Sperr- oder Anmeldebildschirm ist ein Zwischenzustand, kein Einstieg. Steht er im Design als
+// Startbildschirm, wird hier der eigentliche Einstieg gezeigt — sonst beginnt jeder Rundgang durch
+// die App vor einer verschlossenen Tür. Der Startbildschirm liegt immer als erster Rahmen.
+function withCorrectedStart(list: PreviewScreen[]): PreviewScreen[] {
+  if (list.length < 2) return list;
+  const marked = list.find((screen) => screen.isStart);
+  const better = !marked || gateNamePattern.test(marked.name)
+    ? list.find((screen) => entryNamePattern.test(screen.name)) ?? list.find((screen) => !gateNamePattern.test(screen.name))
+    : marked;
+  const start = better ?? marked ?? list[0]!;
+  return [start, ...list.filter((screen) => screen.id !== start.id)].map((screen) => (screen.isStart === (screen.id === start.id) ? screen : { ...screen, isStart: screen.id === start.id }));
+}
 
 // Die Leinwand ist ein Zeichenbrett: die Flaeche gehoert der App, nicht dem Rahmen. Mausrad
 // vergroessert, gedrueckte mittlere Maustaste (oder Ziehen auf freier Flaeche) verschiebt, und jeder
@@ -1211,7 +1226,7 @@ function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, 
       const frame = entry?.[1];
       if (data.action === "screens") {
         setProbed(true);
-        const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
+        const list = withCorrectedStart((data.screens ?? []).filter((screen) => screen && typeof screen.id === "string"));
         if (list.length) setScreens((current) => (current.length === list.length && current.every((screen, index) => screen.id === list[index]!.id) ? current : list));
         return;
       }
@@ -1869,12 +1884,16 @@ function Variants({ onAdopt }: { onAdopt(a: string, r: number, d: boolean): void
 }
 function KeyboardModal({ onClose }: { onClose(): void }) {
   return (
-    <Modal title="Tastaturkürzel" width="440px" onClose={onClose}>
+    <Modal title="Leinwand bedienen" width="460px" onClose={onClose}>
       <div className="modal-body key-list">
         {[
+          ["Vergrößern / verkleinern", "Mausrad"],
+          ["Leinwand verschieben", "Mittlere Maustaste ziehen"],
+          ["Leinwand verschieben (Alternative)", "Ziehen auf freier Fläche"],
+          ["Bildschirm formatfüllend zeigen", "Doppelklick auf den Rahmen"],
+          ["Klick im Design", "springt zum Zielbildschirm"],
           ["Interagieren / Auswählen", "V · S"],
           ["Kommentar / Bearbeiten / Zeichnen", "C · E · D"],
-          ["Zoom größer / kleiner", "+ · −"],
           ["Zoom 100 %", "0"],
           ["Gesprächspanel", "1"],
           ["Inspektor", "2"],

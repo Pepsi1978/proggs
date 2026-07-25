@@ -48,6 +48,27 @@ const bridgeScript = `<script ${bridgeMarker}>
     post({ action: "size", width, height, screenId: screenIdOf(screen) });
   };
 
+  // Die Bildschirme heissen intern z. B. "compose:HistoryScreen"; verlinkt wird im Design aber oft
+  // die Kurzform "HistoryScreen". Ohne diese Zuordnung findet der Klick sein Ziel nicht — das Design
+  // wirkt dann wie ein Standbild, obwohl alle Verknuepfungen vorhanden sind. Die Reparatur laeuft
+  // beim Ausliefern und wirkt damit auch fuer laengst aufgebaute Designs.
+  const simplify = (text) => String(text).toLowerCase().replace(/^[a-z]+:/, "").replace(/[^a-z0-9]+/g, "");
+  const repairNavigationTargets = () => {
+    const all = screensOf();
+    if (!all.length) return;
+    for (const node of Array.prototype.slice.call(document.querySelectorAll("[data-werft-navigate]"))) {
+      const target = (node.getAttribute("data-werft-navigate") || "").trim();
+      if (!target || all.some((screen) => screenIdOf(screen) === target)) continue;
+      const wanted = simplify(target);
+      const match = all.filter((screen) => screenIdOf(screen).endsWith(":" + target))[0]
+        || all.filter((screen) => (screen.dataset.screenName || "") === target)[0]
+        || all.filter((screen) => simplify(screenIdOf(screen)) === wanted)[0]
+        || all.filter((screen) => simplify(screen.dataset.screenName || "") === wanted)[0];
+      if (match) node.setAttribute("data-werft-navigate", screenIdOf(match));
+    }
+  };
+  repairNavigationTargets();
+
   // Die Bildschirmliste wird EINMAL erfasst und danach unveraendert gemeldet: im Rahmen-Modus
   // bleibt spaeter nur noch der eigene Bildschirm im Dokument stehen, die Liste muss aber
   // vollstaendig bleiben — sonst haette das Studio nach dem Aufraeumen nur noch einen Bildschirm.
