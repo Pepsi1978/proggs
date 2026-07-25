@@ -10,7 +10,7 @@ type Project = { id: string; name: string; type: string; fidelity: string; platf
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; previewPath?: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; previewPath?: string };
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
 type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number };
 type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null; attempts?: number; heartbeatAt?: string };
@@ -374,7 +374,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
   return (
     <Modal title="Design importieren" width="680px" onClose={upload.isPending ? () => {} : onClose}>
       <div className="modal-body import-dialog">
-        <p className="subtle">Liest das vollständige UI eines Projekts ein und baut daraus eine präzise, direkt bearbeitbare HTML-Version mit originalen Abmessungen, Positionen, Assets und Farbvarianten.</p>
+        <p className="subtle">Misst Farben, Abmessungen, Typografie und Effekte exakt aus den Projektquellen und baut daraus jeden Bildschirm einzeln als durchklickbare, direkt bearbeitbare HTML-Version — anschließend wird das Ergebnis gegen die gemessenen Werte nachgeprüft.</p>
         <label>
           Projektname
           <input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
@@ -446,7 +446,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
         <div className="setting-row">
           <span>
             <strong>Nur Frontend übernehmen</strong>
-            <small>Übernimmt sämtliche First-Party-UI-Quellen, Navigationen, Themes, Ressourcen, Bilder und Fonts; nur Backend, Abhängigkeiten und generierte Build-Dateien bleiben außen vor.</small>
+            <small>Übernimmt sämtliche First-Party-UI-Quellen, Navigationen, Themes, Ressourcen, Bilder und Fonts; Backend-Code bleibt außen vor. Build-Ausgaben, Werkzeugberichte und Abhängigkeiten werden generell nicht importiert — sie enthalten kein Design und würden den Import nur verlangsamen.</small>
           </span>
           <button type="button" className={`switch ${frontendOnly ? "on" : ""}`} onClick={() => setFrontendOnly(!frontendOnly)}>
             <i />
@@ -1090,6 +1090,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
+  const [activeScreen, setActiveScreen] = useState<string | null>(null);
   const reconstruct = useMutation({
     mutationFn: (retryFailed: boolean) => reconstructProject(projectId, setReconstructionProgress, retryFailed),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
@@ -1142,7 +1143,11 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   }, [zoom, setZoom, imported?.imported]);
   useEffect(() => {
     const handlePreviewMessage = (event: MessageEvent) => {
-      if (event.source !== previewRef.current?.contentWindow || !event.data || event.data.source !== "werft-preview-canvas") return;
+      if (event.source !== previewRef.current?.contentWindow || !event.data) return;
+      // Die rekonstruierte Datei meldet jeden Bildschirmwechsel; so ist im Studio sichtbar,
+      // welcher der durchklickbaren Bildschirme gerade gezeigt wird.
+      if (event.data.source === "werft-preview-screen") { setActiveScreen(typeof event.data.screenName === "string" ? event.data.screenName : null); return; }
+      if (event.data.source !== "werft-preview-canvas") return;
       const { action, x, y, deltaY } = event.data as { action?: string; x?: number; y?: number; deltaY?: number };
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
       if (!previewRef.current.offsetWidth || !previewRef.current.offsetHeight) return;
@@ -1184,12 +1189,21 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     return (
       <div className="canvas imported-canvas">
         <div className="canvas-toolbar imported-toolbar">
-          <Status kind={imported.previewPath ? "success" : reconstruct.error ? "error" : "info"}>{imported.previewPath ? "HTML originalgetreu aufgebaut" : reconstruct.error ? "Rekonstruktion unterbrochen" : "UI wird vollständig rekonstruiert"}</Status>
-          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
+          <Status kind={imported.reconstructed ? "success" : imported.previewPath ? "info" : reconstruct.error ? "error" : "info"}>{imported.reconstructed ? "Aus den Quellen originalgetreu aufgebaut" : imported.previewPath ? "Gefundene HTML-Datei" : reconstruct.error ? "Rekonstruktion unterbrochen" : "UI wird vollständig rekonstruiert"}</Status>
+          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}${activeScreen ? ` · ${activeScreen}` : ""}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
           <small>
             {imported.fileCount} Dateien · {(imported.totalBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB
           </small>
+          {/* Zeigt die Leinwand nur eine gefundene Fremd-HTML statt des echten Designs, muss der
+              Aufbau aus den Quellen jederzeit nachholbar sein — auch für früher importierte Projekte. */}
+          {!imported.reconstructed && imported.previewPath && <Button disabled={reconstruct.isPending} onClick={() => reconstruct.mutate(true)}>{reconstruct.isPending ? `Design wird aufgebaut … ${Math.round(reconstructionProgress?.progress ?? 0)} %` : "Design aus den Quellen aufbauen"}</Button>}
         </div>
+        {!imported.reconstructed && imported.previewPath && reconstruct.isPending && (
+          <div className="canvas-toolbar imported-toolbar">
+            <span>{reconstructionProgress?.result?.message ?? "UI-Quellen werden ausgewertet."}</span>
+            <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
+          </div>
+        )}
         {imported.previewPath ? (
           <div {...viewportProps}>
             <div className="canvas-pan-content imported-preview-frame" style={{ ...contentStyle, width: imported.previewWidth, height: imported.previewHeight }}>

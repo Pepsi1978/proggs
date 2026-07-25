@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseEntryPath, isFrontendFile, mimeForPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
+import { chooseEntryPath, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
 
 const file = (path: string, text = "x") => ({ path, data: Buffer.from(text), mime: "text/plain" });
 
@@ -43,6 +43,27 @@ describe("project import validation", () => {
     expect(isFrontendFile("design.werft", "android")).toBe(true);
     expect(isFrontendFile("runtime/app.mjs", "web")).toBe(true);
     expect(isFrontendFile("runtime/app.wasm", "web")).toBe(true);
+  });
+
+  it("never shows a Gradle or tooling report instead of the app design", () => {
+    // Der Gradle-Testreport gewann die Startseitenwahl (index.html + build/ als Pluspunkt) und
+    // wurde als „HTML originalgetreu aufgebaut" angezeigt — statt der App.
+    const report = file("app/build/reports/tests/testDebugUnitTest/index.html");
+    expect(chooseEntryPath([report, file("app/src/main/res/layout/activity_main.xml")], "android")).toBeUndefined();
+    expect(chooseEntryPath([report, file("www/index.html")], "android")).toBe("www/index.html");
+    expect(chooseEntryPath([file("build/reports/jacoco/test/html/index.html"), file("public/index.html")], "web")).toBe("public/index.html");
+    expect(chooseEntryPath([file("build/dokka/html/index.html")], "android")).toBeUndefined();
+  });
+
+  it("drops generated artifacts and dependencies even when the frontend filter is off", () => {
+    for (const path of ["app/build/reports/tests/test/index.html", "app/build/intermediates/merged_res/values.xml", "node_modules/lib/index.js", ".gradle/caches/x.bin", "ios/DerivedData/App/x.plist", "Pods/Alamofire/Source.swift", "app/build/outputs/apk/app.apk", "obj/Debug/App.dll", "coverage/lcov-report/index.html"]) {
+      expect(isGeneratedArtifact(path, "android"), path).toBe(true);
+    }
+    // Echte Quellen und Web-Bundles bleiben erhalten.
+    expect(isGeneratedArtifact("app/src/main/res/values/colors.xml", "android")).toBe(false);
+    expect(isGeneratedArtifact("dist/index.html", "web")).toBe(false);
+    expect(isGeneratedArtifact("build/index.html", "web")).toBe(false);
+    expect(isGeneratedArtifact("src/components/Button.tsx", "web")).toBe(false);
   });
 
   it("marks native UI sources as editable text", () => {

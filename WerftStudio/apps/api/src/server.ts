@@ -18,8 +18,13 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
-import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
-import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
+import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
+import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
+import { effectGuidance } from "./effect-catalog.js";
+import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
+import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
+import { composeScreens, extractScreenFragment, screenPlanFrom } from "./screen-composer.js";
+import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
@@ -175,7 +180,10 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
       const candidatePath = (part.filename ?? "").replaceAll("\\", "/");
       const expectedSize = pendingFileSize;
       pendingFileSize = undefined;
-      if (frontendOnly && candidatePath && !candidatePath.toLowerCase().endsWith(".zip") && !isFrontendFile(candidatePath, platform)) {
+      const isArchive = candidatePath.toLowerCase().endsWith(".zip");
+      // Build-Ausgaben und Fremdabhaengigkeiten werden verworfen, bevor sie Bandbreite und
+      // Objektspeicher kosten — sie sind nie Teil des Designs.
+      if (candidatePath && !isArchive && ((frontendOnly && !isFrontendFile(candidatePath, platform)) || isGeneratedArtifact(candidatePath, platform))) {
         for await (const chunk of part.file) void chunk;
         continue;
       }
@@ -209,7 +217,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
       const zip = files[0]!;
       if (zip.size > importLimits.maxArchiveFileBytes) fail("IMPORT_ARCHIVE_TOO_LARGE", 413, "Das ZIP ist zu groß für sichere In-Memory-Entpackung. Bitte den Projektordner direkt streamen.");
       const unpacked = await expandZip(await readObject(`${objectPrefix}${zip.path}`));
-      const selected = frontendOnly ? unpacked.filter((file) => isFrontendFile(file.path, platform)) : unpacked;
+      const selected = unpacked.filter((file) => !isGeneratedArtifact(file.path, platform) && (!frontendOnly || isFrontendFile(file.path, platform)));
       if (!selected.length) fail("IMPORT_EMPTY", 400, "Das ZIP enthält keine Frontend-/UI-Dateien.");
       const expanded = validateImportFiles(selected);
       await objectStore.removeObject(env.S3_BUCKET, `${objectPrefix}${zip.path}`);
@@ -234,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.6-20260725.1633" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.5.0-20260725.1807" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -358,7 +366,13 @@ app.post("/api/v1/imports", { bodyLimit: Number.MAX_SAFE_INTEGER }, async (reque
     if (explicitNativeFile && parsedNative && !parsedNative.success) fail("IMPORT_DOCUMENT_INVALID", 400, "Die Werft-/JSON-Datei ist kein gültiges DesignDocument.");
     const nativeDocument = parsedNative?.success ? designDocumentSchema.parse({ ...parsedNative.data, projectId }) : undefined;
     const storeAsFiles = !nativeDocument;
-    const entryPath = storeAsFiles ? chooseEntryPath(files) ?? "" : undefined;
+    const hasNativeUiSources = files.some((file) => nativeUiSourcePattern.test(file.path));
+    // Eine native App mit eigenen UI-Quellen wird IMMER rekonstruiert. Ein zufaellig gefundenes
+    // HTML (Werkzeugbericht, Doku, eingebettete Hilfeseite) darf dann nicht als Startseite gelten —
+    // sonst zeigt die Leinwand eine Fremdseite und meldet sie faelschlich als fertiges Design.
+    const needsReconstruction = storeAsFiles && (platform !== "web" && hasNativeUiSources);
+    const detectedEntry = storeAsFiles && !needsReconstruction ? chooseEntryPath(files, platform) ?? "" : undefined;
+    const entryPath = storeAsFiles ? detectedEntry ?? "" : undefined;
     const document = nativeDocument ?? importedDesignDocument(projectId, name, platform, projectType);
     if (!storeAsFiles) {
       await Promise.all(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
@@ -371,8 +385,7 @@ app.post("/api/v1/imports", { bodyLimit: Number.MAX_SAFE_INTEGER }, async (reque
       if (storeAsFiles) await tx.insert(projectImports).values({ projectId, organizationId: actor.organizationId, format: "ui-project", entryPath: entryPath ?? "", objectPrefix, manifest: files, fileCount: files.length, totalBytes: files.reduce((sum, file) => sum + file.size, 0) });
       await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.imported", targetType: "project", targetId: projectId, result: "success", metadata: { format: storeAsFiles ? "ui-project" : "design-document", fileCount: files.length, entryDetected: Boolean(entryPath), streamed: true }, correlationId: request.id });
     });
-    const hasNativeUiSources = files.some((file) => nativeUiSourcePattern.test(file.path));
-    return reply.status(201).send({ projectId, kind: storeAsFiles ? (entryPath ? "html" : "files") : "native", requiresReconstruction: storeAsFiles && (!entryPath || (platform !== "web" && hasNativeUiSources)) });
+    return reply.status(201).send({ projectId, kind: storeAsFiles ? (entryPath ? "html" : "files") : "native", requiresReconstruction: storeAsFiles && (needsReconstruction || !entryPath) });
   } catch (error) {
     await Promise.allSettled(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
     throw error;
@@ -406,7 +419,10 @@ app.get("/api/v1/projects/:projectId/import", async (request) => {
     try { profile = previewProfileFromHtml((await readObject(`${row.imported.objectPrefix}${row.imported.entryPath}`)).toString("utf8"), fallbackProfile); }
     catch (error) { request.log.warn({ err: error, projectId }, "Vorschau-Metadaten nicht lesbar; Plattformprofil wird verwendet"); }
   }
-  return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+  // `reconstructed` unterscheidet das aus den Quellen aufgebaute Design von einer nur gefundenen
+  // HTML-Datei; nur Ersteres darf als originalgetreu aufgebaut angezeigt werden.
+  const reconstructed = row.imported.entryPath.startsWith(".werft-generated/");
+  return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
 });
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
 app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
@@ -634,30 +650,78 @@ async function updateReconstructionJob(jobId: string, runAttempt: number, status
   const updated = await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`)).returning({ id: jobs.id });
   if (!updated[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
 }
-const cleanHtmlResponse = (text: string) => text.trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
 const generatedDesignPathPattern = /^\.werft-generated\/[0-9a-f-]+(?:\/\d+)?\/design\.html$/i;
+// Grenzen der deterministischen Messung: sie soll Sekunden dauern und darf den Speicher nicht sprengen.
+const maxFactFileBytes = 2 * 1024 * 1024, maxFactFiles = 6_000, factReadConcurrency = 12, maxReconstructedScreens = 24;
+const maxScreenSourceChars = 90_000, maxPublishedProbes = 40;
 const reconstructionAnalysisInstructions = [
   "Du analysierst einen fortlaufenden Teil eines App-Projekts für eine pixelgenaue HTML-Rekonstruktion.",
   "Erstelle ein kompaktes Evidenzprotokoll, keine HTML-Datei und kein Markdown-Gerede.",
-  "Bewahre JEDE exakte sichtbare Konstante: Breite, Höhe, x/y-Ausrichtung, Padding, Margin, Gap, Insets, Radius, Stroke, Schatten, Schriftfamilie/-größe/-gewicht/-Zeilenhöhe, Farbe inklusive Alpha, Icon-/Assetpfad und Z-Order.",
-  "Dokumentiere Komponentenbaum, Constraints/Modifier-Reihenfolge, Navigation, Zustände, Texte sowie sämtliche Light-/Dark-/Zusatz-Themes.",
+  "Die mitgelieferten DESIGN-FAKTEN sind bereits exakt gemessen — wiederhole sie nicht, sondern beschreibe, WELCHES Element WELCHEN dieser Werte benutzt.",
+  "Bewahre JEDE exakte sichtbare Konstante, die in den Fakten noch fehlt: Breite, Höhe, x/y-Ausrichtung, Padding, Margin, Gap, Insets, Radius, Stroke, Schatten, Schriftfamilie/-größe/-gewicht/-Zeilenhöhe, Farbe inklusive Alpha, Icon-/Assetpfad und Z-Order.",
+  "Dokumentiere Komponentenbaum, Constraints/Modifier-Reihenfolge, Navigation, Zustände, Texte sowie sämtliche Light-/Dark-/Zusatz-Themes — jeweils mit dem Bildschirm, zu dem sie gehören.",
   "Nichts schätzen. Unsichere Beziehungen mit Quellpfad markieren. Maximal 12000 Zeichen, aber keine exakten Designwerte weglassen."
 ].join(" ");
+
+// Bildschirm-Aufbau: bewusst ein FRAGMENT statt eines ganzen Dokuments — nur so passt jeder
+// Bildschirm vollstaendig in eine Antwort, und der Zusammenbau bleibt deterministisch.
+function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfile, screenIds: string[]): string {
+  return [
+    "Du bist der pixelgenaue Design-Rekonstrukteur von Werft Studio und baust GENAU EINEN Bildschirm einer bestehenden App nach.",
+    `Zielplattform ${platform}, Bildschirmfläche exakt ${profile.width}x${profile.height} CSS-Pixel (${profile.device}, Dichte ${profile.density}). Ein logisches dp/sp/pt/DIP ist exakt ein CSS-Pixel.`,
+    "Die DESIGN-FAKTEN sind gemessene Quellwerte und damit verbindlich: übernimm Farben, Maße, Abstände, Radien, Schriftgrößen und Effekte ZEICHENGENAU aus ihnen. Nichts runden, nichts „verschönern“, nichts erfinden.",
+    "Die ORIGINALQUELLEN dieses Bildschirms schlagen im Zweifel jede verdichtete Evidenz.",
+    "Positioniere so, wie es das Original tut: Constraint-/absolut-basierte Oberflächen absolut, Stack-/Flow-Layouts als Flex/Grid mit exakt denselben Gaps und Insets. Kein zusätzliches Zentrieren, kein Skalieren, keine eigenen Außenabstände.",
+    "Original-Icons aus der Icon-Bibliothek inline als <svg> einsetzen; niemals Ersatzsymbole, Emoji oder Fremd-Icons. Bitmap-Assets als /<exakter Manifestpfad> referenzieren.",
+    effectGuidance,
+    `Verlinke Navigationsziele über data-werft-navigate="ZIEL-ID"; gültige IDs sind: ${screenIds.join("; ") || "keine"}.`,
+    "Nutze für Farben die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Baue KEINE eigenen Theme-Umschalter, Werkzeugleisten oder Hinweistexte ein.",
+    "Antworte AUSSCHLIESSLICH mit dem HTML-Fragment dieses einen Bildschirms (optional ein <style>-Block davor, dessen Selektoren eindeutig zu diesem Bildschirm gehören). Kein <!doctype>, kein <html>, kein <body>, kein Markdown, keine Erklärung."
+  ].join("\n");
+}
+
+const fidelityRepairInstructions = [
+  "Du bist die Nachmessung der Design-Rekonstruktion von Werft Studio.",
+  "Die aufgeführten Abweichungen wurden PROGRAMMATISCH gemessen: jeder Punkt nennt einen Quellwert, der im Markup fehlt oder falsch ist.",
+  "Korrigiere ausschließlich diese Punkte, soweit sie diesen Bildschirm betreffen. Ändere nichts an Aufbau, Inhalt oder Gestaltung, was nicht in der Liste steht.",
+  "Betrifft ein Punkt einen anderen Bildschirm, lass ihn unverändert — erfinde dafür keine Elemente.",
+  effectGuidance,
+  "Antworte AUSSCHLIESSLICH mit dem vollständigen korrigierten Fragment dieses Bildschirms (optional ein <style>-Block davor). Kein <!doctype>, kein <html>, kein <body>, kein Markdown."
+].join("\n");
+
+// Beim screenweisen Aufbau bekommt jeder Bildschirm seinen eigenen, UNVERDICHTETEN Quelltext —
+// genau das rettet die Details, die eine Evidenz-Verdichtung sonst wegkuerzt.
+async function readScreenSources(objectPrefix: string, manifest: ImportManifestFile[], wanted: string[]): Promise<string> {
+  if (!wanted.length) return "";
+  const files = manifest.filter((file) => wanted.some((entry) => file.path === entry || file.path.endsWith(`/${entry}`) || file.path.endsWith(`/${entry}.xml`)));
+  const parts: string[] = [];
+  let budget = maxScreenSourceChars;
+  for (const file of files) {
+    if (budget <= 0) break;
+    try {
+      const text = (await readObject(`${objectPrefix}${file.path}`)).toString("utf8").slice(0, budget);
+      budget -= text.length;
+      parts.push(`--- ${file.path} ---\n${text}`);
+    } catch (error) { app.log.warn({ err: error, path: file.path }, "Bildschirmquelle nicht lesbar"); }
+  }
+  return parts.join("\n\n");
+}
+
 type ReconstructionCodexRunner = (operation: string, instructions: string, input: string, remainingCompactionCalls: number, newlyPlannedCalls: number) => Promise<CodexRunResult>;
+const compactionInstructions = "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden sowie die Zuordnung zu Bildschirmen. Entferne nur Wiederholungen. Maximal 18000 Zeichen.";
+// Die Verdichtungsgruppen einer Runde sind voneinander unabhaengig und laufen deshalb nebenlaeufig.
 async function compactReconstructionEvidence(summaries: string[], run: ReconstructionCodexRunner): Promise<string[]> {
   let current = summaries;
   let round = 0;
   while (current.join("\n").length > 320_000) {
     round += 1;
-    const next: string[] = [];
-    const groupCount = Math.ceil(current.length / 18);
-    for (let index = 0; index < current.length; index += 18) {
-      const group = current.slice(index, index + 18).join("\n\n");
-      const groupNumber = Math.floor(index / 18) + 1;
-      const { text } = await run(`Evidenz verdichten ${round}.${groupNumber}`, "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden. Entferne nur Wiederholungen. Maximal 18000 Zeichen.", group, groupCount - groupNumber, groupNumber === 1 ? groupCount : 0);
-      next.push(text.trim());
-    }
-    current = next;
+    const groups: string[][] = [];
+    for (let index = 0; index < current.length; index += 18) groups.push(current.slice(index, index + 18));
+    const groupCount = groups.length;
+    current = await mapWithConcurrency(groups, reconstructionConcurrency, async (group, index) => {
+      const { text } = await run(`Evidenz verdichten ${round}.${index + 1}`, compactionInstructions, group.join("\n\n"), groupCount - index - 1, index === 0 ? groupCount : 0);
+      return text.trim();
+    });
   }
   return current;
 }
@@ -676,14 +740,19 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     completedOperations,
     totalOperations,
     retryCount,
-    probes: probes.map((probe) => ({ ...probe })),
+    // Ein Lauf erzeugt jetzt Dutzende Schritte. Der veroeffentlichte Zustand wird alle zwei Sekunden
+    // je laufendem Schritt geschrieben — ohne Begrenzung waechst jede dieser Schreibungen mit.
+    probes: probes.slice(-maxPublishedProbes).map((probe) => ({ ...probe })),
     startedAt,
     ...(currentOperation ? { currentOperation } : {})
   });
   const publish = async (status: "queued" | "running" | "completed" | "failed", progress: number, state: ReconstructionState, errorCode?: string) => {
-    latestProgress = progress;
+    // Mehrere Schritte laufen jetzt gleichzeitig und melden eigene Fortschrittswerte. Der Balken
+    // darf dabei nie zurueckspringen, sonst wirkt der Lauf haengend.
+    const effective = status === "running" ? Math.max(latestProgress, progress) : progress;
+    latestProgress = effective;
     latestState = state;
-    await updateReconstructionJob(jobId, runAttempt, status, progress, state, errorCode);
+    await updateReconstructionJob(jobId, runAttempt, status, effective, state, errorCode);
   };
   const publishMilestone = async (progress: number, state: ReconstructionState, remainingWeight: number, phaseProgress: number | null = 100, showEta = true) => {
     const timing = reconstructionTiming(timingSamples, null, 0, remainingWeight);
@@ -777,51 +846,130 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     const row = (await db.select({ imported: projectImports, revision: projects.revision, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
     if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
     const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
-    const profile = previewProfiles[platform] ?? previewProfiles.web;
+    let profile = previewProfiles[platform] ?? previewProfiles.web;
     const sources = reconstructionSourceFiles(row.imported.manifest);
     if (!sources.length) fail("RECONSTRUCT_NO_SOURCES", 400, "Im Projekt wurden keine lesbaren UI-Quellen gefunden.");
     const totalBytes = sources.reduce((sum, file) => sum + file.size, 0);
     const estimatedAnalysisCalls = estimateAnalysisCallCount(totalBytes);
     app.log.info({ event: "reconstruction.started", jobId, projectId, platform, sourceFiles: sources.length, sourceBytes: totalBytes, estimatedAnalysisCalls, totalManifestFiles: row.imported.manifest.length }, "Design-Rekonstruktion gestartet");
-    await publishMilestone(5, reconstructionState("inventory", "Projektdateien und UI-Ressourcen wurden vollständig inventarisiert.", 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 4);
+    await publishMilestone(4, reconstructionState("inventory", "Projektdateien und UI-Ressourcen wurden vollständig inventarisiert.", 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 5);
+
+    // Schritt 1: exakt messen statt schaetzen. Farben, Maße, Typografie, Formen, Effekte, Icons und
+    // Screens werden deterministisch aus den Quellen geparst — ohne KI und in Sekunden. Diese Werte
+    // ueberleben jede spaetere Verdichtung und sind fuer Aufbau und Nachpruefung verbindlich.
+    const factPaths = new Set(factCandidatePaths(platform, row.imported.manifest.map((file) => file.path)));
+    const factFiles = row.imported.manifest.filter((file) => factPaths.has(file.path) && file.size <= maxFactFileBytes).slice(0, maxFactFiles);
+    const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") }));
+    const facts = extractDesignFacts(platform, factTexts);
+    if (facts.viewport) profile = { width: facts.viewport.width, height: facts.viewport.height, device: facts.viewport.device, density: facts.viewport.density };
+    const factSheet = renderFactSheet(facts);
+    const assetLibrary = renderAssetLibrary(facts);
+    const measuredValues = factCount(facts);
+    app.log.info({ event: "reconstruction.facts_measured", jobId, projectId, platform, measuredValues, colors: facts.colors.length, dimensions: facts.dimensions.length, effects: facts.effects.length, icons: facts.assets.filter((asset) => asset.svg).length, screens: facts.screens.length, factFiles: factFiles.length }, "Designwerte deterministisch gemessen");
+    await publishMilestone(9, reconstructionState("measure", `${measuredValues} exakte Designwerte aus ${factFiles.length} Quelldateien gemessen: ${facts.colors.length} Farben, ${facts.dimensions.length} Maße, ${facts.effects.length} Effekte, ${facts.screens.length} Bildschirme.`, 2, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 4);
+
+    // Schritt 2: Analysepakete laufen jetzt nebenlaeufig statt streng nacheinander — das ist der
+    // groesste Zeitgewinn; die Reihenfolge der Evidenz bleibt trotzdem stabil.
     const summaries: string[] = [];
     let processedBytes = 0, processedFiles = 0, batchNumber = 0;
+    const pendingBatches: Array<{ number: number; text: string; completedBytes: number; completedFiles: number }> = [];
+    const flushBatches = async () => {
+      if (!pendingBatches.length) return;
+      const window = pendingBatches.splice(0, pendingBatches.length);
+      const ratioBefore = totalBytes ? processedBytes / totalBytes : 0;
+      const texts = await mapWithConcurrency(window, reconstructionConcurrency, async (batch) => {
+        const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batch.number}.\n\n${factSheet}\n\n=== QUELLTEXT DIESES PAKETS ===\n${batch.text}`;
+        const { text } = await runCodexStep({ operation: `UI-Analysepaket ${batch.number}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 50, remainingWeight: 5, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `${window.length} UI-Analysepakete werden gleichzeitig ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 2, processedFiles, sources.length, processedBytes, totalBytes) });
+        return text.trim();
+      });
+      summaries.push(...texts);
+      for (const batch of window) { processedBytes += batch.completedBytes; processedFiles += batch.completedFiles; }
+      const ratio = totalBytes ? processedBytes / totalBytes : 1;
+      await publishMilestone(10 + ratio * 50, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 3 : 2, processedFiles, sources.length, processedBytes, totalBytes), 5, 100, false);
+    };
     for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
       batchNumber += 1;
-      const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batchNumber}.\n${batch.text}`;
-      const ratioBefore = totalBytes ? processedBytes / totalBytes : 0;
-      const { text } = await runCodexStep({ operation: `UI-Analysepaket ${batchNumber}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 58, remainingWeight: 4, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `UI-Analysepaket ${batchNumber} wird ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 1, processedFiles, sources.length, processedBytes, totalBytes) });
-      summaries.push(text.trim());
-      processedBytes += batch.completedBytes;
-      processedFiles += batch.completedFiles;
-      const ratio = totalBytes ? processedBytes / totalBytes : 1;
-      await publishMilestone(10 + ratio * 58, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 4 : 1, processedFiles, sources.length, processedBytes, totalBytes), 4, 100, false);
+      pendingBatches.push({ ...batch, number: batchNumber });
+      if (pendingBatches.length >= reconstructionConcurrency) await flushBatches();
     }
-    totalOperations = completedOperations + 2;
+    await flushBatches();
     const binaryAssets = row.imported.manifest.filter((file) => !sources.some((source) => source.path === file.path));
     for (let index = 0; index < binaryAssets.length; index += 1500) summaries.push(`ASSET-INVENTAR:\n${binaryAssets.slice(index, index + 1500).map((file) => `${file.path} | ${file.mime} | ${file.size} Bytes`).join("\n")}`);
-    await publishMilestone(72, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 4, processedFiles, sources.length, processedBytes, totalBytes), 4, 0);
+    await publishMilestone(62, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 3, processedFiles, sources.length, processedBytes, totalBytes), 5, 0);
     const evidence = (await compactReconstructionEvidence(summaries, async (operation, instructions, input, remainingCompactionCalls, newlyPlannedCalls) => {
       totalOperations += newlyPlannedCalls;
-      return runCodexStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 72, remainingWeight: remainingCompactionCalls * 0.8 + 4, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 4, processedFiles, sources.length, processedBytes, totalBytes) });
+      return runCodexStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 62, remainingWeight: remainingCompactionCalls * 0.8 + 5, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 3, processedFiles, sources.length, processedBytes, totalBytes) });
     })).join("\n\n");
-    const reconstructionInstructions = [
-      "Du bist der pixelgenaue Design-Rekonstrukteur von Werft Studio.",
-      `Erzeuge EINE vollständige, direkt bearbeitbare HTML-Datei für ${platform}. Fallback-Viewport: ${profile.width}x${profile.height} (${profile.device}, Dichte ${profile.density}); wenn die Quell-Evidenz eine konkrete Fenster-, Preview- oder Gerätegeometrie nennt, ist stattdessen exakt diese Geometrie verbindlich.`,
-      "Die Quell-Evidenz ist verbindlich: Komponenten müssen in derselben Hierarchie, Reihenfolge und Z-Order stehen. Übernimm alle Maße, Koordinaten, Alignments, Insets, Abstände, Farben, Typografie, Radien, Schatten, Icons, Bilder und Zustände exakt; nichts optisch 'verbessern' oder frei schätzen.",
-      "Ein logisches dp/pt entspricht einem CSS-Pixel. Verwende border-box, body margin 0 und keine Zentrierung oder Skalierung, die Quellkoordinaten verschiebt. Positioniere absolute/constraint-basierte Oberflächen auch in CSS exakt; Flex/Grid nur wenn es die Original-Constraints identisch ausdrückt.",
-      "Bilde alle gefundenen Screens, Dialoge und Interaktionen bearbeitbar ab. Der initial sichtbare Zustand muss dem App-Start entsprechen. Navigation und Zustandswechsel folgen dem Original.",
-      "Implementiere sämtliche gefundenen Farbvarianten über prefers-color-scheme und data-theme, ohne zusätzliche sichtbare Werft-Bedienelemente einzubauen. Importierte Assets als root-relative /<exakter Manifestpfad> referenzieren; Styles und notwendige Logik sonst inline halten.",
-      "Setze <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> und exakt ein maschinenlesbares <meta name=\"werft-preview\" content='{\"platform\":\"...\",\"width\":ZAHL,\"height\":ZAHL,\"device\":\"...\",\"density\":ZAHL}'> mit der tatsächlich rekonstruierten Quellgeometrie.",
-      "Antworte ausschließlich mit dem vollständigen HTML-Dokument ab <!doctype html>, ohne Markdown oder Erklärung."
-    ].join(" ");
-    await publishMilestone(82, reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes), 4, 0);
-    const generated = await runCodexStep({ operation: "Bearbeitbares HTML aufbauen", phase: "build", kind: "build", instructions: reconstructionInstructions, input: `Projekt: ${row.name}\n\nVOLLSTÄNDIGE UI-EVIDENZ:\n${evidence}`, progress: 82, remainingWeight: 2, state: () => reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes), validate: (value) => { if (!/<!doctype html|<html/i.test(cleanHtmlResponse(value.text))) fail("RECONSTRUCT_INVALID", 502, "Die KI hat keine gültige HTML-Version geliefert.", true); } });
-    let html = cleanHtmlResponse(generated.text);
-    await publishMilestone(92, reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes), 2, 0);
-    const verification = await runCodexStep({ operation: "Pixel-Fidelity prüfen", phase: "verify", kind: "verification", instructions: "Du bist die abschließende Pixel-Fidelity-Prüfung. Vergleiche das HTML streng mit der UI-Evidenz. Korrigiere jede abweichende Position, Größe, Ausrichtung, Farbe, Typografie, Theme-Variante, Hierarchie und jeden fehlenden Screen oder Zustand. Keine gestalterischen Änderungen. Antworte ausschließlich mit dem vollständigen korrigierten HTML-Dokument.", input: `UI-EVIDENZ:\n${evidence}\n\nZU PRÜFENDES HTML:\n${html}`, progress: 92, remainingWeight: 0, state: () => reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes), validate: (value) => { if (!/<!doctype html|<html/i.test(cleanHtmlResponse(value.text))) fail("RECONSTRUCT_INVALID", 502, "Die Fidelity-Prüfung hat kein gültiges HTML geliefert.", true); } });
-    const corrected = cleanHtmlResponse(verification.text);
-    html = corrected;
+
+    // Schritt 3: jeder Bildschirm wird EINZELN und nebenlaeufig gebaut. Vorher entstand die ganze
+    // App in einem Aufruf — der lief in die Ausgabegrenze, liess Screens weg und rundete Werte.
+    const allScreens = orderedScreens(facts);
+    const screenPlan = screenPlanFrom({ ...facts, screens: allScreens }, row.name).slice(0, maxReconstructedScreens);
+    if (allScreens.length > screenPlan.length) app.log.warn({ event: "reconstruction.screens_capped", jobId, projectId, found: allScreens.length, built: screenPlan.length, skipped: allScreens.slice(screenPlan.length).map((screen) => screen.id) }, "Mehr Bildschirme gefunden als aufgebaut werden");
+    totalOperations = completedOperations + screenPlan.length + 1;
+    const screenIndex = new Map(screenPlan.map((screen, index) => [screen.id, index] as const));
+    const screenInstructions = buildScreenInstructions(platform, profile, screenPlan.map((screen) => `${screen.id} = „${screen.name}“`));
+    await publishMilestone(66, reconstructionState("build", `${screenPlan.length} Bildschirm(e) werden einzeln und originalgetreu aufgebaut.`, 4, processedFiles, sources.length, processedBytes, totalBytes), screenPlan.length + 1, 0);
+    let builtScreens = 0;
+    const fragments = await mapWithConcurrency(screenPlan, reconstructionConcurrency, async (screen, index) => {
+      const screenSources = await readScreenSources(row.imported.objectPrefix, row.imported.manifest, screen.files);
+      const navigation = screen.navigatesTo.filter((target) => screenIndex.has(target));
+      const input = [
+        `Projekt: ${row.name}`,
+        `Aufzubauender Bildschirm ${index + 1} von ${screenPlan.length}: „${screen.name}“ (id=${screen.id}, Art=${screen.kind}${screen.isStart ? ", STARTBILDSCHIRM" : ""}${screen.route ? `, route=${screen.route}` : ""}), Quelle ${screen.source}.`,
+        navigation.length ? `Von hier aus erreichbar (als data-werft-navigate="ZIEL-ID" verlinken): ${navigation.join(", ")}` : "",
+        factSheet,
+        assetLibrary,
+        screenSources ? `\n# ORIGINALQUELLEN GENAU DIESES BILDSCHIRMS (verbindlich, unverdichtet)\n${screenSources}` : "",
+        `\n# GESAMT-EVIDENZ DES PROJEKTS (Kontext)\n${evidence}`
+      ].filter(Boolean).join("\n");
+      const result = await runCodexStep({
+        operation: `Bildschirm „${screen.name}“ aufbauen`, phase: "build", kind: "build", instructions: screenInstructions, input,
+        progress: 66 + (builtScreens / screenPlan.length) * 22, remainingWeight: 1,
+        state: () => reconstructionState("build", `${builtScreens} von ${screenPlan.length} Bildschirmen originalgetreu aufgebaut.`, 4, processedFiles, sources.length, processedBytes, totalBytes),
+        validate: (value) => { if (!extractScreenFragment(value.text).markup) fail("RECONSTRUCT_INVALID", 502, `Für den Bildschirm „${screen.name}“ kam kein verwertbares Markup zurück.`, true); }
+      });
+      builtScreens += 1;
+      const fragment = extractScreenFragment(result.text);
+      return { screen, markup: fragment.markup, css: fragment.css };
+    });
+
+    // Schritt 4: nachmessen statt nur nachfragen. Das Ergebnis wird gegen die geparsten Quellwerte
+    // geprueft; nur die tatsaechlich abweichenden Punkte gehen in einen gezielten Korrekturlauf.
+    const composeAll = (parts: typeof fragments) => composeScreens(parts.map(({ screen, markup }) => ({ id: screen.id, name: screen.name, markup, isStart: screen.isStart })), { title: row.name, platform, width: profile.width, height: profile.height, device: profile.device, density: profile.density, facts, sharedCss: parts.map((part) => part.css).filter(Boolean).join("\n") });
+    let html = composeAll(fragments);
+    let report = checkFidelity(html, facts);
+    app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 0, score: report.score, checked: report.checked, matched: report.matched, issues: report.issues.length }, "Fidelity gemessen");
+    await publishMilestone(88, reconstructionState("verify", `Nachmessung: ${report.score} % der gemessenen Quellwerte stimmen exakt (${report.matched} von ${report.checked}).`, 5, processedFiles, sources.length, processedBytes, totalBytes), 1, 0);
+    if (!fidelityAcceptable(report)) {
+      // Nur Bildschirme nachbessern, die wirklich betroffen sind — und jeder bekommt AUSSCHLIESSLICH
+      // die Abweichungen aus seinen eigenen Quelldateien. Sonst baut Bildschirm B Werte ein, die zu
+      // Bildschirm A gehoeren, und die Rekonstruktion wird schlechter statt besser.
+      const affected = fragments.filter((fragment) => hasIssuesForSources(report, fragment.screen.files));
+      totalOperations += affected.length;
+      let correctedScreens = 0;
+      app.log.info({ event: "reconstruction.repair_planned", jobId, projectId, affected: affected.length, total: fragments.length, issues: report.issues.length }, "Gezielter Korrekturlauf geplant");
+      const repairedByScreen = new Map((await mapWithConcurrency(affected, reconstructionConcurrency, async (fragment) => {
+        const corrections = renderFidelityInstructions(report, { sources: fragment.screen.files });
+        const result = await runCodexStep({
+          operation: `Bildschirm „${fragment.screen.name}“ nachmessen`, phase: "verify", kind: "verification",
+          instructions: fidelityRepairInstructions, input: [`Bildschirm: „${fragment.screen.name}“ (id=${fragment.screen.id}).`, factSheet, `\n# GEMESSENE ABWEICHUNGEN DIESES BILDSCHIRMS\n${corrections}`, `\n# ZU KORRIGIERENDES MARKUP DIESES BILDSCHIRMS\n<style>${fragment.css}</style>\n${fragment.markup}`].join("\n"),
+          progress: 88 + (correctedScreens / Math.max(1, affected.length)) * 8, remainingWeight: 0,
+          state: () => reconstructionState("verify", `${correctedScreens} von ${affected.length} betroffenen Bildschirmen gegen die gemessenen Quellwerte korrigiert.`, 5, processedFiles, sources.length, processedBytes, totalBytes),
+          validate: (value) => { if (!extractScreenFragment(value.text).markup) fail("RECONSTRUCT_INVALID", 502, `Die Nachmessung von „${fragment.screen.name}“ lieferte kein verwertbares Markup.`, true); }
+        });
+        correctedScreens += 1;
+        const repairedFragment = extractScreenFragment(result.text);
+        return [fragment.screen.id, { screen: fragment.screen, markup: repairedFragment.markup, css: repairedFragment.css || fragment.css }] as const;
+      })));
+      const repaired = fragments.map((fragment) => repairedByScreen.get(fragment.screen.id) ?? fragment);
+      const repairedHtml = composeAll(repaired);
+      const repairedReport = checkFidelity(repairedHtml, facts);
+      app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 1, score: repairedReport.score, before: report.score, issues: repairedReport.issues.length }, "Fidelity nach Korrekturlauf gemessen");
+      // Nur uebernehmen, wenn die Korrektur messbar besser ist — sonst bleibt der bessere Stand.
+      if (repairedReport.score >= report.score) { html = repairedHtml; report = repairedReport; }
+    }
+    const fidelityScore = report.score;
     const designPath = `.werft-generated/${jobId}/${runAttempt}/design.html`;
     const data = Buffer.from(html, "utf8");
     const designObjectKey = `${row.imported.objectPrefix}${designPath}`;
@@ -839,8 +987,8 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         const revision = current.revision + 1;
         await tx.update(projectImports).set({ entryPath: designPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
         await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { model: generated.model, sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
-        const state = runtimeState(reconstructionState("completed", "HTML-Design vollständig aufgebaut, geprüft und gespeichert.", reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision }), 100, 0);
+        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, measuredValues, screens: screenPlan.length, fidelityScore, openIssues: report.issues.length, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
+        const state = runtimeState(reconstructionState("completed", `Alle ${screenPlan.length} Bildschirme aufgebaut und nachgemessen: ${fidelityScore} % der ${report.checked} geprüften Quellwerte stimmen exakt.`, reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision }), 100, 0);
         const completedJob = await tx.update(jobs).set({ status: "completed", progress: 100, result: state, errorCode: null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), eq(jobs.status, "running"))).returning({ id: jobs.id });
         if (!completedJob[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
         return { revision, state };

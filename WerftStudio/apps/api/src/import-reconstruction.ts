@@ -24,7 +24,7 @@ export function previewProfileFromHtml(html: string, fallback: PreviewProfile): 
   const raw = tag?.match(/\bcontent\s*=\s*(["'])(.*?)\1/i)?.[2];
   if (!raw) return fallback;
   try {
-    const value = JSON.parse(raw.replaceAll("&quot;", '"')) as Partial<PreviewProfile>;
+    const value = JSON.parse(raw.replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&amp;", "&")) as Partial<PreviewProfile>;
     if (!Number.isFinite(value.width) || !Number.isFinite(value.height) || value.width! < 200 || value.height! < 200 || value.width! > 10_000 || value.height! > 10_000) return fallback;
     return {
       width: Math.round(value.width!),
@@ -40,10 +40,21 @@ export function previewProfileFromHtml(html: string, fallback: PreviewProfile): 
 const generatedOrThirdParty = /(^|\/)(node_modules|\.git|\.werft-generated|\.gradle|\.idea|\.vs|bin|obj|build|dist|out|target|coverage|logs?|test|tests|__tests__|backend|server|database|__pycache__|vendor)(\/|$)/i;
 const sourceExtension = /\.(?:html?|css|scss|sass|less|js|mjs|cjs|jsx|ts|tsx|vue|svelte|xaml|axaml|xml|kt|kts|java|swift|dart|cs|fs|vb|c|cc|cpp|cxx|h|hh|hpp|m|mm|qml|ui|json|json5|toml|ya?ml|properties|gradle|groovy|storyboard|plist|strings|xcstrings|resx|md|txt|razor|cshtml|uxml|uss|aidl|go|lua|pas|php|ps1|py|rb|rs)$/i;
 const lowValueName = /(?:^|\/)(?:package-lock\.json|pnpm-lock\.yaml|yarn\.lock|podfile\.lock|gradle\.lockfile)$/i;
+// Reine Bau-, Abhaengigkeits- und Werkzeugdateien tragen keinen einzigen Designwert, verbrauchen
+// aber volle KI-Analysepakete. Sie draussen zu lassen ist der groesste Geschwindigkeitshebel.
+const nonDesignName = /(?:^|\/)(?:build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|gradle\.properties|gradlew(?:\.bat)?|local\.properties|proguard-rules\.pro|CMakeLists\.txt|Package\.swift|Podfile|Cartfile|\.editorconfig|\.gitignore|\.gitattributes|LICENSE(?:\.\w+)?|CHANGELOG\.md|README(?:\.\w+)?|CONTRIBUTING\.md|CODE_OF_CONDUCT\.md|\w+\.csproj|\w+\.sln|\w+\.vcxproj|tsconfig(?:\.\w+)?\.json|jest\.config\.\w+|vitest\.config\.\w+|eslint\.config\.\w+|\.eslintrc(?:\.\w+)?|babel\.config\.\w+)$/i;
+// Uebersetzungen und Nicht-Standard-Qualifier beschreiben denselben Screen erneut: fuer die
+// Rekonstruktion zaehlt der Standardsatz, sonst analysiert die KI 40× dasselbe Layout.
+const localizedResource = /(^|\/)res\/values-(?!night\b)[a-z]{2}(?:-r[A-Z]{2})?(?:-\w+)*\//i;
+const localizedApple = /(^|\/)[a-z]{2}(?:-[A-Z]{2})?\.lproj\//i;
+const businessLogicPath = /(^|\/)(?:data|domain|network|repository|repositories|api|db|database|dao|entity|entities|model|models|service|services|usecase|usecases|di|inject|worker|analytics|billing|sync|util|utils|helper|helpers|extension|extensions)(\/|$)/i;
+const uiPath = /(^|\/)(?:ui|view|views|screen|screens|page|pages|component|components|widget|widgets|compose|presentation|theme|themes|style|styles|res|resources|layout|assets|design|navigation|nav)(\/|$)|\.(?:xaml|axaml|storyboard|xib|qml|uxml|uss|css|scss|sass|less|html?)$/i;
 
 export function reconstructionSourceFiles(files: ImportManifestFile[]): ImportManifestFile[] {
   return files
-    .filter((file) => !generatedOrThirdParty.test(file.path) && !lowValueName.test(file.path) && (sourceExtension.test(file.path) || file.mime.startsWith("text/")))
+    .filter((file) => !generatedOrThirdParty.test(file.path) && !lowValueName.test(file.path) && !nonDesignName.test(file.path) && !localizedResource.test(file.path) && !localizedApple.test(file.path) && (sourceExtension.test(file.path) || file.mime.startsWith("text/")))
+    // Reine Geschaeftslogik ohne UI-Bezug fliegt raus: sie erklaert kein Pixel, kostet aber Analysezeit.
+    .filter((file) => uiPath.test(file.path) || !businessLogicPath.test(file.path))
     .sort((left, right) => sourceScore(right.path) - sourceScore(left.path) || left.path.localeCompare(right.path));
 }
 
@@ -56,6 +67,30 @@ function sourceScore(filePath: string): number {
   if (/(test|fixture|sample|example)/.test(lower)) score -= 50;
   return score - lower.split("/").length;
 }
+
+// Analysepakete liefen bisher streng nacheinander — bei grossen Projekten ist das der eigentliche
+// Zeitfresser. Hier laufen sie mit begrenzter Nebenlaeufigkeit, aber die Ergebnisreihenfolge bleibt
+// exakt erhalten, damit die Evidenz reproduzierbar bleibt.
+export async function mapWithConcurrency<TInput, TOutput>(items: TInput[], limit: number, worker: (item: TInput, index: number) => Promise<TOutput>): Promise<TOutput[]> {
+  const results = new Array<TOutput>(items.length);
+  const width = Math.max(1, Math.min(limit, items.length));
+  let cursor = 0;
+  let failure: unknown;
+  let failed = false;
+  const runners = Array.from({ length: width }, async () => {
+    while (!failed) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      try { results[index] = await worker(items[index]!, index); }
+      catch (error) { if (!failed) { failed = true; failure = error; } return; }
+    }
+  });
+  await Promise.all(runners);
+  if (failed) throw failure;
+  return results;
+}
+
+export const reconstructionConcurrency = 4;
 
 export type SourceBatch = { text: string; completedBytes: number; completedFiles: number };
 
@@ -128,11 +163,11 @@ export async function* buildSourceBatches(
 
 export const reconstructionTodos = [
   "Projektdateien vollständig inventarisieren",
+  "Farben, Maße, Typografie und Effekte exakt aus den Quellen messen",
   "UI-Frameworks, Screens und Navigation erkennen",
-  "Abmessungen, Abstände und Ausrichtung extrahieren",
-  "Farben, Typografie, Assets und Themes auflösen",
-  "Bearbeitbare HTML-Version aufbauen",
-  "Geometrie und Varianten gegen die Quellen prüfen"
+  "Assets, Icons und Themes auflösen",
+  "Alle Bildschirme bearbeitbar aufbauen",
+  "Gegen die gemessenen Quellwerte nachprüfen"
 ] as const;
 
 export function canRestartReconstructionJob(status: string, retryFailed: boolean): boolean {

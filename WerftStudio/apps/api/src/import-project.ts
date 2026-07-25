@@ -39,7 +39,23 @@ const frontendDropNames = /(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.map)
 const frontendKeepExtensions = /\.(html?|css|scss|sass|less|svg|png|jpe?g|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|m4a|mp4|webm|wasm|webmanifest|werft|xaml|axaml|xml|jsx|tsx|vue|svelte|dart|json|json5|ya?ml|toml|properties|gradle|groovy|storyboard|plist|strings|xcstrings|resx|qml|ui|md|razor|cshtml|uxml|uss)$/i;
 const frontendCodeExtensions = /\.(js|mjs|cjs|ts|kt|kts|java|swift|cs|fs|vb|c|cc|cpp|cxx|h|hh|hpp|m|mm|aidl|go|lua|pas|php|ps1|py|rb|rs)$/i;
 
+// Reproduzierbare Werkzeugausgaben und Fremdabhaengigkeiten enthalten nie Designquellen, blaehen
+// aber Upload, Speicher und Analyse massiv auf (und liefern irrefuehrende Report-HTML-Seiten).
+// Sie bleiben deshalb IMMER draussen — auch wenn "nur Frontend" abgeschaltet ist.
+const alwaysDropSegments = /(^|\/)(node_modules|\.git|\.gradle|\.idea|\.vs|\.vscode|\.svn|\.hg|\.dart_tool|\.next|\.nuxt|\.turbo|\.venv|venv|__pycache__|Pods|Carthage|DerivedData|xcuserdata|\.werft-generated|vendor|bower_components)(\/|$)/i;
+const alwaysDropReportSegments = /(^|\/)(reports?|jacoco|javadoc|dokka|kdoc|lint-results|coverage|allure-report|playwright-report|intermediates|kapt|ksp|captures)(\/|$)/i;
+const alwaysDropNames = /(\.(?:map|lock|pyc|class|o|obj|a|so|dll|pdb|apk|aab|aar|jar|war|ipa|dmg|exe|msi|dSYM|hprof|log)|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/i;
+
+export function isGeneratedArtifact(filePath: string, platform = "web"): boolean {
+  if (alwaysDropSegments.test(filePath) || alwaysDropNames.test(filePath)) return true;
+  // Bei nativen Projekten ist build/ und out/ garantiert Ausgabe; bei Web kann dort das fertige
+  // Bundle liegen, deshalb wird dort nur der Berichtsanteil verworfen.
+  if (platform !== "web" && nativeGeneratedSegments.test(filePath)) return true;
+  return alwaysDropReportSegments.test(filePath) && (platform !== "web" || nativeGeneratedSegments.test(filePath));
+}
+
 export function isFrontendFile(filePath: string, platform = "web"): boolean {
+  if (isGeneratedArtifact(filePath, platform)) return false;
   if (frontendDropSegments.test(filePath) || frontendDropNames.test(filePath) || (platform !== "web" && nativeGeneratedSegments.test(filePath))) return false;
   return frontendKeepExtensions.test(filePath) || frontendCodeExtensions.test(filePath);
 }
@@ -66,10 +82,17 @@ export function stripCommonRoot(files: ImportedFile[]): ImportedFile[] {
 const entryNegativeSegments = new Set(["node_modules", ".git", "obj", "bin", "test", "tests", "__tests__", "coverage", "plugins", "skills", "samples", "examples", "fixtures", "temp", "tmp", "backup", "docs", "doc"]);
 const entryPositiveSegments = new Set(["dist", "build", "public", "web", "www", "frontend", "site", "app", "ui", "out", "html"]);
 const entryNegativeNames = ["review", "template", "viewer", "eval", "report", "test", "changelog", "readme"];
+// Werkzeugberichte (Gradle-Testreports, Jacoco, Lint, Dokka, Javadoc) enthalten fast immer eine
+// index.html und wuerden das Scoring sonst gewinnen — sie sind NIE das Design der App.
+const generatedReportSegments = new Set(["reports", "jacoco", "javadoc", "dokka", "kdoc", "lint-results", "htmlreport", "html-report", "allure-report", "playwright-report", "intermediates", "generated", "tmp", "kapt", "ksp"]);
+// Native Projekte legen unter build/ und out/ nur Artefakte ab; dort steht niemals die App-Oberflaeche.
+const nativeGeneratedEntrySegments = new Set(["build", "out", "obj", "bin", "deriveddata", "xcuserdata", "captures"]);
 
-export function scoreEntryPath(filePath: string): number {
+export function scoreEntryPath(filePath: string, platform = "web"): number {
   const segments = filePath.toLowerCase().split("/");
   const base = segments.at(-1)!;
+  if (segments.some((segment) => generatedReportSegments.has(segment))) return -1000;
+  if (platform !== "web" && segments.some((segment) => nativeGeneratedEntrySegments.has(segment))) return -1000;
   let score = 0;
   if (base === "index.html" || base === "index.htm") score += 100;
   if (base.endsWith(".dc.html")) score += 80;
@@ -79,14 +102,14 @@ export function scoreEntryPath(filePath: string): number {
   return score - segments.length * 2;
 }
 
-export function chooseEntryPath(files: Array<{ path: string }>): string | undefined {
+export function chooseEntryPath(files: Array<{ path: string }>, platform = "web"): string | undefined {
   const best = files
     .map((file) => file.path)
     .filter((filePath) => /\.html?$/i.test(filePath))
-    .sort((left, right) => scoreEntryPath(right) - scoreEntryPath(left) || left.localeCompare(right))[0];
+    .sort((left, right) => scoreEntryPath(right, platform) - scoreEntryPath(left, platform) || left.localeCompare(right))[0];
   // Deutlich negatives Scoring = nur Werkzeug-Beifang (z.B. Skill-Reviews in einer Desktop-App):
   // dann lieber KEINE Startseite melden statt eine irrefuehrende Fremd-Seite anzuzeigen.
-  return best !== undefined && scoreEntryPath(best) > -20 ? best : undefined;
+  return best !== undefined && scoreEntryPath(best, platform) > -20 ? best : undefined;
 }
 
 export function validateImportFiles(files: ImportedFile[]): ImportedFile[] {
