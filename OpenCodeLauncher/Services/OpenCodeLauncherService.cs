@@ -44,6 +44,28 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
     ForEach-Object { Set-ProgrammerProcessPriority $_ 'Windows Terminal' }
 """;
 
+    /// <summary>
+    /// Entfernt die Umgebung eines uebergeordneten KI-Agenten, bevor eine Sitzung startet.
+    /// Der Launcher erbt die Umgebung des Prozesses, der ihn gestartet hat; wurde er aus einer
+    /// Claude-Sitzung heraus gestartet (typisch: der Agent baut den Launcher und startet ihn neu),
+    /// reicht er sie an jedes Terminal weiter, das er oeffnet. Folgen in der neuen Sitzung:
+    ///   NO_COLOR=1                -> alle Farben aus (weisses statt oranges Logo, blasse Syntax,
+    ///                                farblose Statusline-Trenner)
+    ///   CLAUDE_CODE_CHILD_SESSION -> Sitzung startet als Kind-Sitzung: kein Transcript, dadurch
+    ///                                kein ctx-Wert in der Statusline
+    /// Der Effekt ueberlebt Neustarts, weil die betroffene Sitzung den Launcher erneut baut.
+    /// CLAUDE_CONFIG_DIR bleibt bewusst stehen -- das Profil setzt es selbst.
+    /// Das CLAUDE*-Muster faengt auch Marker ab, die kuenftige Claude-Versionen neu einfuehren.
+    /// </summary>
+    private const string InheritedAgentEnvScrubScript = """
+foreach ($staleName in @('NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE', 'AI_AGENT', 'GIT_TERMINAL_PROMPT')) {
+    Remove-Item -LiteralPath "Env:$staleName" -ErrorAction SilentlyContinue
+}
+foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CLAUDE*' -and $_.Name -ne 'CLAUDE_CONFIG_DIR' })) {
+    Remove-Item -LiteralPath "Env:$($staleClaude.Name)" -ErrorAction SilentlyContinue
+}
+""";
+
     private static readonly TerminalTabColor[] TerminalTabColors =
     [
         new("black", "#0C0C0C"),
@@ -546,28 +568,8 @@ $ErrorActionPreference = 'Continue'
 [Console]::Write("`e[?1004l")
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
-# Der Launcher erbt die Umgebung des Prozesses, der ihn gestartet hat. Wurde er aus einer
-# Claude-Sitzung heraus gestartet (typisch: Claude baut den Launcher und startet ihn neu),
-# reicht er Claudes Unterprozess-Umgebung an jede neue Sitzung weiter. Zwei Folgen:
-#   NO_COLOR=1                -> Claude Code schaltet ALLE Farben ab: weisses statt oranges
-#                                Logo, blasse Syntax, farblose Statusline-Trenner.
-#   CLAUDE_CODE_CHILD_SESSION -> Sitzung startet als Kind-Sitzung: kein Transcript,
-#                                kein ctx-Wert in der Statusline.
-# Darum die geerbten Variablen vor dem Start ausdruecklich entfernen (CLAUDE_CONFIG_DIR bleibt,
-# das setzt der Launcher unten selbst). Vor dem Profil, damit das Profil gesetzte Werte behaelt.
-foreach ($staleMarker in @(
-    'NO_COLOR',
-    'FORCE_COLOR',
-    'AI_AGENT',
-    'GIT_TERMINAL_PROMPT',
-    'CLAUDECODE',
-    'CLAUDE_CODE_CHILD_SESSION',
-    'CLAUDE_CODE_SESSION_ID',
-    'CLAUDE_CODE_BRIDGE_SESSION_ID',
-    'CLAUDE_CODE_ENTRYPOINT',
-    'CLAUDE_PID')) {
-    Remove-Item -LiteralPath "Env:$staleMarker" -ErrorAction SilentlyContinue
-}
+# Geerbte Agenten-Umgebung entfernen -- vor dem Profil, damit das Profil gesetzte Werte behaelt.
+{{InheritedAgentEnvScrubScript}}
 
 $profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
 if (Test-Path $profilePath) {
@@ -688,6 +690,8 @@ try {
 $ErrorActionPreference = 'Continue'
 {{ProgrammerProcessPriorityScript}}
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+# Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+{{InheritedAgentEnvScrubScript}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 $env:OPENCODE_LAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
 $env:OPENCODE_LAUNCHER_SOURCE = 'OpenCodeLauncher'
