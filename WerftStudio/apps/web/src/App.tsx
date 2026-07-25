@@ -10,7 +10,7 @@ type Project = { id: string; name: string; type: string; fidelity: string; platf
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewPath?: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewPath?: string };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
 const examples = [
   ["Banking App „Fluss“", "iOS · Android", "Konten, Zahlungen und Tagesüberblick mit ruhiger Typografie.", "Prototyp"],
@@ -996,6 +996,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   };
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
+    if (imported?.imported) setZoom(1);
   }, [projectId, imported?.imported]);
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1062,7 +1063,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
         </div>
         {imported.previewPath ? (
           <div {...viewportProps}>
-            <iframe ref={previewRef} onLoad={syncPreviewTransform} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+            <iframe ref={previewRef} onLoad={syncPreviewTransform} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} style={{ width: imported.previewWidth, height: imported.previewHeight }} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
           </div>
         ) : (
           <div className="empty">

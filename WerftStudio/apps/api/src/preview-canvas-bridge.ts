@@ -1,4 +1,5 @@
 const bridgeMarker = "data-werft-canvas-bridge";
+export const importedPreviewSize = { width: 1440, height: 900 } as const;
 
 const bridgeScript = `<script ${bridgeMarker}>
 (() => {

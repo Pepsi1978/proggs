@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { injectPreviewCanvasBridge } from "./preview-canvas-bridge.js";
+import { importedPreviewSize, injectPreviewCanvasBridge } from "./preview-canvas-bridge.js";
 
 describe("preview canvas bridge", () => {
+  it("keeps imports at their original preview viewport", () => {
+    expect(importedPreviewSize).toEqual({ width: 1440, height: 900 });
+  });
+
   it("injects the bridge before the closing body", () => {
     const result = injectPreviewCanvasBridge("<!doctype html><body><main>Design</main></body>");
     expect(result).toContain("data-werft-canvas-bridge");
