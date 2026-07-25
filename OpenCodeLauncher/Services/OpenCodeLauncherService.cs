@@ -330,12 +330,22 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
             : new PowerShellExecutable("powershell.exe", false);
     }
 
-    private static TerminalTabColor PickTerminalTabColor()
+    private static TerminalTabColor PickTerminalTabColor() =>
+        PickRotatingTabColor(TerminalTabColors, ResolveTabColorStatePath());
+
+    private static TerminalTabColor PickClaudeTerminalTabColor() =>
+        PickRotatingTabColor(ClaudeTerminalTabColors, ResolveClaudeTabColorStatePath());
+
+    /// <summary>
+    /// Zieht eine Farbe aus der Palette, ohne die zuletzt benutzte zu wiederholen, und arbeitet
+    /// den Vorrat durch, bevor er neu aufgefuellt wird. Jede Palette hat ihre eigene Zustandsdatei.
+    /// </summary>
+    private static TerminalTabColor PickRotatingTabColor(TerminalTabColor[] palette, string statePath)
     {
         try
         {
-            var colorByName = TerminalTabColors.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
-            var state = ReadTabColorState();
+            var colorByName = palette.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
+            var state = ReadTabColorState(statePath);
             var remaining = state.Remaining
                 .Where(name => colorByName.ContainsKey(name) && !string.Equals(name, state.LastColor, StringComparison.OrdinalIgnoreCase))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -343,7 +353,7 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
 
             if (remaining.Count == 0)
             {
-                remaining = TerminalTabColors
+                remaining = palette
                     .Select(c => c.Name)
                     .Where(name => !string.Equals(name, state.LastColor, StringComparison.OrdinalIgnoreCase))
                     .ToList();
@@ -352,7 +362,7 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
             var index = RandomNumberGenerator.GetInt32(remaining.Count);
             var pickedName = remaining[index];
             remaining.RemoveAt(index);
-            WriteTabColorState(new TabColorState
+            WriteTabColorState(statePath, new TabColorState
             {
                 LastColor = pickedName,
                 Remaining = remaining
@@ -361,25 +371,20 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
         }
         catch
         {
-            return TerminalTabColors[RandomNumberGenerator.GetInt32(TerminalTabColors.Length)];
+            return palette[RandomNumberGenerator.GetInt32(palette.Length)];
         }
     }
 
-    private static TerminalTabColor PickClaudeTerminalTabColor() =>
-        ClaudeTerminalTabColors[RandomNumberGenerator.GetInt32(ClaudeTerminalTabColors.Length)];
-
-    private static TabColorState ReadTabColorState()
+    private static TabColorState ReadTabColorState(string path)
     {
-        var path = ResolveTabColorStatePath();
         if (!File.Exists(path)) return new TabColorState();
 
         var raw = File.ReadAllText(path, Encoding.UTF8);
         return JsonSerializer.Deserialize<TabColorState>(raw, JsonOpts) ?? new TabColorState();
     }
 
-    private static void WriteTabColorState(TabColorState state)
+    private static void WriteTabColorState(string path, TabColorState state)
     {
-        var path = ResolveTabColorStatePath();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var tmp = path + ".tmp";
         File.WriteAllText(tmp, JsonSerializer.Serialize(state, JsonOpts), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -390,6 +395,11 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "OpenCodeLauncher",
         "tab-color-state.json");
+
+    private static string ResolveClaudeTabColorStatePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OpenCodeLauncher",
+        "claude-tab-color-state.json");
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
