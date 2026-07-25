@@ -186,7 +186,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.2-20260725.1312" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.3-20260725.1325" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -202,7 +202,7 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
   // ETag pro Projektrevision: Browser darf cachen und bekommt 304 statt kompletter Neu-Downloads;
   // nach jeder KI-/Editor-Aenderung steigt die Revision und die Vorschau wird frisch geladen.
-  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v1"`;
+  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v2"`;
   if (request.headers["if-none-match"] === etag) return reply.code(304).header("etag", etag).header("cache-control", "private, no-cache").send();
   reply.headers({ "cache-control": "private, no-cache", etag, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
   if (item.mime.startsWith("text/html")) {

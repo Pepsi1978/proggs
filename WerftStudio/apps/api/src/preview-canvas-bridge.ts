@@ -3,7 +3,18 @@ const bridgeMarker = "data-werft-canvas-bridge";
 const bridgeScript = `<script ${bridgeMarker}>
 (() => {
   const send = (action, event) => parent.postMessage({ source: "werft-preview-canvas", action, x: event.clientX, y: event.clientY, deltaY: event.deltaY }, "*");
+  const canvas = document.body;
+  document.documentElement.style.background = getComputedStyle(canvas).background;
+  document.documentElement.style.overflow = "hidden";
+  canvas.style.transformOrigin = "0 0";
+  canvas.style.willChange = "transform";
   let panning = false;
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (event.source !== parent || !data || data.source !== "werft-studio-canvas" || data.action !== "transform") return;
+    if (![data.zoom, data.x, data.y].every(Number.isFinite)) return;
+    canvas.style.transform = "translate(" + data.x + "px, " + data.y + "px) scale(" + data.zoom + ")";
+  });
   document.addEventListener("wheel", (event) => {
     if (!event.ctrlKey) return;
     event.preventDefault();

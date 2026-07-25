@@ -952,6 +952,7 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
   const client = useQueryClient();
+  const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -1034,6 +1035,10 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     window.addEventListener("message", handlePreviewMessage);
     return () => window.removeEventListener("message", handlePreviewMessage);
   }, [zoom, setZoom]);
+  const syncPreviewTransform = () => previewRef.current?.contentWindow?.postMessage({ source: "werft-studio-canvas", action: "transform", zoom, x: offset.x, y: offset.y }, previewOrigin);
+  useEffect(() => {
+    if (imported?.imported) syncPreviewTransform();
+  }, [zoom, offset.x, offset.y, imported?.imported]);
   const viewportProps = {
     ref: viewportRef,
     className: `canvas-viewport${panning ? " panning" : ""}`,
@@ -1045,7 +1050,6 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   };
   const contentStyle = { transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` };
   if (imported?.imported) {
-    const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
     const looksLikeDesktopApp = imported.files.some((file) => /\.(xaml|csproj|sln|kt|swift)$/i.test(file.path));
     return (
       <div className="canvas imported-canvas">
@@ -1058,9 +1062,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
         </div>
         {imported.previewPath ? (
           <div {...viewportProps}>
-            <div className="canvas-pan-content imported-preview-content" style={contentStyle}>
-              <iframe ref={previewRef} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
-            </div>
+            <iframe ref={previewRef} onLoad={syncPreviewTransform} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
           </div>
         ) : (
           <div className="empty">
