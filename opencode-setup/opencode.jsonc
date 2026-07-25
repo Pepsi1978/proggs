@@ -108,27 +108,6 @@
   // ACHTUNG: Owl Alpha loggt Prompts/Completions (Training) -> NICHT fuer
   // sensible/private App-Daten (Entropie Reductor, BestJournal-Nutzerdaten).
   "provider": {
-    // OpenAIs Fast-Modus ist kein eigener API-Modellname. Der Fast-Eintrag ist
-    // ein lokaler Alias auf gpt-5.6-sol; nur er setzt service_tier:"priority".
-    "openai": {
-      "models": {
-        "gpt-5.6-sol": {
-          "name": "GPT-5.6 Sol",
-          "options": {
-            "reasoningEffort": "high"
-          }
-        },
-        "gpt-5.6-sol-fast": {
-          "id": "gpt-5.6-sol",
-          "name": "GPT-5.6 Sol Fast",
-          "options": {
-            "reasoningEffort": "high",
-            "serviceTier": "priority"
-          }
-        }
-      }
-    },
-
     "owl": {
       "npm": "@openrouter/ai-sdk-provider",
       "name": "OpenRouter Owl (Stealth)",

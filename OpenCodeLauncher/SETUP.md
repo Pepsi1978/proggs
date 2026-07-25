@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.33 (18.07.2026, 11:58 Uhr)
+Stand: v1.17.47 (25.07.2026, 13:10 Uhr)
 
 ---
 
@@ -289,6 +289,12 @@ Unter Windows setzt der Launcher für jeden OpenCode-Prozess zusätzlich
 `OPENCODE_LAUNCHER_MODEL`, `OPENCODE_LAUNCHER_SOURCE` und
 `OPENCODE_LAUNCHER_SERVICE_TIER`. Preis- und Token-Audits können dadurch die tatsächliche
 Launcher-Auswahl einschließlich Priority-Tier eindeutig zuordnen.
+
+Die GPT-5.6-Fast-Modelle werden nicht mehr als Launcher-eigene Aliase angelegt. Der Launcher
+übergibt `openai/gpt-5.6-sol-fast`, `openai/gpt-5.6-terra-fast` oder
+`openai/gpt-5.6-luna-fast` unverändert an `opencode -m`; damit verwendet die CLI exakt ihre
+eingebaute Zuordnung zum jeweiligen Basismodell und `serviceTier: "priority"`. Alte GPT-5.6-
+Overrides in der globalen Config entfernt der Launcher beim nächsten GPT-5.6-Start automatisch.
 
 ---
 

@@ -110,8 +110,8 @@ foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CL
     };
 
     /// <summary>
-    /// Schreibt die Provider-Order (exakt der gewählte Provider, ohne Fallback)
-    /// in die globale opencode.jsonc/opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
+    /// Schreibt bei OpenRouter die gewählte Provider-Order ohne Fallback. Native Direktmodelle
+    /// werden über ihre unveränderte OpenCode-Modell-ID gestartet. Gibt den String für opencode -m zurück.
     /// </summary>
     public string ConfigureProvider(ModelEntry model, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders, string? thinkingLevel)
     {
@@ -122,7 +122,24 @@ foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CL
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
             var usesPriorityServiceTier = UsesPriorityServiceTier(model.ProviderId, model.Slug);
-            if (!string.IsNullOrWhiteSpace(thinkingLevel) || IsGpt56Model(model.ProviderId, model.Slug) || usesPriorityServiceTier)
+            if (IsGpt56Model(model.ProviderId, model.Slug))
+            {
+                // GPT-5.6 einschließlich der drei Fast-Varianten ist im OpenCode-Katalog nativ
+                // definiert. Eigene model.id/options-Overrides können von dieser Definition
+                // abweichen; deshalb nur die exakte native Modell-ID an -m weiterreichen.
+                var root = ReadConfig();
+                if (RemoveLegacyGpt56Overrides(root)) WriteConfig(root);
+                if (!string.IsNullOrWhiteSpace(thinkingLevel)) PatchModelVariantState(modelString, thinkingLevel);
+                log.Info("OpenCodeLauncherService", "ConfigureProvider", "Natives OpenCode-GPT-5.6-Modell gesetzt", new
+                {
+                    model = modelString,
+                    thinkingLevel,
+                    serviceTier = usesPriorityServiceTier ? "priority" : "standard"
+                });
+                return modelString;
+            }
+
+            if (!string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
             {
                 var root = ReadConfig();
                 root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
@@ -910,16 +927,35 @@ try {
         // OpenCode variants own the active reasoning level. Keeping reasoningEffort in model
         // options pins every request and prevents in-session variant changes from taking effect.
         ClearThinkingOptions(optionsBlock);
-        if (IsGpt56Model(providerId, slug) || UsesPriorityServiceTier(providerId, slug)) NormalizeExistingOpenAIModels(models);
+        if (UsesPriorityServiceTier(providerId, slug)) NormalizeExistingOpenAIModels(models);
         return rootObject;
+    }
+
+    private static bool RemoveLegacyGpt56Overrides(JsonNode root)
+    {
+        if (root is not JsonObject rootObject ||
+            rootObject["provider"] is not JsonObject providers ||
+            providers["openai"] is not JsonObject openAi ||
+            openAi["models"] is not JsonObject models)
+            return false;
+
+        var changed = false;
+        foreach (var slug in new[]
+        {
+            Gpt56SolSlug, Gpt56SolFastSlug,
+            Gpt56TerraSlug, Gpt56TerraFastSlug,
+            Gpt56LunaSlug, Gpt56LunaFastSlug
+        })
+        {
+            changed |= models.Remove(slug);
+        }
+
+        return changed;
     }
 
     private static void NormalizeExistingOpenAIModels(JsonObject models)
     {
         NormalizeModelPair(models, Gpt55Slug, Gpt55FastSlug, "GPT-5.5");
-        NormalizeModelPair(models, Gpt56SolSlug, Gpt56SolFastSlug, "GPT-5.6 Sol");
-        NormalizeModelPair(models, Gpt56TerraSlug, Gpt56TerraFastSlug, "GPT-5.6 Terra");
-        NormalizeModelPair(models, Gpt56LunaSlug, Gpt56LunaFastSlug, "GPT-5.6 Luna");
     }
 
     private static void NormalizeModelPair(JsonObject models, string normalSlug, string fastSlug, string displayName)
