@@ -231,7 +231,11 @@ export const reconstructionTodos = [
   "Gegen die gemessenen Quellwerte nachprüfen"
 ] as const;
 
-export function canRestartReconstructionJob(status: string, retryFailed: boolean): boolean {
+// `force` ist der bewusste Neuaufbau eines bereits fertigen Designs — sonst bliebe ein Projekt fuer
+// immer auf dem Stand seines ersten Laufs, auch wenn die Quellenauswertung inzwischen besser ist.
+export function canRestartReconstructionJob(status: string, retryFailed: boolean, force = false): boolean {
+  if (status === "queued" || status === "running") return false;
+  if (force) return status === "completed" || status === "failed";
   return status === "failed" && retryFailed;
 }
 

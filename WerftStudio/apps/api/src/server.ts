@@ -1069,7 +1069,7 @@ reconstructionReaper.unref();
 app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request, reply) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { retryFailed } = z.object({ retryFailed: z.boolean().optional().default(false) }).strict().parse(request.body ?? {});
+  const { retryFailed, force } = z.object({ retryFailed: z.boolean().optional().default(false), force: z.boolean().optional().default(false) }).strict().parse(request.body ?? {});
   const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
   const idempotencyKey = `${projectId}:${imported.revision}`;
@@ -1082,8 +1082,8 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   }
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
   if (!existing) fail("JOB_CLAIM_FAILED", 409, "Der Verarbeitungslauf konnte nicht übernommen werden. Bitte erneut versuchen.", true);
-  if (existing.status === "queued" || existing.status === "running" || existing.status === "completed") return reply.status(202).send({ jobId: existing.id, status: existing.status });
-  if (!canRestartReconstructionJob(existing.status, retryFailed)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
+  if (existing.status === "queued" || existing.status === "running") return reply.status(202).send({ jobId: existing.id, status: existing.status });
+  if (!canRestartReconstructionJob(existing.status, retryFailed, force)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
   const existingResult = existing.result && typeof existing.result === "object" ? existing.result as Partial<ReconstructionState> : null;
   const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
   const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };

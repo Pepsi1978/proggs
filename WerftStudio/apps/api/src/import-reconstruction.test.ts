@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTiming } from "./import-reconstruction.js";
 
 const file = (path: string, size = 10, mime = "application/octet-stream") => ({ path, size, mime });
@@ -67,6 +68,15 @@ describe("native UI reconstruction", () => {
     expect(canRestartReconstructionJob("failed", true)).toBe(true);
     expect(canRestartReconstructionJob("running", true)).toBe(false);
     expect(canRestartReconstructionJob("completed", true)).toBe(false);
+  });
+
+  it("baut ein fertiges Design nur auf ausdrücklichen Wunsch neu auf", () => {
+    // Ohne diesen Weg bliebe ein Projekt fuer immer auf dem Stand seines ersten Laufs.
+    expect(canRestartReconstructionJob("completed", false, true)).toBe(true);
+    expect(canRestartReconstructionJob("failed", false, true)).toBe(true);
+    // Ein laufender Aufbau darf NIE unterbrochen werden — auch nicht erzwungen.
+    expect(canRestartReconstructionJob("running", true, true)).toBe(false);
+    expect(canRestartReconstructionJob("queued", true, true)).toBe(false);
   });
 
   it("derives ETA and step progress from completed timing probes", () => {

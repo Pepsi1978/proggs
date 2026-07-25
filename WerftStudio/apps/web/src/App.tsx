@@ -49,8 +49,8 @@ function ProgressMeters({ percent, phaseProgress, elapsedMs, estimatedRemainingM
     </div>
   );
 }
-async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false): Promise<ReconstructionJob> {
-  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed }) });
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false): Promise<ReconstructionJob> {
+  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force }) });
   let networkRetries = 0;
   let interruptedRestarts = 0;
   for (;;) {
@@ -1409,7 +1409,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     current.active === next.active && current.links === next.links && current.screens.length === next.screens.length && current.screens.every((screen, index) => screen.id === next.screens[index]?.id) ? current : next);
   const activeScreen = boardState.screens.find((screen) => screen.id === boardState.active)?.name ?? null;
   const reconstruct = useMutation({
-    mutationFn: (retryFailed: boolean) => reconstructProject(projectId, setReconstructionProgress, retryFailed),
+    mutationFn: ({ retryFailed, force }: { retryFailed: boolean; force?: boolean }) => reconstructProject(projectId, setReconstructionProgress, retryFailed, force ?? false),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
@@ -1458,7 +1458,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     return () => viewport.removeEventListener("wheel", handleWheel);
   }, [zoom, setZoom, imported?.imported]);
   useEffect(() => {
-    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate(false);
+    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate({ retryFailed: false });
   }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
   const viewportProps = {
     ref: viewportRef,
@@ -1481,7 +1481,10 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           </small>
           {/* Zeigt die Leinwand nur eine gefundene Fremd-HTML statt des echten Designs, muss der
               Aufbau aus den Quellen jederzeit nachholbar sein — auch für früher importierte Projekte. */}
-          {!imported.reconstructed && imported.previewPath && <Button disabled={reconstruct.isPending} onClick={() => reconstruct.mutate(true)}>{reconstruct.isPending ? `Design wird aufgebaut … ${Math.round(reconstructionProgress?.progress ?? 0)} %` : "Design aus den Quellen aufbauen"}</Button>}
+          {/* Auch ein fertiges Design muss neu aufgebaut werden koennen: erkennt die Quellenauswertung
+              inzwischen mehr (Startbildschirm, Verknuepfungen), bliebe das Projekt sonst fuer immer
+              auf dem Stand seines ersten Laufs. */}
+          {imported.previewPath && <Button disabled={reconstruct.isPending} onClick={() => reconstruct.mutate({ retryFailed: true, force: imported.reconstructed })} title="Baut alle Bildschirme neu aus dem Quellcode auf — dauert je nach Projektgröße einige Minuten.">{reconstruct.isPending ? `Design wird aufgebaut … ${Math.round(reconstructionProgress?.progress ?? 0)} %` : imported.reconstructed ? "Design neu aufbauen" : "Design aus den Quellen aufbauen"}</Button>}
         </div>
         {!imported.reconstructed && imported.previewPath && reconstruct.isPending && (
           <div className="canvas-toolbar imported-toolbar">
@@ -1508,7 +1511,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
             {(reconstructionProgress?.result?.totalOperations ?? 0) > 0 ? <small>{reconstructionProgress?.result?.completedOperations ?? 0} von {reconstructionProgress?.result?.totalOperations} KI-Schritten abgeschlossen{reconstructionProgress?.result?.retryCount ? ` · ${reconstructionProgress.result.retryCount} Verbindungswiederholung${reconstructionProgress.result.retryCount === 1 ? "" : "en"}` : ""}</small> : null}
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
-            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate(true)}>Rekonstruktion erneut starten</Button>}
+            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate({ retryFailed: true })}>Rekonstruktion erneut starten</Button>}
             {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}
