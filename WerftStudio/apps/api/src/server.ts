@@ -20,6 +20,7 @@ import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredenti
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
+import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
 type Actor = { userId: string; organizationId: string; role: Role };
@@ -65,7 +66,10 @@ async function cleanupOrphanImportObjects() {
   const imports = await db.select({ objectPrefix: projectImports.objectPrefix, manifest: projectImports.manifest }).from(projectImports);
   const knownObjects = new Set(imports.flatMap((row) => row.manifest.map((file) => `${row.objectPrefix}${file.path}`)));
   for await (const upload of objectStore.listIncompleteUploads(env.S3_BUCKET, "", true)) await objectStore.removeIncompleteUpload(env.S3_BUCKET, upload.key);
-  for await (const item of objectStore.listObjectsV2(env.S3_BUCKET, "", true)) {
+  type ListedObject = { name?: string; lastModified?: Date };
+  type PaginatedMinio = { listObjectsV2Query(bucket: string, prefix: string, continuationToken: string, delimiter: string, maxKeys: number, startAfter: string): AsyncIterable<ObjectListPage<ListedObject>> };
+  const paginatedStore = objectStore as unknown as PaginatedMinio;
+  for await (const item of paginatedObjects((token, maxKeys) => paginatedStore.listObjectsV2Query(env.S3_BUCKET, "", token, "", maxKeys, ""))) {
     if (!item.name) continue;
     if (!knownObjects.has(item.name)) await objectStore.removeObject(env.S3_BUCKET, item.name);
   }
@@ -230,7 +234,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.5-20260725.1627" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.6-20260725.1633" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -959,5 +963,6 @@ app.get("/api/v1/projects/:projectId/versions", async (request) => { const actor
 app.post("/api/v1/projects/:projectId/versions", async (request) => { const actor = requireActorPermission(request, "version.create"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const body = z.object({ reason: z.string().min(1).max(300), baseRevision: z.number().int().nonnegative() }).parse(request.body); return db.transaction(async (tx) => { await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`); const project = (await tx.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId))).limit(1))[0]; const draft = (await tx.select().from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1))[0]; if (!project || !draft) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); if (draft.revision !== body.baseRevision) fail("REVISION_CONFLICT", 409, "Der Entwurf wurde inzwischen geändert."); const number = project.activeVersion + 1; const document = designDocumentSchema.parse(draft.document); const row = { id: uuidv7(), organizationId: actor.organizationId, projectId, number, reason: body.reason, authorId: actor.userId, document, snapshotHash: hashJson(document) }; await tx.insert(versions).values(row); await tx.update(projects).set({ activeVersion: number, updatedAt: new Date() }).where(eq(projects.id, projectId)); await tx.insert(outboxEvents).values({ id: uuidv7(), organizationId: actor.organizationId, aggregateId: projectId, type: "version.created", payload: { projectId, number, actorId: actor.userId } }); return { id: row.id, number }; }); });
 const shutdown = async () => { clearInterval(reconstructionReaper); await app.close(); await client.end(); };
 process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
-await cleanupOrphanImportObjects();
+try { await cleanupOrphanImportObjects(); }
+catch (error) { app.log.error({ err: error, event: "storage.orphan_cleanup_failed" }, "Verwaiste Importobjekte konnten nicht bereinigt werden; API startet ohne Datenverlust weiter"); }
 await app.listen({ port: env.API_PORT, host: "0.0.0.0" });
