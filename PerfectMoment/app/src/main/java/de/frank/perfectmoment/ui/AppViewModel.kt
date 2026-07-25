@@ -61,6 +61,13 @@ enum class RecordingState { IDLE, RECORDING, PROCESSING }
 enum class RecordingTarget { START, INTRO }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
 
+/** Woher die zuletzt gestartete Sitzung kam — Grundlage für „Erneut versuchen". */
+private sealed interface SessionStart {
+    data object New : SessionStart
+    data class Replay(val sessionId: Long, val shuffle: Boolean) : SessionStart
+    data class Resume(val sessionId: Long) : SessionStart
+}
+
 class AppViewModel(
     context: Context,
     private val container: AppContainer,
@@ -177,6 +184,9 @@ class AppViewModel(
     var pendingSessionTopic by mutableStateOf("")
         private set
     private var pendingSessionDecision: SessionPromptDecision? = null
+
+    /** Merkt, wie die aktuelle Sitzung gestartet wurde, damit „Erneut versuchen" denselben Weg wiederholt. */
+    private var lastSessionStart: SessionStart = SessionStart.New
     var sessionError by mutableStateOf<String?>(null)
         private set
     var randomReplay by mutableStateOf(false)
@@ -440,6 +450,7 @@ class AppViewModel(
     fun startSessionIntro() {
         if (topic.isBlank() || !authManager.isConnected) return
         cancelVoiceInput()
+        lastSessionStart = SessionStart.New
         pendingSessionTopic = topic.trim()
         introText = ""
         introQuestion = ""
@@ -463,6 +474,7 @@ class AppViewModel(
         cancelVoiceInput()
         sessionStartJob?.cancel()
         authManager.cancelQuestionGeneration()
+        lastSessionStart = SessionStart.New
         sheet = null
         introVisible = false
         sessionError = null
@@ -475,15 +487,31 @@ class AppViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                handleSessionFailure(error)
+                if (generation == sessionStartGeneration) handleSessionFailure(error)
             } finally {
                 if (generation == sessionStartGeneration) sessionStartJob = null
             }
         }
     }
 
+    /**
+     * Wiederholt genau den Start, der fehlgeschlagen ist. Ohne diese Unterscheidung würde der
+     * Wiederholversuch einer Verlaufs-Sitzung im Startpfad für neue Sitzungen landen und dort
+     * ohne Thema scheitern.
+     */
     fun retrySession() {
-        if (pendingSessionDecision == null) classifyAndStartPendingSession() else beginAiSession(introText)
+        when (val start = lastSessionStart) {
+            is SessionStart.Replay -> startReplay(start.sessionId, start.shuffle)
+            is SessionStart.Resume -> startResume(start.sessionId)
+            SessionStart.New -> when {
+                pendingSessionTopic.isBlank() -> {
+                    sessionError = null
+                    screen = AppScreen.START
+                }
+                pendingSessionDecision == null -> classifyAndStartPendingSession()
+                else -> beginAiSession(introText)
+            }
+        }
     }
 
     fun toggleSpeaker() = sessionController.toggleSpeaker()
@@ -542,45 +570,55 @@ class AppViewModel(
 
     fun replayHistory() {
         val id = historyDetail?.session?.id ?: return
-        sessionError = null
-        screen = AppScreen.SESSION
-        sessionStartJob?.cancel()
-        authManager.cancelQuestionGeneration()
-        val generation = ++sessionStartGeneration
+        startReplay(id, randomReplay)
+    }
+
+    fun resumeHistory() {
+        val id = historyDetail?.session?.id ?: return
+        startResume(id)
+    }
+
+    private fun startReplay(sessionId: Long, shuffle: Boolean) {
+        lastSessionStart = SessionStart.Replay(sessionId, shuffle)
+        val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
-                if (!sessionController.replaySession(id, randomReplay)) {
+                if (!sessionController.replaySession(sessionId, shuffle)) {
                     message = "Die Fragen laufen im gespeicherten Wortlaut. " +
                         "OpenAI war für die Perspektivumstellung gerade nicht erreichbar."
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                handleSessionFailure(error)
+                if (generation == sessionStartGeneration) handleSessionFailure(error)
             } finally {
                 if (generation == sessionStartGeneration) sessionStartJob = null
             }
         }
     }
 
-    fun resumeHistory() {
-        val id = historyDetail?.session?.id ?: return
-        sessionError = null
-        screen = AppScreen.SESSION
-        sessionStartJob?.cancel()
-        authManager.cancelQuestionGeneration()
-        val generation = ++sessionStartGeneration
+    private fun startResume(sessionId: Long) {
+        lastSessionStart = SessionStart.Resume(sessionId)
+        val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
-                sessionController.resumeSession(id)
+                sessionController.resumeSession(sessionId)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                handleSessionFailure(error)
+                if (generation == sessionStartGeneration) handleSessionFailure(error)
             } finally {
                 if (generation == sessionStartGeneration) sessionStartJob = null
             }
         }
+    }
+
+    private fun beginSessionStart(): Long {
+        sessionError = null
+        screen = AppScreen.SESSION
+        sessionStartJob?.cancel()
+        authManager.cancelQuestionGeneration()
+        return ++sessionStartGeneration
     }
 
     fun deleteSession(id: Long) {
@@ -874,6 +912,11 @@ class AppViewModel(
     }
 
     private fun classifyAndStartPendingSession() {
+        if (pendingSessionTopic.isBlank()) {
+            sessionError = null
+            screen = AppScreen.START
+            return
+        }
         sessionStartJob?.cancel()
         authManager.cancelQuestionGeneration()
         sessionError = null
@@ -893,7 +936,7 @@ class AppViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                handleSessionFailure(error)
+                if (generation == sessionStartGeneration) handleSessionFailure(error)
             } finally {
                 if (generation == sessionStartGeneration) sessionStartJob = null
             }

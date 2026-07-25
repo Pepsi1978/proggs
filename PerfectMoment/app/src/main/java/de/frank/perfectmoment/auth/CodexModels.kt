@@ -68,10 +68,15 @@ data class DeviceAuthInfo(
 
 enum class AuthErrorKind { REAUTH, QUOTA, NETWORK }
 
+/**
+ * @param retryable true bei Störungen, die sich von allein erledigen können (Serverfehler 5xx,
+ *        Zeitüberschreitungen). Solche Anfragen werden automatisch wiederholt.
+ */
 class CodexAuthException(
     val kind: AuthErrorKind,
     message: String,
     cause: Throwable? = null,
+    val retryable: Boolean = false,
 ) : Exception(message, cause)
 
 class QuestionValidationException(message: String) : IllegalArgumentException(message)

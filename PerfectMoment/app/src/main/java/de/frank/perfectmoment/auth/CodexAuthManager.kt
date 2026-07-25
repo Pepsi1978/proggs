@@ -241,6 +241,51 @@ internal fun codexSessionPromptPayload(
         )
 }
 
+/**
+ * Ordnet eine HTTP-Antwort einer Fehlerart zu. Vorübergehende Störungen (Zeitüberschreitung,
+ * Serverfehler 5xx) werden als wiederholbar gekennzeichnet, damit sie die Sitzung nicht beenden.
+ */
+internal fun classifyHttpError(code: Int, body: String) {
+    if (code in 200..299) return
+    val lowerBody = body.lowercase()
+    val message = runCatching {
+        val json = JSONObject(body)
+        val error = json.optJSONObject("error")
+        error?.optString("message")?.takeIf(String::isNotBlank)
+            ?: json.optString("message").takeIf(String::isNotBlank)
+    }.getOrNull() ?: body.take(240)
+    when {
+        code == 429 || lowerBody.contains("insufficient_quota") || lowerBody.contains("rate_limit") ->
+            throw CodexAuthException(
+                AuthErrorKind.QUOTA,
+                "Dein ChatGPT-/Codex-Kontingent ist aktuell ausgeschöpft. Bitte später erneut versuchen.",
+            )
+        code == 401 || code == 403 || lowerBody.contains("invalid_grant") || lowerBody.contains("refresh_token_reused") ->
+            throw CodexAuthException(
+                AuthErrorKind.REAUTH,
+                "OpenAI-Anmeldung ungültig oder nicht mehr zugelassen. Bitte erneut anmelden. $message",
+            )
+        code == 408 || code in 500..599 -> throw CodexAuthException(
+            AuthErrorKind.NETWORK,
+            "OpenAI ist gerade überlastet oder nicht erreichbar (Fehler $code). Bitte kurz erneut versuchen.",
+            retryable = true,
+        )
+        else -> throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI-Fehler $code: $message")
+    }
+}
+
+/**
+ * Der erste Versuch läuft über den Priority-Pool. Ist der gestört — OpenAI antwortet dann mit
+ * 5xx, obwohl der Standardweg bedient wird — fällt jeder Folgeversuch auf den Standard-Tarif
+ * zurück, statt die Sitzung scheitern zu lassen. Die übergebene Anfrage bleibt unverändert.
+ */
+internal fun payloadForAttempt(payload: JSONObject, attempt: Int): JSONObject {
+    if (attempt == 0) return payload
+    return runCatching {
+        JSONObject(payload.toString()).apply { remove("service_tier") }
+    }.getOrDefault(payload)
+}
+
 internal fun parseSessionPromptDecision(rawOutput: String): SessionPromptDecision {
     val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
     val json = runCatching { JSONObject(output) }.getOrElse {
@@ -620,10 +665,50 @@ class CodexAuthManager(context: Context) {
         }
     }
 
+    /**
+     * Führt die Anfrage aus und wiederholt sie bei vorübergehenden Störungen (Serverfehler 5xx,
+     * Zeitüberschreitungen, Verbindungsabbrüche) mit wachsendem Abstand.
+     *
+     * Wiederholt wird ausschliesslich, solange noch keine Frage ausgeliefert wurde — sonst
+     * würde ein zweiter Durchlauf bereits gespeicherte Fragen doppeln. Ein vom Nutzer
+     * abgebrochener Aufruf wird nie wiederholt.
+     */
     private suspend fun requestCodexResponse(
         payload: JSONObject,
         decodeQuestions: Boolean,
         onQuestion: suspend (String) -> Unit = {},
+    ): String {
+        var attempt = 0
+        while (true) {
+            var deliveredQuestion = false
+            try {
+                return requestCodexResponseOnce(payloadForAttempt(payload, attempt), decodeQuestions) { question ->
+                    deliveredQuestion = true
+                    onQuestion(question)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                currentCoroutineContext().ensureActive()
+                if (deliveredQuestion || attempt >= TRANSIENT_RETRY_DELAYS_MS.size || !error.isTransient()) {
+                    throw error
+                }
+                delay(TRANSIENT_RETRY_DELAYS_MS[attempt])
+                attempt++
+            }
+        }
+    }
+
+    private fun Exception.isTransient(): Boolean = when (this) {
+        is CodexAuthException -> retryable
+        is IOException -> true
+        else -> false
+    }
+
+    private suspend fun requestCodexResponseOnce(
+        payload: JSONObject,
+        decodeQuestions: Boolean,
+        onQuestion: suspend (String) -> Unit,
     ): String {
         val token = validAccessToken()
         val tokenAccountId = jwtAccountId(token)
@@ -657,6 +742,11 @@ class CodexAuthManager(context: Context) {
                     )
                 }
             }
+        } catch (error: IOException) {
+            if (trackedResponse.call.isCanceled()) {
+                throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
+            }
+            throw error
         } finally {
             activeQuestionCall.clear(trackedResponse.call)
         }
@@ -686,7 +776,10 @@ class CodexAuthManager(context: Context) {
         continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isActive) continuation.resumeWithException(e)
+                if (!continuation.isActive) return
+                // Ein abgebrochener Aufruf ist kein Netzwerkfehler: als Abbruch melden, damit
+                // er weder wiederholt noch als Fehler angezeigt wird.
+                if (call.isCanceled()) continuation.cancel(e) else continuation.resumeWithException(e)
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -750,30 +843,6 @@ class CodexAuthManager(context: Context) {
     private fun parseJson(value: String, message: String): JSONObject = runCatching { JSONObject(value) }
         .getOrElse { throw CodexAuthException(AuthErrorKind.NETWORK, message, it) }
 
-    private fun classifyHttpError(code: Int, body: String) {
-        if (code in 200..299) return
-        val lowerBody = body.lowercase()
-        val message = runCatching {
-            val json = JSONObject(body)
-            val error = json.optJSONObject("error")
-            error?.optString("message")?.takeIf(String::isNotBlank)
-                ?: json.optString("message").takeIf(String::isNotBlank)
-        }.getOrNull() ?: body.take(240)
-        when {
-            code == 429 || lowerBody.contains("insufficient_quota") || lowerBody.contains("rate_limit") ->
-                throw CodexAuthException(
-                    AuthErrorKind.QUOTA,
-                    "Dein ChatGPT-/Codex-Kontingent ist aktuell ausgeschöpft. Bitte später erneut versuchen.",
-                )
-            code == 401 || code == 403 || lowerBody.contains("invalid_grant") || lowerBody.contains("refresh_token_reused") ->
-                throw CodexAuthException(
-                    AuthErrorKind.REAUTH,
-                    "OpenAI-Anmeldung ungültig oder nicht mehr zugelassen. Bitte erneut anmelden. $message",
-                )
-            else -> throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI-Fehler $code: $message")
-        }
-    }
-
     private fun jwtAccountId(token: String): String? =
         jwtAuthValue(token, "chatgpt_account_id") ?: jwtAuthValue(token, "account_id")
 
@@ -831,6 +900,7 @@ class CodexAuthManager(context: Context) {
         internal const val MIN_DEVICE_POLL_SECONDS = 3
         internal const val MAX_DEVICE_POLL_SECONDS = 30
         internal val DNS_RETRY_DELAYS_MS = longArrayOf(500L, 1_500L, 3_000L)
+        internal val TRANSIENT_RETRY_DELAYS_MS = longArrayOf(1_000L, 3_000L, 7_000L)
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_EXPIRES_AT = "expires_at"
