@@ -66,6 +66,21 @@ foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CL
 }
 """;
 
+    /// <summary>
+    /// Aktualisiert den geerbten Prozess-PATH vor jedem Sitzungsstart. Ein bereits laufender
+    /// Launcher sieht spaetere Installationen oder PATH-Reparaturen sonst erst nach seinem Neustart.
+    /// Prozesslokale Eintraege bleiben erhalten, waehrend der aktuelle Machine- und User-PATH
+    /// Vorrang erhalten.
+    /// </summary>
+    private const string PersistentPathRefreshScript = """
+$machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+$pathEntries = @($machinePath, $userPath, $env:Path) -split ';' |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    Select-Object -Unique
+$env:Path = $pathEntries -join ';'
+""";
+
     private static readonly TerminalTabColor[] TerminalTabColors =
     [
         new("black", "#0C0C0C"),
@@ -585,6 +600,9 @@ $ErrorActionPreference = 'Continue'
 [Console]::Write("`e[?1004l")
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
+# Aktuellen persistenten Windows-PATH laden, damit alle installierten Tools erreichbar sind.
+{{PersistentPathRefreshScript}}
+
 # Geerbte Agenten-Umgebung entfernen -- vor dem Profil, damit das Profil gesetzte Werte behaelt.
 {{InheritedAgentEnvScrubScript}}
 
@@ -707,6 +725,8 @@ try {
 $ErrorActionPreference = 'Continue'
 {{ProgrammerProcessPriorityScript}}
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+# Aktuellen persistenten Windows-PATH laden, damit alle installierten Tools erreichbar sind.
+{{PersistentPathRefreshScript}}
 # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
 {{InheritedAgentEnvScrubScript}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}

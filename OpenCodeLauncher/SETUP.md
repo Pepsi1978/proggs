@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.47 (25.07.2026, 13:10 Uhr)
+Stand: v1.17.48 (25.07.2026, 14:18 Uhr)
 
 ---
 
@@ -75,6 +75,9 @@ Weitere Details:
 - Der Launcher setzt `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` pro Session → keine `CLAUDE.md` als
   Prompt-Fallback. **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** (bewusst NICHT der volle
   `OPENCODE_DISABLE_CLAUDE_CODE`). Die globale `~/.config/opencode/AGENTS.md` wird leer gehalten.
+- Vor jedem Claude-Code- und OpenCode-Start liest der Launcher den aktuellen Machine- und User-PATH
+  neu aus Windows ein und erhaelt zusaetzliche prozesslokale Eintraege. Damit sind nachtraeglich
+  installierte oder reparierte Programme auch ohne Launcher-Neustart in neuen Sitzungen erreichbar.
 - `~/proggs/AGENTS.md` ist eine Laufzeitdatei (`.gitignore`, wird immer neu erzeugt).
 
 ### macOS-Profile
