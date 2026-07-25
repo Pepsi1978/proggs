@@ -134,3 +134,7 @@ export const reconstructionTodos = [
   "Bearbeitbare HTML-Version aufbauen",
   "Geometrie und Varianten gegen die Quellen prüfen"
 ] as const;
+
+export function canRestartReconstructionJob(status: string, retryFailed: boolean): boolean {
+  return status === "failed" && retryFailed;
+}

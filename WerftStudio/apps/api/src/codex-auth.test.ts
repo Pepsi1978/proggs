@@ -10,7 +10,8 @@ describe("Codex credential protection", () => {
 
   it("rejects modified ciphertext", () => {
     const encrypted = encryptCredentials({ accessToken: "secret" }, "session-secret-with-at-least-32-characters");
-    expect(() => decryptCredentials(`${encrypted.slice(0, -1)}A`, "session-secret-with-at-least-32-characters")).toThrow();
+    const changedLastCharacter = encrypted.endsWith("A") ? "B" : "A";
+    expect(() => decryptCredentials(`${encrypted.slice(0, -1)}${changedLastCharacter}`, "session-secret-with-at-least-32-characters")).toThrow();
   });
 
   it("reads the ChatGPT account and email claims", () => {

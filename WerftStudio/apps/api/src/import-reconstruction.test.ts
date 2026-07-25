@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSourceBatches, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles } from "./import-reconstruction.js";
+import { buildSourceBatches, canRestartReconstructionJob, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles } from "./import-reconstruction.js";
 
 const file = (path: string, size = 10, mime = "application/octet-stream") => ({ path, size, mime });
 
@@ -62,5 +62,12 @@ describe("native UI reconstruction", () => {
     expect(joined).toContain("second");
     expect(joined).toContain("third");
     expect(batches.reduce((sum, batch) => sum + batch.completedBytes, 0)).toBe(18);
+  });
+
+  it("restarts failed work only after an explicit retry request", () => {
+    expect(canRestartReconstructionJob("failed", false)).toBe(false);
+    expect(canRestartReconstructionJob("failed", true)).toBe(true);
+    expect(canRestartReconstructionJob("running", true)).toBe(false);
+    expect(canRestartReconstructionJob("completed", true)).toBe(false);
   });
 });

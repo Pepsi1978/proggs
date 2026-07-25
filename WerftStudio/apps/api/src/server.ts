@@ -18,7 +18,7 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
-import { buildSourceBatches, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTodos, type ImportManifestFile, type ImportPlatform } from "./import-reconstruction.js";
+import { buildSourceBatches, canRestartReconstructionJob, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTodos, type ImportManifestFile, type ImportPlatform } from "./import-reconstruction.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
@@ -230,7 +230,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.1-20260725.1541" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.2-20260725.1543" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -707,12 +707,13 @@ await db.update(jobs).set({ status: "failed", errorCode: "RECONSTRUCT_INTERRUPTE
 app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request, reply) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const { retryFailed } = z.object({ retryFailed: z.boolean().optional().default(false) }).strict().parse(request.body ?? {});
   const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
   const idempotencyKey = `${projectId}:${imported.revision}`;
   const queuedState = reconstructionState("queued", "HTML-Rekonstruktion wird vorbereitet.", 0, 0, 0, 0, 0);
   const candidateId = uuidv7();
-  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState }).onConflictDoNothing().returning({ id: jobs.id });
+  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState, attempts: 1 }).onConflictDoNothing().returning({ id: jobs.id });
   if (inserted[0]) {
     setTimeout(() => void runReconstructionJob(candidateId, actor, projectId, request.id), 0);
     return reply.status(202).send({ jobId: candidateId, status: "queued" });
@@ -720,7 +721,8 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
   if (!existing) fail("JOB_CLAIM_FAILED", 409, "Der Verarbeitungslauf konnte nicht übernommen werden. Bitte erneut versuchen.", true);
   if (existing.status === "queued" || existing.status === "running" || existing.status === "completed") return reply.status(202).send({ jobId: existing.id, status: existing.status });
-  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: queuedState, errorCode: null, updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id });
+  if (!canRestartReconstructionJob(existing.status, retryFailed)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
+  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: queuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id });
   if (claimed[0]) setTimeout(() => void runReconstructionJob(existing.id, actor, projectId, request.id), 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
 });

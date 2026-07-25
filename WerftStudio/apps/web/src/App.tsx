@@ -25,8 +25,8 @@ const examples = [
 ];
 
 const pause = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void): Promise<ReconstructionJob> {
-  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" });
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false): Promise<ReconstructionJob> {
+  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed }) });
   let networkRetries = 0;
   let interruptedRestarts = 0;
   for (;;) {
@@ -44,7 +44,7 @@ async function reconstructProject(projectId: string, onProgress: (job: Reconstru
     if (job.status === "completed") return job;
     if (job.status === "failed" && job.errorCode === "RECONSTRUCT_INTERRUPTED" && interruptedRestarts < 1) {
       interruptedRestarts += 1;
-      started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" });
+      started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed: true }) });
       continue;
     }
     if (job.status === "failed") throw new ApiError(job.errorCode ?? "RECONSTRUCT_FAILED", job.result?.message ?? "Die HTML-Rekonstruktion ist fehlgeschlagen.", 500);
@@ -1057,7 +1057,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const [panning, setPanning] = useState(false);
   const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
   const reconstruct = useMutation({
-    mutationFn: () => reconstructProject(projectId, setReconstructionProgress),
+    mutationFn: (retryFailed: boolean) => reconstructProject(projectId, setReconstructionProgress, retryFailed),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
@@ -1134,7 +1134,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     return () => window.removeEventListener("message", handlePreviewMessage);
   }, [zoom, setZoom]);
   useEffect(() => {
-    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate();
+    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate(false);
   }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
   const viewportProps = {
     ref: viewportRef,
@@ -1169,7 +1169,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             <span>{reconstructionProgress?.result?.message ?? "Alle UI-Quellen, Themes, Ressourcen und Abmessungen werden geprüft."}</span>
             {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
-            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate()}>Rekonstruktion erneut starten</Button>}
+            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate(true)}>Rekonstruktion erneut starten</Button>}
             {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}
