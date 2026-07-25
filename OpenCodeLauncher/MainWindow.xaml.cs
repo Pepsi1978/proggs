@@ -658,6 +658,12 @@ public partial class MainWindow : Window
     {
         var lb = sender as System.Windows.Controls.ListBox;
         if (lb == null) return;
+        if (FindAncestor<System.Windows.Controls.Button>(e.OriginalSource as DependencyObject) != null)
+        {
+            _dragSourceGroup = null;
+            _dragSourceIndex = -1;
+            return;
+        }
         _dragStartPoint = e.GetPosition(lb);
         _dragSourceGroup = lb.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         _dragSourceIndex = IndexFromOriginalSource(lb, e.OriginalSource);

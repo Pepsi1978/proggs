@@ -214,6 +214,20 @@
                     </MultiBinding>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ModelVisibilityBtn" TargetType="Button" BasedOn="{StaticResource WindowBtn}">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="ToolTip" Value="Modell ausblenden"/>
         </Style>
 
         <!-- Status-Pill (Provider-Tabelle) -->
@@ -402,11 +416,22 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <DockPanel Grid.Row="0" Margin="4,0,4,12">
+                        <Grid Grid.Row="0" Margin="4,0,4,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             <TextBlock Text="MODELLE" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                            <Button Style="{StaticResource GhostBtn}" Content="+ Hinzufügen" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                            <Button Grid.Column="1" Style="{StaticResource GhostBtn}" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                                    IsEnabled="{Binding HasHiddenModels}" Command="{Binding ShowHiddenModelsCommand}">
+                                <TextBlock>
+                                    <Run Text="Ausgeblendet ("/><Run Text="{Binding HiddenModels.Count, Mode=OneWay}"/><Run Text=")"/>
+                                </TextBlock>
+                            </Button>
+                            <Button Grid.Column="2" Style="{StaticResource GhostBtn}" Content="+ Hinzufügen" Margin="8,0,0,0" Padding="11,6" FontSize="12"
                                     Command="{Binding AddModelCommand}"/>
-                        </DockPanel>
+                        </Grid>
                         <ScrollViewer x:Name="ModelScrollViewer"
                                       Grid.Row="1"
                                       VerticalScrollBarVisibility="Hidden"
@@ -433,7 +458,7 @@
                                                     <TextBlock Text="⠿" Foreground="{DynamicResource DimBrush}" FontSize="13" Margin="2,0,8,0" VerticalAlignment="Center" Cursor="SizeAll" TextOptions.TextFormattingMode="Ideal"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{DynamicResource TextBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                     <Border Grid.Column="2" CornerRadius="20" Padding="7,1" Margin="0,0,8,0" Background="{DynamicResource ChipBg}" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Models.Count, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding VisibleModelCount, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
                                                     </Border>
                                                     <TextBlock Grid.Column="3" Text="▾" Foreground="{DynamicResource AccentBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
                                                 </Grid>
@@ -451,16 +476,20 @@
                                                     <ListBox.ItemTemplate>
                                                         <DataTemplate DataType="m:ModelEntry">
                                                             <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
+                                                                 <Grid.ColumnDefinitions>
+                                                                     <ColumnDefinition Width="Auto"/>
+                                                                     <ColumnDefinition Width="*"/>
+                                                                     <ColumnDefinition Width="Auto"/>
+                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Text="⠿" Foreground="{DynamicResource DimBrush}" FontSize="13" Margin="0,0,9,0" VerticalAlignment="Top" Cursor="SizeAll"/>
                                                                 <StackPanel Grid.Column="1">
                                                                     <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                                                                     <TextBlock Text="{Binding ModelString}" FontSize="11" Foreground="{DynamicResource DimBrush}" FontFamily="Cascadia Code, Consolas, monospace" Margin="0,2,0,0"/>
-                                                                </StackPanel>
-                                                            </Grid>
+                                                                 </StackPanel>
+                                                                 <Button Grid.Column="2" Style="{StaticResource ModelVisibilityBtn}" Content="&#xE890;" Margin="8,0,0,0"
+                                                                         Command="{Binding DataContext.HideModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                         CommandParameter="{Binding}"/>
+                                                             </Grid>
                                                         </DataTemplate>
                                                     </ListBox.ItemTemplate>
                                                 </ListBox>

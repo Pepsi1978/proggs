@@ -33,6 +33,13 @@ public sealed partial class ModelEntry : ObservableObject
     /// </summary>
     public bool IsUserDefined { get; set; }
 
+    /// <summary>
+    /// Ausgeblendete Modelle bleiben vollständig in der Registry erhalten und können über die
+    /// Wiederherstellungsansicht jederzeit erneut eingeblendet werden.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isHidden;
+
     public string ProviderId { get; set; } = "openrouter";
     public string ProviderName { get; set; } = "OpenRouter";
 

@@ -18,7 +18,14 @@ public sealed partial class ModelGroupEntry : ObservableObject
     private bool _isExpanded = true;
 
     [JsonIgnore]
-    public string HeaderText => $"{Title} ({Models.Count})";
+    public string HeaderText => $"{Title} ({VisibleModelCount})";
 
-    public void RefreshHeaderText() => OnPropertyChanged(nameof(HeaderText));
+    [JsonIgnore]
+    public int VisibleModelCount => Models.Count(model => !model.IsHidden);
+
+    public void RefreshHeaderText()
+    {
+        OnPropertyChanged(nameof(HeaderText));
+        OnPropertyChanged(nameof(VisibleModelCount));
+    }
 }

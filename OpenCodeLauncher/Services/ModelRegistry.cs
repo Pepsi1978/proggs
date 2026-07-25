@@ -349,8 +349,9 @@ public sealed class ModelRegistry
             if (!remoteBySlug.TryGetValue(existing.Slug, out var remoteModel))
             {
                 // Selbst hinzugefuegte/bearbeitete Eintraege ueberleben den Sync auch dann, wenn
-                // ihr Slug in der Remote-Liste fehlt — sonst waere jede Bearbeitung sofort weg.
-                if (existing.IsUserDefined) merged.Add(existing);
+                // ihr Slug in der Remote-Liste fehlt. Ausgeblendete Eintraege muessen ebenfalls
+                // erhalten bleiben, damit sie in der Wiederherstellungsansicht nicht verloren gehen.
+                if (existing.IsUserDefined || existing.IsHidden) merged.Add(existing);
                 continue;
             }
             existing.ProviderId = group.ProviderId;

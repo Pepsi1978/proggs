@@ -25,6 +25,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _registry = ModelRegistry.Load();
         foreach (var g in _registry.Groups) ModelGroups.Add(g);
+        foreach (var model in ModelGroups.SelectMany(group => group.Models).Where(model => model.IsHidden))
+            HiddenModels.Add(model);
+        HasHiddenModels = HiddenModels.Count > 0;
         Profiles.Add(new InstructionProfileEntry
         {
             Id = "minimal",
@@ -50,7 +53,7 @@ public sealed partial class MainViewModel : ObservableObject
             IsEnabled = true
         });
         SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
-        SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
+        SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
@@ -71,6 +74,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<ProviderEntry> Providers { get; } = new();
     public ObservableCollection<ThinkingOptionEntry> ThinkingOptions { get; } = new();
     public ObservableCollection<InstructionProfileEntry> Profiles { get; } = new();
+    public ObservableCollection<ModelEntry> HiddenModels { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
     [ObservableProperty] private ProviderEntry? _selectedProvider;
@@ -90,6 +94,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private InstructionProfileEntry? _selectedProfile;
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
     [ObservableProperty] private bool _canEditSelectedProfile = true;
+    [ObservableProperty] private bool _hasHiddenModels;
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
@@ -102,9 +107,17 @@ public sealed partial class MainViewModel : ObservableObject
         ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
         ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · Minimal + Standard + Strikt" : "OpenCode · Profil-Snapshots";
         UpdateProfileAvailability();
+        if (value == null)
+        {
+            _loadCts?.Cancel();
+            _thinkingCts?.Cancel();
+            UpdateThinkingState("Modell wählen.");
+            return;
+        }
+
         UpdateThinkingState("Lade Thinking …");
-        if (value != null) _ = LoadThinkingOptionsAsync(value);
-        if (value != null) _ = LoadProvidersAsync(value);
+        _ = LoadThinkingOptionsAsync(value);
+        _ = LoadProvidersAsync(value);
     }
 
     partial void OnSelectedThinkingOptionChanged(ThinkingOptionEntry? value)
@@ -419,10 +432,59 @@ public sealed partial class MainViewModel : ObservableObject
         if (idx < 0) return;
         if (!ConfirmRemoveModel(SelectedModel.DisplayName, SelectedModel.Slug)) return;
         _registry.RemoveAt(group, idx);
-        if (group.Models.Count > 0)
-            SelectedModel = group.Models[Math.Clamp(idx, 0, group.Models.Count - 1)];
-        else
-            SelectedModel = ModelGroups.SelectMany(g => g.Models).FirstOrDefault();
+        SelectedModel = group.Models.Skip(Math.Min(idx, group.Models.Count)).FirstOrDefault(model => !model.IsHidden)
+            ?? group.Models.Take(Math.Min(idx, group.Models.Count)).LastOrDefault(model => !model.IsHidden)
+            ?? ModelGroups.SelectMany(candidateGroup => candidateGroup.Models).FirstOrDefault(model => !model.IsHidden);
+    }
+
+    [RelayCommand]
+    private void HideModel(ModelEntry model)
+    {
+        if (model.IsHidden) return;
+        var group = FindGroupForModel(model);
+        if (group == null) return;
+
+        var index = group.Models.IndexOf(model);
+        model.IsHidden = true;
+        HiddenModels.Add(model);
+        HasHiddenModels = true;
+        group.RefreshHeaderText();
+        _registry.Save();
+
+        if (ReferenceEquals(SelectedModel, model))
+        {
+            SelectedModel = group.Models.Skip(index + 1).FirstOrDefault(candidate => !candidate.IsHidden)
+                ?? group.Models.Take(index).LastOrDefault(candidate => !candidate.IsHidden)
+                ?? ModelGroups.SelectMany(candidateGroup => candidateGroup.Models).FirstOrDefault(candidate => !candidate.IsHidden);
+        }
+
+        StatusText = $"Modell '{model.DisplayName}' ausgeblendet.";
+    }
+
+    [RelayCommand]
+    private void RestoreModel(ModelEntry model)
+    {
+        if (!model.IsHidden) return;
+        var group = FindGroupForModel(model);
+        if (group == null) return;
+
+        model.IsHidden = false;
+        HiddenModels.Remove(model);
+        HasHiddenModels = HiddenModels.Count > 0;
+        group.RefreshHeaderText();
+        _registry.Save();
+        SelectedModel ??= model;
+        StatusText = $"Modell '{model.DisplayName}' wieder eingeblendet.";
+    }
+
+    [RelayCommand]
+    private void ShowHiddenModels()
+    {
+        var window = new HiddenModelsWindow(this)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        window.ShowDialog();
     }
 
     [RelayCommand]
