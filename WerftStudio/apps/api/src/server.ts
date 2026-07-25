@@ -17,6 +17,7 @@ import { Client as MinioClient } from "minio";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
+import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { buildSourceBatches, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTodos, type ImportManifestFile, type ImportPlatform } from "./import-reconstruction.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
@@ -229,7 +230,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.0-20260725.1458" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.1-20260725.1541" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -478,26 +479,27 @@ async function codexRun(organizationId: string, instructions: string, input: str
   if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
   const body: Record<string, unknown> = { ...codexModelFields(settings.model, settings.fast), instructions, input: [{ role: "user", content: input }], store: false, stream: true };
   if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
-  let response: Response;
-  try {
-    response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(540_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
-  } catch (error) {
-    log.warn({ err: error }, "KI-Lauf: OpenAI nicht erreichbar");
-    fail("CHAT_UPSTREAM", 502, "OpenAI hat nicht rechtzeitig geantwortet oder ist nicht erreichbar. Bitte erneut versuchen.", true);
-  }
-  const raw = await response.text();
-  if (!response.ok) fail("CHAT_UPSTREAM", 502, `OpenAI hat den KI-Lauf abgelehnt (HTTP ${response.status}).`, true);
-  let outputText = "";
-  for (const line of raw.split("\n")) {
-    if (!line.startsWith("data:")) continue;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const event = JSON.parse(line.slice(5).trim()) as { type?: string; delta?: string; response?: { output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> } };
-      if (event.type === "response.output_text.delta" && typeof event.delta === "string") outputText += event.delta;
-      else if (event.type === "response.completed" && !outputText) outputText = (event.response?.output ?? []).flatMap((item) => item.content ?? []).map((part) => part.text ?? "").join("");
-    } catch { /* Nicht-JSON-Zeilen im Stream ignorieren */ }
+      const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(540_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
+      const raw = await response.text();
+      if (!response.ok) throw codexHttpError(response.status);
+      const outputText = parseCodexEventStream(raw);
+      if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
+      return { text: outputText, model: settings.model };
+    } catch (error) {
+      if (!isRetryableCodexError(error) || attempt === 3) {
+        const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
+        log.warn({ err: error, attempt }, "KI-Lauf dauerhaft fehlgeschlagen");
+        if (typeof details.code === "string") throw error;
+        fail("CHAT_UPSTREAM", 502, "OpenAI hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.", true);
+      }
+      const delayMs = attempt * 2_000;
+      log.warn({ err: error, attempt, nextAttempt: attempt + 1, delayMs }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
-  if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
-  return { text: outputText, model: settings.model };
+  fail("CHAT_UPSTREAM", 502, "OpenAI hat den KI-Lauf nicht abgeschlossen.", true);
 }
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
