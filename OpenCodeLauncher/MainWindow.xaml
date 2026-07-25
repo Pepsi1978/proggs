@@ -412,6 +412,7 @@
                                       VerticalScrollBarVisibility="Hidden"
                                       HorizontalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="ModelScrollViewer_PreviewMouseWheel">
+                            <StackPanel>
                             <ItemsControl x:Name="ModelGroupsList" ItemsSource="{Binding ModelGroups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="m:ModelGroupEntry">
@@ -468,13 +469,17 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <!-- Hinweis unter der letzten Gruppe statt neben den Buttons: dort ueberlappte er
+                                 bei schmaler Modell-Spalte mit "Bearbeiten"/"Entfernen". -->
+                            <TextBlock Text="Ziehen zum Sortieren" FontSize="11" Foreground="{DynamicResource DimBrush}"
+                                       Margin="4,0,4,4" HorizontalAlignment="Left"/>
+                            </StackPanel>
                         </ScrollViewer>
                         <DockPanel Grid.Row="2" Margin="4,10,4,14">
                             <Button Style="{StaticResource GhostBtn}" Content="Entfernen" DockPanel.Dock="Right" Padding="11,6" FontSize="12"
                                     Command="{Binding RemoveModelCommand}"/>
                             <Button Style="{StaticResource GhostBtn}" Content="Bearbeiten" DockPanel.Dock="Right" Margin="0,0,8,0" Padding="11,6" FontSize="12"
                                     Command="{Binding EditModelCommand}"/>
-                            <TextBlock Text="Ziehen zum Sortieren" FontSize="11" Foreground="{DynamicResource DimBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Grid>
                 </Border>
