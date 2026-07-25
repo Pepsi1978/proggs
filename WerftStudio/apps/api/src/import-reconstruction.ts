@@ -138,3 +138,34 @@ export const reconstructionTodos = [
 export function canRestartReconstructionJob(status: string, retryFailed: boolean): boolean {
   return status === "failed" && retryFailed;
 }
+
+export type ReconstructionOperationKind = "analysis" | "compaction" | "build" | "verification";
+export type ReconstructionTimingSample = { kind: ReconstructionOperationKind; durationMs: number };
+
+const reconstructionOperationWeights: Record<ReconstructionOperationKind, number> = {
+  analysis: 1,
+  compaction: 0.8,
+  build: 2,
+  verification: 2
+};
+
+export function estimateAnalysisCallCount(totalBytes: number, batchChars = 220_000): number {
+  return Math.max(1, Math.ceil(Math.max(0, totalBytes) / batchChars));
+}
+
+export function reconstructionTiming(
+  samples: ReconstructionTimingSample[],
+  currentKind: ReconstructionOperationKind | null,
+  currentElapsedMs: number,
+  remainingWeight: number
+): { phaseProgress: number | null; estimatedRemainingMs: number | null } {
+  if (!samples.length) return { phaseProgress: null, estimatedRemainingMs: null };
+  const unitDurationMs = Math.max(1, samples.reduce((sum, sample) => sum + sample.durationMs / reconstructionOperationWeights[sample.kind], 0) / samples.length);
+  const expectedCurrentMs = currentKind ? unitDurationMs * reconstructionOperationWeights[currentKind] : 0;
+  const currentOverdue = currentKind !== null && currentElapsedMs >= expectedCurrentMs;
+  const currentRemainingMs = Math.max(0, expectedCurrentMs - Math.max(0, currentElapsedMs));
+  return {
+    phaseProgress: currentKind ? Math.min(95, Math.max(0, currentElapsedMs) / expectedCurrentMs * 100) : null,
+    estimatedRemainingMs: currentOverdue ? null : Math.round(currentRemainingMs + Math.max(0, remainingWeight) * unitDurationMs)
+  };
+}

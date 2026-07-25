@@ -12,8 +12,9 @@ type Me = { id: string; email: string; name: string; role: string; organizationN
 type ImportFile = { path: string; size: number; mime: string };
 type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; previewPath?: string };
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
-type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; entryPath?: string; revision?: number };
-type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null };
+type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number };
+type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null; attempts?: number; heartbeatAt?: string };
+type ImportProgressState = { percent: number; phaseProgress: number | null; message: string; loaded: number; total: number; elapsedMs: number; estimatedRemainingMs: number | null; currentOperation?: string | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; todos: ReconstructionTodo[] };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
 const examples = [
   ["Banking App „Fluss“", "iOS · Android", "Konten, Zahlungen und Tagesüberblick mit ruhiger Typografie.", "Prototyp"],
@@ -25,6 +26,29 @@ const examples = [
 ];
 
 const pause = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+function formatDuration(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1_000));
+  if (totalSeconds < 60) return `${totalSeconds} Sek.`;
+  const totalMinutes = Math.floor(totalSeconds / 60), seconds = totalSeconds % 60;
+  if (totalMinutes < 60) return `${totalMinutes} Min.${seconds ? ` ${seconds} Sek.` : ""}`;
+  const hours = Math.floor(totalMinutes / 60), minutes = totalMinutes % 60;
+  return `${hours} Std.${minutes ? ` ${minutes} Min.` : ""}`;
+}
+function ProgressMeters({ percent, phaseProgress, elapsedMs, estimatedRemainingMs, currentOperation }: { percent: number; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; currentOperation?: string | undefined }) {
+  return (
+    <div className="progress-meters">
+      <div className="progress-meter">
+        <div><span>Gesamtfortschritt</span><strong>{Math.round(percent)} %</strong></div>
+        <progress aria-label="Gesamtfortschritt" value={percent} max="100" />
+      </div>
+      <div className="progress-meter secondary">
+        <div><span>{currentOperation ?? "Aktueller Schritt"}</span><strong>{phaseProgress == null ? "läuft" : `${Math.round(phaseProgress)} %`}</strong></div>
+        {phaseProgress == null ? <progress aria-label="Aktueller Schritt läuft" max="100" /> : <progress aria-label="Fortschritt des aktuellen Schritts" value={phaseProgress} max="100" />}
+      </div>
+      <small>{elapsedMs == null ? "Laufzeit startet" : `Laufzeit ${formatDuration(elapsedMs)}`} · {estimatedRemainingMs == null ? "Restzeit wird kalibriert" : `noch etwa ${formatDuration(estimatedRemainingMs)}`}</small>
+    </div>
+  );
+}
 async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false): Promise<ReconstructionJob> {
   let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed }) });
   let networkRetries = 0;
@@ -288,7 +312,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
   const [projectType, setProjectType] = useState("prototype");
   const [frontendOnly, setFrontendOnly] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
-  const [progress, setProgress] = useState<{ percent: number; message: string; loaded: number; total: number; todos: ReconstructionTodo[] } | null>(null);
+  const [progress, setProgress] = useState<ImportProgressState | null>(null);
   const selectFiles = (selected: FileList | null) => {
     const next = Array.from(selected ?? []);
     setFiles(next);
@@ -300,6 +324,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
   };
   const upload = useMutation({
     mutationFn: async () => {
+      const uploadStartedAt = Date.now();
       const form = new FormData();
       form.append("name", name);
       form.append("platform", platform);
@@ -309,10 +334,11 @@ function ImportProject({ onClose }: { onClose(): void }) {
         form.append("fileSize", String(file.size));
         form.append("files", file, file.webkitRelativePath || file.name);
       }
-      setProgress({ percent: 0, message: "Projektdateien werden hochgeladen.", loaded: 0, total: files.reduce((sum, file) => sum + file.size, 0), todos: [] });
+      setProgress({ percent: 0, phaseProgress: 0, message: "Projektdateien werden hochgeladen.", loaded: 0, total: files.reduce((sum, file) => sum + file.size, 0), elapsedMs: 0, estimatedRemainingMs: null, currentOperation: "Projektdateien hochladen", todos: [] });
       const imported = await apiFormProgress<{ projectId: string; requiresReconstruction: boolean }>("/imports", form, (loaded, total) => {
         const knownTotal = total || files.reduce((sum, file) => sum + file.size, 0);
-        setProgress({ percent: knownTotal ? Math.min(35, loaded / knownTotal * 35) : 5, message: "Projektdateien werden vollständig eingelesen.", loaded, total: knownTotal, todos: [] });
+        const elapsedMs = Date.now() - uploadStartedAt;
+        setProgress({ percent: knownTotal ? Math.min(35, loaded / knownTotal * 35) : 5, phaseProgress: knownTotal ? Math.min(100, loaded / knownTotal * 100) : null, message: "Projektdateien werden vollständig eingelesen.", loaded, total: knownTotal, elapsedMs, estimatedRemainingMs: loaded > 0 && knownTotal > loaded ? elapsedMs / loaded * (knownTotal - loaded) : null, currentOperation: "Projektdateien hochladen", todos: [] });
       });
       let reconstructionCompleted = true;
       if (imported.requiresReconstruction) {
@@ -322,14 +348,21 @@ function ImportProject({ onClose }: { onClose(): void }) {
             message: job.result?.message ?? "UI-Quellen werden verarbeitet.",
             loaded: job.result?.processedBytes ?? 0,
             total: job.result?.totalBytes ?? 0,
+            phaseProgress: job.result?.phaseProgress ?? null,
+            elapsedMs: job.result?.elapsedMs ?? 0,
+            estimatedRemainingMs: job.result?.estimatedRemainingMs ?? null,
+            currentOperation: job.result?.currentOperation ?? "UI-Quellen verarbeiten",
+            completedOperations: job.result?.completedOperations,
+            totalOperations: job.result?.totalOperations,
+            retryCount: job.result?.retryCount,
             todos: job.result?.todos ?? []
           }));
         } catch {
           reconstructionCompleted = false;
-          setProgress((current) => ({ percent: current?.percent ?? 35, message: "Projekt importiert; die HTML-Rekonstruktion wird im Studio fortgesetzt.", loaded: current?.loaded ?? 0, total: current?.total ?? 0, todos: current?.todos ?? [] }));
+          setProgress((current) => ({ percent: current?.percent ?? 35, phaseProgress: current?.phaseProgress ?? null, message: "Projekt importiert; die HTML-Rekonstruktion kann im Studio erneut gestartet werden.", loaded: current?.loaded ?? 0, total: current?.total ?? 0, elapsedMs: current?.elapsedMs ?? 0, estimatedRemainingMs: null, currentOperation: current?.currentOperation, completedOperations: current?.completedOperations, totalOperations: current?.totalOperations, retryCount: current?.retryCount, todos: current?.todos ?? [] }));
         }
       }
-      if (reconstructionCompleted) setProgress((current) => ({ percent: 100, message: "Design vollständig importiert und geprüft.", loaded: current?.total ?? 0, total: current?.total ?? 0, todos: current?.todos ?? [] }));
+      if (reconstructionCompleted) setProgress((current) => ({ percent: 100, phaseProgress: 100, message: "Design vollständig importiert, geprüft und gespeichert.", loaded: current?.total ?? 0, total: current?.total ?? 0, elapsedMs: current?.elapsedMs ?? 0, estimatedRemainingMs: 0, currentOperation: "Import abgeschlossen", completedOperations: current?.completedOperations, totalOperations: current?.totalOperations, retryCount: current?.retryCount, todos: current?.todos ?? [] }));
       return imported;
     },
     onSuccess: async ({ projectId }) => {
@@ -421,10 +454,11 @@ function ImportProject({ onClose }: { onClose(): void }) {
         </div>
         <p className="subtle">Die Projektgröße begrenzt nicht die Designanalyse: große UI-Quellen werden vollständig in überprüfbare Verarbeitungspakete zerlegt, statt still übersprungen oder zusammengequetscht zu werden.</p>
         {progress && (
-          <section className="import-progress" aria-live="polite">
-            <div><strong>{progress.message}</strong><span>{Math.round(progress.percent)} %</span></div>
-            <progress value={progress.percent} max="100" />
+          <section className="import-progress">
+            <div><strong aria-live="polite" aria-atomic="true">{progress.message}</strong><span>{Math.round(progress.percent)} %</span></div>
+            <ProgressMeters percent={progress.percent} phaseProgress={progress.phaseProgress} elapsedMs={progress.elapsedMs} estimatedRemainingMs={progress.estimatedRemainingMs} currentOperation={progress.currentOperation} />
             {progress.total > 0 && <small>{progress.loaded.toLocaleString("de-DE")} von {progress.total.toLocaleString("de-DE")} Bytes verarbeitet</small>}
+            {(progress.totalOperations ?? 0) > 0 && <small>{progress.completedOperations ?? 0} von {progress.totalOperations} KI-Schritten abgeschlossen{progress.retryCount ? ` · ${progress.retryCount} Verbindungswiederholung${progress.retryCount === 1 ? "" : "en"}` : ""}</small>}
             {progress.todos.length > 0 && <div className="import-todos">{progress.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
           </section>
         )}
@@ -1165,9 +1199,10 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
         ) : (
           <div className="empty reconstruction-state">
             <strong>{reconstruct.error ? "Die HTML-Version konnte noch nicht fertiggestellt werden." : "Das Ist-Design wird automatisch als HTML aufgebaut."}</strong>
-            {!reconstruct.error && <progress value={reconstructionProgress?.progress ?? 0} max="100" />}
+            {!reconstruct.error && <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />}
             <span>{reconstructionProgress?.result?.message ?? "Alle UI-Quellen, Themes, Ressourcen und Abmessungen werden geprüft."}</span>
             {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
+            {(reconstructionProgress?.result?.totalOperations ?? 0) > 0 ? <small>{reconstructionProgress?.result?.completedOperations ?? 0} von {reconstructionProgress?.result?.totalOperations} KI-Schritten abgeschlossen{reconstructionProgress?.result?.retryCount ? ` · ${reconstructionProgress.result.retryCount} Verbindungswiederholung${reconstructionProgress.result.retryCount === 1 ? "" : "en"}` : ""}</small> : null}
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
             {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate(true)}>Rekonstruktion erneut starten</Button>}
             {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}

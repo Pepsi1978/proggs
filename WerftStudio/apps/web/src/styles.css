@@ -21,3 +21,6 @@
 
 /* Leinwand-Vollbild */
 .studio.canvas-fullscreen{position:fixed;inset:0;z-index:1000}.canvas-fullscreen .project-header,.canvas-fullscreen .workspace-tabs,.canvas-fullscreen .statusbar{display:none}.canvas-fullscreen .workspace,.canvas-fullscreen .canvas{height:100%}.canvas-fullscreen-controls{position:fixed;top:12px;right:12px;z-index:70;display:flex;gap:6px;padding:6px;border:1px solid var(--color-line);border-radius:12px;background:color-mix(in srgb,var(--color-surface) 88%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px)}
+
+/* Messbarer Importfortschritt */
+.progress-meters{width:100%;display:grid;gap:8px;text-align:left}.progress-meter{display:grid;gap:4px}.progress-meter>div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:var(--color-text-subtle)}.progress-meter>div strong{color:var(--color-text);font-variant-numeric:tabular-nums}.progress-meter.secondary progress{height:6px;accent-color:var(--color-success)}.progress-meters>small{font-variant-numeric:tabular-nums;color:var(--color-text-subtle)}.reconstruction-state .progress-meters{max-width:560px}

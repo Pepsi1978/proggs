@@ -11,14 +11,14 @@ import { can, type Role } from "@werft/authz";
 import { applyOperationsSchema, createProjectSchema, designDocumentSchema, type DesignDocument } from "@werft/contracts";
 import { auditEvents, createDatabase, designOperations, drafts, jobs, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
 import { applyDesignOperations, validateDesignReferences } from "@werft/design-model";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
 import { Client as MinioClient } from "minio";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
-import { buildSourceBatches, canRestartReconstructionJob, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTodos, type ImportManifestFile, type ImportPlatform } from "./import-reconstruction.js";
+import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
@@ -230,7 +230,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.2-20260725.1543" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.3-20260725.1547" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -472,7 +472,10 @@ function extractJsonObject(text: string): string {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
   return start >= 0 && end > start ? text.slice(start, end + 1) : text;
 }
-async function codexRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"]): Promise<{ text: string; model: string }> {
+type CodexRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void };
+type CodexRunResult = { text: string; model: string; attempts: number; durationMs: number; inputChars: number; outputChars: number };
+async function codexRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: CodexRunOptions = {}): Promise<CodexRunResult> {
+  const runStartedAt = Date.now();
   const connection = await validCodexConnection(organizationId);
   const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("high"), fast: z.boolean().default(false) }).parse(connection.settings);
   const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
@@ -480,22 +483,28 @@ async function codexRun(organizationId: string, instructions: string, input: str
   const body: Record<string, unknown> = { ...codexModelFields(settings.model, settings.fast), instructions, input: [{ role: "user", content: input }], store: false, stream: true };
   if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    options.onAttempt?.(attempt);
+    const attemptStartedAt = Date.now();
+    log.info({ event: "codex.request.started", jobId: options.jobId, operation: options.operation, model: settings.model, effort: settings.effort, fast: settings.fast, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
     try {
-      const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(540_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
+      const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
+      const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
       const raw = await response.text();
       if (!response.ok) throw codexHttpError(response.status);
       const outputText = parseCodexEventStream(raw);
       if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
-      return { text: outputText, model: settings.model };
+      const durationMs = Date.now() - runStartedAt;
+      log.info({ event: "codex.request.completed", jobId: options.jobId, operation: options.operation, model: settings.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
+      return { text: outputText, model: settings.model, attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
     } catch (error) {
       if (!isRetryableCodexError(error) || attempt === 3) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
-        log.warn({ err: error, attempt }, "KI-Lauf dauerhaft fehlgeschlagen");
+        log.warn({ err: error, event: "codex.request.failed", jobId: options.jobId, operation: options.operation, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
         if (typeof details.code === "string") throw error;
         fail("CHAT_UPSTREAM", 502, "OpenAI hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.", true);
       }
       const delayMs = attempt * 2_000;
-      log.warn({ err: error, attempt, nextAttempt: attempt + 1, delayMs }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
+      log.warn({ err: error, event: "codex.request.retry", jobId: options.jobId, operation: options.operation, attempt, nextAttempt: attempt + 1, delayMs, attemptDurationMs: Date.now() - attemptStartedAt }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
@@ -574,6 +583,23 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
   }
 });
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
+type ReconstructionProbe = {
+  runAttempt: number;
+  operation: string;
+  phase: string;
+  status: "running" | "retrying" | "completed" | "failed";
+  startedAt: string;
+  completedAt?: string;
+  durationMs: number;
+  attempts: number;
+  inputChars: number;
+  outputChars?: number;
+  sourceFiles?: number;
+  sourceBytes?: number;
+  rssBytes?: number;
+  heapUsedBytes?: number;
+  errorCode?: string;
+};
 type ReconstructionState = {
   phase: string;
   message: string;
@@ -582,18 +608,30 @@ type ReconstructionState = {
   processedBytes: number;
   totalBytes: number;
   todos: ReconstructionTodo[];
+  phaseProgress: number | null;
+  elapsedMs: number;
+  estimatedRemainingMs: number | null;
+  completedOperations: number;
+  totalOperations: number;
+  retryCount: number;
+  probes: ReconstructionProbe[];
+  startedAt?: string;
+  currentOperation?: string;
   entryPath?: string;
   revision?: number;
 };
 const reconstructionState = (phase: string, message: string, completedTodos: number, processedFiles: number, totalFiles: number, processedBytes: number, totalBytes: number, extra: Partial<ReconstructionState> = {}): ReconstructionState => ({
   phase, message, processedFiles, totalFiles, processedBytes, totalBytes,
   todos: reconstructionTodos.map((label, index) => ({ label, status: index < completedTodos ? "completed" : index === completedTodos ? "running" : "pending" })),
+  phaseProgress: null, elapsedMs: 0, estimatedRemainingMs: null, completedOperations: 0, totalOperations: 0, retryCount: 0, probes: [],
   ...extra
 });
-async function updateReconstructionJob(jobId: string, status: "queued" | "running" | "completed" | "failed", progress: number, result: ReconstructionState, errorCode?: string) {
-  await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, jobId));
+async function updateReconstructionJob(jobId: string, runAttempt: number, status: "queued" | "running" | "completed" | "failed", progress: number, result: ReconstructionState, errorCode?: string) {
+  const updated = await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`)).returning({ id: jobs.id });
+  if (!updated[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
 }
 const cleanHtmlResponse = (text: string) => text.trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
+const generatedDesignPathPattern = /^\.werft-generated\/[0-9a-f-]+(?:\/\d+)?\/design\.html$/i;
 const reconstructionAnalysisInstructions = [
   "Du analysierst einen fortlaufenden Teil eines App-Projekts für eine pixelgenaue HTML-Rekonstruktion.",
   "Erstelle ein kompaktes Evidenzprotokoll, keine HTML-Datei und kein Markdown-Gerede.",
@@ -601,20 +639,136 @@ const reconstructionAnalysisInstructions = [
   "Dokumentiere Komponentenbaum, Constraints/Modifier-Reihenfolge, Navigation, Zustände, Texte sowie sämtliche Light-/Dark-/Zusatz-Themes.",
   "Nichts schätzen. Unsichere Beziehungen mit Quellpfad markieren. Maximal 12000 Zeichen, aber keine exakten Designwerte weglassen."
 ].join(" ");
-async function compactReconstructionEvidence(organizationId: string, summaries: string[]): Promise<string[]> {
+type ReconstructionCodexRunner = (operation: string, instructions: string, input: string, remainingCompactionCalls: number, newlyPlannedCalls: number) => Promise<CodexRunResult>;
+async function compactReconstructionEvidence(summaries: string[], run: ReconstructionCodexRunner): Promise<string[]> {
   let current = summaries;
+  let round = 0;
   while (current.join("\n").length > 320_000) {
+    round += 1;
     const next: string[] = [];
+    const groupCount = Math.ceil(current.length / 18);
     for (let index = 0; index < current.length; index += 18) {
       const group = current.slice(index, index + 18).join("\n\n");
-      const { text } = await codexRun(organizationId, "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden. Entferne nur Wiederholungen. Maximal 18000 Zeichen.", group, app.log);
+      const groupNumber = Math.floor(index / 18) + 1;
+      const { text } = await run(`Evidenz verdichten ${round}.${groupNumber}`, "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden. Entferne nur Wiederholungen. Maximal 18000 Zeichen.", group, groupCount - groupNumber, groupNumber === 1 ? groupCount : 0);
       next.push(text.trim());
     }
     current = next;
   }
   return current;
 }
-async function runReconstructionJob(jobId: string, actor: Actor, projectId: string, correlationId: string) {
+async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, previousProbes: ReconstructionProbe[] = []) {
+  const jobStartedAt = Date.now();
+  const startedAt = new Date(jobStartedAt).toISOString();
+  const probes: ReconstructionProbe[] = previousProbes.map((probe) => ({ ...probe }));
+  const timingSamples: ReconstructionTimingSample[] = [];
+  let completedOperations = 0, totalOperations = 0, retryCount = 0, latestProgress = 0;
+  let latestState = reconstructionState("starting", "HTML-Rekonstruktion wird gestartet.", 0, 0, 0, 0, 0, { startedAt });
+  const runtimeState = (base: ReconstructionState, phaseProgress: number | null, estimatedRemainingMs: number | null, currentOperation?: string): ReconstructionState => ({
+    ...base,
+    phaseProgress,
+    elapsedMs: Date.now() - jobStartedAt,
+    estimatedRemainingMs,
+    completedOperations,
+    totalOperations,
+    retryCount,
+    probes: probes.map((probe) => ({ ...probe })),
+    startedAt,
+    ...(currentOperation ? { currentOperation } : {})
+  });
+  const publish = async (status: "queued" | "running" | "completed" | "failed", progress: number, state: ReconstructionState, errorCode?: string) => {
+    latestProgress = progress;
+    latestState = state;
+    await updateReconstructionJob(jobId, runAttempt, status, progress, state, errorCode);
+  };
+  const publishMilestone = async (progress: number, state: ReconstructionState, remainingWeight: number, phaseProgress: number | null = 100, showEta = true) => {
+    const timing = reconstructionTiming(timingSamples, null, 0, remainingWeight);
+    await publish("running", progress, runtimeState(state, phaseProgress, showEta ? timing.estimatedRemainingMs : null));
+  };
+  const runCodexStep = async ({ operation, phase, kind, instructions, input, progress, remainingWeight, state, sourceFiles, sourceBytes, validate, showEta }: {
+    operation: string;
+    phase: string;
+    kind: ReconstructionOperationKind;
+    instructions: string;
+    input: string;
+    progress: number;
+    remainingWeight: number;
+    state: () => ReconstructionState;
+    validate?: (result: CodexRunResult) => void;
+    showEta?: boolean;
+    sourceFiles?: number;
+    sourceBytes?: number;
+  }): Promise<CodexRunResult> => {
+    const operationStartedAt = Date.now();
+    const controller = new AbortController();
+    let attempts = 0, settled = false, failed = false, failure: unknown, result: CodexRunResult | undefined;
+    let lastHeartbeatLogAt = 0;
+    const probe: ReconstructionProbe = { runAttempt, operation, phase, status: "running", startedAt: new Date(operationStartedAt).toISOString(), durationMs: 0, attempts: 0, inputChars: input.length, ...(sourceFiles === undefined ? {} : { sourceFiles }), ...(sourceBytes === undefined ? {} : { sourceBytes }) };
+    probes.push(probe);
+    const initialTiming = reconstructionTiming(timingSamples, kind, 0, remainingWeight);
+    await publish("running", progress, runtimeState(state(), initialTiming.phaseProgress, showEta === false ? null : initialTiming.estimatedRemainingMs, operation));
+    const tracked = codexRun(actor.organizationId, instructions, input, app.log, {
+      operation,
+      jobId,
+      signal: controller.signal,
+      onAttempt: (attempt) => {
+        if (attempts > 0 && attempt > attempts) retryCount += attempt - attempts;
+        attempts = attempt;
+        probe.attempts = attempt;
+        probe.status = attempt > 1 ? "retrying" : "running";
+      }
+    }).then((value) => { result = value; }, (error: unknown) => { failed = true; failure = error; }).finally(() => { settled = true; });
+    while (!settled) {
+      await Promise.race([tracked, new Promise((resolve) => setTimeout(resolve, 2_000))]);
+      if (settled) break;
+      const elapsedMs = Date.now() - operationStartedAt;
+      probe.durationMs = elapsedMs;
+      const timing = reconstructionTiming(timingSamples, kind, elapsedMs, remainingWeight);
+      const base = state();
+      if (attempts > 1) base.message = `${base.message} Verbindungswiederholung ${attempts} von 3.`;
+      try {
+        await publish("running", progress, runtimeState(base, timing.phaseProgress, showEta === false ? null : timing.estimatedRemainingMs, operation));
+      } catch (heartbeatError) {
+        const heartbeatDetails = heartbeatError && typeof heartbeatError === "object" ? heartbeatError as Record<string, unknown> : {};
+        if (heartbeatDetails.code === "RECONSTRUCT_LEASE_LOST") {
+          controller.abort(heartbeatError);
+          await tracked;
+          throw heartbeatError;
+        }
+        app.log.warn({ err: heartbeatError, event: "reconstruction.heartbeat.persist_failed", jobId, projectId, operation, runAttempt }, "Rekonstruktions-Heartbeat konnte nicht gespeichert werden");
+      }
+      if (Date.now() - lastHeartbeatLogAt >= 15_000) {
+        lastHeartbeatLogAt = Date.now();
+        const memory = process.memoryUsage();
+        app.log.info({ event: "reconstruction.heartbeat", jobId, projectId, operation, phase, attempts, elapsedMs, progress: latestProgress, phaseProgress: timing.phaseProgress, estimatedRemainingMs: timing.estimatedRemainingMs, rssBytes: memory.rss, heapUsedBytes: memory.heapUsed }, "Rekonstruktionsschritt läuft");
+      }
+    }
+    await tracked;
+    const memory = process.memoryUsage();
+    probe.completedAt = new Date().toISOString();
+    probe.durationMs = Date.now() - operationStartedAt;
+    probe.attempts = attempts;
+    probe.rssBytes = memory.rss;
+    probe.heapUsedBytes = memory.heapUsed;
+    if (failed || !result) {
+      const details = failure && typeof failure === "object" ? failure as Record<string, unknown> : {};
+      probe.status = "failed";
+      probe.errorCode = typeof details.code === "string" ? details.code : failure instanceof Error ? failure.name : "RECONSTRUCT_STEP_FAILED";
+      throw failure;
+    }
+    probe.outputChars = result.outputChars;
+    try { validate?.(result); }
+    catch (validationError) {
+      const validationDetails = validationError && typeof validationError === "object" ? validationError as Record<string, unknown> : {};
+      probe.status = "failed";
+      probe.errorCode = typeof validationDetails.code === "string" ? validationDetails.code : validationError instanceof Error ? validationError.name : "RECONSTRUCT_INVALID";
+      throw validationError;
+    }
+    probe.status = "completed";
+    timingSamples.push({ kind, durationMs: result.durationMs });
+    completedOperations += 1;
+    return result;
+  };
   try {
     const row = (await db.select({ imported: projectImports, revision: projects.revision, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
     if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
@@ -623,23 +777,30 @@ async function runReconstructionJob(jobId: string, actor: Actor, projectId: stri
     const sources = reconstructionSourceFiles(row.imported.manifest);
     if (!sources.length) fail("RECONSTRUCT_NO_SOURCES", 400, "Im Projekt wurden keine lesbaren UI-Quellen gefunden.");
     const totalBytes = sources.reduce((sum, file) => sum + file.size, 0);
-    await updateReconstructionJob(jobId, "running", 5, reconstructionState("inventory", "Projektdateien und UI-Ressourcen werden inventarisiert.", 0, 0, sources.length, 0, totalBytes));
+    const estimatedAnalysisCalls = estimateAnalysisCallCount(totalBytes);
+    app.log.info({ event: "reconstruction.started", jobId, projectId, platform, sourceFiles: sources.length, sourceBytes: totalBytes, estimatedAnalysisCalls, totalManifestFiles: row.imported.manifest.length }, "Design-Rekonstruktion gestartet");
+    await publishMilestone(5, reconstructionState("inventory", "Projektdateien und UI-Ressourcen wurden vollständig inventarisiert.", 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 4);
     const summaries: string[] = [];
     let processedBytes = 0, processedFiles = 0, batchNumber = 0;
     for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
       batchNumber += 1;
       const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batchNumber}.\n${batch.text}`;
-      const { text } = await codexRun(actor.organizationId, reconstructionAnalysisInstructions, input, app.log);
+      const ratioBefore = totalBytes ? processedBytes / totalBytes : 0;
+      const { text } = await runCodexStep({ operation: `UI-Analysepaket ${batchNumber}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 58, remainingWeight: 4, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `UI-Analysepaket ${batchNumber} wird ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 1, processedFiles, sources.length, processedBytes, totalBytes) });
       summaries.push(text.trim());
       processedBytes += batch.completedBytes;
       processedFiles += batch.completedFiles;
       const ratio = totalBytes ? processedBytes / totalBytes : 1;
-      await updateReconstructionJob(jobId, "running", 10 + ratio * 58, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 4 : 1, processedFiles, sources.length, processedBytes, totalBytes));
+      await publishMilestone(10 + ratio * 58, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 4 : 1, processedFiles, sources.length, processedBytes, totalBytes), 4, 100, false);
     }
+    totalOperations = completedOperations + 2;
     const binaryAssets = row.imported.manifest.filter((file) => !sources.some((source) => source.path === file.path));
     for (let index = 0; index < binaryAssets.length; index += 1500) summaries.push(`ASSET-INVENTAR:\n${binaryAssets.slice(index, index + 1500).map((file) => `${file.path} | ${file.mime} | ${file.size} Bytes`).join("\n")}`);
-    await updateReconstructionJob(jobId, "running", 72, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 4, processedFiles, sources.length, processedBytes, totalBytes));
-    const evidence = (await compactReconstructionEvidence(actor.organizationId, summaries)).join("\n\n");
+    await publishMilestone(72, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 4, processedFiles, sources.length, processedBytes, totalBytes), 4, 0);
+    const evidence = (await compactReconstructionEvidence(summaries, async (operation, instructions, input, remainingCompactionCalls, newlyPlannedCalls) => {
+      totalOperations += newlyPlannedCalls;
+      return runCodexStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 72, remainingWeight: remainingCompactionCalls * 0.8 + 4, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 4, processedFiles, sources.length, processedBytes, totalBytes) });
+    })).join("\n\n");
     const reconstructionInstructions = [
       "Du bist der pixelgenaue Design-Rekonstrukteur von Werft Studio.",
       `Erzeuge EINE vollständige, direkt bearbeitbare HTML-Datei für ${platform}. Fallback-Viewport: ${profile.width}x${profile.height} (${profile.device}, Dichte ${profile.density}); wenn die Quell-Evidenz eine konkrete Fenster-, Preview- oder Gerätegeometrie nennt, ist stattdessen exakt diese Geometrie verbindlich.`,
@@ -650,23 +811,19 @@ async function runReconstructionJob(jobId: string, actor: Actor, projectId: stri
       "Setze <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> und exakt ein maschinenlesbares <meta name=\"werft-preview\" content='{\"platform\":\"...\",\"width\":ZAHL,\"height\":ZAHL,\"device\":\"...\",\"density\":ZAHL}'> mit der tatsächlich rekonstruierten Quellgeometrie.",
       "Antworte ausschließlich mit dem vollständigen HTML-Dokument ab <!doctype html>, ohne Markdown oder Erklärung."
     ].join(" ");
-    await updateReconstructionJob(jobId, "running", 82, reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes));
-    const generated = await codexRun(actor.organizationId, reconstructionInstructions, `Projekt: ${row.name}\n\nVOLLSTÄNDIGE UI-EVIDENZ:\n${evidence}`, app.log);
+    await publishMilestone(82, reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes), 4, 0);
+    const generated = await runCodexStep({ operation: "Bearbeitbares HTML aufbauen", phase: "build", kind: "build", instructions: reconstructionInstructions, input: `Projekt: ${row.name}\n\nVOLLSTÄNDIGE UI-EVIDENZ:\n${evidence}`, progress: 82, remainingWeight: 2, state: () => reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes), validate: (value) => { if (!/<!doctype html|<html/i.test(cleanHtmlResponse(value.text))) fail("RECONSTRUCT_INVALID", 502, "Die KI hat keine gültige HTML-Version geliefert.", true); } });
     let html = cleanHtmlResponse(generated.text);
-    if (!/<!doctype html|<html/i.test(html)) fail("RECONSTRUCT_INVALID", 502, "Die KI hat keine gültige HTML-Version geliefert.", true);
-    await updateReconstructionJob(jobId, "running", 92, reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes));
-    try {
-      const verification = await codexRun(actor.organizationId, "Du bist die abschließende Pixel-Fidelity-Prüfung. Vergleiche das HTML streng mit der UI-Evidenz. Korrigiere jede abweichende Position, Größe, Ausrichtung, Farbe, Typografie, Theme-Variante, Hierarchie und jeden fehlenden Screen oder Zustand. Keine gestalterischen Änderungen. Antworte ausschließlich mit dem vollständigen korrigierten HTML-Dokument.", `UI-EVIDENZ:\n${evidence}\n\nZU PRÜFENDES HTML:\n${html}`, app.log);
-      const corrected = cleanHtmlResponse(verification.text);
-      if (/<!doctype html|<html/i.test(corrected)) html = corrected;
-    } catch (error) {
-      app.log.warn({ err: error, projectId }, "HTML-Fidelity-Prüfung fehlgeschlagen; gültige Erstrekonstruktion bleibt erhalten");
-    }
-    const designPath = `.werft-generated/${jobId}/design.html`;
+    await publishMilestone(92, reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes), 2, 0);
+    const verification = await runCodexStep({ operation: "Pixel-Fidelity prüfen", phase: "verify", kind: "verification", instructions: "Du bist die abschließende Pixel-Fidelity-Prüfung. Vergleiche das HTML streng mit der UI-Evidenz. Korrigiere jede abweichende Position, Größe, Ausrichtung, Farbe, Typografie, Theme-Variante, Hierarchie und jeden fehlenden Screen oder Zustand. Keine gestalterischen Änderungen. Antworte ausschließlich mit dem vollständigen korrigierten HTML-Dokument.", input: `UI-EVIDENZ:\n${evidence}\n\nZU PRÜFENDES HTML:\n${html}`, progress: 92, remainingWeight: 0, state: () => reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes), validate: (value) => { if (!/<!doctype html|<html/i.test(cleanHtmlResponse(value.text))) fail("RECONSTRUCT_INVALID", 502, "Die Fidelity-Prüfung hat kein gültiges HTML geliefert.", true); } });
+    const corrected = cleanHtmlResponse(verification.text);
+    html = corrected;
+    const designPath = `.werft-generated/${jobId}/${runAttempt}/design.html`;
     const data = Buffer.from(html, "utf8");
     const designObjectKey = `${row.imported.objectPrefix}${designPath}`;
-    const oldGeneratedPaths = row.imported.manifest.filter((file) => /^\.werft-generated\/[0-9a-f-]+\/design\.html$/i.test(file.path) && file.path !== designPath).map((file) => file.path);
-    let stored: { revision: number };
+    const oldGeneratedPaths = row.imported.manifest.filter((file) => generatedDesignPathPattern.test(file.path) && file.path !== designPath).map((file) => file.path);
+    let stored: { revision: number; state: ReconstructionState } | undefined;
+    await publishMilestone(98, reconstructionState("store", "Das vollständig geprüfte HTML wird atomar gespeichert.", reconstructionTodos.length, processedFiles, sources.length, processedBytes, totalBytes), 0, 0);
     try {
       await objectStore.putObject(env.S3_BUCKET, designObjectKey, data, data.byteLength, { "content-type": "text/html; charset=utf-8" });
       stored = await db.transaction(async (tx) => {
@@ -674,36 +831,86 @@ async function runReconstructionJob(jobId: string, actor: Actor, projectId: stri
         const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
         if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
         if (current.revision !== row.revision) fail("REVISION_CONFLICT", 409, "Das importierte UI wurde während der Rekonstruktion geändert. Die Analyse wird auf dem aktuellen Stand neu gestartet.", true);
-        const manifest = [...current.imported.manifest.filter((file) => !/^\.werft-generated\/[0-9a-f-]+\/design\.html$/i.test(file.path)), { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
+        const manifest = [...current.imported.manifest.filter((file) => !generatedDesignPathPattern.test(file.path)), { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
         const revision = current.revision + 1;
         await tx.update(projectImports).set({ entryPath: designPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
         await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { model: generated.model, sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile }, correlationId });
-        return { revision };
+        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { model: generated.model, sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
+        const state = runtimeState(reconstructionState("completed", "HTML-Design vollständig aufgebaut, geprüft und gespeichert.", reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision }), 100, 0);
+        const completedJob = await tx.update(jobs).set({ status: "completed", progress: 100, result: state, errorCode: null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), eq(jobs.status, "running"))).returning({ id: jobs.id });
+        if (!completedJob[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
+        return { revision, state };
       });
     } catch (error) {
       let committed = false, commitStatusKnown = false;
       try {
-        const latest = (await db.select({ manifest: projectImports.manifest }).from(projectImports).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
-        commitStatusKnown = Boolean(latest);
-        committed = latest?.manifest.some((file) => file.path === designPath) === true;
+        const latest = (await db.select({ manifest: projectImports.manifest, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+        const latestJob = (await db.select({ status: jobs.status, result: jobs.result }).from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt))).limit(1))[0];
+        commitStatusKnown = Boolean(latest && latestJob);
+        committed = latest?.manifest.some((file) => file.path === designPath) === true && latestJob?.status === "completed" && Boolean(latestJob.result && typeof latestJob.result === "object");
+        if (committed && latest && latestJob?.result && typeof latestJob.result === "object") {
+          stored = { revision: latest.revision, state: latestJob.result as ReconstructionState };
+          app.log.warn({ err: error, event: "reconstruction.commit_ack_lost", jobId, projectId, runAttempt }, "Rekonstruktion war trotz verlorener Commit-Antwort erfolgreich");
+        }
       } catch (statusError) { app.log.warn({ err: statusError, projectId, designPath }, "Commit-Status der Rekonstruktion ist unklar; generiertes Objekt bleibt sicher erhalten"); }
       if (commitStatusKnown && !committed) await objectStore.removeObject(env.S3_BUCKET, designObjectKey);
-      throw error;
+      if (!committed) throw error;
     }
+    if (!stored) fail("RECONSTRUCT_COMMIT_UNKNOWN", 500, "Der Speicherstatus der Rekonstruktion konnte nicht bestätigt werden.", true);
     await Promise.allSettled(oldGeneratedPaths.map((path) => objectStore.removeObject(env.S3_BUCKET, `${row.imported.objectPrefix}${path}`)));
-    await updateReconstructionJob(jobId, "completed", 100, reconstructionState("completed", "HTML-Design vollständig aufgebaut und geprüft.", reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision: stored.revision }));
+    latestProgress = 100;
+    latestState = stored.state;
+    app.log.info({ event: "reconstruction.completed", jobId, projectId, elapsedMs: Date.now() - jobStartedAt, retryCount, operations: completedOperations, sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength }, "Design-Rekonstruktion abgeschlossen");
   } catch (error) {
     const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
     const message = error instanceof Error ? error.message : "Die HTML-Rekonstruktion ist fehlgeschlagen.";
     const code = typeof details.code === "string" ? details.code : error instanceof Error ? error.name : "RECONSTRUCT_FAILED";
-    await updateReconstructionJob(jobId, "failed", 100, reconstructionState("failed", message, 0, 0, 0, 0, 0), code);
-    app.log.error({ err: error, jobId, projectId }, "Design-Rekonstruktion fehlgeschlagen");
+    if (code === "RECONSTRUCT_LEASE_LOST") {
+      app.log.warn({ event: "reconstruction.lease_lost", jobId, projectId, runAttempt, elapsedMs: Date.now() - jobStartedAt }, "Veralteter Rekonstruktionslauf wurde beendet");
+      return;
+    }
+    const failedState = runtimeState({ ...latestState, phase: "failed", message }, null, null, latestState.currentOperation);
+    let failurePersisted = false;
+    for (let persistAttempt = 1; persistAttempt <= 3 && !failurePersisted; persistAttempt += 1) {
+      try { await publish("failed", Math.min(99, latestProgress), failedState, code); failurePersisted = true; }
+      catch (persistError) {
+        app.log.error({ err: persistError, jobId, projectId, runAttempt, persistAttempt }, "Fehlerstatus der Rekonstruktion konnte nicht gespeichert werden");
+        if (persistAttempt < 3) await new Promise((resolve) => setTimeout(resolve, persistAttempt * 1_000));
+      }
+    }
+    try {
+      await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstruction.failed", targetType: "project", targetId: projectId, result: "failure", metadata: { code, message, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
+    } catch (auditError) { app.log.warn({ err: auditError, jobId, projectId }, "Fehler-Audit der Rekonstruktion konnte nicht gespeichert werden"); }
+    const memory = process.memoryUsage();
+    app.log.error({ err: error, event: "reconstruction.failed", jobId, projectId, code, progress: latestProgress, elapsedMs: Date.now() - jobStartedAt, retryCount, probes, rssBytes: memory.rss, heapUsedBytes: memory.heapUsed }, "Design-Rekonstruktion fehlgeschlagen");
   }
 }
 // In-Process-Laeufe koennen einen API-Neustart nicht ueberleben. Persistierte Zwischenzustaende
-// werden deshalb beim Start freigegeben; der idempotente POST startet sie beim naechsten Poll/Öffnen neu.
-await db.update(jobs).set({ status: "failed", errorCode: "RECONSTRUCT_INTERRUPTED", result: reconstructionState("interrupted", "Der Verarbeitungslauf wurde durch einen Serverneustart unterbrochen und kann sicher neu gestartet werden.", 0, 0, 0, 0, 0), updatedAt: new Date() }).where(and(eq(jobs.kind, "design-reconstruction"), sql`${jobs.status} in ('queued', 'running')`));
+// werden nach ausbleibenden Heartbeats freigegeben; aktive Parallelprozesse bleiben unangetastet.
+const reconstructionHeartbeatTimeoutMs = 15_000;
+async function interruptStaleReconstructionJobs() {
+  const staleBefore = new Date(Date.now() - reconstructionHeartbeatTimeoutMs);
+  const stale = await db.select({ id: jobs.id, result: jobs.result }).from(jobs).where(and(eq(jobs.kind, "design-reconstruction"), sql`${jobs.status} in ('queued', 'running')`, or(isNull(jobs.heartbeatAt), lt(jobs.heartbeatAt, staleBefore))));
+  let interrupted = 0;
+  for (const row of stale) {
+    const existing = reconstructionState("interrupted", "Der Verarbeitungslauf wurde unterbrochen und kann sicher neu gestartet werden.", 0, 0, 0, 0, 0, row.result && typeof row.result === "object" ? row.result as Partial<ReconstructionState> : {});
+    const completedAt = new Date().toISOString();
+    const state: ReconstructionState = {
+      ...existing,
+      phase: "interrupted",
+      message: "Der Verarbeitungslauf wurde durch einen Serverabbruch unterbrochen und kann sicher neu gestartet werden.",
+      phaseProgress: null,
+      estimatedRemainingMs: null,
+      probes: existing.probes.map((probe) => probe.status === "running" || probe.status === "retrying" ? { ...probe, status: "failed", completedAt, errorCode: "RECONSTRUCT_INTERRUPTED" } : probe)
+    };
+    const updated = await db.update(jobs).set({ status: "failed", errorCode: "RECONSTRUCT_INTERRUPTED", result: state, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, row.id), sql`${jobs.status} in ('queued', 'running')`, or(isNull(jobs.heartbeatAt), lt(jobs.heartbeatAt, staleBefore)))).returning({ id: jobs.id });
+    interrupted += updated.length;
+  }
+  if (interrupted) app.log.warn({ event: "reconstruction.stale_interrupted", interrupted, staleBefore }, "Verwaiste Rekonstruktionsläufe wurden freigegeben");
+}
+await interruptStaleReconstructionJobs();
+const reconstructionReaper = setInterval(() => { void interruptStaleReconstructionJobs().catch((error) => app.log.error({ err: error }, "Stale-Job-Reaper fehlgeschlagen")); }, 10_000);
+reconstructionReaper.unref();
 app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request, reply) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
@@ -713,23 +920,26 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const idempotencyKey = `${projectId}:${imported.revision}`;
   const queuedState = reconstructionState("queued", "HTML-Rekonstruktion wird vorbereitet.", 0, 0, 0, 0, 0);
   const candidateId = uuidv7();
-  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState, attempts: 1 }).onConflictDoNothing().returning({ id: jobs.id });
+  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
   if (inserted[0]) {
-    setTimeout(() => void runReconstructionJob(candidateId, actor, projectId, request.id), 0);
+    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
     return reply.status(202).send({ jobId: candidateId, status: "queued" });
   }
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
   if (!existing) fail("JOB_CLAIM_FAILED", 409, "Der Verarbeitungslauf konnte nicht übernommen werden. Bitte erneut versuchen.", true);
   if (existing.status === "queued" || existing.status === "running" || existing.status === "completed") return reply.status(202).send({ jobId: existing.id, status: existing.status });
   if (!canRestartReconstructionJob(existing.status, retryFailed)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
-  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: queuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id });
-  if (claimed[0]) setTimeout(() => void runReconstructionJob(existing.id, actor, projectId, request.id), 0);
+  const existingResult = existing.result && typeof existing.result === "object" ? existing.result as Partial<ReconstructionState> : null;
+  const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
+  const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };
+  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
+  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, previousProbes).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
 });
 app.get("/api/v1/jobs/:jobId", async (request) => {
   const actor = requireActorPermission(request, "project.read");
   const { jobId } = z.object({ jobId: z.string().uuid() }).parse(request.params);
-  const row = (await db.select({ id: jobs.id, projectId: jobs.projectId, kind: jobs.kind, status: jobs.status, progress: jobs.progress, result: jobs.result, errorCode: jobs.errorCode, updatedAt: jobs.updatedAt }).from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, actor.organizationId))).limit(1))[0];
+  const row = (await db.select({ id: jobs.id, projectId: jobs.projectId, kind: jobs.kind, status: jobs.status, progress: jobs.progress, result: jobs.result, errorCode: jobs.errorCode, attempts: jobs.attempts, heartbeatAt: jobs.heartbeatAt, updatedAt: jobs.updatedAt }).from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("JOB_NOT_FOUND", 404, "Verarbeitungslauf nicht gefunden.");
   return row;
 });
@@ -747,7 +957,7 @@ app.post("/api/v1/projects/:projectId/design-operations", async (request) => {
 
 app.get("/api/v1/projects/:projectId/versions", async (request) => { const actor = requireActorPermission(request, "design.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); return db.select({ id: versions.id, number: versions.number, reason: versions.reason, createdAt: versions.createdAt, snapshotHash: versions.snapshotHash }).from(versions).where(and(eq(versions.projectId, projectId), eq(versions.organizationId, actor.organizationId))).orderBy(desc(versions.number)); });
 app.post("/api/v1/projects/:projectId/versions", async (request) => { const actor = requireActorPermission(request, "version.create"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const body = z.object({ reason: z.string().min(1).max(300), baseRevision: z.number().int().nonnegative() }).parse(request.body); return db.transaction(async (tx) => { await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`); const project = (await tx.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId))).limit(1))[0]; const draft = (await tx.select().from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1))[0]; if (!project || !draft) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); if (draft.revision !== body.baseRevision) fail("REVISION_CONFLICT", 409, "Der Entwurf wurde inzwischen geändert."); const number = project.activeVersion + 1; const document = designDocumentSchema.parse(draft.document); const row = { id: uuidv7(), organizationId: actor.organizationId, projectId, number, reason: body.reason, authorId: actor.userId, document, snapshotHash: hashJson(document) }; await tx.insert(versions).values(row); await tx.update(projects).set({ activeVersion: number, updatedAt: new Date() }).where(eq(projects.id, projectId)); await tx.insert(outboxEvents).values({ id: uuidv7(), organizationId: actor.organizationId, aggregateId: projectId, type: "version.created", payload: { projectId, number, actorId: actor.userId } }); return { id: row.id, number }; }); });
-const shutdown = async () => { await app.close(); await client.end(); };
+const shutdown = async () => { clearInterval(reconstructionReaper); await app.close(); await client.end(); };
 process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
 await cleanupOrphanImportObjects();
 await app.listen({ port: env.API_PORT, host: "0.0.0.0" });

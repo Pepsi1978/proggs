@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSourceBatches, canRestartReconstructionJob, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles } from "./import-reconstruction.js";
+import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTiming } from "./import-reconstruction.js";
 
 const file = (path: string, size = 10, mime = "application/octet-stream") => ({ path, size, mime });
 
@@ -69,5 +69,12 @@ describe("native UI reconstruction", () => {
     expect(canRestartReconstructionJob("failed", true)).toBe(true);
     expect(canRestartReconstructionJob("running", true)).toBe(false);
     expect(canRestartReconstructionJob("completed", true)).toBe(false);
+  });
+
+  it("derives ETA and step progress from completed timing probes", () => {
+    expect(estimateAnalysisCallCount(463_165)).toBe(3);
+    expect(reconstructionTiming([], "analysis", 5_000, 4)).toEqual({ phaseProgress: null, estimatedRemainingMs: null });
+    expect(reconstructionTiming([{ kind: "analysis", durationMs: 10_000 }], "build", 5_000, 2)).toEqual({ phaseProgress: 25, estimatedRemainingMs: 35_000 });
+    expect(reconstructionTiming([{ kind: "analysis", durationMs: 10_000 }], "verification", 30_000, 0)).toEqual({ phaseProgress: 95, estimatedRemainingMs: null });
   });
 });
