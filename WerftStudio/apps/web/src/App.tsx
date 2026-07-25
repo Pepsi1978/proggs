@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, MessageSquare, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiForm, ApiError } from "./api";
@@ -722,6 +722,7 @@ function Studio() {
   const [accent, setAccent] = useState("#3157D5");
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
+  const [canvasFullscreen, setCanvasFullscreen] = useState(false);
   const [chat, setChat] = useState("");
   const [panelTab, setPanelTab] = useState<"chat" | "comments" | "history">("chat");
   const chatStorageKey = `werft-chat-${projectId}`;
@@ -764,9 +765,37 @@ function Studio() {
     addEventListener("keydown", handler);
     return () => removeEventListener("keydown", handler);
   }, [setMode, setZoom, toggleLeft, toggleRight, setModal]);
+  useEffect(() => {
+    const handleFullscreenChange = () => { if (!document.fullscreenElement) setCanvasFullscreen(false); };
+    const handleFullscreenEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setCanvasFullscreen(false); };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("keydown", handleFullscreenEscape);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("keydown", handleFullscreenEscape);
+    };
+  }, []);
+  const enterCanvasFullscreen = () => {
+    nav(`/app/projects/${projectId}/studio/canvas`);
+    if (leftOpen) toggleLeft();
+    if (rightOpen) toggleRight();
+    setCanvasFullscreen(true);
+    if (document.documentElement.requestFullscreen) void document.documentElement.requestFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht gestartet werden", error));
+  };
+  const exitCanvasFullscreen = () => {
+    setCanvasFullscreen(false);
+    if (document.fullscreenElement) void document.exitFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht beendet werden", error));
+  };
   if (project.isError) return <Navigate to="/app/designs" />;
   return (
-    <div className="studio" data-theme={theme}>
+    <div className={`studio${canvasFullscreen ? " canvas-fullscreen" : ""}`} data-theme={theme}>
+      {canvasFullscreen && (
+        <div className="canvas-fullscreen-controls">
+          <IconButton label="Gesprächspanel ein- oder ausblenden" onClick={toggleLeft}><PanelLeft /></IconButton>
+          <IconButton label="Inspektor ein- oder ausblenden" onClick={toggleRight}><PanelRight /></IconButton>
+          <IconButton label="Vollbild beenden" onClick={exitCanvasFullscreen}><Minimize2 /></IconButton>
+        </div>
+      )}
       <header className="project-header">
         <IconButton label="Zum Hub" onClick={() => nav("/app/designs")}>
           <ArrowLeft />
@@ -781,6 +810,9 @@ function Studio() {
         </IconButton>
         <IconButton label="Inspektor" onClick={toggleRight}>
           <PanelRight />
+        </IconButton>
+        <IconButton label="Leinwand im Vollbild anzeigen" onClick={enterCanvasFullscreen}>
+          <Maximize2 />
         </IconButton>
         <IconButton label="Theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun /> : <Moon />}

@@ -186,7 +186,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.4-20260725.1329" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.5-20260725.1332" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);

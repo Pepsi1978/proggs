@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.3.4 - 25.07.2026 13:29 Uhr
+Version: v0.3.5 - 25.07.2026 13:32 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -16,5 +16,6 @@ Version: v0.3.4 - 25.07.2026 13:29 Uhr
 | OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
 | GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, Effort-, Priority- und Live-Verbindungstest |
 | Leinwand-Navigation | `apps/web`, `apps/api/preview-canvas-bridge.ts` | Zoom-Anker-, Zoomgrenzen- und Bridge-Injektionstests |
+| Leinwand-Vollbild | `apps/web/src/App.tsx` | Browser-Vollbild mit fokussiertem Canvas und getrennten Panel-Schaltern |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
