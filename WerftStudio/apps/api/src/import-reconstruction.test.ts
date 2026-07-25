@@ -19,22 +19,20 @@ describe("native UI reconstruction", () => {
   it("keeps first-party UI sources across supported native frameworks", () => {
     const sources = reconstructionSourceFiles([
       file("app/src/main/java/com/acme/MainActivity.kt"),
-      file("app/src/main/res/values/themes.xml"),
+      file("app/src/main/res/layout/activity_main.xml"),
       file("ios/App.swift"),
       file("windows/MainWindow.xaml"),
       file("windows/MainViewModel.cs"),
-      file("flutter/pubspec.yaml"),
       file("qt/Main.qml"),
       file("node_modules/library/index.ts"),
       file("app/build/generated/source.kt")
     ]).map((item) => item.path);
     expect(sources).toEqual(expect.arrayContaining([
       "app/src/main/java/com/acme/MainActivity.kt",
-      "app/src/main/res/values/themes.xml",
+      "app/src/main/res/layout/activity_main.xml",
       "ios/App.swift",
       "windows/MainWindow.xaml",
       "windows/MainViewModel.cs",
-      "flutter/pubspec.yaml",
       "qt/Main.qml"
     ]));
     expect(sources).not.toContain("node_modules/library/index.ts");

@@ -38,7 +38,21 @@ export function previewProfileFromHtml(html: string, fallback: PreviewProfile): 
 }
 
 const generatedOrThirdParty = /(^|\/)(node_modules|\.git|\.werft-generated|\.gradle|\.idea|\.vs|bin|obj|build|dist|out|target|coverage|logs?|test|tests|__tests__|backend|server|database|__pycache__|vendor)(\/|$)/i;
-const sourceExtension = /\.(?:html?|css|scss|sass|less|js|mjs|cjs|jsx|ts|tsx|vue|svelte|xaml|axaml|xml|kt|kts|java|swift|dart|cs|fs|vb|c|cc|cpp|cxx|h|hh|hpp|m|mm|qml|ui|json|json5|toml|ya?ml|properties|gradle|groovy|storyboard|plist|strings|xcstrings|resx|md|txt|razor|cshtml|uxml|uss|aidl|go|lua|pas|php|ps1|py|rb|rs)$/i;
+// Nur Dateien, die Oberflaeche BESCHREIBEN, gehen in die teure KI-Analyse. Fruehere Fassungen
+// liessen auch md/json/yaml/properties zu — bei einem Projekt mit 951 Dokumentationsdateien
+// entstanden daraus 40 Analysepakete, von denen keines ein einziges Pixel erklaerte.
+const markupExtension = /\.(?:html?|xaml|axaml|xml|storyboard|xib|vue|svelte|qml|ui|uxml|razor|cshtml)$/i;
+const styleExtension = /\.(?:css|scss|sass|less|uss)$/i;
+const uiCodeExtension = /\.(?:kt|kts|swift|dart|cs|fs|vb|java|tsx|jsx|ts|js|mjs|cjs|m|mm)$/i;
+// Skriptsprachen bauen nur in Ausnahmefaellen Oberflaeche (Desktop-GUIs). Ohne Pfadbezug zur UI
+// sind es Hilfs- und Build-Skripte — `add_report_dialog_strings.py` waere sonst wegen „dialog" im
+// Namen weit oben gelandet.
+const scriptExtension = /\.(?:py|rb|php|lua|go|rs|pas)$/i;
+// Punkt-Ordner sind Werkzeugverzeichnisse (.android-shield, .github, .claude) und nie App-Oberflaeche.
+const hiddenDirectory = /(^|\/)\.[^/]+\//;
+// Diese Endungen tragen nie Layoutinformation; die enthaltenen Designwerte holt der deterministische
+// Extraktor ohnehin exakt und ohne KI-Aufruf heraus.
+const neverAnalyzed = /\.(?:md|markdown|txt|json|json5|jsonl|ya?ml|toml|properties|gradle|groovy|lock|csv|tsv|sql|editorconfig|gitignore|env|ini|cfg|conf|log|xcstrings|strings|aidl|pyc|map)$/i;
 const lowValueName = /(?:^|\/)(?:package-lock\.json|pnpm-lock\.yaml|yarn\.lock|podfile\.lock|gradle\.lockfile)$/i;
 // Reine Bau-, Abhaengigkeits- und Werkzeugdateien tragen keinen einzigen Designwert, verbrauchen
 // aber volle KI-Analysepakete. Sie draussen zu lassen ist der groesste Geschwindigkeitshebel.
@@ -50,22 +64,64 @@ const localizedApple = /(^|\/)[a-z]{2}(?:-[A-Z]{2})?\.lproj\//i;
 const businessLogicPath = /(^|\/)(?:data|domain|network|repository|repositories|api|db|database|dao|entity|entities|model|models|service|services|usecase|usecases|di|inject|worker|analytics|billing|sync|util|utils|helper|helpers|extension|extensions)(\/|$)/i;
 const uiPath = /(^|\/)(?:ui|view|views|screen|screens|page|pages|component|components|widget|widgets|compose|presentation|theme|themes|style|styles|res|resources|layout|assets|design|navigation|nav)(\/|$)|\.(?:xaml|axaml|storyboard|xib|qml|uxml|uss|css|scss|sass|less|html?)$/i;
 
+// Android-Ressourcen sind zwar XML, ihre Werte liest aber der Extraktor exakt aus. Fuer die
+// KI-Analyse zaehlen dort nur Layouts und Navigation — `res/xml` ist reine Konfiguration
+// (Backup-Regeln, Netzwerksicherheit, Dateipfade) und beschreibt keine Oberflaeche.
+const androidResourceFile = /(^|\/)res\/(?!layout|navigation)[^/]+\//i;
+// Mitgelieferte Fremdinhalte: Werkzeug-Profile, Plugin-Marktplaetze, Skill-Beispiele und
+// eingebettete Rechts-/Hilfetexte. Sie sind HTML/Code, gehoeren aber nicht zur Oberflaeche der App.
+const foreignBundle = /(^|\/)(?:plugins?|marketplaces?|skills?|agents?|prompts?|templates?|examples?|samples?|fixtures?|docs?|documentation|\.claude|\.codex|\.opencode)(\/|$)/i;
+const embeddedDocument = /(^|\/)assets\/(?:legal|help|docs?|faq|terms|privacy|imprint)(\/|$)/i;
+
 export function reconstructionSourceFiles(files: ImportManifestFile[]): ImportManifestFile[] {
   return files
-    .filter((file) => !generatedOrThirdParty.test(file.path) && !lowValueName.test(file.path) && !nonDesignName.test(file.path) && !localizedResource.test(file.path) && !localizedApple.test(file.path) && (sourceExtension.test(file.path) || file.mime.startsWith("text/")))
+    .filter((file) => !generatedOrThirdParty.test(file.path) && !lowValueName.test(file.path) && !nonDesignName.test(file.path) && !localizedResource.test(file.path) && !localizedApple.test(file.path))
+    .filter((file) => !neverAnalyzed.test(file.path) && !androidResourceFile.test(file.path) && !foreignBundle.test(file.path) && !embeddedDocument.test(file.path) && !hiddenDirectory.test(file.path))
+    .filter((file) => markupExtension.test(file.path) || styleExtension.test(file.path) || uiCodeExtension.test(file.path) || (scriptExtension.test(file.path) && uiPath.test(file.path)))
     // Reine Geschaeftslogik ohne UI-Bezug fliegt raus: sie erklaert kein Pixel, kostet aber Analysezeit.
-    .filter((file) => uiPath.test(file.path) || !businessLogicPath.test(file.path))
+    .filter((file) => markupExtension.test(file.path) || styleExtension.test(file.path) || uiPath.test(file.path) || !businessLogicPath.test(file.path))
     .sort((left, right) => sourceScore(right.path) - sourceScore(left.path) || left.path.localeCompare(right.path));
 }
 
+// Auch nach der Einengung kann ein sehr grosses Projekt mehr UI-Quellen haben, als in vertretbarer
+// Zeit analysierbar sind. Die Liste ist nach Aussagekraft sortiert; was nicht mehr hineinpasst,
+// wird BENANNT statt still verschluckt — und geht beim screenweisen Aufbau ohnehin direkt ein.
+export function analysisBudget(files: ImportManifestFile[], maxBatches: number, batchChars: number): { analyzed: ImportManifestFile[]; skipped: ImportManifestFile[] } {
+  const limit = Math.max(1, maxBatches) * batchChars;
+  const analyzed: ImportManifestFile[] = [];
+  const skipped: ImportManifestFile[] = [];
+  let used = 0;
+  for (const file of files) {
+    if (used + file.size > limit && analyzed.length) { skipped.push(file); continue; }
+    analyzed.push(file);
+    used += file.size;
+  }
+  return { analyzed, skipped };
+}
+
+// Die Reihenfolge entscheidet, WAS bei begrenztem Analysebudget noch drankommt. Deshalb zaehlt
+// zuerst die Dateiart (ein XAML-Fenster schlaegt jede Hilfsdatei) und erst danach der Name — und
+// zwar an Wortgrenzen: „view" darf nicht in „topology-viewer" treffen.
+const screenWord = /(?:^|[^a-z])(?:screen|page|window|activity|fragment|dialog|sheet|route)s?(?:[^a-z]|$)/i;
+const structureWord = /(?:^|[^a-z])(?:view|layout|component|widget|app|main|shell|home|root)s?(?:[^a-z]|$)/i;
+const themeWord = /(?:^|[^a-z])(?:theme|style|color|palette|typography|font|dimens|spacing|shape|token)s?(?:[^a-z]|$)/i;
+const navigationWord = /(?:^|[^a-z])(?:navigation|navgraph|nav|router|route|viewmodel)s?(?:[^a-z]|$)/i;
+
 function sourceScore(filePath: string): number {
   const lower = filePath.toLowerCase();
+  const base = lower.split("/").at(-1)!;
   let score = 0;
-  if (/(screen|page|view|window|activity|fragment|component|layout|main|app)/.test(lower)) score += 80;
-  if (/(theme|style|color|typography|font|dimens?|spacing|shape|drawable|assets?|res\/)/.test(lower)) score += 60;
-  if (/(navigation|router|route|state|viewmodel)/.test(lower)) score += 30;
-  if (/(test|fixture|sample|example)/.test(lower)) score -= 50;
-  return score - lower.split("/").length;
+  if (/\.(?:xaml|axaml|storyboard|xib)$/i.test(lower)) score += 220;
+  if (/(^|\/)res\/layout[^/]*\//i.test(lower)) score += 220;
+  if (/\.(?:css|scss|sass|less|uss)$/i.test(lower)) score += 160;
+  if (/\.(?:vue|svelte|qml|uxml|razor|cshtml)$/i.test(lower)) score += 160;
+  if (screenWord.test(base)) score += 140;
+  if (themeWord.test(base)) score += 120;
+  if (structureWord.test(base)) score += 70;
+  if (navigationWord.test(base)) score += 60;
+  if (/(?:^|[^a-z])(?:test|spec|mock|fixture|sample|example|benchmark)s?(?:[^a-z]|$)/i.test(lower)) score -= 200;
+  // Flach liegende Dateien gehoeren eher zur App selbst als tief verschachtelte Hilfsdateien.
+  return score - lower.split("/").length * 4;
 }
 
 // Analysepakete liefen bisher streng nacheinander — bei grossen Projekten ist das der eigentliche
@@ -90,7 +146,12 @@ export async function mapWithConcurrency<TInput, TOutput>(items: TInput[], limit
   return results;
 }
 
-export const reconstructionConcurrency = 4;
+// Acht gleichzeitige Laeufe halbieren die Wartezeit gegenueber vier, ohne die Wiederholungslogik
+// zu ueberlasten; darueber dominieren beim Anbieter ohnehin Warteschlangen.
+export const reconstructionConcurrency = 8;
+// Obergrenze der Analysephase: mehr Pakete bringen kaum Erkenntnis, kosten aber linear Zeit —
+// die exakten Werte liefert die deterministische Messung, die Details der screenweise Aufbau.
+export const maxAnalysisBatches = 8;
 
 export type SourceBatch = { text: string; completedBytes: number; completedFiles: number };
 

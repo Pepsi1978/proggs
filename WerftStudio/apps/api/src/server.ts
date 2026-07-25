@@ -22,7 +22,7 @@ import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
-import { buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
+import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom } from "./screen-composer.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.5.1-20260725.1820" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.6.0-20260725.1845" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -653,7 +653,7 @@ async function updateReconstructionJob(jobId: string, runAttempt: number, status
 const generatedDesignPathPattern = /^\.werft-generated\/[0-9a-f-]+(?:\/\d+)?\/design\.html$/i;
 // Grenzen der deterministischen Messung: sie soll Sekunden dauern und darf den Speicher nicht sprengen.
 const maxFactFileBytes = 2 * 1024 * 1024, maxFactFiles = 6_000, factReadConcurrency = 12, maxReconstructedScreens = 24;
-const maxScreenSourceChars = 90_000, maxPublishedProbes = 40;
+const maxScreenSourceChars = 90_000, maxPublishedProbes = 40, analysisBatchChars = 220_000;
 const reconstructionAnalysisInstructions = [
   "Du analysierst einen fortlaufenden Teil eines App-Projekts für eine pixelgenaue HTML-Rekonstruktion.",
   "Erstelle ein kompaktes Evidenzprotokoll, keine HTML-Datei und kein Markdown-Gerede.",
@@ -847,12 +847,14 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
     const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
     let profile = previewProfiles[platform] ?? previewProfiles.web;
-    const sources = reconstructionSourceFiles(row.imported.manifest);
-    if (!sources.length) fail("RECONSTRUCT_NO_SOURCES", 400, "Im Projekt wurden keine lesbaren UI-Quellen gefunden.");
+    const uiSources = reconstructionSourceFiles(row.imported.manifest);
+    if (!uiSources.length) fail("RECONSTRUCT_NO_SOURCES", 400, "Im Projekt wurden keine lesbaren UI-Quellen gefunden.");
+    const { analyzed: sources, skipped: skippedSources } = analysisBudget(uiSources, maxAnalysisBatches, analysisBatchChars);
     const totalBytes = sources.reduce((sum, file) => sum + file.size, 0);
-    const estimatedAnalysisCalls = estimateAnalysisCallCount(totalBytes);
-    app.log.info({ event: "reconstruction.started", jobId, projectId, platform, sourceFiles: sources.length, sourceBytes: totalBytes, estimatedAnalysisCalls, totalManifestFiles: row.imported.manifest.length }, "Design-Rekonstruktion gestartet");
-    await publishMilestone(4, reconstructionState("inventory", "Projektdateien und UI-Ressourcen wurden vollständig inventarisiert.", 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 5);
+    const estimatedAnalysisCalls = Math.min(maxAnalysisBatches, estimateAnalysisCallCount(totalBytes, analysisBatchChars));
+    if (skippedSources.length) app.log.warn({ event: "reconstruction.analysis_capped", jobId, projectId, analyzed: sources.length, skipped: skippedSources.length, skippedExamples: skippedSources.slice(0, 10).map((file) => file.path) }, "Analysebudget erreicht; weitere UI-Quellen gehen nur über den bildschirmweisen Aufbau ein");
+    app.log.info({ event: "reconstruction.started", jobId, projectId, platform, uiSourceFiles: uiSources.length, analyzedFiles: sources.length, sourceBytes: totalBytes, estimatedAnalysisCalls, totalManifestFiles: row.imported.manifest.length }, "Design-Rekonstruktion gestartet");
+    await publishMilestone(4, reconstructionState("inventory", `${row.imported.manifest.length} Projektdateien inventarisiert; ${uiSources.length} davon beschreiben Oberfläche.`, 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 5);
 
     // Schritt 1: exakt messen statt schaetzen. Farben, Maße, Typografie, Formen, Effekte, Icons und
     // Screens werden deterministisch aus den Quellen geparst — ohne KI und in Sekunden. Diese Werte
@@ -885,7 +887,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       summaries.push(...texts);
       for (const batch of window) { processedBytes += batch.completedBytes; processedFiles += batch.completedFiles; }
       const ratio = totalBytes ? processedBytes / totalBytes : 1;
-      await publishMilestone(10 + ratio * 50, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 3 : 2, processedFiles, sources.length, processedBytes, totalBytes), 5, 100, false);
+      await publishMilestone(10 + ratio * 50, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet${skippedSources.length ? `; ${skippedSources.length} weitere gehen direkt in den bildschirmweisen Aufbau ein` : ""}.`, ratio >= 1 ? 3 : 2, processedFiles, sources.length, processedBytes, totalBytes), 5, 100, false);
     };
     for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
       batchNumber += 1;

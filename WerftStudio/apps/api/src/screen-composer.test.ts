@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyFacts, type DesignFacts } from "./design-facts.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
-import { mapWithConcurrency, reconstructionSourceFiles } from "./import-reconstruction.js";
+import { analysisBudget, mapWithConcurrency, reconstructionSourceFiles } from "./import-reconstruction.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles } from "./screen-composer.js";
 
 const facts = (patch: Partial<DesignFacts> = {}): DesignFacts => ({ ...emptyFacts("android"), ...patch });
@@ -163,27 +163,77 @@ describe("Parallele Verarbeitung", () => {
 describe("Auswahl der Analysequellen", () => {
   const entry = (path: string, size = 1000) => ({ path, size, mime: "text/plain" });
 
-  it("lässt Bau-, Werkzeug- und Übersetzungsdateien aus der teuren KI-Analyse heraus", () => {
+  it("schickt nur oberflächenbeschreibende Dateien in die teure KI-Analyse", () => {
+    // Entscheidend fuer die Laufzeit: Ein Projekt mit hunderten Dokumentations-, Konfigurations-
+    // und Ressourcendateien erzeugte daraus dutzende Analysepakete, von denen keines ein Pixel
+    // erklaerte. Die Werte aus res/values liest der Extraktor exakt und ohne KI-Aufruf.
     const chosen = reconstructionSourceFiles([
-      entry("app/src/main/res/values/colors.xml"),
-      entry("app/src/main/res/values-fr/strings.xml"),
-      entry("app/src/main/res/values-night/colors.xml"),
+      entry("MainWindow.xaml"),
+      entry("Themes/DarkTheme.xaml"),
+      entry("app/src/main/res/layout/activity_main.xml"),
       entry("app/src/main/java/acme/ui/HomeScreen.kt"),
+      entry("app/src/main/res/values/colors.xml"),
+      entry("app/src/main/res/values-night/colors.xml"),
+      entry("app/src/main/res/values-fr/strings.xml"),
       entry("app/src/main/java/acme/data/UserRepository.kt"),
+      entry("Profiles/ClaudeCode/strict/skills/uebersetzung/references/languages/de.md"),
+      entry(".claude/agent-memory/shared/experience-store.jsonl"),
+      entry("Profiles/settings.json"),
       entry("build.gradle.kts"),
       entry("gradle.properties"),
       entry("README.md"),
       entry("app/build/generated/Binding.java")
     ]).map((file) => file.path);
-    expect(chosen).toContain("app/src/main/res/values/colors.xml");
-    expect(chosen).toContain("app/src/main/java/acme/ui/HomeScreen.kt");
-    // Nacht-Varianten sind echte Designvarianten und bleiben drin.
-    expect(chosen).toContain("app/src/main/res/values-night/colors.xml");
-    expect(chosen).not.toContain("app/src/main/res/values-fr/strings.xml");
-    expect(chosen).not.toContain("build.gradle.kts");
-    expect(chosen).not.toContain("gradle.properties");
-    expect(chosen).not.toContain("README.md");
-    expect(chosen).not.toContain("app/build/generated/Binding.java");
-    expect(chosen).not.toContain("app/src/main/java/acme/data/UserRepository.kt");
+    expect(chosen).toEqual(expect.arrayContaining(["MainWindow.xaml", "Themes/DarkTheme.xaml", "app/src/main/res/layout/activity_main.xml", "app/src/main/java/acme/ui/HomeScreen.kt"]));
+    for (const excluded of [
+      "Profiles/ClaudeCode/strict/skills/uebersetzung/references/languages/de.md",
+      ".claude/agent-memory/shared/experience-store.jsonl",
+      "Profiles/settings.json",
+      "app/src/main/res/values/colors.xml",
+      "app/src/main/res/values-night/colors.xml",
+      "app/src/main/res/values-fr/strings.xml",
+      "build.gradle.kts",
+      "gradle.properties",
+      "README.md",
+      "app/build/generated/Binding.java",
+      "app/src/main/java/acme/data/UserRepository.kt"
+    ]) expect(chosen, excluded).not.toContain(excluded);
+  });
+
+  it("stellt die echte Oberfläche vor mitgelieferte Fremdinhalte", () => {
+    // Aus einem echten Lauf: Der Launcher liefert Werkzeug-Profile mit Plugin-Marktplätzen mit.
+    // Deren HTML gewann die Reihenfolge, weil „view" in „topology-viewer" traf — die sechs
+    // XAML-Fenster der App standen dahinter und wären beim Budget-Deckel weggefallen.
+    const chosen = reconstructionSourceFiles([
+      entry("Profiles/ClaudeCode/standard/plugins/marketplaces/official/code-modernization/assets/topology-viewer.html"),
+      entry("Profiles/ClaudeCode/strict/skills/skill-creator/assets/eval_review.html"),
+      entry(".android-shield/l2_latin_fragments.py"),
+      entry("add_report_dialog_strings.py"),
+      entry("app/src/main/res/xml/network_security_config.xml"),
+      entry("app/src/main/assets/legal/de/IMPRINT.html"),
+      entry("MainWindow.xaml"),
+      entry("Themes/DarkTheme.xaml"),
+      entry("ViewModels/MainViewModel.cs")
+    ]).map((file) => file.path);
+    expect(chosen.slice(0, 2)).toEqual(["MainWindow.xaml", "Themes/DarkTheme.xaml"]);
+    for (const excluded of [
+      "Profiles/ClaudeCode/standard/plugins/marketplaces/official/code-modernization/assets/topology-viewer.html",
+      "Profiles/ClaudeCode/strict/skills/skill-creator/assets/eval_review.html",
+      ".android-shield/l2_latin_fragments.py",
+      "add_report_dialog_strings.py",
+      "app/src/main/res/xml/network_security_config.xml",
+      "app/src/main/assets/legal/de/IMPRINT.html"
+    ]) expect(chosen, excluded).not.toContain(excluded);
+  });
+
+  it("deckelt die Analyse und benennt, was nur über den Aufbau eingeht", () => {
+    const many = Array.from({ length: 40 }, (_, index) => entry(`ui/Screen${index}.xaml`, 100_000));
+    const { analyzed, skipped } = analysisBudget(many, 3, 200_000);
+    expect(analyzed).toHaveLength(6);
+    expect(skipped).toHaveLength(34);
+    // Selbst eine einzelne riesige Datei wird analysiert statt still zu verschwinden.
+    const huge = analysisBudget([entry("ui/Giant.xaml", 5_000_000)], 1, 200_000);
+    expect(huge.analyzed).toHaveLength(1);
+    expect(huge.skipped).toHaveLength(0);
   });
 });
