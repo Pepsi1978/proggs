@@ -548,11 +548,18 @@ Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
 # Der Launcher erbt die Umgebung des Prozesses, der ihn gestartet hat. Wurde er aus einer
 # Claude-Sitzung heraus gestartet (typisch: Claude baut den Launcher und startet ihn neu),
-# reicht er CLAUDECODE/CLAUDE_CODE_CHILD_SESSION an jede neue Sitzung weiter. Die startet dann
-# als Kind-Sitzung: kein Transcript, kein ctx-Wert in der Statusline, gedaempftes Logo.
-# Darum die geerbten Marker vor dem Start ausdruecklich entfernen (CLAUDE_CONFIG_DIR bleibt,
+# reicht er Claudes Unterprozess-Umgebung an jede neue Sitzung weiter. Zwei Folgen:
+#   NO_COLOR=1                -> Claude Code schaltet ALLE Farben ab: weisses statt oranges
+#                                Logo, blasse Syntax, farblose Statusline-Trenner.
+#   CLAUDE_CODE_CHILD_SESSION -> Sitzung startet als Kind-Sitzung: kein Transcript,
+#                                kein ctx-Wert in der Statusline.
+# Darum die geerbten Variablen vor dem Start ausdruecklich entfernen (CLAUDE_CONFIG_DIR bleibt,
 # das setzt der Launcher unten selbst). Vor dem Profil, damit das Profil gesetzte Werte behaelt.
 foreach ($staleMarker in @(
+    'NO_COLOR',
+    'FORCE_COLOR',
+    'AI_AGENT',
+    'GIT_TERMINAL_PROMPT',
     'CLAUDECODE',
     'CLAUDE_CODE_CHILD_SESSION',
     'CLAUDE_CODE_SESSION_ID',
