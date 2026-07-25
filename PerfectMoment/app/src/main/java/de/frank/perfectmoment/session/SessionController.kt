@@ -68,7 +68,9 @@ class SessionController(
         releaseEngine()
         val config = currentConfig()
         _state.value = null
-        val sessionId = sessionRepository.createSession(newSessionEntity(topic, config))
+        val sessionId = sessionRepository.createSession(
+            newSessionEntity(topic, config, introContext, entranceQuestion),
+        )
         val runtime = SessionRuntime(
             topic = topic,
             sessionId = sessionId,
@@ -79,32 +81,9 @@ class SessionController(
 
         try {
             startForegroundSessionService()
-            val skill = contentRepository.getSkill(settings.activeSkillId)
-                ?: throw IllegalStateException("Der aktive Skill wurde nicht gefunden.")
-            val requestBase = CodexQuestionRequest(
-                topic = topic,
-                introContext = introContext,
-                entranceQuestion = entranceQuestion,
-                skillText = skill.text,
-                operatingModeText = settings.operatingModeText,
-                perspective = QuestionPerspective.fromId(settings.questionPerspective),
-                model = CodexModel.fromLabel(settings.model),
-                reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
-            )
-            val refillPort = QuestionRefillPort { existing ->
-                val raw = codexAuthManager.generateQuestions(
-                    requestBase.copy(previousQuestions = existing.map(Question::text)),
-                )
-                QuestionResponseValidator.validate(
-                    raw,
-                    existing.map(Question::text),
-                    listOf(entranceQuestion),
-                )
-                    .map { "${it.emoji} ${it.text}" }
-            }
-            val persistencePort = QuestionPersistencePort { questions ->
-                sessionRepository.appendQuestions(sessionId, questions)
-            }
+            val requestBase = newQuestionRequest(topic, introContext, entranceQuestion)
+            val refillPort = newRefillPort(requestBase, entranceQuestion)
+            val persistencePort = newPersistencePort(sessionId)
             val streamedValidator = IncrementalQuestionValidator(excludedQuestions = listOf(entranceQuestion))
             val streamedQuestions = mutableListOf<Question>()
             val rawInitial = codexAuthManager.generateQuestions(requestBase) { rawQuestion ->
@@ -221,11 +200,17 @@ class SessionController(
             repsPerQuestion = source.session.reps,
             durationMinutes = source.session.durationMin,
         )
+        val entranceQuestion = source.session.entranceQuestion
+        val requestBase = newQuestionRequest(
+            topic = source.session.topic,
+            introContext = source.session.introContext,
+            entranceQuestion = entranceQuestion,
+        )
         createEngine(
-            runtime = SessionRuntime(source.session.topic, sourceSessionId, config, replay = true),
+            runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
             questions = source.questions.map { Question(it.id, it.emoji, it.text) },
-            refillPort = null,
-            persistencePort = QuestionPersistencePort { },
+            refillPort = newRefillPort(requestBase, entranceQuestion),
+            persistencePort = newPersistencePort(sourceSessionId),
             checkpoint = SessionCheckpoint(
                 currentIndex = questionIndex,
                 currentRep = source.session.resumeRepetition ?: 1,
@@ -320,7 +305,50 @@ class SessionController(
         )
     }
 
-    private fun newSessionEntity(topic: String, config: SessionConfig): SessionEntity {
+    private suspend fun newQuestionRequest(
+        topic: String,
+        introContext: String,
+        entranceQuestion: String,
+    ): CodexQuestionRequest {
+        val skill = contentRepository.getSkill(settings.activeSkillId)
+            ?: throw IllegalStateException("Der aktive Skill wurde nicht gefunden.")
+        return CodexQuestionRequest(
+            topic = topic,
+            introContext = introContext,
+            entranceQuestion = entranceQuestion,
+            skillText = skill.text,
+            operatingModeText = settings.operatingModeText,
+            perspective = QuestionPerspective.fromId(settings.questionPerspective),
+            model = CodexModel.fromLabel(settings.model),
+            reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
+        )
+    }
+
+    private fun newRefillPort(
+        requestBase: CodexQuestionRequest,
+        entranceQuestion: String,
+    ) = QuestionRefillPort { existing ->
+        val raw = codexAuthManager.generateQuestions(
+            requestBase.copy(previousQuestions = existing.map(Question::text)),
+        )
+        QuestionResponseValidator.validate(
+            raw,
+            existing.map(Question::text),
+            listOf(entranceQuestion),
+        )
+            .map { "${it.emoji} ${it.text}" }
+    }
+
+    private fun newPersistencePort(sessionId: Long) = QuestionPersistencePort { questions ->
+        sessionRepository.appendQuestions(sessionId, questions)
+    }
+
+    private fun newSessionEntity(
+        topic: String,
+        config: SessionConfig,
+        introContext: String,
+        entranceQuestion: String,
+    ): SessionEntity {
         val provider = TtsProvider.entries.firstOrNull { it.id == settings.ttsProvider }
             ?: TtsCatalog.DEFAULT_PROVIDER
         val voice = if (provider == TtsProvider.EDGE) {
@@ -337,6 +365,8 @@ class SessionController(
             pauseRep = (config.pauseRepMs / 1_000L).toInt(),
             pauseNext = (config.pauseNextMs / 1_000L).toInt(),
             reps = config.repsPerQuestion,
+            introContext = introContext,
+            entranceQuestion = entranceQuestion,
         )
     }
 

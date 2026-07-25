@@ -85,7 +85,11 @@ class SessionEngine(
                 paused = restored,
             )
             if (_state.value.phase != Phase.ENDED && !_state.value.paused) startTimer()
-            if (_state.value.questions.isEmpty() && !replay && !initialGenerationInFlight) requestRefill()
+            if (_state.value.questions.isEmpty() && !replay && !initialGenerationInFlight) {
+                requestRefill()
+            } else if (restored) {
+                refillIfResumedStockIsLow()
+            }
         }
     }
 
@@ -391,6 +395,18 @@ class SessionEngine(
         }
     }
 
+    /**
+     * Beim Fortsetzen liegt der Index-Trigger des laufenden Blocks meist schon hinter dem
+     * Fortsetzungspunkt. Reicht der gespeicherte Vorrat nicht mehr für den üblichen Vorlauf,
+     * wird der Nachschub sofort angestossen — die Sitzung endet dann nicht am letzten
+     * gespeicherten Fragen, sondern läuft wie eine frisch gestartete weiter.
+     */
+    private fun refillIfResumedStockIsLow() {
+        val current = _state.value
+        if (current.questions.size - current.currentIndex > RESUME_REFILL_THRESHOLD) return
+        requestRefill()
+    }
+
     private fun triggerRefillIfNeeded(index: Int) {
         if (replay || index < FIRST_REFILL_INDEX || (index - FIRST_REFILL_INDEX) % BLOCK_SIZE != 0) {
             return
@@ -591,6 +607,7 @@ class SessionEngine(
         private const val TIMER_TICK_MS = 100L
         private const val FIRST_REFILL_INDEX = 19
         private const val BLOCK_SIZE = 30
+        private const val RESUME_REFILL_THRESHOLD = BLOCK_SIZE - FIRST_REFILL_INDEX
         private const val MAX_TTS_ERRORS_PER_QUESTION = 3
     }
 }

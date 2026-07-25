@@ -344,7 +344,6 @@ class SessionEngineTest {
             coroutineScope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
             clock = SessionClock { testScheduler.currentTime },
-            replay = true,
             checkpoint = SessionCheckpoint(currentIndex = 1, currentRep = 2, remainingMs = 4_200),
         )
 
@@ -362,6 +361,62 @@ class SessionEngineTest {
         runCurrent()
         assertEquals(listOf("Frage 2"), tts.spokenTexts)
         engine.close()
+    }
+
+    @Test
+    fun `fortgesetzte Sitzung laedt nach und endet nicht nach der letzten Frage`() = runTest {
+        val refill = FakeRefill().apply { responses += List(30) { "✨ Nachschub ${it + 1}" } }
+        val fixture = fixture(
+            questions = List(30) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+            checkpoint = SessionCheckpoint(currentIndex = 29, currentRep = 1, remainingMs = 600_000),
+        )
+
+        fixture.engine.start()
+        runCurrent()
+
+        assertEquals(1, refill.requests)
+        assertEquals(60, fixture.engine.state.value.questions.size)
+
+        fixture.engine.togglePause()
+        runCurrent()
+        assertEquals("Frage 30", fixture.tts.spokenTexts.last())
+
+        fixture.tts.completeCurrent()
+        runCurrent()
+
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
+        assertEquals("Nachschub 1", fixture.tts.spokenTexts.last())
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `fortgesetzte Sitzung mit vollem Vorrat laedt erst am Blocktrigger nach`() = runTest {
+        val refill = FakeRefill().apply { responses += List(30) { "✨ Nachschub ${it + 1}" } }
+        val fixture = fixture(
+            questions = List(30) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+            checkpoint = SessionCheckpoint(currentIndex = 5, currentRep = 1, remainingMs = 600_000),
+        )
+
+        fixture.engine.start()
+        runCurrent()
+
+        assertEquals(0, refill.requests)
+
+        fixture.engine.togglePause()
+        runCurrent()
+        repeat(14) {
+            fixture.tts.completeCurrent()
+            runCurrent()
+        }
+
+        assertEquals(19, fixture.engine.state.value.currentIndex)
+        assertEquals(1, refill.requests)
+        assertEquals(60, fixture.engine.state.value.questions.size)
+        fixture.engine.close()
     }
 
     @Test
@@ -412,6 +467,7 @@ class SessionEngineTest {
         refill: FakeRefill? = null,
         replay: Boolean = false,
         initialGenerationInFlight: Boolean = false,
+        checkpoint: SessionCheckpoint? = null,
     ): Fixture {
         val tts = FakeTts()
         val engine = SessionEngine(
@@ -424,6 +480,7 @@ class SessionEngineTest {
             clock = SessionClock { testScheduler.currentTime },
             replay = replay,
             initialGenerationInFlight = initialGenerationInFlight,
+            checkpoint = checkpoint,
         )
         return Fixture(engine, tts, this)
     }

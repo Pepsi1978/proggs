@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -36,7 +36,10 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     context.applicationContext,
                     PerfectMomentDatabase::class.java,
                     DATABASE_NAME,
-                ).addMigrations(Migration1To2).addCallback(SeedCallback).build().also { instance = it }
+                ).addMigrations(Migration1To2, Migration2To3)
+                    .addCallback(SeedCallback)
+                    .build()
+                    .also { instance = it }
             }
 
         private val Migration1To2 = object : Migration(1, 2) {
@@ -44,6 +47,13 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE sessions ADD COLUMN resumeQuestionIndex INTEGER")
                 db.execSQL("ALTER TABLE sessions ADD COLUMN resumeRepetition INTEGER")
                 db.execSQL("ALTER TABLE sessions ADD COLUMN resumeRemainingMs INTEGER")
+            }
+        }
+
+        private val Migration2To3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sessions ADD COLUMN introContext TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE sessions ADD COLUMN entranceQuestion TEXT NOT NULL DEFAULT ''")
             }
         }
     }
