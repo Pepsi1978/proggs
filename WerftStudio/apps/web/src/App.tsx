@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
-import { api, apiForm, ApiError } from "./api";
+import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
 import { type ToolMode, useUi } from "./store";
 
@@ -10,7 +10,10 @@ type Project = { id: string; name: string; type: string; fidelity: string; platf
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewPath?: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; previewPath?: string };
+type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
+type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; entryPath?: string; revision?: number };
+type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
 const examples = [
   ["Banking App „Fluss“", "iOS · Android", "Konten, Zahlungen und Tagesüberblick mit ruhiger Typografie.", "Prototyp"],
@@ -20,6 +23,34 @@ const examples = [
   ["Reiseplaner", "Android", "Onboarding, Suche und Buchung nach Material 3.", "Prototyp"],
   ["Preisliste 2026", "Dokument", "A4-Dokument mit Tabellen und Druckansicht.", "Dokument"],
 ];
+
+const pause = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void): Promise<ReconstructionJob> {
+  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" });
+  let networkRetries = 0;
+  let interruptedRestarts = 0;
+  for (;;) {
+    let job: ReconstructionJob;
+    try {
+      job = await api<ReconstructionJob>(`/jobs/${started.jobId}`);
+      networkRetries = 0;
+    } catch (error) {
+      if (networkRetries >= 75) throw error;
+      networkRetries += 1;
+      await pause(800);
+      continue;
+    }
+    onProgress(job);
+    if (job.status === "completed") return job;
+    if (job.status === "failed" && job.errorCode === "RECONSTRUCT_INTERRUPTED" && interruptedRestarts < 1) {
+      interruptedRestarts += 1;
+      started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" });
+      continue;
+    }
+    if (job.status === "failed") throw new ApiError(job.errorCode ?? "RECONSTRUCT_FAILED", job.result?.message ?? "Die HTML-Rekonstruktion ist fehlgeschlagen.", 500);
+    await pause(800);
+  }
+}
 
 function Button({ children, variant = "secondary", className = "", ...props }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
@@ -257,6 +288,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
   const [projectType, setProjectType] = useState("prototype");
   const [frontendOnly, setFrontendOnly] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
+  const [progress, setProgress] = useState<{ percent: number; message: string; loaded: number; total: number; todos: ReconstructionTodo[] } | null>(null);
   const selectFiles = (selected: FileList | null) => {
     const next = Array.from(selected ?? []);
     setFiles(next);
@@ -267,14 +299,38 @@ function ImportProject({ onClose }: { onClose(): void }) {
     if (inferred) setName(inferred.slice(0, 120));
   };
   const upload = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const form = new FormData();
       form.append("name", name);
       form.append("platform", platform);
       form.append("type", projectType);
       form.append("frontendOnly", frontendOnly ? "true" : "false");
-      for (const file of files) form.append("files", file, file.webkitRelativePath || file.name);
-      return apiForm<{ projectId: string }>("/imports", form);
+      for (const file of files) {
+        form.append("fileSize", String(file.size));
+        form.append("files", file, file.webkitRelativePath || file.name);
+      }
+      setProgress({ percent: 0, message: "Projektdateien werden hochgeladen.", loaded: 0, total: files.reduce((sum, file) => sum + file.size, 0), todos: [] });
+      const imported = await apiFormProgress<{ projectId: string; requiresReconstruction: boolean }>("/imports", form, (loaded, total) => {
+        const knownTotal = total || files.reduce((sum, file) => sum + file.size, 0);
+        setProgress({ percent: knownTotal ? Math.min(35, loaded / knownTotal * 35) : 5, message: "Projektdateien werden vollständig eingelesen.", loaded, total: knownTotal, todos: [] });
+      });
+      let reconstructionCompleted = true;
+      if (imported.requiresReconstruction) {
+        try {
+          await reconstructProject(imported.projectId, (job) => setProgress({
+            percent: 35 + job.progress * 0.65,
+            message: job.result?.message ?? "UI-Quellen werden verarbeitet.",
+            loaded: job.result?.processedBytes ?? 0,
+            total: job.result?.totalBytes ?? 0,
+            todos: job.result?.todos ?? []
+          }));
+        } catch {
+          reconstructionCompleted = false;
+          setProgress((current) => ({ percent: current?.percent ?? 35, message: "Projekt importiert; die HTML-Rekonstruktion wird im Studio fortgesetzt.", loaded: current?.loaded ?? 0, total: current?.total ?? 0, todos: current?.todos ?? [] }));
+        }
+      }
+      if (reconstructionCompleted) setProgress((current) => ({ percent: 100, message: "Design vollständig importiert und geprüft.", loaded: current?.total ?? 0, total: current?.total ?? 0, todos: current?.todos ?? [] }));
+      return imported;
     },
     onSuccess: async ({ projectId }) => {
       await client.invalidateQueries({ queryKey: ["projects"] });
@@ -283,9 +339,9 @@ function ImportProject({ onClose }: { onClose(): void }) {
     },
   });
   return (
-    <Modal title="Design importieren" width="680px" onClose={onClose}>
+    <Modal title="Design importieren" width="680px" onClose={upload.isPending ? () => {} : onClose}>
       <div className="modal-body import-dialog">
-        <p className="subtle">Importiert vollständige Claude-Designs-Projekte mit HTML, CSS, JavaScript, Bildern, Fonts, Videos und Tönen. Die Verzeichnisstruktur und Interaktionen bleiben erhalten.</p>
+        <p className="subtle">Liest das vollständige UI eines Projekts ein und baut daraus eine präzise, direkt bearbeitbare HTML-Version mit originalen Abmessungen, Positionen, Assets und Farbvarianten.</p>
         <label>
           Projektname
           <input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
@@ -327,14 +383,14 @@ function ImportProject({ onClose }: { onClose(): void }) {
           <label className="import-choice">
             <FolderOpen />
             <strong>Projektordner wählen</strong>
-            <span>Empfohlen für Claude Designs mit HTML und Begleitdateien</span>
+            <span>Für vollständige App-, Software- und Prototyp-Repositories</span>
             <input type="file" multiple ref={(node) => node?.setAttribute("webkitdirectory", "")} onChange={(event) => selectFiles(event.target.files)} />
           </label>
           <label className="import-choice">
             <FileArchive />
             <strong>ZIP oder Designdatei wählen</strong>
             <span>ZIP, HTML, Werft-JSON oder mehrere zusammengehörige Dateien</span>
-            <input type="file" multiple accept=".zip,.html,.htm,.json,.werft,.css,.js,.svg,.png,.jpg,.jpeg,.webp,.gif,.pdf,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.woff,.woff2,.ttf,.otf" onChange={(event) => selectFiles(event.target.files)} />
+            <input type="file" multiple onChange={(event) => selectFiles(event.target.files)} />
           </label>
         </div>
         {files.length > 0 && (
@@ -357,19 +413,27 @@ function ImportProject({ onClose }: { onClose(): void }) {
         <div className="setting-row">
           <span>
             <strong>Nur Frontend übernehmen</strong>
-            <small>Erkennt Design-Dateien (HTML, CSS, XAML, Compose, SwiftUI, Bilder, Fonts …) und lässt Backend, Build-Ordner und Werkzeug-Dateien weg — empfohlen für App-Quellcode.</small>
+            <small>Übernimmt sämtliche First-Party-UI-Quellen, Navigationen, Themes, Ressourcen, Bilder und Fonts; nur Backend, Abhängigkeiten und generierte Build-Dateien bleiben außen vor.</small>
           </span>
           <button type="button" className={`switch ${frontendOnly ? "on" : ""}`} onClick={() => setFrontendOnly(!frontendOnly)}>
             <i />
           </button>
         </div>
-        <p className="subtle">Es zählen nur übernommene Dateien: maximal 5.000 Dateien, 100 MB pro Datei, 1 GB insgesamt. Mit Frontend-Filter darf der Ordner selbst beliebig groß sein (bis 8 GB Upload).</p>
+        <p className="subtle">Die Projektgröße begrenzt nicht die Designanalyse: große UI-Quellen werden vollständig in überprüfbare Verarbeitungspakete zerlegt, statt still übersprungen oder zusammengequetscht zu werden.</p>
+        {progress && (
+          <section className="import-progress" aria-live="polite">
+            <div><strong>{progress.message}</strong><span>{Math.round(progress.percent)} %</span></div>
+            <progress value={progress.percent} max="100" />
+            {progress.total > 0 && <small>{progress.loaded.toLocaleString("de-DE")} von {progress.total.toLocaleString("de-DE")} Bytes verarbeitet</small>}
+            {progress.todos.length > 0 && <div className="import-todos">{progress.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
+          </section>
+        )}
         {upload.error && <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>}
       </div>
       <div className="modal-actions">
-        <Button onClick={onClose}>Abbrechen</Button>
+        <Button disabled={upload.isPending} onClick={onClose}>Abbrechen</Button>
         <Button variant="primary" disabled={!files.length || !name.trim() || upload.isPending} onClick={() => upload.mutate()}>
-          {upload.isPending ? "Projekt wird importiert …" : "Importieren & öffnen"}
+          {upload.isPending ? `${Math.round(progress?.percent ?? 0)} % · Design wird aufgebaut …` : "Importieren & öffnen"}
         </Button>
       </div>
     </Modal>
@@ -887,7 +951,7 @@ function Studio() {
               </NavLink>
             ))}
           </nav>
-          {tab === "canvas" && <Canvas projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
+          {tab === "canvas" && <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} />} {tab === "files" && <Files projectId={projectId} imported={imported.data} />}
           {tab === "questions" && <Questions />}
           {tab === "variants" && (
             <Variants
@@ -991,8 +1055,9 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const previewPanRef = useRef<CanvasPoint | null>(null);
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
+  const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
   const reconstruct = useMutation({
-    mutationFn: () => api<{ entryPath: string; revision: number }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" }),
+    mutationFn: () => reconstructProject(projectId, setReconstructionProgress),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
@@ -1068,10 +1133,9 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     window.addEventListener("message", handlePreviewMessage);
     return () => window.removeEventListener("message", handlePreviewMessage);
   }, [zoom, setZoom]);
-  const syncPreviewTransform = () => previewRef.current?.contentWindow?.postMessage({ source: "werft-studio-canvas", action: "transform", zoom, x: offset.x, y: offset.y }, previewOrigin);
   useEffect(() => {
-    if (imported?.imported) syncPreviewTransform();
-  }, [zoom, offset.x, offset.y, imported?.imported]);
+    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate();
+  }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
   const viewportProps = {
     ref: viewportRef,
     className: `canvas-viewport${panning ? " panning" : ""}`,
@@ -1083,32 +1147,29 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   };
   const contentStyle = { transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` };
   if (imported?.imported) {
-    const looksLikeDesktopApp = imported.files.some((file) => /\.(xaml|csproj|sln|kt|swift)$/i.test(file.path));
     return (
       <div className="canvas imported-canvas">
         <div className="canvas-toolbar imported-toolbar">
-          <Status kind={imported.previewPath ? "success" : "warning"}>{imported.previewPath ? "Original importiert" : "Kein Web-Frontend erkannt"}</Status>
-          <span>{imported.entryPath || "Keine Startseite festgelegt"}</span>
+          <Status kind={imported.previewPath ? "success" : reconstruct.error ? "error" : "info"}>{imported.previewPath ? "HTML originalgetreu aufgebaut" : reconstruct.error ? "Rekonstruktion unterbrochen" : "UI wird vollständig rekonstruiert"}</Status>
+          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
           <small>
             {imported.fileCount} Dateien · {(imported.totalBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB
           </small>
         </div>
         {imported.previewPath ? (
           <div {...viewportProps}>
-            <iframe ref={previewRef} onLoad={syncPreviewTransform} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} style={{ width: imported.previewWidth, height: imported.previewHeight }} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+            <div className="canvas-pan-content imported-preview-frame" style={{ ...contentStyle, width: imported.previewWidth, height: imported.previewHeight }}>
+              <iframe ref={previewRef} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} style={{ width: imported.previewWidth, height: imported.previewHeight }} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+            </div>
           </div>
         ) : (
-          <div className="empty">
-            <strong>Dieses Projekt enthält keine eindeutige Web-Startseite.</strong>
-            <span>
-              {looksLikeDesktopApp
-                ? "Es sieht nach einer Desktop- oder Mobil-App aus (z. B. WPF/XAML, Kotlin oder Swift) — deren Oberfläche kann der Browser nicht direkt darstellen. Alle Dateien wurden trotzdem vollständig importiert."
-                : "Es wurde keine geeignete HTML-Startseite gefunden. Alle Dateien wurden trotzdem vollständig importiert."}
-            </span>
-            <span>Unter „Design Files“ kannst du jede HTML-Datei öffnen und „Als Startseite verwenden“ wählen — oder lass die KI das Design direkt aus dem App-Quellcode nachbauen:</span>
-            <Button variant="primary" disabled={reconstruct.isPending} onClick={() => reconstruct.mutate()}>
-              {reconstruct.isPending ? "KI rekonstruiert das Design … (bis zu einigen Minuten)" : "Design mit KI aus dem App-Code rekonstruieren"}
-            </Button>
+          <div className="empty reconstruction-state">
+            <strong>{reconstruct.error ? "Die HTML-Version konnte noch nicht fertiggestellt werden." : "Das Ist-Design wird automatisch als HTML aufgebaut."}</strong>
+            {!reconstruct.error && <progress value={reconstructionProgress?.progress ?? 0} max="100" />}
+            <span>{reconstructionProgress?.result?.message ?? "Alle UI-Quellen, Themes, Ressourcen und Abmessungen werden geprüft."}</span>
+            {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
+            {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
+            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate()}>Rekonstruktion erneut starten</Button>}
             {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}

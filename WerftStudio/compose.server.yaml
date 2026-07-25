@@ -99,7 +99,7 @@ services:
       start_period: 40s
     deploy:
       resources:
-        # 3 GB: uebernommene Importe bis 1 GB werden im Speicher gepuffert (Multipart + Entpacken + MinIO-Upload).
+        # 3 GB: Ordnerimporte streamen; Speicherreserve bleibt fuer sicher begrenztes ZIP-Entpacken und KI-Evidenz.
         limits: { memory: 3072M, cpus: "1.5" }
         reservations: { memory: 256M, cpus: "0.25" }
 

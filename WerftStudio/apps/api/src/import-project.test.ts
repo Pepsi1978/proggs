@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseEntryPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
+import { chooseEntryPath, isFrontendFile, mimeForPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
 
 const file = (path: string, text = "x") => ({ path, data: Buffer.from(text), mime: "text/plain" });
 
@@ -30,5 +30,24 @@ describe("project import validation", () => {
 
   it("rejects duplicate paths independent of case", () => {
     expect(() => validateImportFiles([file("Logo.svg"), file("logo.svg")])).toThrow(/mehrfach/);
+  });
+
+  it("keeps all first-party UI sources while excluding dependencies and native build output", () => {
+    for (const path of ["app/src/main/java/acme/MainActivity.kt", "app/src/main/java/acme/NavGraph.java", "windows/MainViewModel.cs", "ios/App.swift", "src/main/res/values/themes.xml", "flutter/pubspec.yaml", "qt/Main.qml", "desktop/gui.py", "src/app.rs", "Views/Home.razor", "unity/Main.uxml"]) expect(isFrontendFile(path, "android"), path).toBe(true);
+    expect(isFrontendFile("node_modules/lib/Button.tsx", "web")).toBe(false);
+    expect(isFrontendFile("backend/server.py", "windows")).toBe(false);
+    expect(isFrontendFile("tests/App.test.tsx", "web")).toBe(false);
+    expect(isFrontendFile("app/build/generated/Binding.java", "android")).toBe(false);
+    expect(isFrontendFile("dist/index.html", "web")).toBe(true);
+    expect(isFrontendFile("app.webmanifest", "web")).toBe(true);
+    expect(isFrontendFile("design.werft", "android")).toBe(true);
+    expect(isFrontendFile("runtime/app.mjs", "web")).toBe(true);
+    expect(isFrontendFile("runtime/app.wasm", "web")).toBe(true);
+  });
+
+  it("marks native UI sources as editable text", () => {
+    expect(mimeForPath("MainActivity.kt")).toMatch(/^text\//);
+    expect(mimeForPath("MainWindow.xaml")).toMatch(/xml/);
+    expect(mimeForPath("App.swift")).toMatch(/^text\//);
   });
 });

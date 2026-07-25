@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { Transform } from "node:stream";
 import archiver from "archiver";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
@@ -8,7 +9,7 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { can, type Role } from "@werft/authz";
 import { applyOperationsSchema, createProjectSchema, designDocumentSchema, type DesignDocument } from "@werft/contracts";
-import { auditEvents, createDatabase, designOperations, drafts, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
+import { auditEvents, createDatabase, designOperations, drafts, jobs, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
 import { applyDesignOperations, validateDesignReferences } from "@werft/design-model";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
@@ -16,8 +17,9 @@ import { Client as MinioClient } from "minio";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
-import { chooseEntryPath, expandZip, importLimits, mimeForPath, normalizeImportPath, type ImportedFile, validateImportFiles } from "./import-project.js";
-import { importedPreviewSize, injectPreviewCanvasBridge } from "./preview-canvas-bridge.js";
+import { buildSourceBatches, previewProfileFromHtml, previewProfiles, reconstructionSourceFiles, reconstructionTodos, type ImportManifestFile, type ImportPlatform } from "./import-reconstruction.js";
+import { chooseEntryPath, expandZip, importLimits, isFrontendFile, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
+import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
 type Actor = { userId: string; organizationId: string; role: Role };
 type PendingCodexAuth = { userId: string; organizationId: string; deviceAuthId: string; userCode: string; expiresAt: number; interval: number };
@@ -47,7 +49,7 @@ await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: [
 // parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts.
 // Es duerfen deutlich mehr Dateien ANKOMMEN als uebernommen werden — der Frontend-Filter
 // sortiert direkt im Upload-Strom aus, ohne die Grenzen zu belasten.
-await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxUploadFiles, fileSize: importLimits.maxFileBytes, fields: 10, parts: importLimits.maxUploadFiles + 10 } });
+await app.register(multipart, { preservePath: true, limits: { files: importLimits.maxUploadFiles, fileSize: importLimits.maxFileBytes, fields: importLimits.maxUploadFiles + 10, parts: importLimits.maxUploadFiles * 2 + 20 } });
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 await app.register(sensible);
 await app.register(swagger, { openapi: { info: { title: "Werft Studio API", version: "1.0.0" }, servers: [{ url: "/api/v1" }] } });
@@ -57,6 +59,16 @@ const hashJson = (value: unknown) => createHash("sha256").update(JSON.stringify(
 const previewToken = (projectId: string) => createHmac("sha256", env.SESSION_SECRET).update(`preview:${projectId}`).digest("base64url");
 const validPreviewToken = (projectId: string, token: string) => { const expected = Buffer.from(previewToken(projectId)); const actual = Buffer.from(token); return expected.length === actual.length && timingSafeEqual(expected, actual); };
 const ensureBucket = () => bucketReady ??= (async () => { if (!(await objectStore.bucketExists(env.S3_BUCKET))) await objectStore.makeBucket(env.S3_BUCKET); })();
+async function cleanupOrphanImportObjects() {
+  await ensureBucket();
+  const imports = await db.select({ objectPrefix: projectImports.objectPrefix, manifest: projectImports.manifest }).from(projectImports);
+  const knownObjects = new Set(imports.flatMap((row) => row.manifest.map((file) => `${row.objectPrefix}${file.path}`)));
+  for await (const upload of objectStore.listIncompleteUploads(env.S3_BUCKET, "", true)) await objectStore.removeIncompleteUpload(env.S3_BUCKET, upload.key);
+  for await (const item of objectStore.listObjectsV2(env.S3_BUCKET, "", true)) {
+    if (!item.name) continue;
+    if (!knownObjects.has(item.name)) await objectStore.removeObject(env.S3_BUCKET, item.name);
+  }
+}
 const editableImportMime = (mime: string) => mime.startsWith("text/") || ["application/json", "image/svg+xml"].some((type) => mime.startsWith(type));
 const readObject = async (key: string) => { const chunks: Buffer[] = []; for await (const chunk of await objectStore.getObject(env.S3_BUCKET, key)) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); return Buffer.concat(chunks); };
 const codexPost = async (url: string, body: unknown, form = false) => {
@@ -114,17 +126,18 @@ app.addHook("preHandler", async (request) => {
 
 function actorOf(request: FastifyRequest): Actor { if (!request.actor) fail("AUTH_REQUIRED", 401, "Bitte anmelden."); return request.actor; }
 function requireActorPermission(request: FastifyRequest, permission: Parameters<typeof can>[1]) { const actor = actorOf(request); if (!can(actor.role, permission)) fail("FORBIDDEN", 403, "Diese Aktion ist für deine Rolle nicht erlaubt."); return actor; }
-type ImportPlatform = "web" | "android" | "ios" | "ipados" | "macos" | "windows";
 type ImportType = "prototype" | "presentation" | "document" | "template" | "canvas";
+const nativeUiSourcePattern = /\.(?:xaml|axaml|kt|kts|java|swift|storyboard|dart|cs|razor|qml|ui|uxml|py|rs)$/i;
 function importedDesignDocument(projectId: string, name: string, platform: ImportPlatform, projectType: ImportType): DesignDocument {
   const pageId = uuidv7(), frameId = uuidv7(), nodeId = uuidv7();
   const pageType = projectType === "presentation" ? "slide" : projectType === "document" ? "document-page" : projectType === "canvas" ? "canvas" : "screen";
+  const profile = previewProfiles[platform];
   return {
     schemaVersion: 1, projectId, projectType, fidelity: "high_fidelity", platforms: [platform], designSystemVersionId: null,
     themes: [{ id: "light", name: "Original", tokens: { "color.bg": "#F5F7FA", "color.surface": "#FFFFFF", "color.accent": "#3157D5" } }],
     pages: [{ id: pageId, name, type: pageType, frameIds: [frameId] }],
-    frames: [{ id: frameId, pageId, name, platform, device: "Importierte Originalgröße", ...importedPreviewSize, theme: "light", locale: "de-DE", rootNodeId: nodeId, canvasX: 0, canvasY: 0 }],
-    nodes: [{ id: nodeId, name: "Interaktive HTML-Vorschau", parentId: null, childIds: [], bounds: { x: 0, y: 0, ...importedPreviewSize }, visible: true, locked: false, tokenBindings: {}, semantics: { role: "main", label: name }, type: "container", layout: "absolute", gap: 0, padding: [0, 0, 0, 0], fill: "color.surface" }],
+    frames: [{ id: frameId, pageId, name, platform, device: profile.device, width: profile.width, height: profile.height, theme: "light", locale: "de-DE", rootNodeId: nodeId, canvasX: 0, canvasY: 0 }],
+    nodes: [{ id: nodeId, name: "Interaktive HTML-Vorschau", parentId: null, childIds: [], bounds: { x: 0, y: 0, width: profile.width, height: profile.height }, visible: true, locked: false, tokenBindings: {}, semantics: { role: "main", label: name }, type: "container", layout: "absolute", gap: 0, padding: [0, 0, 0, 0], fill: "color.surface" }],
     assets: [], interactions: [], metadata: { createdAt: new Date().toISOString(), compilerVersion: "0.1.0" }
   };
 }
@@ -132,61 +145,91 @@ function importedDesignDocument(projectId: string, name: string, platform: Impor
 // Frontend-Extraktion beim Import: aus App-Quellcode nur die designrelevanten Dateien uebernehmen
 // (Markup, Styles, Themes, UI-Code, Bilder/Fonts/Medien) — Backend, Build-Artefakte und Werkzeug-
 // Ordner bleiben draussen. So bleiben auch grosse Programme schlank importierbar.
-const frontendDropSegments = /(^|\/)(node_modules|\.git|bin|obj|build|out|target|dist-info|__pycache__|\.gradle|\.idea|\.vs|coverage|logs?|test|tests|__tests__)(\/|$)/i;
-const frontendDropNames = /(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.map)$/i;
-const frontendKeepExtensions = /\.(html?|css|scss|sass|less|svg|png|jpe?g|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|m4a|mp4|webm|xaml|axaml|jsx|tsx|vue|svelte|dart|json|xml)$/i;
-const frontendCodeExtensions = /\.(js|ts|kt|kts|swift|cs)$/i;
-const frontendCodeHint = /(ui|view|screen|page|window|theme|style|layout|design|compose|component|frontend|wwwroot|assets|public|static|res\/|resources)/i;
-export function isFrontendFile(path: string): boolean {
-  if (frontendDropSegments.test(path) || frontendDropNames.test(path)) return false;
-  if (frontendKeepExtensions.test(path)) return true;
-  if (frontendCodeExtensions.test(path)) return frontendCodeHint.test(path);
-  return false;
-}
-async function readImportParts(request: FastifyRequest): Promise<{ name: string; platform: ImportPlatform; projectType: ImportType; frontendOnly: boolean; files: ImportedFile[] }> {
-  let name = "Importiertes Design", totalBytes = 0;
+async function readImportParts(request: FastifyRequest, objectPrefix: string, storedKeys: string[]): Promise<{ name: string; platform: ImportPlatform; projectType: ImportType; frontendOnly: boolean; files: ImportManifestFile[] }> {
+  let name = "Importiertes Design";
   let platform: ImportPlatform = "web", projectType: ImportType = "prototype", frontendOnly = false;
   const platformValues = ["web", "android", "ios", "ipados", "macos", "windows"] as const;
   const typeValues = ["prototype", "presentation", "document", "template", "canvas"] as const;
-  const files: ImportedFile[] = [];
-  for await (const part of request.parts()) {
-    if (part.type === "field") {
-      if (part.fieldname === "name" && typeof part.value === "string") name = part.value.trim().slice(0, 120) || name;
-      if (part.fieldname === "platform" && typeof part.value === "string" && (platformValues as readonly string[]).includes(part.value)) platform = part.value as ImportPlatform;
-      if (part.fieldname === "type" && typeof part.value === "string" && (typeValues as readonly string[]).includes(part.value)) projectType = part.value as ImportType;
-      if (part.fieldname === "frontendOnly" && part.value === "true") frontendOnly = true;
-      continue;
+  let files: ImportManifestFile[] = [];
+  let pendingFileSize: number | undefined;
+  const seenPaths = new Set<string>();
+  await ensureBucket();
+  try {
+    for await (const part of request.parts()) {
+      if (part.type === "field") {
+        if (part.fieldname === "name" && typeof part.value === "string") name = part.value.trim().slice(0, 120) || name;
+        if (part.fieldname === "platform" && typeof part.value === "string" && (platformValues as readonly string[]).includes(part.value)) platform = part.value as ImportPlatform;
+        if (part.fieldname === "type" && typeof part.value === "string" && (typeValues as readonly string[]).includes(part.value)) projectType = part.value as ImportType;
+        if (part.fieldname === "frontendOnly" && part.value === "true") frontendOnly = true;
+        if (part.fieldname === "fileSize" && typeof part.value === "string") {
+          const value = Number(part.value);
+          pendingFileSize = Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+        }
+        continue;
+      }
+      const candidatePath = (part.filename ?? "").replaceAll("\\", "/");
+      const expectedSize = pendingFileSize;
+      pendingFileSize = undefined;
+      if (frontendOnly && candidatePath && !candidatePath.toLowerCase().endsWith(".zip") && !isFrontendFile(candidatePath, platform)) {
+        for await (const chunk of part.file) void chunk;
+        continue;
+      }
+      const filePath = normalizeImportPath(part.filename);
+      const pathKey = filePath.toLocaleLowerCase("en-US");
+      if (seenPaths.has(pathKey)) fail("IMPORT_PATH_DUPLICATE", 400, `Der Dateipfad „${filePath}“ kommt mehrfach vor.`);
+      seenPaths.add(pathKey);
+      const mime = !part.mimetype || part.mimetype === "application/octet-stream" ? mimeForPath(filePath) : part.mimetype;
+      const objectKey = `${objectPrefix}${filePath}`;
+      if (expectedSize === undefined) {
+        for await (const chunk of part.file) void chunk;
+        fail("IMPORT_SIZE_REQUIRED", 400, `Für die Datei „${filePath}“ fehlt die Größenangabe.`);
+      }
+      let size = 0;
+      if (expectedSize === 0) {
+        for await (const chunk of part.file) size += Buffer.byteLength(chunk);
+        if (size === 0) await objectStore.putObject(env.S3_BUCKET, objectKey, Buffer.alloc(0), 0, { "content-type": mime });
+      } else {
+        const meter = new Transform({ transform(chunk, _encoding, callback) { size += Buffer.byteLength(chunk); callback(null, chunk); } });
+        await objectStore.putObject(env.S3_BUCKET, objectKey, part.file.pipe(meter), expectedSize, { "content-type": mime });
+      }
+      if (part.file.truncated || (expectedSize !== undefined && expectedSize !== size)) {
+        await objectStore.removeObject(env.S3_BUCKET, objectKey);
+        fail("IMPORT_FILE_INCOMPLETE", 413, `Die Datei „${filePath}“ wurde nicht vollständig übertragen.`);
+      }
+      storedKeys.push(objectKey);
+      files.push({ path: filePath, size, mime });
     }
-    // Frontend-Filter direkt im Upload-Strom: aussortierte Dateien werden verworfen,
-    // ohne zu den Grenzen (Anzahl/Gesamtgroesse) zu zaehlen — grosse Programme bleiben so importierbar.
-    const candidatePath = (part.filename ?? "").replaceAll("\\", "/");
-    if (frontendOnly && candidatePath && !candidatePath.toLowerCase().endsWith(".zip") && !isFrontendFile(candidatePath)) {
-      for await (const chunk of part.file) void chunk;
-      continue;
+    if (!files.length) fail("IMPORT_EMPTY", 400, frontendOnly ? "Im gewählten Ordner wurden keine Frontend-/UI-Dateien erkannt." : "Der Import enthält keine Dateien.");
+    if (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".zip")) {
+      const zip = files[0]!;
+      if (zip.size > importLimits.maxArchiveFileBytes) fail("IMPORT_ARCHIVE_TOO_LARGE", 413, "Das ZIP ist zu groß für sichere In-Memory-Entpackung. Bitte den Projektordner direkt streamen.");
+      const unpacked = await expandZip(await readObject(`${objectPrefix}${zip.path}`));
+      const selected = frontendOnly ? unpacked.filter((file) => isFrontendFile(file.path, platform)) : unpacked;
+      if (!selected.length) fail("IMPORT_EMPTY", 400, "Das ZIP enthält keine Frontend-/UI-Dateien.");
+      const expanded = validateImportFiles(selected);
+      await objectStore.removeObject(env.S3_BUCKET, `${objectPrefix}${zip.path}`);
+      const zipKeyIndex = storedKeys.indexOf(`${objectPrefix}${zip.path}`);
+      if (zipKeyIndex >= 0) storedKeys.splice(zipKeyIndex, 1);
+      files = [];
+      seenPaths.clear();
+      for (const file of expanded) {
+        const key = file.path.toLocaleLowerCase("en-US");
+        if (seenPaths.has(key)) fail("IMPORT_PATH_DUPLICATE", 400, `Der Dateipfad „${file.path}“ kommt mehrfach vor.`);
+        seenPaths.add(key);
+        const objectKey = `${objectPrefix}${file.path}`;
+        await objectStore.putObject(env.S3_BUCKET, objectKey, file.data, file.data.byteLength, { "content-type": file.mime });
+        storedKeys.push(objectKey);
+        files.push({ path: file.path, size: file.data.byteLength, mime: file.mime });
+      }
     }
-    const chunks: Buffer[] = [];
-    for await (const chunk of part.file) {
-      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      totalBytes += buffer.byteLength;
-      if (totalBytes > importLimits.maxTotalBytes) fail("IMPORT_TOO_LARGE", 413, "Die übernommenen Dateien sind zusammen größer als 1 GB.");
-      chunks.push(buffer);
-    }
-    if (part.file.truncated) fail("IMPORT_FILE_TOO_LARGE", 413, `Die Datei „${part.filename}“ ist größer als 100 MB.`);
-    const filePath = normalizeImportPath(part.filename);
-    files.push({ path: filePath, data: Buffer.concat(chunks), mime: part.mimetype || mimeForPath(filePath) });
+    return { name, platform, projectType, frontendOnly, files };
+  } catch (error) {
+    await Promise.allSettled(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
+    throw error;
   }
-  const selectFrontend = (all: ImportedFile[]) => {
-    if (!frontendOnly) return all;
-    const kept = all.filter((file) => isFrontendFile(file.path));
-    // Sicherheitsnetz: findet der Filter nichts, lieber alles behalten als leer importieren.
-    return kept.length ? kept : all;
-  };
-  if (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".zip")) return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(await expandZip(files[0]!.data))) };
-  // ZIPs innerhalb eines Projektordners sind normale Dateien: nur ein einzeln ausgewaehltes ZIP wird entpackt.
-  return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.5-20260725.1332" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.4.0-20260725.1458" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -194,6 +237,8 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(eq(projectImports.projectId, params.projectId)).limit(1))[0];
   if (!row) fail("PREVIEW_NOT_FOUND", 404, "Vorschau nicht gefunden.");
   const imported = row.imported;
+  const generatedEntry = imported.entryPath.startsWith(".werft-generated/");
+  const previewRootDirectory = !generatedEntry && imported.entryPath.includes("/") ? imported.entryPath.slice(0, imported.entryPath.lastIndexOf("/") + 1) : "";
   const rawRequestedPath = params["*"] || imported.entryPath;
   if (!rawRequestedPath) fail("PREVIEW_FILE_NOT_FOUND", 404, "Für dieses Projekt ist keine Startseite festgelegt.");
   const requestedPath = normalizeImportPath(rawRequestedPath);
@@ -202,13 +247,18 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
   // ETag pro Projektrevision: Browser darf cachen und bekommt 304 statt kompletter Neu-Downloads;
   // nach jeder KI-/Editor-Aenderung steigt die Revision und die Vorschau wird frisch geladen.
-  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v2"`;
+  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v3"`;
   if (request.headers["if-none-match"] === etag) return reply.code(304).header("etag", etag).header("cache-control", "private, no-cache").send();
   reply.headers({ "cache-control": "private, no-cache", etag, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
   if (item.mime.startsWith("text/html")) {
     reply.header("content-security-policy", "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' blob: https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: wss: ws:; frame-src 'self' blob: https: http:; frame-ancestors https://10.8.0.1:8443 http://localhost:5173");
     const html = (await readObject(`${imported.objectPrefix}${item.path}`)).toString("utf8");
-    return reply.send(injectPreviewCanvasBridge(html));
+    return reply.send(injectPreviewCanvasBridge(html, `/api/v1/previews/${params.projectId}/${params.token}/${previewRootDirectory}`));
+  }
+  if (item.mime.startsWith("text/css") || item.mime.startsWith("text/javascript")) {
+    const source = (await readObject(`${imported.objectPrefix}${item.path}`)).toString("utf8");
+    const base = `/api/v1/previews/${params.projectId}/${params.token}/${previewRootDirectory}`;
+    return reply.send(item.mime.startsWith("text/css") ? rewriteRootRelativeCss(source, base) : rewriteRootRelativeJavaScript(source, base));
   }
   return reply.send(await objectStore.getObject(env.S3_BUCKET, `${imported.objectPrefix}${item.path}`));
 });
@@ -282,50 +332,46 @@ app.post("/api/v1/projects", async (request, reply) => {
   return reply.status(201).send({ projectId, version: 1, revision: 0 });
 });
 
-// Transport-Limit bewusst hoch (8 GB Rohdaten): beim Frontend-Filter zaehlen nur die UEBERNOMMENEN
-// Dateien gegen die Grenzen — das ganze Programm darf durch den Upload-Strom laufen.
-app.post("/api/v1/imports", { bodyLimit: 8 * 1024 * 1024 * 1024 }, async (request, reply) => {
+// Ordnerimporte werden Datei fuer Datei direkt in den Objektspeicher gestreamt. Weder das gesamte
+// Projekt noch einzelne grosse Quellen muessen dadurch im API-Speicher liegen.
+app.post("/api/v1/imports", { bodyLimit: Number.MAX_SAFE_INTEGER }, async (request, reply) => {
   const actor = requireActorPermission(request, "project.update");
   if (!request.isMultipart()) fail("IMPORT_MULTIPART_REQUIRED", 415, "Bitte Dateien oder ein ZIP-Paket auswählen.");
-  const { name, platform, projectType, files } = await readImportParts(request);
   const projectId = uuidv7(), draftId = uuidv7(), versionId = uuidv7();
-  const nativeFile = files.find((file) => /(^|\/)(design-document\.json|[^/]+\.werft)$/i.test(file.path)) ?? (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".json") ? files[0] : undefined);
-  let candidate: unknown;
-  if (nativeFile) {
-    try { candidate = JSON.parse(nativeFile.data.toString("utf8")); }
-    catch { fail("IMPORT_JSON_INVALID", 400, "Die ausgewählte Werft-/JSON-Datei enthält kein gültiges JSON."); }
-  }
-  const parsedNative = candidate === undefined ? undefined : designDocumentSchema.safeParse(typeof candidate === "object" && candidate !== null && "document" in candidate ? (candidate as { document: unknown }).document : candidate);
-  if (parsedNative && !parsedNative.success) fail("IMPORT_DOCUMENT_INVALID", 400, "Die Werft-/JSON-Datei ist kein gültiges DesignDocument.");
-  const nativeDocument = parsedNative?.success ? designDocumentSchema.parse({ ...parsedNative.data, projectId }) : undefined;
-  // Ohne eindeutiges Frontend wird trotzdem vollstaendig importiert (entryPath leer):
-  // die Leinwand zeigt dann eine ehrliche Meldung und die Startseite laesst sich manuell setzen.
-  const storeAsFiles = !nativeDocument;
-  const entryPath = storeAsFiles ? chooseEntryPath(files) ?? "" : undefined;
-  const document = nativeDocument ?? importedDesignDocument(projectId, name, platform, projectType);
   const storedKeys: string[] = [];
   const objectPrefix = `${actor.organizationId}/${projectId}/`;
   try {
-    if (storeAsFiles) {
-      await ensureBucket();
-      for (const file of files) {
-        const key = `${objectPrefix}${file.path}`;
-        await objectStore.putObject(env.S3_BUCKET, key, file.data, file.data.byteLength, { "content-type": file.mime });
-        storedKeys.push(key);
-      }
+    const { name, platform, projectType, files } = await readImportParts(request, objectPrefix, storedKeys);
+    const explicitNativeFile = files.find((file) => /(^|\/)(design-document\.json|[^/]+\.werft)$/i.test(file.path));
+    const nativeFile = explicitNativeFile ?? (files.length === 1 && files[0]!.path.toLowerCase().endsWith(".json") ? files[0] : undefined);
+    let candidate: unknown;
+    if (nativeFile) {
+      try { candidate = JSON.parse((await readObject(`${objectPrefix}${nativeFile.path}`)).toString("utf8")); }
+      catch { if (explicitNativeFile) fail("IMPORT_JSON_INVALID", 400, "Die ausgewählte Werft-/JSON-Datei enthält kein gültiges JSON."); }
+    }
+    const parsedNative = candidate === undefined ? undefined : designDocumentSchema.safeParse(typeof candidate === "object" && candidate !== null && "document" in candidate ? (candidate as { document: unknown }).document : candidate);
+    if (explicitNativeFile && parsedNative && !parsedNative.success) fail("IMPORT_DOCUMENT_INVALID", 400, "Die Werft-/JSON-Datei ist kein gültiges DesignDocument.");
+    const nativeDocument = parsedNative?.success ? designDocumentSchema.parse({ ...parsedNative.data, projectId }) : undefined;
+    const storeAsFiles = !nativeDocument;
+    const entryPath = storeAsFiles ? chooseEntryPath(files) ?? "" : undefined;
+    const document = nativeDocument ?? importedDesignDocument(projectId, name, platform, projectType);
+    if (!storeAsFiles) {
+      await Promise.all(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
+      storedKeys.length = 0;
     }
     await db.transaction(async (tx) => {
       await tx.insert(projects).values({ id: projectId, organizationId: actor.organizationId, name, type: document.projectType, fidelity: document.fidelity, platforms: document.platforms, ownerId: actor.userId });
       await tx.insert(drafts).values({ id: draftId, projectId, organizationId: actor.organizationId, document, updatedBy: actor.userId });
       await tx.insert(versions).values({ id: versionId, organizationId: actor.organizationId, projectId, number: 1, reason: "Projekt importiert", authorId: actor.userId, document, snapshotHash: hashJson(document) });
-      if (storeAsFiles) await tx.insert(projectImports).values({ projectId, organizationId: actor.organizationId, format: "html-project", entryPath: entryPath ?? "", objectPrefix, manifest: files.map((file) => ({ path: file.path, size: file.data.byteLength, mime: file.mime })), fileCount: files.length, totalBytes: files.reduce((sum, file) => sum + file.data.byteLength, 0) });
-      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.imported", targetType: "project", targetId: projectId, result: "success", metadata: { format: storeAsFiles ? "html-project" : "design-document", fileCount: files.length, entryDetected: Boolean(entryPath) }, correlationId: request.id });
+      if (storeAsFiles) await tx.insert(projectImports).values({ projectId, organizationId: actor.organizationId, format: "ui-project", entryPath: entryPath ?? "", objectPrefix, manifest: files, fileCount: files.length, totalBytes: files.reduce((sum, file) => sum + file.size, 0) });
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.imported", targetType: "project", targetId: projectId, result: "success", metadata: { format: storeAsFiles ? "ui-project" : "design-document", fileCount: files.length, entryDetected: Boolean(entryPath), streamed: true }, correlationId: request.id });
     });
+    const hasNativeUiSources = files.some((file) => nativeUiSourcePattern.test(file.path));
+    return reply.status(201).send({ projectId, kind: storeAsFiles ? (entryPath ? "html" : "files") : "native", requiresReconstruction: storeAsFiles && (!entryPath || (platform !== "web" && hasNativeUiSources)) });
   } catch (error) {
     await Promise.allSettled(storedKeys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
     throw error;
   }
-  return reply.status(201).send({ projectId, kind: storeAsFiles ? (entryPath ? "html" : "files") : "native" });
 });
 
 app.delete("/api/v1/projects/:projectId", async (request) => {
@@ -343,7 +389,20 @@ app.delete("/api/v1/projects/:projectId", async (request) => {
   return { deleted: true };
 });
 app.get("/api/v1/projects/:projectId", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId), isNull(projects.deletedAt))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); return rows[0]; });
-app.get("/api/v1/projects/:projectId/import", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; if (!row) return { imported: false as const }; return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: importedPreviewSize.width, previewHeight: importedPreviewSize.height, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) }; });
+app.get("/api/v1/projects/:projectId/import", async (request) => {
+  const actor = requireActorPermission(request, "project.read");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ imported: projectImports, revision: projects.revision, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) return { imported: false as const };
+  const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+  const fallbackProfile = previewProfiles[platform] ?? previewProfiles.web;
+  let profile = fallbackProfile;
+  if (row.imported.entryPath) {
+    try { profile = previewProfileFromHtml((await readObject(`${row.imported.objectPrefix}${row.imported.entryPath}`)).toString("utf8"), fallbackProfile); }
+    catch (error) { request.log.warn({ err: error, projectId }, "Vorschau-Metadaten nicht lesbar; Plattformprofil wird verwendet"); }
+  }
+  return { imported: true as const, entryPath: row.imported.entryPath, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+});
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
 app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
@@ -512,59 +571,163 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
     throw error;
   }
 });
-const reconstructInstructions = [
-  "Du bist der Design-Rekonstrukteur von Werft Studio.",
-  "Du erhältst UI-Quellcode einer Desktop- oder Mobil-App (z.B. WPF/XAML, Jetpack Compose, SwiftUI) samt Themes/Styles.",
-  "Baue daraus EINE vollständige, eigenständige HTML-Datei, die das Design der App originalgetreu nachbildet:",
-  "gleiche Farben, Schriften, Abstände, Ecken, Layout und alle sichtbaren Bedienelemente; Light/Dark falls Themes vorhanden (umschaltbar).",
-  "Komplett self-contained: alles inline (CSS/JS), keine externen Ressourcen. Deutsch als Oberflächensprache, sofern der Quellcode deutsch ist.",
-  "Antworte AUSSCHLIESSLICH mit dem HTML-Dokument, beginnend mit <!doctype html>. Kein Markdown, keine Erklärungen."
+type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
+type ReconstructionState = {
+  phase: string;
+  message: string;
+  processedFiles: number;
+  totalFiles: number;
+  processedBytes: number;
+  totalBytes: number;
+  todos: ReconstructionTodo[];
+  entryPath?: string;
+  revision?: number;
+};
+const reconstructionState = (phase: string, message: string, completedTodos: number, processedFiles: number, totalFiles: number, processedBytes: number, totalBytes: number, extra: Partial<ReconstructionState> = {}): ReconstructionState => ({
+  phase, message, processedFiles, totalFiles, processedBytes, totalBytes,
+  todos: reconstructionTodos.map((label, index) => ({ label, status: index < completedTodos ? "completed" : index === completedTodos ? "running" : "pending" })),
+  ...extra
+});
+async function updateReconstructionJob(jobId: string, status: "queued" | "running" | "completed" | "failed", progress: number, result: ReconstructionState, errorCode?: string) {
+  await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, jobId));
+}
+const cleanHtmlResponse = (text: string) => text.trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
+const reconstructionAnalysisInstructions = [
+  "Du analysierst einen fortlaufenden Teil eines App-Projekts für eine pixelgenaue HTML-Rekonstruktion.",
+  "Erstelle ein kompaktes Evidenzprotokoll, keine HTML-Datei und kein Markdown-Gerede.",
+  "Bewahre JEDE exakte sichtbare Konstante: Breite, Höhe, x/y-Ausrichtung, Padding, Margin, Gap, Insets, Radius, Stroke, Schatten, Schriftfamilie/-größe/-gewicht/-Zeilenhöhe, Farbe inklusive Alpha, Icon-/Assetpfad und Z-Order.",
+  "Dokumentiere Komponentenbaum, Constraints/Modifier-Reihenfolge, Navigation, Zustände, Texte sowie sämtliche Light-/Dark-/Zusatz-Themes.",
+  "Nichts schätzen. Unsichere Beziehungen mit Quellpfad markieren. Maximal 12000 Zeichen, aber keine exakten Designwerte weglassen."
 ].join(" ");
-const reconstructSourcePattern = /\.(xaml|axaml|kt|kts|swift|dart|css|scss|json|xml)$/i;
-app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request) => {
+async function compactReconstructionEvidence(organizationId: string, summaries: string[]): Promise<string[]> {
+  let current = summaries;
+  while (current.join("\n").length > 320_000) {
+    const next: string[] = [];
+    for (let index = 0; index < current.length; index += 18) {
+      const group = current.slice(index, index + 18).join("\n\n");
+      const { text } = await codexRun(organizationId, "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden. Entferne nur Wiederholungen. Maximal 18000 Zeichen.", group, app.log);
+      next.push(text.trim());
+    }
+    current = next;
+  }
+  return current;
+}
+async function runReconstructionJob(jobId: string, actor: Actor, projectId: string, correlationId: string) {
+  try {
+    const row = (await db.select({ imported: projectImports, revision: projects.revision, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+    if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+    const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+    const profile = previewProfiles[platform] ?? previewProfiles.web;
+    const sources = reconstructionSourceFiles(row.imported.manifest);
+    if (!sources.length) fail("RECONSTRUCT_NO_SOURCES", 400, "Im Projekt wurden keine lesbaren UI-Quellen gefunden.");
+    const totalBytes = sources.reduce((sum, file) => sum + file.size, 0);
+    await updateReconstructionJob(jobId, "running", 5, reconstructionState("inventory", "Projektdateien und UI-Ressourcen werden inventarisiert.", 0, 0, sources.length, 0, totalBytes));
+    const summaries: string[] = [];
+    let processedBytes = 0, processedFiles = 0, batchNumber = 0;
+    for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
+      batchNumber += 1;
+      const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batchNumber}.\n${batch.text}`;
+      const { text } = await codexRun(actor.organizationId, reconstructionAnalysisInstructions, input, app.log);
+      summaries.push(text.trim());
+      processedBytes += batch.completedBytes;
+      processedFiles += batch.completedFiles;
+      const ratio = totalBytes ? processedBytes / totalBytes : 1;
+      await updateReconstructionJob(jobId, "running", 10 + ratio * 58, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet.`, ratio >= 1 ? 4 : 1, processedFiles, sources.length, processedBytes, totalBytes));
+    }
+    const binaryAssets = row.imported.manifest.filter((file) => !sources.some((source) => source.path === file.path));
+    for (let index = 0; index < binaryAssets.length; index += 1500) summaries.push(`ASSET-INVENTAR:\n${binaryAssets.slice(index, index + 1500).map((file) => `${file.path} | ${file.mime} | ${file.size} Bytes`).join("\n")}`);
+    await updateReconstructionJob(jobId, "running", 72, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 4, processedFiles, sources.length, processedBytes, totalBytes));
+    const evidence = (await compactReconstructionEvidence(actor.organizationId, summaries)).join("\n\n");
+    const reconstructionInstructions = [
+      "Du bist der pixelgenaue Design-Rekonstrukteur von Werft Studio.",
+      `Erzeuge EINE vollständige, direkt bearbeitbare HTML-Datei für ${platform}. Fallback-Viewport: ${profile.width}x${profile.height} (${profile.device}, Dichte ${profile.density}); wenn die Quell-Evidenz eine konkrete Fenster-, Preview- oder Gerätegeometrie nennt, ist stattdessen exakt diese Geometrie verbindlich.`,
+      "Die Quell-Evidenz ist verbindlich: Komponenten müssen in derselben Hierarchie, Reihenfolge und Z-Order stehen. Übernimm alle Maße, Koordinaten, Alignments, Insets, Abstände, Farben, Typografie, Radien, Schatten, Icons, Bilder und Zustände exakt; nichts optisch 'verbessern' oder frei schätzen.",
+      "Ein logisches dp/pt entspricht einem CSS-Pixel. Verwende border-box, body margin 0 und keine Zentrierung oder Skalierung, die Quellkoordinaten verschiebt. Positioniere absolute/constraint-basierte Oberflächen auch in CSS exakt; Flex/Grid nur wenn es die Original-Constraints identisch ausdrückt.",
+      "Bilde alle gefundenen Screens, Dialoge und Interaktionen bearbeitbar ab. Der initial sichtbare Zustand muss dem App-Start entsprechen. Navigation und Zustandswechsel folgen dem Original.",
+      "Implementiere sämtliche gefundenen Farbvarianten über prefers-color-scheme und data-theme, ohne zusätzliche sichtbare Werft-Bedienelemente einzubauen. Importierte Assets als root-relative /<exakter Manifestpfad> referenzieren; Styles und notwendige Logik sonst inline halten.",
+      "Setze <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> und exakt ein maschinenlesbares <meta name=\"werft-preview\" content='{\"platform\":\"...\",\"width\":ZAHL,\"height\":ZAHL,\"device\":\"...\",\"density\":ZAHL}'> mit der tatsächlich rekonstruierten Quellgeometrie.",
+      "Antworte ausschließlich mit dem vollständigen HTML-Dokument ab <!doctype html>, ohne Markdown oder Erklärung."
+    ].join(" ");
+    await updateReconstructionJob(jobId, "running", 82, reconstructionState("build", "Die bearbeitbare HTML-Version wird aus der vollständigen UI-Evidenz aufgebaut.", 4, processedFiles, sources.length, processedBytes, totalBytes));
+    const generated = await codexRun(actor.organizationId, reconstructionInstructions, `Projekt: ${row.name}\n\nVOLLSTÄNDIGE UI-EVIDENZ:\n${evidence}`, app.log);
+    let html = cleanHtmlResponse(generated.text);
+    if (!/<!doctype html|<html/i.test(html)) fail("RECONSTRUCT_INVALID", 502, "Die KI hat keine gültige HTML-Version geliefert.", true);
+    await updateReconstructionJob(jobId, "running", 92, reconstructionState("verify", "Abmessungen, Positionen, Themes und Assets werden gegen die Quellen geprüft.", 5, processedFiles, sources.length, processedBytes, totalBytes));
+    try {
+      const verification = await codexRun(actor.organizationId, "Du bist die abschließende Pixel-Fidelity-Prüfung. Vergleiche das HTML streng mit der UI-Evidenz. Korrigiere jede abweichende Position, Größe, Ausrichtung, Farbe, Typografie, Theme-Variante, Hierarchie und jeden fehlenden Screen oder Zustand. Keine gestalterischen Änderungen. Antworte ausschließlich mit dem vollständigen korrigierten HTML-Dokument.", `UI-EVIDENZ:\n${evidence}\n\nZU PRÜFENDES HTML:\n${html}`, app.log);
+      const corrected = cleanHtmlResponse(verification.text);
+      if (/<!doctype html|<html/i.test(corrected)) html = corrected;
+    } catch (error) {
+      app.log.warn({ err: error, projectId }, "HTML-Fidelity-Prüfung fehlgeschlagen; gültige Erstrekonstruktion bleibt erhalten");
+    }
+    const designPath = `.werft-generated/${jobId}/design.html`;
+    const data = Buffer.from(html, "utf8");
+    const designObjectKey = `${row.imported.objectPrefix}${designPath}`;
+    const oldGeneratedPaths = row.imported.manifest.filter((file) => /^\.werft-generated\/[0-9a-f-]+\/design\.html$/i.test(file.path) && file.path !== designPath).map((file) => file.path);
+    let stored: { revision: number };
+    try {
+      await objectStore.putObject(env.S3_BUCKET, designObjectKey, data, data.byteLength, { "content-type": "text/html; charset=utf-8" });
+      stored = await db.transaction(async (tx) => {
+        await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
+        const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+        if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+        if (current.revision !== row.revision) fail("REVISION_CONFLICT", 409, "Das importierte UI wurde während der Rekonstruktion geändert. Die Analyse wird auf dem aktuellen Stand neu gestartet.", true);
+        const manifest = [...current.imported.manifest.filter((file) => !/^\.werft-generated\/[0-9a-f-]+\/design\.html$/i.test(file.path)), { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
+        const revision = current.revision + 1;
+        await tx.update(projectImports).set({ entryPath: designPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
+        await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
+        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { model: generated.model, sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile }, correlationId });
+        return { revision };
+      });
+    } catch (error) {
+      let committed = false, commitStatusKnown = false;
+      try {
+        const latest = (await db.select({ manifest: projectImports.manifest }).from(projectImports).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+        commitStatusKnown = Boolean(latest);
+        committed = latest?.manifest.some((file) => file.path === designPath) === true;
+      } catch (statusError) { app.log.warn({ err: statusError, projectId, designPath }, "Commit-Status der Rekonstruktion ist unklar; generiertes Objekt bleibt sicher erhalten"); }
+      if (commitStatusKnown && !committed) await objectStore.removeObject(env.S3_BUCKET, designObjectKey);
+      throw error;
+    }
+    await Promise.allSettled(oldGeneratedPaths.map((path) => objectStore.removeObject(env.S3_BUCKET, `${row.imported.objectPrefix}${path}`)));
+    await updateReconstructionJob(jobId, "completed", 100, reconstructionState("completed", "HTML-Design vollständig aufgebaut und geprüft.", reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision: stored.revision }));
+  } catch (error) {
+    const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
+    const message = error instanceof Error ? error.message : "Die HTML-Rekonstruktion ist fehlgeschlagen.";
+    const code = typeof details.code === "string" ? details.code : error instanceof Error ? error.name : "RECONSTRUCT_FAILED";
+    await updateReconstructionJob(jobId, "failed", 100, reconstructionState("failed", message, 0, 0, 0, 0, 0), code);
+    app.log.error({ err: error, jobId, projectId }, "Design-Rekonstruktion fehlgeschlagen");
+  }
+}
+// In-Process-Laeufe koennen einen API-Neustart nicht ueberleben. Persistierte Zwischenzustaende
+// werden deshalb beim Start freigegeben; der idempotente POST startet sie beim naechsten Poll/Öffnen neu.
+await db.update(jobs).set({ status: "failed", errorCode: "RECONSTRUCT_INTERRUPTED", result: reconstructionState("interrupted", "Der Verarbeitungslauf wurde durch einen Serverneustart unterbrochen und kann sicher neu gestartet werden.", 0, 0, 0, 0, 0), updatedAt: new Date() }).where(and(eq(jobs.kind, "design-reconstruction"), sql`${jobs.status} in ('queued', 'running')`));
+app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request, reply) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const row = (await db.select({ imported: projectImports }).from(projectImports).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
-  if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
-  const uiScore = (path: string) => {
-    const lower = path.toLowerCase();
-    let score = 0;
-    if (/\.(xaml|axaml)$/.test(lower)) score += 60;
-    if (/(theme|style|color|window|view|page|screen|main|shell)/.test(lower)) score += 30;
-    if (/(test|bin\/|obj\/|node_modules)/.test(lower)) score -= 100;
-    return score - lower.split("/").length;
-  };
-  const candidates = [...row.imported.manifest]
-    .filter((file) => reconstructSourcePattern.test(file.path) && file.size <= 200_000)
-    .sort((a, b) => uiScore(b.path) - uiScore(a.path));
-  const texts: Array<{ path: string; content: string }> = [];
-  let budget = 500_000;
-  for (const file of candidates) {
-    if (file.size > budget) continue;
-    texts.push({ path: file.path, content: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") });
-    budget -= file.size;
-    if (texts.length >= 40) break;
+  const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+  const idempotencyKey = `${projectId}:${imported.revision}`;
+  const queuedState = reconstructionState("queued", "HTML-Rekonstruktion wird vorbereitet.", 0, 0, 0, 0, 0);
+  const candidateId = uuidv7();
+  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState }).onConflictDoNothing().returning({ id: jobs.id });
+  if (inserted[0]) {
+    setTimeout(() => void runReconstructionJob(candidateId, actor, projectId, request.id), 0);
+    return reply.status(202).send({ jobId: candidateId, status: "queued" });
   }
-  if (!texts.length) fail("RECONSTRUCT_NO_SOURCES", 400, "In diesem Projekt wurden keine UI-Quellcode-Dateien (XAML, Compose, SwiftUI, CSS …) gefunden.");
-  const input = `App-UI-Quellcode:\n\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
-  const { text, model } = await codexRun(actor.organizationId, reconstructInstructions, input, request.log);
-  const html = text.trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
-  if (!/<!doctype html|<html/i.test(html)) fail("RECONSTRUCT_INVALID", 502, "Die KI hat kein gültiges HTML-Design geliefert. Bitte erneut versuchen.", true);
-  const designPath = "werft-design.html";
-  const data = Buffer.from(html, "utf8");
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
-    const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
-    if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
-    await objectStore.putObject(env.S3_BUCKET, `${current.imported.objectPrefix}${designPath}`, data, data.byteLength, { "content-type": "text/html; charset=utf-8" });
-    const existing = current.imported.manifest.find((file) => file.path === designPath);
-    const manifest = existing ? current.imported.manifest.map((file) => (file.path === designPath ? { ...file, size: data.byteLength } : file)) : [...current.imported.manifest, { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
-    const revision = current.revision + 1;
-    await tx.update(projectImports).set({ entryPath: designPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
-    await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { model, sourceFiles: texts.length, bytes: data.byteLength, revision }, correlationId: request.id });
-    return { entryPath: designPath, revision, sourceFiles: texts.map((item) => item.path) };
-  });
+  const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
+  if (!existing) fail("JOB_CLAIM_FAILED", 409, "Der Verarbeitungslauf konnte nicht übernommen werden. Bitte erneut versuchen.", true);
+  if (existing.status === "queued" || existing.status === "running" || existing.status === "completed") return reply.status(202).send({ jobId: existing.id, status: existing.status });
+  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: queuedState, errorCode: null, updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id });
+  if (claimed[0]) setTimeout(() => void runReconstructionJob(existing.id, actor, projectId, request.id), 0);
+  return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
+});
+app.get("/api/v1/jobs/:jobId", async (request) => {
+  const actor = requireActorPermission(request, "project.read");
+  const { jobId } = z.object({ jobId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ id: jobs.id, projectId: jobs.projectId, kind: jobs.kind, status: jobs.status, progress: jobs.progress, result: jobs.result, errorCode: jobs.errorCode, updatedAt: jobs.updatedAt }).from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("JOB_NOT_FOUND", 404, "Verarbeitungslauf nicht gefunden.");
+  return row;
 });
 app.get("/api/v1/projects/:projectId/design-document", async (request) => { const actor = requireActorPermission(request, "design.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const rows = await db.select({ revision: drafts.revision, document: drafts.document }).from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1); if (!rows[0]) fail("NOT_FOUND", 404, "Design nicht gefunden."); return { revision: rows[0].revision, document: designDocumentSchema.parse(rows[0].document) }; });
 app.post("/api/v1/projects/:projectId/design-operations", async (request) => {
@@ -582,4 +745,5 @@ app.get("/api/v1/projects/:projectId/versions", async (request) => { const actor
 app.post("/api/v1/projects/:projectId/versions", async (request) => { const actor = requireActorPermission(request, "version.create"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const body = z.object({ reason: z.string().min(1).max(300), baseRevision: z.number().int().nonnegative() }).parse(request.body); return db.transaction(async (tx) => { await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`); const project = (await tx.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.organizationId, actor.organizationId))).limit(1))[0]; const draft = (await tx.select().from(drafts).where(and(eq(drafts.projectId, projectId), eq(drafts.organizationId, actor.organizationId))).limit(1))[0]; if (!project || !draft) fail("NOT_FOUND", 404, "Projekt nicht gefunden."); if (draft.revision !== body.baseRevision) fail("REVISION_CONFLICT", 409, "Der Entwurf wurde inzwischen geändert."); const number = project.activeVersion + 1; const document = designDocumentSchema.parse(draft.document); const row = { id: uuidv7(), organizationId: actor.organizationId, projectId, number, reason: body.reason, authorId: actor.userId, document, snapshotHash: hashJson(document) }; await tx.insert(versions).values(row); await tx.update(projects).set({ activeVersion: number, updatedAt: new Date() }).where(eq(projects.id, projectId)); await tx.insert(outboxEvents).values({ id: uuidv7(), organizationId: actor.organizationId, aggregateId: projectId, type: "version.created", payload: { projectId, number, actorId: actor.userId } }); return { id: row.id, number }; }); });
 const shutdown = async () => { await app.close(); await client.end(); };
 process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
+await cleanupOrphanImportObjects();
 await app.listen({ port: env.API_PORT, host: "0.0.0.0" });

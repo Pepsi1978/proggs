@@ -1,21 +1,9 @@
 const bridgeMarker = "data-werft-canvas-bridge";
-export const importedPreviewSize = { width: 1440, height: 900 } as const;
 
 const bridgeScript = `<script ${bridgeMarker}>
 (() => {
   const send = (action, event) => parent.postMessage({ source: "werft-preview-canvas", action, x: event.clientX, y: event.clientY, deltaY: event.deltaY }, "*");
-  const canvas = document.body;
-  document.documentElement.style.background = getComputedStyle(canvas).background;
-  document.documentElement.style.overflow = "hidden";
-  canvas.style.transformOrigin = "0 0";
-  canvas.style.willChange = "transform";
   let panning = false;
-  window.addEventListener("message", (event) => {
-    const data = event.data;
-    if (event.source !== parent || !data || data.source !== "werft-studio-canvas" || data.action !== "transform") return;
-    if (![data.zoom, data.x, data.y].every(Number.isFinite)) return;
-    canvas.style.transform = "translate(" + data.x + "px, " + data.y + "px) scale(" + data.zoom + ")";
-  });
   document.addEventListener("wheel", (event) => {
     if (!event.ctrlKey) return;
     event.preventDefault();
@@ -47,9 +35,36 @@ const bridgeScript = `<script ${bridgeMarker}>
 })();
 </script>`;
 
-export function injectPreviewCanvasBridge(html: string): string {
-  if (html.includes(bridgeMarker)) return html;
-  const bodyEnd = html.search(/<\/body\s*>/i);
-  if (bodyEnd >= 0) return `${html.slice(0, bodyEnd)}${bridgeScript}${html.slice(bodyEnd)}`;
-  return `${html}${bridgeScript}`;
+const normalizedBase = (previewBase: string) => previewBase.endsWith("/") ? previewBase : `${previewBase}/`;
+
+export function rewriteRootRelativeCss(css: string, previewBase: string): string {
+  const base = normalizedBase(previewBase);
+  return css.replace(/(url\(\s*["']?)\/(?!\/)/gi, `$1${base}`);
+}
+
+export function rewriteRootRelativeJavaScript(code: string, previewBase: string): string {
+  const base = normalizedBase(previewBase);
+  return code
+    .replace(/(\bfrom\s*["'])\/(?!\/)/g, `$1${base}`)
+    .replace(/(\bimport\s*["'])\/(?!\/)/g, `$1${base}`)
+    .replace(/(\bimport\s*\(\s*["'])\/(?!\/)/g, `$1${base}`);
+}
+
+export function rewriteRootRelativeAssets(html: string, previewBase: string): string {
+  const base = normalizedBase(previewBase);
+  return html
+    .replace(/<[^>]+>/g, (tag) => tag
+      .replace(/(\b(?:src|href|poster|action)\s*=\s*["'])\/(?!\/)/gi, `$1${base}`)
+      .replace(/(\bsrcset\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix: string, quote: string, value: string) => `${prefix}${quote}${value.split(",").map((candidate) => candidate.trim().replace(/^\/(?!\/)/, base)).join(", ")}${quote}`)
+      .replace(/(\bstyle\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix: string, quote: string, value: string) => `${prefix}${quote}${rewriteRootRelativeCss(value, base)}${quote}`))
+    .replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (_all, open: string, css: string, close: string) => `${open}${rewriteRootRelativeCss(css, base)}${close}`)
+    .replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script\s*>)/gi, (_all, open: string, code: string, close: string) => `${open}${rewriteRootRelativeJavaScript(code, base)}${close}`);
+}
+
+export function injectPreviewCanvasBridge(html: string, previewBase?: string): string {
+  const withAssets = previewBase ? rewriteRootRelativeAssets(html, previewBase) : html;
+  if (withAssets.includes(bridgeMarker)) return withAssets;
+  const bodyEnd = withAssets.search(/<\/body\s*>/i);
+  if (bodyEnd >= 0) return `${withAssets.slice(0, bodyEnd)}${bridgeScript}${withAssets.slice(bodyEnd)}`;
+  return `${withAssets}${bridgeScript}`;
 }
