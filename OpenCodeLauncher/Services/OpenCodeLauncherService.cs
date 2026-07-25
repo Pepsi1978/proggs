@@ -546,6 +546,22 @@ $ErrorActionPreference = 'Continue'
 [Console]::Write("`e[?1004l")
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
+# Der Launcher erbt die Umgebung des Prozesses, der ihn gestartet hat. Wurde er aus einer
+# Claude-Sitzung heraus gestartet (typisch: Claude baut den Launcher und startet ihn neu),
+# reicht er CLAUDECODE/CLAUDE_CODE_CHILD_SESSION an jede neue Sitzung weiter. Die startet dann
+# als Kind-Sitzung: kein Transcript, kein ctx-Wert in der Statusline, gedaempftes Logo.
+# Darum die geerbten Marker vor dem Start ausdruecklich entfernen (CLAUDE_CONFIG_DIR bleibt,
+# das setzt der Launcher unten selbst). Vor dem Profil, damit das Profil gesetzte Werte behaelt.
+foreach ($staleMarker in @(
+    'CLAUDECODE',
+    'CLAUDE_CODE_CHILD_SESSION',
+    'CLAUDE_CODE_SESSION_ID',
+    'CLAUDE_CODE_BRIDGE_SESSION_ID',
+    'CLAUDE_CODE_ENTRYPOINT',
+    'CLAUDE_PID')) {
+    Remove-Item -LiteralPath "Env:$staleMarker" -ErrorAction SilentlyContinue
+}
+
 $profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
 if (Test-Path $profilePath) {
     . $profilePath
