@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.3.1 - 21.07.2026 20:32 Uhr
+Version: v0.3.2 - 25.07.2026 13:12 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -15,5 +15,6 @@ Version: v0.3.1 - 21.07.2026 20:32 Uhr
 | Projektimport | `apps/web`, `apps/api`, `project_imports`, MinIO | Pfadguard-Tests sowie echter HTML-Ordner- und ZIP-Import |
 | OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
 | GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, Effort-, Priority- und Live-Verbindungstest |
+| Leinwand-Navigation | `apps/web`, `apps/api/preview-canvas-bridge.ts` | Zoom-Anker-, Zoomgrenzen- und Bridge-Injektionstests |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.

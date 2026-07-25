@@ -17,6 +17,7 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { chooseEntryPath, expandZip, importLimits, mimeForPath, normalizeImportPath, type ImportedFile, validateImportFiles } from "./import-project.js";
+import { injectPreviewCanvasBridge } from "./preview-canvas-bridge.js";
 
 type Actor = { userId: string; organizationId: string; role: Role };
 type PendingCodexAuth = { userId: string; organizationId: string; deviceAuthId: string; userCode: string; expiresAt: number; interval: number };
@@ -185,7 +186,7 @@ async function readImportParts(request: FastifyRequest): Promise<{ name: string;
   return { name, platform, projectType, frontendOnly, files: validateImportFiles(selectFrontend(files)) };
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.1-20260721.2032" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.3.2-20260725.1312" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -201,10 +202,14 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
   // ETag pro Projektrevision: Browser darf cachen und bekommt 304 statt kompletter Neu-Downloads;
   // nach jeder KI-/Editor-Aenderung steigt die Revision und die Vorschau wird frisch geladen.
-  const etag = `W/"${params.projectId}:${row.revision}:${item.path}"`;
+  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v1"`;
   if (request.headers["if-none-match"] === etag) return reply.code(304).header("etag", etag).header("cache-control", "private, no-cache").send();
   reply.headers({ "cache-control": "private, no-cache", etag, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
-  if (item.mime.startsWith("text/html")) reply.header("content-security-policy", "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' blob: https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: wss: ws:; frame-src 'self' blob: https: http:; frame-ancestors https://10.8.0.1:8443 http://localhost:5173");
+  if (item.mime.startsWith("text/html")) {
+    reply.header("content-security-policy", "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' blob: https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: wss: ws:; frame-src 'self' blob: https: http:; frame-ancestors https://10.8.0.1:8443 http://localhost:5173");
+    const html = (await readObject(`${imported.objectPrefix}${item.path}`)).toString("utf8");
+    return reply.send(injectPreviewCanvasBridge(html));
+  }
   return reply.send(await objectStore.getObject(env.S3_BUCKET, `${imported.objectPrefix}${item.path}`));
 });
 

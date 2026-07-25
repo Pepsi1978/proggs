@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Image, LayoutDashboard, MessageSquare, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiForm, ApiError } from "./api";
+import { canvasZoomFromWheel, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -951,10 +952,98 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined }) {
   const client = useQueryClient();
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLIFrameElement>(null);
+  const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const previewPanRef = useRef<CanvasPoint | null>(null);
+  const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
+  const [panning, setPanning] = useState(false);
   const reconstruct = useMutation({
     mutationFn: () => api<{ entryPath: string; revision: number }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: "{}" }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
+  const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const point = { x: clientX - rect.left, y: clientY - rect.top };
+    setOffset((current) => offsetForZoomAtPoint(current, point, zoom, nextZoom));
+    setZoom(nextZoom);
+  };
+  const zoomAtCenter = (nextZoom: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, nextZoom);
+    else setZoom(nextZoom);
+  };
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 1) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointerPanRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    setPanning(true);
+  };
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const previous = pointerPanRef.current;
+    if (!previous || previous.pointerId !== event.pointerId) return;
+    setOffset((current) => ({ x: current.x + event.clientX - previous.x, y: current.y + event.clientY - previous.y }));
+    pointerPanRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+  const endPointerPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerPanRef.current?.pointerId !== event.pointerId) return;
+    pointerPanRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    setPanning(false);
+  };
+  useEffect(() => {
+    setOffset({ x: 0, y: 0 });
+  }, [projectId, imported?.imported]);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+    };
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [zoom, setZoom, imported?.imported]);
+  useEffect(() => {
+    const handlePreviewMessage = (event: MessageEvent) => {
+      if (event.source !== previewRef.current?.contentWindow || !event.data || event.data.source !== "werft-preview-canvas") return;
+      const { action, x, y, deltaY } = event.data as { action?: string; x?: number; y?: number; deltaY?: number };
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      if (!previewRef.current.offsetWidth || !previewRef.current.offsetHeight) return;
+      const frameRect = previewRef.current.getBoundingClientRect();
+      const scaleX = frameRect.width / previewRef.current.offsetWidth;
+      const scaleY = frameRect.height / previewRef.current.offsetHeight;
+      const point = { x: frameRect.left + x! * scaleX, y: frameRect.top + y! * scaleY };
+      if (action === "wheel" && Number.isFinite(deltaY)) {
+        zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, deltaY!));
+      } else if (action === "pan-start") {
+        previewPanRef.current = point;
+        setPanning(true);
+      } else if (action === "pan-move" && previewPanRef.current) {
+        const previous = previewPanRef.current;
+        setOffset((current) => ({ x: current.x + point.x - previous.x, y: current.y + point.y - previous.y }));
+        previewPanRef.current = point;
+      } else if (action === "pan-end") {
+        previewPanRef.current = null;
+        setPanning(false);
+      }
+    };
+    window.addEventListener("message", handlePreviewMessage);
+    return () => window.removeEventListener("message", handlePreviewMessage);
+  }, [zoom, setZoom]);
+  const viewportProps = {
+    ref: viewportRef,
+    className: `canvas-viewport${panning ? " panning" : ""}`,
+    onPointerDown: handlePointerDown,
+    onPointerMove: handlePointerMove,
+    onPointerUp: endPointerPan,
+    onPointerCancel: endPointerPan,
+    onAuxClick: (event: ReactPointerEvent<HTMLDivElement>) => { if (event.button === 1) event.preventDefault(); },
+  };
+  const contentStyle = { transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` };
   if (imported?.imported) {
     const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
     const looksLikeDesktopApp = imported.files.some((file) => /\.(xaml|csproj|sln|kt|swift)$/i.test(file.path));
@@ -968,7 +1057,11 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           </small>
         </div>
         {imported.previewPath ? (
-          <iframe title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+          <div {...viewportProps}>
+            <div className="canvas-pan-content imported-preview-content" style={contentStyle}>
+              <iframe ref={previewRef} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
+            </div>
+          </div>
         ) : (
           <div className="empty">
             <strong>Dieses Projekt enthält keine eindeutige Web-Startseite.</strong>
@@ -1000,11 +1093,11 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             {label}
           </button>
         ))}
-        <IconButton label="Verkleinern" onClick={() => setZoom(zoom - 0.1)}>
+        <IconButton label="Verkleinern" onClick={() => zoomAtCenter(zoom - 0.1)}>
           <ZoomOut />
         </IconButton>
         <b>{Math.round(zoom * 100)} %</b>
-        <IconButton label="Vergrößern" onClick={() => setZoom(zoom + 0.1)}>
+        <IconButton label="Vergrößern" onClick={() => zoomAtCenter(zoom + 0.1)}>
           <ZoomIn />
         </IconButton>
       </div>
@@ -1020,13 +1113,15 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           <Button variant="primary">An KI senden</Button>
         </div>
       )}
-      <div className="frame-scroller">
-        <div className="frames" style={{ transform: `scale(${zoom})` }}>
-          <PhoneFrame name="Onboarding" accent={accent} radius={radius} dark={dark} onboarding />
-          <PhoneFrame name="Dashboard" accent={accent} radius={radius} dark={dark} />
-          <AndroidFrame accent={accent} dark={dark} />
-          <WindowsFrame accent={accent} dark={dark} />
-          <WebFrame accent={accent} dark={dark} />
+      <div {...viewportProps} className={`frame-scroller ${viewportProps.className}`}>
+        <div className="canvas-pan-content frame-content" style={contentStyle}>
+          <div className="frames">
+            <PhoneFrame name="Onboarding" accent={accent} radius={radius} dark={dark} onboarding />
+            <PhoneFrame name="Dashboard" accent={accent} radius={radius} dark={dark} />
+            <AndroidFrame accent={accent} dark={dark} />
+            <WindowsFrame accent={accent} dark={dark} />
+            <WebFrame accent={accent} dark={dark} />
+          </div>
         </div>
       </div>
     </div>
