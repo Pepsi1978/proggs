@@ -162,11 +162,68 @@ public sealed class ModelRegistry
         {
             Slug = slug,
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? ToDisplayName(slug) : displayName,
+            HasCustomDisplayName = !string.IsNullOrWhiteSpace(displayName),
+            IsUserDefined = true,
             ProviderId = group.ProviderId,
             ProviderName = group.ProviderName
         });
         Save();
         Logger.Instance.Info("ModelRegistry", "AddModel", $"hinzugefügt: {slug}", new { group = group.Title, displayName });
+        return true;
+    }
+
+    /// <summary>
+    /// Bearbeitet einen bestehenden Eintrag: Modell-ID (Slug inkl. Parameter wie "[1m]"),
+    /// Anzeigename und optional die Kategorie. false, wenn der Ziel-Slug dort schon existiert.
+    /// </summary>
+    public bool UpdateModel(ModelGroupEntry group, ModelEntry model, ModelGroupEntry targetGroup, string slug, string displayName)
+    {
+        var index = group.Models.IndexOf(model);
+        if (index < 0) return false;
+
+        var normalized = NormalizeSlugForGroup(slug, targetGroup.ProviderId);
+        if (string.IsNullOrWhiteSpace(normalized)) return false;
+        if (targetGroup.Models.Any(m => !ReferenceEquals(m, model) && string.Equals(m.Slug, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            Logger.Instance.Warn("ModelRegistry", "UpdateModel", $"Slug existiert bereits: {normalized}", new { group = targetGroup.Title });
+            return false;
+        }
+
+        var oldSlug = model.Slug;
+        var hasCustomName = !string.IsNullOrWhiteSpace(displayName);
+
+        // Der alte Slug darf im OpenRouterFree-Sync nicht wieder auftauchen (gleiche Logik wie beim
+        // Entfernen) — sonst legte der naechste Abgleich das umbenannte Modell erneut daneben an.
+        if (!string.Equals(oldSlug, normalized, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+        {
+            AddUnique(group.HiddenModelSlugs, oldSlug);
+            AddUnique(group.KnownSyncedModelSlugs, oldSlug);
+        }
+
+        if (!ReferenceEquals(group, targetGroup))
+        {
+            group.Models.RemoveAt(index);
+            if (string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+            {
+                AddUnique(group.HiddenModelSlugs, oldSlug);
+                AddUnique(group.KnownSyncedModelSlugs, oldSlug);
+            }
+            model.ProviderId = targetGroup.ProviderId;
+            model.ProviderName = targetGroup.ProviderName;
+            targetGroup.Models.Add(model);
+        }
+
+        model.Slug = normalized;
+        model.DisplayName = hasCustomName ? displayName.Trim() : ToDisplayName(normalized);
+        model.HasCustomDisplayName = hasCustomName;
+        model.IsUserDefined = true;
+
+        Save();
+        group.RefreshHeaderText();
+        targetGroup.RefreshHeaderText();
+        Logger.Instance.Info("ModelRegistry", "UpdateModel", $"bearbeitet: {oldSlug} -> {normalized}",
+            new { group = group.Title, target = targetGroup.Title, displayName = model.DisplayName });
         return true;
     }
 
@@ -289,10 +346,16 @@ public sealed class ModelRegistry
         foreach (var existing in group.Models)
         {
             if (hiddenSlugs.Contains(existing.Slug)) continue;
-            if (!remoteBySlug.TryGetValue(existing.Slug, out var remoteModel)) continue;
+            if (!remoteBySlug.TryGetValue(existing.Slug, out var remoteModel))
+            {
+                // Selbst hinzugefuegte/bearbeitete Eintraege ueberleben den Sync auch dann, wenn
+                // ihr Slug in der Remote-Liste fehlt — sonst waere jede Bearbeitung sofort weg.
+                if (existing.IsUserDefined) merged.Add(existing);
+                continue;
+            }
             existing.ProviderId = group.ProviderId;
             existing.ProviderName = group.ProviderName;
-            existing.DisplayName = remoteModel.DisplayName;
+            if (!existing.HasCustomDisplayName) existing.DisplayName = remoteModel.DisplayName;
             merged.Add(existing);
         }
 
@@ -371,7 +434,7 @@ public sealed class ModelRegistry
                     }
 
                     var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
-                    if (model != null) model.DisplayName = definition.DisplayName;
+                    if (model != null && !model.HasCustomDisplayName) model.DisplayName = definition.DisplayName;
                 }
             }
 
@@ -389,7 +452,7 @@ public sealed class ModelRegistry
                     if (outdated != null && !alreadyPresent)
                     {
                         outdated.Slug = migration.NewSlug;
-                        outdated.DisplayName = migration.DisplayName;
+                        if (!outdated.HasCustomDisplayName) outdated.DisplayName = migration.DisplayName;
                         Logger.Instance.Info("ModelRegistry", "RepairAndNormalize", $"1M-Variante gesetzt: {migration.OldSlug} -> {migration.NewSlug}");
                     }
                     AddUnique(group.KnownSyncedModelSlugs, migration.NewSlug);
@@ -405,7 +468,7 @@ public sealed class ModelRegistry
                     }
 
                     var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
-                    if (model != null) model.DisplayName = definition.DisplayName;
+                    if (model != null && !model.HasCustomDisplayName) model.DisplayName = definition.DisplayName;
                 }
             }
         }

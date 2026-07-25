@@ -378,6 +378,38 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void EditModel()
+    {
+        var model = SelectedModel;
+        if (model == null)
+        {
+            StatusText = "Kein Modell ausgewählt.";
+            return;
+        }
+        var group = FindGroupForModel(model);
+        if (group == null) return;
+
+        var result = ShowModelDialog(ModelGroups, group, "Modell bearbeiten", "Speichern", model.Slug, model.DisplayName);
+        if (result == null) return;
+        var (targetGroup, slug, display) = result.Value;
+
+        if (!_registry.UpdateModel(group, model, targetGroup, slug, display))
+        {
+            StatusText = $"Modell '{slug}' existiert in '{targetGroup.Title}' bereits.";
+            return;
+        }
+
+        targetGroup.IsExpanded = true;
+        // Auswahl neu setzen: Provider/Thinking haengen am Slug und muessen nach der
+        // Bearbeitung neu geladen werden.
+        SelectedModel = null;
+        SelectedModel = model;
+        StatusText = ReferenceEquals(group, targetGroup)
+            ? $"Modell '{model.DisplayName}' bearbeitet."
+            : $"Modell '{model.DisplayName}' bearbeitet und nach '{targetGroup.Title}' verschoben.";
+    }
+
+    [RelayCommand]
     private void RemoveModel()
     {
         if (SelectedModel == null) return;
@@ -656,14 +688,23 @@ public sealed partial class MainViewModel : ObservableObject
     private static bool IsClaudeCodeModel(ModelEntry? model) =>
         string.Equals(model?.ProviderId, "anthropic", StringComparison.OrdinalIgnoreCase);
 
-    private static (ModelGroupEntry Group, string Slug, string DisplayName)? ShowAddModelDialog(IEnumerable<ModelGroupEntry> groups, ModelGroupEntry defaultGroup)
+    private static (ModelGroupEntry Group, string Slug, string DisplayName)? ShowAddModelDialog(IEnumerable<ModelGroupEntry> groups, ModelGroupEntry defaultGroup) =>
+        ShowModelDialog(groups, defaultGroup, "Neues Modell hinzufügen", "Hinzufügen", string.Empty, string.Empty);
+
+    private static (ModelGroupEntry Group, string Slug, string DisplayName)? ShowModelDialog(
+        IEnumerable<ModelGroupEntry> groups,
+        ModelGroupEntry defaultGroup,
+        string title,
+        string confirmText,
+        string initialSlug,
+        string initialDisplayName)
     {
         var groupList = groups.ToList();
         if (groupList.Count == 0) return null;
 
         var w = new Window
         {
-            Title = "Neues Modell hinzufügen",
+            Title = title,
             Width = 560,
             Height = 330,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
@@ -692,7 +733,7 @@ public sealed partial class MainViewModel : ObservableObject
             Foreground = System.Windows.Media.Brushes.White,
             Margin = new Thickness(0, 0, 0, 8)
         });
-        var slugInput = new System.Windows.Controls.TextBox { Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 12) };
+        var slugInput = new System.Windows.Controls.TextBox { Text = initialSlug, Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 12) };
         sp.Children.Add(slugInput);
         sp.Children.Add(new System.Windows.Controls.TextBlock
         {
@@ -700,7 +741,7 @@ public sealed partial class MainViewModel : ObservableObject
             Foreground = System.Windows.Media.Brushes.White,
             Margin = new Thickness(0, 0, 0, 8)
         });
-        var displayInput = new System.Windows.Controls.TextBox { Padding = new Thickness(8) };
+        var displayInput = new System.Windows.Controls.TextBox { Text = initialDisplayName, Padding = new Thickness(8) };
         sp.Children.Add(displayInput);
 
         var buttons = new System.Windows.Controls.StackPanel
@@ -710,19 +751,20 @@ public sealed partial class MainViewModel : ObservableObject
             Margin = new Thickness(0, 18, 0, 0)
         };
         var cancel = DialogButton("Abbrechen", false);
-        var add = DialogButton("Hinzufügen", true);
+        var confirm = DialogButton(confirmText, true);
         cancel.Click += (_, _) => { w.DialogResult = false; w.Close(); };
-        add.Click += (_, _) =>
+        confirm.Click += (_, _) =>
         {
             if (category.SelectedItem is not ModelGroupEntry || string.IsNullOrWhiteSpace(slugInput.Text)) return;
             w.DialogResult = true;
             w.Close();
         };
         buttons.Children.Add(cancel);
-        buttons.Children.Add(add);
+        buttons.Children.Add(confirm);
         sp.Children.Add(buttons);
         w.Content = sp;
         slugInput.Focus();
+        slugInput.CaretIndex = slugInput.Text.Length;
 
         return w.ShowDialog() == true && category.SelectedItem is ModelGroupEntry selectedGroup
             ? (selectedGroup, slugInput.Text.Trim(), displayInput.Text.Trim())
