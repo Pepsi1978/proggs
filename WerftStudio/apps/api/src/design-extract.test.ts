@@ -234,6 +234,61 @@ val DarkPmColors = PmColors(
     expect(extracted.colors.some((color) => color.used && color.css === "#d4a24c")).toBe(true);
   });
 
+  it("erkennt Startbildschirm und Klickziele auch ohne NavHost (Aufzählungs-Navigation)", () => {
+    // Wortlaut aus einer echten App: kein NavHost, sondern `enum class AppScreen` + `when`-Zweig +
+    // `navigate(AppScreen.X)`. Vorher blieb dabei JEDER Bildschirm ohne Start und ohne Klickziel —
+    // das Studio zeigte den alphabetisch ersten Sperrbildschirm und nichts war anklickbar.
+    const extracted = extractDesignFacts("android", [
+      source("ui/AppViewModel.kt", `
+enum class AppScreen { START, SESSION, HISTORY, SETTINGS, CHAT_GPT }
+class AppViewModel : ViewModel() {
+    var screen by mutableStateOf(if (running) AppScreen.SESSION else AppScreen.START)
+    fun navigate(target: AppScreen) { screen = target }
+}`),
+      source("ui/PerfectMomentApp.kt", `
+@Composable
+fun PerfectMomentApp(viewModel: AppViewModel) {
+    when (screen) {
+        AppScreen.START -> StartScreen(viewModel)
+        AppScreen.SESSION -> SessionScreen(viewModel)
+        AppScreen.HISTORY -> HistoryScreen(viewModel)
+        AppScreen.SETTINGS -> SettingsScreen(viewModel)
+        AppScreen.CHAT_GPT -> ChatGptScreen(viewModel)
+    }
+}`),
+      source("ui/Screens.kt", `
+@Composable
+fun StartScreen(viewModel: AppViewModel) {
+    Icon(modifier = Modifier.pmClickable { viewModel.navigate(AppScreen.HISTORY) })
+    Icon(modifier = Modifier.pmClickable { viewModel.navigate(AppScreen.SETTINGS) })
+}
+
+@Composable
+fun SessionScreen(viewModel: AppViewModel) { Text("läuft") }
+
+@Composable
+fun HistoryScreen(viewModel: AppViewModel) { Text("Verlauf") }
+
+@Composable
+fun SettingsScreen(viewModel: AppViewModel) {
+    OutlineButton("Zu ChatGPT", onClick = { viewModel.navigate(AppScreen.CHAT_GPT) })
+}
+
+@Composable
+fun ChatGptScreen(viewModel: AppViewModel) { Text("ChatGPT") }`),
+      source("MainActivity.kt", `
+@Composable
+private fun AppLockedScreen(onUnlock: () -> Unit) { Text("gesperrt") }`)
+    ]);
+    const byId = new Map(extracted.screens!.map((screen) => [screen.id, screen] as const));
+    expect(byId.get("compose:StartScreen")?.isStart).toBe(true);
+    expect(byId.get("compose:AppLockedScreen")?.isStart).toBe(false);
+    // Klickziele hängen am richtigen Bildschirm — nicht pauschal an allen der Datei.
+    expect(byId.get("compose:StartScreen")?.navigatesTo).toEqual(["compose:HistoryScreen", "compose:SettingsScreen"]);
+    expect(byId.get("compose:SettingsScreen")?.navigatesTo).toEqual(["compose:ChatGptScreen"]);
+    expect(byId.get("compose:HistoryScreen")?.navigatesTo).toEqual([]);
+  });
+
   it("hält eingebettete Rechtstext-Seiten aus der Bildschirmliste heraus", () => {
     // Eine App mit Rechtstexten in 40 Sprachen brächte sonst hunderte Pseudo-Bildschirme mit und
     // verdrängte damit die echten App-Screens aus der Aufbauliste.

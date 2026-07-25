@@ -1,6 +1,6 @@
 :root {
-  --werft-version: "Werft v0.6.0";
-  --werft-build-time: "25.07.2026 18:45 Uhr";
+  --werft-version: "Werft v0.7.0";
+  --werft-build-time: "25.07.2026 19:57 Uhr";
 }
 
 .statusbar::after {

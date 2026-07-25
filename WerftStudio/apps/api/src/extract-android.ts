@@ -64,20 +64,16 @@ export function extractAndroidFacts(files: SourceText[]): Partial<DesignFacts> {
   // Der NavHost steht fast nie in derselben Datei wie die Bildschirme. Farb- UND Routenzuordnung
   // muessen deshalb projektweit vorliegen, bevor die einzelnen Dateien ausgewertet werden.
   const composeColorIndex = new Map<string, string>();
-  const routeToComposable = new Map<string, string>();
-  for (const file of files) {
-    if (!/\.kts?$/i.test(file.path)) continue;
+  const kotlinSources = files.filter((file) => /\.kts?$/i.test(file.path));
+  for (const file of kotlinSources) {
     for (const match of file.text.matchAll(composeColorPattern)) {
       const hex = match[2]!.slice(2);
       const css = normalizeHexColor(hex.length === 8 ? hex : hex.padStart(8, "f"));
       if (css) composeColorIndex.set(match[1]!, css);
     }
-    for (const match of file.text.matchAll(composeRouteBodyPattern)) {
-      const route = match[2] || match[1];
-      const target = routeBodyTarget(match[3] ?? "");
-      if (route && target) routeToComposable.set(route, target);
-    }
   }
+  const navigationIndex = buildComposeNavigationIndex(kotlinSources);
+  if (navigationIndex.startComposable) notes.push(`Compose-Navigation ohne NavHost: „${navigationIndex.startComposable}“ ist der Startbildschirm (Aufzählungs-Navigation). Er muss beim Öffnen sichtbar sein.`);
 
   for (const file of files) {
     if (valuesFile(file.path, "themes") || valuesFile(file.path, "styles")) readStyles(file, isNightQualifier(file.path), resolveColorReference, resolveDimensionReference, themes, typography, effects, shapes);
@@ -85,7 +81,14 @@ export function extractAndroidFacts(files: SourceText[]): Partial<DesignFacts> {
     if (/(^|\/)res\/layout[^/]*\/[^/]+\.xml$/i.test(file.path)) readLayout(file, resolveColorReference, resolveDimensionReference, screens, effects, dimensions, colors);
     if (/(^|\/)res\/navigation[^/]*\/[^/]+\.xml$/i.test(file.path)) readNavigationGraph(file, screens);
     if (/AndroidManifest\.xml$/i.test(file.path)) readManifest(file, screens, notes);
-    if (/\.kts?$/i.test(file.path)) readComposeSource(file, composeColorIndex, routeToComposable, colors, dimensions, typography, shapes, effects, screens, themes, notes);
+    if (/\.kts?$/i.test(file.path)) readComposeSource(file, composeColorIndex, navigationIndex, colors, dimensions, typography, shapes, effects, screens, themes, notes);
+  }
+
+  // Bei einer Compose-App ist die Launcher-Activity nur die Huelle — sichtbar ist das
+  // Start-Composable. Ohne diese Korrektur galt „MainActivity" als Einstiegsbildschirm.
+  const composeStartId = navigationIndex.startComposable ? `compose:${navigationIndex.startComposable}` : undefined;
+  if (composeStartId && screens.some((screen) => screen.id === composeStartId)) {
+    for (const screen of screens) screen.isStart = screen.id === composeStartId;
   }
 
   const vectorAssets = files.filter((file) => /(^|\/)res\/(drawable|mipmap)[^/]*\//i.test(file.path) && !/\.xml$/i.test(file.path));
@@ -261,10 +264,74 @@ const composeColorUsagePattern = /\.(?:background|drawBehind)\s*\(\s*(Color\s*\(
 const composeNavigatePattern = /navigate\s*\(\s*(?:route\s*=\s*)?["<]?([\w./{}-]+)/g;
 const composeModifierDimensionPattern = /\.(padding|size|height|width|offset|spacedBy|shadow|blur|border|clip|absoluteOffset|requiredSize|defaultMinSize)\s*\(([^()]{0,160})\)/g;
 
+// Sehr viele Compose-Apps navigieren OHNE NavHost: ein `enum class AppScreen { START, … }`, eine
+// `when`-Verzweigung auf den Bildschirm und `navigate(AppScreen.X)` an den Schaltflaechen. Wer nur
+// NavHost auswertet, findet dort weder Startbildschirm noch ein einziges Klickziel — die
+// Rekonstruktion wurde dadurch zu einer Sammlung unverbundener Standbilder.
+const enumClassPattern = /\benum\s+class\s+(\w+)\s*(?:\([^)]*\))?\s*(?::[^{]{0,120})?\{([\s\S]{0,4000}?)\}/g;
+const enumBranchPattern = /\b([A-Z]\w*)\.(\w+)\s*->\s*([A-Z]\w*)\s*\(/g;
+const enumStateHolderPattern = /mutableStateOf(?:<[^>]{0,80}>)?\s*\(([\s\S]{0,240}?)\)/g;
+export type ComposeNavigationIndex = {
+  routeToComposable: Map<string, string>;
+  // "AppScreen.START" → "StartScreen"
+  enumScreenToComposable: Map<string, string>;
+  // Namen der Bildschirm-Aufzaehlungen, z. B. "AppScreen"
+  enumNames: Set<string>;
+  startComposable?: string;
+};
+
+export function buildComposeNavigationIndex(sources: Array<{ path: string; text: string }>): ComposeNavigationIndex {
+  const routeToComposable = new Map<string, string>();
+  const enumScreenToComposable = new Map<string, string>();
+  const enumValues = new Map<string, string[]>();
+  const branches: Array<{ enumName: string; value: string; composable: string }> = [];
+  const stateHolders: string[] = [];
+  for (const file of sources) {
+    for (const match of file.text.matchAll(composeRouteBodyPattern)) {
+      const route = match[2] || match[1];
+      const target = routeBodyTarget(match[3] ?? "");
+      if (route && target) routeToComposable.set(route, target);
+    }
+    for (const match of file.text.matchAll(enumClassPattern)) {
+      const values = match[2]!.split(/[,;\n]/).map((entry) => /^\s*([A-Za-z_]\w*)/.exec(entry)?.[1]).filter((value): value is string => Boolean(value));
+      if (values.length) enumValues.set(match[1]!, values);
+    }
+    // Nur Zweige, die WIRKLICH einen Bildschirm zeigen. Ohne die Endungs- und Aufzaehlungspruefung
+    // wurde jedes `when`-Muster mitgenommen und Bausteine wie `Icon(` oder `Column(` galten als
+    // Bildschirm — der Startbildschirm war dann ein Symbol.
+    for (const match of file.text.matchAll(enumBranchPattern)) {
+      if (!/(?:Screen|Page|Route|View|Dialog|Sheet|Pane)$/.test(match[3]!)) continue;
+      branches.push({ enumName: match[1]!, value: match[2]!, composable: match[3]! });
+    }
+    for (const match of file.text.matchAll(enumStateHolderPattern)) stateHolders.push(match[1]!);
+  }
+  // Die Aufzaehlung steht fast nie in derselben Datei wie die Verzweigung — deshalb erst jetzt pruefen.
+  for (const branch of branches) {
+    if (!enumValues.get(branch.enumName)?.includes(branch.value)) continue;
+    enumScreenToComposable.set(`${branch.enumName}.${branch.value}`, branch.composable);
+  }
+  // Der Startbildschirm ist der Wert, mit dem der Bildschirmzustand initialisiert wird. Steht dort
+  // ein Ausdruck („laufende Sitzung ? SESSION : START“), zaehlt der letzte Zweig — der Normalfall.
+  // Erst wenn gar nichts zu lesen ist, gilt der erste Eintrag der Aufzaehlung.
+  let startKey: string | undefined;
+  for (const holder of stateHolders) {
+    const references = [...holder.matchAll(/\b([A-Z]\w*)\.(\w+)\b/g)].map((match) => `${match[1]}.${match[2]}`).filter((key) => enumScreenToComposable.has(key));
+    if (references.length) startKey = references.at(-1);
+  }
+  if (!startKey) {
+    for (const [name, values] of enumValues) {
+      const candidate = values.map((value) => `${name}.${value}`).find((key) => enumScreenToComposable.has(key));
+      if (candidate) { startKey = candidate; break; }
+    }
+  }
+  const enumNames = new Set([...enumScreenToComposable.keys()].map((key) => key.split(".")[0]!));
+  return { routeToComposable, enumScreenToComposable, enumNames, ...(startKey && enumScreenToComposable.get(startKey) ? { startComposable: enumScreenToComposable.get(startKey)! } : {}) };
+}
+
 function readComposeSource(
   file: SourceText,
   composeColorIndex: Map<string, string>,
-  routeToComposable: Map<string, string>,
+  navigationIndex: ComposeNavigationIndex,
   colors: FactColor[],
   dimensions: FactDimension[],
   typography: FactTypography[],
@@ -331,18 +398,41 @@ function readComposeSource(
     else if (match[1] === "border") effects.push({ name: `${file.path}:border(${values[0]}dp)`, kind: "stroke", css: `border-width: ${values[0]}px`, source: file.path });
     else for (const value of values) dimensions.push({ name: `${file.path}:${match[1]}(${value}dp)`, px: value, raw: `${value}.dp`, source: file.path, used: true });
   }
+  const { routeToComposable, enumScreenToComposable, enumNames, startComposable } = navigationIndex;
+  // `navigate(AppScreen.HISTORY)` ist eine Aufzaehlungs-Navigation, KEINE Route. Ohne diese
+  // Unterscheidung entstuenden Geisterziele wie „route:AppScreen.HISTORY", die auf nichts zeigen.
+  const isEnumReference = (value: string) => enumScreenToComposable.has(value) || enumNames.has(value.split(".")[0] ?? "");
   const routes = [...text.matchAll(composeRoutePattern)].map((match) => match[2] || match[1] || "").filter(Boolean);
   const navigations = [...text.matchAll(composeNavigatePattern)].map((match) => match[1]!).filter(Boolean);
   const start = /startDestination\s*=\s*(?:route\s*=\s*)?["<]?([\w./{}-]+)/.exec(text)?.[1];
   // `composable("home") { HomeScreen() }` verraet die direkte Zuordnung Route→Composable. Ohne sie
   // entstuenden zwei Screens fuer denselben Bildschirm — und er wuerde doppelt aufgebaut.
   const screenIdForRoute = (route: string) => routeToComposable.has(route) ? `compose:${routeToComposable.get(route)}` : `route:${route}`;
-  for (const match of text.matchAll(composableFunctionPattern)) {
+  // Eine einzige Datei enthaelt oft ALLE Bildschirme (Screens.kt). Wuerde jeder von ihnen die
+  // Navigationsziele der ganzen Datei erben, waere am Ende jeder Bildschirm mit jedem verlinkt.
+  // Deshalb zaehlt der Textbereich der jeweiligen Funktion — nur bei genau einem Bildschirm pro
+  // Datei bleibt die bisherige, dateiweite Zuordnung erhalten.
+  const composableMatches = [...text.matchAll(composableFunctionPattern)];
+  const screenMatches = composableMatches.filter((match) => /(?:Screen|Page|Route|View|Activity|Dialog|Sheet|Pane)$/.test(match[1]!));
+  for (const match of screenMatches) {
     const name = match[1]!;
-    if (!/(?:Screen|Page|Route|View|Activity|Dialog|Sheet|Pane)$/.test(name)) continue;
+    const position = composableMatches.indexOf(match);
+    const bodyStart = match.index ?? 0;
+    const bodyEnd = composableMatches[position + 1]?.index ?? text.length;
+    const body = screenMatches.length > 1 ? text.slice(bodyStart, bodyEnd) : text;
     const route = [...routeToComposable.entries()].find(([, target]) => target === name)?.[0]
       ?? routes.find((value) => value.toLowerCase().includes(name.replace(/(?:Screen|Page|Route|View|Activity|Dialog|Sheet|Pane)$/, "").toLowerCase()));
-    screens.push({ id: `compose:${name}`, name, kind: "composable", source: file.path, ...(route ? { route } : {}), navigatesTo: navigations.map(screenIdForRoute), isStart: route !== undefined && route === start, files: [file.path] });
+    const routeTargets = (screenMatches.length > 1 ? [...body.matchAll(composeNavigatePattern)].map((entry) => entry[1]!).filter(Boolean) : navigations).filter((value) => !isEnumReference(value)).map(screenIdForRoute);
+    // Enum-Navigation: jede im Rumpf genannte Bildschirm-Konstante ist ein echtes Klickziel.
+    const enumTargets = [...enumScreenToComposable.entries()]
+      .filter(([key, target]) => target !== name && body.includes(key))
+      .map(([, target]) => `compose:${target}`);
+    screens.push({
+      id: `compose:${name}`, name, kind: "composable", source: file.path, ...(route ? { route } : {}),
+      navigatesTo: [...new Set([...routeTargets, ...enumTargets])],
+      isStart: (route !== undefined && route === start) || name === startComposable,
+      files: [file.path]
+    });
   }
   if (/NavHost\s*\(/.test(text)) {
     if (start) notes.push(`Compose-Navigation: Startziel „${start}“ (${file.path}). Dieser Screen muss beim Öffnen sichtbar sein.`);

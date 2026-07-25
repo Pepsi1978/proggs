@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyFacts, type DesignFacts } from "./design-facts.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, mapWithConcurrency, reconstructionSourceFiles } from "./import-reconstruction.js";
-import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles } from "./screen-composer.js";
+import { composeScreens, extractScreenFragment, orderScreensByFlow, screenPlanFrom, themeStyles } from "./screen-composer.js";
 
 const facts = (patch: Partial<DesignFacts> = {}): DesignFacts => ({ ...emptyFacts("android"), ...patch });
 const options = (overrides: Partial<Parameters<typeof composeScreens>[1]> = {}) => ({ title: "Acme", platform: "android", width: 412, height: 915, device: "Pixel 9", density: 2.625, facts: facts(), ...overrides });
@@ -51,6 +51,35 @@ describe("Bildschirm-Zusammenbau", () => {
   it("liefert einen Ersatzbildschirm, wenn keine Screens erkannt wurden", () => {
     expect(screenPlanFrom(facts(), "Acme")).toHaveLength(1);
     expect(screenPlanFrom(facts(), "Acme")[0]).toMatchObject({ name: "Acme", isStart: true });
+  });
+
+  it("stellt den Startbildschirm nach vorn und ordnet danach nach Navigationsfluss", () => {
+    const ordered = orderScreensByFlow([
+      { id: "settings", isStart: false, navigatesTo: [] },
+      { id: "home", isStart: true, navigatesTo: ["details"] },
+      { id: "details", isStart: false, navigatesTo: [] }
+    ]);
+    expect(ordered.map((screen) => screen.id)).toEqual(["home", "details", "settings"]);
+  });
+
+  it("baut den Startbildschirm als erste Sektion ein, auch wenn er zuletzt geliefert wird", () => {
+    const html = composeScreens([
+      { id: "locked", name: "AppLockedScreen", markup: "<i>gesperrt</i>", isStart: false },
+      { id: "home", name: "StartScreen", markup: "<i>start</i>", isStart: true }
+    ], options());
+    expect(html.indexOf('data-screen-id="home"')).toBeLessThan(html.indexOf('data-screen-id="locked"'));
+  });
+
+  it("wählt ohne erkannten Startbildschirm den Einstieg statt eines Sperrbildschirms", () => {
+    const plan = screenPlanFrom(facts({ screens: [
+      { id: "compose:AppLockedScreen", name: "AppLockedScreen", kind: "composable", source: "MainActivity.kt", navigatesTo: [], isStart: false, files: [] },
+      { id: "compose:ChatGptScreen", name: "ChatGptScreen", kind: "composable", source: "Screens.kt", navigatesTo: [], isStart: false, files: [] },
+      { id: "compose:StartScreen", name: "StartScreen", kind: "composable", source: "Screens.kt", navigatesTo: ["compose:ChatGptScreen"], isStart: false, files: [] }
+    ] }), "Perfect Moment");
+    expect(plan[0]).toMatchObject({ name: "StartScreen", isStart: true });
+    expect(plan.map((screen) => screen.name)).toEqual(["StartScreen", "ChatGptScreen", "AppLockedScreen"]);
+    // Kein Bildschirm darf bei der Umsortierung verloren gehen.
+    expect(plan).toHaveLength(3);
   });
 });
 

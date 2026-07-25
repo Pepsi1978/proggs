@@ -5,7 +5,31 @@ import type { DesignFacts, FactScreen } from "./design-facts.js";
 // einzeln (und parallel), und dieses Modul setzt sie deterministisch zu einer durchklickbaren
 // Datei zusammen — ohne dass ein Modell dabei etwas weglassen kann.
 
-export type ComposedScreen = { id: string; name: string; markup: string; isStart: boolean };
+export type ComposedScreen = { id: string; name: string; markup: string; isStart: boolean; navigatesTo?: string[] };
+
+// Die Reihenfolge im Dokument ist die Reihenfolge, in der ein Mensch die App erlebt: der
+// Startbildschirm zuerst, dann seine direkten Ziele. Frueher entschied darueber der Zufall der
+// Dateisortierung — im Studio erschien deshalb ein Sperrbildschirm als „erster" Bildschirm.
+export function orderScreensByFlow<T extends { id: string; isStart: boolean; navigatesTo?: string[] }>(screens: T[]): T[] {
+  if (screens.length < 2) return screens;
+  const byId = new Map(screens.map((screen) => [screen.id, screen] as const));
+  const queue = screens.filter((screen) => screen.isStart).map((screen) => screen.id);
+  if (!queue.length) queue.push(screens[0]!.id);
+  const ordered: T[] = [];
+  const seen = new Set<string>();
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (seen.has(id)) continue;
+    const screen = byId.get(id);
+    if (!screen) continue;
+    seen.add(id);
+    ordered.push(screen);
+    for (const target of screen.navigatesTo ?? []) if (!seen.has(target) && byId.has(target)) queue.push(target);
+  }
+  // Was die Navigation nicht erreicht, geht NICHT verloren — es folgt in der Ursprungsreihenfolge.
+  for (const screen of screens) if (!seen.has(screen.id)) ordered.push(screen);
+  return ordered;
+}
 
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const escapeAttribute = (value: string) => escapeHtml(value).replace(/'/g, "&#39;");
@@ -43,6 +67,7 @@ body { background: #f2f3f5; font-family: system-ui, -apple-system, "Segoe UI", R
 .werft-screen-switcher { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 2147483000; display: flex; gap: 4px; padding: 6px; max-width: calc(100vw - 24px); overflow-x: auto; background: rgba(20, 22, 28, 0.86); border-radius: 999px; backdrop-filter: blur(12px); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .werft-screen-switcher button { flex: 0 0 auto; border: 0; cursor: pointer; padding: 6px 14px; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.72); font-size: 12px; line-height: 18px; white-space: nowrap; }
 .werft-screen-switcher button[aria-current="true"] { background: #ffffff; color: #14161c; font-weight: 600; }
+.werft-screen-switcher button[data-start="true"]::before { content: "▶"; margin-right: 6px; font-size: 9px; opacity: .75; }
 @media print { .werft-screen-switcher { display: none; } .werft-screen { display: block !important; } }
 `.trim();
 
@@ -67,6 +92,7 @@ const shellScript = `
   for (const screen of screens) {
     const button = document.createElement("button");
     button.type = "button";
+    if (screen.dataset.start === "true") button.setAttribute("data-start", "true");
     button.textContent = screen.dataset.screenName || screen.dataset.screenId;
     button.addEventListener("click", () => show(screen.dataset.screenId));
     buttons.set(screen.dataset.screenId, button);
@@ -91,7 +117,7 @@ export type ComposeOptions = { title: string; platform: string; width: number; h
 
 export function composeScreens(screens: ComposedScreen[], options: ComposeOptions): string {
   const preview = JSON.stringify({ platform: options.platform, width: options.width, height: options.height, device: options.device, density: options.density });
-  const sections = screens.map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${screen.markup}\n</section>`).join("\n");
+  const sections = orderScreensByFlow(screens).map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${screen.markup}\n</section>`).join("\n");
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -133,5 +159,26 @@ export function extractScreenFragment(response: string): { markup: string; css: 
   return { markup, css: styles };
 }
 
-export const screenPlanFrom = (facts: DesignFacts, fallbackName: string): FactScreen[] =>
-  facts.screens.length ? facts.screens : [{ id: "app", name: fallbackName, kind: "app", source: "—", navigatesTo: [], isStart: true, files: [] }];
+// Einstiegs-Kandidaten nach Namen: dieselben Woerter benutzt praktisch jedes Projekt.
+const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
+// Sperr-, Berechtigungs-, Lade- und Anmeldebildschirme sind Zwischenzustaende. Genau so ein
+// Bildschirm („AppLockedScreen“) wurde bisher als Einstieg gezeigt, weil er alphabetisch vorn stand.
+const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate|onboard)/i;
+
+export function screenPlanFrom(facts: DesignFacts, fallbackName: string): FactScreen[] {
+  const screens = facts.screens;
+  if (!screens.length) return [{ id: "app", name: fallbackName, kind: "app", source: "—", navigatesTo: [], isStart: true, files: [] }];
+  if (screens.some((screen) => screen.isStart)) return orderScreensByFlow(screens);
+  // Ohne erkannten Startbildschirm wird KEIN Zufallstreffer genommen: erst der sprechende Name,
+  // dann ein Bildschirm, zu dem niemand navigiert (typischer Einstieg), erst zuletzt der erste.
+  const incoming = new Set(screens.flatMap((screen) => screen.navigatesTo));
+  // Eine Activity ist bei Compose-Projekten nur der Rahmen um die Bildschirme: „MainActivity"
+  // erfuellt zwar das Namensmuster, zeigt aber nichts. Sie kommt erst dran, wenn es nichts sonst gibt.
+  const shell = (screen: FactScreen) => screen.kind === "activity" && screens.some((other) => other.kind === "composable");
+  const chosen = screens.find((screen) => !shell(screen) && entryNamePattern.test(screen.name))
+    ?? screens.find((screen) => !shell(screen) && !gateNamePattern.test(screen.name) && !incoming.has(screen.id))
+    ?? screens.find((screen) => !shell(screen) && !gateNamePattern.test(screen.name))
+    ?? screens.find((screen) => !shell(screen))
+    ?? screens[0]!;
+  return orderScreensByFlow(screens.map((screen) => screen.id === chosen.id ? { ...screen, isStart: true } : screen));
+}

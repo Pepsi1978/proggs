@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.6.0-20260725.1845" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.7.0-20260725.1957" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -260,7 +260,7 @@ app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }
   if (!item) fail("PREVIEW_FILE_NOT_FOUND", 404, "Vorschaudatei nicht gefunden.");
   // ETag pro Projektrevision: Browser darf cachen und bekommt 304 statt kompletter Neu-Downloads;
   // nach jeder KI-/Editor-Aenderung steigt die Revision und die Vorschau wird frisch geladen.
-  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v3"`;
+  const etag = `W/"${params.projectId}:${row.revision}:${item.path}:canvas-bridge-v4"`;
   if (request.headers["if-none-match"] === etag) return reply.code(304).header("etag", etag).header("cache-control", "private, no-cache").send();
   reply.headers({ "cache-control": "private, no-cache", etag, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" }).type(item.mime);
   if (item.mime.startsWith("text/html")) {
@@ -675,6 +675,7 @@ function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfi
     "Original-Icons aus der Icon-Bibliothek inline als <svg> einsetzen; niemals Ersatzsymbole, Emoji oder Fremd-Icons. Bitmap-Assets als /<exakter Manifestpfad> referenzieren.",
     effectGuidance,
     `Verlinke Navigationsziele über data-werft-navigate="ZIEL-ID"; gültige IDs sind: ${screenIds.join("; ") || "keine"}.`,
+    "JEDES Bedienelement, das im Original einen anderen Bildschirm öffnet, MUSS data-werft-navigate tragen — auch Zurück-Pfeile, Listeneinträge, Karten, Kacheln, Symbole und Leisten-Einträge. Ohne diese Verknüpfungen ist die Rekonstruktion nicht durchklickbar.",
     "Nutze für Farben die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Baue KEINE eigenen Theme-Umschalter, Werkzeugleisten oder Hinweistexte ein.",
     "Antworte AUSSCHLIESSLICH mit dem HTML-Fragment dieses einen Bildschirms (optional ein <style>-Block davor, dessen Selektoren eindeutig zu diesem Bildschirm gehören). Kein <!doctype>, kein <html>, kein <body>, kein Markdown, keine Erklärung."
   ].join("\n");
@@ -938,7 +939,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
 
     // Schritt 4: nachmessen statt nur nachfragen. Das Ergebnis wird gegen die geparsten Quellwerte
     // geprueft; nur die tatsaechlich abweichenden Punkte gehen in einen gezielten Korrekturlauf.
-    const composeAll = (parts: typeof fragments) => composeScreens(parts.map(({ screen, markup }) => ({ id: screen.id, name: screen.name, markup, isStart: screen.isStart })), { title: row.name, platform, width: profile.width, height: profile.height, device: profile.device, density: profile.density, facts, sharedCss: parts.map((part) => part.css).filter(Boolean).join("\n") });
+    const composeAll = (parts: typeof fragments) => composeScreens(parts.map(({ screen, markup }) => ({ id: screen.id, name: screen.name, markup, isStart: screen.isStart, navigatesTo: screen.navigatesTo })), { title: row.name, platform, width: profile.width, height: profile.height, device: profile.device, density: profile.density, facts, sharedCss: parts.map((part) => part.css).filter(Boolean).join("\n") });
     let html = composeAll(fragments);
     let report = checkFidelity(html, facts);
     app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 0, score: report.score, checked: report.checked, matched: report.matched, issues: report.issues.length }, "Fidelity gemessen");

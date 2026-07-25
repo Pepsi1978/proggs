@@ -10,6 +10,27 @@ describe("preview canvas bridge", () => {
     expect(result.indexOf("data-werft-canvas-bridge")).toBeLessThan(result.indexOf("</body>"));
   });
 
+  it("zoomt am Mausrad ohne Zusatztaste und meldet Bildschirme, Größe und Klickziele", () => {
+    const result = injectPreviewCanvasBridge("<!doctype html><body><section class=\"werft-screen\"></section></body>");
+    // Ohne Strg-Zwang: der Radlauf wird immer an die Leinwand gemeldet, ausser der Inhalt scrollt selbst.
+    expect(result).not.toContain("if (!event.ctrlKey) return;");
+    expect(result).toContain("scrollableUnder");
+    expect(result).toContain('action: "screens"');
+    expect(result).toContain('post({ action: "size"');
+    expect(result).toContain('action: "navigate"');
+    expect(result).toContain("werftFrame");
+    expect(result).toContain("werftScreen");
+    expect(result).toContain("data-werft-highlight");
+  });
+
+  it("liefert syntaktisch gültiges JavaScript aus", () => {
+    // Ein Tippfehler im eingebetteten Skript würde JEDE Vorschau lahmlegen und wäre in einem
+    // reinen Textvergleich unsichtbar. `new Function` parst den Code, ohne ihn auszuführen.
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(injectPreviewCanvasBridge("<body></body>"))?.[1];
+    expect(code?.length).toBeGreaterThan(500);
+    expect(() => new Function(code!)).not.toThrow();
+  });
+
   it("does not inject the bridge twice", () => {
     const once = injectPreviewCanvasBridge("<main>Design</main>");
     expect(injectPreviewCanvasBridge(once)).toBe(once);

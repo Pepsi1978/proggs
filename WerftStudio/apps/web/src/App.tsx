@@ -3,7 +3,7 @@ import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Do
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
-import { canvasZoomFromWheel, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
+import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -1073,6 +1073,305 @@ function Studio() {
   );
 }
 
+type PreviewScreen = { id: string; name: string; isStart: boolean; links: string[] };
+type FrameSize = { width: number; height: number };
+// Bis vier Bildschirme steht alles in einer Reihe; darueber wird gerastert, damit das Board nicht
+// zu einem endlos breiten Band wird, das man nur noch scrollend absuchen kann.
+const boardColumns = (count: number) => (count <= 4 ? Math.max(1, count) : count <= 9 ? 3 : 4);
+const boardGap = 72;
+const fallbackScreen: PreviewScreen = { id: "__design__", name: "Design", isStart: true, links: [] };
+
+// Die Leinwand ist ein Zeichenbrett: die Flaeche gehoert der App, nicht dem Rahmen. Mausrad
+// vergroessert, gedrueckte mittlere Maustaste (oder Ziehen auf freier Flaeche) verschiebt, und jeder
+// Bildschirm liegt als eigener Rahmen darauf — der Startbildschirm zuerst.
+function DesignBoard({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreensChange }: {
+  previewOrigin: string;
+  previewPath: string;
+  previewWidth: number;
+  previewHeight: number;
+  zoom: number;
+  setZoom(value: number): void;
+  onScreensChange(state: { screens: PreviewScreen[]; active: string | null; links: number }): void;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const frames = useRef(new Map<string, HTMLIFrameElement>());
+  const wrappers = useRef(new Map<string, HTMLDivElement>());
+  const pointerPan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const previewPan = useRef<CanvasPoint | null>(null);
+  const userAdjusted = useRef(false);
+  const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
+  const [panning, setPanning] = useState(false);
+  const [screens, setScreens] = useState<PreviewScreen[]>([]);
+  const [probed, setProbed] = useState(false);
+  const [sizes, setSizes] = useState<Record<string, FrameSize>>({});
+  const [highlight, setHighlight] = useState(true);
+  const [view, setView] = useState<"board" | "flow">("board");
+  const [flowScreen, setFlowScreen] = useState<string | null>(null);
+  const [flowHistory, setFlowHistory] = useState<string[]>([]);
+  const [focused, setFocused] = useState<string | null>(null);
+
+  const visibleScreens = screens.length ? screens : probed ? [fallbackScreen] : [];
+  const startScreen = visibleScreens.find((screen) => screen.isStart) ?? visibleScreens[0];
+  const flowTarget = flowScreen ?? startScreen?.id ?? null;
+  const boardScreens = view === "flow" ? visibleScreens.filter((screen) => screen.id === flowTarget) : visibleScreens;
+  const columns = view === "flow" ? 1 : boardColumns(boardScreens.length);
+  const sizeOf = (id: string): FrameSize => sizes[id] ?? { width: previewWidth, height: previewHeight };
+
+  const frameUrl = (screenId?: string) => {
+    const separator = previewPath.includes("?") ? "&" : "?";
+    const frameMode = view === "board" ? "1" : "0";
+    const screenPart = screenId && screenId !== fallbackScreen.id ? `&werftScreen=${encodeURIComponent(screenId)}` : "";
+    const hash = screenId && screenId !== fallbackScreen.id ? `#${screenId}` : "";
+    return `${previewOrigin}${previewPath}${separator}werftFrame=${frameMode}${screenPart}${hash}`;
+  };
+  const tellFrame = (frame: HTMLIFrameElement | undefined, message: Record<string, unknown>) => {
+    try { frame?.contentWindow?.postMessage({ source: "werft-studio-canvas", ...message }, "*"); }
+    catch (error) { console.warn("Vorschau nicht erreichbar", error); }
+  };
+  const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    userAdjusted.current = true;
+    const point = { x: clientX - rect.left, y: clientY - rect.top };
+    setOffset((current) => offsetForZoomAtPoint(current, point, zoom, nextZoom));
+    setZoom(nextZoom);
+  };
+  const zoomAtCenter = (nextZoom: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, Math.max(0.04, Math.min(4, nextZoom)));
+    else setZoom(nextZoom);
+  };
+  const centerOn = (id: string, nextZoom?: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const wrapper = wrappers.current.get(id);
+    if (!rect || !wrapper) return false;
+    const scale = nextZoom ?? zoom;
+    setZoom(scale);
+    setOffset({
+      x: rect.width / 2 - (wrapper.offsetLeft + wrapper.offsetWidth / 2) * scale,
+      y: rect.height / 2 - (wrapper.offsetTop + wrapper.offsetHeight / 2) * scale
+    });
+    return true;
+  };
+  const fitScreen = (id: string) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const wrapper = wrappers.current.get(id);
+    if (!rect || !wrapper) return false;
+    const fit = fitZoomAndOffset({ width: rect.width, height: rect.height }, { width: wrapper.offsetWidth, height: wrapper.offsetHeight }, 40);
+    return centerOn(id, fit.zoom);
+  };
+  const fitBoard = () => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const board = boardRef.current;
+    if (!rect || !board) return;
+    userAdjusted.current = true;
+    const fit = fitZoomAndOffset({ width: rect.width, height: rect.height }, { width: board.offsetWidth, height: board.offsetHeight });
+    setZoom(fit.zoom);
+    setOffset(fit.offset);
+  };
+  const revealScreen = (id: string, fromUser = true) => {
+    if (fromUser) userAdjusted.current = true;
+    setFocused(id);
+    if (view === "flow") { setFlowScreen(id); return; }
+    if (!wrappers.current.has(id)) return;
+    centerOn(id, Math.max(zoom, 0.5));
+  };
+  const openInFlow = (id: string) => {
+    userAdjusted.current = true;
+    setView("flow");
+    setFlowScreen(id);
+    setFlowHistory([]);
+    setFocused(id);
+  };
+
+  // Der erste Rahmen zeigt den Startbildschirm formatfuellend. Solange der Benutzer nichts selbst
+  // verschoben hat, wird beim Eintreffen der echten Bildschirmhoehe nachjustiert.
+  useEffect(() => {
+    if (!startScreen || userAdjusted.current) return;
+    const frame = requestAnimationFrame(() => { fitScreen(startScreen.id); });
+    return () => cancelAnimationFrame(frame);
+  }, [startScreen?.id, sizes[startScreen?.id ?? ""]?.height, view]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setProbed(true), 5_000);
+    return () => clearTimeout(timer);
+  }, [previewPath]);
+
+  useEffect(() => {
+    onScreensChange({ screens: visibleScreens, active: view === "flow" ? flowTarget : focused, links: visibleScreens.reduce((sum, screen) => sum + screen.links.length, 0) });
+  }, [visibleScreens.length, focused, flowTarget, view, screens]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data as { source?: string; action?: string; screens?: PreviewScreen[]; screenId?: string; width?: number; height?: number; x?: number; y?: number; deltaY?: number; to?: string } | null;
+      if (!data || data.source !== "werft-preview-canvas") return;
+      const entry = [...frames.current.entries()].find(([, frame]) => frame.contentWindow === event.source);
+      const sourceId = entry?.[0];
+      const frame = entry?.[1];
+      if (data.action === "screens") {
+        setProbed(true);
+        const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
+        if (list.length) setScreens((current) => (current.length === list.length && current.every((screen, index) => screen.id === list[index]!.id) ? current : list));
+        return;
+      }
+      if (data.action === "size" && sourceId && Number.isFinite(data.width) && Number.isFinite(data.height)) {
+        const key = sourceId === "__probe__" ? null : sourceId;
+        if (!key) return;
+        setSizes((current) => (current[key]?.height === Math.round(data.height!) && current[key]?.width === Math.round(data.width!) ? current : { ...current, [key]: { width: Math.round(data.width!), height: Math.round(data.height!) } }));
+        return;
+      }
+      if (data.action === "navigate" && typeof data.to === "string") {
+        if (view === "flow") { setFlowHistory((history) => [...history, flowTarget ?? ""].filter(Boolean)); setFlowScreen(data.to); setFocused(data.to); }
+        else revealScreen(data.to);
+        return;
+      }
+      if (data.action === "focus" && sourceId) { setFocused(sourceId); return; }
+      if (!frame || !Number.isFinite(data.x) || !Number.isFinite(data.y) || !frame.offsetWidth || !frame.offsetHeight) return;
+      const rect = frame.getBoundingClientRect();
+      const point = { x: rect.left + data.x! * (rect.width / frame.offsetWidth), y: rect.top + data.y! * (rect.height / frame.offsetHeight) };
+      if (data.action === "wheel" && Number.isFinite(data.deltaY)) zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, data.deltaY!));
+      else if (data.action === "pan-start") { previewPan.current = point; setPanning(true); }
+      else if (data.action === "pan-move" && previewPan.current) {
+        const previous = previewPan.current;
+        userAdjusted.current = true;
+        setOffset((current) => ({ x: current.x + point.x - previous.x, y: current.y + point.y - previous.y }));
+        previewPan.current = point;
+      } else if (data.action === "pan-end") { previewPan.current = null; setPanning(false); }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [zoom, view, flowTarget]);
+
+  // Mausrad vergroessert und verkleinert die Leinwand — ohne Zusatztaste, wie auf einem Zeichenbrett.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+    };
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [zoom]);
+
+  useEffect(() => {
+    for (const [id, frame] of frames.current) if (id !== "__probe__") tellFrame(frame, { action: "highlight", on: highlight });
+  }, [highlight, screens.length, view, flowTarget]);
+
+  const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Mittlere Maustaste immer, linke nur auf freier Flaeche — sonst waeren Rahmen nicht bedienbar.
+    const onEmptySurface = event.button === 0 && (event.target === viewportRef.current || event.target === boardRef.current);
+    if (event.button !== 1 && !onEmptySurface) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointerPan.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    setPanning(true);
+  };
+  const movePan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const previous = pointerPan.current;
+    if (!previous || previous.pointerId !== event.pointerId) return;
+    userAdjusted.current = true;
+    setOffset((current) => ({ x: current.x + event.clientX - previous.x, y: current.y + event.clientY - previous.y }));
+    pointerPan.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+  const endPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerPan.current?.pointerId !== event.pointerId) return;
+    pointerPan.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    setPanning(false);
+  };
+
+  const boardWidth = columns * previewWidth + (columns - 1) * boardGap;
+  const totalLinks = visibleScreens.reduce((sum, screen) => sum + screen.links.length, 0);
+  return (
+    <>
+      <div
+        ref={viewportRef}
+        className={`canvas-viewport board-viewport${panning ? " panning" : ""}`}
+        onPointerDown={startPan}
+        onPointerMove={movePan}
+        onPointerUp={endPan}
+        onPointerCancel={endPan}
+        onAuxClick={(event) => { if (event.button === 1) event.preventDefault(); }}
+      >
+        <div ref={boardRef} className="canvas-pan-content design-board" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: boardWidth, gap: boardGap }}>
+          {boardScreens.map((screen) => {
+            const size = sizeOf(screen.id);
+            return (
+              <div
+                key={screen.id}
+                ref={(element) => { if (element) wrappers.current.set(screen.id, element); else wrappers.current.delete(screen.id); }}
+                className={`board-frame${focused === screen.id ? " focused" : ""}${screen.isStart ? " start" : ""}`}
+                style={{ width: previewWidth }}
+                onDoubleClick={() => fitScreen(screen.id)}
+              >
+                <header>
+                  <strong>{screen.name}</strong>
+                  {screen.isStart && <em>Startbildschirm</em>}
+                  <span />
+                  {view === "board" && <button type="button" onClick={() => openInFlow(screen.id)} title="Diesen Bildschirm durchklicken"><Play /></button>}
+                  <small>{screen.links.length ? `${screen.links.length} Verknüpfung${screen.links.length === 1 ? "" : "en"}` : "keine Verknüpfung"}</small>
+                </header>
+                <div className="board-frame-body" style={{ width: previewWidth, height: Math.max(size.height, 120) }}>
+                  <iframe
+                    ref={(element) => { if (element) frames.current.set(screen.id, element); else frames.current.delete(screen.id); }}
+                    title={`Bildschirm ${screen.name}`}
+                    src={frameUrl(screen.id)}
+                    loading="lazy"
+                    style={{ width: previewWidth, height: Math.max(size.height, 120) }}
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
+                    allow="autoplay; fullscreen"
+                    onLoad={(event) => tellFrame(event.currentTarget, { action: "highlight", on: highlight })}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!probed && (
+          <iframe
+            ref={(element) => { if (element) frames.current.set("__probe__", element); else frames.current.delete("__probe__"); }}
+            className="board-probe"
+            title="Bildschirme werden gelesen"
+            src={frameUrl()}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        )}
+        {!visibleScreens.length && <div className="board-loading">Bildschirme werden gelesen …</div>}
+      </div>
+      <div className="board-toolbar">
+        <button type="button" className={view === "board" ? "active" : ""} onClick={() => { setView("board"); setFlowHistory([]); }} title="Alle Bildschirme nebeneinander">
+          <Grid2X2 />Übersicht
+        </button>
+        <button type="button" className={view === "flow" ? "active" : ""} onClick={() => openInFlow(flowTarget ?? startScreen?.id ?? fallbackScreen.id)} title="Einen Bildschirm groß durchklicken">
+          <Play />Durchklicken
+        </button>
+        {view === "flow" && (
+          <button type="button" disabled={!flowHistory.length} onClick={() => { const previous = flowHistory.at(-1); setFlowHistory((history) => history.slice(0, -1)); if (previous) { setFlowScreen(previous); setFocused(previous); } }}>
+            <ChevronLeft />Zurück
+          </button>
+        )}
+        <i />
+        <button type="button" className={highlight ? "active" : ""} onClick={() => setHighlight(!highlight)} title="Alle klickbaren Stellen im Design hervorheben">
+          <MousePointer2 />Interaktionen
+        </button>
+        <select value={(view === "flow" ? flowTarget : focused) ?? ""} onChange={(event) => { const id = event.target.value; if (!id) return; setFocused(id); if (view === "flow") setFlowScreen(id); else if (!centerOn(id, Math.max(zoom, 0.5))) fitScreen(id); }}>
+          <option value="">Bildschirm wählen …</option>
+          {visibleScreens.map((screen) => <option value={screen.id} key={screen.id}>{screen.isStart ? `▶ ${screen.name}` : screen.name}</option>)}
+        </select>
+        <i />
+        <IconButton label="Verkleinern" onClick={() => zoomAtCenter(zoom * 0.8)}><ZoomOut /></IconButton>
+        <b>{Math.round(zoom * 100)} %</b>
+        <IconButton label="Vergrößern" onClick={() => zoomAtCenter(zoom * 1.25)}><ZoomIn /></IconButton>
+        <button type="button" onClick={fitBoard} title="Alles einpassen"><Maximize2 />Einpassen</button>
+        <button type="button" onClick={() => { userAdjusted.current = true; if (startScreen) fitScreen(startScreen.id); }} title="Zum Startbildschirm springen">Start</button>
+        {!totalLinks && visibleScreens.length > 1 && <small className="board-hint">Keine Verknüpfungen im Design — „Design aus den Quellen aufbauen“ erzeugt sie.</small>}
+      </div>
+    </>
+  );
+}
+
 const tools: [ToolMode, string, ReactNode][] = [
   ["interact", "Interagieren", <MousePointer2 />],
   ["select", "Auswählen", <MousePointer2 />],
@@ -1084,13 +1383,16 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
-  const previewRef = useRef<HTMLIFrameElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
-  const previewPanRef = useRef<CanvasPoint | null>(null);
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
-  const [activeScreen, setActiveScreen] = useState<string | null>(null);
+  const [boardState, setBoardStateRaw] = useState<{ screens: PreviewScreen[]; active: string | null; links: number }>({ screens: [], active: null, links: 0 });
+  // Das Board meldet seinen Stand bei jedem Rendern. Ohne diesen Gleichheitsvergleich wuerde jede
+  // Meldung ein neues Rendern ausloesen und die beiden Komponenten schaukelten sich endlos auf.
+  const setBoardState = (next: { screens: PreviewScreen[]; active: string | null; links: number }) => setBoardStateRaw((current) =>
+    current.active === next.active && current.links === next.links && current.screens.length === next.screens.length && current.screens.every((screen, index) => screen.id === next.screens[index]?.id) ? current : next);
+  const activeScreen = boardState.screens.find((screen) => screen.id === boardState.active)?.name ?? null;
   const reconstruct = useMutation({
     mutationFn: (retryFailed: boolean) => reconstructProject(projectId, setReconstructionProgress, retryFailed),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
@@ -1108,7 +1410,8 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     else setZoom(nextZoom);
   };
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 1) return;
+    // Mittlere Maustaste ueberall, linke nur auf der freien Flaeche zwischen den Rahmen.
+    if (event.button !== 1 && !(event.button === 0 && event.target === viewportRef.current)) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     pointerPanRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
@@ -1126,52 +1429,19 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     setPanning(false);
   };
-  useEffect(() => {
-    setOffset({ x: 0, y: 0 });
-    if (imported?.imported) setZoom(1);
-  }, [projectId, imported?.imported]);
+  useEffect(() => { setOffset({ x: 0, y: 0 }); }, [projectId]);
+  // Auch auf der Beispiel-Leinwand gilt das Zeichenbrett-Verhalten: Rad vergroessert direkt, ohne
+  // dass eine Zusatztaste gehalten werden muss.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const handleWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey) return;
       event.preventDefault();
       zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
     };
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", handleWheel);
   }, [zoom, setZoom, imported?.imported]);
-  useEffect(() => {
-    const handlePreviewMessage = (event: MessageEvent) => {
-      if (event.source !== previewRef.current?.contentWindow || !event.data) return;
-      // Die rekonstruierte Datei meldet jeden Bildschirmwechsel; so ist im Studio sichtbar,
-      // welcher der durchklickbaren Bildschirme gerade gezeigt wird.
-      if (event.data.source === "werft-preview-screen") { setActiveScreen(typeof event.data.screenName === "string" ? event.data.screenName : null); return; }
-      if (event.data.source !== "werft-preview-canvas") return;
-      const { action, x, y, deltaY } = event.data as { action?: string; x?: number; y?: number; deltaY?: number };
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-      if (!previewRef.current.offsetWidth || !previewRef.current.offsetHeight) return;
-      const frameRect = previewRef.current.getBoundingClientRect();
-      const scaleX = frameRect.width / previewRef.current.offsetWidth;
-      const scaleY = frameRect.height / previewRef.current.offsetHeight;
-      const point = { x: frameRect.left + x! * scaleX, y: frameRect.top + y! * scaleY };
-      if (action === "wheel" && Number.isFinite(deltaY)) {
-        zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, deltaY!));
-      } else if (action === "pan-start") {
-        previewPanRef.current = point;
-        setPanning(true);
-      } else if (action === "pan-move" && previewPanRef.current) {
-        const previous = previewPanRef.current;
-        setOffset((current) => ({ x: current.x + point.x - previous.x, y: current.y + point.y - previous.y }));
-        previewPanRef.current = point;
-      } else if (action === "pan-end") {
-        previewPanRef.current = null;
-        setPanning(false);
-      }
-    };
-    window.addEventListener("message", handlePreviewMessage);
-    return () => window.removeEventListener("message", handlePreviewMessage);
-  }, [zoom, setZoom]);
   useEffect(() => {
     if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate(false);
   }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
@@ -1190,7 +1460,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
       <div className="canvas imported-canvas">
         <div className="canvas-toolbar imported-toolbar">
           <Status kind={imported.reconstructed ? "success" : imported.previewPath ? "info" : reconstruct.error ? "error" : "info"}>{imported.reconstructed ? "Aus den Quellen originalgetreu aufgebaut" : imported.previewPath ? "Gefundene HTML-Datei" : reconstruct.error ? "Rekonstruktion unterbrochen" : "UI wird vollständig rekonstruiert"}</Status>
-          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}${activeScreen ? ` · ${activeScreen}` : ""}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
+          <span>{imported.previewPath ? `${imported.previewDevice} · ${imported.previewWidth} × ${imported.previewHeight}${boardState.screens.length ? ` · ${boardState.screens.length} Bildschirm${boardState.screens.length === 1 ? "" : "e"}` : ""}${activeScreen ? ` · ${activeScreen}` : ""}` : reconstructionProgress?.result?.message ?? "Projekt wird analysiert"}</span>
           <small>
             {imported.fileCount} Dateien · {(imported.totalBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB
           </small>
@@ -1205,11 +1475,16 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           </div>
         )}
         {imported.previewPath ? (
-          <div {...viewportProps}>
-            <div className="canvas-pan-content imported-preview-frame" style={{ ...contentStyle, width: imported.previewWidth, height: imported.previewHeight }}>
-              <iframe ref={previewRef} title="Interaktive importierte Designvorschau" src={`${previewOrigin}${imported.previewPath}`} style={{ width: imported.previewWidth, height: imported.previewHeight }} sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" />
-            </div>
-          </div>
+          <DesignBoard
+            key={`${projectId}:${imported.revision}`}
+            previewOrigin={previewOrigin}
+            previewPath={imported.previewPath}
+            previewWidth={imported.previewWidth}
+            previewHeight={imported.previewHeight}
+            zoom={zoom}
+            setZoom={setZoom}
+            onScreensChange={setBoardState}
+          />
         ) : (
           <div className="empty reconstruction-state">
             <strong>{reconstruct.error ? "Die HTML-Version konnte noch nicht fertiggestellt werden." : "Das Ist-Design wird automatisch als HTML aufgebaut."}</strong>
