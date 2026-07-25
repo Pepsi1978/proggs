@@ -61,13 +61,21 @@ export function extractAndroidFacts(files: SourceText[]): Partial<DesignFacts> {
 
   // Compose trennt Farbdefinition (Color.kt) und Farbschema (Theme.kt) fast immer auf zwei Dateien.
   // Deshalb werden erst ALLE Farbkonstanten gesammelt und danach die Schemata aufgeloest.
+  // Der NavHost steht fast nie in derselben Datei wie die Bildschirme. Farb- UND Routenzuordnung
+  // muessen deshalb projektweit vorliegen, bevor die einzelnen Dateien ausgewertet werden.
   const composeColorIndex = new Map<string, string>();
+  const routeToComposable = new Map<string, string>();
   for (const file of files) {
     if (!/\.kts?$/i.test(file.path)) continue;
     for (const match of file.text.matchAll(composeColorPattern)) {
       const hex = match[2]!.slice(2);
       const css = normalizeHexColor(hex.length === 8 ? hex : hex.padStart(8, "f"));
       if (css) composeColorIndex.set(match[1]!, css);
+    }
+    for (const match of file.text.matchAll(composeRouteBodyPattern)) {
+      const route = match[2] || match[1];
+      const target = routeBodyTarget(match[3] ?? "");
+      if (route && target) routeToComposable.set(route, target);
     }
   }
 
@@ -77,7 +85,7 @@ export function extractAndroidFacts(files: SourceText[]): Partial<DesignFacts> {
     if (/(^|\/)res\/layout[^/]*\/[^/]+\.xml$/i.test(file.path)) readLayout(file, resolveColorReference, resolveDimensionReference, screens, effects, dimensions, colors);
     if (/(^|\/)res\/navigation[^/]*\/[^/]+\.xml$/i.test(file.path)) readNavigationGraph(file, screens);
     if (/AndroidManifest\.xml$/i.test(file.path)) readManifest(file, screens, notes);
-    if (/\.kts?$/i.test(file.path)) readComposeSource(file, composeColorIndex, colors, dimensions, typography, shapes, effects, screens, themes, notes);
+    if (/\.kts?$/i.test(file.path)) readComposeSource(file, composeColorIndex, routeToComposable, colors, dimensions, typography, shapes, effects, screens, themes, notes);
   }
 
   const vectorAssets = files.filter((file) => /(^|\/)res\/(drawable|mipmap)[^/]*\//i.test(file.path) && !/\.xml$/i.test(file.path));
@@ -228,14 +236,25 @@ function readManifest(file: SourceText, screens: FactScreen[], notes: string[]):
 const composeColorPattern = /\bval\s+(\w+)\s*(?::\s*Color)?\s*=\s*Color\(\s*(0x[0-9a-fA-F]{6,8})\s*\)/g;
 const composeDimensionPattern = /\bval\s+(\w+)\s*(?::\s*Dp)?\s*=\s*(-?\d+(?:\.\d+)?)\.dp\b/g;
 const composeShapePattern = /\bval\s+(\w+)\s*(?::\s*\w+)?\s*=\s*RoundedCornerShape\(\s*([^)]*)\)/g;
-const composeSchemePattern = /\b(?:private\s+)?val\s+(\w+)\s*(?::\s*ColorScheme)?\s*=\s*(lightColorScheme|darkColorScheme|ColorScheme)\s*\(([\s\S]{0,4000}?)\n\s*\)/g;
-const composeSchemeEntryPattern = /(\w+)\s*=\s*([\w.]+)/g;
+// Nicht nur Material3: sehr viele Compose-Apps definieren ein EIGENES Farbschema als Datenklasse
+// (`val DarkPmColors = PmColors(background = Color(0xFF181209), …)`). Ohne diese Verallgemeinerung
+// bleiben deren Themefarben komplett unentdeckt.
+const composeSchemePattern = /\b(?:private\s+)?val\s+(\w+)\s*(?::\s*\w+)?\s*=\s*(\w+)\s*\(([\s\S]{0,6000}?)\n\s*\)/g;
+const composeSchemeEntryPattern = /(\w+)\s*=\s*(Color\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)|[\w.]+)/g;
+const composeSchemeMinimumColors = 3;
 const composeTextStylePattern = /\b(\w+)\s*=\s*TextStyle\(([\s\S]{0,1200}?)\n\s*\)/g;
 const composableFunctionPattern = /@Composable[\s\S]{0,400}?\bfun\s+(\w+)\s*\(/g;
 const composeRoutePattern = /composable(?:<\s*(\w+)\s*>)?\s*\(\s*(?:route\s*=\s*)?"([^"]*)"?/g;
-// Der Rumpf endet an der ersten schliessenden Klammer ODER am Zeilenende — `composable("x") { X() }`
-// steht genauso oft einzeilig wie ueber mehrere Zeilen verteilt.
-const composeRouteBodyPattern = /composable(?:<\s*(\w+)\s*>)?\s*\(\s*(?:route\s*=\s*)?"([^"]*)"[^)]*\)\s*\{([\s\S]{0,400}?)\}/g;
+// Echte NavGraphs schreiben `composable("consent", enterTransition = { fadeIn(tween(600)) }) { … }`:
+// die Argumentliste enthaelt selbst Klammern und Zeilenumbrueche. Statt sie zu parsen, wird hinter
+// dem Routen-Literal ein Textfenster genommen und darin der erste Bildschirm-Aufruf gesucht.
+// Das Textfenster steht im Lookahead: wuerde es mitkonsumiert, verschluckte jeder Treffer den
+// jeweils naechsten Eintrag und nur jede zweite Route waere erkannt.
+const composeRouteBodyPattern = /composable(?:<\s*(\w+)\s*>)?\s*\(\s*(?:route\s*=\s*)?"([^"]*)"(?=([\s\S]{0,600}))/g;
+const composeScreenCallPattern = /\b([A-Z]\w*(?:Screen|Page|View|Route|Pane|Dialog|Sheet))\s*\(/;
+// Das Fenster darf nicht in den naechsten Eintrag hineinreichen, sonst erbt eine Route den
+// Bildschirm ihres Nachfolgers.
+const routeBodyTarget = (window: string): string | undefined => composeScreenCallPattern.exec(window.split(/composable\s*[(<]/)[0]!)?.[1];
 // Das Farbliteral MUSS vor dem Bezeichner stehen: sonst schluckt `[\w.]+` bei `Color(0xFF3157D5)`
 // nur das Wort „Color“ und der eigentliche Farbwert geht verloren.
 const composeColorUsagePattern = /\.(?:background|drawBehind)\s*\(\s*(Color\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)|[\w.]+)|\b(?:color|containerColor|contentColor|tint|backgroundColor|borderColor|textColor)\s*=\s*(Color\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)|[\w.]+)/g;
@@ -245,6 +264,7 @@ const composeModifierDimensionPattern = /\.(padding|size|height|width|offset|spa
 function readComposeSource(
   file: SourceText,
   composeColorIndex: Map<string, string>,
+  routeToComposable: Map<string, string>,
   colors: FactColor[],
   dimensions: FactDimension[],
   typography: FactTypography[],
@@ -274,10 +294,18 @@ function readComposeSource(
   for (const match of text.matchAll(composeSchemePattern)) {
     const tokens: Record<string, string> = {};
     for (const entry of match[3]!.matchAll(composeSchemeEntryPattern)) {
-      const value = composeColorIndex.get(entry[2]!) ?? normalizeHexColor(entry[2]!.replace(/^0x/, ""));
+      const literal = /Color\s*\(\s*0x([0-9a-fA-F]{6,8})\s*\)/.exec(entry[2]!)?.[1];
+      const value = literal ? normalizeHexColor(literal.length === 8 ? literal : literal.padStart(8, "f")) : composeColorIndex.get(entry[2]!.replace(/^.*\./, ""));
       if (value) tokens[entry[1]!] = value;
     }
-    if (Object.keys(tokens).length) themes.push({ id: match[1]!, name: match[2] === "darkColorScheme" ? `${match[1]} (Dunkel)` : match[1]!, tokens, source: file.path });
+    // Bei einem benannten Material-Schema genuegt ein Farbwert; bei beliebigen Konstruktoraufrufen
+    // braucht es mehrere, sonst wird jeder Funktionsaufruf mit einer Farbe zum „Theme“.
+    const materialScheme = /^(?:light|dark)?ColorScheme$/i.test(match[2]!);
+    if (Object.keys(tokens).length < (materialScheme ? 1 : composeSchemeMinimumColors)) continue;
+    const dark = /darkColorScheme/.test(match[2]!) || /dark|night|dunkel/i.test(match[1]!);
+    themes.push({ id: match[1]!, name: dark ? `${match[1]} (Dunkel)` : match[1]!, tokens, source: file.path });
+    // Die Schemafarben sind per Definition sichtbar und gehoeren damit in die Nachmessung.
+    for (const [token, value] of Object.entries(tokens)) colors.push({ name: `${match[1]}.${token}`, css: value, source: file.path, used: true });
   }
   for (const match of text.matchAll(composeTextStylePattern)) {
     const body = match[2]!;
@@ -308,12 +336,6 @@ function readComposeSource(
   const start = /startDestination\s*=\s*(?:route\s*=\s*)?["<]?([\w./{}-]+)/.exec(text)?.[1];
   // `composable("home") { HomeScreen() }` verraet die direkte Zuordnung Route→Composable. Ohne sie
   // entstuenden zwei Screens fuer denselben Bildschirm — und er wuerde doppelt aufgebaut.
-  const routeToComposable = new Map<string, string>();
-  for (const match of text.matchAll(composeRouteBodyPattern)) {
-    const route = match[2] || match[1];
-    const target = /\b([A-Z]\w*(?:Screen|Page|View|Route|Pane|Dialog|Sheet))\s*\(/.exec(match[3] ?? "")?.[1];
-    if (route && target) routeToComposable.set(route, target);
-  }
   const screenIdForRoute = (route: string) => routeToComposable.has(route) ? `compose:${routeToComposable.get(route)}` : `route:${route}`;
   for (const match of text.matchAll(composableFunctionPattern)) {
     const name = match[1]!;

@@ -137,9 +137,12 @@ export function renderFactSheet(facts: DesignFacts, options: { includeAssets?: b
   return parts.filter(Boolean).join("\n");
 }
 
+// App-/Launcher-Symbole erscheinen nie IN der Oberflaeche; sie wuerden nur Platz im Prompt kosten.
+const launcherAsset = /(?:^|\/)(?:ic_launcher|ic_app_icon|app_icon|launcher_icon|ic_banner)|(?:^|\/)mipmap[^/]*\//i;
+
 // Inline-SVGs der erkannten Icons: ohne sie erfindet die KI Symbole, statt die echten zu zeigen.
 export function renderAssetLibrary(facts: DesignFacts, limit = 60): string {
-  const vectors = facts.assets.filter((asset) => asset.svg).slice(0, limit);
+  const vectors = facts.assets.filter((asset) => asset.svg && !launcherAsset.test(asset.path) && !launcherAsset.test(asset.name)).slice(0, limit);
   if (!vectors.length) return "";
   return `# ORIGINAL-ICONS (exakt so einbetten, keine Ersatzsymbole)\n${vectors.map((asset) => `--- ${asset.name} (${asset.path}) ---\n${asset.svg}`).join("\n")}`;
 }

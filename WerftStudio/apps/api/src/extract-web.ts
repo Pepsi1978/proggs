@@ -46,3 +46,10 @@ export function extractWebFacts(files: SourceText[]): Partial<DesignFacts> {
 export function webFactCandidates(paths: string[]): string[] {
   return paths.filter((path) => /\.(css|scss|sass|less|html?|vue|svelte|jsx|tsx)$/i.test(path));
 }
+
+// Native Apps enthalten fast immer fremdes HTML (Rechtstexte, Hilfeseiten, Werkzeugoberflaechen).
+// Deren Schatten, Radien und Schriften gehoeren NICHT zum App-Design — als Quellwert nachgemessen
+// wuerden sie falsche Korrekturauftraege ausloesen. Dort zaehlen nur echte Stylesheets.
+export function webStyleCandidates(paths: string[]): string[] {
+  return paths.filter((path) => /\.(css|scss|sass|less)$/i.test(path));
+}

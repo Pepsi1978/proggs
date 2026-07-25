@@ -1,7 +1,7 @@
 import { emptyFacts, mergeFacts, type DesignFacts } from "./design-facts.js";
 import { androidFactCandidates, extractAndroidFacts } from "./extract-android.js";
 import { appleFactCandidates, extractAppleFacts } from "./extract-apple.js";
-import { extractWebFacts, webFactCandidates } from "./extract-web.js";
+import { extractWebFacts, webFactCandidates, webStyleCandidates } from "./extract-web.js";
 import { extractWindowsFacts, windowsFactCandidates } from "./extract-windows.js";
 import type { SourceText } from "./extract-common.js";
 
@@ -9,13 +9,17 @@ export type FactPlatform = "web" | "android" | "ios" | "ipados" | "macos" | "win
 
 // Projekte sind selten sortenrein (Android-App mit Web-Assets, macOS-App mit XAML-Doku). Deshalb
 // laufen alle passenden Extraktoren, die Plattformwahl bestimmt nur die Reihenfolge der Wahrheit.
-const extractorsByPlatform: Record<FactPlatform, Array<{ candidates: (paths: string[]) => string[]; extract: (files: SourceText[]) => Partial<DesignFacts> }>> = {
-  android: [{ candidates: androidFactCandidates, extract: extractAndroidFacts }, { candidates: webFactCandidates, extract: extractWebFacts }],
-  ios: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webFactCandidates, extract: extractWebFacts }],
-  ipados: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webFactCandidates, extract: extractWebFacts }],
-  macos: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webFactCandidates, extract: extractWebFacts }],
-  windows: [{ candidates: windowsFactCandidates, extract: extractWindowsFacts }, { candidates: webFactCandidates, extract: extractWebFacts }],
-  web: [{ candidates: webFactCandidates, extract: extractWebFacts }, { candidates: androidFactCandidates, extract: extractAndroidFacts }]
+// `screens: false` fuer sekundaere Extraktoren: eine native App enthaelt oft eingebettete
+// HTML-Seiten (Rechtstexte in 40 Sprachen, Hilfeseiten). Die sind KEINE App-Bildschirme und
+// wuerden die echten Screens aus der Aufbauliste verdraengen.
+type PlatformExtractor = { candidates: (paths: string[]) => string[]; extract: (files: SourceText[]) => Partial<DesignFacts>; screens?: boolean };
+const extractorsByPlatform: Record<FactPlatform, PlatformExtractor[]> = {
+  android: [{ candidates: androidFactCandidates, extract: extractAndroidFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  ios: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  ipados: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  macos: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  windows: [{ candidates: windowsFactCandidates, extract: extractWindowsFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  web: [{ candidates: webFactCandidates, extract: extractWebFacts }, { candidates: androidFactCandidates, extract: extractAndroidFacts, screens: false }]
 };
 
 export function factCandidatePaths(platform: FactPlatform, paths: string[]): string[] {
@@ -29,7 +33,10 @@ export function extractDesignFacts(platform: FactPlatform, files: SourceText[]):
   for (const extractor of extractorsByPlatform[platform]) {
     const subset = new Set(extractor.candidates(files.map((file) => file.path)));
     if (!subset.size) continue;
-    try { facts = mergeFacts(facts, extractor.extract(files.filter((file) => subset.has(file.path)))); }
+    try {
+      const extracted = extractor.extract(files.filter((file) => subset.has(file.path)));
+      facts = mergeFacts(facts, extractor.screens === false ? { ...extracted, screens: [] } : extracted);
+    }
     catch (error) { facts.notes.push(`Teil-Extraktion übersprungen: ${error instanceof Error ? error.message : "unbekannter Fehler"}`); }
   }
   return dedupeFacts(facts);
@@ -77,9 +84,14 @@ export function orderedScreens(facts: DesignFacts): DesignFacts["screens"] {
 // Wuerde sie mitgebaut, entstuende ein zusaetzlicher, inhaltsleerer "MainActivity"-Bildschirm —
 // ihre einzige eigene Information ist, WELCHER Bildschirm beim Start sichtbar ist.
 function relevantScreens(screens: DesignFacts["screens"]): DesignFacts["screens"] {
-  const withContent = screens.filter((screen) => !screen.id.startsWith("activity:"));
-  if (!withContent.length) return screens;
-  const activityIsStart = screens.some((screen) => screen.id.startsWith("activity:") && screen.isStart);
+  // Eine reine Route (`route:consent`) und der Composable, der sie darstellt (`ConsentScreen` mit
+  // route=consent), sind derselbe Bildschirm. Steht die Zuordnung erst dateiuebergreifend fest,
+  // faellt die Dublette erst hier auf.
+  const claimedRoutes = new Set(screens.filter((screen) => !screen.id.startsWith("route:") && screen.route).map((screen) => screen.route!));
+  const deduped = screens.filter((screen) => !(screen.id.startsWith("route:") && claimedRoutes.has(screen.route ?? screen.id.slice(6))));
+  const withContent = deduped.filter((screen) => !screen.id.startsWith("activity:"));
+  if (!withContent.length) return deduped;
+  const activityIsStart = deduped.some((screen) => screen.id.startsWith("activity:") && screen.isStart);
   if (!activityIsStart || withContent.some((screen) => screen.isStart)) return withContent;
   // Ohne eigenen Startvermerk erbt der erste inhaltstragende Bildschirm den Start der Activity.
   return withContent.map((screen, index) => index === 0 ? { ...screen, isStart: true } : screen);

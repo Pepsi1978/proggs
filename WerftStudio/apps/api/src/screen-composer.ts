@@ -14,8 +14,12 @@ export const screenSlug = (id: string) => id.toLowerCase().replace(/[^a-z0-9]+/g
 // Die Theme-Variablen entstehen aus den geparsten Quellfarben, nicht aus einer KI-Antwort: dadurch
 // sind Farben ueber alle Screens hinweg garantiert identisch und exakt.
 export function themeStyles(facts: DesignFacts): string {
-  const light = facts.themes.find((theme) => !/dark|night|dunkel/i.test(theme.id) && !/dark|night|dunkel/i.test(theme.name)) ?? facts.themes[0];
-  const dark = facts.themes.find((theme) => /dark|night|dunkel/i.test(theme.id) || /dark|night|dunkel/i.test(theme.name));
+  // Projekte definieren oft mehrere Farbobjekte. Das umfangreichste Schema ist das echte Theme —
+  // das erstgefundene waere haeufig nur eine kleine Zusatzpalette.
+  const isDark = (theme: DesignFacts["themes"][number]) => /dark|night|dunkel/i.test(theme.id) || /dark|night|dunkel/i.test(theme.name);
+  const largest = (candidates: DesignFacts["themes"]) => [...candidates].sort((left, right) => Object.keys(right.tokens).length - Object.keys(left.tokens).length)[0];
+  const light = largest(facts.themes.filter((theme) => !isDark(theme))) ?? largest(facts.themes);
+  const dark = largest(facts.themes.filter(isDark));
   const toVariables = (theme: typeof light) => theme ? Object.entries(theme.tokens).map(([token, value]) => `  --${token.replace(/[^\w-]/g, "-")}: ${value};`).join("\n") : "";
   const lightBlock = toVariables(light);
   const darkBlock = toVariables(dark);

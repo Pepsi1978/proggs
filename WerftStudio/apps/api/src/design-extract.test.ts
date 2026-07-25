@@ -143,6 +143,16 @@ describe("Android-Faktenextraktion", () => {
     expect(facts.screens.find((screen) => screen.id === "compose:HomeScreen")?.files).toContain("app/src/main/java/acme/ui/HomeScreen.kt");
   });
 
+  it("entfernt eine reine Route, wenn ein Composable dieselbe Route bedient", () => {
+    // Steht der NavHost in einer anderen Datei als der Bildschirm, fällt die Dublette erst beim
+    // Zusammenführen auf — sie würde sonst denselben Bildschirm ein zweites Mal aufbauen lassen.
+    const merged = orderedScreens({ ...facts, screens: [
+      { id: "compose:ConsentScreen", name: "ConsentScreen", kind: "composable", source: "Consent.kt", route: "consent", navigatesTo: [], isStart: false, files: ["Consent.kt"] },
+      { id: "route:consent", name: "consent", kind: "nav-route", source: "Nav.kt", route: "consent", navigatesTo: [], isStart: false, files: ["Nav.kt"] }
+    ] });
+    expect(merged.map((screen) => screen.id)).toEqual(["compose:ConsentScreen"]);
+  });
+
   it("baut keine leere Activity-Hülle als zusätzlichen Bildschirm auf", () => {
     // Bei Compose-/Layout-Apps ist die Activity nur der Container; ihr einziger eigener Beitrag
     // ist die Information, welcher Bildschirm beim Start sichtbar ist.
@@ -172,6 +182,69 @@ describe("Android-Faktenextraktion", () => {
     const candidates = factCandidatePaths("android", ["app/src/main/res/values/colors.xml", "app/src/main/java/acme/Repository.kt", "app/build/reports/index.html", "README.md"]);
     expect(candidates).toContain("app/src/main/res/values/colors.xml");
     expect(candidates).not.toContain("README.md");
+  });
+});
+
+describe("Android-Muster aus echten Projekten", () => {
+  it("erkennt Routen trotz verschachtelter Klammern in der Argumentliste", () => {
+    // Wortlaut aus einem echten NavGraph: enterTransition = { fadeIn(tween(600)) } enthält selbst
+    // Klammern; ein Muster, das die Argumentliste zu parsen versucht, findet die Route nicht.
+    const extracted = extractDesignFacts("android", [source("ui/navigation/AppNavGraph.kt", `
+NavHost(navController = navController, startDestination = "splash") {
+    composable("splash", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+        SplashScreen(viewModel = hiltViewModel())
+    }
+    composable(
+        "consent",
+        enterTransition = { fadeIn(tween(600)) },
+        exitTransition = { fadeOut(tween(400)) },
+    ) {
+        ConsentScreen(viewModel = hiltViewModel())
+    }
+    composable("legal/datenschutz") {
+        LegalDocumentScreen(document = LegalDocument.Privacy)
+    }
+}`)]);
+    const ids = extracted.screens.map((screen) => screen.id);
+    expect(ids).toContain("compose:SplashScreen");
+    expect(ids).toContain("compose:ConsentScreen");
+    expect(ids).toContain("compose:LegalDocumentScreen");
+    // Keine unaufgelöste Rohroute mehr und keine Dublette.
+    expect(ids.filter((id) => id.startsWith("route:"))).toHaveLength(0);
+    expect(extracted.screens.find((screen) => screen.id === "compose:SplashScreen")?.isStart).toBe(true);
+  });
+
+  it("liest ein eigenes Farbschema, nicht nur Material3-Schemata", () => {
+    // Sehr viele Compose-Apps definieren ein eigenes Design-System als Datenklasse.
+    const extracted = extractDesignFacts("android", [source("ui/theme/AppTheme.kt", `
+val DarkPmColors = PmColors(
+    background = Color(0xFF181209),
+    surface = Color(0xFF251C10),
+    gold = Color(0xFFD4A24C),
+    breath = Color(0x21D4A24C),
+    dark = true,
+)`)]);
+    const theme = extracted.themes.find((item) => item.id === "DarkPmColors");
+    expect(theme?.tokens.background).toBe("#181209");
+    expect(theme?.tokens.gold).toBe("#d4a24c");
+    // Teiltransparente Werte behalten ihr Alpha.
+    expect(theme?.tokens.breath).toBe("rgba(212, 162, 76, 0.1294)");
+    expect(theme?.name).toContain("Dunkel");
+    // Schemafarben sind sichtbar und damit nachmessbar.
+    expect(extracted.colors.some((color) => color.used && color.css === "#d4a24c")).toBe(true);
+  });
+
+  it("hält eingebettete Rechtstext-Seiten aus der Bildschirmliste heraus", () => {
+    // Eine App mit Rechtstexten in 40 Sprachen brächte sonst hunderte Pseudo-Bildschirme mit und
+    // verdrängte damit die echten App-Screens aus der Aufbauliste.
+    const extracted = extractDesignFacts("android", [
+      source("app/src/main/assets/legal/ar/IMPRINT.html", `<html><head><title>Imprint</title></head><body><p style="box-shadow: 0 8px 30px rgba(255,99,72,.2)">x</p></body></html>`),
+      source("app/src/main/assets/legal/de/PRIVACY.html", `<html><head><title>Datenschutz</title></head><body>y</body></html>`),
+      source("app/src/main/java/acme/ui/HomeScreen.kt", `@Composable\nfun HomeScreen() { }`)
+    ]);
+    expect(extracted.screens.map((screen) => screen.id)).toEqual(["compose:HomeScreen"]);
+    // Auch der Schatten aus dem fremden HTML darf nicht als Quellwert nachgemessen werden.
+    expect(extracted.effects.some((effect) => effect.css.includes("255,99,72"))).toBe(false);
   });
 });
 
