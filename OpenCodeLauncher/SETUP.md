@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.51 (26.07.2026, 14:07 Uhr)
+Stand: v1.17.52 – 26.07.2026 14:19
 
 ---
 

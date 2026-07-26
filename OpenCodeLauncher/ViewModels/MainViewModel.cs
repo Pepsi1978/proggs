@@ -33,7 +33,6 @@ public sealed partial class MainViewModel : ObservableObject
             Id = "minimal",
             DisplayName = "Minimal",
             Description = "Frisches, leeres Profil zum Ausbauen",
-            Status = "AKTIV",
             IsEnabled = true
         });
         Profiles.Add(new InstructionProfileEntry
@@ -41,7 +40,6 @@ public sealed partial class MainViewModel : ObservableObject
             Id = "standard",
             DisplayName = "Standard",
             Description = "Bewährte globale und Projektregeln",
-            Status = "AKTIV",
             IsEnabled = true
         });
         Profiles.Add(new InstructionProfileEntry
@@ -49,7 +47,6 @@ public sealed partial class MainViewModel : ObservableObject
             Id = "strict",
             DisplayName = "Strikt",
             Description = "Mehr Kontrolle und Absicherung",
-            Status = "AKTIV",
             IsEnabled = true
         });
         WorkModes.Add(new WorkModeEntry

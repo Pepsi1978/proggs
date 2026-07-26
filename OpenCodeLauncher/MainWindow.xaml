@@ -688,15 +688,10 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <TextBlock Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                                         <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource DimBrush}"
-                                                   TextWrapping="Wrap" Margin="0,7,0,8"/>
-                                        <Border Grid.Row="2" HorizontalAlignment="Left" CornerRadius="7" Padding="7,2"
-                                                Background="{DynamicResource AccentSoftBg}" BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
-                                            <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                        </Border>
+                                                   TextWrapping="Wrap" Margin="0,7,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
