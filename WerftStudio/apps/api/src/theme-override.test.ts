@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { builtInVariant, colourSpellings, readRules, scopeSelector, themeOverrideCss } from "./theme-override.js";
+import { builtInVariant, colourReplacements, colourSpellings, readRules, scopeSelector, themeOverrideCss } from "./theme-override.js";
 import type { ThemeVariant } from "./screen-composer.js";
 
 // Wortlaut aus PerfectMoment: das aufgebaute Design trägt die dunklen Farben fest im Stylesheet,
@@ -29,6 +29,17 @@ describe("Farbabbildung für fest aufgebaute Designs", () => {
     expect(colourSpellings("#251c10")).toContain("rgb(37, 28, 16)");
     const css = themeOverrideCss(html, [dark, light]);
     expect(css).toContain("background-color: #f3ead9");
+  });
+
+  // Ein Viertel aller Farben eines echten Designs steht als rgba mit Deckkraft. Ohne diese Form
+  // bliebe jede halbtransparente Fläche dunkel, während der Rest hell wird.
+  it("tauscht auch halbtransparente Farben und behält dabei die Deckkraft", () => {
+    const withAlpha = `<style>.pm-veil { background: rgba(24, 18, 9, 0.65); box-shadow: 0 2px 8px rgba(37,28,16,.4); }</style>`;
+    const css = themeOverrideCss(withAlpha + html, [dark, light]);
+    expect(css).toContain("rgba(251, 246, 236, 0.65)");
+    expect(css).toContain("rgba(243,234,217,.4)");
+    const replacements = colourReplacements("#181209", "#fbf6ec");
+    expect(replacements.some((entry) => entry.to === "rgba(251, 246, 236")).toBe(true);
   });
 
   it("behält Bedingungsblöcke und lässt unbeteiligte Regeln unangetastet", () => {

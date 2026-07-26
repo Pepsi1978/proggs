@@ -63,15 +63,35 @@ function readDeclarations(body: string): Declaration[] {
 
 const escapeForPattern = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Dieselbe Farbe steht im Stylesheet mal als `#181209`, mal als `rgb(24, 18, 9)`. Ohne beide
-// Schreibweisen bliebe die Haelfte der Regeln unberuehrt und das Design halb umgeschaltet.
+const rgbParts = (value: string): [number, number, number] | undefined => {
+  const hex = /^#([0-9a-fA-F]{6})/.exec(value.trim());
+  if (hex) {
+    const number = Number.parseInt(hex[1]!, 16);
+    return [(number >> 16) & 255, (number >> 8) & 255, number & 255];
+  }
+  const rgb = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i.exec(value.trim());
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : undefined;
+};
+
+// Dieselbe Farbe steht im Stylesheet mal als `#181209`, mal als `rgb(24, 18, 9)`, mal als
+// `rgba(24, 18, 9, .6)`. Ohne alle Schreibweisen bliebe ein Viertel der Regeln unberuehrt und das
+// Design nach dem Umschalten halb dunkel.
 export function colourSpellings(value: string): string[] {
+  const parts = rgbParts(value);
   const trimmed = value.trim();
-  const hex = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
-  if (!hex) return [trimmed];
-  const number = Number.parseInt(hex[1]!, 16);
-  const red = (number >> 16) & 255, green = (number >> 8) & 255, blue = number & 255;
-  return [trimmed, `rgb(${red}, ${green}, ${blue})`, `rgb(${red},${green},${blue})`];
+  if (!parts) return [trimmed];
+  const [red, green, blue] = parts;
+  return [...new Set([trimmed, `#${((red << 16) | (green << 8) | blue).toString(16).padStart(6, "0")}`, `rgb(${red}, ${green}, ${blue})`, `rgb(${red},${green},${blue})`, `rgba(${red}, ${green}, ${blue}`, `rgba(${red},${green},${blue}`])];
+}
+
+// Die Ersetzung bleibt in der Schreibweise des Fundorts: eine halbtransparente Flaeche behaelt ihre
+// Deckkraft, weil nur der Farbanteil vor dem Alpha getauscht wird.
+export function colourReplacements(from: string, to: string): Array<{ pattern: RegExp; to: string }> {
+  const target = rgbParts(to);
+  return colourSpellings(from).map((spelling) => ({
+    pattern: new RegExp(escapeForPattern(spelling), "gi"),
+    to: spelling.startsWith("rgba(") && target ? `rgba(${spelling.includes(", ") ? `${target[0]}, ${target[1]}, ${target[2]}` : `${target[0]},${target[1]},${target[2]}`}` : to.trim()
+  }));
 }
 
 // Welche Erscheinung steckt im Dokument? Die, deren Farben dort am haeufigsten wirklich vorkommen.
@@ -111,7 +131,7 @@ export function themeOverrideCss(html: string, variants: ThemeVariant[]): string
     // Abgebildet wird je TOKEN, nicht je Farbe: nur so trifft „Hintergrund" auf „Hintergrund".
     const mapping = Object.entries(base.tokens)
       .filter(([token, value]) => colourValue.test(value.trim()) && variant.tokens[token] && variant.tokens[token]!.trim().toLowerCase() !== value.trim().toLowerCase())
-      .flatMap(([token, value]) => colourSpellings(value).map((spelling) => ({ pattern: new RegExp(escapeForPattern(spelling), "gi"), to: variant.tokens[token]! })));
+      .flatMap(([token, value]) => colourReplacements(value, variant.tokens[token]!));
     if (!mapping.length) continue;
     const byMedia = new Map<string, string[]>();
     for (const rule of rules) {
