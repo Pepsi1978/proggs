@@ -26,6 +26,7 @@ public partial class App : Application
         // der seinen Ordner selbst anlegt) — sonst existiert das Ziel bereits und die Uebernahme
         // der alten Daten wuerde stillschweigend ausbleiben.
         MigrateLegacyAppData();
+        MigrateLegacyRepoProfiles();
 
         // Aktivierungs-Event VOR dem Single-Instance-Mutex anlegen: sonst existiert ein kurzes
         // Startfenster, in dem eine zweite Instanz den Mutex bereits sieht, das Event aber noch nicht
@@ -96,6 +97,48 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Uebernimmt die Profilordner aus dem Repo-Ordner des frueheren Namens
+    /// (~/proggs/OpenCodeLauncher/Profiles) in den heutigen (~/proggs/OpenLauncher/Profiles).
+    ///
+    /// Diese Ordner sind die CLAUDE_CONFIG_DIRs der Profile und enthalten neben der versionierten
+    /// Konfiguration die Laufzeitdaten der CLIs — darunter den Login-Token (.credentials.json), der
+    /// bewusst nie im Repo liegt. Beim Umbenennen zeigten die Pfade im Code deshalb auf einen
+    /// Ordner, den es noch nicht gab: Claude Code startete mit leerem Config-Ordner und verlangte
+    /// einen neuen Login. Der Zielordner existiert nach einem Repo-Update bereits (versionierte
+    /// Dateien), daher wird nur Fehlendes ergaenzt statt nur bei fehlendem Ziel zu kopieren.
+    ///
+    /// Kopiert statt verschoben, damit der alte Ordner als Sicherheitsnetz bestehen bleibt. Der
+    /// Marker liegt im Anwendungsdatenordner, nicht im Repo, damit er dort keine fremde Datei
+    /// hinterlaesst; er sorgt dafuer, dass genau einmal uebernommen wird — sonst kaemen spaeter
+    /// bewusst geloeschte Profildateien beim naechsten Start wieder zurueck.
+    /// </summary>
+    private static void MigrateLegacyRepoProfiles()
+    {
+        var legacy = InstructionProfileService.LegacyProfilesRoot;
+        var current = InstructionProfileService.ProfilesRoot;
+        var marker = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OpenLauncher", ".profile-uebernahme-abgeschlossen");
+        if (!Directory.Exists(legacy) || File.Exists(marker)) return;
+
+        try
+        {
+            CopyDirectory(legacy, current);
+            Directory.CreateDirectory(Path.GetDirectoryName(marker)!);
+            File.WriteAllText(marker, $"Profile uebernommen aus {legacy} am {DateTime.Now:dd.MM.yyyy HH:mm}.");
+        }
+        catch (Exception ex)
+        {
+            // Ohne Marker wird beim naechsten Start erneut versucht; bereits kopierte Dateien
+            // bleiben dabei unberuehrt.
+            MessageBox.Show(
+                $"Die Profile aus dem frueheren Ordner konnten nicht uebernommen werden:\n{legacy}\n\n" +
+                $"{ex.Message}\n\nDie CLIs verlangen dadurch moeglicherweise einen neuen Login.",
+                "OpenLauncher", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private static void CopyDirectory(string source, string target)
     {
         Directory.CreateDirectory(target);
@@ -108,7 +151,14 @@ public partial class App : Application
                 File.Copy(file, destination);
         }
         foreach (var dir in Directory.GetDirectories(source))
+        {
+            // Junctions NICHT verfolgen: Das Minimal-Profil blendet ~/.claude/skills als
+            // Verzeichnis-Junction ein (EnsureSkillsJunction). Ein Durchlaufen wuerde den echten
+            // Skills-Bestand als Dateikopie im Zielordner materialisieren — der Launcher legt die
+            // Junction beim naechsten Start ohnehin selbst wieder an.
+            if (File.GetAttributes(dir).HasFlag(FileAttributes.ReparsePoint)) continue;
             CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -128,6 +128,10 @@ Weitere Details:
    Updates später: `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` (schließt laufenden
    Launcher, baut Release, startet neu).
 
+   > **Schritt 5 + 6 in einem Aufruf:** `pwsh ~/proggs/OpenLauncher/release-und-verknuepfung.ps1`
+   > baut die Release-Version und legt anschließend die Desktop-Verknüpfung an (alternativ
+   > Rechtsklick auf die Datei → „Mit PowerShell ausführen“).
+
 7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modus + Modell wählen → starten.
    Beim ersten Minimal-Start entsteht die Skills-Junction automatisch; der Login-Token wird bei
    Bedarf lokal in den Profil-Ordner kopiert.
