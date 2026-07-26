@@ -1,4 +1,4 @@
-namespace OpenCodeLauncher.Models;
+namespace OpenLauncher.Models;
 
 public sealed class InstructionProfileEntry
 {

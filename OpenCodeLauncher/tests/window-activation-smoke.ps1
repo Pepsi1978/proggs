@@ -7,16 +7,16 @@ param(
 $ErrorActionPreference = 'Stop'
 $ExecutablePath = (Resolve-Path -LiteralPath $ExecutablePath).Path
 
-$existing = @(Get-Process -Name 'OpenCodeLauncher' -ErrorAction SilentlyContinue)
+$existing = @(Get-Process -Name 'OpenLauncher' -ErrorAction SilentlyContinue)
 if ($existing.Count -gt 0) {
-    throw "Close existing OpenCodeLauncher processes before running this test: $($existing.Id -join ', ')"
+    throw "Close existing OpenLauncher processes before running this test: $($existing.Id -join ', ')"
 }
 
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class OpenCodeLauncherWindowTestNative
+public static class OpenLauncherWindowTestNative
 {
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hwnd, int command);
@@ -57,21 +57,21 @@ function Get-LiveHandle([int]$ProcessId) {
 }
 
 function Assert-Restored([int]$ProcessId, [bool]$ExpectedMaximized, [string]$Scenario) {
-    Wait-Until { -not [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $ProcessId)) } `
+    Wait-Until { -not [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $ProcessId)) } `
         "$Scenario did not restore the minimized window."
     Wait-Until {
         $handle = Get-LiveHandle $ProcessId
-        [OpenCodeLauncherWindowTestNative]::GetForegroundWindow() -eq $handle
+        [OpenLauncherWindowTestNative]::GetForegroundWindow() -eq $handle
     } "$Scenario did not activate the launcher HWND."
 
     $handle = Get-LiveHandle $ProcessId
-    if ([OpenCodeLauncherWindowTestNative]::IsZoomed($handle) -ne $ExpectedMaximized) {
+    if ([OpenLauncherWindowTestNative]::IsZoomed($handle) -ne $ExpectedMaximized) {
         throw "$Scenario changed the pre-minimize maximized state."
     }
 }
 
 function Get-LauncherLogPath {
-    Join-Path $env:APPDATA ("OpenCodeLauncher\logs\launcher_{0:yyyyMMdd}.jsonl" -f (Get-Date))
+    Join-Path $env:APPDATA ("OpenLauncher\logs\launcher_{0:yyyyMMdd}.jsonl" -f (Get-Date))
 }
 
 function Get-LauncherLogLineCount {
@@ -89,8 +89,8 @@ function Get-LauncherLogSince([int]$SkipLines) {
 function Invoke-ShellStyleActivation([int]$ProcessId) {
     # Exakter Nachbau des Taskleisten-Klicks auf ein minimiertes Fenster.
     $handle = Get-LiveHandle $ProcessId
-    [void][OpenCodeLauncherWindowTestNative]::ShowWindow($handle, $SW_RESTORE)
-    [OpenCodeLauncherWindowTestNative]::SwitchToThisWindow($handle, $true)
+    [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_RESTORE)
+    [OpenLauncherWindowTestNative]::SwitchToThisWindow($handle, $true)
 }
 
 function Assert-StaysMinimized([int]$ProcessId, [string]$Scenario, [int]$HoldMs = 2000) {
@@ -98,7 +98,7 @@ function Assert-StaysMinimized([int]$ProcessId, [string]$Scenario, [int]$HoldMs 
     # bewusst minimiertes Fenster nicht zurueckreissen. Die Haltezeit liegt ueber allen App-Guards.
     $watch = [Diagnostics.Stopwatch]::StartNew()
     while ($watch.ElapsedMilliseconds -lt $HoldMs) {
-        if (-not [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $ProcessId))) {
+        if (-not [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $ProcessId))) {
             throw "$Scenario restored the window although it was minimized on purpose."
         }
         Start-Sleep -Milliseconds 100
@@ -119,11 +119,11 @@ try {
     Wait-Until { (Get-LiveHandle $primary.Id) -ne [IntPtr]::Zero } 'Launcher did not create a main window.' 10000
 
     $handle = Get-LiveHandle $primary.Id
-    $wasMaximized = [OpenCodeLauncherWindowTestNative]::IsZoomed($handle)
+    $wasMaximized = [OpenLauncherWindowTestNative]::IsZoomed($handle)
 
-    [void][OpenCodeLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
-    Wait-Until { [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } 'Launcher did not minimize.'
-    if (-not [OpenCodeLauncherWindowTestNative]::PostMessage($handle, $WM_SYSCOMMAND, [IntPtr]$SC_RESTORE, [IntPtr]::Zero)) {
+    [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
+    Wait-Until { [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } 'Launcher did not minimize.'
+    if (-not [OpenLauncherWindowTestNative]::PostMessage($handle, $WM_SYSCOMMAND, [IntPtr]$SC_RESTORE, [IntPtr]::Zero)) {
         throw 'SC_RESTORE could not be posted.'
     }
     Assert-Restored $primary.Id $wasMaximized 'SC_RESTORE'
@@ -134,8 +134,8 @@ try {
     $logBefore = Get-LauncherLogLineCount
     for ($cycle = 1; $cycle -le $ActivationCycles; $cycle++) {
         $handle = Get-LiveHandle $primary.Id
-        [void][OpenCodeLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
-        Wait-Until { [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
+        [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
+        Wait-Until { [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
             "Launcher did not minimize before shell-style activation cycle $cycle."
         Invoke-ShellStyleActivation $primary.Id
         Assert-Restored $primary.Id $wasMaximized "Shell-style taskbar activation (cycle $cycle)"
@@ -156,14 +156,14 @@ try {
     # Gegenprobe: der Taskleisten-Button ist ein Schalter. Minimiert die Shell das aktive Fenster,
     # darf die App es nicht selbsttaetig wieder nach vorn holen.
     $handle = Get-LiveHandle $primary.Id
-    [void][OpenCodeLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
-    Wait-Until { [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
+    [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
+    Wait-Until { [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
         'Launcher did not minimize for the toggle check.'
     Assert-StaysMinimized $primary.Id 'Taskbar toggle minimize'
 
     $handle = Get-LiveHandle $primary.Id
-    [void][OpenCodeLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
-    Wait-Until { [OpenCodeLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } 'Launcher did not minimize before second-instance activation.'
+    [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
+    Wait-Until { [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } 'Launcher did not minimize before second-instance activation.'
     $secondary = Start-Process -FilePath $ExecutablePath -PassThru
     if (-not $secondary.WaitForExit(10000)) {
         $secondary.Kill($true)
@@ -189,13 +189,13 @@ try {
         ShellActivationScenario = "passed ($ActivationCycles cycles)"
         ToggleMinimizeScenario = 'passed'
         SecondInstanceScenario = 'passed'
-        ForegroundHandle = ('0x{0:X}' -f [OpenCodeLauncherWindowTestNative]::GetForegroundWindow().ToInt64())
+        ForegroundHandle = ('0x{0:X}' -f [OpenLauncherWindowTestNative]::GetForegroundWindow().ToInt64())
     } | Format-List
 }
 finally {
     if ($primary -and -not $primary.HasExited -and -not $KeepRunning) {
         $handle = Get-LiveHandle $primary.Id
-        [void][OpenCodeLauncherWindowTestNative]::PostMessage($handle, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)
+        [void][OpenLauncherWindowTestNative]::PostMessage($handle, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)
         if (-not $primary.WaitForExit(5000)) {
             $primary.Kill($true)
         }

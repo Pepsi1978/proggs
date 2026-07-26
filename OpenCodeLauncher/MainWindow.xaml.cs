@@ -4,10 +4,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
-using OpenCodeLauncher.Services;
-using OpenCodeLauncher.ViewModels;
+using OpenLauncher.Services;
+using OpenLauncher.ViewModels;
 
-namespace OpenCodeLauncher;
+namespace OpenLauncher;
 
 public partial class MainWindow : Window
 {
@@ -176,7 +176,7 @@ public partial class MainWindow : Window
         // Prozess bis zum Neustart nicht mehr in den Vordergrund holen. Die Vordergrund-Sequenz
         // laeuft daher ausschliesslich noch bei echten externen Anforderungen (zweite Instanz,
         // SC_RESTORE aus Systemmenue/Titelleiste), nicht bei jedem gewoehnlichen Fensterwechsel.
-        ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
+        ContentRendered += (_, _) => Title = $"OpenLauncher — {ViewModel.Version}";
     }
 
     private void QueueBringToTaskbarForeground(string reason)
@@ -585,14 +585,14 @@ public partial class MainWindow : Window
     // ---- Drag & Drop für Modellgruppen und Modelle ----
     private Point _dragStartPoint;
     private int _dragSourceGroupIndex = -1;
-    private OpenCodeLauncher.Models.ModelGroupEntry? _dragSourceGroup;
+    private OpenLauncher.Models.ModelGroupEntry? _dragSourceGroup;
     private bool _groupDragStarted;
     private int _dragSourceIndex = -1;
 
     private void ModelGroupHeader_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(this);
-        _dragSourceGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        _dragSourceGroup = (sender as FrameworkElement)?.DataContext as OpenLauncher.Models.ModelGroupEntry;
         _dragSourceGroupIndex = _dragSourceGroup == null ? -1 : ViewModel.ModelGroups.IndexOf(_dragSourceGroup);
         _groupDragStarted = false;
         e.Handled = true;
@@ -616,7 +616,7 @@ public partial class MainWindow : Window
 
     private void ModelGroupHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (!_groupDragStarted && (sender as FrameworkElement)?.DataContext is OpenCodeLauncher.Models.ModelGroupEntry group)
+        if (!_groupDragStarted && (sender as FrameworkElement)?.DataContext is OpenLauncher.Models.ModelGroupEntry group)
             ViewModel.ToggleGroupCommand.Execute(group);
         _dragSourceGroup = null;
         _dragSourceGroupIndex = -1;
@@ -629,10 +629,10 @@ public partial class MainWindow : Window
 
     private void ModelGroup_Drop(object sender, DragEventArgs e)
     {
-        var targetGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        var targetGroup = (sender as FrameworkElement)?.DataContext as OpenLauncher.Models.ModelGroupEntry;
         if (targetGroup == null) return;
 
-        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelGroupEntry)) && _dragSourceGroupIndex >= 0)
+        if (e.Data.GetDataPresent(typeof(OpenLauncher.Models.ModelGroupEntry)) && _dragSourceGroupIndex >= 0)
         {
             var targetIndex = ViewModel.ModelGroups.IndexOf(targetGroup);
             ViewModel.MoveGroup(_dragSourceGroupIndex, targetIndex);
@@ -642,7 +642,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) && _dragSourceGroup != null && _dragSourceIndex >= 0)
+        if (e.Data.GetDataPresent(typeof(OpenLauncher.Models.ModelEntry)) && _dragSourceGroup != null && _dragSourceIndex >= 0)
         {
             ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetGroup.Models.Count);
             _dragSourceGroup = null;
@@ -665,7 +665,7 @@ public partial class MainWindow : Window
             return;
         }
         _dragStartPoint = e.GetPosition(lb);
-        _dragSourceGroup = lb.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        _dragSourceGroup = lb.DataContext as OpenLauncher.Models.ModelGroupEntry;
         _dragSourceIndex = IndexFromOriginalSource(lb, e.OriginalSource);
         if (_dragSourceGroup != null && _dragSourceIndex >= 0 && _dragSourceIndex < _dragSourceGroup.Models.Count)
             ViewModel.SelectedModel = _dragSourceGroup.Models[_dragSourceIndex];
@@ -704,10 +704,10 @@ public partial class MainWindow : Window
         // Nur echte Modell-Drags verarbeiten. Ohne diese Typprüfung würde ein Gruppen-Drag, das über
         // einer Modell-Liste losgelassen wird, den noch vom letzten Modell-Klick stammenden
         // _dragSourceIndex verwenden und fälschlich ein Modell der falschen Gruppe verschieben.
-        if (!e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry))) return;
+        if (!e.Data.GetDataPresent(typeof(OpenLauncher.Models.ModelEntry))) return;
         if (_dragSourceGroup == null || _dragSourceIndex < 0) return;
         var lb = sender as System.Windows.Controls.ListBox;
-        var targetGroup = lb?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        var targetGroup = lb?.DataContext as OpenLauncher.Models.ModelGroupEntry;
         if (lb == null || targetGroup == null) return;
         var pos = e.GetPosition(lb);
         var targetIdx = IndexFromPoint(lb, pos);
@@ -720,8 +720,8 @@ public partial class MainWindow : Window
 
     private static void SetDragEffects(DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) ||
-                    e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelGroupEntry))
+        e.Effects = e.Data.GetDataPresent(typeof(OpenLauncher.Models.ModelEntry)) ||
+                    e.Data.GetDataPresent(typeof(OpenLauncher.Models.ModelGroupEntry))
             ? DragDropEffects.Move
             : DragDropEffects.None;
         e.Handled = true;

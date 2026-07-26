@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace OpenCodeLauncher.Models;
+namespace OpenLauncher.Models;
 
 /// <summary>
 /// Ein Provider-Angebot für ein Modell (ein Eintrag aus

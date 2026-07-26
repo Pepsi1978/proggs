@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization.Metadata;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
 /// Strukturiertes JSON-Lines-Logging (Observability-Standard).
@@ -27,7 +27,7 @@ public sealed class Logger
 
     private Logger()
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OpenCodeLauncher", "logs");
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OpenLauncher", "logs");
         Directory.CreateDirectory(dir);
         LogPath = Path.Combine(dir, $"launcher_{DateTime.Now:yyyyMMdd}.jsonl");
         // einmalige Bekanntgabe des Log-Pfads

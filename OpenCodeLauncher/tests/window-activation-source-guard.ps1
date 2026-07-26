@@ -1,4 +1,4 @@
-# Quellcode-Guard fuer die Fenster-Aktivierung des OpenCode Launchers.
+# Quellcode-Guard fuer die Fenster-Aktivierung des OpenLaunchers.
 #
 # Hintergrund: Der Defekt "Klick auf den Taskleisten-Button holt das Fenster nicht nach vorn, nur
 # ein Neustart hilft" entsteht dadurch, dass die App bei JEDEM Fensterwechsel eine verzoegerte

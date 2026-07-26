@@ -204,31 +204,31 @@ if (-not $SkipWindowsFix) {
 }
 
 if (-not $SkipLauncherBuild) {
-  $launcherDir = Join-Path (Split-Path $Src -Parent) 'OpenCodeLauncher'
+  $launcherDir = Join-Path (Split-Path $Src -Parent) 'OpenLauncher'
   $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
   if ($dotnet -and (Test-Path -LiteralPath $launcherDir)) {
-    $runningLaunchers = @(Get-Process -Name 'OpenCodeLauncher' -ErrorAction SilentlyContinue)
+    $runningLaunchers = @(Get-Process -Name 'OpenLauncher' -ErrorAction SilentlyContinue)
     foreach ($launcher in $runningLaunchers) {
       if (-not $launcher.HasExited -and -not $launcher.CloseMainWindow()) {
-        throw 'Der laufende OpenCode Launcher konnte nicht kontrolliert geschlossen werden.'
+        throw 'Der laufende OpenLauncher konnte nicht kontrolliert geschlossen werden.'
       }
       if (-not $launcher.HasExited -and -not $launcher.WaitForExit(10000)) {
-        throw 'Der OpenCode Launcher wurde nicht innerhalb von 10 Sekunden geschlossen.'
+        throw 'Der OpenLauncher wurde nicht innerhalb von 10 Sekunden geschlossen.'
       }
     }
-    & dotnet build (Join-Path $launcherDir 'OpenCodeLauncher.csproj') -c Release
-    if ($LASTEXITCODE -ne 0) { throw 'OpenCode Launcher konnte nicht gebaut werden.' }
+    & dotnet build (Join-Path $launcherDir 'OpenLauncher.csproj') -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'OpenLauncher konnte nicht gebaut werden.' }
     & (Join-Path $launcherDir 'create_shortcut.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Launcher-Verknüpfung konnte nicht erstellt werden.' }
     if ($runningLaunchers.Count -gt 0) {
-      $launcherExe = Join-Path $launcherDir 'bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenCodeLauncher.exe'
+      $launcherExe = Join-Path $launcherDir 'bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe'
       $restartedLauncher = Start-Process -FilePath $launcherExe -PassThru
       Start-Sleep -Seconds 1
-      if ($restartedLauncher.HasExited) { throw 'Der aktualisierte OpenCode Launcher wurde sofort wieder beendet.' }
+      if ($restartedLauncher.HasExited) { throw 'Der aktualisierte OpenLauncher wurde sofort wieder beendet.' }
     }
-    Ok 'OpenCode Launcher + Desktop-Verknüpfung'
+    Ok 'OpenLauncher + Desktop-Verknüpfung'
   } else {
-    Warn 'dotnet 8 oder OpenCodeLauncher fehlt -> Launcher nicht gebaut'
+    Warn 'dotnet 8 oder OpenLauncher fehlt -> Launcher nicht gebaut'
   }
 }
 

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 public sealed record OpenCodeUpdateResult(string Status, string Message, int ExitCode);
 

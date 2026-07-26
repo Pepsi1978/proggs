@@ -13,7 +13,7 @@
 # Hinweis: CLAUDE.md ist bewusst NICHT eingeschlossen -- sie ist die aktive Laufzeitdatei,
 # die der Launcher pro Start aus Profiles/ClaudeCode/sources/<id>.md befuellt. Diese
 # skills/rules/agents/commands koennen frei bearbeitet werden -> die Aenderungen wirken
-# ueber den OpenCode Launcher direkt im Strikt-Profil.
+# ueber den OpenLauncher direkt im Strikt-Profil.
 !.gitignore
 !README.md
 !settings.json

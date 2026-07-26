@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace OpenCodeLauncher.Models;
+namespace OpenLauncher.Models;
 
 public sealed partial class ModelGroupEntry : ObservableObject
 {

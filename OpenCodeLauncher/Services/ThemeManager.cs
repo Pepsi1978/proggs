@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
 /// Wechselt das Farb-ResourceDictionary (Themes/DarkTheme.xaml bzw. LightTheme.xaml)

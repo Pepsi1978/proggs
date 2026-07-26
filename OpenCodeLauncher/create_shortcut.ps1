@@ -1,11 +1,11 @@
-# Erstellt die Desktop-Verknuepfung fuer OpenCodeLauncher mit dem eingebetteten Icon.
+# Erstellt die Desktop-Verknuepfung fuer OpenLauncher mit dem eingebetteten Icon.
 # Die .exe enthaelt das Icon bereits (ApplicationIcon im csproj), darum reicht es,
 # die Verknuepfung direkt auf die exe zeigen zu lassen (IconLocation = exe).
 
-$launcherDir = Join-Path $HOME "proggs\OpenCodeLauncher"
-$exe = Join-Path $launcherDir "bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenCodeLauncher.exe"
+$launcherDir = Join-Path $HOME "proggs\OpenLauncher"
+$exe = Join-Path $launcherDir "bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe"
 $desktopDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop)
-$lnkPath = Join-Path $desktopDir "OpenCode Launcher.lnk"
+$lnkPath = Join-Path $desktopDir "OpenLauncher.lnk"
 
 if (-not (Test-Path $exe)) {
     Write-Error "EXE nicht gefunden: $exe"
@@ -17,7 +17,7 @@ $lnk = $shell.CreateShortcut($lnkPath)
 $lnk.TargetPath = $exe
 $lnk.WorkingDirectory = $launcherDir
 $lnk.IconLocation = "$exe,0"
-$lnk.Description = "OpenCode Launcher — Modell + Provider fuer OpenCode auswaehlen und starten"
+$lnk.Description = "OpenLauncher — Modell + Provider fuer OpenCode auswaehlen und starten"
 $lnk.WindowStyle = 1
 $lnk.Save()
 

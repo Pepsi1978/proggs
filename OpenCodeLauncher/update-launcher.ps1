@@ -4,21 +4,21 @@ param()
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = $PSScriptRoot
-$projectFile = Join-Path $projectRoot 'OpenCodeLauncher.csproj'
+$projectFile = Join-Path $projectRoot 'OpenLauncher.csproj'
 $releaseDirectory = Join-Path $projectRoot 'bin\Release\net8.0-windows10.0.19041.0\win-x64'
-$launcherExe = Join-Path $releaseDirectory 'OpenCodeLauncher.exe'
+$launcherExe = Join-Path $releaseDirectory 'OpenLauncher.exe'
 
 if (-not (Test-Path -LiteralPath $projectFile)) {
     throw "Projektdatei nicht gefunden: $projectFile"
 }
 
-$runningLaunchers = @(Get-Process -Name 'OpenCodeLauncher' -ErrorAction SilentlyContinue)
+$runningLaunchers = @(Get-Process -Name 'OpenLauncher' -ErrorAction SilentlyContinue)
 
 if ($runningLaunchers.Count -gt 0) {
     Add-Type -AssemblyName PresentationFramework
     $answer = [System.Windows.MessageBox]::Show(
-        "Der OpenCode Launcher läuft noch. Für das Update wird er geschlossen und danach automatisch mit der neuen Version gestartet.`n`nNicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?",
-        'OpenCode Launcher aktualisieren',
+        "Der OpenLauncher läuft noch. Für das Update wird er geschlossen und danach automatisch mit der neuen Version gestartet.`n`nNicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?",
+        'OpenLauncher aktualisieren',
         [System.Windows.MessageBoxButton]::YesNo,
         [System.Windows.MessageBoxImage]::Warning
     )

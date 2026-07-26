@@ -1,4 +1,4 @@
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 public sealed record OpenCodeModelMetadata(string OpenRouterSlug, int ContextLength);
 

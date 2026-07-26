@@ -2,9 +2,9 @@ using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using OpenCodeLauncher.Models;
+using OpenLauncher.Models;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
 /// Ruft die Provider-Liste für ein OpenRouter-Modell ab.
@@ -25,7 +25,7 @@ public sealed class OpenRouterService
         DefaultRequestHeaders =
         {
             { "HTTP-Referer", "https://github.com/Pepsi1978/proggs" },
-            { "X-Title", "OpenCode Launcher" }
+            { "X-Title", "OpenLauncher" }
         }
     };
 
@@ -39,7 +39,7 @@ public sealed class OpenRouterService
     private static readonly object ThroughputCacheLock = new();
     private static readonly string ThroughputCachePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenCodeLauncher",
+        "OpenLauncher",
         "provider-throughput.json");
     private static Dictionary<string, double>? _throughputCache;
 

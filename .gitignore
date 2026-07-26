@@ -49,12 +49,12 @@ BestJournalFrank/Screenshots/
 # Cowork-Robustheits-Testdatei (nur temporaer, nie tracken)
 cowork-robustness-test.txt
 
-# Alter Claude-Minimal-Profil-Ordner (umgezogen nach OpenCodeLauncher/Profiles/ClaudeCode/minimal).
+# Alter Claude-Minimal-Profil-Ordner (umgezogen nach OpenLauncher/Profiles/ClaudeCode/minimal).
 # Nur noch lokaler Laufzeit-Rest einer evtl. laufenden Session; nie tracken. Kann geloescht
 # werden, sobald keine alte Minimal-Session mehr laeuft.
 /claude-profiles/
 
-# proggs/AGENTS.md wird vom OpenCode Launcher pro Profil erzeugt (Quelle: Profiles/OpenCode/standard/agents-base.md + minimal.md)
+# proggs/AGENTS.md wird vom OpenLauncher pro Profil erzeugt (Quelle: Profiles/OpenCode/standard/agents-base.md + minimal.md)
 /AGENTS.md
 
 # Lokales, fortlaufendes OpenCode-Token-Audit; kann Prompt-Kurztexte enthalten.

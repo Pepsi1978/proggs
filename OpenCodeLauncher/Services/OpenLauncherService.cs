@@ -5,9 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
-using OpenCodeLauncher.Models;
+using OpenLauncher.Models;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
 /// Startet OpenCode mit einem gewählten Modell über einen gewählten Provider.
@@ -20,7 +20,7 @@ namespace OpenCodeLauncher.Services;
 ///   4. opencode -m openrouter/<slug> "<workdir>" in neuem Windows-Terminal starten.
 /// OpenCode zeigt im Banner das Modell (openrouter/<slug>) und verbindet sich dann.
 /// </summary>
-public sealed class OpenCodeLauncherService
+public sealed class OpenLauncherService
 {
     private const string Gpt55Slug = "gpt-5.5";
     private const string Gpt55FastSlug = "gpt-5.5-fast";
@@ -145,7 +145,7 @@ $env:Path = $pathEntries -join ';'
                 var root = ReadConfig();
                 if (RemoveLegacyGpt56Overrides(root)) WriteConfig(root);
                 if (!string.IsNullOrWhiteSpace(thinkingLevel)) PatchModelVariantState(modelString, thinkingLevel);
-                log.Info("OpenCodeLauncherService", "ConfigureProvider", "Natives OpenCode-GPT-5.6-Modell gesetzt", new
+                log.Info("OpenLauncherService", "ConfigureProvider", "Natives OpenCode-GPT-5.6-Modell gesetzt", new
                 {
                     model = modelString,
                     thinkingLevel,
@@ -160,14 +160,14 @@ $env:Path = $pathEntries -join ';'
                 root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
                 if (!string.IsNullOrWhiteSpace(thinkingLevel)) PatchModelVariantState(modelString, thinkingLevel);
-                log.Info("OpenCodeLauncherService", "ConfigureProvider", "Direktmodell-Variante gesetzt", new
+                log.Info("OpenLauncherService", "ConfigureProvider", "Direktmodell-Variante gesetzt", new
                 {
                     model = modelString,
                     thinkingLevel,
                     serviceTier = usesPriorityServiceTier ? "priority" : null
                 });
             }
-            log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
+            log.Info("OpenLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
             return modelString;
         }
 
@@ -177,13 +177,13 @@ $env:Path = $pathEntries -join ';'
             root = PatchProvider(root, model.Slug, model.DisplayName, chosen, allProviders, thinkingLevel);
             WriteConfig(root);
             PatchModelVariantState(modelString, thinkingLevel);
-            log.Info("OpenCodeLauncherService", "ConfigureProvider",
+            log.Info("OpenLauncherService", "ConfigureProvider",
                 $"opencode-Konfig gepatched: {model.Slug} via {chosen.ProviderName}",
                 new { order = new[] { chosen.ProviderSlug }, thinkingLevel });
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "ConfigureProvider", ex, new { model.Slug, model.ProviderId, chosen.ProviderName });
+            log.Error("OpenLauncherService", "ConfigureProvider", ex, new { model.Slug, model.ProviderId, chosen.ProviderName });
             throw;
         }
 
@@ -218,7 +218,7 @@ $env:Path = $pathEntries -join ';'
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
             {
                 var robustProcess = LaunchOpenCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelString, thinkingLevel, tabColor, log);
-                log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
+                log.Info("OpenLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
                 return;
             }
 
@@ -231,7 +231,7 @@ $env:Path = $pathEntries -join ';'
 
             if (!string.IsNullOrEmpty(wt))
             {
-                log.Warn("OpenCodeLauncherService", "Launch", shell.IsPwsh
+                log.Warn("OpenLauncherService", "Launch", shell.IsPwsh
                     ? "start-wt-common.ps1 nicht gefunden; nutze direkten Windows-Terminal-Start ohne Retry-Wrapper"
                     : "pwsh.exe nicht gefunden; nutze Windows PowerShell ohne Retry-Wrapper");
                 psi.FileName = wt;
@@ -248,7 +248,7 @@ $env:Path = $pathEntries -join ';'
                 psi.ArgumentList.Add("Bypass");
                 psi.ArgumentList.Add("-File");
                 psi.ArgumentList.Add(innerScript);
-                log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
+                log.Info("OpenLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
             {
@@ -261,11 +261,11 @@ $env:Path = $pathEntries -join ';'
             }
 
             var p = Process.Start(psi);
-            log.Info("OpenCodeLauncherService", "Launch", $"opencode gestartet (PID {p?.Id})", new { modelString, workDir, thinkingLevel, wtUsed = wt != null });
+            log.Info("OpenLauncherService", "Launch", $"opencode gestartet (PID {p?.Id})", new { modelString, workDir, thinkingLevel, wtUsed = wt != null });
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "Launch", ex, new { modelString, workDir, thinkingLevel });
+            log.Error("OpenLauncherService", "Launch", ex, new { modelString, workDir, thinkingLevel });
             throw;
         }
     }
@@ -293,7 +293,7 @@ $env:Path = $pathEntries -join ';'
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
             {
                 var process = LaunchClaudeCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelId, effortLevel, tabColor, log);
-                log.Info("OpenCodeLauncherService", "LaunchClaudeCode", $"robuster Claude-Code-Launcher gestartet (PID {process?.Id})", new { modelId, workDir, effortLevel, tabColor = tabColor.Name });
+                log.Info("OpenLauncherService", "LaunchClaudeCode", $"robuster Claude-Code-Launcher gestartet (PID {process?.Id})", new { modelId, workDir, effortLevel, tabColor = tabColor.Name });
                 return;
             }
 
@@ -331,11 +331,11 @@ $env:Path = $pathEntries -join ';'
             }
 
             var p = Process.Start(psi);
-            log.Info("OpenCodeLauncherService", "LaunchClaudeCode", $"Claude Code gestartet (PID {p?.Id})", new { modelId, workDir, effortLevel, wtUsed = wt != null });
+            log.Info("OpenLauncherService", "LaunchClaudeCode", $"Claude Code gestartet (PID {p?.Id})", new { modelId, workDir, effortLevel, wtUsed = wt != null });
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "LaunchClaudeCode", ex, new { modelId, workDir, effortLevel });
+            log.Error("OpenLauncherService", "LaunchClaudeCode", ex, new { modelId, workDir, effortLevel });
             throw;
         }
     }
@@ -447,12 +447,12 @@ $env:Path = $pathEntries -join ';'
 
     private static string ResolveTabColorStatePath() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenCodeLauncher",
+        "OpenLauncher",
         "tab-color-state.json");
 
     private static string ResolveClaudeTabColorStatePath() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenCodeLauncher",
+        "OpenLauncher",
         "claude-tab-color-state.json");
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
@@ -497,14 +497,14 @@ $env:Path = $pathEntries -join ';'
             "-File", innerScript
         };
 
-        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-wt-{Guid.NewGuid():N}.ps1");
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-wt-{Guid.NewGuid():N}.ps1");
         var script = $$"""
 $ErrorActionPreference = 'Continue'
 . {{PowerShellLiteral(robustLauncherScript)}}
 $tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
 $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
-    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode-launcher-opencode-run-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-opencode-run-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
@@ -524,7 +524,7 @@ try {
         psi.ArgumentList.Add("Bypass");
         psi.ArgumentList.Add("-File");
         psi.ArgumentList.Add(tempScript);
-        log.Info("OpenCodeLauncherService", "LaunchOpenCodeViaRobustPowerShell", "OpenCode-Start vorbereitet", new { modelString, thinkingLevel, tabColor = tabColor.Name });
+        log.Info("OpenLauncherService", "LaunchOpenCodeViaRobustPowerShell", "OpenCode-Start vorbereitet", new { modelString, thinkingLevel, tabColor = tabColor.Name });
         return Process.Start(psi);
     }
 
@@ -558,14 +558,14 @@ try {
             "-File", innerScript
         };
 
-        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-wt-{Guid.NewGuid():N}.ps1");
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-wt-{Guid.NewGuid():N}.ps1");
         var script = $$"""
 $ErrorActionPreference = 'Continue'
 . {{PowerShellLiteral(robustLauncherScript)}}
 $tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
 $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
-    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode-launcher-claude-code-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-claude-code-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
@@ -585,14 +585,14 @@ try {
         psi.ArgumentList.Add("Bypass");
         psi.ArgumentList.Add("-File");
         psi.ArgumentList.Add(tempScript);
-        log.Info("OpenCodeLauncherService", "LaunchClaudeCodeViaRobustPowerShell", "Claude-Code-Start vorbereitet", new { modelId, effortLevel, tabColor = tabColor.Name });
+        log.Info("OpenLauncherService", "LaunchClaudeCodeViaRobustPowerShell", "Claude-Code-Start vorbereitet", new { modelId, effortLevel, tabColor = tabColor.Name });
         return Process.Start(psi);
     }
 
     private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir)
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
-        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-code-{Guid.NewGuid():N}.ps1");
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-code-{Guid.NewGuid():N}.ps1");
         var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel);
         var script = $$"""
 $ErrorActionPreference = 'Continue'
@@ -662,7 +662,7 @@ try {
 
     private static string BuildClaudeCodeSessionSettings(string modelId, string? effortLevel)
     {
-        var tempSettings = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-settings-{Guid.NewGuid():N}.json");
+        var tempSettings = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-settings-{Guid.NewGuid():N}.json");
         var root = new JsonObject
         {
             ["model"] = modelId
@@ -714,7 +714,7 @@ try {
         var launcherSlug = separator > 0 ? modelString[(separator + 1)..] : modelString;
         var launcherServiceTier = UsesPriorityServiceTier(launcherProvider, launcherSlug) ? "priority" : "standard";
 
-        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the
         // OpenCode TUI main thread print raw stack traces to stderr, which is the same TTY the
         // TUI renders on — foreign bytes corrupt the diff-rendered screen until a full repaint
@@ -730,10 +730,10 @@ Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
 {{InheritedAgentEnvScrubScript}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
-$env:OPENCODE_LAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
-$env:OPENCODE_LAUNCHER_SOURCE = 'OpenCodeLauncher'
-$env:OPENCODE_LAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
-$env:OPENCODE_LAUNCHER_WORK_MODE = {{PowerShellLiteral(workMode)}}
+$env:OPENLAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
+$env:OPENLAUNCHER_SOURCE = 'OpenLauncher'
+$env:OPENLAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
+$env:OPENLAUNCHER_WORK_MODE = {{PowerShellLiteral(workMode)}}
 {{minimalEnv}}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {
@@ -802,7 +802,7 @@ try {
             }
             catch (Exception ex)
             {
-                Logger.Instance.Warn("OpenCodeLauncherService", "ResolveOpenCodeExecutable", $"{pointerName} ist ungültig: {ex.Message}");
+                Logger.Instance.Warn("OpenLauncherService", "ResolveOpenCodeExecutable", $"{pointerName} ist ungültig: {ex.Message}");
             }
         }
 
@@ -844,7 +844,7 @@ try {
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("OpenCodeLauncherService", "PatchModelVariantState", $"model.json konnte nicht gelesen werden, State wird neu aufgebaut: {ex.Message}", new { statePath });
+            Logger.Instance.Warn("OpenLauncherService", "PatchModelVariantState", $"model.json konnte nicht gelesen werden, State wird neu aufgebaut: {ex.Message}", new { statePath });
             root = new JsonObject();
         }
 

@@ -1,7 +1,7 @@
 using System.Windows;
-using OpenCodeLauncher.ViewModels;
+using OpenLauncher.ViewModels;
 
-namespace OpenCodeLauncher;
+namespace OpenLauncher;
 
 public partial class HiddenModelsWindow : Window
 {

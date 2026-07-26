@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
 /// Einheitliches Profilmodell: JEDES Profil (Claude wie OpenCode) ist genau EINE bearbeitbare
@@ -40,7 +40,7 @@ public sealed class InstructionProfileService
 
     /// <summary>
     /// Eigener Claude-Config-Ordner (CLAUDE_CONFIG_DIR) je Profil im Repo
-    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/&lt;id&gt;). Jedes Profil traegt seine eigenen,
+    /// (~/proggs/OpenLauncher/Profiles/ClaudeCode/&lt;id&gt;). Jedes Profil traegt seine eigenen,
     /// versionierten Inhalte (settings.json und -- bei Standard/Strikt -- skills/rules/agents/commands),
     /// sodass sie auf jedem Rechner identisch verfuegbar sind und frei bearbeitet werden koennen. Die
     /// .gitignore jedes Ordners haelt Laufzeit/Secrets (Login-Token, sessions/, cache/) vom Repo fern;
@@ -51,7 +51,7 @@ public sealed class InstructionProfileService
     {
         ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", profileId);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", profileId);
     }
 
     /// <summary>Versionierte Profilquelle (Regeltext) je Claude-Profil.</summary>
@@ -59,7 +59,7 @@ public sealed class InstructionProfileService
     {
         ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "sources", profileId + ".md");
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "sources", profileId + ".md");
     }
 
     private static string EnsureClaudeProfileSource(string profileId)
@@ -184,7 +184,7 @@ public sealed class InstructionProfileService
     {
         ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", profileId, "AGENTS.md");
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "OpenCode", profileId, "AGENTS.md");
     }
 
     private static string EnsureOpenCodeProfileSource(string profileId)
@@ -217,7 +217,7 @@ public sealed class InstructionProfileService
 
         var sessionRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OpenCodeLauncher", "sessions", Guid.NewGuid().ToString("N"));
+            "OpenLauncher", "sessions", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(sessionRoot);
         var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
 

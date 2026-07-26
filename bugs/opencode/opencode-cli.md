@@ -194,7 +194,7 @@
 **Versionen:** OpenCode 1.17.18 (windowsfix.6–8), OpenTUI 0.4.3, Windows Terminal, beobachtet 2026-07-10/11. Upstream-Problem (fehlender TUI-Thread-Handler) betrifft auch offizielle Builds.
 
 **FIX (Defense in Depth, funktionserhaltend, alle 3 Ebenen):**
-1. **Launcher (Poka-Yoke Stufe 3, eliminiert die ganze Klasse):** stderr beim OpenCode-Start in eine Log-Datei umleiten (z.B. `2>> ~/.local/share/opencode/log/opencode-stderr.log` im generierten Startskript `BuildOpenCodeStartScript`, OpenCodeLauncher) — Fehler bleiben vollständig lesbar (verlustfrei), erreichen aber nie das TTY.
+1. **Launcher (Poka-Yoke Stufe 3, eliminiert die ganze Klasse):** stderr beim OpenCode-Start in eine Log-Datei umleiten (z.B. `2>> ~/.local/share/opencode/log/opencode-stderr.log` im generierten Startskript `BuildOpenCodeStartScript`, OpenLauncher) — Fehler bleiben vollständig lesbar (verlustfrei), erreichen aber nie das TTY.
 2. **windowsfix.9 (Root-Cause-nah):** im TUI-Entry `unhandledRejection`/`uncaughtException`-Handler installieren, die in die opencode.log schreiben (NICHT stumm schlucken — Observability erhalten), analog zum Server-Worker.
 3. **Trigger abstellen:** existierendes `small_model` explizit in `~/.config/opencode/opencode.jsonc` setzen, damit die automatische (falsche) Kleinmodell-Wahl entfällt; MCP-Timeout-Quellen (second-brain Half-Open-Keep-Alive) separat im Blick behalten.
 

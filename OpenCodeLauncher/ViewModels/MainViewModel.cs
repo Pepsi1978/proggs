@@ -6,16 +6,16 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using OpenCodeLauncher.Models;
-using OpenCodeLauncher.Services;
+using OpenLauncher.Models;
+using OpenLauncher.Services;
 
-namespace OpenCodeLauncher.ViewModels;
+namespace OpenLauncher.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
-    private readonly OpenCodeLauncherService _launcher = new();
+    private readonly OpenLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
     private readonly InstructionProfileService _profiles = new();
     private CancellationTokenSource? _loadCts;
@@ -647,7 +647,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var w = new Window
         {
-            Title = "OpenCode Launcher - Fehlerdetails",
+            Title = "OpenLauncher - Fehlerdetails",
             Width = 980,
             Height = 720,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,

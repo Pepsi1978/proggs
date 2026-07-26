@@ -5,7 +5,7 @@ $model = Get-Content -LiteralPath (Join-Path $root 'Models\ModelEntry.cs') -Raw
 $viewModel = Get-Content -LiteralPath (Join-Path $root 'ViewModels\MainViewModel.cs') -Raw
 $mainXaml = Get-Content -LiteralPath (Join-Path $root 'MainWindow.xaml') -Raw
 $dialogXaml = Get-Content -LiteralPath (Join-Path $root 'HiddenModelsWindow.xaml') -Raw
-$project = [xml](Get-Content -LiteralPath (Join-Path $root 'OpenCodeLauncher.csproj') -Raw)
+$project = [xml](Get-Content -LiteralPath (Join-Path $root 'OpenLauncher.csproj') -Raw)
 [void][xml]$mainXaml
 [void][xml]$dialogXaml
 
@@ -19,7 +19,7 @@ $checks = @(
     @{ Name = 'versteckte Listeneinträge sind eingeklappt'; Pass = $mainXaml -match '(?s)Binding IsHidden.*?Visibility" Value="Collapsed"' }
     @{ Name = 'zentraler Ausgeblendet-Button'; Pass = $mainXaml -match 'Command="\{Binding ShowHiddenModelsCommand\}"' }
     @{ Name = 'Wiederherstellung pro Modell'; Pass = $dialogXaml -match 'Command="\{Binding DataContext\.RestoreModelCommand' }
-    @{ Name = 'Version 1.17.56'; Pass = $project.Project.PropertyGroup.Version -contains '1.17.56' }
+    @{ Name = 'Version 1.18.0'; Pass = $project.Project.PropertyGroup.Version -contains '1.18.0' }
 )
 
 $failed = @($checks | Where-Object { -not $_.Pass })

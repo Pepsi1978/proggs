@@ -14,7 +14,7 @@ export type WorkModeId = (typeof WORK_MODES)[number]["id"]
 
 export const DEFAULT_WORK_MODE: WorkModeId = "schnell"
 export const WORK_MODE_DIRECTORY = join(homedir(), ".local", "state", "opencode", "work-modes")
-export const WORK_MODE_ENVIRONMENT_VARIABLE = "OPENCODE_LAUNCHER_WORK_MODE"
+export const WORK_MODE_ENVIRONMENT_VARIABLE = "OPENLAUNCHER_WORK_MODE"
 
 function isWorkMode(value: string): value is WorkModeId {
   return WORK_MODES.some((mode) => mode.id === value)

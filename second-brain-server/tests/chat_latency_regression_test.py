@@ -47,7 +47,7 @@ def main() -> int:
     assert not greeting("Kannst du mich hören und im Internet nachsehen?")
 
     assert project("Woran habe ich zuletzt gearbeitet?")
-    assert project("Wie ist der aktuelle Stand beim OpenCode Launcher?")
+    assert project("Wie ist der aktuelle Stand beim OpenLauncher?")
     assert not project("Ich habe gerade programmiert. Meine Idee ist weniger Kontext. Was denkst du darüber?")
     assert not project("Was sagt das Internet zu meiner Vermutung über AGENTS.md?")
 

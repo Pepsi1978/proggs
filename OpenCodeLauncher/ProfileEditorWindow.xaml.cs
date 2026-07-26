@@ -2,9 +2,9 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using OpenCodeLauncher.Services;
+using OpenLauncher.Services;
 
-namespace OpenCodeLauncher;
+namespace OpenLauncher;
 
 public partial class ProfileEditorWindow : Window
 {

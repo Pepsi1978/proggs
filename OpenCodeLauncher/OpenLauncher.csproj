@@ -7,15 +7,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>OpenCodeLauncher</RootNamespace>
-    <AssemblyName>OpenCodeLauncher</AssemblyName>
+    <RootNamespace>OpenLauncher</RootNamespace>
+    <AssemblyName>OpenLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.17.56</Version>
-    <FileVersion>1.17.56.0</FileVersion>
-    <AssemblyVersion>1.17.56.0</AssemblyVersion>
+    <Version>1.18.0</Version>
+    <FileVersion>1.18.0.0</FileVersion>
+    <AssemblyVersion>1.18.0.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
-    <Product>OpenCode Launcher</Product>
+    <Product>OpenLauncher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

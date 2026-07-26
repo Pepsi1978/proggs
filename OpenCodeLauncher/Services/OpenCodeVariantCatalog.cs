@@ -1,6 +1,6 @@
-using OpenCodeLauncher.Models;
+using OpenLauncher.Models;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 public static class OpenCodeVariantCatalog
 {

@@ -19,9 +19,9 @@ describe("token usage audit", () => {
     const record = createAuditRecord({
       timestamp: new Date("2026-07-18T10:00:00.000Z"),
       launcher: {
-        OPENCODE_LAUNCHER_SOURCE: "OpenCodeLauncher",
-        OPENCODE_LAUNCHER_MODEL: "openai/gpt-5.6-sol-fast",
-        OPENCODE_LAUNCHER_SERVICE_TIER: "priority",
+        OPENLAUNCHER_SOURCE: "OpenLauncher",
+        OPENLAUNCHER_MODEL: "openai/gpt-5.6-sol-fast",
+        OPENLAUNCHER_SERVICE_TIER: "priority",
       },
       message: { role: "assistant", providerID: "openai", modelID: "gpt-5.6-sol-fast", agent: "build" },
       request: {

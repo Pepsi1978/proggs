@@ -355,13 +355,13 @@ describe("Windows-Faktenextraktion", () => {
     expect(facts.screens?.some((screen) => screen.id === "xaml:MainWindow" && screen.isStart)).toBe(true);
   });
 
-  // Gemeldet am OpenCodeLauncher: die App erschien auf halber Breite. Ursache war die Reihenfolge —
+  // Gemeldet am OpenLauncher: die App erschien auf halber Breite. Ursache war die Reihenfolge —
   // alphabetisch stand HiddenModelsWindow (680 breit) vor MainWindow (1360 breit), und der erste
   // Treffer gewann. 680 ist exakt die Haelfte von 1360.
   it("nimmt die Groesse des Hauptfensters, nicht die des zuerst gelesenen Dialogs", () => {
     const windows = [
       source("HiddenModelsWindow.xaml", `<Window Title="Ausgeblendete Modelle" Width="680" Height="560"><Grid/></Window>`),
-      source("MainWindow.xaml", `<Window Title="OpenCode Launcher" Width="1360" Height="860"><Grid/></Window>`),
+      source("MainWindow.xaml", `<Window Title="OpenLauncher" Width="1360" Height="860"><Grid/></Window>`),
       source("ProfileEditorWindow.xaml", `<Window Title="Profil bearbeiten" Width="1040" Height="760"><Grid/></Window>`)
     ];
     expect(extractWindowsFacts(windows).viewport).toMatchObject({ width: 1360, height: 860 });

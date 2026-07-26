@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace OpenCodeLauncher.Models;
+namespace OpenLauncher.Models;
 
 /// <summary>
 /// Ein vom Nutzer gepflegter Modell-Eintrag in einer Launcher-Gruppe.

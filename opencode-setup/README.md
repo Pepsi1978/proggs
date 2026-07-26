@@ -25,12 +25,12 @@
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
 | 2f. Windows-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode.exe` | nein (lokal) | Patch + Buildskript | ja (gebaut) |
-| 2g. OpenCode Launcher | `~/proggs/OpenCodeLauncher/bin/Release/.../OpenCodeLauncher.exe` | **ja** (Quellcode) | `OpenCodeLauncher/` | ja (gebaut + Shortcut) |
+| 2g. OpenLauncher | `~/proggs/OpenLauncher/bin/Release/.../OpenLauncher.exe` | **ja** (Quellcode) | `OpenLauncher/` | ja (gebaut + Shortcut) |
 | 3. Projektbasis | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
-| 3b. OpenCode-Profile | `%APPDATA%\OpenCodeLauncher\profiles\opencode\<profil>\` | nein (lokal) | Standardvorlagen im `OpenCodeLauncher` | beim ersten Profilzugriff erzeugt |
+| 3b. OpenCode-Profile | `%APPDATA%\OpenLauncher\profiles\opencode\<profil>\` | nein (lokal) | Standardvorlagen im `OpenLauncher` | beim ersten Profilzugriff erzeugt |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) | — |
 
-**OpenCode-Launcher unter Windows:** Die globale und die Projekt-`AGENTS.md` bleiben klein. Der Launcher
+**OpenLauncher unter Windows:** Die globale und die Projekt-`AGENTS.md` bleiben klein. Der Launcher
 erzeugt für Minimal, Standard und Strikt getrennte Quelldateien und lädt beim Start unveränderliche
 Sitzungssnapshots über `OPENCODE_CONFIG`. Das bestehende Standardprofil wird bei der ersten Migration
 verlustfrei übernommen; erst danach ersetzt der Launcher die globale Datei durch den Bootstrap. Claude
@@ -113,7 +113,7 @@ Der Installer zeigt am Ende eine `OK`/`FEHLT`-Liste. Diese Dinge sind manuell zu
 - **`opencode auth login`** (bzw. `/connect` in der TUI) — fuer das Go-Abo (opencode-go/MiniMax + Plan).
 
 ### Schritt 5 — Start & Selbst-Check
-Unter Windows über die erzeugte Desktop-Verknüpfung **OpenCode Launcher** starten. Ein nacktes `opencode`
+Unter Windows über die erzeugte Desktop-Verknüpfung **OpenLauncher** starten. Ein nacktes `opencode`
 im PATH ist nur der ungepatchte offizielle Fallback. Unter macOS/Linux weiterhin `cd ~/proggs && opencode`.
 
 Beim ersten Prompt MUSS OpenCode melden: **"N Regeln aus dem zweiten Gehirn eingelesen."** — dann ist

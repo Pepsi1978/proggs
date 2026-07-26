@@ -1,4 +1,4 @@
-# Erzeugt app.ico fuer OpenCodeLauncher (dunkles Feld + lila Sterne, zum Fluent-Look passend).
+# Erzeugt app.ico fuer OpenLauncher (dunkles Feld + lila Sterne, zum Fluent-Look passend).
 Add-Type -AssemblyName System.Drawing
 
 $size = 256

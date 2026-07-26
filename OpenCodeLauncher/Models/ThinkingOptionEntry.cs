@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace OpenCodeLauncher.Models;
+namespace OpenLauncher.Models;
 
 public sealed class ThinkingOptionEntry
 {

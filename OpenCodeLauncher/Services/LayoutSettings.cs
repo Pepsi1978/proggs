@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 public sealed class LayoutSettings
 {
@@ -17,7 +17,7 @@ public sealed class LayoutSettings
 
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenCodeLauncher");
+        "OpenLauncher");
     private static readonly string FilePath = Path.Combine(Dir, "layout.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new()

@@ -7,7 +7,7 @@ der von `main` divergiert. Am 13.07.2026 wurde das auf dem Windows-Hauptrechner 
 und `origin/master` gelöscht — aber **jeder andere Rechner, dessen lokaler Branch noch
 `master` heißt, bringt `origin/master` beim nächsten Push zurück.**
 
-Siehe Hintergrund: `OpenCodeLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/repo-branch-und-sync-setup.md`
+Siehe Hintergrund: `OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/repo-branch-und-sync-setup.md`
 
 ## Schritte (auf jedem Rechner einmal ausführen)
 

@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $viewModel = Get-Content -LiteralPath (Join-Path $root 'ViewModels\MainViewModel.cs') -Raw
-$launcher = Get-Content -LiteralPath (Join-Path $root 'Services\OpenCodeLauncherService.cs') -Raw
+$launcher = Get-Content -LiteralPath (Join-Path $root 'Services\OpenLauncherService.cs') -Raw
 $xaml = Get-Content -LiteralPath (Join-Path $root 'MainWindow.xaml') -Raw
 [void][xml]$xaml
 
@@ -15,7 +15,7 @@ $checks = @(
     @{ Name = 'Nicht unterstützte Stufe fällt auf höchste verfügbare zurück'; Pass = $viewModel -match '\?\? ThinkingOptions\.Last\(\)' }
     @{ Name = 'Thinking-Vorauswahl folgt Profilwechsel und Optionsladen'; Pass = ([regex]::Matches($viewModel, 'SelectProfileThinkingOption\(\);')).Count -eq 2 }
     @{ Name = 'Modus wird an den OpenCode-Start übergeben'; Pass = $viewModel -match '_launcher\.Launch\(modelString, WorkDir, thinkingLevel, profileSession\.ConfigPath, SelectedWorkMode\.Id\)' }
-    @{ Name = 'Startskript setzt prozesslokalen Modus'; Pass = $launcher -match '\$env:OPENCODE_LAUNCHER_WORK_MODE = \{\{PowerShellLiteral\(workMode\)\}\}' }
+    @{ Name = 'Startskript setzt prozesslokalen Modus'; Pass = $launcher -match '\$env:OPENLAUNCHER_WORK_MODE = \{\{PowerShellLiteral\(workMode\)\}\}' }
     @{ Name = 'Modus-Auswahl steht unter Profil'; Pass = $xaml -match 'Text="MODUS"' -and $xaml -match 'ItemsSource="\{Binding WorkModes\}"' }
     @{ Name = 'vier Modus-Kästchen'; Pass = $xaml -match '<UniformGrid Rows="1" Columns="4"/>' }
     @{ Name = 'Vorauswahl bleibt unabhängig vom ersten Listeneintrag'; Pass = ([regex]::Matches($xaml, 'IsSynchronizedWithCurrentItem="False"')).Count -ge 2 }

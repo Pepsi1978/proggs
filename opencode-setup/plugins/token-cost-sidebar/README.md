@@ -137,7 +137,7 @@ bun test
 ## Zustände und Fehlerverhalten
 
 - Der Modus wird pro Session unter `~/.local/state/opencode/work-modes/` gespeichert.
-- Neue Sessions starten standardmäßig im Schnellmodus. Der OpenCode Launcher kann den Startmodus
-  pro Prozess über `OPENCODE_LAUNCHER_WORK_MODE` vorauswählen.
+- Neue Sessions starten standardmäßig im Schnellmodus. Der OpenLauncher kann den Startmodus
+  pro Prozess über `OPENLAUNCHER_WORK_MODE` vorauswählen.
 - Kann der gespeicherte Modus nicht gelesen werden, verwendet das System-Plugin den gewählten
   Startmodus (ohne Launcher: Schnellmodus) und schreibt den Fehler in das OpenCode-App-Log.

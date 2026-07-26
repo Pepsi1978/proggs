@@ -139,10 +139,10 @@ export function createAuditRecord({ part, message, request, launcher = process.e
     modelID: request?.modelID ?? info.modelID,
     agent: request?.agent ?? info.agent,
     launcher: {
-      source: launcher.OPENCODE_LAUNCHER_SOURCE ?? null,
-      model: launcher.OPENCODE_LAUNCHER_MODEL ?? null,
-      serviceTier: request?.serviceTier ?? launcher.OPENCODE_LAUNCHER_SERVICE_TIER ?? "standard",
-      requestedServiceTier: request?.serviceTierLauncher ?? launcher.OPENCODE_LAUNCHER_SERVICE_TIER ?? null,
+      source: launcher.OPENLAUNCHER_SOURCE ?? null,
+      model: launcher.OPENLAUNCHER_MODEL ?? null,
+      serviceTier: request?.serviceTier ?? launcher.OPENLAUNCHER_SERVICE_TIER ?? "standard",
+      requestedServiceTier: request?.serviceTierLauncher ?? launcher.OPENLAUNCHER_SERVICE_TIER ?? null,
     },
     request: {
       startedAt: request?.startedAt,

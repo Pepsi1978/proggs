@@ -2,12 +2,12 @@ using System.IO;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using OpenCodeLauncher.Models;
+using OpenLauncher.Models;
 
-namespace OpenCodeLauncher.Services;
+namespace OpenLauncher.Services;
 
 /// <summary>
-/// Persistente Liste der gepflegten Modelle (JSON in %AppData%/OpenCodeLauncher).
+/// Persistente Liste der gepflegten Modelle (JSON in %AppData%/OpenLauncher).
 /// Beim ersten Start werden Default-Gruppen angelegt (Slugs verifiziert gegen
 /// GET /api/v1/models). Reihenfolge per Drag&Drop änderbar,
 /// neue Modelle per AddModel, entfernen per RemoveModel.
@@ -62,7 +62,7 @@ public sealed class ModelRegistry
 
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenCodeLauncher");
+        "OpenLauncher");
     private static readonly string FilePath = Path.Combine(Dir, "models.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new()

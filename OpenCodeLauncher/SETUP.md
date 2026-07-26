@@ -1,8 +1,8 @@
-# OpenCode Launcher — Einrichtung auf einem neuen Rechner (Windows + macOS)
+# OpenLauncher — Einrichtung auf einem neuen Rechner (Windows + macOS)
 
 > Diese Datei beschreibt, **wie das Gesamtsystem aktuell läuft** und **was auf einem neuen Rechner
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
-> einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
+> einfach sagen: *„Richte alles genau nach `OpenLauncher/SETUP.md` ein."*
 
 Stand: v1.17.56 – 26.07.2026 14:48
 
@@ -19,7 +19,7 @@ Das Gesamtsystem besteht aus **drei** Teilen, jeder mit eigenem Setup:
    Das OpenCode-CLI, die globale `~/.config/opencode/opencode.jsonc`, die **TUI-Seitenleiste**
    (`token-cost-sidebar`-Plugin), Agents/Skills, Sounds. **Windows zusätzlich:** ein selbst gebautes,
    gepatchtes Binary („Mousefix" — s. §6). Auf **macOS entfällt der Mousefix** (stock `opencode` via Homebrew).
-3. **OpenCode Launcher** (dieses Verzeichnis) — die WPF-App (Windows-only), die Claude Code / OpenCode
+3. **OpenLauncher** (dieses Verzeichnis) — die WPF-App (Windows-only), die Claude Code / OpenCode
    mit gewähltem Modell und Profil sowie OpenCode mit vorausgewähltem Arbeitsmodus startet. macOS-Variante ist in Vorbereitung (§5).
 
 **Reihenfolge auf neuem Rechner:** Bausteine 1 + 2 (Basen), dann 3 (Launcher, nur Windows).
@@ -31,7 +31,7 @@ Das Gesamtsystem besteht aus **drei** Teilen, jeder mit eigenem Setup:
 
 | Kommt per `git pull` (im Repo) | Pro Rechner (NICHT im Repo) |
 |---|---|
-| Launcher-Quellcode (`OpenCodeLauncher/`) | .NET 8 SDK (nur Windows-Build) |
+| Launcher-Quellcode (`OpenLauncher/`) | .NET 8 SDK (nur Windows-Build) |
 | **Alle Claude-Profil-Inhalte** (`skills/rules/agents/commands` + `settings.json`) | Claude-Code-Basis via `claude-code-setup` (Login, Hooks, Skills) |
 | OpenCode-Profil-Quellen (`Profiles/OpenCode/<id>/AGENTS.md`) | OpenCode-Basis via `opencode-setup` (CLI, `opencode.jsonc`, TUI-Sidebar) |
 | `opencode-setup/`, `claude-code-setup/` (Setup-Skripte) | API-Keys als Umgebungsvariablen (aus `~/SK`) |
@@ -46,7 +46,7 @@ aus `~/.claude/settings.json` ist bewusst NICHT in den Repo-Profilen.
 
 ### Claude-Code-Profile — **jedes Profil hat seinen EIGENEN Config-Ordner**
 
-`CLAUDE_CONFIG_DIR` zeigt je Profil auf `OpenCodeLauncher/Profiles/ClaudeCode/<id>` (`id` =
+`CLAUDE_CONFIG_DIR` zeigt je Profil auf `OpenLauncher/Profiles/ClaudeCode/<id>` (`id` =
 `minimal` | `standard` | `strict`). Der Launcher setzt das beim Start; der Kontext ist damit
 **versioniert und auf jedem Rechner gleich**.
 
@@ -69,11 +69,11 @@ Weitere Details:
 
 ### OpenCode-Profile
 
-- Quelle je Profil: `OpenCodeLauncher/Profiles/OpenCode/<id>/AGENTS.md`.
+- Quelle je Profil: `OpenLauncher/Profiles/OpenCode/<id>/AGENTS.md`.
 - Beim Start schreibt der Launcher diese Quelle in **`~/proggs/AGENTS.md`** (Arbeitsverzeichnis);
   OpenCode liest die `AGENTS.md` dort immer.
 - Die Launcher-Auswahl Freimodus/Schnellmodus/Normalmodus/Gründlichkeitsmodus wird als
-  `OPENCODE_LAUNCHER_WORK_MODE` an den neuen Prozess übergeben und gilt dadurch schon für den ersten Prompt.
+  `OPENLAUNCHER_WORK_MODE` an den neuen Prozess übergeben und gilt dadurch schon für den ersten Prompt.
 - Der Launcher setzt `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` pro Session → keine `CLAUDE.md` als
   Prompt-Fallback. **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** (bewusst NICHT der volle
   `OPENCODE_DISABLE_CLAUDE_CODE`). Die globale `~/.config/opencode/AGENTS.md` wird leer gehalten.
@@ -84,7 +84,7 @@ Weitere Details:
 
 ### macOS-Profile
 
-- Eigener Bereich `OpenCodeLauncher/Profiles/ClaudeCodeMac/<id>` (getrennt von Windows, weil die
+- Eigener Bereich `OpenLauncher/Profiles/ClaudeCodeMac/<id>` (getrennt von Windows, weil die
   Windows-Profile absolute `C:\`-Pfade + PowerShell-Hooks tragen). Aktuell **Gerüst** (siehe §4).
 
 ---
@@ -117,15 +117,15 @@ Weitere Details:
 
 5. **Launcher bauen**
    ```powershell
-   dotnet build ~/proggs/OpenCodeLauncher/OpenCodeLauncher.csproj -c Release
+   dotnet build ~/proggs/OpenLauncher/OpenLauncher.csproj -c Release
    ```
-   Ergebnis: `OpenCodeLauncher/bin/Release/net8.0-windows10.0.19041.0/win-x64/OpenCodeLauncher.exe`
+   Ergebnis: `OpenLauncher/bin/Release/net8.0-windows10.0.19041.0/win-x64/OpenLauncher.exe`
 
 6. **Desktop-Verknüpfung**
    ```powershell
-   pwsh ~/proggs/OpenCodeLauncher/create_shortcut.ps1
+   pwsh ~/proggs/OpenLauncher/create_shortcut.ps1
    ```
-   Updates später: `pwsh ~/proggs/OpenCodeLauncher/update-launcher.ps1` (schließt laufenden
+   Updates später: `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` (schließt laufenden
    Launcher, baut Release, startet neu).
 
 7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modus + Modell wählen → starten.
@@ -170,7 +170,7 @@ Weitere Details:
 4. **macOS-Profile befüllen** — der Bereich `Profiles/ClaudeCodeMac/<id>` ist ein Gerüst
    (READMEs + `.gitignore`). Einmalig mit macOS-Inhalten füllen:
    ```bash
-   cd ~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac
+   cd ~/proggs/OpenLauncher/Profiles/ClaudeCodeMac
    for p in standard strict; do
      for d in skills rules agents commands; do
        rm -rf "$p/$d"; cp -R "$HOME/.claude/$d" "$p/$d"
@@ -183,14 +183,14 @@ Weitere Details:
 
 5. **Minimal-Skills auf macOS** — Symlink statt Windows-Junction (nicht versioniert):
    ```bash
-   ln -s "$HOME/.claude/skills" ~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac/minimal/skills
+   ln -s "$HOME/.claude/skills" ~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/minimal/skills
    ```
 
 6. **Manueller Claude-Start (bis die macOS-App existiert)** — je Profil:
    ```bash
-   export CLAUDE_CONFIG_DIR=~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac/standard
+   export CLAUDE_CONFIG_DIR=~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/standard
    cp ~/.claude/.credentials.json "$CLAUDE_CONFIG_DIR/.credentials.json"   # Login lokal, einmalig
-   cp ~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/sources/standard.md "$CLAUDE_CONFIG_DIR/CLAUDE.md"
+   cp ~/proggs/OpenLauncher/Profiles/ClaudeCode/sources/standard.md "$CLAUDE_CONFIG_DIR/CLAUDE.md"
    claude --model <modell>
    ```
    OpenCode startest du auf macOS direkt: `cd ~/proggs && opencode` (kein Launcher nötig, §6).
@@ -205,7 +205,7 @@ Weitere Details:
 
 ### 5.1 Technologie-Wahl
 - **Avalonia UI (C#)** — maximale Wiederverwendung der bestehenden Services
-  (`InstructionProfileService`, `OpenCodeLauncherService`); nur UI + plattformabhängige Teile neu.
+  (`InstructionProfileService`, `OpenLauncherService`); nur UI + plattformabhängige Teile neu.
   Build: `dotnet build -c Release -r osx-arm64` (bzw. `osx-x64`) → `.app`-Bundle.
 - **Alternativ Swift/AppKit** — komplette Neuimplementierung der Logik; dann ist die Spec unten die Vorlage.
 
@@ -236,9 +236,9 @@ Weitere Details:
 - `InstructionProfileService.EnsureClaudeConfigDir(id)` → `CLAUDE.md` schreiben + Login kopieren + (Minimal) Skills einblenden.
 - `InstructionProfileService.EnsureSkillsJunction` → **macOS:** Symlink-Anlage statt Junction (idempotent).
 - `InstructionProfileService.EnsureLoginToken` → `.credentials.json` aus `~/.claude` kopieren.
-- `OpenCodeLauncherService.BuildClaudeCodeStartScript` → statt `$env:CLAUDE_CONFIG_DIR=…; & claude …`
+- `OpenLauncherService.BuildClaudeCodeStartScript` → statt `$env:CLAUDE_CONFIG_DIR=…; & claude …`
   (pwsh) → `export CLAUDE_CONFIG_DIR=…; claude …` (zsh/bash).
-- `OpenCodeLauncherService.LaunchClaudeCode` / `Launch` → statt `wt new-tab …` ein `osascript`-Aufruf,
+- `OpenLauncherService.LaunchClaudeCode` / `Launch` → statt `wt new-tab …` ein `osascript`-Aufruf,
   der Terminal.app/iTerm2 mit dem Start-Skript öffnet.
 - `ResolveOpenCodeExecutable` → **macOS:** einfach `opencode` (kein Mousefix-Pointer), **oder** den
   OpenCode-Teil weglassen und direkt `opencode` starten lassen.
@@ -288,11 +288,11 @@ Der WPF-Launcher patcht unter Windows die `opencode.jsonc` **vor** dem Start (Pr
 Fallback, Reasoning-Effort). Auf macOS gibt es (noch) keinen Launcher — man startet direkt
 `cd ~/proggs && opencode`. Provider-/Effort-Steuerung dort **manuell** in `~/.config/opencode/opencode.jsonc`
 oder OpenCode-nativ (`/models`, `Ctrl+T`-Variant). Sobald die macOS-Launcher-App (§5) existiert, kann
-sie diese Config-Patch-Logik übernehmen (Code-Vorlage: `OpenCodeLauncherService.ConfigureProvider`/`PatchProvider`).
+sie diese Config-Patch-Logik übernehmen (Code-Vorlage: `OpenLauncherService.ConfigureProvider`/`PatchProvider`).
 
 Unter Windows setzt der Launcher für jeden OpenCode-Prozess zusätzlich
-`OPENCODE_LAUNCHER_MODEL`, `OPENCODE_LAUNCHER_SOURCE` und
-`OPENCODE_LAUNCHER_SERVICE_TIER`. Preis- und Token-Audits können dadurch die tatsächliche
+`OPENLAUNCHER_MODEL`, `OPENLAUNCHER_SOURCE` und
+`OPENLAUNCHER_SERVICE_TIER`. Preis- und Token-Audits können dadurch die tatsächliche
 Launcher-Auswahl einschließlich Priority-Tier eindeutig zuordnen.
 
 Die GPT-5.6-Fast-Modelle werden nicht mehr als Launcher-eigene Aliase angelegt. Der Launcher
@@ -308,7 +308,7 @@ Overrides in der globalen Config entfernt der Launcher beim nächsten GPT-5.6-St
 - `Profiles/ClaudeCode(Mac)/<id>/CLAUDE.md` (aktive Claude-Regeln) — ignoriert.
 - `Profiles/ClaudeCode(Mac)/<id>/.credentials.json` (lokaler Login) — ignoriert, **Secret**.
 - `Profiles/ClaudeCode(Mac)/minimal/skills` (Junction/Symlink) — lokal, ignoriert.
-- Sessions unter `%LOCALAPPDATA%/OpenCodeLauncher/sessions/` — temporär.
+- Sessions unter `%LOCALAPPDATA%/OpenLauncher/sessions/` — temporär.
 
 ## 8. Profile ändern
 - **Kontext/Regeln:** `Profiles/ClaudeCode/sources/<id>.md` (bzw. OpenCode: `Profiles/OpenCode/<id>/AGENTS.md`).
