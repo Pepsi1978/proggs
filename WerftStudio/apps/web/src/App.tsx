@@ -950,12 +950,15 @@ function Studio() {
   // Rettungsanker für Designs, die vor der Theme-Unterstützung aufgebaut wurden.
   const measuredThemes = useQuery({
     queryKey: ["themes", projectId],
-    queryFn: () => api<{ themes: DesignTheme[]; css: string }>(`/projects/${projectId}/themes`),
+    queryFn: () => api<{ themes: DesignTheme[]; css: string; overrideCss: string }>(`/projects/${projectId}/themes`),
     enabled: boardAvailable,
     staleTime: 5 * 60 * 1000
   });
-  // Nachgereicht wird nur, wenn das Dokument selbst weniger Erscheinungen kennt als gemessen wurden.
-  const themeCss = (measuredThemes.data?.themes.length ?? 0) > boardThemes.length ? measuredThemes.data?.css : undefined;
+  // Nachgereicht wird, sobald das Dokument weniger Erscheinungen kennt als gemessen wurden ODER das
+  // Umschalten dort wirkungslos bliebe, weil die Farben fest im Stylesheet stehen.
+  const themeCss = measuredThemes.data && ((measuredThemes.data.themes.length > boardThemes.length) || !themesEffective)
+    ? [measuredThemes.data.css, measuredThemes.data.overrideCss].filter(Boolean).join("\n")
+    : undefined;
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
   // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
   // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.

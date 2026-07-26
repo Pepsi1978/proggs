@@ -24,6 +24,7 @@ import { effectGuidance } from "./effect-catalog.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
+import { themeOverrideCss } from "./theme-override.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
@@ -242,7 +243,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.18.0-20260726.2334" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.18.1-20260726.2347" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -438,8 +439,17 @@ app.get("/api/v1/projects/:projectId/themes", async (request) => {
   const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") }));
   const facts = extractDesignFacts(platform, factTexts);
   const variants = themeVariants(facts.themes);
-  request.log.info({ event: "themes.measured", projectId, platform, themes: variants.length, factFiles: factFiles.length }, "Erscheinungen des Designs gemessen");
-  return { themes: variants.map(({ id, name, kind, color }) => ({ id, name, kind, color })), css: themeStyles(facts) };
+  // Trägt das ausgelieferte Design seine Farben fest im Stylesheet, hilft ein Variablenblock nicht.
+  // Dann wird zusätzlich eine Farbabbildung erzeugt — dieselben Regeln, andere Farben.
+  let overrideCss = "";
+  if (variants.length > 1 && row.imported.entryPath) {
+    try {
+      const html = (await readObject(`${row.imported.objectPrefix}${row.imported.entryPath}`)).toString("utf8");
+      overrideCss = themeOverrideCss(html, variants);
+    } catch (error) { request.log.warn({ err: error, projectId }, "Vorschaudokument für die Farbabbildung nicht lesbar"); }
+  }
+  request.log.info({ event: "themes.measured", projectId, platform, themes: variants.length, factFiles: factFiles.length, overrideBytes: overrideCss.length }, "Erscheinungen des Designs gemessen");
+  return { themes: variants.map(({ id, name, kind, color }) => ({ id, name, kind, color })), css: themeStyles(facts), overrideCss };
 });
 // Rückfragen entstehen AUS dem importierten Projekt, nicht aus einer festen Liste: gefragt wird nur,
 // was für die richtige Darstellung dieses Projekts wirklich fehlt — und jede Antwort ist sofort
