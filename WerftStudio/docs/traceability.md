@@ -21,13 +21,11 @@ Version: v0.7.0 - 26.07.2026 21:13 Uhr
 | Formatabdeckung Import | `apps/api/src/import-project.ts` | Regressionstest: jede vom Filter akzeptierte Erweiterung hat einen bekannten MIME-Typ; Interface-Builder-Dateien (`.xib`) werden importiert |
 | Design Board | `apps/web/src/App.tsx`, `styles.css` | Bildschirmliste aus der Preview-Bridge links, aktiver Bildschirm hervorgehoben, Klick navigiert die Bühne und füllt den Zurück-Verlauf |
 | Markieren & Kommentieren | `apps/api/src/preview-canvas-bridge.ts`, `apps/api/src/server.ts`, `apps/web/src/App.tsx` | Element im Vorschau-Dokument umranden, Rechteck/CSS-Pfad/wörtlichen Ausschnitt melden, Rahmen mit zoomunabhängigem Eingabefenster, Ziel im Chat-Endpunkt (striktes Schema); Test hält das Bruecken-Skript parsebar |
-
 | Projektbezogene Rückfragen | `apps/api/src/server.ts` | Offene Punkte aus dem echten Import statt fester Fragen; an drei Projekten belegt: reines HTML → keine Frage, natives Projekt → keine Frage (die Leinwand baut selbst auf), Web-Projekt mit Flutter-Quelle → Frage mit beiden Optionen |
 | Vorschaugeometrie | `apps/api/src/extract-windows.ts`, `extract-apple.ts` | Hauptfenster bzw. Hauptstoryboard bestimmt die Größe, sonst die größte Fläche; Regressionstests mit den echten Maßen aus OpenCodeLauncher (680 gegen 1360) und LaunchScreen gegen Main |
 | Durchklickbarkeit | `apps/api/src/extract-android.ts` | Sprechende Öffner (`openHookEditor(hook)`) zählen als Navigationsziel; an PerfectMoment von 6 auf 9 Bildschirme mit Klickzielen |
 | Theme-Umschaltung | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die Vorschau meldet, ob ein zweites Theme vorliegt, und schaltet `data-theme` im Design um |
 | Claude-Design-Optik | `packages/ui/src/tokens.css`, `apps/web/src/styles.css` | Leinwand `#f0eee6`/`#2e2c26`, Akzent `#d97757`, Weichton `#f7e1d3` und die `sc-shine`-Ladeanimation, gelesen aus der Claude-Design-Laufzeit der Exporte unter `Designs` |
-
 | Kommentaransicht | `apps/web/src/App.tsx` | Jeder abgeschickte Kommentar mit Element, Bildschirm, Anweisung und Ergebnis; „angewendet“ nur bei wirklich geschriebenen Dateien |
 | Live-Farbregler | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die aus den Projektquellen gemessenen Farbtoken werden gemeldet und direkt in der Vorschau überschrieben — ohne KI-Lauf, auf allen Bildschirmen |
 | Modellauswahl im Ablauf | `apps/web/src/App.tsx` | Auswahl am Eingabefeld statt nur in den Einstellungen; Effort und Fast bleiben unberührt |
@@ -38,9 +36,13 @@ Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
 
 - Die tatsächliche KI-Anwendung eines Kommentars braucht eine verbundene OpenAI-Codex-Verbindung;
   ohne sie endet der Lauf mit `OPENAI_NOT_CONNECTED`. Bis dorthin ist die Kette geprüft.
-- Startseite, Plus-Schaltfläche und Modellauswahl sind optisch noch nicht an Claude Design
-  angeglichen. `claude.ai/design` antwortet ohne Anmeldung mit HTTP 403 und in dieser Umgebung
-  steht kein Browser-Werkzeug bereit; übernommen wurde deshalb nur, was aus der Claude-Design-
-  Laufzeit der vorhandenen Exporte belegbar ist (Farben, Ladeanimation).
+- Alle im Auftrag genannten Bedienelemente sind vorhanden und funktionieren (Startseite,
+  Projektansicht, Plus-Schaltfläche, Import, Modellauswahl, Rückfragen, Lade- und Fehlerzustände,
+  Design Board, Vorschau, Bearbeitung, Speicherung, erneutes Öffnen). Offen bleiben die
+  pixelgenauen Abstände und das Icon-Set der Startseite: `claude.ai/design` antwortet ohne
+  Anmeldung mit HTTP 403, in dieser Umgebung steht kein Browser-Werkzeug bereit, und die
+  öffentliche Dokumentation nennt keine Maße. Übernommen wurde daher nur Belegbares — aus der
+  Claude-Design-Laufzeit der Exporte (Farben, Ladeanimation) und aus der offiziellen Doku
+  (zwei Bereiche mit Gespräch links und Leinwand rechts, Kommentarmodus, Export oben rechts).
 - Die Rekonstruktion nativer Projekte braucht eine verbundene OpenAI-Codex-Verbindung. Import,
   Faktenmessung, Bildschirm- und Navigationserkennung sind ohne sie geprüft, der KI-Aufbau nicht.
