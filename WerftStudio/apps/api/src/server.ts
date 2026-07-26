@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.10.0-20260726.2006" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.10.1-20260726.2012" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -437,13 +437,18 @@ app.get("/api/v1/projects/:projectId/import/questions", async (request) => {
   const { entryPath, manifest } = row.imported;
   const htmlFiles = manifest.filter((file) => /\.html?$/i.test(file.path) && !file.path.startsWith(".werft-generated/"))
     .sort((left, right) => scoreEntryPath(right.path, platform) - scoreEntryPath(left.path, platform));
-  // Gezaehlt wird, was die Designmessung wirklich auswertet — nicht eine eigene Regex daneben.
-  // Sonst meldet die Rueckfrage bei einer Android-App "1 Quelle", obwohl die Layout-XML fehlt.
-  const uiSources = factCandidatePaths(platform, manifest.map((file) => file.path)).filter((path) => !path.startsWith(".werft-generated/"));
+  // Gezaehlt werden NUR echte native Oberflaechenquellen (Compose, SwiftUI, XAML, Flutter, Interface
+  // Builder) und Android-Ressourcen-XML. HTML, CSS und JS gehoeren nicht dazu: die zeigt die Vorschau
+  // bereits — sie als "Quelle zum Aufbauen" zu melden, wuerde auf die gerade sichtbare Datei zeigen.
+  const uiSources = manifest.map((file) => file.path).filter((path) => !path.startsWith(".werft-generated/")
+    && (nativeUiSourcePattern.test(path) || /(^|\/)res\/(values|layout|drawable|navigation|color|font|mipmap)[^/]*\/[^/]+\.xml$/i.test(path)));
   const reconstructed = entryPath.startsWith(".werft-generated/");
   const questions: ImportQuestion[] = [];
   const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-  if (uiSources.length > 0 && !reconstructed) questions.push({
+  // Ohne Startseite baut die Leinwand ohnehin selbsttaetig auf — dann waere die Frage nur eine
+  // Doppelung des laufenden Vorgangs. Gefragt wird nur, wenn gerade eine GEFUNDENE HTML-Datei
+  // gezeigt wird, obwohl das Projekt eigene Oberflaechenquellen mitbringt.
+  if (uiSources.length > 0 && !reconstructed && entryPath) questions.push({
     id: "reconstruct",
     kind: "reconstruct",
     question: `Dieses Projekt bringt ${plural(uiSources.length, "eigene Oberflächenquelle", "eigene Oberflächenquellen")} mit. Soll das Design daraus aufgebaut werden?`,
