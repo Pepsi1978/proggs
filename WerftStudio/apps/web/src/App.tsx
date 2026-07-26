@@ -798,6 +798,50 @@ function ProviderSettings() {
     </>
   );
 }
+type ImportQuestion = { id: string; kind: "entry" | "reconstruct"; question: string; why: string; options: Array<{ value: string; label: string; hint?: string }> };
+// Die Rückfragen kommen aus dem importierten Projekt selbst und werden nur gezeigt, solange für
+// dessen Darstellung wirklich etwas fehlt. Jede Antwort wirkt sofort auf die Vorschau.
+function ImportQuestions({ projectId }: { projectId: string }) {
+  const client = useQueryClient();
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  const questions = useQuery({ queryKey: ["import-questions", projectId], queryFn: () => api<{ questions: ImportQuestion[] }>(`/projects/${projectId}/import/questions`) });
+  const refresh = async () => {
+    await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+    await client.invalidateQueries({ queryKey: ["import-questions", projectId] });
+  };
+  const answer = useMutation({
+    mutationFn: async ({ question, value }: { question: ImportQuestion; value: string }) => {
+      if (question.kind === "entry") return api(`/projects/${projectId}/import/entry`, { method: "PATCH", body: JSON.stringify({ path: value }) });
+      if (value === "reconstruct") return reconstructProject(projectId, () => {}, false, true);
+      setDismissed((all) => [...all, question.id]);
+      return null;
+    },
+    onSuccess: refresh
+  });
+  const open = (questions.data?.questions ?? []).filter((item) => !dismissed.includes(item.id));
+  if (!open.length) return null;
+  return (
+    <section className="import-questions">
+      {open.map((question) => (
+        <article key={question.id}>
+          <strong>{question.question}</strong>
+          <small>{question.why}</small>
+          <div className="chips">
+            {question.options.map((option) => (
+              <button type="button" key={option.value} disabled={answer.isPending} title={option.hint ?? option.label} onClick={() => answer.mutate({ question, value: option.value })}>
+                {option.label}
+                {option.hint && <em>{option.hint}</em>}
+              </button>
+            ))}
+          </div>
+        </article>
+      ))}
+      {answer.isPending && <small className="subtle">Wird angewendet … das Aufbauen aus Quellen dauert einige Minuten.</small>}
+      {answer.error && <p className="field-error">{answer.error instanceof ApiError ? answer.error.message : "Die Antwort konnte nicht angewendet werden."}</p>}
+    </section>
+  );
+}
+
 function Studio() {
   const { projectId = "" } = useParams();
   const nav = useNavigate();
@@ -998,6 +1042,7 @@ function Studio() {
           </aside>
         )}
         <section className="workspace">
+          {imported.data?.imported && <ImportQuestions projectId={projectId} />}
           <Canvas
             key={projectId}
             projectId={projectId}

@@ -24,7 +24,7 @@ import { effectGuidance } from "./effect-catalog.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom } from "./screen-composer.js";
-import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, validateImportFiles } from "./import-project.js";
+import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 
@@ -137,7 +137,7 @@ app.addHook("preHandler", async (request) => {
 function actorOf(request: FastifyRequest): Actor { if (!request.actor) fail("AUTH_REQUIRED", 401, "Bitte anmelden."); return request.actor; }
 function requireActorPermission(request: FastifyRequest, permission: Parameters<typeof can>[1]) { const actor = actorOf(request); if (!can(actor.role, permission)) fail("FORBIDDEN", 403, "Diese Aktion ist für deine Rolle nicht erlaubt."); return actor; }
 type ImportType = "prototype" | "presentation" | "document" | "template" | "canvas";
-const nativeUiSourcePattern = /\.(?:xaml|axaml|kt|kts|java|swift|storyboard|dart|cs|razor|qml|ui|uxml|py|rs)$/i;
+const nativeUiSourcePattern = /\.(?:xaml|axaml|kt|kts|java|swift|storyboard|xib|dart|cs|razor|qml|ui|uxml|py|rs)$/i;
 function importedDesignDocument(projectId: string, name: string, platform: ImportPlatform, projectType: ImportType): DesignDocument {
   const pageId = uuidv7(), frameId = uuidv7(), nodeId = uuidv7();
   const pageType = projectType === "presentation" ? "slide" : projectType === "document" ? "document-page" : projectType === "canvas" ? "canvas" : "screen";
@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.9.2-20260726.1953" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.10.0-20260726.2006" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -423,6 +423,41 @@ app.get("/api/v1/projects/:projectId/import", async (request) => {
   // HTML-Datei; nur Ersteres darf als originalgetreu aufgebaut angezeigt werden.
   const reconstructed = row.imported.entryPath.startsWith(".werft-generated/");
   return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+});
+// Rückfragen entstehen AUS dem importierten Projekt, nicht aus einer festen Liste: gefragt wird nur,
+// was für die richtige Darstellung dieses Projekts wirklich fehlt — und jede Antwort ist sofort
+// anwendbar (Startseite setzen, aus Quellen aufbauen).
+type ImportQuestion = { id: string; kind: "entry" | "reconstruct"; question: string; why: string; options: Array<{ value: string; label: string; hint?: string }> };
+app.get("/api/v1/projects/:projectId/import/questions", async (request) => {
+  const actor = requireActorPermission(request, "project.read");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ imported: projectImports, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) return { questions: [] as ImportQuestion[] };
+  const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+  const { entryPath, manifest } = row.imported;
+  const htmlFiles = manifest.filter((file) => /\.html?$/i.test(file.path) && !file.path.startsWith(".werft-generated/"))
+    .sort((left, right) => scoreEntryPath(right.path, platform) - scoreEntryPath(left.path, platform));
+  // Gezaehlt wird, was die Designmessung wirklich auswertet — nicht eine eigene Regex daneben.
+  // Sonst meldet die Rueckfrage bei einer Android-App "1 Quelle", obwohl die Layout-XML fehlt.
+  const uiSources = factCandidatePaths(platform, manifest.map((file) => file.path)).filter((path) => !path.startsWith(".werft-generated/"));
+  const reconstructed = entryPath.startsWith(".werft-generated/");
+  const questions: ImportQuestion[] = [];
+  const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  if (uiSources.length > 0 && !reconstructed) questions.push({
+    id: "reconstruct",
+    kind: "reconstruct",
+    question: `Dieses Projekt bringt ${plural(uiSources.length, "eigene Oberflächenquelle", "eigene Oberflächenquellen")} mit. Soll das Design daraus aufgebaut werden?`,
+    why: `Erkannt: ${[...new Set(uiSources.map((path) => path.replace(/^.*(\.[^.]+)$/, "$1").toLowerCase()))].slice(0, 6).join(", ")}. Ohne diesen Schritt zeigt die Vorschau nur eine gefundene HTML-Datei statt der echten App.`,
+    options: [{ value: "reconstruct", label: "Aus den Quellen aufbauen", hint: `${plural(uiSources.length, "Datei", "Dateien")}, dauert je nach Umfang einige Minuten` }, ...(entryPath ? [{ value: "keep", label: `Bei „${entryPath}“ bleiben` }] : [])]
+  });
+  if (!entryPath && htmlFiles.length > 0) questions.push({
+    id: "entry",
+    kind: "entry",
+    question: "Welche Datei ist der Einstieg in dieses Design?",
+    why: "Für dieses Projekt liess sich keine eindeutige Startseite bestimmen; ohne sie bleibt die Vorschau leer.",
+    options: htmlFiles.slice(0, 8).map((file) => ({ value: file.path, label: file.path, hint: `${Math.max(1, Math.round(file.size / 1024))} KB` }))
+  });
+  return { questions };
 });
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
 app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
