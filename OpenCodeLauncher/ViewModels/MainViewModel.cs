@@ -170,6 +170,7 @@ public sealed partial class MainViewModel : ObservableObject
             if (ct.IsCancellationRequested) return;
             ThinkingOptions.Clear();
             foreach (var option in levels.Select(ToThinkingOption)) ThinkingOptions.Add(option);
+            SelectProfileThinkingOption();
             var empty = IsClaudeCodeModel(model) ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt.";
             var prompt = IsClaudeCodeModel(model) ? "Effort-Wert wählen." : "Thinking-Wert wählen.";
             UpdateThinkingState(levels.Count == 0 ? empty : prompt);
@@ -260,7 +261,17 @@ public sealed partial class MainViewModel : ObservableObject
             _ => "frei"
         };
         SelectedWorkMode = WorkModes.Single(mode => mode.Id == workModeId);
+        SelectProfileThinkingOption();
         StatusText = $"Profil {value.DisplayName} ausgewählt.";
+    }
+
+    private void SelectProfileThinkingOption()
+    {
+        if (SelectedProfile == null || ThinkingOptions.Count == 0) return;
+
+        var preferredValue = SelectedProfile.Id == "strict" ? "xhigh" : "high";
+        SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == preferredValue)
+            ?? ThinkingOptions.Last();
     }
 
     private void UpdateProfileAvailability()
