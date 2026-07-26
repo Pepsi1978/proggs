@@ -251,7 +251,16 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnSelectedProfileChanged(InstructionProfileEntry? value)
     {
         UpdateProfileAvailability();
-        if (value != null) StatusText = $"Profil {value.DisplayName} ausgewählt.";
+        if (value == null) return;
+
+        var workModeId = value.Id switch
+        {
+            "minimal" => "frei",
+            "strict" => "normal",
+            _ => "schnell"
+        };
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == workModeId);
+        StatusText = $"Profil {value.DisplayName} ausgewählt.";
     }
 
     private void UpdateProfileAvailability()
