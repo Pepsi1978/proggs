@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte alles genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.48 (25.07.2026, 14:18 Uhr)
+Stand: v1.17.51 (26.07.2026, 14:07 Uhr)
 
 ---
 
@@ -20,7 +20,7 @@ Das Gesamtsystem besteht aus **drei** Teilen, jeder mit eigenem Setup:
    (`token-cost-sidebar`-Plugin), Agents/Skills, Sounds. **Windows zusätzlich:** ein selbst gebautes,
    gepatchtes Binary („Mousefix" — s. §6). Auf **macOS entfällt der Mousefix** (stock `opencode` via Homebrew).
 3. **OpenCode Launcher** (dieses Verzeichnis) — die WPF-App (Windows-only), die Claude Code / OpenCode
-   mit gewähltem Modell **und Profil** startet. macOS-Variante ist in Vorbereitung (§5).
+   mit gewähltem Modell und Profil sowie OpenCode mit vorausgewähltem Arbeitsmodus startet. macOS-Variante ist in Vorbereitung (§5).
 
 **Reihenfolge auf neuem Rechner:** Bausteine 1 + 2 (Basen), dann 3 (Launcher, nur Windows).
 **Wichtig:** `claude-code-setup` und `opencode-setup` sind **getrennt** — nicht vermischen.
@@ -72,6 +72,8 @@ Weitere Details:
 - Quelle je Profil: `OpenCodeLauncher/Profiles/OpenCode/<id>/AGENTS.md`.
 - Beim Start schreibt der Launcher diese Quelle in **`~/proggs/AGENTS.md`** (Arbeitsverzeichnis);
   OpenCode liest die `AGENTS.md` dort immer.
+- Die Launcher-Auswahl Freimodus/Schnellmodus/Normalmodus/Gründlichkeitsmodus wird als
+  `OPENCODE_LAUNCHER_WORK_MODE` an den neuen Prozess übergeben und gilt dadurch schon für den ersten Prompt.
 - Der Launcher setzt `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` pro Session → keine `CLAUDE.md` als
   Prompt-Fallback. **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** (bewusst NICHT der volle
   `OPENCODE_DISABLE_CLAUDE_CODE`). Die globale `~/.config/opencode/AGENTS.md` wird leer gehalten.
@@ -126,7 +128,7 @@ Weitere Details:
    Updates später: `pwsh ~/proggs/OpenCodeLauncher/update-launcher.ps1` (schließt laufenden
    Launcher, baut Release, startet neu).
 
-7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modell wählen → starten.
+7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modus + Modell wählen → starten.
    Beim ersten Minimal-Start entsteht die Skills-Junction automatisch; der Login-Token wird bei
    Bedarf lokal in den Profil-Ordner kopiert.
 

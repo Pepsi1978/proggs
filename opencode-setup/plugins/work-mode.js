@@ -1,12 +1,12 @@
 import {
-  DEFAULT_WORK_MODE,
+  initialWorkMode,
   readWorkMode,
   workModeInstruction,
 } from "./token-cost-sidebar/dist/work-mode.ts"
 
 export const WorkModePlugin = async ({ client }) => ({
   "experimental.chat.system.transform": async (input, output) => {
-    let mode = DEFAULT_WORK_MODE
+    let mode = initialWorkMode()
     try {
       if (input.sessionID) mode = await readWorkMode(input.sessionID)
     } catch (error) {
@@ -15,10 +15,11 @@ export const WorkModePlugin = async ({ client }) => ({
         body: {
           service: "work-mode",
           level: "error",
-          message: `Arbeitsmodus konnte nicht gelesen werden; Schnellmodus wird verwendet: ${message}`,
+          message: `Arbeitsmodus konnte nicht gelesen werden; der gewählte Startmodus wird verwendet: ${message}`,
         },
       }).catch(() => undefined)
     }
-    output.system.push(workModeInstruction(mode))
+    const instruction = workModeInstruction(mode)
+    if (instruction) output.system.push(instruction)
   },
 })

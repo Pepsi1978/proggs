@@ -20,6 +20,7 @@ import {
 } from "../dist/pricing"
 import {
   DEFAULT_WORK_MODE,
+  initialWorkMode,
   readWorkMode,
   WORK_MODES,
   workModeInstruction,
@@ -572,6 +573,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("theme().textMuted")
     expect(source).toContain("<text fg={theme().accent}><b>{item.label}</b></text>")
     expect(WORK_MODES.map((mode) => mode.label)).toEqual([
+      "Freimodus",
       "Schnellmodus",
       "Normalmodus",
       "Gründlichkeitsmodus",
@@ -587,6 +589,9 @@ describe("models.dev pricing", () => {
       writeWorkMode("session-a", "gruendlich", directory)
       expect(await readWorkMode("session-a", directory)).toBe("gruendlich")
       expect(await readWorkMode("session-b", directory)).toBe(DEFAULT_WORK_MODE)
+      expect(initialWorkMode({ OPENCODE_LAUNCHER_WORK_MODE: "frei" })).toBe("frei")
+      expect(initialWorkMode({ OPENCODE_LAUNCHER_WORK_MODE: "unbekannt" })).toBe(DEFAULT_WORK_MODE)
+      expect(workModeInstruction("frei")).toBeUndefined()
       expect(workModeInstruction("schnell")).toContain("kleinsten korrekten Eingriff")
       expect(workModeInstruction("schnell")).toContain("direkt betroffenen Aufrufer")
       expect(workModeInstruction("normal")).toContain("zum Risiko und Umfang passenden Eingriff")
@@ -595,6 +600,7 @@ describe("models.dev pricing", () => {
       expect(workModeInstruction("gruendlich")).toContain("alle Prüfungen grün sind")
       for (const mode of WORK_MODES) {
         const instruction = workModeInstruction(mode.id)
+        if (mode.id === "frei") continue
         expect(instruction).toContain("Das aktive AGENTS.md-Profil gilt vollständig und unverändert.")
         expect(instruction).toContain("bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang")
         expect(instruction).not.toContain("überschreibt den Standardmodus")
@@ -610,7 +616,11 @@ describe("models.dev pricing", () => {
       for (const mode of WORK_MODES) {
         writeWorkMode("session-sync", mode.id, directory)
         expect(await readWorkMode("session-sync", directory)).toBe(mode.id)
-        expect(workModeInstruction(mode.id)).toContain(`AKTIVER ARBEITSMODUS: ${mode.label}`)
+        if (mode.id === "frei") {
+          expect(workModeInstruction(mode.id)).toBeUndefined()
+        } else {
+          expect(workModeInstruction(mode.id)).toContain(`AKTIVER ARBEITSMODUS: ${mode.label}`)
+        }
       }
 
       const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
@@ -629,7 +639,8 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../../work-mode.js", import.meta.url)).text()
     expect(source).toContain('"experimental.chat.system.transform"')
     expect(source).toContain("readWorkMode(input.sessionID)")
-    expect(source).toContain("output.system.push(workModeInstruction(mode))")
+    expect(source).toContain("const instruction = workModeInstruction(mode)")
+    expect(source).toContain("if (instruction) output.system.push(instruction)")
     expect(source).not.toContain("console.")
   })
 

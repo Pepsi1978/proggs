@@ -4,11 +4,12 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.13.7 - 20.07.2026, 12:27 Uhr
+Stand: v1.14.0 - 26.07.2026, 14:01 Uhr
 
 ## Funktionen
 
-- Klickbare Auswahl zwischen Schnellmodus, Normalmodus und Gründlichkeitsmodus.
+- Klickbare Auswahl zwischen Freimodus, Schnellmodus, Normalmodus und Gründlichkeitsmodus.
+- Der Freimodus fügt dem Modellaufruf keinen zusätzlichen Arbeitsmodus-Prompt hinzu.
 - Klickbare Auswahl aller Varianten, die OpenCode für das aktuelle Modell tatsächlich bereitstellt.
   Dazu gehören modellabhängig unter anderem None, Minimal, Low, Medium, High, XHigh, Max und Thinking.
 - OpenAI-, OpenRouter- und andere Provider-Modelle verwenden dieselbe effektive Laufzeitliste; neue
@@ -116,11 +117,11 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 ## Verifikation
 
 1. Unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter alle von OpenCode für dieses Modell bereitgestellten Varianten; ein Klick markiert die aktive Variante.
-2. Die rechte Sidebar zeigt darunter `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
+2. Die rechte Sidebar zeigt darunter `Freimodus`, `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
 3. Ein Effort-Klick ändert denselben validierten Model-Variant-State wie OpenCodes eigener Varianten-Picker.
 4. Ein Modus-Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.
 5. Beim nächsten Modellaufruf beginnt die zusätzliche Systemanweisung mit
-   `AKTIVER ARBEITSMODUS: <gewählter Modus>`.
+   `AKTIVER ARBEITSMODUS: <gewählter Modus>`; im Freimodus wird keine solche Anweisung ergänzt.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
@@ -136,6 +137,7 @@ bun test
 ## Zustände und Fehlerverhalten
 
 - Der Modus wird pro Session unter `~/.local/state/opencode/work-modes/` gespeichert.
-- Neue Sessions starten standardmäßig im Schnellmodus.
-- Kann der gespeicherte Modus nicht gelesen werden, verwendet das System-Plugin den Schnellmodus
-  und schreibt den Fehler in das OpenCode-App-Log.
+- Neue Sessions starten standardmäßig im Schnellmodus. Der OpenCode Launcher kann den Startmodus
+  pro Prozess über `OPENCODE_LAUNCHER_WORK_MODE` vorauswählen.
+- Kann der gespeicherte Modus nicht gelesen werden, verwendet das System-Plugin den gewählten
+  Startmodus (ohne Launcher: Schnellmodus) und schreibt den Fehler in das OpenCode-App-Log.

@@ -191,7 +191,7 @@ $env:Path = $pathEntries -join ';'
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode)
     {
         var log = Logger.Instance;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -211,7 +211,7 @@ $env:Path = $pathEntries -join ';'
             // Fehler-Fenster (Teil danach), bis der Konsolen-Fallback ohne wt greift. Ein
             // -File-Script hat kein ';' in der wt-Argumentliste und ist immun (gleiche Technik
             // wie der bereits funktionierende Claude-Code-Weg).
-            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath);
+            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, workMode);
             var shell = ResolvePowerShellExecutable();
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
@@ -692,7 +692,7 @@ try {
     /// wt-Argumentliste und ist damit immun — dieselbe Technik wie der Claude-Code-Weg.
     /// $env:OPENCODE_CONFIG und der opencode-Aufruf stehen auf getrennten Zeilen (kein ';').
     /// </summary>
-    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
+    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode)
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
@@ -733,6 +733,7 @@ $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 $env:OPENCODE_LAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
 $env:OPENCODE_LAUNCHER_SOURCE = 'OpenCodeLauncher'
 $env:OPENCODE_LAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
+$env:OPENCODE_LAUNCHER_WORK_MODE = {{PowerShellLiteral(workMode)}}
 {{minimalEnv}}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {

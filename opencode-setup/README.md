@@ -123,7 +123,7 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 Die rechte TUI-Seitenleiste muss danach auf beiden Windows-Rechnern dieselben Funktionen zeigen:
 
 - Session-Datum und Uhrzeit
-- Schnellmodus, Normalmodus und Gründlichkeitsmodus
+- Freimodus, Schnellmodus, Normalmodus und Gründlichkeitsmodus
 - Modellname, Tokenmengen, Eingabe-/Ausgabepreise und Sitzungskosten
 - Theme-Auswahl sowie Dunkel-/Hell-Umschalter
 - OpenCode-Version mit `-windowsfix.<revision>`

@@ -52,7 +52,32 @@ public sealed partial class MainViewModel : ObservableObject
             Status = "AKTIV",
             IsEnabled = true
         });
+        WorkModes.Add(new WorkModeEntry
+        {
+            Id = "frei",
+            DisplayName = "Freimodus",
+            Description = "Kein zusätzlicher Modus-Prompt"
+        });
+        WorkModes.Add(new WorkModeEntry
+        {
+            Id = "schnell",
+            DisplayName = "Schnellmodus",
+            Description = "Kleinster korrekter Eingriff"
+        });
+        WorkModes.Add(new WorkModeEntry
+        {
+            Id = "normal",
+            DisplayName = "Normalmodus",
+            Description = "Passend zu Risiko und Umfang"
+        });
+        WorkModes.Add(new WorkModeEntry
+        {
+            Id = "gruendlich",
+            DisplayName = "Gründlichkeitsmodus",
+            Description = "Randfälle und Härtung mitprüfen"
+        });
         SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -74,6 +99,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<ProviderEntry> Providers { get; } = new();
     public ObservableCollection<ThinkingOptionEntry> ThinkingOptions { get; } = new();
     public ObservableCollection<InstructionProfileEntry> Profiles { get; } = new();
+    public ObservableCollection<WorkModeEntry> WorkModes { get; } = new();
     public ObservableCollection<ModelEntry> HiddenModels { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
@@ -92,6 +118,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _lastErrorPath = string.Empty;
     [ObservableProperty] private bool _hasLastError;
     [ObservableProperty] private InstructionProfileEntry? _selectedProfile;
+    [ObservableProperty] private WorkModeEntry? _selectedWorkMode;
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
     [ObservableProperty] private bool _canEditSelectedProfile = true;
     [ObservableProperty] private bool _hasHiddenModels;
@@ -511,6 +538,11 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Bitte ein Profil wählen.";
             return;
         }
+        if (SelectedWorkMode == null)
+        {
+            StatusText = "Bitte einen Modus wählen.";
+            return;
+        }
         var isClaudeCode = IsClaudeCodeModel(SelectedModel);
         if (isClaudeCode && !IsClaudeCodeProfileSupported(SelectedProfile.Id))
         {
@@ -533,6 +565,7 @@ public sealed partial class MainViewModel : ObservableObject
                 providerSlug = SelectedProvider.ProviderSlug,
                 thinkingLevel,
                 profile = SelectedProfile.Id,
+                workMode = SelectedWorkMode.Id,
                 profileGlobal = profileDocuments.GlobalPath,
                 profileProject = profileDocuments.ProjectPath,
                 workDir = WorkDir
@@ -554,7 +587,7 @@ public sealed partial class MainViewModel : ObservableObject
             _profiles.ActivateProjectAgents(SelectedProfile.Id, WorkDir);
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir);
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
-            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath);
+            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, SelectedWorkMode.Id);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
             {
                 profileSession.ProfileId,
@@ -565,8 +598,8 @@ public sealed partial class MainViewModel : ObservableObject
                 profileSession.ConfigPath
             });
             StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Profil {SelectedProfile.DisplayName}"
-                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName}";
+                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
+                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
         }
         catch (Exception ex)
         {
