@@ -952,9 +952,9 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rank != null) {
                 val rankColor = when (rank) {
-                    1 -> colors.goldHi
+                    1 -> Color(0xFF5B8DEF)
                     2 -> colors.success
-                    else -> colors.amber
+                    else -> Color(0xFFF08A36)
                 }
                 Box(
                     Modifier
