@@ -52,7 +52,7 @@ public sealed partial class MainViewModel : ObservableObject
             Status = "AKTIV",
             IsEnabled = true
         });
-        SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
+        SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -98,7 +98,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
-        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
+        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "standard");
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
