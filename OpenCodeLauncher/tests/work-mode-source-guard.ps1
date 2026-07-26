@@ -8,8 +8,8 @@ $xaml = Get-Content -LiteralPath (Join-Path $root 'MainWindow.xaml') -Raw
 
 $checks = @(
     @{ Name = 'vier Modi in richtiger Reihenfolge'; Pass = $viewModel -match '(?s)Id = "frei".*?Id = "schnell".*?Id = "normal".*?Id = "gruendlich"' }
-    @{ Name = 'Schnellmodus bleibt Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "schnell"\)' }
-    @{ Name = 'Profile wählen ihren Startmodus vor'; Pass = $viewModel -match '(?s)"minimal" => "frei".*?"strict" => "normal".*?_ => "schnell"' }
+    @{ Name = 'Freimodus ist Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "frei"\)' }
+    @{ Name = 'Profile wählen ihren Startmodus vor'; Pass = $viewModel -match '(?s)"minimal" or "standard" => "frei".*?"strict" => "normal"' }
     @{ Name = 'Profilwechsel setzt nur die normale Modusauswahl'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == workModeId\)' }
     @{ Name = 'Modus wird an den OpenCode-Start übergeben'; Pass = $viewModel -match '_launcher\.Launch\(modelString, WorkDir, thinkingLevel, profileSession\.ConfigPath, SelectedWorkMode\.Id\)' }
     @{ Name = 'Startskript setzt prozesslokalen Modus'; Pass = $launcher -match '\$env:OPENCODE_LAUNCHER_WORK_MODE = \{\{PowerShellLiteral\(workMode\)\}\}' }

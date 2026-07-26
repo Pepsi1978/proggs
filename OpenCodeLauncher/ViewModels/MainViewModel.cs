@@ -74,7 +74,7 @@ public sealed partial class MainViewModel : ObservableObject
             Description = "Randfälle und Härtung mitprüfen"
         });
         SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
-        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -255,9 +255,9 @@ public sealed partial class MainViewModel : ObservableObject
 
         var workModeId = value.Id switch
         {
-            "minimal" => "frei",
+            "minimal" or "standard" => "frei",
             "strict" => "normal",
-            _ => "schnell"
+            _ => "frei"
         };
         SelectedWorkMode = WorkModes.Single(mode => mode.Id == workModeId);
         StatusText = $"Profil {value.DisplayName} ausgewählt.";
