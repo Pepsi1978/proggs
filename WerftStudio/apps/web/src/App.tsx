@@ -1122,7 +1122,9 @@ function Studio() {
                           title={theme.name}
                           onClick={() => { setActiveThemeId(theme.id); setThemeRequest({ themeId: theme.id, nonce: Date.now() }); }}
                         >
-                          <i style={{ background: theme.color || "transparent" }} />
+                          {/* Die Farbe liegt als Bild ÜBER dem weißen Grund: halbdurchsichtige
+                              Designfarben bleiben so erkennbar statt mit dem Panel zu verschmelzen. */}
+                          <i style={theme.color ? { backgroundImage: `linear-gradient(${theme.color}, ${theme.color})` } : undefined} />
                           {themeLabel(theme, boardThemes)}
                         </button>
                       ))}

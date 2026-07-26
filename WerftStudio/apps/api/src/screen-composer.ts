@@ -50,9 +50,11 @@ const opaqueColor = (value: string) => /^(?:#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|rgb\
 const firstColor = (tokens: Record<string, string>) => {
   const entries = Object.entries(tokens);
   const anyColor = (value: string) => /^#|^rgb|^hsl/i.test(value.trim());
+  // Der HINTERGRUND kennzeichnet die Erscheinung — auch wenn er halbdurchsichtig ist. Eine deckende
+  // Textfarbe an seiner Stelle würde die helle und die dunkle Erscheinung vertauscht anzeigen.
   return entries.find(([token, value]) => backgroundToken.test(token) && opaqueColor(value))?.[1]
-    ?? entries.find(([, value]) => opaqueColor(value))?.[1]
     ?? entries.find(([token, value]) => backgroundToken.test(token) && anyColor(value))?.[1]
+    ?? entries.find(([, value]) => opaqueColor(value))?.[1]
     ?? entries.find(([, value]) => anyColor(value))?.[1]
     ?? "#ffffff";
 };
