@@ -73,4 +73,15 @@ describe("preview canvas bridge", () => {
     expect(code).toContain('data-theme\", data.theme');
     expect(code).toContain('prefers-color-scheme: dark');
   });
+
+  // Die Doku von Claude Design nennt Live-Regler fuer Farbe und Layout. Sie arbeiten hier mit den
+  // Token, die der Aufbau AUS DEN PROJEKTQUELLEN erzeugt — nicht mit erfundenen Reglern.
+  it("reports the design own colour tokens and can override them live", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("designTokens");
+    expect(code).toContain("applyTune");
+    expect(code).toContain("data-werft-tune");
+  });
 });

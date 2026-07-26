@@ -101,3 +101,9 @@
 .comment-entry small{font-size:11px;color:var(--color-text-subtle);word-break:break-word}
 .comment-entry footer{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-subtle)}
 .comment-entry footer button{border:1px solid var(--color-line);border-radius:8px;background:transparent;color:var(--color-text);font-size:11px;padding:3px 8px;cursor:pointer}
+
+/* Farbregler aus den echten Projekt-Token */
+.token-list{gap:6px}
+.token-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.token-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-subtle)}
+.token-row input[type=color]{flex:none;width:34px;height:24px;padding:0;border:1px solid var(--color-line);border-radius:6px;background:transparent;cursor:pointer}

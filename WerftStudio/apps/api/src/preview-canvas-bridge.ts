@@ -100,8 +100,44 @@ const bridgeScript = `<script ${bridgeMarker}>
     return false;
   };
 
+  // Die Regler arbeiten mit den Farbtoken, die der Aufbau AUS DEN PROJEKTQUELLEN erzeugt hat —
+  // nicht mit erfundenen Reglern. Dadurch trifft jede Anpassung genau die Farbe, die das Design
+  // wirklich verwendet, und wirkt auf allen Bildschirmen zugleich.
+  const colorLike = /^(#[0-9a-fA-F]{3,8}|rgba?\\(|hsla?\\()/;
+  const designTokens = () => {
+    const found = {};
+    try {
+      for (const sheet of Array.prototype.slice.call(document.styleSheets)) {
+        let rules = null;
+        try { rules = sheet.cssRules; } catch (error) { continue; }
+        for (const rule of Array.prototype.slice.call(rules || [])) {
+          if (!rule.style || !rule.selectorText || rule.selectorText.indexOf(":root") < 0) continue;
+          if (rule.selectorText.indexOf("data-theme") >= 0) continue;
+          for (const name of Array.prototype.slice.call(rule.style)) {
+            if (name.slice(0, 2) !== "--") continue;
+            const value = String(rule.style.getPropertyValue(name)).trim();
+            if (colorLike.test(value)) found[name] = value;
+          }
+        }
+      }
+    } catch (error) { /* ohne lesbare Stylesheets bleibt die Vorschau bedienbar */ }
+    return found;
+  };
+
+  let tuneStyle = null;
+  const applyTune = (overrides) => {
+    if (!tuneStyle) {
+      tuneStyle = document.createElement("style");
+      tuneStyle.setAttribute("data-werft-tune", "");
+      (document.head || document.documentElement).appendChild(tuneStyle);
+    }
+    const body = Object.keys(overrides || {}).map((name) => "  " + name + ": " + overrides[name] + ";").join("\\n");
+    // Hoehere Spezifitaet als ":root", damit die Anpassung auch das Dunkel-Theme uebersteuert.
+    tuneStyle.textContent = body ? ":root:root:root {\\n" + body + "\\n}" : "";
+  };
+
   const publishScreens = () => {
-    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode, stageMode, hasDarkTheme: hasDarkTheme() });
+    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode, stageMode, hasDarkTheme: hasDarkTheme(), tokens: designTokens() });
     measure();
   };
 
@@ -248,6 +284,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "highlight") document.documentElement.setAttribute("data-werft-highlight", data.on ? "on" : "off");
     if (data.action === "screen") showScreen(data.screenId);
     if (data.action === "measure") measure();
+    if (data.action === "tune") applyTune(data.overrides);
     if (data.action === "theme" && (data.theme === "light" || data.theme === "dark")) {
       document.documentElement.setAttribute("data-theme", data.theme);
       measure();

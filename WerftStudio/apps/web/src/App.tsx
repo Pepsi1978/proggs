@@ -880,6 +880,15 @@ function Studio() {
   const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [screenRequest, setScreenRequest] = useState<{ screenId: string; nonce: number } | null>(null);
+  // Die Farbregler arbeiten mit den Token, die der Aufbau aus den Projektquellen erzeugt hat.
+  const [designTokens, setDesignTokens] = useState<Record<string, string>>({});
+  const [tokenOverrides, setTokenOverrides] = useState<Record<string, string>>({});
+  const [tuneRequest, setTuneRequest] = useState<{ overrides: Record<string, string>; nonce: number } | null>(null);
+  const tuneToken = (name: string, value: string) => {
+    const next = { ...tokenOverrides, [name]: value };
+    setTokenOverrides(next);
+    setTuneRequest({ overrides: next, nonce: Date.now() });
+  };
   // Ohne importiertes Design gibt es kein Board — dann bleibt das Gespräch der Einstieg, statt einen
   // leeren Reiter vorzublenden.
   const boardAvailable = imported.data?.imported === true;
@@ -1117,6 +1126,8 @@ function Studio() {
             onActiveScreenChange={setActiveScreenId}
             screenRequest={screenRequest}
             commentPending={chatRun.isPending}
+            onTokensChange={setDesignTokens}
+            tuneRequest={tuneRequest}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
               // nachvollziehbar bleibt, welche Anweisung auf welches Element gewirkt hat.
@@ -1127,6 +1138,36 @@ function Studio() {
             }}
           />
         </section>
+        {rightOpen && imported.data?.imported && Object.keys(designTokens).length > 0 && (
+          <aside className="right-panel">
+            <header>
+              <div>
+                <strong>Farben dieses Designs</strong>
+                <small>Wirken sofort auf allen Bildschirmen, ohne KI-Lauf</small>
+              </div>
+              <Button
+                variant="ghost"
+                disabled={!Object.keys(tokenOverrides).length}
+                onClick={() => { setTokenOverrides({}); setTuneRequest({ overrides: {}, nonce: Date.now() }); }}
+              >
+                Zurücksetzen
+              </Button>
+            </header>
+            <div className="inspector token-list">
+              {Object.entries(designTokens).map(([name, value]) => (
+                <label className="token-row" key={name}>
+                  <span title={name}>{name.replace(/^--/, "")}</span>
+                  <input
+                    type="color"
+                    value={/^#[0-9a-fA-F]{6}$/.test(tokenOverrides[name] ?? value) ? (tokenOverrides[name] ?? value) : "#000000"}
+                    onChange={(event) => tuneToken(name, event.target.value)}
+                  />
+                </label>
+              ))}
+              <small className="subtle">Aus den Projektquellen gemessen — jede Farbe ist die, die das Design wirklich verwendet.</small>
+            </div>
+          </aside>
+        )}
         {rightOpen && !imported.data?.imported && (
           <aside className="right-panel">
             <header>
@@ -1217,7 +1258,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1230,6 +1271,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   screenRequest: { screenId: string; nonce: number } | null;
   onComment(target: MarkTarget, text: string): void;
   commentPending: boolean;
+  onTokensChange(tokens: Record<string, string>): void;
+  tuneRequest: { overrides: Record<string, string>; nonce: number } | null;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1338,6 +1381,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
         setScreens(list);
         setDesignHasDark(Boolean((data as { hasDarkTheme?: boolean }).hasDarkTheme));
+        onTokensChange((data as { tokens?: Record<string, string> }).tokens ?? {});
         // Beim Öffnen steht der Startbildschirm — nicht der, den das Dokument zufällig zuerst führt.
         const start = startScreenOf(list);
         if (start && activeRef.current === null) { setActive(start.id); tellFrame({ action: "screen", screenId: start.id }); }
@@ -1397,6 +1441,9 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     setActive(screenRequest.screenId);
     tellFrame({ action: "screen", screenId: screenRequest.screenId });
   }, [screenRequest?.nonce]);
+
+  // Farbregler wirken sofort im Design — ohne KI-Lauf und auf allen Bildschirmen zugleich.
+  useEffect(() => { if (tuneRequest) tellFrame({ action: "tune", overrides: tuneRequest.overrides }); }, [tuneRequest?.nonce]);
 
   const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     const onEmptySurface = event.button === 0 && event.target === viewportRef.current;
@@ -1505,7 +1552,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1593,6 +1640,8 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             screenRequest={screenRequest}
             onComment={onComment}
             commentPending={commentPending}
+            onTokensChange={onTokensChange}
+            tuneRequest={tuneRequest}
           />
         ) : (
           <div className="empty reconstruction-state">
