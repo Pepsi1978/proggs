@@ -44,10 +44,18 @@ const darkThemeWords = /dark|night|dunkel|nacht|midnight|black|noir/i;
 const lightThemeWords = /light|day|hell|tag|bright|white/i;
 export const themeVariantId = (id: string) => id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
 const backgroundToken = /(?:^|[^a-z])(?:background|surface|bg|window|page|canvas|scaffold)/i;
-const firstColor = (tokens: Record<string, string>) =>
-  Object.entries(tokens).find(([token, value]) => backgroundToken.test(token) && /^#|^rgb|^hsl/i.test(value))?.[1]
-  ?? Object.values(tokens).find((value) => /^#|^rgb|^hsl/i.test(value))
-  ?? "#ffffff";
+// Der Farbpunkt im Design Board soll die Erscheinung ERKENNBAR machen. Eine halbdurchsichtige Farbe
+// wirkt dort fast weiss — deshalb zaehlt zuerst ein deckender Wert.
+const opaqueColor = (value: string) => /^(?:#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|rgb\(|hsl\()/.test(value.trim());
+const firstColor = (tokens: Record<string, string>) => {
+  const entries = Object.entries(tokens);
+  const anyColor = (value: string) => /^#|^rgb|^hsl/i.test(value.trim());
+  return entries.find(([token, value]) => backgroundToken.test(token) && opaqueColor(value))?.[1]
+    ?? entries.find(([, value]) => opaqueColor(value))?.[1]
+    ?? entries.find(([token, value]) => backgroundToken.test(token) && anyColor(value))?.[1]
+    ?? entries.find(([, value]) => anyColor(value))?.[1]
+    ?? "#ffffff";
+};
 
 // Aus den gemessenen Theme-Fakten werden die WAEHLBAREN Varianten. Eine Zusatzpalette mit zwei
 // Farben neben einem Theme mit dreissig ist keine Erscheinung der App — sie wuerde die Auswahl nur
