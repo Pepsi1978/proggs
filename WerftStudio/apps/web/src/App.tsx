@@ -868,7 +868,13 @@ function Studio() {
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
   const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
-  const [panelTab, setPanelTab] = useState<"board" | "chat" | "history">("board");
+  const [panelTab, setPanelTab] = useState<"board" | "chat" | "comments" | "history">("board");
+  const commentStorageKey = `werft-comments-${projectId}`;
+  const [comments, setComments] = useState<DesignComment[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`werft-comments-${projectId}`) ?? "[]") as DesignComment[]; }
+    catch { return []; }
+  });
+  useEffect(() => { try { localStorage.setItem(commentStorageKey, JSON.stringify(comments.slice(-200))); } catch { /* Speicher voll: Kommentare bleiben in der Sitzung */ } }, [comments, commentStorageKey]);
   // Das Design Board links kennt alle Bildschirme des importierten Projekts und hebt den gerade
   // sichtbaren hervor; ein Klick schickt die Bühne rechts auf den gewählten Bildschirm.
   const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
@@ -901,10 +907,20 @@ function Studio() {
       if (data.changedFiles.length) parts.push(`✓ Geänderte Dateien: ${data.changedFiles.join(", ")}`);
       if (data.skipped?.length) parts.push(`⚠ Nicht angewendet:\n${data.skipped.join("\n")}`);
       setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
+      // Ein laufender Kommentar bekommt sein Ergebnis: „angewendet" nur, wenn wirklich Dateien
+      // geschrieben wurden — sonst stuende dort ein Erfolg, den es nicht gab.
+      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : {
+        ...comment,
+        status: data.changedFiles.length ? "angewendet" : "ohne Änderung",
+        detail: data.changedFiles.length ? data.changedFiles.join(", ") : data.reply.slice(0, 200)
+      }));
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
     },
-    onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }])
+    onError: (error) => {
+      setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }]);
+      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : { ...comment, status: "fehlgeschlagen", detail: error instanceof ApiError ? error.message : "Der KI-Lauf ist fehlgeschlagen." }));
+    }
   });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -981,8 +997,29 @@ function Studio() {
             <div className="panel-tabs">
               {boardAvailable && <button className={activeTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Design Board</button>}
               <button className={activeTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
+              {boardAvailable && <button className={activeTab === "comments" ? "active" : ""} onClick={() => setPanelTab("comments")}>Kommentare{comments.length ? ` (${comments.length})` : ""}</button>}
               <button className={activeTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
+            {activeTab === "comments" && (
+              <div className="comment-list">
+                {comments.length === 0 ? (
+                  <div className="empty">Noch keine Kommentare. Wähle oben rechts das Kommentarwerkzeug, markiere einen Bereich und beschreibe die Änderung.</div>
+                ) : [...comments].reverse().map((comment) => (
+                  <article className={`comment-entry ${comment.status === "angewendet" ? "done" : comment.status === "fehlgeschlagen" ? "failed" : ""}`} key={comment.id}>
+                    <header>
+                      <strong title={comment.selector}>{comment.label}</strong>
+                      <em>{comment.status}</em>
+                    </header>
+                    <p>{comment.text}</p>
+                    {comment.detail && <small>{comment.detail}</small>}
+                    <footer>
+                      {comment.screenId && <button type="button" onClick={() => setScreenRequest({ screenId: comment.screenId, nonce: Date.now() })}>{comment.screenName || "Bildschirm"} zeigen</button>}
+                      <span>{new Date(comment.at).toLocaleString("de-DE")}</span>
+                    </footer>
+                  </article>
+                ))}
+              </div>
+            )}
             {activeTab === "board" && (
               <div className="design-board">
                 {boardScreens.length === 0 ? (
@@ -1081,10 +1118,11 @@ function Studio() {
             screenRequest={screenRequest}
             commentPending={chatRun.isPending}
             onComment={(target, text) => {
-              // Der Kommentar landet sichtbar im Gespräch, damit nachvollziehbar bleibt, welche
-              // Anweisung auf welches Element gewirkt hat.
+              // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
+              // nachvollziehbar bleibt, welche Anweisung auf welches Element gewirkt hat.
               setMessages((all) => [...all, { role: "user", text: `Markierung „${target.label || target.selector}“: ${text}` }]);
-              setPanelTab("chat");
+              setComments((all) => [...all, { id: `${Date.now()}`, label: target.label || target.selector, selector: target.selector, screenId: target.screenId, screenName: target.screenName, text, at: new Date().toISOString(), status: "läuft" }]);
+              setPanelTab("comments");
               chatRun.mutate({ message: text, target });
             }}
           />
@@ -1160,6 +1198,10 @@ type PreviewScreen = { id: string; name: string; isStart: boolean; links: string
 // Der markierte Bereich: Rechteck fuer den Rahmen in der Vorschau, Selektor und woertlicher
 // Ausschnitt, damit die Aenderung genau dieses Element trifft.
 type MarkTarget = { rect: { x: number; y: number; width: number; height: number }; selector: string; label: string; html: string; screenId: string; screenName: string };
+// Ein abgeschickter Kommentar bleibt nachvollziehbar: WELCHE Anweisung auf WELCHES Element wirkte
+// und was daraus wurde. Ohne diese Ansicht waere nach dem Absenden nicht mehr erkennbar, was
+// bereits verlangt wurde.
+type DesignComment = { id: string; label: string; selector: string; screenId: string; screenName: string; text: string; at: string; status: "läuft" | "angewendet" | "ohne Änderung" | "fehlgeschlagen"; detail?: string };
 const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
 const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate)/i;
 
