@@ -824,7 +824,12 @@ function Studio() {
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
   const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
-  const [panelTab, setPanelTab] = useState<"chat" | "comments" | "history">("chat");
+  const [panelTab, setPanelTab] = useState<"board" | "chat" | "history">("board");
+  // Das Design Board links kennt alle Bildschirme des importierten Projekts und hebt den gerade
+  // sichtbaren hervor; ein Klick schickt die Bühne rechts auf den gewählten Bildschirm.
+  const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
+  const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
+  const [screenRequest, setScreenRequest] = useState<{ screenId: string; nonce: number } | null>(null);
   const chatStorageKey = `werft-chat-${projectId}`;
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>(() => {
     try { return JSON.parse(localStorage.getItem(`werft-chat-${projectId}`) ?? "[]") as Array<{ role: "user" | "assistant"; text: string }>; }
@@ -918,9 +923,33 @@ function Studio() {
         {leftOpen && (
           <aside className="left-panel">
             <div className="panel-tabs">
+              <button className={panelTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Design Board</button>
               <button className={panelTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
               <button className={panelTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
+            {panelTab === "board" && (
+              <div className="design-board">
+                {boardScreens.length === 0 ? (
+                  <div className="empty">{imported.data?.imported ? "Die Bildschirme werden gelesen, sobald die Vorschau steht." : "Für dieses Projekt liegt noch kein importiertes Design vor."}</div>
+                ) : (
+                  <>
+                    <p className="board-count">{boardScreens.length} Bildschirm{boardScreens.length === 1 ? "" : "e"}</p>
+                    {boardScreens.map((screen) => (
+                      <button
+                        type="button"
+                        className={`board-screen${screen.id === activeScreenId ? " active" : ""}`}
+                        key={screen.id}
+                        onClick={() => setScreenRequest({ screenId: screen.id, nonce: Date.now() })}
+                      >
+                        <span className="board-screen-name">{screen.name}</span>
+                        {screen.isStart && <em title="Startbildschirm">Start</em>}
+                        {screen.links.length > 0 && <small>{screen.links.length} Verknüpfung{screen.links.length === 1 ? "" : "en"}</small>}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
             {panelTab === "history" && (
               <div className="messages">
                 {versions.isLoading ? <div className="empty">Verlauf wird geladen …</div> : (versions.data ?? []).length === 0 ? <div className="empty">Noch keine gespeicherten Versionen.</div> : (versions.data ?? []).map((version) => (
@@ -961,7 +990,7 @@ function Studio() {
           </aside>
         )}
         <section className="workspace">
-          <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} onScreenChange={setVisibleScreen} />
+          <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} onScreenChange={setVisibleScreen} onScreensChange={setBoardScreens} onActiveScreenChange={setActiveScreenId} screenRequest={screenRequest} />
         </section>
         {rightOpen && !imported.data?.imported && (
           <aside className="right-panel">
@@ -1046,7 +1075,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1054,6 +1083,9 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   zoom: number;
   setZoom(value: number): void;
   onScreenChange(name: string | null): void;
+  onScreensChange(list: PreviewScreen[]): void;
+  onActiveScreenChange(screenId: string | null): void;
+  screenRequest: { screenId: string; nonce: number } | null;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1067,6 +1099,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [size, setSize] = useState({ width: previewWidth, height: previewHeight });
   const [screens, setScreens] = useState<PreviewScreen[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+
+  // Der aktive Bildschirm wird nach oben gemeldet, damit das Design Board links ihn hervorheben
+  // kann. Der Ref bleibt die Wahrheit fuer den Verlauf; die Meldung ist nur die Anzeige.
+  const setActive = (screenId: string | null) => { activeRef.current = screenId; onActiveScreenChange(screenId); };
+  useEffect(() => { onScreensChange(screens); }, [screens, onScreensChange]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1106,14 +1143,14 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     if (!previous) return;
     setHistory((entries) => entries.slice(0, -1));
     // Vorher setzen: der zurückgemeldete Wechsel darf nicht erneut in den Verlauf wandern.
-    activeRef.current = previous;
+    setActive(previous);
     tellFrame({ action: "screen", screenId: previous });
   };
   const goStart = () => {
     const start = startScreenOf(screens);
     if (!start) return;
     setHistory([]);
-    activeRef.current = start.id;
+    setActive(start.id);
     tellFrame({ action: "screen", screenId: start.id });
   };
 
@@ -1125,7 +1162,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         const id = typeof data.screenId === "string" ? data.screenId : null;
         const previous = activeRef.current;
         if (id && previous && previous !== id) setHistory((entries) => [...entries, previous]);
-        activeRef.current = id;
+        setActive(id);
         onScreenChange(typeof data.screenName === "string" ? data.screenName : null);
         // Jeder Bildschirm wird wieder vollstaendig gezeigt — ein hoeherer Folgebildschirm darf
         // nicht unten abgeschnitten sein, nur weil vorher hineingezoomt wurde.
@@ -1139,7 +1176,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         setScreens(list);
         // Beim Öffnen steht der Startbildschirm — nicht der, den das Dokument zufällig zuerst führt.
         const start = startScreenOf(list);
-        if (start && activeRef.current === null) { activeRef.current = start.id; tellFrame({ action: "screen", screenId: start.id }); }
+        if (start && activeRef.current === null) { setActive(start.id); tellFrame({ action: "screen", screenId: start.id }); }
         return;
       }
       if (data.action === "size" && Number.isFinite(data.width) && Number.isFinite(data.height)) {
@@ -1186,6 +1223,16 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     addEventListener("keydown", handleKey);
     return () => removeEventListener("keydown", handleKey);
   }, [history, screens]);
+
+  // Klick im Design Board: wie ein Klick im Design selbst — der bisherige Bildschirm wandert in den
+  // Verlauf, damit die Rücktaste auch von der Navigation aus zurückführt.
+  useEffect(() => {
+    if (!screenRequest || screenRequest.screenId === activeRef.current) return;
+    const previous = activeRef.current;
+    if (previous) setHistory((entries) => [...entries, previous]);
+    setActive(screenRequest.screenId);
+    tellFrame({ action: "screen", screenId: screenRequest.screenId });
+  }, [screenRequest?.nonce]);
 
   const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     const onEmptySurface = event.button === 0 && event.target === viewportRef.current;
@@ -1245,7 +1292,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1328,6 +1375,9 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             zoom={zoom}
             setZoom={setZoom}
             onScreenChange={onScreenChange}
+            onScreensChange={onScreensChange}
+            onActiveScreenChange={onActiveScreenChange}
+            screenRequest={screenRequest}
           />
         ) : (
           <div className="empty reconstruction-state">
