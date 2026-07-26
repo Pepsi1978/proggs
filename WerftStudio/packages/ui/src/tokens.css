@@ -1,8 +1,15 @@
+/* Warme Grundfläche und Terrakotta-Akzent wie in Claude Design.
+   BELEGT aus dessen eigener Laufzeit (support.js je Export unter Designs, alle sechs identisch):
+   --color-bg  hell #f0eee6 / dunkel #2e2c26  (CANVAS_BG_LIGHT / CANVAS_BG_DARK)
+   --color-accent      #d97757  (rgba(217,119,87) im sc-shine-Verlauf)
+   --color-accent-soft #f7e1d3  (rgba(247,225,211) im sc-shine-Verlauf)
+   ABGELEITET, weil in den Quellen nicht enthalten: --color-accent-hover (dunkleres Terrakotta)
+   und der dunkle Weichton. Flächen, Linien und Schrift bleiben aus dem Werft-Designbrief. */
 :root {
-  --color-bg:#f5f7fa;--color-surface:#fff;--color-line:#d8dee8;--color-line-subtle:#e7ecf2;--color-text:#12202f;--color-text-subtle:#5d6978;--color-disabled:#8f99a8;--color-hover:#f0f3f8;--color-field:#f9fafc;--color-accent-soft:#eaf0fb;--color-accent:#3157d5;--color-accent-hover:#2848b4;--color-success:#0c7a5b;--color-warning:#8a5a00;--color-error:#9b1c1c;--color-info:#2e74b5;
+  --color-bg:#f0eee6;--color-surface:#fff;--color-line:#d8dee8;--color-line-subtle:#e7ecf2;--color-text:#12202f;--color-text-subtle:#5d6978;--color-disabled:#8f99a8;--color-hover:#f0f3f8;--color-field:#f9fafc;--color-accent-soft:#f7e1d3;--color-accent:#d97757;--color-accent-hover:#c25e3f;--color-success:#0c7a5b;--color-warning:#8a5a00;--color-error:#9b1c1c;--color-info:#2e74b5;
   --font-ui:Inter,system-ui,sans-serif;--font-mono:"JetBrains Mono",ui-monospace,monospace;
   --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;
   --motion-fast:150ms;--motion-panel:220ms;
 }
-[data-theme="dark"] {--color-bg:#12181f;--color-surface:#1a222c;--color-line:#2a3441;--color-line-subtle:#242e3a;--color-text:#e8edf4;--color-text-subtle:#9aa7b6;--color-disabled:#6e7a88;--color-hover:#232d39;--color-field:#151c25;--color-accent-soft:#22304b}
+[data-theme="dark"] {--color-bg:#2e2c26;--color-surface:#1a222c;--color-line:#2a3441;--color-line-subtle:#242e3a;--color-text:#e8edf4;--color-text-subtle:#9aa7b6;--color-disabled:#6e7a88;--color-hover:#232d39;--color-field:#151c25;--color-accent-soft:#4a3328}
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after {scroll-behavior:auto!important;animation-duration:1ms!important;transition-duration:1ms!important} }

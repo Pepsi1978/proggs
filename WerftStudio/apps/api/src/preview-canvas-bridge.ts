@@ -26,8 +26,8 @@ const bridgeScript = `<script ${bridgeMarker}>
   style.setAttribute("data-werft-canvas-style", "");
   style.textContent = [
     "[data-werft-navigate] { cursor: pointer; }",
-    "[data-werft-navigate]:hover { outline: 2px solid rgba(49, 87, 213, 0.55); outline-offset: 1px; }",
-    "html[data-werft-highlight=\\"on\\"] [data-werft-navigate] { outline: 2px solid #3157d5; outline-offset: 1px; background-image: linear-gradient(rgba(49, 87, 213, 0.14), rgba(49, 87, 213, 0.14)); }",
+    "[data-werft-navigate]:hover { outline: 2px solid rgba(217, 119, 87, 0.55); outline-offset: 1px; }",
+    "html[data-werft-highlight=\\"on\\"] [data-werft-navigate] { outline: 2px solid #d97757; outline-offset: 1px; background-image: linear-gradient(rgba(217, 119, 87, 0.14), rgba(217, 119, 87, 0.14)); }",
     chromeless ? "html, body { overflow: hidden !important; }" : "",
     chromeless ? ".werft-screen-switcher { display: none !important; }" : "",
     frameMode ? "html[data-werft-frame=\\"single\\"] .werft-screen { display: block !important; }" : ""
@@ -187,7 +187,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     clearMarkHover();
     if (!element) return;
     markHover = element;
-    element.style.setProperty("outline", "2px solid #3157d5", "important");
+    element.style.setProperty("outline", "2px solid #d97757", "important");
   }, true);
   document.addEventListener("click", (event) => {
     if (!markMode) return;
