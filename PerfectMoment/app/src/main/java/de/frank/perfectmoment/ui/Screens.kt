@@ -814,8 +814,8 @@ fun HistoryScreen(viewModel: AppViewModel) {
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .background(colors.breath, topShape)
-                            .border(1.dp, colors.goldDim.copy(alpha = 0.55f), topShape)
+                            .background(colors.surface2, topShape)
+                            .border(1.5.dp, colors.goldDim.copy(alpha = 0.85f), topShape)
                             .padding(12.dp),
                     ) {
                         Row(
@@ -823,20 +823,20 @@ fun HistoryScreen(viewModel: AppViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(
-                                Modifier.size(30.dp).background(colors.gold.copy(alpha = 0.14f), CircleShape),
+                                Modifier.size(30.dp).background(colors.gold, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.Outlined.AutoAwesome,
                                     null,
-                                    tint = colors.gold,
+                                    tint = colors.background,
                                     modifier = Modifier.size(16.dp),
                                 )
                             }
                             Column(Modifier.padding(start = 10.dp)) {
                                 Text(
                                     "DEINE TOP 3",
-                                    color = colors.gold,
+                                    color = colors.goldHi,
                                     fontFamily = Inter,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
@@ -844,7 +844,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                                 )
                                 Text(
                                     "Aktuell: ${viewModel.historySort.label}",
-                                    color = colors.text3,
+                                    color = colors.text2,
                                     fontFamily = Inter,
                                     fontSize = 11.sp,
                                     modifier = Modifier.padding(top = 2.dp),
@@ -953,19 +953,19 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
             if (rank != null) {
                 val rankColor = when (rank) {
                     1 -> colors.goldHi
-                    2 -> colors.goldDim
+                    2 -> colors.success
                     else -> colors.amber
                 }
                 Box(
                     Modifier
                         .size(32.dp)
-                        .background(rankColor.copy(alpha = 0.12f), CircleShape)
-                        .border(1.dp, rankColor.copy(alpha = 0.65f), CircleShape),
+                        .background(rankColor, CircleShape)
+                        .border(1.5.dp, colors.background.copy(alpha = 0.55f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         rank.toString(),
-                        color = rankColor,
+                        color = if (colors.dark) colors.background else colors.text1,
                         fontFamily = Inter,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
@@ -991,9 +991,6 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 6.dp),
                 )
-            }
-            Box(Modifier.size(40.dp).background(colors.surface2, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.PlayArrow, "Sitzung öffnen", tint = colors.gold, modifier = Modifier.size(18.dp))
             }
         }
     }
