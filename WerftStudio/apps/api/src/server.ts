@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.8.1-20260726.1934" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.9.0-20260726.1944" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -488,7 +488,8 @@ const chatInstructions = [
   "Nutze viele kleine Edits statt grosser Bloecke. Gib NIEMALS komplette Dateien zurueck.",
   "Erhalte Struktur, Funktionen und alle nicht betroffenen Inhalte vollstaendig. Pfade exakt wie geliefert.",
   "Ist der Wunsch mehrdeutig (unklar WELCHES Element, WELCHER Wert oder WELCHER Bildschirm gemeint ist), aendere NICHTS und stelle stattdessen in \"reply\" hoechstens drei kurze, nummerierte Rueckfragen. Lieber einmal nachfragen als am falschen Element arbeiten.",
-  "Bezieht sich der Wunsch erkennbar auf den gerade angezeigten Bildschirm, aendere NUR dessen Abschnitt (die passende <section class=\"werft-screen\">) und keinen anderen."
+  "Bezieht sich der Wunsch erkennbar auf den gerade angezeigten Bildschirm, aendere NUR dessen Abschnitt (die passende <section class=\"werft-screen\">) und keinen anderen.",
+  "Ist ein MARKIERTER BEREICH angegeben, gilt er als eindeutig: aendere ausschliesslich dieses Element und frage NICHT nach, welches Element gemeint ist. Der mitgelieferte Ausschnitt stammt woertlich aus der Datei — nimm ihn als Grundlage fuer find und lasse alles ausserhalb unveraendert."
 ].join(" ");
 function extractJsonObject(text: string): string {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
@@ -535,7 +536,13 @@ async function codexRun(organizationId: string, instructions: string, input: str
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message, screen } = z.object({ message: z.string().min(1).max(8000), screen: z.string().max(200).optional() }).strict().parse(request.body);
+  const { message, screen, target } = z.object({
+    message: z.string().min(1).max(8000),
+    screen: z.string().max(200).optional(),
+    // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
+    // eindeutig, ohne dass die KI raten oder nachfragen muss.
+    target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
+  }).strict().parse(request.body);
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
   const texts: Array<{ path: string; content: string }> = [];
@@ -547,7 +554,10 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
     budget -= file.size;
   }
   if (!texts.length) fail("CHAT_NO_TEXT_FILES", 400, "Dieses Projekt enthält keine bearbeitbaren Textdateien.");
-  const inputText = `Änderungswunsch:\n${message}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
+  const markedRegion = target
+    ? `\n\n=== MARKIERTER BEREICH (genau hier anwenden) ===\nBildschirm: ${target.screenName ?? screen ?? "unbekannt"}\nElement: ${target.label ?? target.selector}\nCSS-Pfad: ${target.selector}\nWörtlicher Ausschnitt aus der Datei:\n${target.html}`
+    : "";
+  const inputText = `Änderungswunsch:\n${message}${markedRegion}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
   const { text: outputText, model } = await codexRun(actor.organizationId, chatInstructions, inputText, request.log);
   const settings = { model };
   const cleaned = extractJsonObject(outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));

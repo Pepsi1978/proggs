@@ -50,4 +50,16 @@ describe("preview canvas bridge", () => {
     expect(rewriteRootRelativeCss(".hero{background:url(/images/hero.png)}", "/preview/root")).toContain("url(/preview/root/images/hero.png)");
     expect(rewriteRootRelativeJavaScript('import x from "/chunks/x.js"; export { y } from "/chunks/y.js";', "/preview/root")).toBe('import x from "/preview/root/chunks/x.js"; export { y } from "/preview/root/chunks/y.js";');
   });
+
+  // Die Bruecke ist ein String — kein Compiler prueft sie. Ein Syntaxfehler darin wuerde JEDE
+  // Vorschau lahmlegen, ohne dass Typecheck oder Build etwas melden.
+  it("keeps the embedded bridge script parsable and offers marking mode", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(code, "Bruecken-Skript nicht gefunden").toBeTruthy();
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain('action: "mark-target"');
+    expect(code).toContain("selectorFor");
+    expect(code).toContain("markMode");
+  });
 });

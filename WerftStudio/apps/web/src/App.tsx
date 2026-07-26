@@ -839,7 +839,11 @@ function Studio() {
   const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: panelTab === "history" });
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
   const chatRun = useMutation({
-    mutationFn: (message: string) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({ message, ...(visibleScreen ? { screen: visibleScreen } : {}) }) }),
+    mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
+      message,
+      ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
+      ...(target ? { target: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName } } : {})
+    }) }),
     onSuccess: async (data) => {
       const parts = [data.reply];
       if (data.changedFiles.length) parts.push(`✓ Geänderte Dateien: ${data.changedFiles.join(", ")}`);
@@ -978,7 +982,7 @@ function Studio() {
                 if (!message || chatRun.isPending) return;
                 setMessages((all) => [...all, { role: "user", text: message }]);
                 setChat("");
-                chatRun.mutate(message);
+                chatRun.mutate({ message });
               }}
             >
               <textarea value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
@@ -990,7 +994,30 @@ function Studio() {
           </aside>
         )}
         <section className="workspace">
-          <Canvas key={projectId} projectId={projectId} accent={accent} radius={radius} dark={darkPreview} zoom={zoom} setZoom={setZoom} mode={mode} setMode={setMode} imported={imported.data} onScreenChange={setVisibleScreen} onScreensChange={setBoardScreens} onActiveScreenChange={setActiveScreenId} screenRequest={screenRequest} />
+          <Canvas
+            key={projectId}
+            projectId={projectId}
+            accent={accent}
+            radius={radius}
+            dark={darkPreview}
+            zoom={zoom}
+            setZoom={setZoom}
+            mode={mode}
+            setMode={setMode}
+            imported={imported.data}
+            onScreenChange={setVisibleScreen}
+            onScreensChange={setBoardScreens}
+            onActiveScreenChange={setActiveScreenId}
+            screenRequest={screenRequest}
+            commentPending={chatRun.isPending}
+            onComment={(target, text) => {
+              // Der Kommentar landet sichtbar im Gespräch, damit nachvollziehbar bleibt, welche
+              // Anweisung auf welches Element gewirkt hat.
+              setMessages((all) => [...all, { role: "user", text: `Markierung „${target.label || target.selector}“: ${text}` }]);
+              setPanelTab("chat");
+              chatRun.mutate({ message: text, target });
+            }}
+          />
         </section>
         {rightOpen && !imported.data?.imported && (
           <aside className="right-panel">
@@ -1060,6 +1087,9 @@ function Studio() {
 }
 
 type PreviewScreen = { id: string; name: string; isStart: boolean; links: string[] };
+// Der markierte Bereich: Rechteck fuer den Rahmen in der Vorschau, Selektor und woertlicher
+// Ausschnitt, damit die Aenderung genau dieses Element trifft.
+type MarkTarget = { rect: { x: number; y: number; width: number; height: number }; selector: string; label: string; html: string; screenId: string; screenName: string };
 const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
 const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate)/i;
 
@@ -1075,7 +1105,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1086,6 +1116,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   onScreensChange(list: PreviewScreen[]): void;
   onActiveScreenChange(screenId: string | null): void;
   screenRequest: { screenId: string; nonce: number } | null;
+  onComment(target: MarkTarget, text: string): void;
+  commentPending: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1099,11 +1131,21 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [size, setSize] = useState({ width: previewWidth, height: previewHeight });
   const [screens, setScreens] = useState<PreviewScreen[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+  const { mode, setMode } = useUi();
+  const markMode = mode === "comment";
+  const [marker, setMarker] = useState<MarkTarget | null>(null);
+  const [commentText, setCommentText] = useState("");
 
   // Der aktive Bildschirm wird nach oben gemeldet, damit das Design Board links ihn hervorheben
   // kann. Der Ref bleibt die Wahrheit fuer den Verlauf; die Meldung ist nur die Anzeige.
   const setActive = (screenId: string | null) => { activeRef.current = screenId; onActiveScreenChange(screenId); };
   useEffect(() => { onScreensChange(screens); }, [screens, onScreensChange]);
+  // Der Markierungsmodus lebt im Vorschau-Dokument; die Bühne sagt ihm nur, ob er an ist. Beim
+  // Verlassen verschwindet auch der Rahmen, damit keine tote Markierung stehen bleibt.
+  useEffect(() => {
+    tellFrame({ action: "mark", on: markMode });
+    if (!markMode) { setMarker(null); setCommentText(""); }
+  }, [markMode, screens.length]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1171,6 +1213,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         return;
       }
       if (data.source !== "werft-preview-canvas") return;
+      if (data.action === "mark-target") {
+        const target = data as unknown as MarkTarget;
+        if (target.rect && Number.isFinite(target.rect.width)) { setMarker(target); setCommentText(""); }
+        return;
+      }
       if (data.action === "screens") {
         const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
         setScreens(list);
@@ -1276,6 +1323,42 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
           allow="autoplay; fullscreen"
         />
+        {marker && (
+          <div className="mark-frame" style={{ left: marker.rect.x, top: marker.rect.y, width: marker.rect.width, height: marker.rect.height }}>
+            {/* Gegen den Bühnen-Zoom skaliert: der Rahmen sitzt am Element, das Eingabefenster
+                bleibt aber immer gleich gross und lesbar. */}
+            <form
+              className="mark-comment"
+              style={{ transform: `scale(${1 / zoom})` }}
+              onSubmit={(event) => {
+                event.preventDefault();
+                const text = commentText.trim();
+                if (!text || commentPending) return;
+                onComment(marker, text);
+                setCommentText("");
+                setMarker(null);
+              }}
+            >
+              <strong title={marker.selector}>{marker.label || marker.selector}</strong>
+              <textarea
+                autoFocus
+                rows={2}
+                value={commentText}
+                placeholder="Was soll hier anders sein?"
+                onChange={(event) => setCommentText(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Escape") { setMarker(null); setCommentText(""); } }}
+              />
+              <footer>
+                <button type="button" onClick={() => { setMarker(null); setCommentText(""); }}>Verwerfen</button>
+                <button type="submit" className="primary" disabled={!commentText.trim() || commentPending}>{commentPending ? "läuft …" : "Senden"}</button>
+              </footer>
+            </form>
+          </div>
+        )}
+      </div>
+      <div className="stage-modes">
+        <button type="button" className={markMode ? "" : "active"} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
+        <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
       </div>
       <div className="stage-hint">
         {history.length > 0 && <button type="button" onClick={goBack} title="Zurück (Rücktaste)"><ChevronLeft /></button>}
@@ -1292,7 +1375,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1378,6 +1461,8 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             onScreensChange={onScreensChange}
             onActiveScreenChange={onActiveScreenChange}
             screenRequest={screenRequest}
+            onComment={onComment}
+            commentPending={commentPending}
           />
         ) : (
           <div className="empty reconstruction-state">

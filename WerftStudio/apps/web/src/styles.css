@@ -50,3 +50,17 @@
 .board-screen-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .board-screen em{font-style:normal;font-size:10px;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:var(--color-accent);color:#fff}
 .board-screen small{grid-column:1/-1;font-size:11px;color:var(--color-text-subtle)}
+
+/* Markieren und kommentieren: Rahmen sitzt am Element, das Eingabefenster bleibt lesbar */
+.mark-frame{position:absolute;border:2px solid var(--color-accent);border-radius:4px;pointer-events:none;z-index:24}
+.mark-comment{position:absolute;left:0;top:100%;margin-top:8px;transform-origin:top left;pointer-events:auto;width:288px;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:12px;box-shadow:var(--shadow-lg)}
+.mark-comment>strong{font-size:11px;font-weight:600;color:var(--color-text-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mark-comment textarea{width:100%;resize:vertical;min-height:52px;padding:8px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-field);color:var(--color-text);font:13px/1.45 var(--font-sans)}
+.mark-comment footer{display:flex;justify-content:flex-end;gap:8px}
+.mark-comment footer button{padding:6px 12px;border:1px solid var(--color-line);border-radius:8px;background:transparent;color:var(--color-text);font-size:12px;font-weight:600;cursor:pointer}
+.mark-comment footer button.primary{border-color:var(--color-accent);background:var(--color-accent);color:#fff}
+.mark-comment footer button:disabled{opacity:.5;cursor:default}
+.stage-modes{position:absolute;right:12px;top:12px;z-index:30;display:flex;gap:4px;padding:4px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-surface);box-shadow:var(--shadow-lg)}
+.stage-modes button{width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--color-text-subtle);display:grid;place-items:center;cursor:pointer}
+.stage-modes button.active{background:var(--color-accent);color:#fff}
+.stage-modes button svg{width:16px;height:16px}

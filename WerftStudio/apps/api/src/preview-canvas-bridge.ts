@@ -149,6 +149,65 @@ const bridgeScript = `<script ${bridgeMarker}>
   document.addEventListener("pointercancel", endPan, true);
   document.addEventListener("auxclick", (event) => { if (event.button === 1) event.preventDefault(); }, true);
 
+  // Markieren: im Kommentarmodus wird das Element unter dem Zeiger umrandet und beim Klick mit
+  // seinem WOERTLICHEN Ausschnitt gemeldet. Nur so trifft ein Aenderungswunsch spaeter genau das
+  // gemeinte Element statt irgendeines gleichnamigen.
+  let markMode = false;
+  let markHover = null;
+  const clearMarkHover = () => { if (markHover) markHover.style.removeProperty("outline"); markHover = null; };
+  // Markiert wird genau das Element unter dem Zeiger; Seite und Body selbst sind kein Bereich.
+  const markableUnder = (node) => node instanceof Element && node !== document.body && node !== document.documentElement ? node : null;
+  const selectorFor = (element) => {
+    const parts = [];
+    let node = element;
+    while (node && node.nodeType === 1 && parts.length < 8) {
+      if (node.classList && node.classList.contains("werft-screen")) { parts.unshift('[data-screen-id="' + (node.dataset.screenId || "") + '"]'); break; }
+      let part = node.tagName.toLowerCase();
+      if (node.id) { parts.unshift(part + "#" + node.id); break; }
+      const parent = node.parentElement;
+      if (parent) {
+        const same = Array.prototype.filter.call(parent.children, (child) => child.tagName === node.tagName);
+        if (same.length > 1) part += ":nth-of-type(" + (same.indexOf(node) + 1) + ")";
+      }
+      parts.unshift(part);
+      node = parent;
+    }
+    return parts.join(" > ");
+  };
+  const labelFor = (element) => {
+    const tag = element.tagName.toLowerCase();
+    const cls = element.classList && element.classList.length ? "." + Array.prototype.slice.call(element.classList).slice(0, 2).join(".") : "";
+    const text = (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 40);
+    return tag + cls + (text ? ' \\u201E' + text + '\\u201C' : "");
+  };
+  document.addEventListener("pointermove", (event) => {
+    if (!markMode) return;
+    const element = markableUnder(event.target);
+    if (element === markHover) return;
+    clearMarkHover();
+    if (!element) return;
+    markHover = element;
+    element.style.setProperty("outline", "2px solid #3157d5", "important");
+  }, true);
+  document.addEventListener("click", (event) => {
+    if (!markMode) return;
+    const element = markableUnder(event.target);
+    if (!element) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const rect = element.getBoundingClientRect();
+    const screen = element.closest(".werft-screen") || activeScreen();
+    post({
+      action: "mark-target",
+      rect: { x: Math.round(rect.left + window.scrollX), y: Math.round(rect.top + window.scrollY), width: Math.round(rect.width), height: Math.round(rect.height) },
+      selector: selectorFor(element),
+      label: labelFor(element),
+      html: (element.outerHTML || "").slice(0, 8000),
+      screenId: screenIdOf(screen),
+      screenName: screen && screen.dataset ? screen.dataset.screenName || "" : ""
+    });
+  }, true);
+
   // Jeder Klick auf eine Verknuepfung wird gemeldet: das Studio kann daraufhin den Zielbildschirm
   // zeigen. Im Rahmen auf der Leinwand bleibt der Bildschirm selbst stehen, damit die Uebersicht
   // nicht unter dem Zeiger wegspringt.
@@ -172,6 +231,11 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "highlight") document.documentElement.setAttribute("data-werft-highlight", data.on ? "on" : "off");
     if (data.action === "screen") showScreen(data.screenId);
     if (data.action === "measure") measure();
+    if (data.action === "mark") {
+      markMode = Boolean(data.on);
+      clearMarkHover();
+      document.documentElement.style.cursor = markMode ? "crosshair" : "";
+    }
   });
 
   const observer = new MutationObserver(() => { measure(); });
