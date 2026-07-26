@@ -35,24 +35,71 @@ const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g,
 const escapeAttribute = (value: string) => escapeHtml(value).replace(/'/g, "&#39;");
 export const screenSlug = (id: string) => id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "screen";
 
+// Eine waehlbare Erscheinung des Designs: Hell, Dunkel oder ein eigenes Farbthema. Bisher wurden
+// hoechstens ZWEI davon ins Dokument geschrieben — alle weiteren Themes eines Projekts waren danach
+// unerreichbar, obwohl sie in den Quellen stehen.
+export type ThemeVariant = { id: string; name: string; kind: "light" | "dark" | "other"; color: string; tokens: Record<string, string> };
+
+const darkThemeWords = /dark|night|dunkel|nacht|midnight|black|noir/i;
+const lightThemeWords = /light|day|hell|tag|bright|white/i;
+export const themeVariantId = (id: string) => id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
+const backgroundToken = /(?:^|[^a-z])(?:background|surface|bg|window|page|canvas|scaffold)/i;
+const firstColor = (tokens: Record<string, string>) =>
+  Object.entries(tokens).find(([token, value]) => backgroundToken.test(token) && /^#|^rgb|^hsl/i.test(value))?.[1]
+  ?? Object.values(tokens).find((value) => /^#|^rgb|^hsl/i.test(value))
+  ?? "#ffffff";
+
+// Aus den gemessenen Theme-Fakten werden die WAEHLBAREN Varianten. Eine Zusatzpalette mit zwei
+// Farben neben einem Theme mit dreissig ist keine Erscheinung der App — sie wuerde die Auswahl nur
+// zumuellen. Der Massstab ist deshalb RELATIV: ein Drittel des groessten Themes. Sind alle klein,
+// bleiben alle erhalten; sonst faellt nur der Kleinkram weg.
+export function themeVariants(themes: DesignFacts["themes"]): ThemeVariant[] {
+  const sized = themes.filter((theme) => Object.keys(theme.tokens).length > 0);
+  if (!sized.length) return [];
+  const biggest = Math.max(...sized.map((theme) => Object.keys(theme.tokens).length));
+  const threshold = Math.max(1, Math.floor(biggest / 3));
+  const chosen: ThemeVariant[] = [];
+  const seenTokens = new Set<string>();
+  const seenIds = new Set<string>();
+  for (const theme of [...sized].sort((left, right) => Object.keys(right.tokens).length - Object.keys(left.tokens).length)) {
+    if (Object.keys(theme.tokens).length < threshold) continue;
+    // Zwei Quellen koennen dasselbe Theme beschreiben; doppelte Reiter helfen niemandem.
+    const fingerprint = JSON.stringify(Object.entries(theme.tokens).sort());
+    const id = themeVariantId(theme.id);
+    if (seenTokens.has(fingerprint) || seenIds.has(id)) continue;
+    seenTokens.add(fingerprint);
+    seenIds.add(id);
+    const label = `${theme.id} ${theme.name}`;
+    chosen.push({
+      id,
+      name: theme.name,
+      kind: darkThemeWords.test(label) ? "dark" : lightThemeWords.test(label) ? "light" : "other",
+      color: firstColor(theme.tokens),
+      tokens: theme.tokens
+    });
+  }
+  return chosen;
+}
+
 // Die Theme-Variablen entstehen aus den geparsten Quellfarben, nicht aus einer KI-Antwort: dadurch
 // sind Farben ueber alle Screens hinweg garantiert identisch und exakt.
 export function themeStyles(facts: DesignFacts): string {
-  // Projekte definieren oft mehrere Farbobjekte. Das umfangreichste Schema ist das echte Theme —
-  // das erstgefundene waere haeufig nur eine kleine Zusatzpalette.
-  const isDark = (theme: DesignFacts["themes"][number]) => /dark|night|dunkel/i.test(theme.id) || /dark|night|dunkel/i.test(theme.name);
-  const largest = (candidates: DesignFacts["themes"]) => [...candidates].sort((left, right) => Object.keys(right.tokens).length - Object.keys(left.tokens).length)[0];
-  const light = largest(facts.themes.filter((theme) => !isDark(theme))) ?? largest(facts.themes);
-  const dark = largest(facts.themes.filter(isDark));
-  const toVariables = (theme: typeof light) => theme ? Object.entries(theme.tokens).map(([token, value]) => `  --${token.replace(/[^\w-]/g, "-")}: ${value};`).join("\n") : "";
-  const lightBlock = toVariables(light);
-  const darkBlock = toVariables(dark);
-  if (!lightBlock && !darkBlock) return "";
-  return [
-    lightBlock ? `:root {\n${lightBlock}\n}` : "",
-    darkBlock ? `@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]) {\n${darkBlock.replace(/^/gm, "  ")}\n  }\n}` : "",
-    darkBlock ? `:root[data-theme="dark"] {\n${darkBlock}\n}` : ""
-  ].filter(Boolean).join("\n");
+  const variants = themeVariants(facts.themes);
+  if (!variants.length) return "";
+  const toVariables = (tokens: Record<string, string>, indent = "  ") => Object.entries(tokens).map(([token, value]) => `${indent}--${token.replace(/[^\w-]/g, "-")}: ${value};`).join("\n");
+  // Ohne Wahl gilt die helle Erscheinung; ein Projekt ganz ohne helles Theme startet mit seiner
+  // umfangreichsten Variante.
+  const base = variants.find((variant) => variant.kind === "light") ?? variants.find((variant) => variant.kind === "other") ?? variants[0]!;
+  const dark = variants.find((variant) => variant.kind === "dark");
+  const blocks = [`:root {\n${toVariables(base.tokens)}\n}`];
+  // `data-theme` bleibt erhalten: bereits aufgebaute Designs und ihre eigenen Umschalter benutzen es.
+  if (dark) {
+    blocks.push(`@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]):not([data-werft-theme]) {\n${toVariables(dark.tokens, "    ")}\n  }\n}`);
+    blocks.push(`:root[data-theme="dark"]:not([data-werft-theme]) {\n${toVariables(dark.tokens)}\n}`);
+  }
+  // Jede erkannte Variante ist einzeln waehlbar — auch die dritte, vierte und fuenfte.
+  for (const variant of variants) blocks.push(`:root[data-werft-theme="${variant.id}"] {\n${toVariables(variant.tokens)}\n}`);
+  return blocks.join("\n");
 }
 
 // Die Screen-Leiste ist bewusst ausserhalb der App-Flaeche und wird beim Export nicht mitgezaehlt:
@@ -139,6 +186,9 @@ export function repairNavigationTargets(markup: string, screens: Array<{ id: str
 
 export function composeScreens(screens: ComposedScreen[], options: ComposeOptions): string {
   const preview = JSON.stringify({ platform: options.platform, width: options.width, height: options.height, device: options.device, density: options.density });
+  // Die waehlbaren Erscheinungen stehen im Dokument selbst: das Studio muss sie nicht erraten und
+  // kann sie fuer ALLE Bildschirme zugleich umschalten.
+  const themes = JSON.stringify(themeVariants(options.facts.themes).map(({ id, name, kind, color }) => ({ id, name, kind, color })));
   const sections = orderScreensByFlow(screens).map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${repairNavigationTargets(screen.markup, screens)}\n</section>`).join("\n");
   return `<!doctype html>
 <html lang="de">
@@ -146,6 +196,7 @@ export function composeScreens(screens: ComposedScreen[], options: ComposeOption
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="werft-preview" content='${preview.replace(/'/g, "&#39;")}'>
+<meta name="werft-themes" content='${themes.replace(/'/g, "&#39;")}'>
 <title>${escapeHtml(options.title)}</title>
 <style>
 ${shellStyles}

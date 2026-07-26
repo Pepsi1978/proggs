@@ -23,7 +23,7 @@ import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.j
 import { effectGuidance } from "./effect-catalog.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
-import { composeScreens, extractScreenFragment, screenPlanFrom } from "./screen-composer.js";
+import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.17.0-20260726.2119" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.18.0-20260726.2334" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -423,6 +423,23 @@ app.get("/api/v1/projects/:projectId/import", async (request) => {
   // HTML-Datei; nur Ersteres darf als originalgetreu aufgebaut angezeigt werden.
   const reconstructed = row.imported.entryPath.startsWith(".werft-generated/");
   return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+});
+// Alle Erscheinungen eines Projekts — Hell, Dunkel und eigene Farbthemes — deterministisch aus den
+// Quellen gemessen, ohne KI. Ein Design, das vor dieser Fassung aufgebaut wurde, kennt nur EIN Theme;
+// über diesen Weg bekommt es die übrigen nachgereicht, statt auf einen teuren Neuaufbau zu warten.
+app.get("/api/v1/projects/:projectId/themes", async (request) => {
+  const actor = requireActorPermission(request, "project.read");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ imported: projectImports, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) return { themes: [], css: "" };
+  const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+  const factPaths = new Set(factCandidatePaths(platform, row.imported.manifest.map((file) => file.path)));
+  const factFiles = row.imported.manifest.filter((file) => factPaths.has(file.path) && file.size <= maxFactFileBytes).slice(0, maxFactFiles);
+  const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") }));
+  const facts = extractDesignFacts(platform, factTexts);
+  const variants = themeVariants(facts.themes);
+  request.log.info({ event: "themes.measured", projectId, platform, themes: variants.length, factFiles: factFiles.length }, "Erscheinungen des Designs gemessen");
+  return { themes: variants.map(({ id, name, kind, color }) => ({ id, name, kind, color })), css: themeStyles(facts) };
 });
 // Rückfragen entstehen AUS dem importierten Projekt, nicht aus einer festen Liste: gefragt wird nur,
 // was für die richtige Darstellung dieses Projekts wirklich fehlt — und jede Antwort ist sofort
@@ -748,6 +765,7 @@ const reconstructionAnalysisInstructions = [
   "Die mitgelieferten DESIGN-FAKTEN sind bereits exakt gemessen — wiederhole sie nicht, sondern beschreibe, WELCHES Element WELCHEN dieser Werte benutzt.",
   "Bewahre JEDE exakte sichtbare Konstante, die in den Fakten noch fehlt: Breite, Höhe, x/y-Ausrichtung, Padding, Margin, Gap, Insets, Radius, Stroke, Schatten, Schriftfamilie/-größe/-gewicht/-Zeilenhöhe, Farbe inklusive Alpha, Icon-/Assetpfad und Z-Order.",
   "Dokumentiere Komponentenbaum, Constraints/Modifier-Reihenfolge, Navigation, Zustände, Texte sowie sämtliche Light-/Dark-/Zusatz-Themes — jeweils mit dem Bildschirm, zu dem sie gehören.",
+  "Halte JEDE Bewegung und JEDE Zustandsreaktion fest: Dauerschleifen (pulsierende Ringe, Wellen), Ein-/Ausblenden, Übergänge, Ripple, gedrückte und ausgewählte Zustände, Aufklapper und Blätter — mit Dauer, Kurve und dem Element, an dem sie hängen. Sie gehören zum Design und fehlen sonst vollständig.",
   "Nichts schätzen. Unsichere Beziehungen mit Quellpfad markieren. Maximal 12000 Zeichen, aber keine exakten Designwerte weglassen."
 ].join(" ");
 
@@ -764,7 +782,8 @@ function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfi
     effectGuidance,
     `Verlinke Navigationsziele über data-werft-navigate="ZIEL-ID"; gültige IDs sind: ${screenIds.join("; ") || "keine"}.`,
     "JEDES Bedienelement, das im Original einen anderen Bildschirm öffnet, MUSS data-werft-navigate tragen — auch Zurück-Pfeile, Listeneinträge, Karten, Kacheln, Symbole und Leisten-Einträge. Ohne diese Verknüpfungen ist die Rekonstruktion nicht durchklickbar.",
-    "Nutze für Farben die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Baue KEINE eigenen Theme-Umschalter, Werkzeugleisten oder Hinweistexte ein.",
+    "Farben IMMER über die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Feste Farbwerte statt Variablen machen das Design unumschaltbar.",
+    "Bringt das Original einen Umschalter für Hell/Dunkel oder die Darstellung mit (Mond-/Sonnensymbol, Eintrag „Darstellung“/„Erscheinungsbild“), baue ihn nach UND gib ihm data-werft-theme-toggle. Erfinde KEINEN zusätzlichen Umschalter, keine Werkzeugleisten und keine Hinweistexte.",
     "Antworte AUSSCHLIESSLICH mit dem HTML-Fragment dieses einen Bildschirms (optional ein <style>-Block davor, dessen Selektoren eindeutig zu diesem Bildschirm gehören). Kein <!doctype>, kein <html>, kein <body>, kein Markdown, keine Erklärung."
   ].join("\n");
 }

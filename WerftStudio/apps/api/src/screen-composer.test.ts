@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyFacts, type DesignFacts } from "./design-facts.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, mapWithConcurrency, reconstructionSourceFiles } from "./import-reconstruction.js";
-import { composeScreens, extractScreenFragment, orderScreensByFlow, resolveNavigationTarget, screenPlanFrom, themeStyles } from "./screen-composer.js";
+import { composeScreens, extractScreenFragment, orderScreensByFlow, resolveNavigationTarget, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
 
 const facts = (patch: Partial<DesignFacts> = {}): DesignFacts => ({ ...emptyFacts("android"), ...patch });
 const options = (overrides: Partial<Parameters<typeof composeScreens>[1]> = {}) => ({ title: "Acme", platform: "android", width: 412, height: 915, device: "Pixel 9", density: 2.625, facts: facts(), ...overrides });
@@ -39,6 +39,40 @@ describe("Bildschirm-Zusammenbau", () => {
     expect(css).toContain("--primary: #3157d5");
     expect(css).toContain("prefers-color-scheme: dark");
     expect(css).toContain('[data-theme="dark"]');
+  });
+
+  // Gemeldet an PerfectMoment und OpenLauncher: von 18 Bildschirmen war nur EINE Erscheinung zu
+  // sehen. Frueher landeten hoechstens zwei Themes im Dokument, alle weiteren fielen still weg.
+  it("macht JEDE gemessene Erscheinung einzeln wählbar", () => {
+    const themes = [
+      { id: "LightColors", name: "LightColors", tokens: { primary: "#3157d5", background: "#ffffff" }, source: "Theme.kt" },
+      { id: "DarkColors", name: "DarkColors (Dunkel)", tokens: { primary: "#9db4ff", background: "#101318" }, source: "Theme.kt" },
+      { id: "ForestColors", name: "ForestColors", tokens: { primary: "#0c7a5b", background: "#f2f7f4" }, source: "Theme.kt" }
+    ];
+    const css = themeStyles(facts({ themes }));
+    expect(css).toContain('[data-werft-theme="lightcolors"]');
+    expect(css).toContain('[data-werft-theme="darkcolors"]');
+    expect(css).toContain('[data-werft-theme="forestcolors"]');
+    const variants = themeVariants(themes);
+    expect(variants).toHaveLength(3);
+    expect(variants.map((variant) => variant.kind)).toEqual(["light", "dark", "other"]);
+    // Die Vorschaufarbe kommt aus dem Hintergrund-Token — daran erkennt man das Theme im Board.
+    expect(variants[1]!.color).toBe("#101318");
+    // Und das Dokument nennt seine Erscheinungen, damit die Vorschau sie nicht raten muss.
+    const html = composeScreens([{ id: "a", name: "A", markup: "<i></i>", isStart: true }], options({ facts: facts({ themes }) }));
+    expect(html).toContain('name="werft-themes"');
+    expect(html).toContain('"kind":"dark"');
+  });
+
+  // Eine Zusatzpalette mit zwei Farben neben einem Theme mit dreissig ist keine Erscheinung der App.
+  it("lässt Zusatzpaletten aus der Auswahl heraus, behält aber kleine Themes wenn alle klein sind", () => {
+    const big = Object.fromEntries(Array.from({ length: 30 }, (_, index) => [`token${index}`, "#101010"]));
+    const variants = themeVariants([
+      { id: "AppTheme", name: "AppTheme", tokens: big, source: "Theme.kt" },
+      { id: "BadgeColors", name: "BadgeColors", tokens: { badge: "#ff0000", badgeOn: "#ffffff" }, source: "Badge.kt" }
+    ]);
+    expect(variants.map((variant) => variant.id)).toEqual(["apptheme"]);
+    expect(themeVariants([{ id: "OnlyColors", name: "OnlyColors", tokens: { a: "#111111" }, source: "x.kt" }])).toHaveLength(1);
   });
 
   it("löst auch ein versehentlich komplettes Dokument in ein Fragment auf", () => {

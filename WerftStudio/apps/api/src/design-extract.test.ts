@@ -3,6 +3,7 @@ import { resolveDrawable, shapeDrawableToCss, vectorDrawableToSvg } from "./andr
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { dimensionToPx, normalizeHexColor, renderFactSheet, rgbaFromArgb } from "./design-facts.js";
 import { elevationToShadow, swiftShadowToCss, wpfDropShadowToCss } from "./effect-catalog.js";
+import { composeAnimations } from "./extract-android.js";
 import { extractWindowsFacts, thicknessToCss } from "./extract-windows.js";
 import { parseXml } from "./xml-lite.js";
 
@@ -402,6 +403,35 @@ describe("Apple-Faktenextraktion", () => {
     expect(facts.effects.some((effect) => effect.css === "0px 6px 20px rgba(0, 0, 0, 0.18)")).toBe(true);
     expect(facts.dimensions.some((dimension) => dimension.px === 980)).toBe(true);
     expect(facts.screens.some((screen) => screen.id === "apple:ContentView" && screen.isStart)).toBe(true);
+  });
+});
+
+// Gemeldet an PerfectMoment: der animierte Ring um das Mikrofon fehlte in der Rekonstruktion
+// vollständig. Grund: Bewegung wurde nie gemessen und stand deshalb in keinem Faktenblatt.
+describe("Animationen aus Compose-Quellen", () => {
+  it("misst Dauerschleife, Übergang und Ein-/Ausblenden samt Dauer und Kurve", () => {
+    // Wortlaut aus PerfectMoment: Kotlin schreibt die Dauer als 1_600.
+    const effects = composeAnimations(`
+      val transition = rememberInfiniteTransition(label = "Aufnahme")
+      val puls by transition.animateFloat(initialValue = 1f, targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Reverse))
+      AnimatedVisibility(visible = läuft) { Text("Aufnahme") }
+    `, "ui/Components.kt");
+    const loop = effects.find((effect) => effect.name.endsWith("Dauerschleife"));
+    expect(loop?.kind).toBe("animation");
+    expect(loop?.css).toContain("1600ms");
+    expect(loop?.css).toContain("linear");
+    expect(loop?.css).toContain("infinite alternate");
+    expect(effects.some((effect) => effect.css.startsWith("transition: opacity"))).toBe(true);
+  });
+
+  it("meldet nichts, wenn sich im Quelltext nichts bewegt", () => {
+    expect(composeAnimations("@Composable fun Ruhe() { Text(\"x\") }", "ui/Ruhe.kt")).toHaveLength(0);
+  });
+
+  it("nimmt die Material-Standarddauer, wenn die Quelle keine nennt", () => {
+    const effects = composeAnimations("val alpha by animateFloatAsState(targetValue = 1f)", "ui/A.kt");
+    expect(effects[0]?.css).toContain("300ms");
   });
 });
 

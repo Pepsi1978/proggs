@@ -76,6 +76,26 @@ async function reconstructProject(projectId: string, onProgress: (job: Reconstru
   }
 }
 
+// Ein laufender KI-Auftrag muss SICHTBAR laufen: wandernde Punkte, die verstrichene Zeit und worauf
+// gerade gearbeitet wird. Ohne dieses Zeichen ist nicht erkennbar, ob noch etwas passiert.
+function WorkingIndicator({ detail }: { detail: string }) {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const minutes = Math.floor(seconds / 60);
+  return (
+    <div className="assistant-message working-message">
+      <span className="working-line">
+        <span className="working-dots" aria-hidden="true"><i /><i /><i /></span>
+        Die KI arbeitet am Design … {minutes}:{String(seconds % 60).padStart(2, "0")}
+      </span>
+      <small>{detail} · das kann je nach Modell ein bis zwei Minuten dauern</small>
+    </div>
+  );
+}
+
 function Button({ children, variant = "secondary", className = "", ...props }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button className={`button ${variant} ${className}`} {...props}>
@@ -868,6 +888,24 @@ function Studio() {
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
   const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
+  // Die Höhe des Eingabefelds zieht der Griff darüber: nach oben größer, nach unten kleiner.
+  const [composerHeight, setComposerHeight] = useState(92);
+  const composerDrag = useRef<{ pointerId: number; y: number; height: number } | null>(null);
+  const startComposerResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    composerDrag.current = { pointerId: event.pointerId, y: event.clientY, height: composerHeight };
+  };
+  const moveComposerResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = composerDrag.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    setComposerHeight(Math.min(460, Math.max(56, start.height + (start.y - event.clientY))));
+  };
+  const endComposerResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (composerDrag.current?.pointerId !== event.pointerId) return;
+    composerDrag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const [panelTab, setPanelTab] = useState<"board" | "chat" | "comments" | "history">("board");
   const commentStorageKey = `werft-comments-${projectId}`;
   const [comments, setComments] = useState<DesignComment[]>(() => {
@@ -880,6 +918,14 @@ function Studio() {
   const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [screenRequest, setScreenRequest] = useState<{ screenId: string; nonce: number } | null>(null);
+  // Die Erscheinungen des Designs: gemeldet aus der Vorschau, gewählt im Design Board. Die Wahl gilt
+  // für alle Bildschirme zugleich — ein halb umgeschaltetes Design wäre wertlos.
+  const [boardThemes, setBoardThemes] = useState<DesignTheme[]>([]);
+  const [activeThemeId, setActiveThemeId] = useState("");
+  // Ob das Umschalten im Design wirklich ankommt: ein mit festen Farbwerten aufgebautes Design
+  // reagiert nicht — dann wird das gesagt, statt einen wirkungslosen Schalter anzubieten.
+  const [themesEffective, setThemesEffective] = useState(true);
+  const [themeRequest, setThemeRequest] = useState<{ themeId: string; nonce: number } | null>(null);
   // Die Farbregler arbeiten mit den Token, die der Aufbau aus den Projektquellen erzeugt hat.
   const [designTokens, setDesignTokens] = useState<Record<string, string>>({});
   const [tokenOverrides, setTokenOverrides] = useState<Record<string, string>>({});
@@ -900,6 +946,16 @@ function Studio() {
   });
   useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
   const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: activeTab === "history" });
+  // Deterministisch aus den Projektquellen gemessene Erscheinungen — ohne KI-Lauf. Sie sind der
+  // Rettungsanker für Designs, die vor der Theme-Unterstützung aufgebaut wurden.
+  const measuredThemes = useQuery({
+    queryKey: ["themes", projectId],
+    queryFn: () => api<{ themes: DesignTheme[]; css: string }>(`/projects/${projectId}/themes`),
+    enabled: boardAvailable,
+    staleTime: 5 * 60 * 1000
+  });
+  // Nachgereicht wird nur, wenn das Dokument selbst weniger Erscheinungen kennt als gemessen wurden.
+  const themeCss = (measuredThemes.data?.themes.length ?? 0) > boardThemes.length ? measuredThemes.data?.css : undefined;
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
   // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
   // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.
@@ -912,8 +968,14 @@ function Studio() {
     },
     onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Text nicht geändert: ${error.message}` : "Die Textänderung ist fehlgeschlagen." }])
   });
-  const pickModel = useMutation({
-    mutationFn: (model: string) => api("/providers/openai/settings", { method: "PATCH", body: JSON.stringify({ model, effort: connection.data?.settings?.effort ?? "high", fast: connection.data?.settings?.fast ?? false }) }),
+  // Modell UND Denktiefe gehören an die Stelle, an der sie benutzt werden. Beide gehen über denselben
+  // Weg: der ungeänderte Teil wird mitgeschickt, sonst setzt eine Wahl die andere zurück.
+  const pickSettings = useMutation({
+    mutationFn: (change: { model?: string; effort?: string }) => api("/providers/openai/settings", { method: "PATCH", body: JSON.stringify({
+      model: change.model ?? connection.data?.settings?.model ?? "gpt-5.6-sol",
+      effort: change.effort ?? connection.data?.settings?.effort ?? "high",
+      fast: connection.data?.settings?.fast ?? false
+    }) }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] })
   });
   const chatRun = useMutation({
@@ -1028,7 +1090,8 @@ function Studio() {
                   <article className={`comment-entry ${comment.status === "angewendet" ? "done" : comment.status === "fehlgeschlagen" ? "failed" : ""}`} key={comment.id}>
                     <header>
                       <strong title={comment.selector}>{comment.label}</strong>
-                      <em>{comment.status}</em>
+                      {/* Ein laufender Auftrag zeigt das auch hier — sonst wirkt die Liste still. */}
+                      <em>{comment.status === "läuft" ? <><span className="working-dots" aria-hidden="true"><i /><i /><i /></span> läuft</> : comment.status}</em>
                     </header>
                     <p>{comment.text}</p>
                     {comment.detail && <small>{comment.detail}</small>}
@@ -1042,6 +1105,28 @@ function Studio() {
             )}
             {activeTab === "board" && (
               <div className="design-board">
+                {/* Die Erscheinung steht ganz oben: sie gilt für ALLE Bildschirme, nicht für den
+                    gerade sichtbaren. Ohne diese Zeile wäre nur das erste Theme erreichbar. */}
+                {boardThemes.length > 1 && (
+                  <div className="board-themes">
+                    <p className="board-count">Erscheinung</p>
+                    <div className="board-theme-row">
+                      {boardThemes.map((theme) => (
+                        <button
+                          type="button"
+                          key={theme.id}
+                          className={`board-theme${theme.id === activeThemeId ? " active" : ""}`}
+                          title={theme.name}
+                          onClick={() => { setActiveThemeId(theme.id); setThemeRequest({ themeId: theme.id, nonce: Date.now() }); }}
+                        >
+                          <i style={{ background: theme.color || "transparent" }} />
+                          {themeLabel(theme, boardThemes)}
+                        </button>
+                      ))}
+                    </div>
+                    {!themesEffective && <small className="board-theme-hint">Dieses Design wurde mit festen Farbwerten aufgebaut — das Umschalten wirkt erst nach „Neu aufbauen“ unten rechts an der Bühne.</small>}
+                  </div>
+                )}
                 {boardScreens.length === 0 ? (
                   <div className="empty">Die Bildschirme werden gelesen, sobald die Vorschau steht.</div>
                 ) : (
@@ -1081,7 +1166,7 @@ function Studio() {
                   {m.text}
                 </div>
               ))}
-              {chatRun.isPending && <div className="assistant-message">Die KI arbeitet am Design … das kann je nach Modell ein bis zwei Minuten dauern.</div>}
+              {chatRun.isPending && <WorkingIndicator detail={visibleScreen ? `Bildschirm „${visibleScreen}“` : "Gesamtes Design"} />}
             </div>}
             {activeTab === "chat" && <form
               className="composer"
@@ -1094,27 +1179,51 @@ function Studio() {
                 chatRun.mutate({ message });
               }}
             >
-              <textarea value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
+              {/* Der Griff über dem Feld zieht die Eingabe auf: nach oben größer, nach unten kleiner. */}
+              <div
+                className="composer-grip"
+                title="Höhe des Eingabefelds ziehen"
+                onPointerDown={startComposerResize}
+                onPointerMove={moveComposerResize}
+                onPointerUp={endComposerResize}
+                onPointerCancel={endComposerResize}
+              />
+              <div className="composer-input">
+                <textarea style={{ height: composerHeight }} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
+                <Button variant="primary" className="composer-send" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "läuft …" : "Senden"}</Button>
+              </div>
               <footer>
                 {connection.data?.connected ? (
-                  // Das Modell gehoert an die Stelle, an der man es benutzt — nicht nur in die
-                  // Einstellungen. Effort und Fast bleiben unveraendert, sonst wuerde die
-                  // Modellwahl stillschweigend die Denktiefe zuruecksetzen.
-                  <select
-                    aria-label="Modell für den nächsten Lauf"
-                    value={connection.data.settings?.model ?? "gpt-5.6-sol"}
-                    disabled={pickModel.isPending}
-                    onChange={(event) => pickModel.mutate(event.target.value)}
-                  >
-                    <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
-                    <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
-                    <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
-                  </select>
+                  // Modell und Denktiefe stehen dort, wo sie benutzt werden — nicht nur in den
+                  // Einstellungen. Jede Wahl schickt die andere unverändert mit.
+                  <>
+                    <select
+                      aria-label="Modell für den nächsten Lauf"
+                      value={connection.data.settings?.model ?? "gpt-5.6-sol"}
+                      disabled={pickSettings.isPending}
+                      onChange={(event) => pickSettings.mutate({ model: event.target.value })}
+                    >
+                      <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
+                      <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
+                      <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
+                    </select>
+                    <select
+                      aria-label="Denktiefe für den nächsten Lauf"
+                      value={connection.data.settings?.effort ?? "high"}
+                      disabled={pickSettings.isPending}
+                      onChange={(event) => pickSettings.mutate({ effort: event.target.value })}
+                    >
+                      <option value="none">Ohne Nachdenken</option>
+                      <option value="low">Denktiefe niedrig</option>
+                      <option value="medium">Denktiefe mittel</option>
+                      <option value="high">Denktiefe hoch</option>
+                      <option value="xhigh">Denktiefe sehr hoch</option>
+                    </select>
+                  </>
                 ) : (
                   <Link to="/app/settings/models">Kein Provider verbunden — jetzt verbinden</Link>
                 )}
                 {connection.data?.connected && connection.data.settings?.fast && <em className="composer-fast">Fast</em>}
-                <Button variant="primary" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "KI-Lauf läuft …" : "Senden"}</Button>
               </footer>
             </form>}
           </aside>
@@ -1139,6 +1248,9 @@ function Studio() {
             commentPending={chatRun.isPending}
             onTokensChange={setDesignTokens}
             tuneRequest={tuneRequest}
+            themeRequest={themeRequest}
+            themeCss={themeCss}
+            onThemesChange={(themes, activeId, effective) => { setBoardThemes(themes); setActiveThemeId(activeId); if (effective !== undefined) setThemesEffective(effective); }}
             onTextEdit={(before, after) => textEdit.mutate({ before, after })}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
@@ -1248,6 +1360,14 @@ function Studio() {
 }
 
 type PreviewScreen = { id: string; name: string; isStart: boolean; links: string[] };
+// Eine waehlbare Erscheinung des Designs: Hell, Dunkel oder ein eigenes Farbthema des Projekts.
+type DesignTheme = { id: string; name: string; kind: "light" | "dark" | "other"; color: string };
+// „AppTheme (Nacht)" sagt nichts; besteht die Auswahl nur aus Hell und Dunkel, heissen sie auch so.
+function themeLabel(theme: DesignTheme, all: DesignTheme[]): string {
+  const simple = all.length <= 2 && all.every((entry) => entry.kind !== "other");
+  if (simple) return theme.kind === "dark" ? "Dunkel" : "Hell";
+  return theme.name.replace(/\s*\((?:Dunkel|Nacht)\)\s*$/i, "").trim() || theme.id;
+}
 // Der markierte Bereich: Rechteck fuer den Rahmen in der Vorschau, Selektor und woertlicher
 // Ausschnitt, damit die Aenderung genau dieses Element trifft.
 type MarkTarget = { rect: { x: number; y: number; width: number; height: number }; selector: string; label: string; html: string; screenId: string; screenName: string };
@@ -1270,7 +1390,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1286,9 +1406,13 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   onTokensChange(tokens: Record<string, string>): void;
   tuneRequest: { overrides: Record<string, string>; nonce: number } | null;
   onTextEdit(before: string, after: string): void;
+  onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void;
+  themeRequest: { themeId: string; nonce: number } | null;
+  themeCss: string | undefined;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const commentRef = useRef<HTMLFormElement>(null);
   const pointerPan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const previewPan = useRef<CanvasPoint | null>(null);
   const userAdjusted = useRef(false);
@@ -1297,6 +1421,10 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [size, setSize] = useState({ width: previewWidth, height: previewHeight });
+  // Die Groesse der Buehne und die des Eingabefensters entscheiden, wohin das Fenster passt. Ohne
+  // beide Werte laesst sich nicht garantieren, dass es vollstaendig sichtbar bleibt.
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [commentSize, setCommentSize] = useState({ width: 300, height: 168 });
   const [screens, setScreens] = useState<PreviewScreen[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const { mode, setMode } = useUi();
@@ -1304,10 +1432,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const textMode = mode === "edit";
   const [marker, setMarker] = useState<MarkTarget | null>(null);
   const [commentText, setCommentText] = useState("");
-  // Das Theme des DESIGNS, nicht das des Studios: importierte Apps bringen oft ein zweites Theme
-  // mit, das ohne Schalter unerreichbar bliebe.
-  const [designTheme, setDesignTheme] = useState<"light" | "dark">("light");
-  const [designHasDark, setDesignHasDark] = useState(false);
+  // Die Erscheinungen des DESIGNS, nicht die des Studios: importierte Apps bringen fast immer
+  // mehrere mit — ohne Auswahl bliebe alles ausser der ersten unerreichbar.
+  const [designThemes, setDesignThemes] = useState<DesignTheme[]>([]);
+  const [designThemeId, setDesignThemeId] = useState("");
+  const themesRef = useRef<DesignTheme[]>([]);
 
   // Der aktive Bildschirm wird nach oben gemeldet, damit das Design Board links ihn hervorheben
   // kann. Der Ref bleibt die Wahrheit fuer den Verlauf; die Meldung ist nur die Anzeige.
@@ -1341,10 +1470,27 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport || typeof ResizeObserver !== "function") return;
-    const observer = new ResizeObserver(() => { if (!userAdjusted.current) fitStage(); });
+    const measureViewport = () => {
+      const rect = viewport.getBoundingClientRect();
+      setViewportSize((current) => current.width === rect.width && current.height === rect.height ? current : { width: rect.width, height: rect.height });
+    };
+    measureViewport();
+    const observer = new ResizeObserver(() => { measureViewport(); if (!userAdjusted.current) fitStage(); });
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
+  // Das Eingabefenster wird gemessen, sobald es steht: nur mit seiner echten Hoehe laesst es sich so
+  // einklemmen, dass unten nichts abgeschnitten wird.
+  useEffect(() => {
+    const element = commentRef.current;
+    if (!element || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(() => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width && rect.height) setCommentSize((current) => Math.abs(current.width - rect.width) < 1 && Math.abs(current.height - rect.height) < 1 ? current : { width: rect.width, height: rect.height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [marker?.selector]);
 
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
@@ -1353,6 +1499,13 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     const point = { x: clientX - rect.left, y: clientY - rect.top };
     setOffset((current) => offsetForZoomAtPoint(current, point, zoom, nextZoom));
     setZoom(nextZoom);
+  };
+  // Das Rad ohne Strg bewegt das Design, statt es zu vergroessern: gescrollt wird dort, wo das
+  // Original scrollt — und sonst wandert die Buehne, damit das Rad nie wirkungslos bleibt.
+  const panBy = (deltaX: number, deltaY: number) => {
+    if (!deltaX && !deltaY) return;
+    userAdjusted.current = true;
+    setOffset((current) => ({ x: current.x - deltaX, y: current.y - deltaY }));
   };
   const goBack = () => {
     const previous = history.at(-1);
@@ -1372,7 +1525,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const data = event.data as { source?: string; action?: string; screens?: PreviewScreen[]; screenId?: string; screenName?: string; width?: number; height?: number; x?: number; y?: number; deltaY?: number } | null;
+      const data = event.data as { source?: string; action?: string; screens?: PreviewScreen[]; screenId?: string; screenName?: string; width?: number; height?: number; x?: number; y?: number; deltaX?: number; deltaY?: number; ctrlKey?: boolean } | null;
       if (!data || event.source !== frameRef.current?.contentWindow) return;
       if (data.source === "werft-preview-screen") {
         const id = typeof data.screenId === "string" ? data.screenId : null;
@@ -1400,11 +1553,23 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       if (data.action === "screens") {
         const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
         setScreens(list);
-        setDesignHasDark(Boolean((data as { hasDarkTheme?: boolean }).hasDarkTheme));
+        const themePayload = data as { themes?: DesignTheme[]; activeThemeId?: string; themesEffective?: boolean };
+        const themes = (themePayload.themes ?? []).filter((theme) => theme && typeof theme.id === "string");
+        const activeId = typeof themePayload.activeThemeId === "string" ? themePayload.activeThemeId : "";
+        themesRef.current = themes;
+        setDesignThemes(themes);
+        setDesignThemeId(activeId);
+        onThemesChange(themes, activeId, themePayload.themesEffective !== false);
         onTokensChange((data as { tokens?: Record<string, string> }).tokens ?? {});
         // Beim Öffnen steht der Startbildschirm — nicht der, den das Dokument zufällig zuerst führt.
         const start = startScreenOf(list);
         if (start && activeRef.current === null) { setActive(start.id); tellFrame({ action: "screen", screenId: start.id }); }
+        return;
+      }
+      // Das Design kann sich auch selbst umschalten — dann folgt die Anzeige der Wahl.
+      if (data.action === "theme-changed") {
+        const changed = data as { themeId?: string };
+        if (typeof changed.themeId === "string") { setDesignThemeId(changed.themeId); onThemesChange(themesRef.current, changed.themeId); }
         return;
       }
       if (data.action === "size" && Number.isFinite(data.width) && Number.isFinite(data.height)) {
@@ -1416,7 +1581,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       if (!frame || !Number.isFinite(data.x) || !Number.isFinite(data.y) || !frame.offsetWidth || !frame.offsetHeight) return;
       const rect = frame.getBoundingClientRect();
       const point = { x: rect.left + data.x! * (rect.width / frame.offsetWidth), y: rect.top + data.y! * (rect.height / frame.offsetHeight) };
-      if (data.action === "wheel" && Number.isFinite(data.deltaY)) zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, data.deltaY!));
+      // Vergroessern nur mit Strg — sonst wandert die Ansicht, genau wie beim Scrollen in der App.
+      if (data.action === "wheel" && Number.isFinite(data.deltaY)) {
+        if (data.ctrlKey) zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, data.deltaY!));
+        else panBy(Number.isFinite(data.deltaX) ? data.deltaX! : 0, data.deltaY!);
+      }
       else if (data.action === "pan-start") { previewPan.current = point; setPanning(true); }
       else if (data.action === "pan-move" && previewPan.current) {
         const start = previewPan.current;
@@ -1434,7 +1603,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     if (!viewport) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      else panBy(event.deltaX, event.deltaY);
     };
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", handleWheel);
@@ -1464,6 +1634,12 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
 
   // Farbregler wirken sofort im Design — ohne KI-Lauf und auf allen Bildschirmen zugleich.
   useEffect(() => { if (tuneRequest) tellFrame({ action: "tune", overrides: tuneRequest.overrides }); }, [tuneRequest?.nonce]);
+  // Die Wahl aus dem Design Board gilt für ALLE Bildschirme: umgeschaltet wird am Dokument selbst,
+  // nicht je Bildschirm — sonst wäre das Design nach dem ersten Klick uneinheitlich.
+  useEffect(() => { if (themeRequest?.themeId) tellFrame({ action: "theme", themeId: themeRequest.themeId }); }, [themeRequest?.nonce]);
+  // Ein vor dieser Fassung aufgebautes Design trägt nur EINE Erscheinung in sich. Die aus den
+  // Projektquellen gemessenen Blöcke werden nachgereicht — damit ist es ohne Neuaufbau umschaltbar.
+  useEffect(() => { if (themeCss) tellFrame({ action: "theme-css", css: themeCss }); }, [themeCss, screens.length]);
 
   const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     const onEmptySurface = event.button === 0 && event.target === viewportRef.current;
@@ -1487,6 +1663,27 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     setPanning(false);
   };
 
+  // Das Eingabefenster sitzt am markierten Element, wird aber IMMER in die sichtbare Fläche
+  // gezwungen: erst unter das Element, sonst darüber, und notfalls an den Rand geklemmt. Es darf
+  // nie halb hinter der Kante liegen — dort liesse sich nichts eintippen.
+  const edge = 12, gap = 10;
+  const commentPlacement = (() => {
+    if (!marker) return undefined;
+    const anchorLeft = offset.x + marker.rect.x * zoom;
+    const anchorTop = offset.y + marker.rect.y * zoom;
+    const anchorBottom = anchorTop + marker.rect.height * zoom;
+    if (!viewportSize.width || !viewportSize.height) return { left: Math.max(edge, anchorLeft), top: Math.max(edge, anchorBottom + gap) };
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max));
+    const below = anchorBottom + gap;
+    const above = anchorTop - gap - commentSize.height;
+    const fitsBelow = below + commentSize.height <= viewportSize.height - edge;
+    const top = fitsBelow ? below : above >= edge ? above : clamp(below, edge, viewportSize.height - commentSize.height - edge);
+    return {
+      left: clamp(anchorLeft, edge, viewportSize.width - commentSize.width - edge),
+      top: clamp(top, edge, Math.max(edge, viewportSize.height - commentSize.height - edge))
+    };
+  })();
+
   return (
     <div
       ref={viewportRef}
@@ -1507,54 +1704,56 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
           allow="autoplay; fullscreen"
         />
-        {marker && (
-          <div className="mark-frame" style={{ left: marker.rect.x, top: marker.rect.y, width: marker.rect.width, height: marker.rect.height }}>
-            {/* Gegen den Bühnen-Zoom skaliert: der Rahmen sitzt am Element, das Eingabefenster
-                bleibt aber immer gleich gross und lesbar. */}
-            <form
-              className="mark-comment"
-              style={{ transform: `scale(${1 / zoom})` }}
-              onSubmit={(event) => {
-                event.preventDefault();
-                const text = commentText.trim();
-                if (!text || commentPending) return;
-                onComment(marker, text);
-                setCommentText("");
-                setMarker(null);
-              }}
-            >
-              <strong title={marker.selector}>{marker.label || marker.selector}</strong>
-              <textarea
-                autoFocus
-                rows={2}
-                value={commentText}
-                placeholder="Was soll hier anders sein?"
-                onChange={(event) => setCommentText(event.target.value)}
-                onKeyDown={(event) => { if (event.key === "Escape") { setMarker(null); setCommentText(""); } }}
-              />
-              <footer>
-                <button type="button" onClick={() => { setMarker(null); setCommentText(""); }}>Verwerfen</button>
-                <button type="submit" className="primary" disabled={!commentText.trim() || commentPending}>{commentPending ? "läuft …" : "Senden"}</button>
-              </footer>
-            </form>
-          </div>
-        )}
+        {marker && <div className="mark-frame" style={{ left: marker.rect.x, top: marker.rect.y, width: marker.rect.width, height: marker.rect.height }} />}
       </div>
+      {/* Das Eingabefenster steht ÜBER der Bühne, nicht in ihr: innerhalb wurde es vom Rand des
+          Designs abgeschnitten und war nicht mehr benutzbar. Hier ist es immer vollständig sichtbar. */}
+      {marker && (
+        <form
+          ref={commentRef}
+          className="mark-comment"
+          style={commentPlacement}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = commentText.trim();
+            if (!text || commentPending) return;
+            onComment(marker, text);
+            setCommentText("");
+            setMarker(null);
+          }}
+        >
+          <strong title={marker.selector}>{marker.label || marker.selector}</strong>
+          <textarea
+            autoFocus
+            rows={2}
+            value={commentText}
+            placeholder="Was soll hier anders sein?"
+            onChange={(event) => setCommentText(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Escape") { setMarker(null); setCommentText(""); } }}
+          />
+          <footer>
+            <button type="button" onClick={() => { setMarker(null); setCommentText(""); }}>Verwerfen</button>
+            <button type="submit" className="primary" disabled={!commentText.trim() || commentPending}>{commentPending ? "läuft …" : "Senden"}</button>
+          </footer>
+        </form>
+      )}
       <div className="stage-modes">
         <button type="button" className={!markMode && !textMode ? "active" : ""} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
         <button type="button" className={textMode ? "active" : ""} onClick={() => setMode("edit")} title="Text direkt ändern (E) — wirkt sofort, ohne KI"><PenLine /></button>
         <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
-        {designHasDark && (
+        {designThemes.length > 1 && (
           <button
             type="button"
-            title={designTheme === "dark" ? "Design im hellen Modus zeigen" : "Design im dunklen Modus zeigen"}
+            title={`Erscheinung wechseln — gerade: ${themeLabel(designThemes.find((theme) => theme.id === designThemeId) ?? designThemes[0]!, designThemes)}`}
             onClick={() => {
-              const next = designTheme === "dark" ? "light" : "dark";
-              setDesignTheme(next);
-              tellFrame({ action: "theme", theme: next });
+              const index = designThemes.findIndex((theme) => theme.id === designThemeId);
+              const next = designThemes[(index + 1 + designThemes.length) % designThemes.length]!;
+              setDesignThemeId(next.id);
+              onThemesChange(designThemes, next.id);
+              tellFrame({ action: "theme", themeId: next.id });
             }}
           >
-            {designTheme === "dark" ? <Sun /> : <Moon />}
+            {(designThemes.find((theme) => theme.id === designThemeId)?.kind ?? "light") === "dark" ? <Sun /> : <Moon />}
           </button>
         )}
       </div>
@@ -1573,7 +1772,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1618,14 +1817,15 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     setPanning(false);
   };
   useEffect(() => { setOffset({ x: 0, y: 0 }); }, [projectId]);
-  // Auch auf der Beispiel-Leinwand gilt das Zeichenbrett-Verhalten: Rad vergroessert direkt, ohne
-  // dass eine Zusatztaste gehalten werden muss.
+  // Auf der Leinwand gilt dieselbe Regel wie in der Buehne: das Rad allein bewegt die Ansicht,
+  // vergroessert wird nur mit gedrueckter Strg-Taste.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      else setOffset((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
     };
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", handleWheel);
@@ -1664,6 +1864,9 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             onTokensChange={onTokensChange}
             tuneRequest={tuneRequest}
             onTextEdit={onTextEdit}
+            onThemesChange={onThemesChange}
+            themeRequest={themeRequest}
+            themeCss={themeCss}
           />
         ) : (
           <div className="empty reconstruction-state">

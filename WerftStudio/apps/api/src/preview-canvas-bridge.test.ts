@@ -10,10 +10,12 @@ describe("preview canvas bridge", () => {
     expect(result.indexOf("data-werft-canvas-bridge")).toBeLessThan(result.indexOf("</body>"));
   });
 
-  it("zoomt am Mausrad ohne Zusatztaste und meldet Bildschirme, Größe und Klickziele", () => {
+  it("meldet den Radlauf mit Strg-Zustand und meldet Bildschirme, Größe und Klickziele", () => {
     const result = injectPreviewCanvasBridge("<!doctype html><body><section class=\"werft-screen\"></section></body>");
-    // Ohne Strg-Zwang: der Radlauf wird immer an die Leinwand gemeldet, ausser der Inhalt scrollt selbst.
-    expect(result).not.toContain("if (!event.ctrlKey) return;");
+    // Das Rad allein scrollt, Strg vergrößert: die Leinwand entscheidet anhand des mitgesendeten
+    // Strg-Zustands. Ohne ihn wäre jede Radbewegung wieder ein Zoom.
+    expect(result).toContain("ctrlKey: Boolean(event.ctrlKey)");
+    expect(result).toContain("deltaX: event.deltaX || 0");
     expect(result).toContain("scrollableUnder");
     expect(result).toContain('action: "screens"');
     expect(result).toContain('post({ action: "size"');
@@ -86,13 +88,46 @@ describe("preview canvas bridge", () => {
   });
 
   // Text direkt im Design aendern: alter und neuer Wortlaut stehen exakt fest, die Aenderung
-  // braucht keine KI. Nur reiner Text ist bearbeitbar — sonst gingen Kindknoten verloren.
-  it("can edit plain text in place and reports the exact wording", () => {
+  // braucht keine KI. Bearbeitet wird der Textknoten UNTER DEM ZEIGER — frueher blieb Text in
+  // Elementen mit Kindknoten („Sitzung beginnen", „Dauer") unerreichbar.
+  it("can edit any visible text in place and reports the exact wording", () => {
     const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
     const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
     expect(() => new Function(code!)).not.toThrow();
     expect(code).toContain('action: "text-edit"');
-    expect(code).toContain("plainTextElement");
+    expect(code).toContain("editableTextNode");
+    expect(code).toContain("caretPositionFromPoint");
     expect(code).toContain("contenteditable");
+    // Die Schreibmarke muss sich vom Hintergrund abheben, sonst tippt man blind.
+    expect(code).toContain("caret-color");
+    expect(code).toContain("backgroundLuminance");
+    // Im Stiftmodus darf kein Schalter mehr kippen, nur weil man seinen Text treffen wollte.
+    expect(code).toContain("blockWhileEditing");
+    expect(code).toContain('"pointerdown", "mousedown"');
+  });
+
+  // Gemeldet an PerfectMoment und OpenLauncher: es liess sich nur EINE Erscheinung sehen. Alle
+  // Themes eines Projekts muessen waehlbar sein — und die Wahl gilt fuer ALLE Bildschirme.
+  it("kennt alle Erscheinungen des Designs und schaltet dokumentweit um", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("declaredThemes");
+    expect(code).toContain("derivedThemes");
+    expect(code).toContain('meta[name="werft-themes"]');
+    expect(code).toContain("data-werft-theme");
+    expect(code).toContain("applyThemeCss");
+    expect(code).toContain('action: "theme-changed"');
+  });
+
+  // Ein Mond- oder Sonnensymbol IM Design soll auch wirklich umschalten.
+  it("verdrahtet einen Umschalter im Design selbst", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("looksLikeThemeToggle");
+    expect(code).toContain("data-werft-theme-toggle");
+    // Reagiert das Design selbst, bleibt es dabei — sonst kaeme der Wechsel doppelt.
+    expect(code).toContain("if (currentThemeId() === before) applyTheme(nextThemeId())");
   });
 });

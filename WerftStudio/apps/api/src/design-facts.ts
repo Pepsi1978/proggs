@@ -7,7 +7,7 @@ export type FactColor = { name: string; css: string; source: string; used?: bool
 export type FactDimension = { name: string; px: number; raw: string; source: string; used?: boolean };
 export type FactTypography = { name: string; family?: string; sizePx?: number; weight?: number; lineHeightPx?: number; letterSpacingPx?: number; source: string; used?: boolean };
 export type FactShape = { name: string; radiusCss: string; source: string; used?: boolean };
-export type FactEffectKind = "shadow" | "blur" | "gradient" | "stroke" | "ripple" | "opacity";
+export type FactEffectKind = "shadow" | "blur" | "gradient" | "stroke" | "ripple" | "opacity" | "animation";
 export type FactEffect = { name: string; kind: FactEffectKind; css: string; source: string };
 export type FactAsset = { name: string; path: string; kind: "vector" | "bitmap" | "shape" | "color"; svg?: string; css?: string; source: string };
 // `files` haelt fest, aus welchen Quellen ein Screen stammt: beim screenweisen Aufbau wird genau

@@ -266,6 +266,47 @@ const composeColorUsagePattern = /\.(?:background|drawBehind)\s*\(\s*(Color\s*\(
 const composeNavigatePattern = /navigate\s*\(\s*(?:route\s*=\s*)?["<]?([\w./{}-]+)/g;
 const composeModifierDimensionPattern = /\.(padding|size|height|width|offset|spacedBy|shadow|blur|border|clip|absoluteOffset|requiredSize|defaultMinSize)\s*\(([^()]{0,160})\)/g;
 
+// Bewegung im Original: Dauerschleife (pulsierender Aufnahmering), Zustandsuebergang, Ein-/Ausblenden.
+// Ohne diese Messung tauchte im Faktenblatt keine einzige Animation auf — die Rekonstruktion war
+// deshalb immer starr, obwohl die App sich bewegt.
+const composeAnimationPattern = /\b(rememberInfiniteTransition|infiniteRepeatable|animateFloatAsState|animateDpAsState|animateColorAsState|animateContentSize|AnimatedVisibility|AnimatedContent|Crossfade|updateTransition|animateTo|rememberPulse)\b/g;
+// Kotlin schreibt lange Zahlen als `1_600`; ohne den Unterstrich im Muster bliebe die Dauer ungelesen.
+const composeDurationPattern = /\b(?:tween|snap|keyframes)\s*\(\s*(?:durationMillis\s*=\s*)?(\d[\d_]{1,6})|durationMillis\s*=\s*(\d[\d_]{1,6})/g;
+// Compose-Easing in seine CSS-Entsprechung; die Werte stammen aus der Material-Motion-Spezifikation.
+const composeEasings: Record<string, string> = {
+  LinearEasing: "linear",
+  FastOutSlowInEasing: "cubic-bezier(0.4, 0, 0.2, 1)",
+  LinearOutSlowInEasing: "cubic-bezier(0, 0, 0.2, 1)",
+  FastOutLinearInEasing: "cubic-bezier(0.4, 0, 1, 1)",
+  EaseInOut: "ease-in-out",
+  EaseIn: "ease-in",
+  EaseOut: "ease-out"
+};
+
+export function composeAnimations(text: string, path: string): FactEffect[] {
+  const kinds = [...new Set([...text.matchAll(composeAnimationPattern)].map((match) => match[1]!))];
+  if (!kinds.length) return [];
+  const durations = [...text.matchAll(composeDurationPattern)].map((match) => Number((match[1] ?? match[2] ?? "").replace(/_/g, ""))).filter((value) => Number.isFinite(value) && value > 0);
+  // Ohne abgelesene Dauer gilt die Material-Standarddauer fuer mittlere Uebergaenge.
+  const duration = durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 300;
+  const easingName = Object.keys(composeEasings).find((name) => text.includes(name));
+  const easing = easingName ? composeEasings[easingName]! : "cubic-bezier(0.4, 0, 0.2, 1)";
+  const reverses = /RepeatMode\.Reverse/.test(text);
+  const effects: FactEffect[] = [];
+  const endless = kinds.some((kind) => kind === "rememberInfiniteTransition" || kind === "infiniteRepeatable");
+  if (endless) effects.push({
+    name: `${path}:Dauerschleife`,
+    kind: "animation",
+    css: `animation: werft-loop ${duration}ms ${easing} infinite${reverses ? " alternate" : ""}`,
+    source: `${path} (${kinds.filter((kind) => /infinite/i.test(kind)).join(", ")})`
+  });
+  const fades = kinds.filter((kind) => /AnimatedVisibility|AnimatedContent|Crossfade/.test(kind));
+  if (fades.length) effects.push({ name: `${path}:Ein-/Ausblenden`, kind: "animation", css: `transition: opacity ${duration}ms ${easing}, transform ${duration}ms ${easing}`, source: `${path} (${fades.join(", ")})` });
+  const transitions = kinds.filter((kind) => /^animate|updateTransition|animateTo/.test(kind));
+  if (transitions.length) effects.push({ name: `${path}:Zustandsübergang`, kind: "animation", css: `transition: all ${duration}ms ${easing}`, source: `${path} (${transitions.join(", ")})` });
+  return effects;
+}
+
 // Sehr viele Compose-Apps navigieren OHNE NavHost: ein `enum class AppScreen { START, … }`, eine
 // `when`-Verzweigung auf den Bildschirm und `navigate(AppScreen.X)` an den Schaltflaechen. Wer nur
 // NavHost auswertet, findet dort weder Startbildschirm noch ein einziges Klickziel — die
@@ -392,6 +433,11 @@ function readComposeSource(
     if (family) type.family = family[1]!;
     if (type.sizePx !== undefined || type.weight !== undefined || type.family !== undefined) typography.push({ ...type, used: true });
   }
+  // Bewegung wurde bisher gar nicht gemessen: der pulsierende Ring um den Aufnahmeknopf, ein
+  // Fortschrittsring, ein Ein- und Ausblenden — im Aufbau kam davon nichts an, weil es in keinem
+  // Faktenblatt stand. Erkannt wird die Art der Bewegung samt Dauer; nachgebaut wird sie als
+  // CSS-Animation mit genau dieser Dauer.
+  for (const effect of composeAnimations(text, file.path)) effects.push(effect);
   for (const match of text.matchAll(composeModifierDimensionPattern)) {
     const values = [...match[2]!.matchAll(/(-?\d+(?:\.\d+)?)\.dp/g)].map((value) => Number(value[1]));
     if (!values.length) continue;

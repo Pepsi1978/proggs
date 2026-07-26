@@ -91,5 +91,7 @@ export const effectGuidance = [
   "- Ripple/Highlight über ein ::after-Overlay mit der Originalfarbe, Dauer 100 ms linear.",
   "- Blur (`RenderEffect`, `.blur`, `BlurEffect`, `backdrop-filter`) mit dem gelieferten Radius als `filter`/`backdrop-filter`, nicht als halbtransparente Fläche ersetzen.",
   "- Verläufe exakt mit den gelieferten Stopps und Winkeln; Strichstärken als `border`/`outline` in exakter Breite und Farbe.",
-  "- Deckkraft (`alpha`, `Opacity`, `.opacity`) als `opacity` übernehmen, nicht in die Farbe einrechnen, außer die Quelle tut es selbst."
+  "- Deckkraft (`alpha`, `Opacity`, `.opacity`) als `opacity` übernehmen, nicht in die Farbe einrechnen, außer die Quelle tut es selbst.",
+  "- ANIMATIONEN sind Teil des Designs, kein Beiwerk: jede im Faktenblatt als (animation) gelieferte Zeile MUSS am passenden Element als CSS-Animation/Transition erscheinen — mit genau dieser Dauer und Kurve. Eine Dauerschleife braucht zusätzlich ihre `@keyframes werft-loop`-Definition (z. B. pulsierender Ring: Skalierung 1 → 1.12 und Deckkraft 0.6 → 0).",
+  "- Zustände müssen SICHTBAR reagieren: Aufnahme-/Wiedergabeknöpfe, Schalter, Auswahl, Ausklapper und Blätter (Bottom Sheets) schalten im HTML wirklich um — mit `:hover`, `:active`, `:focus-visible`, `:checked` oder einem kurzen Inline-Skript direkt in diesem Bildschirm. Ein Bedienelement, das nichts tut, ist ein Fehler."
 ].join("\n");
