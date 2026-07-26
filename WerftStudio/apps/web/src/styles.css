@@ -81,3 +81,8 @@
 .import-todos>span.running::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
   background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+
+/* Modellauswahl direkt am Eingabefeld statt nur in den Einstellungen */
+.composer footer select{border:1px solid var(--color-line);border-radius:8px;background:var(--color-field);color:var(--color-text);font-size:11px;padding:3px 6px;max-width:150px}
+.composer footer .composer-fast{font-style:normal;font-size:10px;font-weight:600;padding:2px 6px;border-radius:999px;background:var(--color-accent-soft);color:var(--color-accent)}
+.composer footer a{font-size:11px;color:var(--color-accent)}

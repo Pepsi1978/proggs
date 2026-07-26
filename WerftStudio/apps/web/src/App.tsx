@@ -885,7 +885,11 @@ function Studio() {
   });
   useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
   const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: activeTab === "history" });
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
+  const pickModel = useMutation({
+    mutationFn: (model: string) => api("/providers/openai/settings", { method: "PATCH", body: JSON.stringify({ model, effort: connection.data?.settings?.effort ?? "high", fast: connection.data?.settings?.fast ?? false }) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] })
+  });
   const chatRun = useMutation({
     mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
       message,
@@ -1035,7 +1039,24 @@ function Studio() {
             >
               <textarea value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
               <footer>
-                <span>Modell: {connection.data?.connected ? `${connection.data.settings?.model ?? "GPT-5.6"}${connection.data.settings?.fast ? " · Fast" : ""}` : "kein Provider verbunden"}</span>
+                {connection.data?.connected ? (
+                  // Das Modell gehoert an die Stelle, an der man es benutzt — nicht nur in die
+                  // Einstellungen. Effort und Fast bleiben unveraendert, sonst wuerde die
+                  // Modellwahl stillschweigend die Denktiefe zuruecksetzen.
+                  <select
+                    aria-label="Modell für den nächsten Lauf"
+                    value={connection.data.settings?.model ?? "gpt-5.6-sol"}
+                    disabled={pickModel.isPending}
+                    onChange={(event) => pickModel.mutate(event.target.value)}
+                  >
+                    <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
+                    <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
+                    <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
+                  </select>
+                ) : (
+                  <Link to="/app/settings/models">Kein Provider verbunden — jetzt verbinden</Link>
+                )}
+                {connection.data?.connected && connection.data.settings?.fast && <em className="composer-fast">Fast</em>}
                 <Button variant="primary" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "KI-Lauf läuft …" : "Senden"}</Button>
               </footer>
             </form>}
