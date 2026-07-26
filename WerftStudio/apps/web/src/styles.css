@@ -78,3 +78,12 @@
    Designs/ identisch — belegt, nicht geschätzt. */
 :root{--canvas-bg:#f0eee6}
 [data-theme=dark]{--canvas-bg:#2e2c26}
+
+/* Ladeanimation wörtlich aus der Claude-Design-Laufzeit (support.js, BASE_CSS: sc-shine):
+   gleiche Farben, gleiche Dauer, gleiche Kurve. Markiert — wie dort — genau das, was gerade
+   entsteht: den laufenden Arbeitsschritt. */
+@keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+.import-todos>span.running{position:relative;overflow:hidden;border-radius:3px}
+.import-todos>span.running::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+  background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
