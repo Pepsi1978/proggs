@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseEntryPath, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
+import { acceptedImportExtensions, chooseEntryPath, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, stripCommonRoot, validateImportFiles } from "./import-project.js";
 
 const file = (path: string, text = "x") => ({ path, data: Buffer.from(text), mime: "text/plain" });
 
@@ -70,5 +70,25 @@ describe("project import validation", () => {
     expect(mimeForPath("MainActivity.kt")).toMatch(/^text\//);
     expect(mimeForPath("MainWindow.xaml")).toMatch(/xml/);
     expect(mimeForPath("App.swift")).toMatch(/^text\//);
+  });
+
+  // Vue-, Svelte-, JSX-, Avalonia- und Objective-C-Quellen wurden importiert, fielen aber auf
+  // application/octet-stream zurueck: unlesbar, nicht editierbar und fuer die KI unsichtbar. Die
+  // wichtigsten Oberflaechendateien dieser Projekte waren damit still verloren.
+  it("gives every accepted import extension a known MIME type", () => {
+    const binaryByDesign = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".avif", ".woff", ".woff2", ".ttf", ".otf", ".eot", ".mp3", ".wav", ".ogg", ".m4a", ".mp4", ".webm", ".wasm"]);
+    const unknown = acceptedImportExtensions().filter((extension) => mimeForPath(`file${extension}`) === "application/octet-stream");
+    expect(unknown, `Ohne MIME-Eintrag: ${unknown.join(" ")}`).toEqual([]);
+    for (const extension of acceptedImportExtensions().filter((item) => !binaryByDesign.has(item))) {
+      expect(mimeForPath(`file${extension}`), extension).toMatch(/^(text\/|image\/svg\+xml|application\/(json|xml|manifest))/);
+    }
+  });
+
+  // Interface Builder ist bei iOS- und macOS-Projekten die Oberflaechenquelle; der Apple-Extraktor
+  // liest .xib ausdruecklich, bekam die Dateien aber nie, weil der Importfilter sie verwarf.
+  it("imports Interface Builder surfaces for Apple projects", () => {
+    expect(isFrontendFile("MyApp/Base.lproj/MainMenu.xib", "macos")).toBe(true);
+    expect(isFrontendFile("MyApp/Base.lproj/Main.storyboard", "ios")).toBe(true);
+    expect(mimeForPath("MainMenu.xib")).toMatch(/xml/);
   });
 });

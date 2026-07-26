@@ -19,13 +19,14 @@ const mimeByExtension: Record<string, string> = {
   ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8",
   ".m4a": "audio/mp4", ".map": "application/json; charset=utf-8", ".mp3": "audio/mpeg", ".mp4": "video/mp4",
   ".ogg": "audio/ogg", ".otf": "font/otf", ".pdf": "application/pdf", ".png": "image/png",
-  ".aidl": "text/plain; charset=utf-8", ".c": "text/plain; charset=utf-8", ".cc": "text/plain; charset=utf-8", ".cjs": "text/javascript; charset=utf-8", ".cpp": "text/plain; charset=utf-8", ".cs": "text/plain; charset=utf-8", ".cshtml": "text/html; charset=utf-8",
-  ".dart": "text/plain; charset=utf-8", ".gradle": "text/plain; charset=utf-8", ".groovy": "text/plain; charset=utf-8", ".h": "text/plain; charset=utf-8",
-  ".hpp": "text/plain; charset=utf-8", ".java": "text/plain; charset=utf-8", ".kt": "text/plain; charset=utf-8", ".kts": "text/plain; charset=utf-8",
-  ".go": "text/plain; charset=utf-8", ".lua": "text/plain; charset=utf-8", ".md": "text/markdown; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".pas": "text/plain; charset=utf-8", ".php": "text/plain; charset=utf-8", ".plist": "text/plain; charset=utf-8", ".properties": "text/plain; charset=utf-8", ".ps1": "text/plain; charset=utf-8", ".py": "text/plain; charset=utf-8", ".qml": "text/plain; charset=utf-8",
-  ".resx": "application/xml; charset=utf-8", ".scss": "text/css; charset=utf-8", ".storyboard": "application/xml; charset=utf-8", ".strings": "text/plain; charset=utf-8",
+  ".aidl": "text/plain; charset=utf-8", ".axaml": "application/xml; charset=utf-8", ".c": "text/plain; charset=utf-8", ".cc": "text/plain; charset=utf-8", ".cjs": "text/javascript; charset=utf-8", ".cpp": "text/plain; charset=utf-8", ".cs": "text/plain; charset=utf-8", ".cshtml": "text/html; charset=utf-8", ".cxx": "text/plain; charset=utf-8",
+  ".dart": "text/plain; charset=utf-8", ".eot": "application/vnd.ms-fontobject", ".fs": "text/plain; charset=utf-8", ".gradle": "text/plain; charset=utf-8", ".groovy": "text/plain; charset=utf-8", ".h": "text/plain; charset=utf-8", ".hh": "text/plain; charset=utf-8",
+  ".hpp": "text/plain; charset=utf-8", ".java": "text/plain; charset=utf-8", ".jsx": "text/javascript; charset=utf-8", ".json5": "application/json; charset=utf-8", ".kt": "text/plain; charset=utf-8", ".kts": "text/plain; charset=utf-8", ".less": "text/css; charset=utf-8",
+  ".go": "text/plain; charset=utf-8", ".lua": "text/plain; charset=utf-8", ".m": "text/plain; charset=utf-8", ".md": "text/markdown; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".mm": "text/plain; charset=utf-8", ".pas": "text/plain; charset=utf-8", ".php": "text/plain; charset=utf-8", ".plist": "text/plain; charset=utf-8", ".properties": "text/plain; charset=utf-8", ".ps1": "text/plain; charset=utf-8", ".py": "text/plain; charset=utf-8", ".qml": "text/plain; charset=utf-8",
+  ".resx": "application/xml; charset=utf-8", ".sass": "text/css; charset=utf-8", ".scss": "text/css; charset=utf-8", ".storyboard": "application/xml; charset=utf-8", ".strings": "text/plain; charset=utf-8", ".svelte": "text/plain; charset=utf-8",
   ".razor": "text/plain; charset=utf-8", ".rb": "text/plain; charset=utf-8", ".rs": "text/plain; charset=utf-8", ".svg": "image/svg+xml", ".swift": "text/plain; charset=utf-8", ".toml": "text/plain; charset=utf-8", ".ts": "text/plain; charset=utf-8", ".tsx": "text/plain; charset=utf-8", ".ttf": "font/ttf", ".txt": "text/plain; charset=utf-8", ".uss": "text/css; charset=utf-8", ".uxml": "application/xml; charset=utf-8",
-  ".xaml": "application/xml; charset=utf-8", ".xcstrings": "application/json; charset=utf-8", ".xml": "application/xml; charset=utf-8", ".yaml": "text/plain; charset=utf-8", ".yml": "text/plain; charset=utf-8",
+  ".ui": "application/xml; charset=utf-8", ".vb": "text/plain; charset=utf-8", ".vue": "text/plain; charset=utf-8",
+  ".xaml": "application/xml; charset=utf-8", ".xcstrings": "application/json; charset=utf-8", ".xib": "application/xml; charset=utf-8", ".xml": "application/xml; charset=utf-8", ".yaml": "text/plain; charset=utf-8", ".yml": "text/plain; charset=utf-8",
   ".wasm": "application/wasm", ".wav": "audio/wav", ".webm": "video/webm", ".webmanifest": "application/manifest+json", ".webp": "image/webp", ".werft": "application/json; charset=utf-8", ".woff": "font/woff", ".woff2": "font/woff2", ".zip": "application/zip"
 };
 
@@ -36,8 +37,18 @@ export function mimeForPath(filePath: string): string {
 const frontendDropSegments = /(^|\/)(node_modules|\.git|\.werft-generated|bin|obj|target|dist-info|__pycache__|\.gradle|\.idea|\.vs|coverage|logs?|test|tests|__tests__|backend|server|database)(\/|$)/i;
 const nativeGeneratedSegments = /(^|\/)(build|out)(\/|$)/i;
 const frontendDropNames = /(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.map)$/i;
-const frontendKeepExtensions = /\.(html?|css|scss|sass|less|svg|png|jpe?g|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|m4a|mp4|webm|wasm|webmanifest|werft|xaml|axaml|xml|jsx|tsx|vue|svelte|dart|json|json5|ya?ml|toml|properties|gradle|groovy|storyboard|plist|strings|xcstrings|resx|qml|ui|md|razor|cshtml|uxml|uss)$/i;
+const frontendKeepExtensions = /\.(html?|css|scss|sass|less|svg|png|jpe?g|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|m4a|mp4|webm|wasm|webmanifest|werft|xaml|axaml|xml|jsx|tsx|vue|svelte|dart|json|json5|ya?ml|toml|properties|gradle|groovy|storyboard|xib|plist|strings|xcstrings|resx|qml|ui|md|razor|cshtml|uxml|uss)$/i;
 const frontendCodeExtensions = /\.(js|mjs|cjs|ts|kt|kts|java|swift|cs|fs|vb|c|cc|cpp|cxx|h|hh|hpp|m|mm|aidl|go|lua|pas|php|ps1|py|rb|rs)$/i;
+
+// Eine Erweiterung, die der Importfilter durchlaesst, aber die MIME-Tabelle nicht kennt, landet auf
+// application/octet-stream — die Datei wird dann zwar gespeichert, ist aber weder lesbar noch fuer
+// die KI-Bearbeitung sichtbar. Sie waere still verloren. Der Regressionstest prueft ueber diese
+// Liste, dass beide Tabellen zusammenpassen.
+export function acceptedImportExtensions(): string[] {
+  const expand = (pattern: RegExp) => (pattern.source.match(/\((.+)\)\$$/)?.[1] ?? "").split("|")
+    .flatMap((token) => /(.)\?/.test(token) ? [token.replace(/(.)\?/, ""), token.replace(/(.)\?/, "$1")] : [token]);
+  return [...new Set([...expand(frontendKeepExtensions), ...expand(frontendCodeExtensions)])].map((name) => `.${name}`);
+}
 
 // Reproduzierbare Werkzeugausgaben und Fremdabhaengigkeiten enthalten nie Designquellen, blaehen
 // aber Upload, Speicher und Analyse massiv auf (und liefern irrefuehrende Report-HTML-Seiten).
