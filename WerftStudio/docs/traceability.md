@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.7.0 - 26.07.2026 21:13 Uhr
+Version: v0.8.0 - 26.07.2026 21:23 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -28,14 +28,16 @@ Version: v0.7.0 - 26.07.2026 21:13 Uhr
 | Claude-Design-Optik | `packages/ui/src/tokens.css`, `apps/web/src/styles.css` | Leinwand `#f0eee6`/`#2e2c26`, Akzent `#d97757`, Weichton `#f7e1d3` und die `sc-shine`-Ladeanimation, gelesen aus der Claude-Design-Laufzeit der Exporte unter `Designs` |
 | Kommentaransicht | `apps/web/src/App.tsx` | Jeder abgeschickte Kommentar mit Element, Bildschirm, Anweisung und Ergebnis; „angewendet“ nur bei wirklich geschriebenen Dateien |
 | Live-Farbregler | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die aus den Projektquellen gemessenen Farbtoken werden gemeldet und direkt in der Vorschau überschrieben — ohne KI-Lauf, auf allen Bildschirmen |
+| Direkte Textänderung | `apps/api/src/server.ts`, `preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Text im Design an Ort und Stelle ändern, deterministisch ohne KI; nur bei genau einem Vorkommen, sonst gemeldete Mehrdeutigkeit. Live geprüft: eindeutiger Wortlaut angewendet und in der ausgelieferten Vorschau sichtbar (revision 1), fehlender Wortlaut und ein dreifach vorkommender abgelehnt |
 | Modellauswahl im Ablauf | `apps/web/src/App.tsx` | Auswahl am Eingabefeld statt nur in den Einstellungen; Effort und Fast bleiben unberührt |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
 
 ## Offen
 
-- Die tatsächliche KI-Anwendung eines Kommentars braucht eine verbundene OpenAI-Codex-Verbindung;
-  ohne sie endet der Lauf mit `OPENAI_NOT_CONNECTED`. Bis dorthin ist die Kette geprüft.
+- Die KI-gestützte Änderung über einen markierten Bereich braucht eine verbundene OpenAI-Codex-
+  Verbindung; ohne sie endet der Lauf mit `OPENAI_NOT_CONNECTED`. Bis dorthin ist die Kette geprüft.
+  Die direkte Textänderung läuft dagegen ohne Provider und ist end-to-end nachgewiesen.
 - Alle im Auftrag genannten Bedienelemente sind vorhanden und funktionieren (Startseite,
   Projektansicht, Plus-Schaltfläche, Import, Modellauswahl, Rückfragen, Lade- und Fehlerzustände,
   Design Board, Vorschau, Bearbeitung, Speicherung, erneutes Öffnen). Offen bleiben die
