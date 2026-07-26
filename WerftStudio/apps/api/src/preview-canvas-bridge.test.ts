@@ -84,4 +84,15 @@ describe("preview canvas bridge", () => {
     expect(code).toContain("applyTune");
     expect(code).toContain("data-werft-tune");
   });
+
+  // Text direkt im Design aendern: alter und neuer Wortlaut stehen exakt fest, die Aenderung
+  // braucht keine KI. Nur reiner Text ist bearbeitbar — sonst gingen Kindknoten verloren.
+  it("can edit plain text in place and reports the exact wording", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain('action: "text-edit"');
+    expect(code).toContain("plainTextElement");
+    expect(code).toContain("contenteditable");
+  });
 });

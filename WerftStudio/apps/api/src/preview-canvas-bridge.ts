@@ -233,6 +233,42 @@ const bridgeScript = `<script ${bridgeMarker}>
     const text = (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 40);
     return tag + cls + (text ? ' \\u201E' + text + '\\u201C' : "");
   };
+  // Text direkt im Design aendern: der alte und der neue Wortlaut stehen danach exakt fest, die
+  // Aenderung braucht also keine KI. Bearbeitet wird nur reiner Text — Elemente mit Kindknoten
+  // blieben sonst beim Tippen strukturell zurueck.
+  let textMode = false;
+  let editing = null;
+  let editingBefore = "";
+  const plainTextElement = (node) => node instanceof Element && node.children.length === 0 && (node.textContent || "").trim().length > 0 ? node : null;
+  const finishTextEdit = () => {
+    if (!editing) return;
+    const element = editing;
+    const after = (element.textContent || "").trim();
+    editing = null;
+    element.removeAttribute("contenteditable");
+    element.style.removeProperty("outline");
+    if (after && after !== editingBefore) post({ action: "text-edit", before: editingBefore, after, screenId: screenIdOf(element.closest(".werft-screen") || activeScreen()) });
+  };
+  document.addEventListener("click", (event) => {
+    if (!textMode) return;
+    const element = plainTextElement(event.target);
+    if (!element || element === editing) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    finishTextEdit();
+    editing = element;
+    editingBefore = (element.textContent || "").trim();
+    element.setAttribute("contenteditable", "true");
+    element.style.setProperty("outline", "2px solid #d97757", "important");
+    element.focus();
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (!editing) return;
+    if (event.key === "Enter") { event.preventDefault(); finishTextEdit(); }
+    if (event.key === "Escape") { editing.textContent = editingBefore; finishTextEdit(); }
+  }, true);
+  document.addEventListener("focusout", () => { if (editing) finishTextEdit(); }, true);
+
   document.addEventListener("pointermove", (event) => {
     if (!markMode) return;
     const element = markableUnder(event.target);
@@ -293,6 +329,11 @@ const bridgeScript = `<script ${bridgeMarker}>
       markMode = Boolean(data.on);
       clearMarkHover();
       document.documentElement.style.cursor = markMode ? "crosshair" : "";
+    }
+    if (data.action === "text") {
+      textMode = Boolean(data.on);
+      if (!textMode) finishTextEdit();
+      document.documentElement.style.cursor = textMode ? "text" : "";
     }
   });
 

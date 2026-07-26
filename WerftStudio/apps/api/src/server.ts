@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.16.0-20260726.2110" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.17.0-20260726.2119" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -468,6 +468,39 @@ app.get("/api/v1/projects/:projectId/import/questions", async (request) => {
   return { questions };
 });
 app.get("/api/v1/projects/:projectId/import/file", async (request) => { const actor = requireActorPermission(request, "project.read"); const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params); const { path: filePath } = z.object({ path: z.string().min(1).max(512) }).parse(request.query); const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0]; const item = row?.imported.manifest.find((file) => file.path === filePath); if (!row || !item) fail("IMPORT_FILE_NOT_FOUND", 404, "Importdatei nicht gefunden."); if (!editableImportMime(item.mime)) fail("IMPORT_FILE_BINARY", 415, "Diese Binärdatei kann nur in der Vorschau verwendet werden."); const content = (await readObject(`${row.imported.objectPrefix}${item.path}`)).toString("utf8"); return { path: item.path, content, revision: row.revision }; });
+// Eine Textänderung ist keine Interpretationsaufgabe: alter und neuer Wortlaut stehen exakt fest.
+// Sie läuft deshalb OHNE KI — deterministisch, in Millisekunden und ohne Provider-Verbindung.
+// Ersetzt wird nur, wenn der alte Wortlaut genau EINMAL im Projekt vorkommt; sonst träfe die
+// Änderung womöglich eine gleichlautende Stelle auf einem anderen Bildschirm.
+app.post("/api/v1/projects/:projectId/import/text", async (request) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const { before, after } = z.object({ before: z.string().min(1).max(2000), after: z.string().max(2000) }).strict().parse(request.body);
+  if (before === after) return { applied: false as const, reason: "unverändert" };
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
+    const row = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+    if (!row) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+    const hits: Array<{ path: string; mime: string; content: string; count: number }> = [];
+    for (const file of row.imported.manifest.filter((item) => chatEditableMime(item.mime) && item.size <= 4 * 1024 * 1024)) {
+      const content = (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8");
+      const count = content.split(before).length - 1;
+      if (count > 0) hits.push({ path: file.path, mime: file.mime, content, count });
+    }
+    const total = hits.reduce((sum, hit) => sum + hit.count, 0);
+    if (total === 0) fail("TEXT_NOT_FOUND", 409, "Dieser Wortlaut steht so nicht in den Projektdateien.");
+    if (total > 1) fail("TEXT_AMBIGUOUS", 409, `Der Wortlaut kommt ${total}-mal vor. Bitte über einen markierten Bereich ändern, damit die richtige Stelle getroffen wird.`);
+    const hit = hits[0]!;
+    const data = Buffer.from(hit.content.replace(before, after), "utf8");
+    await objectStore.putObject(env.S3_BUCKET, `${row.imported.objectPrefix}${hit.path}`, data, data.byteLength, { "content-type": hit.mime });
+    const manifest = row.imported.manifest.map((file) => file.path === hit.path ? { ...file, size: data.byteLength } : file);
+    const revision = row.revision + 1;
+    await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
+    await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.text.edited", targetType: "project", targetId: projectId, result: "success", metadata: { path: hit.path, revision }, correlationId: request.id });
+    return { applied: true as const, path: hit.path, revision };
+  });
+});
 app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024 }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);

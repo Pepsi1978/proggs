@@ -901,6 +901,17 @@ function Studio() {
   useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
   const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: activeTab === "history" });
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
+  // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
+  // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.
+  const textEdit = useMutation({
+    mutationFn: ({ before, after }: { before: string; after: string }) => api<{ applied: boolean; path?: string }>(`/projects/${projectId}/import/text`, { method: "POST", body: JSON.stringify({ before, after }) }),
+    onSuccess: async (data) => {
+      if (data.applied) setMessages((all) => [...all, { role: "assistant", text: `Text geändert in ${data.path}.` }]);
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+      await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+    },
+    onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Text nicht geändert: ${error.message}` : "Die Textänderung ist fehlgeschlagen." }])
+  });
   const pickModel = useMutation({
     mutationFn: (model: string) => api("/providers/openai/settings", { method: "PATCH", body: JSON.stringify({ model, effort: connection.data?.settings?.effort ?? "high", fast: connection.data?.settings?.fast ?? false }) }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] })
@@ -1128,6 +1139,7 @@ function Studio() {
             commentPending={chatRun.isPending}
             onTokensChange={setDesignTokens}
             tuneRequest={tuneRequest}
+            onTextEdit={(before, after) => textEdit.mutate({ before, after })}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
               // nachvollziehbar bleibt, welche Anweisung auf welches Element gewirkt hat.
@@ -1258,7 +1270,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1273,6 +1285,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   commentPending: boolean;
   onTokensChange(tokens: Record<string, string>): void;
   tuneRequest: { overrides: Record<string, string>; nonce: number } | null;
+  onTextEdit(before: string, after: string): void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1288,6 +1301,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [history, setHistory] = useState<string[]>([]);
   const { mode, setMode } = useUi();
   const markMode = mode === "comment";
+  const textMode = mode === "edit";
   const [marker, setMarker] = useState<MarkTarget | null>(null);
   const [commentText, setCommentText] = useState("");
   // Das Theme des DESIGNS, nicht das des Studios: importierte Apps bringen oft ein zweites Theme
@@ -1305,6 +1319,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     tellFrame({ action: "mark", on: markMode });
     if (!markMode) { setMarker(null); setCommentText(""); }
   }, [markMode, screens.length]);
+  useEffect(() => { tellFrame({ action: "text", on: textMode }); }, [textMode, screens.length]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1372,6 +1387,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         return;
       }
       if (data.source !== "werft-preview-canvas") return;
+      if (data.action === "text-edit") {
+        const edit = data as unknown as { before?: string; after?: string };
+        if (typeof edit.before === "string" && typeof edit.after === "string") onTextEdit(edit.before, edit.after);
+        return;
+      }
       if (data.action === "mark-target") {
         const target = data as unknown as MarkTarget;
         if (target.rect && Number.isFinite(target.rect.width)) { setMarker(target); setCommentText(""); }
@@ -1521,7 +1541,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         )}
       </div>
       <div className="stage-modes">
-        <button type="button" className={markMode ? "" : "active"} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
+        <button type="button" className={!markMode && !textMode ? "active" : ""} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
+        <button type="button" className={textMode ? "active" : ""} onClick={() => setMode("edit")} title="Text direkt ändern (E) — wirkt sofort, ohne KI"><PenLine /></button>
         <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
         {designHasDark && (
           <button
@@ -1552,7 +1573,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void }) {
   const client = useQueryClient();
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1642,6 +1663,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             commentPending={commentPending}
             onTokensChange={onTokensChange}
             tuneRequest={tuneRequest}
+            onTextEdit={onTextEdit}
           />
         ) : (
           <div className="empty reconstruction-state">
