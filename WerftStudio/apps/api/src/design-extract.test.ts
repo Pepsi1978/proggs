@@ -375,6 +375,18 @@ describe("Windows-Faktenextraktion", () => {
 });
 
 describe("Apple-Faktenextraktion", () => {
+  // Dieselbe Falle wie beim Windows-Extraktor: wer den zuerst gelesenen Storyboard nimmt, erwischt
+  // alphabetisch LaunchScreen statt Main — und der Startbildschirm hat nicht die App-Geometrie.
+  it("nimmt die Szene des Hauptstoryboards, nicht die des Startbildschirms", () => {
+    const scene = (width: number, height: number) => `<document><scenes><scene><objects><viewController><view><rect key="frame" x="0" y="0" width="${width}" height="${height}"/></view></viewController></objects></scene></scenes></document>`;
+    const facts = extractDesignFacts("ios", [
+      source("Base.lproj/LaunchScreen.storyboard", scene(320, 480)),
+      source("Base.lproj/Main.storyboard", scene(390, 844))
+    ]);
+    expect(facts.viewport).toMatchObject({ width: 390, height: 844 });
+  });
+
+
   const facts = extractDesignFacts("macos", [
     source("Sources/Theme.swift", `let accent = Color(red: 0.19, green: 0.34, blue: 0.84)\nlet card = Color(hex: "#FFFFFF")`),
     source("Sources/ContentView.swift", `struct ContentView: View {\n  var body: some View {\n    VStack(spacing: 12) {\n      Text("Titel").font(.largeTitle)\n      Text("Detail").font(.system(size: 15, weight: .medium))\n    }\n    .padding(20)\n    .frame(width: 980, height: 640)\n    .cornerRadius(14)\n    .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)\n  }\n}`),

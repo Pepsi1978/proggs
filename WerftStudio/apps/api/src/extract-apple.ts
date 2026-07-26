@@ -49,13 +49,25 @@ export function extractAppleFacts(files: SourceText[]): Partial<DesignFacts> {
   const screens: FactScreen[] = [];
   const notes: string[] = [];
   let viewport: FactViewport | undefined;
+  const appleViewports: FactViewport[] = [];
 
   for (const file of files) {
     if (/\.swift$/i.test(file.path)) readSwift(file, colors, dimensions, typography, shapes, effects, screens, notes);
     if (/Contents\.json$/i.test(file.path) && /\.colorset\//i.test(file.path)) readColorSet(file, colors);
-    if (/\.(storyboard|xib)$/i.test(file.path)) readStoryboard(file, dimensions, typography, colors, screens, (found) => { viewport ??= found; });
+    // Nicht der zuerst gelesene Storyboard gewinnt: alphabetisch stuende LaunchScreen.storyboard
+    // vor Main.storyboard, und der Startbildschirm hat mit der App-Geometrie nichts zu tun.
+    // Dieselbe Falle wie beim Windows-Extraktor (dort erschien die App auf halber Breite).
+    if (/\.(storyboard|xib)$/i.test(file.path)) readStoryboard(file, dimensions, typography, colors, screens, (found) => { appleViewports.push(found); });
     if (/\.(m|mm|h)$/i.test(file.path)) readObjectiveC(file, dimensions, colors);
   }
+  // Das Hauptstoryboard gewinnt; sonst die groesste Szene — ein Launch- oder Hilfsbildschirm ist
+  // nie groesser als die eigentliche App.
+  const isMainScene = (candidate: FactViewport) => /(^|\/)(main|shell|start)[^/]*\.(storyboard|xib)$/i.test(candidate.source);
+  const isLaunchScene = (candidate: FactViewport) => /launch/i.test(candidate.source);
+  viewport ??= [...appleViewports]
+    .sort((left, right) => Number(isMainScene(right)) - Number(isMainScene(left))
+      || Number(isLaunchScene(left)) - Number(isLaunchScene(right))
+      || right.width * right.height - left.width * left.height)[0];
   return { colors, dimensions, typography, shapes, effects, screens, notes, ...(viewport ? { viewport } : {}) };
 }
 
