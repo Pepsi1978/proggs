@@ -31,6 +31,12 @@ abstract class SessionDao {
     @Query("DELETE FROM sessions WHERE id = :sessionId")
     abstract suspend fun deleteSession(sessionId: Long): Int
 
+    @Query(
+        "UPDATE sessions SET playCount = playCount + 1, lastPlayedAt = :playedAt " +
+            "WHERE id = :sessionId",
+    )
+    abstract suspend fun markPlayed(sessionId: Long, playedAt: Long)
+
     @Insert
     abstract suspend fun insertQuestions(questions: List<QuestionEntity>): List<Long>
 

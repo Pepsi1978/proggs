@@ -190,6 +190,7 @@ class SessionController(
         val questions = source.questions.zip(perspectiveQuestions ?: storedTexts) { entity, text ->
             Question(id = entity.id, emoji = entity.emoji, text = text)
         }.let { if (shuffle) it.shuffled() else it }
+        sessionRepository.markPlayed(sourceSessionId)
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
             questions = questions,
@@ -220,6 +221,7 @@ class SessionController(
             introContext = source.session.introContext,
             entranceQuestion = entranceQuestion,
         )
+        sessionRepository.markPlayed(sourceSessionId)
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
             questions = source.questions.map { Question(it.id, it.emoji, it.text) },

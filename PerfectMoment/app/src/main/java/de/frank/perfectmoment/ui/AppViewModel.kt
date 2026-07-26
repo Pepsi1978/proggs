@@ -60,6 +60,30 @@ enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING,
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
 enum class RecordingTarget { START, INTRO }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
+enum class HistorySort(val label: String) {
+    MOST_USED("Am häufigsten"),
+    NEWEST("Neueste"),
+    OLDEST("Älteste"),
+    A_TO_Z("A–Z"),
+}
+
+internal fun sortHistorySessions(
+    sessions: List<SessionEntity>,
+    sort: HistorySort,
+): List<SessionEntity> {
+    val lastPlayed = sessions.maxWithOrNull(compareBy<SessionEntity> { it.lastPlayedAt }.thenBy { it.id })
+        ?: return emptyList()
+    val remainingComparator = when (sort) {
+        HistorySort.MOST_USED -> compareByDescending<SessionEntity> { it.playCount }
+            .thenByDescending { it.lastPlayedAt }
+            .thenByDescending { it.startedAt }
+        HistorySort.NEWEST -> compareByDescending<SessionEntity> { it.startedAt }
+        HistorySort.OLDEST -> compareBy<SessionEntity> { it.startedAt }
+        HistorySort.A_TO_Z -> compareBy<SessionEntity> { it.topic.lowercase(Locale.GERMAN) }
+            .thenByDescending { it.startedAt }
+    }
+    return listOf(lastPlayed) + sessions.filterNot { it.id == lastPlayed.id }.sortedWith(remainingComparator)
+}
 
 /** Woher die zuletzt gestartete Sitzung kam — Grundlage für „Erneut versuchen". */
 private sealed interface SessionStart {
@@ -107,6 +131,8 @@ class AppViewModel(
     var activeSkillId by mutableStateOf(settings.activeSkillId)
         private set
     var sessions by mutableStateOf<List<SessionEntity>>(emptyList())
+        private set
+    var historySort by mutableStateOf(HistorySort.MOST_USED)
         private set
     var rawSessions by mutableStateOf<List<SessionWithQuestions>>(emptyList())
         private set
@@ -220,6 +246,8 @@ class AppViewModel(
         get() = skills.firstOrNull { it.id == activeSkillId } ?: skills.firstOrNull()
     val selectedVoice: String
         get() = if (ttsProvider == TtsProvider.EDGE.id) edgeVoice else googleVoice
+    val sortedSessions: List<SessionEntity>
+        get() = sortHistorySessions(sessions, historySort)
 
     init {
         if (ttsProvider == TtsProvider.GOOGLE_CLOUD.id && googleApiKey.isBlank()) {
@@ -623,6 +651,10 @@ class AppViewModel(
 
     fun deleteSession(id: Long) {
         viewModelScope.launch { sessionRepository.deleteSession(id) }
+    }
+
+    fun updateHistorySort(value: HistorySort) {
+        historySort = value
     }
 
     fun openHookEditor(hook: HookEntity?) {

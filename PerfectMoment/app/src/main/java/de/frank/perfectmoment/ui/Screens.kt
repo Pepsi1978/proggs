@@ -46,6 +46,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -73,6 +74,8 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -715,8 +718,41 @@ private fun SessionErrorOverlay(viewModel: AppViewModel, error: String) {
 fun HistoryScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
     var pendingDelete by remember { mutableStateOf<SessionEntity?>(null) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Verlauf", viewModel::back)
+        ScreenHeader(
+            "Verlauf",
+            viewModel::back,
+            action = {
+                Box {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.Sort,
+                        "Verlauf sortieren: ${viewModel.historySort.label}",
+                        tint = colors.gold,
+                        modifier = Modifier.size(24.dp).pmClickable { sortMenuExpanded = true },
+                    )
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                    ) {
+                        HistorySort.entries.forEach { sort ->
+                            DropdownMenuItem(
+                                text = { Text(sort.label, fontFamily = Inter) },
+                                trailingIcon = {
+                                    if (sort == viewModel.historySort) {
+                                        Icon(Icons.Outlined.Check, null, tint = colors.gold)
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.updateHistorySort(sort)
+                                    sortMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+        )
         if (viewModel.sessions.isEmpty()) {
             Column(
                 Modifier.fillMaxSize(),
@@ -734,7 +770,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(viewModel.sessions, key = SessionEntity::id) { session ->
+                items(viewModel.sortedSessions, key = SessionEntity::id) { session ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
                             if (value == SwipeToDismissBoxValue.EndToStart) pendingDelete = session

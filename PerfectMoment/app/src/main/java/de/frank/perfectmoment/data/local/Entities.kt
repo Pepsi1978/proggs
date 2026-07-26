@@ -1,5 +1,6 @@
 package de.frank.perfectmoment.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -27,6 +28,8 @@ data class SessionEntity(
     val resumeQuestionIndex: Int? = null,
     val resumeRepetition: Int? = null,
     val resumeRemainingMs: Long? = null,
+    @ColumnInfo(defaultValue = "1") val playCount: Int = 1,
+    @ColumnInfo(defaultValue = "0") val lastPlayedAt: Long = startedAt,
 )
 
 @Entity(

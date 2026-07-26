@@ -19,6 +19,7 @@ interface SessionRepository {
     suspend fun appendQuestions(sessionId: Long, questions: List<Question>)
     suspend fun saveProgress(sessionId: Long, state: SessionState, config: SessionConfig)
     suspend fun clearProgress(sessionId: Long)
+    suspend fun markPlayed(sessionId: Long)
     suspend fun deleteSession(sessionId: Long): Boolean
 }
 
@@ -85,6 +86,9 @@ class RoomSessionRepository(
     }
 
     override suspend fun clearProgress(sessionId: Long) = sessionDao.clearProgress(sessionId)
+
+    override suspend fun markPlayed(sessionId: Long) =
+        sessionDao.markPlayed(sessionId, System.currentTimeMillis())
 
     override suspend fun deleteSession(sessionId: Long): Boolean =
         sessionDao.deleteSession(sessionId) > 0
