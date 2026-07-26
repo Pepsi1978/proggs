@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -46,7 +47,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -107,6 +107,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -725,21 +727,56 @@ fun HistoryScreen(viewModel: AppViewModel) {
             viewModel::back,
             action = {
                 Box {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.Sort,
-                        "Verlauf sortieren: ${viewModel.historySort.label}",
-                        tint = colors.gold,
-                        modifier = Modifier.size(24.dp).pmClickable { sortMenuExpanded = true },
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .semantics { contentDescription = "Verlauf sortieren: ${viewModel.historySort.label}" }
+                            .pmClickable { sortMenuExpanded = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Canvas(Modifier.size(24.dp)) {
+                            listOf(22.dp, 16.dp, 10.dp).forEachIndexed { index, width ->
+                                val lineWidth = width.toPx()
+                                val y = size.height * (index + 1) / 4f
+                                drawLine(
+                                    color = colors.gold,
+                                    start = Offset((size.width - lineWidth) / 2f, y),
+                                    end = Offset((size.width + lineWidth) / 2f, y),
+                                    strokeWidth = 2.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        }
+                    }
                     DropdownMenu(
                         expanded = sortMenuExpanded,
                         onDismissRequest = { sortMenuExpanded = false },
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = colors.surface,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 12.dp,
+                        border = BorderStroke(1.dp, colors.goldDim.copy(alpha = 0.45f)),
+                        modifier = Modifier.width(220.dp),
                     ) {
                         HistorySort.entries.forEach { sort ->
+                            val selected = sort == viewModel.historySort
                             DropdownMenuItem(
-                                text = { Text(sort.label, fontFamily = Inter) },
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .background(
+                                        if (selected) colors.surface2 else Color.Transparent,
+                                        RoundedCornerShape(12.dp),
+                                    ),
+                                text = {
+                                    Text(
+                                        sort.label,
+                                        color = if (selected) colors.goldHi else colors.text1,
+                                        fontFamily = Inter,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                    )
+                                },
                                 trailingIcon = {
-                                    if (sort == viewModel.historySort) {
+                                    if (selected) {
                                         Icon(Icons.Outlined.Check, null, tint = colors.gold)
                                     }
                                 },
