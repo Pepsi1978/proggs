@@ -830,13 +830,17 @@ function Studio() {
   const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [screenRequest, setScreenRequest] = useState<{ screenId: string; nonce: number } | null>(null);
+  // Ohne importiertes Design gibt es kein Board — dann bleibt das Gespräch der Einstieg, statt einen
+  // leeren Reiter vorzublenden.
+  const boardAvailable = imported.data?.imported === true;
+  const activeTab = panelTab === "board" && !boardAvailable ? "chat" : panelTab;
   const chatStorageKey = `werft-chat-${projectId}`;
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>(() => {
     try { return JSON.parse(localStorage.getItem(`werft-chat-${projectId}`) ?? "[]") as Array<{ role: "user" | "assistant"; text: string }>; }
     catch { return []; }
   });
   useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
-  const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: panelTab === "history" });
+  const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: activeTab === "history" });
   const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; fast?: boolean } }>("/providers/openai") });
   const chatRun = useMutation({
     mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
@@ -927,14 +931,14 @@ function Studio() {
         {leftOpen && (
           <aside className="left-panel">
             <div className="panel-tabs">
-              <button className={panelTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Design Board</button>
-              <button className={panelTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
-              <button className={panelTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
+              {boardAvailable && <button className={activeTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Design Board</button>}
+              <button className={activeTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
+              <button className={activeTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
-            {panelTab === "board" && (
+            {activeTab === "board" && (
               <div className="design-board">
                 {boardScreens.length === 0 ? (
-                  <div className="empty">{imported.data?.imported ? "Die Bildschirme werden gelesen, sobald die Vorschau steht." : "Für dieses Projekt liegt noch kein importiertes Design vor."}</div>
+                  <div className="empty">Die Bildschirme werden gelesen, sobald die Vorschau steht.</div>
                 ) : (
                   <>
                     <p className="board-count">{boardScreens.length} Bildschirm{boardScreens.length === 1 ? "" : "e"}</p>
@@ -954,7 +958,7 @@ function Studio() {
                 )}
               </div>
             )}
-            {panelTab === "history" && (
+            {activeTab === "history" && (
               <div className="messages">
                 {versions.isLoading ? <div className="empty">Verlauf wird geladen …</div> : (versions.data ?? []).length === 0 ? <div className="empty">Noch keine gespeicherten Versionen.</div> : (versions.data ?? []).map((version) => (
                   <div className="assistant-message" key={version.id}>
@@ -965,7 +969,7 @@ function Studio() {
                 <div className="empty">Das Gespräch bleibt unter „Gespräch“ dauerhaft gespeichert — du kannst dort jederzeit weitermachen.</div>
               </div>
             )}
-            {panelTab === "chat" && <div className="messages">
+            {activeTab === "chat" && <div className="messages">
               {messages.length === 0 && !chatRun.isPending && <div className="empty">Noch keine Nachrichten. Beschreibe unten eine Änderung am Design.</div>}
               {messages.map((m, i) => (
                 <div className={m.role === "user" ? "user-message" : "assistant-message"} key={i}>
@@ -974,7 +978,7 @@ function Studio() {
               ))}
               {chatRun.isPending && <div className="assistant-message">Die KI arbeitet am Design … das kann je nach Modell ein bis zwei Minuten dauern.</div>}
             </div>}
-            {panelTab === "chat" && <form
+            {activeTab === "chat" && <form
               className="composer"
               onSubmit={(e) => {
                 e.preventDefault();
