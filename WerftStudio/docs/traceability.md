@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.6.0 - 26.07.2026 20:51 Uhr
+Version: v0.7.0 - 26.07.2026 21:13 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -27,6 +27,10 @@ Version: v0.6.0 - 26.07.2026 20:51 Uhr
 | Durchklickbarkeit | `apps/api/src/extract-android.ts` | Sprechende Öffner (`openHookEditor(hook)`) zählen als Navigationsziel; an PerfectMoment von 6 auf 9 Bildschirme mit Klickzielen |
 | Theme-Umschaltung | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die Vorschau meldet, ob ein zweites Theme vorliegt, und schaltet `data-theme` im Design um |
 | Claude-Design-Optik | `packages/ui/src/tokens.css`, `apps/web/src/styles.css` | Leinwand `#f0eee6`/`#2e2c26`, Akzent `#d97757`, Weichton `#f7e1d3` und die `sc-shine`-Ladeanimation, gelesen aus der Claude-Design-Laufzeit der Exporte unter `Designs` |
+
+| Kommentaransicht | `apps/web/src/App.tsx` | Jeder abgeschickte Kommentar mit Element, Bildschirm, Anweisung und Ergebnis; „angewendet“ nur bei wirklich geschriebenen Dateien |
+| Live-Farbregler | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die aus den Projektquellen gemessenen Farbtoken werden gemeldet und direkt in der Vorschau überschrieben — ohne KI-Lauf, auf allen Bildschirmen |
+| Modellauswahl im Ablauf | `apps/web/src/App.tsx` | Auswahl am Eingabefeld statt nur in den Einstellungen; Effort und Fast bleiben unberührt |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
 
