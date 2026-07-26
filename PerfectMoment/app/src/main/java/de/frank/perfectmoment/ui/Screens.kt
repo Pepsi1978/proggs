@@ -803,27 +803,71 @@ fun HistoryScreen(viewModel: AppViewModel) {
                 Text("Noch keine Sitzungen.", color = colors.text3, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.padding(top = 20.dp))
             }
         } else {
+            val sortedSessions = viewModel.sortedSessions
+            val topSessions = sortedSessions.take(3)
             LazyColumn(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(viewModel.sortedSessions, key = SessionEntity::id) { session ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) pendingDelete = session
-                            false
-                        },
-                    )
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        backgroundContent = {
+                item(key = "top-three") {
+                    val topShape = RoundedCornerShape(24.dp)
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.breath, topShape)
+                            .border(1.dp, colors.goldDim.copy(alpha = 0.55f), topShape)
+                            .padding(12.dp),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Box(
-                                Modifier.fillMaxSize().background(colors.warning, RoundedCornerShape(20.dp)).padding(end = 22.dp),
-                                contentAlignment = Alignment.CenterEnd,
-                            ) { Icon(Icons.Outlined.Delete, "Löschen", tint = colors.background) }
-                        },
-                    ) { HistoryRow(session) { viewModel.openHistoryDetail(session.id) } }
+                                Modifier.size(30.dp).background(colors.gold.copy(alpha = 0.14f), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.AutoAwesome,
+                                    null,
+                                    tint = colors.gold,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Column(Modifier.padding(start = 10.dp)) {
+                                Text(
+                                    "DEINE TOP 3",
+                                    color = colors.gold,
+                                    fontFamily = Inter,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    letterSpacing = 0.8.sp,
+                                )
+                                Text(
+                                    "Aktuell: ${viewModel.historySort.label}",
+                                    color = colors.text3,
+                                    fontFamily = Inter,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
+                            }
+                        }
+                        topSessions.forEachIndexed { index, session ->
+                            DismissibleHistoryRow(
+                                session = session,
+                                rank = index + 1,
+                                onDeleteRequest = { pendingDelete = session },
+                                onClick = { viewModel.openHistoryDetail(session.id) },
+                            )
+                            if (index < topSessions.lastIndex) Spacer(Modifier.height(10.dp))
+                        }
+                    }
+                }
+                items(sortedSessions.drop(3), key = SessionEntity::id) { session ->
+                    DismissibleHistoryRow(
+                        session = session,
+                        onDeleteRequest = { pendingDelete = session },
+                        onClick = { viewModel.openHistoryDetail(session.id) },
+                    )
                 }
                 item {
                     Text(
@@ -874,11 +918,61 @@ fun HistoryScreen(viewModel: AppViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HistoryRow(session: SessionEntity, onClick: () -> Unit) {
+private fun DismissibleHistoryRow(
+    session: SessionEntity,
+    rank: Int? = null,
+    onDeleteRequest: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val colors = LocalPmColors.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onDeleteRequest()
+            false
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier.fillMaxSize().background(colors.warning, RoundedCornerShape(20.dp)).padding(end = 22.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) { Icon(Icons.Outlined.Delete, "Löschen", tint = colors.background) }
+        },
+    ) { HistoryRow(session, rank, onClick) }
+}
+
+@Composable
+private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () -> Unit) {
     val colors = LocalPmColors.current
     PmCard(Modifier.fillMaxWidth().pmClickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (rank != null) {
+                val rankColor = when (rank) {
+                    1 -> colors.goldHi
+                    2 -> colors.goldDim
+                    else -> colors.amber
+                }
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .background(rankColor.copy(alpha = 0.12f), CircleShape)
+                        .border(1.dp, rankColor.copy(alpha = 0.65f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        rank.toString(),
+                        color = rankColor,
+                        fontFamily = Inter,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     session.topic,
