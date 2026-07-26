@@ -242,7 +242,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.12.0-20260726.2031" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.13.0-20260726.2043" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -455,7 +455,10 @@ app.get("/api/v1/projects/:projectId/import/questions", async (request) => {
     why: `Erkannt: ${[...new Set(uiSources.map((path) => path.replace(/^.*(\.[^.]+)$/, "$1").toLowerCase()))].slice(0, 6).join(", ")}. Ohne diesen Schritt zeigt die Vorschau nur eine gefundene HTML-Datei statt der echten App.`,
     options: [{ value: "reconstruct", label: "Aus den Quellen aufbauen", hint: `${plural(uiSources.length, "Datei", "Dateien")}, dauert je nach Umfang einige Minuten` }, ...(entryPath ? [{ value: "keep", label: `Bei „${entryPath}“ bleiben` }] : [])]
   });
-  if (!entryPath && htmlFiles.length > 0) questions.push({
+  // Nur fragen, wenn die Startseite wirklich offen ist. Bringt das Projekt eigene Oberflaechen-
+  // quellen mit, baut die Leinwand selbsttaetig auf und bestimmt den Einstieg dabei — eine Frage
+  // waere dann nicht nur ueberfluessig, sie boete auch noch beliebiges Werkzeug-HTML zur Auswahl an.
+  if (!entryPath && htmlFiles.length > 0 && uiSources.length === 0) questions.push({
     id: "entry",
     kind: "entry",
     question: "Welche Datei ist der Einstieg in dieses Design?",

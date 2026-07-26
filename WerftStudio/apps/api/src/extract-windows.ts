@@ -50,7 +50,11 @@ export function extractWindowsFacts(files: SourceText[]): Partial<DesignFacts> {
   const screens: FactScreen[] = [];
   const themes: FactTheme[] = [];
   const notes: string[] = [];
-  let viewport: FactViewport | undefined;
+  // Welches Fenster die Vorschaugroesse vorgibt, entscheidet sich ERST wenn alle bekannt sind.
+  // Wer einfach das zuerst gelesene nimmt, erwischt bei alphabetischer Reihenfolge einen Dialog
+  // (z. B. HiddenModelsWindow 680x560) statt des Hauptfensters (1360x860) — die App erscheint dann
+  // auf halber Breite.
+  const windowCandidates: Array<{ viewport: FactViewport; isMain: boolean }> = [];
 
   for (const file of files) {
     if (/\.(xaml|axaml)$/i.test(file.path)) {
@@ -90,13 +94,17 @@ export function extractWindowsFacts(files: SourceText[]): Partial<DesignFacts> {
         const height = dimensionToPx(attribute(root, "Height") ?? "");
         const title = attribute(root, "Title") ?? name;
         screens.push({ id: `xaml:${name}`, name: title, kind: root.tag.replace(/^.*:/, "").toLowerCase(), source: file.path, navigatesTo: [], isStart: /main|shell|start/i.test(name), files: [file.path] });
-        if (!viewport && width !== undefined && height !== undefined && !Number.isNaN(width) && !Number.isNaN(height)) viewport = { width, height, device: `${title} (Windows)`, density: 1, source: file.path };
+        if (width !== undefined && height !== undefined && !Number.isNaN(width) && !Number.isNaN(height)) windowCandidates.push({ viewport: { width, height, device: `${title} (Windows)`, density: 1, source: file.path }, isMain: /main|shell|start/i.test(name) });
       } else if (!isResourceDictionary && root.children.length) {
         screens.push({ id: `xaml:${name}`, name, kind: "xaml-view", source: file.path, navigatesTo: [], isStart: false, files: [file.path] });
       }
     }
     if (/\.(cs|vb|fs)$/i.test(file.path)) readWindowsCodeBehind(file, screens, notes);
   }
+  // Das Hauptfenster gewinnt; gibt es keins mit sprechendem Namen, das flaechenmaessig groesste —
+  // Dialoge sind immer kleiner als das Fenster, das die App traegt.
+  const viewport = [...windowCandidates]
+    .sort((left, right) => Number(right.isMain) - Number(left.isMain) || right.viewport.width * right.viewport.height - left.viewport.width * left.viewport.height)[0]?.viewport;
   return { colors, dimensions, typography, shapes, effects, screens, themes, notes, ...(viewport ? { viewport } : {}) };
 }
 

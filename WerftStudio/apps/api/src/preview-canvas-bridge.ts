@@ -83,8 +83,25 @@ const bridgeScript = `<script ${bridgeMarker}>
     links: navigationTargets(screen)
   })).filter((screen) => screen.id);
 
+  // Der Aufbau erzeugt das Dunkel-Theme als ":root[data-theme=dark]" — gesetzt hat das Attribut
+  // aber nie jemand, deshalb liess sich der Hell-Dunkel-Modus im Design nicht umschalten.
+  // Gemeldet wird nur, ob es ueberhaupt ein zweites Theme gibt; sonst waere der Schalter wirkungslos.
+  const hasDarkTheme = () => {
+    try {
+      for (const sheet of Array.prototype.slice.call(document.styleSheets)) {
+        let rules = null;
+        try { rules = sheet.cssRules; } catch (error) { continue; }
+        for (const rule of Array.prototype.slice.call(rules || [])) {
+          const text = rule.selectorText || rule.conditionText || "";
+          if (text.indexOf('data-theme="dark"') >= 0 || text.indexOf("prefers-color-scheme: dark") >= 0) return true;
+        }
+      }
+    } catch (error) { /* Fremd-Stylesheets duerfen die Vorschau nicht anhalten */ }
+    return false;
+  };
+
   const publishScreens = () => {
-    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode, stageMode });
+    post({ action: "screens", screens: initialScreens, activeScreenId: screenIdOf(activeScreen()), frameMode, stageMode, hasDarkTheme: hasDarkTheme() });
     measure();
   };
 
@@ -231,6 +248,10 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "highlight") document.documentElement.setAttribute("data-werft-highlight", data.on ? "on" : "off");
     if (data.action === "screen") showScreen(data.screenId);
     if (data.action === "measure") measure();
+    if (data.action === "theme" && (data.theme === "light" || data.theme === "dark")) {
+      document.documentElement.setAttribute("data-theme", data.theme);
+      measure();
+    }
     if (data.action === "mark") {
       markMode = Boolean(data.on);
       clearMarkHover();

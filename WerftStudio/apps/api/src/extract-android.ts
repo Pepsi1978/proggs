@@ -247,6 +247,8 @@ const composeSchemeEntryPattern = /(\w+)\s*=\s*(Color\s*\(\s*0x[0-9a-fA-F]{6,8}\
 const composeSchemeMinimumColors = 3;
 const composeTextStylePattern = /\b(\w+)\s*=\s*TextStyle\(([\s\S]{0,1200}?)\n\s*\)/g;
 const composableFunctionPattern = /@Composable[\s\S]{0,400}?\bfun\s+(\w+)\s*\(/g;
+// `openHookEditor(hook)`, `showHistoryDetail(id)`, `editSkill(...)` — sprechende Oeffner statt Route.
+const composeOpenerPattern = /\b(?:open|show|edit|goTo|navigateTo)([A-Z]\w*)\s*\(/g;
 const composeRoutePattern = /composable(?:<\s*(\w+)\s*>)?\s*\(\s*(?:route\s*=\s*)?"([^"]*)"?/g;
 // Echte NavGraphs schreiben `composable("consent", enterTransition = { fadeIn(tween(600)) }) { … }`:
 // die Argumentliste enthaelt selbst Klammern und Zeilenumbrueche. Statt sie zu parsen, wird hinter
@@ -414,6 +416,7 @@ function readComposeSource(
   // Datei bleibt die bisherige, dateiweite Zuordnung erhalten.
   const composableMatches = [...text.matchAll(composableFunctionPattern)];
   const screenMatches = composableMatches.filter((match) => /(?:Screen|Page|Route|View|Activity|Dialog|Sheet|Pane)$/.test(match[1]!));
+  const screenNamesInFile = new Set(screenMatches.map((match) => match[1]!));
   for (const match of screenMatches) {
     const name = match[1]!;
     const position = composableMatches.indexOf(match);
@@ -427,9 +430,20 @@ function readComposeSource(
     const enumTargets = [...enumScreenToComposable.entries()]
       .filter(([key, target]) => target !== name && body.includes(key))
       .map(([, target]) => `compose:${target}`);
+    // Viele Apps oeffnen Detail- und Editor-Bildschirme nicht ueber eine Route oder Konstante,
+    // sondern ueber eine sprechende Methode: `openHookEditor(hook)` fuehrt zu `HookEditorScreen`.
+    // Ohne diese Zuordnung bleiben genau die Listen-Bildschirme Sackgassen, von denen aus man im
+    // Original weiterklickt. Zugeordnet wird nur, wenn es den Zielbildschirm wirklich gibt.
+    const openerTargets = [...body.matchAll(composeOpenerPattern)]
+      .flatMap((entry) => {
+        const stem = entry[1]!;
+        return [stem, `${stem}Screen`, `${stem}Sheet`, `${stem}Dialog`, `${stem}Page`];
+      })
+      .filter((candidate) => candidate !== name && screenNamesInFile.has(candidate))
+      .map((candidate) => `compose:${candidate}`);
     screens.push({
       id: `compose:${name}`, name, kind: "composable", source: file.path, ...(route ? { route } : {}),
-      navigatesTo: [...new Set([...routeTargets, ...enumTargets])],
+      navigatesTo: [...new Set([...routeTargets, ...enumTargets, ...openerTargets])],
       isStart: (route !== undefined && route === start) || name === startComposable,
       files: [file.path]
     });

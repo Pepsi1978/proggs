@@ -62,4 +62,15 @@ describe("preview canvas bridge", () => {
     expect(code).toContain("selectorFor");
     expect(code).toContain("markMode");
   });
+
+  // Gemeldet an PerfectMoment: der Hell-Dunkel-Modus liess sich in der Vorschau nicht umschalten.
+  // Der Aufbau erzeugt das Dunkel-Theme als :root[data-theme=dark] — gesetzt hat es nie jemand.
+  it("can switch the design theme and reports whether a dark one exists", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("hasDarkTheme");
+    expect(code).toContain('data-theme\", data.theme');
+    expect(code).toContain('prefers-color-scheme: dark');
+  });
 });

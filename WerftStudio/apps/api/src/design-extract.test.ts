@@ -186,6 +186,36 @@ describe("Android-Faktenextraktion", () => {
 });
 
 describe("Android-Muster aus echten Projekten", () => {
+  // Gemeldet an PerfectMoment: nach dem Import liess sich nicht alles durchklicken. Listen-
+  // Bildschirme oeffnen ihre Detailseite dort nicht ueber eine Route oder Enum-Konstante, sondern
+  // ueber eine sprechende Methode (`openHookEditor(hook)`), die vorher niemand als Klickziel las.
+  it("erkennt sprechende Oeffner als Navigationsziel", () => {
+    const extracted = extractDesignFacts("android", [source("ui/Screens.kt", `
+@Composable
+fun HooksScreen(viewModel: AppViewModel) {
+    Button(onClick = { viewModel.openHookEditor(null) }) { Text("Neu") }
+}
+@Composable
+fun HookEditorScreen(viewModel: AppViewModel) {
+    Text("Bearbeiten")
+}
+@Composable
+fun SkillsScreen(viewModel: AppViewModel) {
+    Button(onClick = { viewModel.openSkillEditor(skill) }) { Text("Bearbeiten") }
+}
+@Composable
+fun SkillEditorScreen(viewModel: AppViewModel) {
+    Text("Skill")
+}
+`)]);
+    const hooks = extracted.screens.find((screen) => screen.name === "HooksScreen");
+    const skills = extracted.screens.find((screen) => screen.name === "SkillsScreen");
+    expect(hooks?.navigatesTo).toContain("compose:HookEditorScreen");
+    expect(skills?.navigatesTo).toContain("compose:SkillEditorScreen");
+    // Kein Ziel erfinden: `openSheet(...)` zeigt auf keinen Bildschirm dieses Namens.
+    expect(extracted.screens.find((screen) => screen.name === "HookEditorScreen")?.navigatesTo).toEqual([]);
+  });
+
   it("erkennt Routen trotz verschachtelter Klammern in der Argumentliste", () => {
     // Wortlaut aus einem echten NavGraph: enterTransition = { fadeIn(tween(600)) } enthält selbst
     // Klammern; ein Muster, das die Argumentliste zu parsen versucht, findet die Route nicht.
@@ -323,6 +353,24 @@ describe("Windows-Faktenextraktion", () => {
     expect(facts.effects?.some((effect) => effect.css === "0px 4px 16px rgba(0, 0, 0, 0.25)")).toBe(true);
     expect(facts.effects?.some((effect) => effect.css === "padding: 20px 16px 20px 16px")).toBe(true);
     expect(facts.screens?.some((screen) => screen.id === "xaml:MainWindow" && screen.isStart)).toBe(true);
+  });
+
+  // Gemeldet am OpenCodeLauncher: die App erschien auf halber Breite. Ursache war die Reihenfolge —
+  // alphabetisch stand HiddenModelsWindow (680 breit) vor MainWindow (1360 breit), und der erste
+  // Treffer gewann. 680 ist exakt die Haelfte von 1360.
+  it("nimmt die Groesse des Hauptfensters, nicht die des zuerst gelesenen Dialogs", () => {
+    const windows = [
+      source("HiddenModelsWindow.xaml", `<Window Title="Ausgeblendete Modelle" Width="680" Height="560"><Grid/></Window>`),
+      source("MainWindow.xaml", `<Window Title="OpenCode Launcher" Width="1360" Height="860"><Grid/></Window>`),
+      source("ProfileEditorWindow.xaml", `<Window Title="Profil bearbeiten" Width="1040" Height="760"><Grid/></Window>`)
+    ];
+    expect(extractWindowsFacts(windows).viewport).toMatchObject({ width: 1360, height: 860 });
+    // Auch ohne sprechenden Namen darf kein Dialog gewinnen: dann zaehlt die groesste Flaeche.
+    const unnamed = [
+      source("AlphaWindow.xaml", `<Window Title="Klein" Width="480" Height="320"><Grid/></Window>`),
+      source("ZetaWindow.xaml", `<Window Title="Gross" Width="1440" Height="900"><Grid/></Window>`)
+    ];
+    expect(extractWindowsFacts(unnamed).viewport).toMatchObject({ width: 1440, height: 900 });
   });
 });
 

@@ -1184,6 +1184,10 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const markMode = mode === "comment";
   const [marker, setMarker] = useState<MarkTarget | null>(null);
   const [commentText, setCommentText] = useState("");
+  // Das Theme des DESIGNS, nicht das des Studios: importierte Apps bringen oft ein zweites Theme
+  // mit, das ohne Schalter unerreichbar bliebe.
+  const [designTheme, setDesignTheme] = useState<"light" | "dark">("light");
+  const [designHasDark, setDesignHasDark] = useState(false);
 
   // Der aktive Bildschirm wird nach oben gemeldet, damit das Design Board links ihn hervorheben
   // kann. Der Ref bleibt die Wahrheit fuer den Verlauf; die Meldung ist nur die Anzeige.
@@ -1270,6 +1274,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       if (data.action === "screens") {
         const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
         setScreens(list);
+        setDesignHasDark(Boolean((data as { hasDarkTheme?: boolean }).hasDarkTheme));
         // Beim Öffnen steht der Startbildschirm — nicht der, den das Dokument zufällig zuerst führt.
         const start = startScreenOf(list);
         if (start && activeRef.current === null) { setActive(start.id); tellFrame({ action: "screen", screenId: start.id }); }
@@ -1408,6 +1413,19 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       <div className="stage-modes">
         <button type="button" className={markMode ? "" : "active"} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
         <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
+        {designHasDark && (
+          <button
+            type="button"
+            title={designTheme === "dark" ? "Design im hellen Modus zeigen" : "Design im dunklen Modus zeigen"}
+            onClick={() => {
+              const next = designTheme === "dark" ? "light" : "dark";
+              setDesignTheme(next);
+              tellFrame({ action: "theme", theme: next });
+            }}
+          >
+            {designTheme === "dark" ? <Sun /> : <Moon />}
+          </button>
+        )}
       </div>
       <div className="stage-hint">
         {history.length > 0 && <button type="button" onClick={goBack} title="Zurück (Rücktaste)"><ChevronLeft /></button>}
