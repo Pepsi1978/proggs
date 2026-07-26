@@ -23,6 +23,25 @@ Nur `https://10.8.0.1:8443` wird an die WireGuard-IP gebunden. Alle Datenbanken,
 Objektspeicher und Worker bleiben im internen Docker-Netz `werft-internal`. Cortex auf Port 443
 und dessen `/api`-Routen werden dadurch nicht berührt.
 
+### Stand übertragen
+
+Der Server ist kein Git-Klon; die Quellen werden als Archiv übertragen. `.env` bleibt dabei außen vor,
+sonst würden die Serverschlüssel überschrieben.
+
+```sh
+tar -czf /tmp/werft.tgz --exclude=node_modules --exclude=.git --exclude=dist \
+  --exclude=.turbo --exclude='*.tsbuildinfo' --exclude=.env \
+  apps packages docker package.json pnpm-lock.yaml pnpm-workspace.yaml \
+  tsconfig.base.json turbo.json compose.server.yaml compose.yaml README.md SPEC.md docs
+scp /tmp/werft.tgz root@10.8.0.1:/tmp/werft.tgz
+ssh root@10.8.0.1 'cd /opt/werft-studio && tar -tzf /tmp/werft.tgz >/dev/null \
+  && tar -xzf /tmp/werft.tgz && docker compose -f compose.server.yaml up -d --build'
+```
+
+Das Archiv wird per `scp` als Datei übertragen und vor dem Entpacken mit `tar -tzf` geprüft; die
+Prüfsumme beider Seiten muss übereinstimmen. Ein `tar -czf - … | ssh …` mit `&` im selben Befehl
+liefert das Archiv abgeschnitten aus und würde einen Rebuild auf halbem Quellstand starten.
+
 ## Architektur
 
 - `apps/web`: React-Oberfläche mit Hub, Studio und Administration
