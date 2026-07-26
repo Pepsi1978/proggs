@@ -151,7 +151,7 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = $"{label} für {SelectedModel.DisplayName}: {value.DisplayName}";
     }
 
-    private async Task LoadThinkingOptionsAsync(ModelEntry model)
+    private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
     {
         _thinkingCts?.Cancel();
         _thinkingCts?.Dispose();
@@ -163,7 +163,7 @@ public sealed partial class MainViewModel : ObservableObject
             var levels = GetStaticThinkingLevels(model).ToList();
             if (string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
             {
-                var apiLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct);
+                var apiLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct, forceRefresh);
                 if (apiLevels.Count > 0) levels = apiLevels;
             }
 
@@ -409,7 +409,13 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        if (SelectedModel != null) await LoadProvidersAsync(SelectedModel);
+        var model = SelectedModel;
+        if (model == null) return;
+
+        UpdateThinkingState("Lade Thinking …");
+        await Task.WhenAll(
+            LoadProvidersAsync(model),
+            LoadThinkingOptionsAsync(model, forceRefresh: true));
     }
 
     [RelayCommand]

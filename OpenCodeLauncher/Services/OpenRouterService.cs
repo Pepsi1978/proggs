@@ -43,16 +43,16 @@ public sealed class OpenRouterService
         "provider-throughput.json");
     private static Dictionary<string, double>? _throughputCache;
 
-    private static async Task<string> FetchModelsJsonAsync(CancellationToken ct)
+    private static async Task<string> FetchModelsJsonAsync(CancellationToken ct, bool forceRefresh = false)
     {
         var cached = _modelsJson;
-        if (cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
+        if (!forceRefresh && cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
 
         await ModelsCacheLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             cached = _modelsJson;
-            if (cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
+            if (!forceRefresh && cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
 
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
             using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
@@ -144,12 +144,12 @@ public sealed class OpenRouterService
         }
     }
 
-    public async Task<List<string>> GetThinkingLevelsAsync(string slug, CancellationToken ct = default)
+    public async Task<List<string>> GetThinkingLevelsAsync(string slug, CancellationToken ct = default, bool forceRefresh = false)
     {
         var log = Logger.Instance;
         try
         {
-            var json = await FetchModelsJsonAsync(ct).ConfigureAwait(false);
+            var json = await FetchModelsJsonAsync(ct, forceRefresh).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
                 return [];
@@ -208,7 +208,20 @@ public sealed class OpenRouterService
     {
         if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) return [];
         var id = idEl.GetString() ?? string.Empty;
-        return OpenCodeVariantCatalog.GetOpenRouterLevels(id, ModelMentionsReasoning(item)).ToList();
+        return OpenCodeVariantCatalog.GetOpenRouterLevels(
+            id,
+            ModelMentionsReasoning(item),
+            ModelSupportsParameter(item, "reasoning_effort")).ToList();
+    }
+
+    private static bool ModelSupportsParameter(JsonElement item, string expected)
+    {
+        if (!item.TryGetProperty("supported_parameters", out var parameters) || parameters.ValueKind != JsonValueKind.Array)
+            return false;
+
+        return parameters.EnumerateArray().Any(parameter =>
+            parameter.ValueKind == JsonValueKind.String &&
+            string.Equals(parameter.GetString(), expected, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool ModelMentionsReasoning(JsonElement item)

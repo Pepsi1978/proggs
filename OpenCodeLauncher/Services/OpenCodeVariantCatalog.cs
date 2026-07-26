@@ -38,18 +38,19 @@ public static class OpenCodeVariantCatalog
         return [];
     }
 
-    public static IReadOnlyList<string> GetOpenRouterLevels(string slug, bool supportsReasoning)
+    public static IReadOnlyList<string> GetOpenRouterLevels(string slug, bool supportsReasoning, bool supportsReasoningEffort = false)
     {
         var id = Normalize(slug);
-        if (!supportsReasoning) return [];
+        if (!supportsReasoning && !supportsReasoningEffort) return [];
 
-        if (id.Contains("minimax", StringComparison.Ordinal)) return [];
         if (IsGlm52(id)) return ["high", "xhigh"];
-        if (IsOpenCodeEarlyReturn(id)) return [];
         if (id.Contains("grok-3-mini", StringComparison.Ordinal)) return ["low", "high"];
-        if (id.Contains("grok", StringComparison.Ordinal)) return [];
         if (id.StartsWith("openai/", StringComparison.Ordinal) || id.Contains("gpt", StringComparison.Ordinal))
             return GetOpenAiCompatibleLevels(id);
+        if (supportsReasoningEffort) return WidelySupported;
+        if (id.Contains("minimax", StringComparison.Ordinal)) return [];
+        if (IsOpenCodeEarlyReturn(id)) return [];
+        if (id.Contains("grok", StringComparison.Ordinal)) return [];
 
         return WidelySupported;
     }

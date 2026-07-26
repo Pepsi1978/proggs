@@ -19,7 +19,7 @@ $checks = @(
     @{ Name = 'versteckte Listeneinträge sind eingeklappt'; Pass = $mainXaml -match '(?s)Binding IsHidden.*?Visibility" Value="Collapsed"' }
     @{ Name = 'zentraler Ausgeblendet-Button'; Pass = $mainXaml -match 'Command="\{Binding ShowHiddenModelsCommand\}"' }
     @{ Name = 'Wiederherstellung pro Modell'; Pass = $dialogXaml -match 'Command="\{Binding DataContext\.RestoreModelCommand' }
-    @{ Name = 'Version 1.17.55'; Pass = $project.Project.PropertyGroup.Version -contains '1.17.55' }
+    @{ Name = 'Version 1.17.56'; Pass = $project.Project.PropertyGroup.Version -contains '1.17.56' }
 )
 
 $failed = @($checks | Where-Object { -not $_.Pass })
