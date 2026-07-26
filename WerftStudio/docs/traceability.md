@@ -1,6 +1,6 @@
 # Anforderungsnachweis
 
-Version: v0.5.0 - 26.07.2026 19:59 Uhr
+Version: v0.6.0 - 26.07.2026 20:51 Uhr
 
 | Bereich | Implementierung | Evidenz |
 |---|---|---|
@@ -22,10 +22,21 @@ Version: v0.5.0 - 26.07.2026 19:59 Uhr
 | Design Board | `apps/web/src/App.tsx`, `styles.css` | Bildschirmliste aus der Preview-Bridge links, aktiver Bildschirm hervorgehoben, Klick navigiert die Bühne und füllt den Zurück-Verlauf |
 | Markieren & Kommentieren | `apps/api/src/preview-canvas-bridge.ts`, `apps/api/src/server.ts`, `apps/web/src/App.tsx` | Element im Vorschau-Dokument umranden, Rechteck/CSS-Pfad/wörtlichen Ausschnitt melden, Rahmen mit zoomunabhängigem Eingabefenster, Ziel im Chat-Endpunkt (striktes Schema); Test hält das Bruecken-Skript parsebar |
 
+| Projektbezogene Rückfragen | `apps/api/src/server.ts` | Offene Punkte aus dem echten Import statt fester Fragen; an drei Projekten belegt: reines HTML → keine Frage, natives Projekt → keine Frage (die Leinwand baut selbst auf), Web-Projekt mit Flutter-Quelle → Frage mit beiden Optionen |
+| Vorschaugeometrie | `apps/api/src/extract-windows.ts`, `extract-apple.ts` | Hauptfenster bzw. Hauptstoryboard bestimmt die Größe, sonst die größte Fläche; Regressionstests mit den echten Maßen aus OpenCodeLauncher (680 gegen 1360) und LaunchScreen gegen Main |
+| Durchklickbarkeit | `apps/api/src/extract-android.ts` | Sprechende Öffner (`openHookEditor(hook)`) zählen als Navigationsziel; an PerfectMoment von 6 auf 9 Bildschirme mit Klickzielen |
+| Theme-Umschaltung | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die Vorschau meldet, ob ein zweites Theme vorliegt, und schaltet `data-theme` im Design um |
+| Claude-Design-Optik | `packages/ui/src/tokens.css`, `apps/web/src/styles.css` | Leinwand `#f0eee6`/`#2e2c26`, Akzent `#d97757`, Weichton `#f7e1d3` und die `sc-shine`-Ladeanimation, gelesen aus der Claude-Design-Laufzeit der Exporte unter `Designs` |
+
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
 
 ## Offen
 
 - Die tatsächliche KI-Anwendung eines Kommentars braucht eine verbundene OpenAI-Codex-Verbindung;
   ohne sie endet der Lauf mit `OPENAI_NOT_CONNECTED`. Bis dorthin ist die Kette geprüft.
-- Startseite, Modellauswahl und projektbezogene Rückfragen sind noch nicht an Claude Design angeglichen.
+- Startseite, Plus-Schaltfläche und Modellauswahl sind optisch noch nicht an Claude Design
+  angeglichen. `claude.ai/design` antwortet ohne Anmeldung mit HTTP 403 und in dieser Umgebung
+  steht kein Browser-Werkzeug bereit; übernommen wurde deshalb nur, was aus der Claude-Design-
+  Laufzeit der vorhandenen Exporte belegbar ist (Farben, Ladeanimation).
+- Die Rekonstruktion nativer Projekte braucht eine verbundene OpenAI-Codex-Verbindung. Import,
+  Faktenmessung, Bildschirm- und Navigationserkennung sind ohne sie geprüft, der KI-Aufbau nicht.
