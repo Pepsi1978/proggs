@@ -10,6 +10,12 @@ import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
+type ProviderId = "openai-codex" | "openrouter";
+type ModelSelection = { provider: ProviderId; model: string; effort?: string };
+type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; efforts: string[]; defaultEffort?: string };
+type ModelCatalog = { models: ProviderModel[]; selection?: ModelSelection; openrouterError?: string; selectionError?: string };
+const modelKey = (model: Pick<ProviderModel, "provider" | "id">) => JSON.stringify([model.provider, model.id]);
+const providerName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI · Codex OAuth" : "OpenRouter · API";
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
@@ -871,47 +877,89 @@ function StorageCleanupButton() {
   );
 }
 function ProviderSettings() {
-  const [open, setOpen] = useState(false);
+  const [dialog, setDialog] = useState<"providers" | "openai" | "openrouter" | null>(null);
   const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
+  const [apiKey, setApiKey] = useState("");
+  const [selectedKey, setSelectedKey] = useState("");
+  const [effort, setEffort] = useState("");
   const client = useQueryClient();
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string; settings?: { model?: string; effort?: string } }>("/providers/openai") });
-  const [model,setModel]=useState("gpt-5.6-sol"),[effort,setEffort]=useState("medium");
+  const openai = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string }>("/providers/openai") });
+  const openrouter = useQuery({ queryKey: ["provider", "openrouter"], queryFn: () => api<{ connected: boolean; status: string; label?: string }>("/providers/openrouter") });
+  const catalog = useQuery({ queryKey: ["provider-models"], queryFn: () => api<ModelCatalog>("/providers/models") });
+  const refresh = async () => { await Promise.all([client.invalidateQueries({ queryKey: ["provider"] }), client.invalidateQueries({ queryKey: ["provider-models"] })]); };
   const start = useMutation({ mutationFn: () => api<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>("/providers/openai/auth/start", { method: "POST", body: "{}" }), onSuccess: (data) => { setDevice(data); window.open(data.verificationUri, "_blank", "noopener,noreferrer"); } });
-  const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setOpen(false); await client.invalidateQueries({ queryKey: ["provider", "openai"] }); } else if (data.status === "expired") setDevice(undefined); else if (data.interval) setDevice((current) => (current ? { ...current, interval: Math.max(3, Math.min(30, data.interval!)) } : current)); } });
-  const disconnect = useMutation({ mutationFn: () => api<{ connected: boolean }>("/providers/openai", { method: "DELETE" }), onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] }) });
-  const saveSettings=useMutation({mutationFn:()=>api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort})}),onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
-  const testProvider=useMutation({mutationFn:async()=>{await api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort})});return api<{ok:boolean;elapsedMs:number}>("/providers/openai/test",{method:"POST",body:"{}"})},onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
+  const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setDialog(null); await refresh(); } else if (data.status === "expired") setDevice(undefined); else if (data.interval) setDevice((current) => (current ? { ...current, interval: Math.max(3, Math.min(30, data.interval!)) } : current)); } });
+  const connectOpenRouter = useMutation({ mutationFn: () => api("/providers/openrouter", { method: "POST", body: JSON.stringify({ apiKey }) }), onSuccess: async () => { setApiKey(""); setDialog(null); await refresh(); } });
+  const disconnectOpenAi = useMutation({ mutationFn: () => api("/providers/openai", { method: "DELETE" }), onSuccess: refresh });
+  const disconnectOpenRouter = useMutation({ mutationFn: () => api("/providers/openrouter", { method: "DELETE" }), onSuccess: refresh });
+  const testOpenAi = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openai/test", { method: "POST", body: "{}" }) });
+  const testOpenRouter = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openrouter/test", { method: "POST", body: "{}" }) });
+  const saveSelection = useMutation({ mutationFn: (selection: ModelSelection) => api("/providers/default-model", { method: "PATCH", body: JSON.stringify(selection) }), onSuccess: refresh });
   useEffect(() => { if (!device || poll.isPending) return; const timer=setTimeout(()=>poll.mutate(device.authId),device.interval*1000); return()=>clearTimeout(timer); },[device,poll.isPending,poll.mutate]);
-  useEffect(()=>{const settings=connection.data?.settings;if(settings?.model)setModel(settings.model);if(settings?.effort)setEffort(settings.effort)},[connection.data?.settings]);
+  useEffect(() => {
+    const models = catalog.data?.models ?? [], selection = catalog.data?.selection;
+    if (!models.length) return;
+    const model = selection ? models.find((entry) => entry.provider === selection.provider && entry.id === selection.model) ?? models[0]! : models[0]!;
+    setSelectedKey(modelKey(model));
+    setEffort(selection?.effort ?? model.defaultEffort ?? model.efforts[0] ?? "");
+  }, [catalog.data]);
+  const selectedModel = catalog.data?.models.find((model) => modelKey(model) === selectedKey);
+  const chooseModel = (value: string) => {
+    setSelectedKey(value);
+    const model = catalog.data?.models.find((entry) => modelKey(entry) === value);
+    setEffort(model?.defaultEffort ?? model?.efforts[0] ?? "");
+  };
+  const save = () => {
+    if (!selectedModel) return;
+    saveSelection.mutate({ provider: selectedModel.provider, model: selectedModel.id, ...(selectedModel.efforts.length && effort ? { effort } : {}) });
+  };
+  const mutationError = openai.error || openrouter.error || catalog.error || connectOpenRouter.error || disconnectOpenAi.error || disconnectOpenRouter.error || testOpenAi.error || testOpenRouter.error || saveSelection.error;
   return (
     <>
       <div className="section-head">
-        <p className="subtle">Die OpenAI-Anmeldung wird verschlüsselt auf dem Server gespeichert.</p>
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          OpenAI verbinden
+        <div><h2>Modellprovider</h2><p className="subtle">Verbinde Anbieter und wähle anschließend ein Modell für alle KI-Funktionen.</p></div>
+        <Button variant="primary" onClick={() => setDialog("providers")}>
+          Verbindung hinzufügen
         </Button>
       </div>
       <div className="provider-grid">
         <Card title="OpenAI · Codex OAuth">
           <small>ChatGPT-Anmeldung · Tokens nur verschlüsselt auf dem Server</small>
-          <Status kind={connection.data?.connected ? "success" : "neutral"}>{connection.data?.connected ? "Konfiguriert" : "Nicht verbunden"}</Status>
-          {connection.data?.connected && <small>{connection.data.email || connection.data.accountId || "OpenAI-Konto"}</small>}
+          <Status kind={openai.data?.connected ? "success" : "neutral"}>{openai.data?.connected ? "Verbunden" : "Nicht verbunden"}</Status>
+          {openai.data?.connected && <small>{openai.data.email || openai.data.accountId || "OpenAI-Konto"}</small>}
           <div className="caps"><span>GPT-5.6</span><span>Reasoning</span></div>
-          {connection.data?.connected ? <Button variant="danger" onClick={()=>disconnect.mutate()}>Verbindung trennen</Button> : <Button onClick={()=>setOpen(true)}>Mit OpenAI verbinden</Button>}
+          <div className="provider-actions">{openai.data?.connected ? <><Button disabled={testOpenAi.isPending} onClick={() => testOpenAi.mutate()}>{testOpenAi.isPending ? "Test läuft …" : "Testen"}</Button><Button variant="danger" disabled={disconnectOpenAi.isPending} onClick={() => window.confirm("OpenAI-Verbindung wirklich trennen?") && disconnectOpenAi.mutate()}>Trennen</Button></> : <Button onClick={() => setDialog("openai")}>Mit OpenAI verbinden</Button>}</div>
+          {testOpenAi.data && <small className="field-success">Live getestet · {testOpenAi.data.elapsedMs} ms</small>}
+        </Card>
+        <Card title="OpenRouter · API">
+          <small>Modelle verschiedener Anbieter über einen OpenRouter-API-Key</small>
+          <Status kind={openrouter.data?.connected ? "success" : "neutral"}>{openrouter.data?.connected ? "Verbunden" : "Nicht verbunden"}</Status>
+          {openrouter.data?.connected && <small>{openrouter.data.label || "OpenRouter API-Key"}</small>}
+          <div className="caps"><span>{catalog.isLoading ? "Modelle werden geladen" : `${catalog.data?.models.filter((model) => model.provider === "openrouter").length ?? 0} Modelle`}</span><span>Reasoning</span></div>
+          <div className="provider-actions">{openrouter.data?.connected ? <><Button disabled={testOpenRouter.isPending} onClick={() => testOpenRouter.mutate()}>{testOpenRouter.isPending ? "Key wird geprüft …" : "Key prüfen"}</Button><Button onClick={() => setDialog("openrouter")}>Key ersetzen</Button><Button variant="danger" disabled={disconnectOpenRouter.isPending} onClick={() => window.confirm("OpenRouter-Verbindung wirklich trennen?") && disconnectOpenRouter.mutate()}>Trennen</Button></> : <Button onClick={() => setDialog("openrouter")}>Mit OpenRouter verbinden</Button>}</div>
+          {testOpenRouter.data && <small className="field-success">API-Key gültig · {testOpenRouter.data.elapsedMs} ms</small>}
         </Card>
       </div>
-      {connection.data?.connected&&<Card title="GPT-5.6" sub="Standard für OpenAI-KI-Läufe; im Gespräch pro Lauf überschreibbar."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">XHigh</option><option value="max">Max</option></select></label></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
-      {open && (
-        <Modal title="OpenAI mit Codex verbinden" onClose={() => {setOpen(false);setDevice(undefined)}}>
+      {catalog.data?.models.length ? <Card title="Standardmodell" sub="Dieses Modell wird für Gespräche, Designänderungen und den Neuaufbau aus Quellen verwendet.">
+        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{model.name}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Reasoning<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
+        <div className="modal-actions">{saveSelection.isSuccess && <Status kind="success">Gespeichert</Status>}<span/><Button variant="primary" disabled={!selectedModel || saveSelection.isPending} onClick={save}>{saveSelection.isPending ? "Wird gespeichert …" : "Standardmodell speichern"}</Button></div>
+      </Card> : !catalog.isLoading && <Card title="Noch kein Modell verfügbar" sub="Verbinde OpenAI oder OpenRouter, um ein Standardmodell auszuwählen."><span /></Card>}
+      {catalog.data?.openrouterError && <p className="field-error">{catalog.data.openrouterError}</p>}
+      {catalog.data?.selectionError && <p className="field-error">{catalog.data.selectionError}</p>}
+      {mutationError && <p className="field-error">{mutationError instanceof ApiError ? mutationError.message : "Die Provider-Einstellung konnte nicht geändert werden."}</p>}
+      {dialog === "providers" && <Modal title="Neue Verbindung hinzufügen" onClose={() => setDialog(null)}><div className="provider-choice"><button onClick={() => setDialog("openai")}><strong>OpenAI · Codex OAuth</strong><span>GPT-5.6 mit deiner ChatGPT-Anmeldung</span></button><button onClick={() => setDialog("openrouter")}><strong>OpenRouter · API</strong><span>Modelle verschiedener Anbieter per API-Key</span></button></div></Modal>}
+      {dialog === "openai" && (
+        <Modal title="OpenAI mit Codex verbinden" onClose={() => {setDialog(null);setDevice(undefined)}}>
           <div className="modal-body oauth-dialog">
             {!device ? <><p>Werft öffnet die offizielle OpenAI-Geräteseite. Dein Passwort wird niemals an Werft übermittelt.</p><Button variant="primary" disabled={start.isPending} onClick={()=>start.mutate()}>{start.isPending?"Code wird angefordert …":"Browser-Code anfordern"}</Button></> : <><p>Gib diesen Code auf der OpenAI-Seite ein (Klick kopiert ihn):</p><button className="device-code" onClick={()=>navigator.clipboard.writeText(device.userCode)} title="Code kopieren">{device.userCode}</button><a className="button secondary" href={device.verificationUri} target="_blank" rel="noreferrer">OpenAI-Seite öffnen · auth.openai.com/codex/device</a><Status kind="info">Warte auf Bestätigung im Browser …</Status><small>Der Code läuft um {new Date(device.expiresAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr ab.</small></>}
             {(start.error||poll.error)&&<p className="field-error">{(start.error||poll.error) instanceof ApiError?(start.error||poll.error)?.message:"OpenAI-Anmeldung fehlgeschlagen."}</p>}
           </div>
           <div className="modal-actions">
-            <Button onClick={() => {setOpen(false);setDevice(undefined)}}>Schließen</Button>
+            <Button onClick={() => {setDialog(null);setDevice(undefined)}}>Schließen</Button>
           </div>
         </Modal>
       )}
+      {dialog === "openrouter" && <Modal title="OpenRouter verbinden" onClose={() => { setDialog(null); setApiKey(""); }}><form onSubmit={(event) => { event.preventDefault(); if (apiKey.trim()) connectOpenRouter.mutate(); }}><div className="modal-body"><p>Erstelle einen API-Key unter <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>. Der Key wird verschlüsselt auf dem Server gespeichert und nie an den Browser zurückgegeben.</p><label>API-Key<input autoFocus type="password" autoComplete="off" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="sk-or-v1-…" /></label>{connectOpenRouter.error && <p className="field-error">{connectOpenRouter.error instanceof ApiError ? connectOpenRouter.error.message : "OpenRouter konnte nicht verbunden werden."}</p>}</div><div className="modal-actions"><Button type="button" onClick={() => { setDialog(null); setApiKey(""); }}>Abbrechen</Button><Button type="submit" variant="primary" disabled={!apiKey.trim() || connectOpenRouter.isPending}>{connectOpenRouter.isPending ? "Wird geprüft …" : "Verbinden"}</Button></div></form></Modal>}
     </>
   );
 }
@@ -1101,13 +1149,23 @@ function Studio() {
   const themeCss = measuredThemes.data && ((measuredThemes.data.themes.length > boardThemes.length) || !themesEffective)
     ? [measuredThemes.data.css, measuredThemes.data.overrideCss].filter(Boolean).join("\n")
     : undefined;
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string } }>("/providers/openai") });
-  const [runModel, setRunModel] = useState("gpt-5.6-sol");
-  const [runEffort, setRunEffort] = useState("medium");
+  const modelCatalog = useQuery({ queryKey: ["provider-models"], queryFn: () => api<ModelCatalog>("/providers/models") });
+  const [runModelKey, setRunModelKey] = useState("");
+  const [runEffort, setRunEffort] = useState("");
   useEffect(() => {
-    if (connection.data?.settings?.model) setRunModel(connection.data.settings.model);
-    if (connection.data?.settings?.effort) setRunEffort(connection.data.settings.effort);
-  }, [connection.data?.settings]);
+    const models = modelCatalog.data?.models ?? [];
+    if (!models.length || models.some((model) => modelKey(model) === runModelKey)) return;
+    const preferred = modelCatalog.data?.selection;
+    const model = preferred ? models.find((entry) => entry.provider === preferred.provider && entry.id === preferred.model) ?? models[0]! : models[0]!;
+    setRunModelKey(modelKey(model));
+    setRunEffort(preferred?.effort ?? model.defaultEffort ?? model.efforts[0] ?? "");
+  }, [modelCatalog.data, runModelKey]);
+  const runModel = modelCatalog.data?.models.find((model) => modelKey(model) === runModelKey);
+  const chooseRunModel = (value: string) => {
+    setRunModelKey(value);
+    const model = modelCatalog.data?.models.find((entry) => modelKey(entry) === value);
+    setRunEffort(model?.defaultEffort ?? model?.efforts[0] ?? "");
+  };
   // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
   // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.
   const textEdit = useMutation({
@@ -1122,8 +1180,8 @@ function Studio() {
   const chatRun = useMutation({
     mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
       message,
-      model: runModel,
-      effort: runEffort,
+      ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
+      ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
       ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
       ...(target ? { target: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName } } : {})
     }) }),
@@ -1386,33 +1444,26 @@ function Studio() {
                 <textarea style={{ height: composerHeight }} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
               </div>
               <footer>
-                {connection.data?.connected ? (
+                {runModel ? (
                   // Modell und Effort stehen dort, wo sie benutzt werden — nicht nur in den
                   // Einstellungen. Jede Wahl schickt die andere unverändert mit.
                   <>
                     <select
                       aria-label="Modell für den nächsten Lauf"
-                      value={runModel}
+                      value={runModelKey}
                       disabled={chatRun.isPending}
-                      onChange={(event) => setRunModel(event.target.value)}
+                      onChange={(event) => chooseRunModel(event.target.value)}
                     >
-                      <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
-                      <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
-                      <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
+                      {(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{model.name}</option>)}</optgroup> : null; })}
                     </select>
-                    <select
+                    {runModel.efforts.length > 0 && <select
                       aria-label="Effort für den nächsten Lauf"
                       value={runEffort}
                       disabled={chatRun.isPending}
                       onChange={(event) => setRunEffort(event.target.value)}
                     >
-                      <option value="none">None</option>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="xhigh">XHigh</option>
-                      <option value="max">Max</option>
-                    </select>
+                      {runModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}
+                    </select>}
                   </>
                 ) : (
                   <Link to="/app/settings/models">Kein Provider verbunden — jetzt verbinden</Link>

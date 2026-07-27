@@ -19,6 +19,7 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
+import { assertOpenRouterContext, normalizeOpenRouterModels, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterModel } from "./openrouter.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
@@ -51,7 +52,7 @@ const env = z.object({
 if (env.NODE_ENV === "production" && env.SESSION_SECRET === localSecret) throw new Error("SESSION_SECRET muss in Produktion explizit gesetzt sein");
 const { db, client } = createDatabase(env.DATABASE_URL);
 // bodyLimit 32 MB: grosse Design-Dokumente und Operations-Batches sprengen sonst das 1-MB-Fastify-Standardlimit.
-const app = Fastify({ logger: { redact: ["req.headers.authorization", "req.headers.cookie", "body.password", "body.credential"] }, genReqId: () => uuidv7(), bodyLimit: 32 * 1024 * 1024 });
+const app = Fastify({ logger: { redact: ["req.headers.authorization", "req.headers.cookie", "body.password", "body.credential", "body.apiKey"] }, genReqId: () => uuidv7(), bodyLimit: 32 * 1024 * 1024 });
 const s3Endpoint = new URL(env.S3_ENDPOINT);
 const objectStore = new MinioClient({ endPoint: s3Endpoint.hostname, port: Number(s3Endpoint.port || (s3Endpoint.protocol === "https:" ? 443 : 80)), useSSL: s3Endpoint.protocol === "https:", accessKey: env.S3_ACCESS_KEY, secretKey: env.S3_SECRET_KEY });
 let bucketReady: Promise<void> | undefined;
@@ -122,6 +123,105 @@ async function validCodexConnection(organizationId: string) {
     await db.update(providerConnections).set({ credentials: encryptCredentials(credentials, env.SESSION_SECRET), expiresAt, accountId: identity.accountId || row.accountId, email: identity.email || row.email, updatedAt: new Date() }).where(eq(providerConnections.id, row.id));
   }
   return { ...row, credentials, expiresAt };
+}
+type ProviderId = "openai-codex" | "openrouter";
+type ModelSelection = { provider: ProviderId; model: string; effort?: string };
+type ProviderModel = OpenRouterModel | { provider: "openai-codex"; id: typeof codexModels[number]; name: string; efforts: string[]; defaultEffort: string };
+const providerIds = ["openai-codex", "openrouter"] as const;
+const openRouterCredentialsSchema = z.object({ apiKey: z.string().min(10).max(500) }).strict();
+const modelSelectionSchema = z.object({ provider: z.enum(providerIds), model: z.string().min(1).max(300), effort: z.string().min(1).max(20).optional() }).strict();
+const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-5.6-sol": "GPT-5.6 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-5.6-luna": "GPT-5.6 Luna" };
+const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: [...codexEfforts], defaultEffort: "medium" }));
+
+async function validOpenRouterConnection(organizationId: string) {
+  const row = (await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0];
+  if (!row) fail("OPENROUTER_NOT_CONNECTED", 409, "Bitte zuerst OpenRouter verbinden.");
+  const credentials = openRouterCredentialsSchema.parse(decryptCredentials(row.credentials, env.SESSION_SECRET));
+  return { ...row, credentials };
+}
+async function openRouterFetch(url: string, apiKey: string, init: RequestInit = {}) {
+  try {
+    return await fetch(url, { ...init, signal: init.signal ?? AbortSignal.timeout(30_000), headers: { authorization: `Bearer ${apiKey}`, "HTTP-Referer": env.WEB_ORIGIN, "X-OpenRouter-Title": "Werft Studio", ...init.headers } });
+  } catch (error) {
+    if (init.signal?.aborted) throw init.signal.reason ?? error;
+    app.log.warn({ err: error, url }, "OpenRouter nicht erreichbar");
+    fail("OPENROUTER_UNREACHABLE", 502, "OpenRouter ist vom Server aus nicht erreichbar.", true);
+  }
+}
+async function openRouterKeyInfo(apiKey: string) {
+  const response = await openRouterFetch(openRouterApi.keyUrl, apiKey);
+  if (!response.ok) throw openRouterHttpError(response.status);
+  return await response.json() as { data?: { label?: string; limit_remaining?: number | null; is_free_tier?: boolean } };
+}
+async function openRouterModels(apiKey: string): Promise<OpenRouterModel[]> {
+  const all: OpenRouterModel[] = [];
+  for (let offset = 0; offset < 10_000; offset += 1_000) {
+    const response = await openRouterFetch(`${openRouterApi.modelsUrl}?limit=1000&offset=${offset}`, apiKey);
+    if (!response.ok) throw openRouterHttpError(response.status);
+    const data = await response.json() as { data?: unknown[]; total_count?: number };
+    all.push(...normalizeOpenRouterModels(data));
+    if (!Array.isArray(data.data) || data.data.length < 1_000 || (typeof data.total_count === "number" && all.length >= data.total_count)) break;
+  }
+  return all;
+}
+const openRouterCatalogCache = new Map<string, { updatedAt: number; expiresAt: number; models: OpenRouterModel[] }>();
+async function openRouterModelsForConnection(connection: { id: string; updatedAt: Date; credentials: { apiKey: string } }) {
+  const updatedAt = connection.updatedAt.getTime(), cached = openRouterCatalogCache.get(connection.id);
+  if (cached?.updatedAt === updatedAt && cached.expiresAt > Date.now()) return cached.models;
+  const models = await openRouterModels(connection.credentials.apiKey);
+  openRouterCatalogCache.set(connection.id, { updatedAt, expiresAt: Date.now() + 5 * 60 * 1_000, models });
+  return models;
+}
+async function providerCatalog(organizationId: string) {
+  const rows = await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.status, "connected")));
+  const models: ProviderModel[] = [];
+  const codex = rows.find((row) => row.provider === "openai-codex");
+  const router = rows.find((row) => row.provider === "openrouter");
+  if (codex) models.push(...codexProviderModels());
+  let openrouterError: string | undefined, routerModels: OpenRouterModel[] = [];
+  if (router) {
+    try {
+      routerModels = await openRouterModelsForConnection({ ...router, credentials: openRouterCredentialsSchema.parse(decryptCredentials(router.credentials, env.SESSION_SECRET)) });
+      models.push(...routerModels);
+    }
+    catch (error) { openrouterError = error instanceof Error ? error.message : "OpenRouter-Modelle konnten nicht geladen werden."; }
+  }
+  const selected = rows.find((row) => row.isDefault) ?? codex ?? router;
+  const settings = selected?.settings && typeof selected.settings === "object" ? selected.settings : {};
+  const selection = selected?.provider === "openai-codex"
+    ? { provider: "openai-codex" as const, model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" }
+    : selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.some((model) => model.id === settings.model) ? { provider: "openrouter" as const, model: settings.model, ...(typeof settings.effort === "string" ? { effort: settings.effort } : {}) } : undefined;
+  const selectionError = selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.length && !routerModels.some((model) => model.id === settings.model) ? "Das bisherige OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein neues Modell." : undefined;
+  return { models, selection, ...(openrouterError ? { openrouterError } : {}), ...(selectionError ? { selectionError } : {}) };
+}
+async function resolveModelSelection(organizationId: string, requested?: ModelSelection): Promise<ModelSelection> {
+  if (requested) {
+    if (requested.provider === "openai-codex" && !codexModels.includes(requested.model as typeof codexModels[number])) fail("MODEL_INVALID", 400, "Dieses Codex-Modell wird nicht unterstützt.");
+    if (requested.provider === "openai-codex" && requested.effort && !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Dieser Effort wird nicht unterstützt.");
+    if (requested.provider === "openrouter") {
+      const connection = await validOpenRouterConnection(organizationId);
+      const model = (await openRouterModelsForConnection(connection)).find((entry) => entry.id === requested.model);
+      if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+      if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
+    } else {
+      const connected = (await db.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, requested.provider), eq(providerConnections.status, "connected"))).limit(1))[0];
+      if (!connected) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider ist nicht verbunden.");
+    }
+    return requested;
+  }
+  const rows = await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.status, "connected")));
+  const row = rows.find((entry) => entry.isDefault) ?? rows.find((entry) => entry.provider === "openai-codex") ?? rows[0];
+  if (!row) fail("PROVIDER_NOT_CONNECTED", 409, "Bitte zuerst einen Modellprovider verbinden.");
+  const settings = row.settings && typeof row.settings === "object" ? row.settings : {};
+  if (row.provider === "openai-codex") return { provider: "openai-codex", model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" };
+  if (row.provider === "openrouter" && typeof settings.model === "string") {
+    const connection = await validOpenRouterConnection(organizationId);
+    const model = (await openRouterModelsForConnection(connection)).find((entry) => entry.id === settings.model);
+    if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+    const effort = typeof settings.effort === "string" && model.efforts.includes(settings.effort) ? settings.effort : model.defaultEffort ?? model.efforts[0];
+    return { provider: "openrouter", model: model.id, ...(effort ? { effort } : {}) };
+  }
+  fail("MODEL_NOT_SELECTED", 409, "Bitte zuerst ein Standardmodell auswählen.");
 }
 function fail(code: string, statusCode: number, message: string, retryable = false): never { throw Object.assign(new Error(message), { code, statusCode, retryable }); }
 
@@ -258,7 +358,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.15-20260727.2246" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.17-20260727.2321" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -296,7 +396,7 @@ app.get("/api/v1/me", async (request) => { const actor = actorOf(request); const
 app.get("/api/v1/me/preferences", async (request) => { const actor = actorOf(request); const rows = await db.select().from(userPreferences).where(and(eq(userPreferences.userId, actor.userId), eq(userPreferences.organizationId, actor.organizationId))).limit(1); return rows[0] ?? { revision: 0, values: {} }; });
 app.patch("/api/v1/me/preferences", async (request) => { const actor = actorOf(request); const body = z.object({ baseRevision: z.number().int().nonnegative(), values: z.record(z.string(), z.unknown()) }).parse(request.body); const updated = await db.insert(userPreferences).values({ userId: actor.userId, organizationId: actor.organizationId, revision: 1, values: body.values }).onConflictDoUpdate({ target: [userPreferences.userId, userPreferences.organizationId], set: { revision: sql`${userPreferences.revision} + 1`, values: body.values, updatedAt: new Date() }, setWhere: eq(userPreferences.revision, body.baseRevision) }).returning(); if (!updated[0]) fail("REVISION_CONFLICT", 409, "Einstellungen wurden in einer anderen Sitzung geändert."); return updated[0]; });
 
-app.get("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, email: providerConnections.email, accountId: providerConnections.accountId, expiresAt: providerConnections.expiresAt, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).limit(1))[0]; return row ? { connected: row.status === "connected", ...row } : { connected: false, status: "disconnected", settings: {} }; });
+app.get("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, email: providerConnections.email, accountId: providerConnections.accountId, expiresAt: providerConnections.expiresAt, settings: providerConnections.settings, isDefault: providerConnections.isDefault }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).limit(1))[0]; return row ? { connected: row.status === "connected", ...row } : { connected: false, status: "disconnected", settings: {}, isDefault: false }; });
 app.patch("/api/v1/providers/openai/settings", async (request) => { const actor = requireActorPermission(request, "provider.manage"); const settings = z.object({ model: z.enum(codexModels), effort: z.enum(codexEfforts) }).strict().parse(request.body); const updated = await db.update(providerConnections).set({ settings, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ id: providerConnections.id }); if (!updated[0]) fail("OPENAI_NOT_CONNECTED", 409, "Bitte zuerst OpenAI verbinden."); return { settings }; });
 app.post("/api/v1/providers/openai/test", { config: { rateLimit: { max: 5, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "provider.use"), connection = await validCodexConnection(actor.organizationId);
@@ -342,11 +442,66 @@ app.post("/api/v1/providers/openai/auth/poll", { config: { rateLimit: { max: 120
   if (!tokens.access_token) fail("OPENAI_TOKEN_INVALID", 502, "OpenAI hat keinen Zugriffstoken geliefert.");
   const identity = tokenIdentity(tokens.access_token, tokens.id_token), expiresAt = new Date(Date.now() + (Number(tokens.expires_in) || 3600) * 1000);
   const credentials = encryptCredentials({ accessToken: tokens.access_token, ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}), ...(tokens.id_token ? { idToken: tokens.id_token } : {}) }, env.SESSION_SECRET);
-  await db.transaction(async (tx) => { await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openai-codex", credentials, accountId: identity.accountId, email: identity.email, expiresAt }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: identity.accountId, email: identity.email, expiresAt, status: "connected", updatedAt: new Date() } }); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.connected", targetType: "provider", result: "success", metadata: { provider: "openai-codex" }, correlationId: request.id }); });
+  await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0]; await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openai-codex", credentials, accountId: identity.accountId, email: identity.email, expiresAt, settings: { model: "gpt-5.6-sol", effort: "medium" }, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: identity.accountId, email: identity.email, expiresAt, status: "connected", updatedAt: new Date() } }); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.connected", targetType: "provider", result: "success", metadata: { provider: "openai-codex" }, correlationId: request.id }); });
   pendingCodexAuth.delete(authId);
   return { status: "connected", connected: true, email: identity.email, accountId: identity.accountId };
 });
-app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); return { connected: false }; });
+app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
+
+app.get("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, label: providerConnections.accountId, settings: providerConnections.settings, isDefault: providerConnections.isDefault }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0]; return row ? { connected: row.status === "connected", ...row } : { connected: false, status: "disconnected", settings: {}, isDefault: false }; });
+app.post("/api/v1/providers/openrouter", { config: { rateLimit: { max: 5, timeWindow: "10 minutes" } } }, async (request, reply) => {
+  const actor = requireActorPermission(request, "provider.manage");
+  const { apiKey } = openRouterCredentialsSchema.parse(request.body);
+  const started = Date.now();
+  const [key, models] = await Promise.all([openRouterKeyInfo(apiKey), openRouterModels(apiKey)]);
+  if (!models.length) fail("OPENROUTER_MODELS_EMPTY", 502, "OpenRouter hat keine verwendbaren Textmodelle geliefert.");
+  const credentials = encryptCredentials({ apiKey }, env.SESSION_SECRET);
+  let existed = false;
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const existing = (await tx.select({ settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0];
+    existed = Boolean(existing);
+    const previousSettings = existing?.settings && typeof existing.settings === "object" ? existing.settings : {};
+    const selected = models.find((model) => model.id === previousSettings.model);
+    const effort = selected && typeof previousSettings.effort === "string" && selected.efforts.includes(previousSettings.effort) ? previousSettings.effort : selected?.defaultEffort ?? selected?.efforts[0];
+    const settings = selected ? { model: selected.id, ...(effort ? { effort } : {}) } : {};
+    const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0];
+    await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openrouter", credentials, accountId: key.data?.label, settings, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: key.data?.label, settings, status: "connected", updatedAt: new Date() } });
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.connected", targetType: "provider", result: "success", metadata: { provider: "openrouter", models: models.length }, correlationId: request.id });
+  });
+  return reply.status(existed ? 200 : 201).send({ connected: true, label: key.data?.label, modelCount: models.length, elapsedMs: Date.now() - started });
+});
+app.post("/api/v1/providers/openrouter/test", { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } }, async (request) => { const actor = requireActorPermission(request, "provider.use"), connection = await validOpenRouterConnection(actor.organizationId); const started = Date.now(); const key = await openRouterKeyInfo(connection.credentials.apiKey); return { ok: true, label: key.data?.label, limitRemaining: key.data?.limit_remaining, freeTier: key.data?.is_free_tier, elapsedMs: Date.now() - started }; });
+app.delete("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.manage"); let removedId: string | undefined; await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).returning({ id: providerConnections.id, isDefault: providerConnections.isDefault }))[0]; removedId = removed?.id; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); if (removedId) openRouterCatalogCache.delete(removedId); return { connected: false }; });
+app.get("/api/v1/providers/models", async (request) => { const actor = requireActorPermission(request, "provider.read"); return providerCatalog(actor.organizationId); });
+app.patch("/api/v1/providers/default-model", async (request) => {
+  const actor = requireActorPermission(request, "provider.manage");
+  const requested = modelSelectionSchema.parse(request.body);
+  const connection = (await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, requested.provider), eq(providerConnections.status, "connected"))).limit(1))[0];
+  if (!connection) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider ist nicht verbunden.");
+  let selection: ModelSelection;
+  if (requested.provider === "openai-codex") {
+    if (!codexModels.includes(requested.model as typeof codexModels[number])) fail("MODEL_INVALID", 400, "Dieses Codex-Modell wird nicht unterstützt.");
+    if (!requested.effort || !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Bitte einen gültigen Codex-Effort auswählen.");
+    selection = { provider: "openai-codex", model: requested.model, effort: requested.effort };
+  } else {
+    const model = (await openRouterModels(openRouterCredentialsSchema.parse(decryptCredentials(connection.credentials, env.SESSION_SECRET)).apiKey)).find((entry) => entry.id === requested.model);
+    if (!model) fail("MODEL_INVALID", 400, "Dieses OpenRouter-Modell ist für den API-Key nicht verfügbar.");
+    if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
+    selection = { provider: "openrouter", model: model.id, ...(requested.effort ? { effort: requested.effort } : {}) };
+  }
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const current = (await tx.select({ updatedAt: providerConnections.updatedAt }).from(providerConnections).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected"))).limit(1))[0];
+    if (!current) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider wurde inzwischen getrennt.");
+    if (current.updatedAt.getTime() !== connection.updatedAt.getTime()) fail("PROVIDER_CHANGED", 409, "Die Provider-Verbindung wurde gleichzeitig geändert. Bitte speichere die Modellwahl erneut.");
+    await tx.update(providerConnections).set({ isDefault: false, updatedAt: new Date() }).where(eq(providerConnections.organizationId, actor.organizationId));
+    const updated = await tx.update(providerConnections).set({ isDefault: true, settings: { model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) }, updatedAt: new Date() }).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId))).returning({ id: providerConnections.id });
+    if (!updated[0]) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider wurde inzwischen getrennt.");
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.default_model.updated", targetType: "provider", targetId: connection.id, result: "success", metadata: selection, correlationId: request.id });
+  });
+  return { selection };
+});
 
 app.post("/api/v1/storage/cleanup", async (request) => {
   const actor = requireActorPermission(request, "project.delete");
@@ -633,56 +788,65 @@ function extractJsonObject(text: string): string {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
   return start >= 0 && end > start ? text.slice(start, end + 1) : text;
 }
-type CodexRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void; model?: typeof codexModels[number]; effort?: typeof codexEfforts[number] };
-type CodexRunResult = { text: string; model: string; attempts: number; durationMs: number; inputChars: number; outputChars: number };
-async function codexRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: CodexRunOptions = {}): Promise<CodexRunResult> {
+type ModelRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void; selection?: ModelSelection };
+type ModelRunResult = { text: string; provider: ProviderId; model: string; effort?: string; attempts: number; durationMs: number; inputChars: number; outputChars: number };
+async function modelRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: ModelRunOptions = {}): Promise<ModelRunResult> {
   const runStartedAt = Date.now();
-  const connection = await validCodexConnection(organizationId);
-  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("medium") }).parse(connection.settings);
-  const model = options.model ?? settings.model, effort = options.effort ?? settings.effort;
-  const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
-  if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
-  const body: Record<string, unknown> = { ...codexRequestFields(model, effort), instructions, input: [{ role: "user", content: input }], store: false, stream: true };
+  const selection = await resolveModelSelection(organizationId, options.selection);
+  const codexConnection = selection.provider === "openai-codex" ? await validCodexConnection(organizationId) : undefined;
+  const routerConnection = selection.provider === "openrouter" ? await validOpenRouterConnection(organizationId) : undefined;
+  const routerModel = routerConnection ? (await openRouterModelsForConnection(routerConnection)).find((model) => model.id === selection.model) : undefined;
+  if (routerConnection && !routerModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+  if (routerModel) assertOpenRouterContext(routerModel, instructions, input);
+  const codexModel = selection.provider === "openai-codex" ? z.enum(codexModels).parse(selection.model) : undefined;
+  const codexEffort = selection.provider === "openai-codex" ? z.enum(codexEfforts).parse(selection.effort ?? "medium") : undefined;
+  const accountId = codexConnection ? codexConnection.accountId || tokenIdentity(codexConnection.credentials.accessToken, codexConnection.credentials.idToken).accountId : undefined;
+  if (codexConnection && !accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     options.onAttempt?.(attempt);
     const attemptStartedAt = Date.now();
-    log.info({ event: "codex.request.started", jobId: options.jobId, operation: options.operation, model, effort, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
+    log.info({ event: "model.request.started", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, effort: selection.effort, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
     try {
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
-      const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
+      const response = codexConnection
+        ? await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${codexConnection.credentials.accessToken}`, "chatgpt-account-id": accountId!, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify({ ...codexRequestFields(codexModel!, codexEffort!), instructions, input: [{ role: "user", content: input }], store: false, stream: true }) })
+        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort)) });
       const raw = await response.text();
-      if (!response.ok) throw codexHttpError(response.status);
-      const outputText = parseCodexEventStream(raw);
-      if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
+      if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : openRouterHttpError(response.status, response.headers.get("retry-after"));
+      const outputText = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
+      if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
       const durationMs = Date.now() - runStartedAt;
-      log.info({ event: "codex.request.completed", jobId: options.jobId, operation: options.operation, model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
-      return { text: outputText, model, attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
+      log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
+      return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
     } catch (error) {
       if (!isRetryableCodexError(error) || attempt === 3) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
-        log.warn({ err: error, event: "codex.request.failed", jobId: options.jobId, operation: options.operation, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
+        log.warn({ err: error, event: "model.request.failed", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
         if (typeof details.code === "string") throw error;
-        fail("CHAT_UPSTREAM", 502, "OpenAI hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.", true);
+        fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.`, true);
       }
-      const delayMs = attempt * 2_000;
-      log.warn({ err: error, event: "codex.request.retry", jobId: options.jobId, operation: options.operation, attempt, nextAttempt: attempt + 1, delayMs, attemptDurationMs: Date.now() - attemptStartedAt }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
+      const details = error && typeof error === "object" ? error as { retryAfterMs?: unknown } : {};
+      const delayMs = typeof details.retryAfterMs === "number" ? details.retryAfterMs : attempt * 2_000;
+      log.warn({ err: error, event: "model.request.retry", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, nextAttempt: attempt + 1, delayMs, attemptDurationMs: Date.now() - attemptStartedAt }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  fail("CHAT_UPSTREAM", 502, "OpenAI hat den KI-Lauf nicht abgeschlossen.", true);
+  fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat den KI-Lauf nicht abgeschlossen.`, true);
 }
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message, screen, target, model, effort } = z.object({
+  const { message, screen, target, provider, model, effort } = z.object({
     message: z.string().min(1).max(8000),
     screen: z.string().max(200).optional(),
-    model: z.enum(codexModels).optional(),
-    effort: z.enum(codexEfforts).optional(),
+    provider: z.enum(providerIds).optional(),
+    model: z.string().min(1).max(300).optional(),
+    effort: z.string().min(1).max(20).optional(),
     // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
     // eindeutig, ohne dass die KI raten oder nachfragen muss.
     target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
   }).strict().parse(request.body);
+  if (Boolean(provider) !== Boolean(model)) fail("MODEL_SELECTION_INCOMPLETE", 400, "Provider und Modell müssen gemeinsam ausgewählt werden.");
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
   const texts: Array<{ path: string; content: string }> = [];
@@ -698,8 +862,9 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
     ? `\n\n=== MARKIERTER BEREICH (genau hier anwenden) ===\nBildschirm: ${target.screenName ?? screen ?? "unbekannt"}\nElement: ${target.label ?? target.selector}\nCSS-Pfad: ${target.selector}\nWörtlicher Ausschnitt aus der Datei:\n${target.html}`
     : "";
   const inputText = `Änderungswunsch:\n${message}${markedRegion}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
-  const { text: outputText, model: usedModel } = await codexRun(actor.organizationId, chatInstructions, inputText, request.log, { ...(model ? { model } : {}), ...(effort ? { effort } : {}) });
-  const settings = { model: usedModel };
+  const selection = provider && model ? { provider, model, ...(effort ? { effort } : {}) } : undefined;
+  const { text: outputText, provider: usedProvider, model: usedModel, effort: usedEffort } = await modelRun(actor.organizationId, chatInstructions, inputText, request.log, { ...(selection ? { selection } : {}) });
+  const settings = { provider: usedProvider, model: usedModel, ...(usedEffort ? { effort: usedEffort } : {}) };
   const cleaned = extractJsonObject(outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
   let parsed: { reply?: string; changes?: Array<{ path?: string; edits?: Array<{ find?: string; replace?: string }> }>; files?: Array<{ path?: string; content?: string }> };
   try { parsed = JSON.parse(cleaned) as typeof parsed; }
@@ -745,7 +910,7 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
       const revision = current.revision + 1;
       await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
       await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, skipped: skipped.length, revision, model: settings.model }, correlationId: request.id });
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, skipped: skipped.length, revision, ...settings }, correlationId: request.id });
       return { revision };
     });
     return { reply: parsed.reply?.trim() || `Änderungen umgesetzt (${applied.length} Datei(en)).`, changedFiles: [...new Set(applied)], skipped, revision: result.revision };
@@ -861,10 +1026,10 @@ async function readScreenSources(objectPrefix: string, manifest: ImportManifestF
   return parts.join("\n\n");
 }
 
-type ReconstructionCodexRunner = (operation: string, instructions: string, input: string, remainingCompactionCalls: number, newlyPlannedCalls: number) => Promise<CodexRunResult>;
+type ReconstructionModelRunner = (operation: string, instructions: string, input: string, remainingCompactionCalls: number, newlyPlannedCalls: number) => Promise<ModelRunResult>;
 const compactionInstructions = "Verdichte die folgenden UI-Evidenzprotokolle verlustfrei. Behalte alle exakten Maße, Koordinaten, Abstände, Farben, Typografie-, Theme-, Asset-, Hierarchie- und Zustandsangaben mit ihren Quellpfaden sowie die Zuordnung zu Bildschirmen. Entferne nur Wiederholungen. Maximal 18000 Zeichen.";
 // Die Verdichtungsgruppen einer Runde sind voneinander unabhaengig und laufen deshalb nebenlaeufig.
-async function compactReconstructionEvidence(summaries: string[], run: ReconstructionCodexRunner): Promise<string[]> {
+async function compactReconstructionEvidence(summaries: string[], run: ReconstructionModelRunner): Promise<string[]> {
   let current = summaries;
   let round = 0;
   while (current.join("\n").length > 320_000) {
@@ -879,7 +1044,7 @@ async function compactReconstructionEvidence(summaries: string[], run: Reconstru
   }
   return current;
 }
-async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }) {
+async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, selection: ModelSelection, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }) {
   const jobStartedAt = Date.now();
   const startedAt = new Date(jobStartedAt).toISOString();
   const probes: ReconstructionProbe[] = previousProbes.map((probe) => ({ ...probe }));
@@ -912,7 +1077,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     const timing = reconstructionTiming(timingSamples, null, 0, remainingWeight);
     await publish("running", progress, runtimeState(state, phaseProgress, showEta ? timing.estimatedRemainingMs : null));
   };
-  const runCodexStep = async ({ operation, phase, kind, instructions, input, progress, remainingWeight, state, sourceFiles, sourceBytes, validate, showEta }: {
+  const runModelStep = async ({ operation, phase, kind, instructions, input, progress, remainingWeight, state, sourceFiles, sourceBytes, validate, showEta }: {
     operation: string;
     phase: string;
     kind: ReconstructionOperationKind;
@@ -921,22 +1086,23 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     progress: number;
     remainingWeight: number;
     state: () => ReconstructionState;
-    validate?: (result: CodexRunResult) => void;
+    validate?: (result: ModelRunResult) => void;
     showEta?: boolean;
     sourceFiles?: number;
     sourceBytes?: number;
-  }): Promise<CodexRunResult> => {
+  }): Promise<ModelRunResult> => {
     const operationStartedAt = Date.now();
     const controller = new AbortController();
-    let attempts = 0, settled = false, failed = false, failure: unknown, result: CodexRunResult | undefined;
+    let attempts = 0, settled = false, failed = false, failure: unknown, result: ModelRunResult | undefined;
     let lastHeartbeatLogAt = 0;
     const probe: ReconstructionProbe = { runAttempt, operation, phase, status: "running", startedAt: new Date(operationStartedAt).toISOString(), durationMs: 0, attempts: 0, inputChars: input.length, ...(sourceFiles === undefined ? {} : { sourceFiles }), ...(sourceBytes === undefined ? {} : { sourceBytes }) };
     probes.push(probe);
     const initialTiming = reconstructionTiming(timingSamples, kind, 0, remainingWeight);
     await publish("running", progress, runtimeState(state(), initialTiming.phaseProgress, showEta === false ? null : initialTiming.estimatedRemainingMs, operation));
-    const tracked = codexRun(actor.organizationId, instructions, input, app.log, {
+    const tracked = modelRun(actor.organizationId, instructions, input, app.log, {
       operation,
       jobId,
+      selection,
       signal: controller.signal,
       onAttempt: (attempt) => {
         if (attempts > 0 && attempt > attempts) retryCount += attempt - attempts;
@@ -1039,7 +1205,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       const ratioBefore = totalBytes ? processedBytes / totalBytes : 0;
       const texts = await mapWithConcurrency(window, reconstructionConcurrency, async (batch) => {
         const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batch.number}.\n\n${factSheet}\n\n=== QUELLTEXT DIESES PAKETS ===\n${batch.text}`;
-        const { text } = await runCodexStep({ operation: `UI-Analysepaket ${batch.number}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 50, remainingWeight: 5, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `${window.length} UI-Analysepakete werden gleichzeitig ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 2, processedFiles, sources.length, processedBytes, totalBytes) });
+        const { text } = await runModelStep({ operation: `UI-Analysepaket ${batch.number}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 50, remainingWeight: 5, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `${window.length} UI-Analysepakete werden gleichzeitig ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 2, processedFiles, sources.length, processedBytes, totalBytes) });
         return text.trim();
       });
       summaries.push(...texts);
@@ -1058,7 +1224,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     await publishMilestone(62, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 3, processedFiles, sources.length, processedBytes, totalBytes), 5, 0);
     const evidence = (await compactReconstructionEvidence(summaries, async (operation, instructions, input, remainingCompactionCalls, newlyPlannedCalls) => {
       totalOperations += newlyPlannedCalls;
-      return runCodexStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 62, remainingWeight: remainingCompactionCalls * 0.8 + 5, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 3, processedFiles, sources.length, processedBytes, totalBytes) });
+      return runModelStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 62, remainingWeight: remainingCompactionCalls * 0.8 + 5, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 3, processedFiles, sources.length, processedBytes, totalBytes) });
     })).join("\n\n");
 
     // Schritt 3: jeder Bildschirm wird EINZELN und nebenlaeufig gebaut. Vorher entstand die ganze
@@ -1083,7 +1249,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         screenSources ? `\n# ORIGINALQUELLEN GENAU DIESES BILDSCHIRMS (verbindlich, unverdichtet)\n${screenSources}` : "",
         `\n# GESAMT-EVIDENZ DES PROJEKTS (Kontext)\n${evidence}`
       ].filter(Boolean).join("\n");
-      const result = await runCodexStep({
+      const result = await runModelStep({
         operation: `Bildschirm „${screen.name}“ aufbauen`, phase: "build", kind: "build", instructions: screenInstructions, input,
         progress: 66 + (builtScreens / screenPlan.length) * 22, remainingWeight: 1,
         state: () => reconstructionState("build", `${builtScreens} von ${screenPlan.length} Bildschirmen originalgetreu aufgebaut.`, 4, processedFiles, sources.length, processedBytes, totalBytes),
@@ -1111,7 +1277,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       app.log.info({ event: "reconstruction.repair_planned", jobId, projectId, affected: affected.length, total: fragments.length, issues: report.issues.length }, "Gezielter Korrekturlauf geplant");
       const repairedByScreen = new Map((await mapWithConcurrency(affected, reconstructionConcurrency, async (fragment) => {
         const corrections = renderFidelityInstructions(report, { sources: fragment.screen.files });
-        const result = await runCodexStep({
+        const result = await runModelStep({
           operation: `Bildschirm „${fragment.screen.name}“ nachmessen`, phase: "verify", kind: "verification",
           instructions: fidelityRepairInstructions, input: [`Bildschirm: „${fragment.screen.name}“ (id=${fragment.screen.id}).`, factSheet, `\n# GEMESSENE ABWEICHUNGEN DIESES BILDSCHIRMS\n${corrections}`, `\n# ZU KORRIGIERENDES MARKUP DIESES BILDSCHIRMS\n<style>${fragment.css}</style>\n${fragment.markup}`].join("\n"),
           progress: 88 + (correctedScreens / Math.max(1, affected.length)) * 8, remainingWeight: 0,
@@ -1154,7 +1320,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         const nextEntryPath = targetViewport ? current.imported.entryPath : designPath;
         await tx.update(projectImports).set({ entryPath: nextEntryPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
         await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, measuredValues, screens: screenPlan.length, fidelityScore, openIssues: report.issues.length, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
+        await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, selection, measuredValues, screens: screenPlan.length, fidelityScore, openIssues: report.issues.length, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
         const state = runtimeState(reconstructionState("completed", `Alle ${screenPlan.length} Bildschirme aufgebaut und nachgemessen: ${fidelityScore} % der ${report.checked} geprüften Quellwerte stimmen exakt.`, reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision }), 100, 0);
         const completedJob = await tx.update(jobs).set({ status: "completed", progress: 100, result: state, errorCode: null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), eq(jobs.status, "running"))).returning({ id: jobs.id });
         if (!completedJob[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
@@ -1198,7 +1364,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       }
     }
     try {
-      await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstruction.failed", targetType: "project", targetId: projectId, result: "failure", metadata: { code, message, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
+      await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstruction.failed", targetType: "project", targetId: projectId, result: "failure", metadata: { code, message, selection, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
     } catch (auditError) { app.log.warn({ err: auditError, jobId, projectId }, "Fehler-Audit der Rekonstruktion konnte nicht gespeichert werden"); }
     const memory = process.memoryUsage();
     app.log.error({ err: error, event: "reconstruction.failed", jobId, projectId, code, progress: latestProgress, elapsedMs: Date.now() - jobStartedAt, retryCount, probes, rssBytes: memory.rss, heapUsedBytes: memory.heapUsed }, "Design-Rekonstruktion fehlgeschlagen");
@@ -1242,14 +1408,15 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   }).strict().parse(request.body ?? {});
   const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+  const selection = await resolveModelSelection(actor.organizationId);
   // Das Format gehoert in den Idempotenzschluessel: sonst gaebe der Aufbau fuer ein zweites Format
   // den Lauf des ersten zurueck, und die zweite Fassung entstuende nie.
-  const idempotencyKey = `${projectId}:${imported.revision}:${viewport ? `${viewport.width}x${viewport.height}` : "basis"}`;
+  const idempotencyKey = `${projectId}:${imported.revision}:${viewport ? `${viewport.width}x${viewport.height}` : "basis"}:${hashJson(selection).slice(0, 16)}`;
   const queuedState = reconstructionState("queued", "HTML-Rekonstruktion wird vorbereitet.", 0, 0, 0, 0, 0);
   const candidateId = uuidv7();
-  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision, ...(viewport ? { viewport } : {}) }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
+  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision, selection, ...(viewport ? { viewport } : {}) }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
   if (inserted[0]) {
-    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id, [], viewport).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id, selection, [], viewport).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
     return reply.status(202).send({ jobId: candidateId, status: "queued" });
   }
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
@@ -1260,7 +1427,7 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
   const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };
   const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
-  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, previousProbes, viewport).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, selection, previousProbes, viewport).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
 });
 app.get("/api/v1/jobs/:jobId", async (request) => {

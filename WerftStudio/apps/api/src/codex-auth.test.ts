@@ -14,6 +14,12 @@ describe("Codex credential protection", () => {
     expect(() => decryptCredentials(`${encrypted.slice(0, -1)}${changedLastCharacter}`, "session-secret-with-at-least-32-characters")).toThrow();
   });
 
+  it("protects generic provider API keys with the same credential envelope", () => {
+    const encrypted = encryptCredentials({ apiKey: "sk-or-v1-secret" }, "session-secret-with-at-least-32-characters");
+    expect(encrypted).not.toContain("sk-or-v1-secret");
+    expect(decryptCredentials<{ apiKey: string }>(encrypted, "session-secret-with-at-least-32-characters")).toEqual({ apiKey: "sk-or-v1-secret" });
+  });
+
   it("reads the ChatGPT account and email claims", () => {
     const jwt = (payload: object) => `e30.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.sig`;
     expect(tokenIdentity(jwt({ "https://api.openai.com/auth": { chatgpt_account_id: "acct_1" } }), jwt({ email: "frank@example.de" }))).toEqual({ accountId: "acct_1", email: "frank@example.de" });
