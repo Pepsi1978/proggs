@@ -37,6 +37,8 @@ import {
   type OpenAIAuthType,
   type WeeklyQuota,
 } from "./openai-quota"
+import { homedir } from "node:os"
+import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const QUOTA_POLL_MS = 60_000
@@ -282,11 +284,40 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
 }
 
 function SidebarHeader(props: { api: TuiPluginApi }) {
+  return <SidebarClock api={props.api} />
+}
+
+function SidebarFooter(props: { api: TuiPluginApi; sessionID: string }) {
   const theme = () => props.api.theme.current
+  const displayPath = createMemo(() => {
+    const dir = props.api.state.session.get(props.sessionID)?.directory || props.api.state.path.directory
+    const home = homedir()
+    const relative = path.relative(home, dir)
+    const abbreviated = relative === ""
+      ? "~"
+      : relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)
+        ? dir
+        : `~${path.sep}${relative}`
+    const branch = dir === props.api.state.path.directory ? props.api.state.vcs?.branch : undefined
+    const parts = `${abbreviated}${branch ? `:${branch}` : ""}`.replaceAll("\\", "/").split("/")
+    return {
+      parent: parts.slice(0, -1).join("/"),
+      name: parts.at(-1) ?? "",
+    }
+  })
+
   return (
     <box>
+      <text>
+        <span style={{ fg: theme().textMuted }}>{displayPath().parent}/</span>
+        <span style={{ fg: theme().text }}>{displayPath().name}</span>
+      </text>
       <text fg={theme().text}>{`V.${packageMetadata.version} (${packageMetadata.updated})`}</text>
-      <SidebarClock api={props.api} />
+      <text fg={theme().textMuted}>
+        <span style={{ fg: theme().success }}>•</span> <b>Open</b>
+        <span style={{ fg: theme().text }}><b>Code</b></span>{" "}
+        <span>{props.api.app.version}</span>
+      </text>
     </box>
   )
 }
@@ -831,6 +862,9 @@ const tui: TuiPlugin = async (api) => {
     slots: {
       sidebar_title() {
         return <SidebarHeader api={api} />
+      },
+      sidebar_footer(_ctx, props) {
+        return <SidebarFooter api={api} sessionID={props.session_id} />
       },
       sidebar_content(_ctx, props) {
         return <View api={api} sessionID={props.session_id} usageStore={usageStore} quotaStore={quotaStore} />

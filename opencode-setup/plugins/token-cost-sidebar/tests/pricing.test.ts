@@ -550,14 +550,21 @@ describe("models.dev pricing", () => {
     expect(source).toContain("QUOTA_POLL_MS = 60_000")
   })
 
-  test("shows the complete version in normal text directly above Session", async () => {
+  test("starts with Session and shows the complete version between the workspace and OpenCode", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain("sidebar_title()")
     expect(source).toContain("return <SidebarHeader api={api} />")
+    expect(source).toContain("sidebar_footer(_ctx, props)")
+    expect(source).toContain("return <SidebarFooter api={api} sessionID={props.session_id} />")
     expect(source).toContain('<text fg={theme().text}>{`V.${packageMetadata.version} (${packageMetadata.updated})`}</text>')
     expect(source).not.toMatch(/<span[^>]*>V\.<\/span>/)
     expect(source).not.toContain("V. ${packageMetadata.version}")
     expect(source).not.toContain('label="Version"')
+    const header = source.slice(source.indexOf("function SidebarHeader"), source.indexOf("function SidebarFooter"))
+    const footer = source.slice(source.indexOf("function SidebarFooter"), source.indexOf("function EffortSelector"))
+    expect(header).not.toContain("packageMetadata.version")
+    expect(footer.indexOf("displayPath().name")).toBeLessThan(footer.indexOf("packageMetadata.version"))
+    expect(footer.indexOf("packageMetadata.version")).toBeLessThan(footer.indexOf("props.api.app.version"))
     expect(source).toContain("const scheduleNextMinute = () =>")
     expect(source).toContain("60_000 - current.getSeconds() * 1_000 - current.getMilliseconds() + 25")
     expect(source).toContain("timer = setTimeout(() =>")

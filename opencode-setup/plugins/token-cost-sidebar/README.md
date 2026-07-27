@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.3 – 27.07.2026 23:19
+Stand: v1.14.4 – 27.07.2026 23:50
 
 ## Funktionen
 
@@ -19,8 +19,8 @@ Stand: v1.14.3 – 27.07.2026 23:19
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
-- Versionszeile im Format `V.<Version> (<Datum>, <Uhrzeit>)` als erste Sidebar-Zeile direkt über Session.
-  Die vollständige Zeile verwendet einheitlich die normale Theme-Textfarbe ohne Hervorhebung.
+- Versionszeile im Format `V.<Version> (<Datum>, <Uhrzeit>)` unten zwischen Arbeitsverzeichnis und
+  OpenCode-Version. Die vollständige Zeile verwendet einheitlich die normale Theme-Textfarbe ohne Hervorhebung.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
@@ -117,7 +117,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 
 ## Verifikation
 
-1. Unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter alle von OpenCode für dieses Modell bereitgestellten Varianten; ein Klick markiert die aktive Variante.
+1. Die Sidebar beginnt mit `Session` und Zeitstempel; unter dem Session-Titel stehen nach einer Leerzeile das aktive Modell und direkt darunter alle von OpenCode für dieses Modell bereitgestellten Varianten. Unten steht die Plugin-Version zwischen Arbeitsverzeichnis und OpenCode-Version.
 2. Die rechte Sidebar zeigt darunter `Freimodus`, `Schnellmodus`, `Normalmodus` und `Gründlichkeitsmodus`.
 3. Ein Effort-Klick ändert denselben validierten Model-Variant-State wie OpenCodes eigener Varianten-Picker.
 4. Ein Modus-Klick markiert den gewählten Modus und die Auswahl bleibt in derselben Session erhalten.
