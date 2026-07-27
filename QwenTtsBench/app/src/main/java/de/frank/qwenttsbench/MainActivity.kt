@@ -203,61 +203,72 @@ class MainActivity : AppCompatActivity() {
         ort.outputInfo.forEach { (name, info) -> log("  $name: ${describe(info)}") }
         log("")
 
-        val inputName = ort.inputNames.first()
-        val layouts = listOf(
-            longArrayOf(1, frames.toLong(), CODEBOOKS.toLong()) to "1 x T=$frames x C=$CODEBOOKS",
-            longArrayOf(1, CODEBOOKS.toLong(), frames.toLong()) to "1 x C=$CODEBOOKS x T=$frames",
-        )
-
-        for ((shape, label) in layouts) {
-            log("Versuch mit $label ...")
-            try {
-                val codes = LongArray((shape[1] * shape[2]).toInt()) {
-                    (it * 37 % CODE_RANGE).toLong()
-                }
-                var samples = FloatArray(0)
-                val runMs = measureNanoTime {
-                    OnnxTensor.createTensor(env, LongBuffer.wrap(codes), shape).use { tensor ->
-                        ort.run(mapOf(inputName to tensor)).use { result ->
-                            samples = flatten(result.get(0) as OnnxTensor)
-                        }
-                    }
-                } / 1_000_000
-
-                val seconds = samples.size.toDouble() / SAMPLE_RATE
-                val expected = frames.toDouble() / TOKENS_PER_AUDIO_SECOND
-                var peak = 0f
-                for (value in samples) if (kotlin.math.abs(value) > peak) peak = kotlin.math.abs(value)
-
-                log("")
-                log("======== VOCODER LAEUFT ========")
-                log("Samples:        ${samples.size}  (= ${"%.2f".format(seconds)} s bei $SAMPLE_RATE Hz)")
-                log("Erwartet:       ${"%.2f".format(expected)} s aus $frames Frames")
-                log("Rechenzeit:     $runMs ms")
-                if (runMs > 0) log("Echtzeitfaktor: ${"%.2f".format(seconds * 1000 / runMs)} x")
-                log("Spitzenpegel:   ${"%.3f".format(peak)}")
-                ort.close()
-                return
-            } catch (error: Throwable) {
-                log("  fehlgeschlagen: ${error.message?.take(300)}")
-            }
+        // Mit zwei Laengen messen: waechst die Rechenzeit mit, skaliert der Vocoder. Bleibt sie
+        // gleich, rechnet er immer eine feste Laenge — das entscheidet ueber die Tauglichkeit.
+        for (frameCount in listOf(frames / 4, frames)) {
+            if (frameCount <= 0) continue
+            decodeOnce(ort, env, frameCount, log)
         }
 
         ort.close()
-        log("")
-        log("Kein Eingabe-Layout hat funktioniert.")
+    }
+
+    private fun decodeOnce(
+        ort: OrtSession,
+        env: OrtEnvironment,
+        frameCount: Int,
+        log: (String) -> Unit,
+    ) {
+        val inputName = ort.inputNames.first()
+        val shape = longArrayOf(1, frameCount.toLong(), CODEBOOKS.toLong())
+        log("Lauf mit $frameCount Frames ...")
+        try {
+            // Codes ungleich 0 waehlen: die Referenz zaehlt nur Frames mit Codebuch 0 > 0 als echt.
+            val codes = LongArray(frameCount * CODEBOOKS) { (it * 37 % CODE_RANGE + 1).toLong() }
+            var rawSamples = 0
+            var outShape = ""
+            var reported = -1L
+            var peak = 0f
+
+            val runMs = measureNanoTime {
+                OnnxTensor.createTensor(env, LongBuffer.wrap(codes), shape).use { tensor ->
+                    ort.run(mapOf(inputName to tensor)).use { result ->
+                        val audio = result.get(0) as OnnxTensor
+                        outShape = (audio.info.shape).joinToString(" x ")
+                        val buffer = audio.floatBuffer
+                        rawSamples = buffer.remaining()
+                        while (buffer.hasRemaining()) {
+                            val value = kotlin.math.abs(buffer.get())
+                            if (value > peak) peak = value
+                        }
+                        if (result.size() > 1) {
+                            val lengths = result.get(1) as OnnxTensor
+                            reported = lengths.longBuffer.get(0)
+                        }
+                    }
+                }
+            } / 1_000_000
+
+            // So schneidet die Referenz-Pipeline zu: Frames x 1920 Samples.
+            val trimmed = frameCount.toLong() * UPSAMPLE_RATE
+            val seconds = trimmed.toDouble() / SAMPLE_RATE
+
+            log("  Ausgabeform:    $outShape  ($rawSamples Werte)")
+            log("  lengths:        $reported")
+            log("  Nutzlaenge:     $trimmed Samples = ${"%.2f".format(seconds)} s")
+            log("  Rechenzeit:     $runMs ms")
+            if (runMs > 0) log("  Echtzeitfaktor: ${"%.2f".format(seconds * 1000 / runMs)} x")
+            log("  Spitzenpegel:   ${"%.3f".format(peak)}")
+            log("")
+        } catch (error: Throwable) {
+            log("  fehlgeschlagen: ${error.message?.take(300)}")
+            log("")
+        }
     }
 
     private fun describe(info: ai.onnxruntime.NodeInfo): String {
         val tensor = info.info as? ai.onnxruntime.TensorInfo ?: return info.info.toString()
         return "${tensor.type} [${tensor.shape.joinToString(", ")}]"
-    }
-
-    private fun flatten(tensor: OnnxTensor): FloatArray {
-        val buffer = tensor.floatBuffer
-        val out = FloatArray(buffer.remaining())
-        buffer.get(out)
-        return out
     }
 
     private fun readFloats(
@@ -284,6 +295,9 @@ class MainActivity : AppCompatActivity() {
         const val CODEBOOKS = 16
         const val CODE_RANGE = 1000
         const val SAMPLE_RATE = 24000
+
+        // Der Decoder erzeugt 1920 Samples je Frame — also 12,5 Frames je Sekunde.
+        const val UPSAMPLE_RATE = 1920
 
         // Architektur des Qwen3-TTS-0.6B-Talkers.
         const val LAYERS = 28
