@@ -24,8 +24,15 @@ export function fitZoomAndOffset(
   };
 }
 
-export function canvasZoomFromWheel(currentZoom: number, deltaY: number): number {
-  return Math.max(minCanvasZoom, Math.min(maxCanvasZoom, currentZoom * Math.exp(-deltaY * 0.0015)));
+export function physicalZoomForDevice(deviceWidth: number, physicalWidthMm: number, monitorPixelsPerMillimeter: number): number | null {
+  if (deviceWidth <= 0 || physicalWidthMm <= 0 || monitorPixelsPerMillimeter <= 0) return null;
+  return Math.max(minCanvasZoom, Math.min(maxCanvasZoom, physicalWidthMm * monitorPixelsPerMillimeter / deviceWidth));
+}
+
+export function canvasZoomFromWheel(currentZoom: number, deltaY: number, snapZoom?: number | null): number {
+  const nextZoom = Math.max(minCanvasZoom, Math.min(maxCanvasZoom, currentZoom * Math.exp(-deltaY * 0.0015)));
+  if (snapZoom && currentZoom !== snapZoom && ((currentZoom < snapZoom && nextZoom >= snapZoom) || (currentZoom > snapZoom && nextZoom <= snapZoom))) return snapZoom;
+  return nextZoom;
 }
 
 export function offsetForZoomAtPoint(offset: CanvasPoint, point: CanvasPoint, currentZoom: number, nextZoom: number): CanvasPoint {

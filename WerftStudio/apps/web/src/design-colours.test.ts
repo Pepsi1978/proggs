@@ -41,8 +41,8 @@ describe("Referenzgeraete", () => {
   it("dreht das Geraet fuer das Querformat, statt eine zweite Liste zu fuehren", () => {
     const upright = stageDeviceFor("fold6-main", false);
     const turned = stageDeviceFor("fold6-main", true);
-    expect(upright).toEqual({ id: "fold6-main", label: "Galaxy Z Fold 6 · aufgeklappt · hoch", width: 928, height: 1080 });
-    expect(turned).toEqual({ id: "fold6-main", label: "Galaxy Z Fold 6 · aufgeklappt · quer", width: 1080, height: 928 });
+    expect(upright).toEqual({ id: "fold6-main", label: "Galaxy Z Fold 6 · aufgeklappt · hoch", width: 928, height: 1080, physicalWidthMm: 126.1, physicalHeightMm: 146.7 });
+    expect(turned).toEqual({ id: "fold6-main", label: "Galaxy Z Fold 6 · aufgeklappt · quer", width: 1080, height: 928, physicalWidthMm: 146.7, physicalHeightMm: 126.1 });
   });
 
   it("kennt beide Zustaende der Foldables und liefert ohne Wahl kein Geraet", () => {
@@ -67,6 +67,8 @@ describe("Referenzgeraete", () => {
       expect(device.width).toBeLessThanOrEqual(1100);
       expect(device.height).toBeGreaterThanOrEqual(600);
       expect(device.height).toBeLessThanOrEqual(1400);
+      expect(device.physicalWidthMm).toBeGreaterThan(50);
+      expect(device.physicalHeightMm).toBeGreaterThan(110);
       expect(device.source).toMatch(/^\d+ × \d+ px · \d,\d+×$/);
     }
   });

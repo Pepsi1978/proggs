@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canvasZoomFromWheel, fitZoomAndOffset, maxCanvasZoom, minCanvasZoom, offsetForZoomAtPoint } from "./canvas-navigation";
+import { canvasZoomFromWheel, fitZoomAndOffset, maxCanvasZoom, minCanvasZoom, offsetForZoomAtPoint, physicalZoomForDevice } from "./canvas-navigation";
 
 describe("canvas navigation", () => {
   it("zooms in and out within the canvas limits", () => {
@@ -7,6 +7,21 @@ describe("canvas navigation", () => {
     expect(canvasZoomFromWheel(1, 100)).toBeLessThan(1);
     expect(canvasZoomFromWheel(maxCanvasZoom, -10_000)).toBe(maxCanvasZoom);
     expect(canvasZoomFromWheel(minCanvasZoom, 10_000)).toBe(minCanvasZoom);
+  });
+
+  it("rastet beim Scrollen in beide Richtungen in der physischen Originalgroesse ein", () => {
+    const physicalZoom = physicalZoomForDevice(384, 73.2, 4);
+    expect(physicalZoom).toBeCloseTo(0.7625);
+    expect(canvasZoomFromWheel(0.7, -1000, physicalZoom)).toBe(physicalZoom);
+    expect(canvasZoomFromWheel(0.9, 1000, physicalZoom)).toBe(physicalZoom);
+    expect(canvasZoomFromWheel(physicalZoom!, -100, physicalZoom)).toBeGreaterThan(physicalZoom!);
+    expect(canvasZoomFromWheel(physicalZoom!, 100, physicalZoom)).toBeLessThan(physicalZoom!);
+  });
+
+  it("berechnet ohne valide Geraete- und Monitormasse keine Originalgroesse", () => {
+    expect(physicalZoomForDevice(0, 73.2, 4)).toBeNull();
+    expect(physicalZoomForDevice(384, 0, 4)).toBeNull();
+    expect(physicalZoomForDevice(384, 73.2, 0)).toBeNull();
   });
 
   it("passt einen Bildschirm vollständig ein und stellt ihn mittig", () => {

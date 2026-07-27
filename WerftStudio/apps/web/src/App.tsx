@@ -4,7 +4,7 @@ import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Do
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
-import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
+import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
 import { androidStartDevices, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
@@ -821,10 +821,31 @@ function SettingsPage() {
           <StorageCleanupButton />
         </nav>
         <div className="settings-content">
+          <DisplayCalibration />
           <ProviderSettings />
         </div>
       </div>
     </BackPage>
+  );
+}
+function DisplayCalibration() {
+  const { monitorPixelsPerMillimeter, setMonitorPixelsPerMillimeter } = useUi();
+  const [linePixels, setLinePixels] = useState(Math.round((monitorPixelsPerMillimeter ?? 96 / 25.4) * 100));
+  const calibrated = monitorPixelsPerMillimeter !== null && Math.abs(linePixels / 100 - monitorPixelsPerMillimeter) < 0.001;
+  return (
+    <Card title="Monitor kalibrieren" sub="Nur so kann Werft ein Gerät auf diesem Monitor in seiner echten physischen Größe anzeigen.">
+      <div className="display-calibration">
+        <p>Halte ein Lineal an die grüne Strecke und passe sie auf genau 100 mm an.</p>
+        <div className="calibration-ruler-wrap"><div className="calibration-ruler" style={{ width: linePixels }}><span>100 mm</span></div></div>
+        <input aria-label="Länge der 100-mm-Kalibrierstrecke" type="range" min="200" max="800" step="1" value={linePixels} onChange={(event) => setLinePixels(Number(event.target.value))} />
+        <div className="modal-actions">
+          {monitorPixelsPerMillimeter !== null && <Status kind={calibrated ? "success" : "warning"}>{calibrated ? "Für diesen Monitor kalibriert" : "Änderung noch nicht gespeichert"}</Status>}
+          <span />
+          {monitorPixelsPerMillimeter !== null && <Button onClick={() => { setMonitorPixelsPerMillimeter(null); setLinePixels(Math.round(96 / 25.4 * 100)); }}>Kalibrierung löschen</Button>}
+          <Button variant="primary" onClick={() => setMonitorPixelsPerMillimeter(linePixels / 100)}>Kalibrierung speichern</Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 function StorageCleanupButton() {
@@ -1622,7 +1643,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [commentSize, setCommentSize] = useState({ width: 300, height: 168 });
   const [screens, setScreens] = useState<PreviewScreen[]>([]);
   const [history, setHistory] = useState<string[]>([]);
-  const { mode, setMode } = useUi();
+  const { mode, setMode, monitorPixelsPerMillimeter } = useUi();
+  const physicalZoom = device?.physicalWidthMm && monitorPixelsPerMillimeter
+    ? physicalZoomForDevice(device.width, device.physicalWidthMm, monitorPixelsPerMillimeter)
+    : null;
+  const [physicalSizeHighlight, setPhysicalSizeHighlight] = useState(false);
   const markMode = mode === "comment";
   const textMode = mode === "edit";
   const pickMode = mode === "pick";
@@ -1700,6 +1725,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     const point = { x: clientX - rect.left, y: clientY - rect.top };
     setOffset((current) => offsetForZoomAtPoint(current, point, zoom, nextZoom));
     setZoom(nextZoom);
+  };
+  const wheelZoom = (deltaY: number) => {
+    const nextZoom = canvasZoomFromWheel(zoom, deltaY, physicalZoom);
+    if (physicalZoom && nextZoom === physicalZoom && zoom !== physicalZoom) setPhysicalSizeHighlight(true);
+    return nextZoom;
   };
   // Das Rad ohne Strg bewegt das Design, statt es zu vergroessern: gescrollt wird dort, wo das
   // Original scrollt — und sonst wandert die Buehne, damit das Rad nie wirkungslos bleibt.
@@ -1812,7 +1842,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       const point = { x: rect.left + data.x! * (rect.width / frame.offsetWidth), y: rect.top + data.y! * (rect.height / frame.offsetHeight) };
       // Vergroessern nur mit Strg — sonst wandert die Ansicht, genau wie beim Scrollen in der App.
       if (data.action === "wheel" && Number.isFinite(data.deltaY)) {
-        if (data.ctrlKey) zoomAt(point.x, point.y, canvasZoomFromWheel(zoom, data.deltaY!));
+        if (data.ctrlKey) zoomAt(point.x, point.y, wheelZoom(data.deltaY!));
         else panBy(Number.isFinite(data.deltaX) ? data.deltaX! : 0, data.deltaY!);
       }
       else if (data.action === "pan-start") { previewPan.current = point; setPanning(true); }
@@ -1825,19 +1855,19 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [zoom, history.length]);
+  }, [zoom, physicalZoom, history.length]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, wheelZoom(event.deltaY));
       else panBy(event.deltaX, event.deltaY);
     };
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", handleWheel);
-  }, [zoom]);
+  }, [zoom, physicalZoom]);
 
   // Zurück und Start ohne sichtbare Leiste: die Tastatur genügt, die Schaltflächen erscheinen nur,
   // wenn die Maus in die Ecke fährt.
@@ -1952,7 +1982,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       onDoubleClick={resetView}
       onAuxClick={(event) => { if (event.button === 1) event.preventDefault(); }}
     >
-      <div className="canvas-pan-content stage-surface" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: size.width, height: size.height }}>
+      <div className={`canvas-pan-content stage-surface${physicalSizeHighlight ? " physical-size" : ""}`} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: size.width, height: size.height }} onAnimationEnd={() => setPhysicalSizeHighlight(false)}>
         <iframe
           ref={frameRef}
           title="Design"
@@ -2079,6 +2109,11 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
+  const monitorPixelsPerMillimeter = useUi((state) => state.monitorPixelsPerMillimeter);
+  const physicalZoom = device?.physicalWidthMm && monitorPixelsPerMillimeter
+    ? physicalZoomForDevice(device.width, device.physicalWidthMm, monitorPixelsPerMillimeter)
+    : null;
+  const [physicalSizeHighlight, setPhysicalSizeHighlight] = useState(false);
   const reconstructionProgress = rebuild.progress;
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
@@ -2091,6 +2126,11 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     const rect = viewportRef.current?.getBoundingClientRect();
     if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, nextZoom);
     else setZoom(nextZoom);
+  };
+  const wheelZoom = (deltaY: number) => {
+    const nextZoom = canvasZoomFromWheel(zoom, deltaY, physicalZoom);
+    if (physicalZoom && nextZoom === physicalZoom && zoom !== physicalZoom) setPhysicalSizeHighlight(true);
+    return nextZoom;
   };
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     // Mittlere Maustaste ueberall, linke nur auf der freien Flaeche zwischen den Rahmen.
@@ -2120,12 +2160,12 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     if (!viewport) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, canvasZoomFromWheel(zoom, event.deltaY));
+      if (event.ctrlKey) zoomAt(event.clientX, event.clientY, wheelZoom(event.deltaY));
       else setOffset((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
     };
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", handleWheel);
-  }, [zoom, setZoom, imported?.imported]);
+  }, [zoom, setZoom, physicalZoom, imported?.imported]);
   useEffect(() => {
     if (imported?.imported && !imported.previewPath && !rebuild.pending && !rebuild.error) rebuild.start({ retryFailed: false });
   }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
@@ -2239,7 +2279,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
         <div className="canvas-pan-content frame-content" style={contentStyle}>
           <div className="frames">
             {frame?.platform === "android" ? (
-              <AndroidFrame accent={accent} dark={dark} width={device?.width ?? frame.width} height={device?.height ?? frame.height} device={device?.label ?? frame.device} />
+              <AndroidFrame accent={accent} dark={dark} width={device?.width ?? frame.width} height={device?.height ?? frame.height} device={device?.label ?? frame.device} physicalSizeHighlight={physicalSizeHighlight} onPhysicalSizeHighlightEnd={() => setPhysicalSizeHighlight(false)} />
             ) : (
               <>
                 <PhoneFrame name="Onboarding" accent={accent} radius={radius} dark={dark} onboarding />
@@ -2323,7 +2363,7 @@ function PhoneFrame({ name, accent, radius, dark, onboarding = false }: { name: 
     </div>
   );
 }
-function AndroidFrame({ accent, dark, width = 390, height = 760, device = "Pixel 9" }: { accent: string; dark: boolean; width?: number; height?: number; device?: string }) {
+function AndroidFrame({ accent, dark, width = 390, height = 760, device = "Pixel 9", physicalSizeHighlight = false, onPhysicalSizeHighlightEnd }: { accent: string; dark: boolean; width?: number; height?: number; device?: string; physicalSizeHighlight?: boolean; onPhysicalSizeHighlightEnd?(): void }) {
   return (
     <div className={`frame-wrap ${dark ? "preview-dark" : ""}`} style={{ "--preview-accent": accent } as React.CSSProperties}>
       <label>
@@ -2331,7 +2371,7 @@ function AndroidFrame({ accent, dark, width = 390, height = 760, device = "Pixel
         <span>Android · {device}</span>
         <code>v14</code>
       </label>
-      <div className="android-frame" style={{ width, height }}>
+      <div className={`android-frame${physicalSizeHighlight ? " physical-size" : ""}`} style={{ width, height }} onAnimationEnd={onPhysicalSizeHighlightEnd}>
         <div className="phone-status">
           <b>9:41</b>
         </div>
