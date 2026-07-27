@@ -1,11 +1,11 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "22",
+    [string]$PatchRevision = "23",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
 
-# Stand: windowsfix.22 - 20.07.2026 12:35 Uhr
+# Stand: v1.00.23 – 27.07.2026 21:23 (windowsfix.23)
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
@@ -24,6 +24,21 @@ $candidate = $null
 
 function Write-Utf8NoBom([string]$Path, [string]$Content) {
     [IO.File]::WriteAllText($Path, $Content, [Text.UTF8Encoding]::new($false))
+}
+
+function Resolve-OpenTuiRendererBundle([string]$OpenTuiDir) {
+    $candidates = @(
+        foreach ($pattern in @('index-*.js', 'chunk-bun-*.js')) {
+            Get-ChildItem -LiteralPath $OpenTuiDir -Filter $pattern -File
+        }
+    )
+    $rendererBundles = @($candidates | Where-Object {
+        [IO.File]::ReadAllText($_.FullName).Contains('reportNativeRenderFailure()')
+    })
+    if ($rendererBundles.Count -ne 1) {
+        throw "OpenTUI-Renderer-Bundle konnte nicht eindeutig bestimmt werden: $($rendererBundles.Count) Treffer."
+    }
+    return $rendererBundles[0].FullName
 }
 
 function Write-AtomicJson([string]$Path, [object]$Value) {
@@ -189,11 +204,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Bun-Abhängigkeiten konnten nicht installiert werden." }
 
         $openTuiDir = Join-Path $workDir "packages\tui\node_modules\@opentui\core"
-        $rendererBundles = @(Get-ChildItem -LiteralPath $openTuiDir -Filter "index-*.js" | Where-Object {
-            [IO.File]::ReadAllText($_.FullName).Contains("reportNativeRenderFailure()")
-        })
-        if ($rendererBundles.Count -ne 1) { throw "OpenTUI-Renderer-Bundle konnte nicht eindeutig bestimmt werden." }
-        $openTuiBundle = $rendererBundles[0].FullName
+        $openTuiBundle = Resolve-OpenTuiRendererBundle $openTuiDir
         $rendererSource = [IO.File]::ReadAllText($openTuiBundle)
         $newline = if ($rendererSource.Contains("`r`n")) { "`r`n" } else { "`n" }
         $needle = "  reportNativeRenderFailure() {${newline}    console.error(`"[CliRenderer] Native frame render failed; waiting for the next render request to force repaint`");"
