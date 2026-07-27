@@ -122,6 +122,20 @@ Struktur auf dem neuen Rechner (Home-Verzeichnis):
 └─ samba.env                        # SMB-Login (siehe 3.4)
 ```
 
+Weil der Key **nicht** in `~/.ssh/` liegt, finden ihn Werkzeuge, die nur dort suchen (OpenCode,
+Cowork, manche Deploy-Skripte), nicht und melden „kein SSH-Key gefunden". Deshalb auf JEDEM Rechner
+`~/.ssh/config` anlegen — damit gilt der Key für alle Projekte auf diesem VPS (Second Brain **und**
+Werft Studio, beide `root@10.8.0.1`):
+
+```
+Host 10.8.0.1 168.231.83.205
+    User root
+    IdentityFile ~/SK/second-brain/id_ed25519
+    IdentitiesOnly yes
+```
+
+Prüfen: `ssh -o BatchMode=yes root@10.8.0.1 'echo OK'` muss ohne `-i` durchlaufen.
+
 ### 3.3 Neuen WireGuard-Peer auf dem Server anlegen (PFLICHT bei jedem neuen Rechner)
 Jeder Rechner braucht **eine eigene** Tunnel-IP `10.8.0.X` und einen eigenen `[Peer]` auf dem Server.
 Auf dem **VPS** (per SSH, als root):

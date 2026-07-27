@@ -23,6 +23,22 @@ Nur `https://10.8.0.1:8443` wird an die WireGuard-IP gebunden. Alle Datenbanken,
 Objektspeicher und Worker bleiben im internen Docker-Netz `werft-internal`. Cortex auf Port 443
 und dessen `/api`-Routen werden dadurch nicht berührt.
 
+### SSH-Zugang
+
+Werft Studio hat keinen eigenen SSH-Key: der Server ist derselbe Hostinger-VPS wie Second Brain
+(Cortex auf 443, Werft Studio auf 8443). Der Schlüssel liegt zentral unter
+`~/SK/second-brain/id_ed25519`, nicht in `~/.ssh/`. Ein Eintrag in `~/.ssh/config` verweist darauf:
+
+```
+Host 10.8.0.1 168.231.83.205
+    User root
+    IdentityFile ~/SK/second-brain/id_ed25519
+    IdentitiesOnly yes
+```
+
+Damit genügt ein nacktes `ssh root@10.8.0.1` — ohne diesen Eintrag melden Werkzeuge, die nur
+`~/.ssh/` durchsuchen (OpenCode, Cowork), „kein SSH-Key gefunden". Der Tunnel muss stehen.
+
 ### Stand übertragen
 
 Der Server ist kein Git-Klon; die Quellen werden als Archiv übertragen. `.env` bleibt dabei außen vor,
