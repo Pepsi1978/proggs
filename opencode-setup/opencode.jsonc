@@ -76,12 +76,13 @@
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
     // Offizieller Google-MCP fuer Browserbedienung, Console, Network und Performance.
-    // Chrome startet mit einem eigenen persistenten Profil; das persoenliche Profil bleibt getrennt.
+    // Verbindet sich nach Chromes Freigabe mit dem bereits laufenden persoenlichen Stable-Profil.
     "chrome-devtools": {
       "type": "local",
       "command": [
         "npx", "-y", "chrome-devtools-mcp@1.6.0",
         "--channel=stable",
+        "--auto-connect",
         "--no-usage-statistics",
         "--no-performance-crux",
         "--redact-network-headers"
