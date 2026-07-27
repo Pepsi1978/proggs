@@ -1,14 +1,43 @@
 :root {
-  --werft-version: "Werft v0.24.6";
-  --werft-build-time: "27.07.2026 20:02 Uhr";
+  --werft-version: "Werft v0.24.7";
+  --werft-build-time: "27.07.2026 21:03 Uhr";
 }
 
 .settings-layout > nav::after {
   content: var(--werft-version) "\A" var(--werft-build-time);
-  margin-top: auto;
+  margin-top: 0;
   padding: 16px;
   border-top: 1px solid var(--color-line-subtle);
   color: var(--color-text-subtle);
   font: 11px/1.5 var(--font-mono);
   white-space: pre;
+}
+
+.storage-cleanup {
+  margin-top: auto;
+  padding: 12px;
+}
+
+.storage-cleanup button {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.storage-cleanup button:hover { background: var(--color-hover); }
+.storage-cleanup button:disabled { cursor: not-allowed; opacity: .55; }
+.storage-cleanup svg { width: 16px; }
+.storage-cleanup small { display: block; margin-top: 6px; color: var(--color-text-subtle); font-size: 11px; }
+@media(max-width:899px) {
+  .storage-cleanup { margin: 0 0 0 auto; padding: 6px; flex: 0 0 auto; }
+  .storage-cleanup button { width: auto; }
+  .storage-cleanup small { display: none; }
+  .settings-layout > nav::after { display: none; }
 }

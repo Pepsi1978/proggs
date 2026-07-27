@@ -51,12 +51,18 @@ tar -czf /tmp/werft.tgz --exclude=node_modules --exclude=.git --exclude=dist \
   tsconfig.base.json turbo.json compose.server.yaml compose.yaml README.md SPEC.md docs
 scp /tmp/werft.tgz root@10.8.0.1:/tmp/werft.tgz
 ssh root@10.8.0.1 'cd /opt/werft-studio && tar -tzf /tmp/werft.tgz >/dev/null \
-  && tar -xzf /tmp/werft.tgz && docker compose -f compose.server.yaml up -d --build'
+  && tar -xzf /tmp/werft.tgz && docker compose -f compose.server.yaml up -d --build \
+  && install -m 0644 docker/werft-docker-cache-prune.service docker/werft-docker-cache-prune.timer /etc/systemd/system/ \
+  && systemctl daemon-reload && systemctl enable --now werft-docker-cache-prune.timer \
+  && systemctl start werft-docker-cache-prune.service'
 ```
 
 Das Archiv wird per `scp` als Datei übertragen und vor dem Entpacken mit `tar -tzf` geprüft; die
 Prüfsumme beider Seiten muss übereinstimmen. Ein `tar -czf - … | ssh …` mit `&` im selben Befehl
 liefert das Archiv abgeschnitten aus und würde einen Rebuild auf halbem Quellstand starten.
+
+Der Timer begrenzt den ungenutzten Docker-Build-Cache täglich auf 2 GB. Laufende Container,
+Images, Datenbanken und die im MinIO-Manifest geführten Design-Dateien werden dabei nicht gelöscht.
 
 ## Architektur
 

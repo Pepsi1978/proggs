@@ -29,6 +29,7 @@ import { themeOverrideCss } from "./theme-override.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { previewBridgeVersion, injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
+import { cleanupOrphanedObjects } from "./storage-cleanup.js";
 
 type Actor = { userId: string; organizationId: string; role: Role };
 type PendingCodexAuth = { userId: string; organizationId: string; deviceAuthId: string; userCode: string; expiresAt: number; interval: number };
@@ -68,18 +69,22 @@ const hashJson = (value: unknown) => createHash("sha256").update(JSON.stringify(
 const previewToken = (projectId: string) => createHmac("sha256", env.SESSION_SECRET).update(`preview:${projectId}`).digest("base64url");
 const validPreviewToken = (projectId: string, token: string) => { const expected = Buffer.from(previewToken(projectId)); const actual = Buffer.from(token); return expected.length === actual.length && timingSafeEqual(expected, actual); };
 const ensureBucket = () => bucketReady ??= (async () => { if (!(await objectStore.bucketExists(env.S3_BUCKET))) await objectStore.makeBucket(env.S3_BUCKET); })();
-async function cleanupOrphanImportObjects() {
+async function cleanupOrphanImportObjects(manual = false) {
   await ensureBucket();
   const imports = await db.select({ objectPrefix: projectImports.objectPrefix, manifest: projectImports.manifest }).from(projectImports);
   const knownObjects = new Set(imports.flatMap((row) => row.manifest.map((file) => `${row.objectPrefix}${file.path}`)));
-  for await (const upload of objectStore.listIncompleteUploads(env.S3_BUCKET, "", true)) await objectStore.removeIncompleteUpload(env.S3_BUCKET, upload.key);
-  type ListedObject = { name?: string; lastModified?: Date };
+  type ListedObject = { name?: string; size?: number; lastModified?: Date };
   type PaginatedMinio = { listObjectsV2Query(bucket: string, prefix: string, continuationToken: string, delimiter: string, maxKeys: number, startAfter: string): AsyncIterable<ObjectListPage<ListedObject>> };
   const paginatedStore = objectStore as unknown as PaginatedMinio;
-  for await (const item of paginatedObjects((token, maxKeys) => paginatedStore.listObjectsV2Query(env.S3_BUCKET, "", token, "", maxKeys, ""))) {
-    if (!item.name) continue;
-    if (!knownObjects.has(item.name)) await objectStore.removeObject(env.S3_BUCKET, item.name);
-  }
+  return cleanupOrphanedObjects({
+    knownObjects,
+    incompleteUploads: objectStore.listIncompleteUploads(env.S3_BUCKET, "", true),
+    objects: paginatedObjects((token, maxKeys) => paginatedStore.listObjectsV2Query(env.S3_BUCKET, "", token, "", maxKeys, "")),
+    removeIncompleteUpload: (key) => objectStore.removeIncompleteUpload(env.S3_BUCKET, key),
+    removeObject: (key) => objectStore.removeObject(env.S3_BUCKET, key),
+    removeIncompleteUploads: !manual,
+    minimumAgeMs: manual ? 24 * 60 * 60 * 1000 : 0
+  });
 }
 const editableImportMime = (mime: string) => mime.startsWith("text/") || ["application/json", "image/svg+xml"].some((type) => mime.startsWith(type));
 const readObject = async (key: string) => { const chunks: Buffer[] = []; for await (const chunk of await objectStore.getObject(env.S3_BUCKET, key)) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); return Buffer.concat(chunks); };
@@ -244,7 +249,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.6-20260727.2002" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.7-20260727.2103" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -334,6 +339,13 @@ app.post("/api/v1/providers/openai/auth/poll", { config: { rateLimit: { max: 120
   return { status: "connected", connected: true, email: identity.email, accountId: identity.accountId };
 });
 app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); return { connected: false }; });
+
+app.post("/api/v1/storage/cleanup", async (request) => {
+  const actor = requireActorPermission(request, "project.delete");
+  const result = await cleanupOrphanImportObjects(true);
+  await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "storage.cleaned", targetType: "organization", result: "success", metadata: result, correlationId: request.id });
+  return result;
+});
 
 app.get("/api/v1/projects", async (request) => {
   const actor = requireActorPermission(request, "project.read");

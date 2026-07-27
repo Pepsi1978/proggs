@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Trash2, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
@@ -801,12 +801,31 @@ function SettingsPage() {
       <div className="settings-layout">
         <nav>
           <NavLink to="/app/settings/models">Modelle & Provider</NavLink>
+          <StorageCleanupButton />
         </nav>
         <div className="settings-content">
           <ProviderSettings />
         </div>
       </div>
     </BackPage>
+  );
+}
+function StorageCleanupButton() {
+  const cleanup = useMutation({ mutationFn: () => api<{ removedIncompleteUploads: number; removedObjects: number; freedBytes: number }>("/storage/cleanup", { method: "POST", body: "{}" }) });
+  const message = cleanup.data
+    ? cleanup.data.removedObjects || cleanup.data.removedIncompleteUploads
+      ? `${(cleanup.data.freedBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB freigegeben`
+      : "Cache ist bereits sauber"
+    : undefined;
+  return (
+    <div className="storage-cleanup">
+      <button disabled={cleanup.isPending} onClick={() => window.confirm("Unnötige Cache-Dateien löschen? Alle aktiven Designs und ihre Quelldateien bleiben erhalten.") && cleanup.mutate()}>
+        <Trash2 />
+        <span>{cleanup.isPending ? "Räume auf …" : "Cache leeren"}</span>
+      </button>
+      {message && <small>{message}</small>}
+      {cleanup.error && <small className="field-error">{cleanup.error instanceof ApiError ? cleanup.error.message : "Cache konnte nicht geleert werden."}</small>}
+    </div>
   );
 }
 function ProviderSettings() {
