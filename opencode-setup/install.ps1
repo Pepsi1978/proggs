@@ -1,5 +1,5 @@
 # install.ps1 — OpenCode-Umgebung aus dem plattformuebergreifenden Speicher installieren (Windows).
-# Installer v1.1.1 - 20.07.2026, 12:39 Uhr
+# Die sichtbare Installer-Version wird nach dem param-Block gesetzt.
 #
 # Kopiert ALLES aus opencode-setup\ an seinen Platz unter %USERPROFILE%\.config\opencode\, sodass
 # OpenCode auf einem frischen Rechner 1:1 dieselbe Umgebung hat: globale Config, globale Regeln
@@ -18,6 +18,7 @@ param(
   [switch]$SkipLauncherBuild
 )
 
+$InstallerVersion = 'v1.2.0 – 27.07.2026 21:03'
 $ErrorActionPreference = 'Stop'
 
 $Src = $PSScriptRoot                                  # opencode-setup\
@@ -33,7 +34,7 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
   [System.IO.File]::WriteAllText($Path, $Content, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Write-Host "== OpenCode-Setup -> $Dst =="
+Write-Host "== OpenCode-Setup $InstallerVersion -> $Dst =="
 
 # --- 0) OpenCode installiert? (nur Hinweis, kein Abbruch) ---
 if (Get-Command opencode -ErrorAction SilentlyContinue) {

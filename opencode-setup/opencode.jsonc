@@ -75,6 +75,21 @@
   //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
+    // Offizieller Google-MCP fuer Browserbedienung, Console, Network und Performance.
+    // Chrome startet mit einem eigenen persistenten Profil; das persoenliche Profil bleibt getrennt.
+    "chrome-devtools": {
+      "type": "local",
+      "command": [
+        "npx", "-y", "chrome-devtools-mcp@1.6.0",
+        "--channel=stable",
+        "--no-usage-statistics",
+        "--no-performance-crux",
+        "--redact-network-headers"
+      ],
+      "enabled": true,
+      "timeout": 120000
+    },
+
     // Punkt 8 — Franks "zweites Gehirn" (selbst gehosteter Memory-Server) via lokalem STDIO-Proxy.
     // Laeuft auf dem Hostinger-VPS, erreichbar NUR ueber den WireGuard-Tunnel (10.8.0.1:8001).
     // Kein OAuth/Header noetig: der Tunnel IST der private Kanal (bugs/server/wireguard.md §2).
