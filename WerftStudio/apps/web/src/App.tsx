@@ -925,6 +925,12 @@ function ImportQuestions({ projectId }: { projectId: string }) {
   );
 }
 
+// Fortlaufende Kennung fuer Auftraege an die Vorschau. NICHT die Uhrzeit: beim Ziehen im
+// Farbwaehler entstehen mehrere Aenderungen in derselben Millisekunde, und alle bis auf die erste
+// gingen verloren — die Farbe blieb dann sichtbar unveraendert.
+let auftragsZaehler = 0;
+const naechsterAuftrag = () => (auftragsZaehler += 1);
+
 function Studio() {
   const { projectId = "" } = useParams();
   const nav = useNavigate();
@@ -1009,7 +1015,7 @@ function Studio() {
   const activeOverrides = tokenOverrides[activeThemeId] ?? {};
   const applyOverrides = (next: Record<string, Record<string, string>>, themeId: string) => {
     setTokenOverrides(next);
-    setTuneRequest({ overrides: next[themeId] ?? {}, nonce: Date.now() });
+    setTuneRequest({ overrides: next[themeId] ?? {}, nonce: naechsterAuftrag() });
   };
   const tuneToken = (name: string, value: string) => applyOverrides({ ...tokenOverrides, [activeThemeId]: { ...activeOverrides, [name]: value } }, activeThemeId);
   const resetToken = (name: string) => {
@@ -1021,8 +1027,8 @@ function Studio() {
   // vorherigen Erscheinung im Design stehen.
   const chooseTheme = (themeId: string) => {
     setActiveThemeId(themeId);
-    setThemeRequest({ themeId, nonce: Date.now() });
-    setTuneRequest({ overrides: tokenOverrides[themeId] ?? {}, nonce: Date.now() + 1 });
+    setThemeRequest({ themeId, nonce: naechsterAuftrag() });
+    setTuneRequest({ overrides: tokenOverrides[themeId] ?? {}, nonce: naechsterAuftrag() });
   };
   // Ohne importiertes Design gibt es kein Board — dann bleibt das Gespräch der Einstieg, statt einen
   // leeren Reiter vorzublenden.
@@ -1248,7 +1254,7 @@ function Studio() {
                     <p>{comment.text}</p>
                     {comment.detail && <small>{comment.detail}</small>}
                     <footer>
-                      {comment.screenId && <button type="button" onClick={() => setScreenRequest({ screenId: comment.screenId, nonce: Date.now() })}>{comment.screenName || "Bildschirm"} zeigen</button>}
+                      {comment.screenId && <button type="button" onClick={() => setScreenRequest({ screenId: comment.screenId, nonce: naechsterAuftrag() })}>{comment.screenName || "Bildschirm"} zeigen</button>}
                       <span>{new Date(comment.at).toLocaleString("de-DE")}</span>
                     </footer>
                   </article>
@@ -1291,7 +1297,7 @@ function Studio() {
                         type="button"
                         className={`board-screen${screen.id === activeScreenId ? " active" : ""}`}
                         key={screen.id}
-                        onClick={() => setScreenRequest({ screenId: screen.id, nonce: Date.now() })}
+                        onClick={() => setScreenRequest({ screenId: screen.id, nonce: naechsterAuftrag() })}
                       >
                         <span className="board-screen-name">{screen.name}</span>
                         {screen.isStart && <em title="Startbildschirm">Start</em>}
@@ -1524,7 +1530,10 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
 // Eine im Design aufgenommene Farbe: was dort gezeichnet wird und aus welchem Token es stammt.
-type ColourEntry = { role: string; value: string; hex: string; token: string; exact: boolean };
+// `kind` ist die technische Rolle (background/text/border). Mit ihr laesst sich eine Farbe auch
+// dann aendern, wenn keine Variable dahintersteht: geaendert wird dann die Farbe selbst, ueberall
+// wo sie in dieser Rolle gezeichnet wird.
+type ColourEntry = { role: string; kind: string; value: string; hex: string; token: string; exact: boolean };
 type ColourPick = { label: string; selector: string; screenName: string; entries: ColourEntry[]; at: number; rect?: { x: number; y: number; width: number; height: number } };
 function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: {
   previewOrigin: string;
@@ -1933,19 +1942,21 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           </header>
           {pickedArea.entries.length === 0 && <small>An dieser Stelle wird keine eigene Farbe gezeichnet.</small>}
           {pickedArea.entries.map((entry) => {
-            const current = entry.token ? (overrides[entry.token] ?? tokens[entry.token] ?? entry.value) : entry.value;
-            const changed = Boolean(entry.token && overrides[entry.token]);
+            // Steht hinter der Farbe eine wirksame Variable, wird sie geaendert; sonst die Farbe
+            // selbst — dann ist auch eine fest ins Markup geschriebene Flaeche regelbar.
+            const key = entry.exact && entry.token ? entry.token : `${entry.kind || "background"}|${entry.value}`;
+            const current = overrides[key] ?? (entry.token ? tokens[entry.token] ?? entry.value : entry.value);
+            const changed = Boolean(overrides[key]);
             return (
               <label className="pick-row" key={`${entry.role}:${entry.value}`}>
                 <span>{entry.role}<small>{hexColour(current) || entry.hex || entry.value}</small></span>
                 <input
                   type="color"
                   value={hexColour(current) || "#000000"}
-                  disabled={!entry.token}
-                  title={entry.token ? `Ändert ${tokenTitle(entry.token)} — wirkt sofort` : "Diese Farbe hat keinen eigenen Regler"}
-                  onChange={(event) => { if (entry.token) onTuneToken(entry.token, event.target.value); }}
+                  title={entry.exact && entry.token ? `Ändert ${tokenTitle(entry.token)} — wirkt sofort` : "Ändert diese Farbe überall dort, wo sie so gezeichnet wird — wirkt sofort"}
+                  onChange={(event) => onTuneToken(key, event.target.value)}
                 />
-                <button type="button" className="token-reset" disabled={!changed} title={changed ? "Diese Farbe zurücksetzen" : "Unverändert"} onClick={() => { if (entry.token) onResetToken(entry.token); }}>
+                <button type="button" className="token-reset" disabled={!changed} title={changed ? "Diese Farbe zurücksetzen" : "Unverändert"} onClick={() => onResetToken(key)}>
                   <Undo2 />
                 </button>
               </label>

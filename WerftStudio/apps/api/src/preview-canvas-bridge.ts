@@ -686,7 +686,11 @@ const bridgeScript = `<script ${bridgeMarker}>
     for (const item of conditionalRules()) {
       const declarations = [];
       for (const property of Array.prototype.slice.call(item.rule.style)) {
-        if (property.slice(0, 2) === "--" || roleOf(property) !== entry.role) continue;
+        // Auch Variablendefinitionen: wird die Flaeche ueber var(--x) gezeichnet, steht die Farbe
+        // NUR dort. Wer sie ueberspringt, aendert nichts — die Flaeche blieb, wie sie war. Eine
+        // Variable gehoert zu keiner festen Rolle, deshalb zaehlt hier allein ihr Wert.
+        const istVariable = property.slice(0, 2) === "--";
+        if (!istVariable && roleOf(property) !== entry.role) continue;
         const current = String(item.rule.style.getPropertyValue(property)).trim();
         const colour = firstColourIn(current);
         if (!colour || normalizeColour(colour) !== entry.value) continue;
@@ -715,7 +719,7 @@ const bridgeScript = `<script ${bridgeMarker}>
   const recolourInline = (entry, value) => {
     for (const node of Array.prototype.slice.call(document.querySelectorAll("[style]"))) {
       for (const property of Array.prototype.slice.call(node.style)) {
-        if (roleOf(property) !== entry.role) continue;
+        if (property.slice(0, 2) !== "--" && roleOf(property) !== entry.role) continue;
         const current = node.style.getPropertyValue(property);
         const colour = firstColourIn(current);
         if (!colour || normalizeColour(colour) !== entry.value) continue;
@@ -737,7 +741,15 @@ const bridgeScript = `<script ${bridgeMarker}>
     clearInlineTune();
     const geaenderteVariablen = [];
     for (const name of Object.keys(overrides || {})) {
-      if (name.indexOf(measuredPrefix) === 0) {
+      // Ein Schluessel der Form "background|rgb(24, 18, 9)" nennt die Farbe SELBST. Damit ist jede
+      // Flaeche aenderbar — auch eine, hinter der keine Variable steht. Ohne diesen Weg blieben
+      // genau die Bereiche unveraenderlich, die ihre Farbe fest im Markup tragen.
+      const trenner = name.indexOf("|");
+      if (trenner > 0 && name.slice(0, 2) !== "--") {
+        const entry = { role: name.slice(0, trenner), value: name.slice(trenner + 1) };
+        blocks.push(recolourRules(entry, overrides[name]));
+        recolourInline(entry, overrides[name]);
+      } else if (name.indexOf(measuredPrefix) === 0) {
         const entry = measuredColours[name];
         if (entry) { blocks.push(recolourRules(entry, overrides[name])); recolourInline(entry, overrides[name]); }
       } else { variables.push("  " + name + ": " + overrides[name] + ";"); geaenderteVariablen.push(name); }
@@ -1087,7 +1099,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     const entries = [];
     // Die Markierung "exact" unterscheidet die belegte Zuordnung (die Regel nennt diese Variable)
     // von der blossen Farbgleichheit. Ohne sie liefe man auf einen Regler zu, der hier nichts tut.
-    const add = (role, value, declared, source, property) => {
+    const add = (role, value, declared, source, property, kind) => {
       const normalized = normalizeColour(value);
       if (!normalized || !isVisibleColour(normalized)) return;
       if (entries.some((entry) => entry.value === normalized && entry.role === role)) return;
@@ -1096,24 +1108,24 @@ const bridgeScript = `<script ${bridgeMarker}>
       const token = wirksam || tokenForColour(value);
       // Bei gemessenen Farben IST die Farbgleichheit die Zuordnung — dort wird genau diese Farbe
       // ersetzt. Nur bei echten Variablen bleibt blosse Gleichheit ein unsicherer Hinweis.
-      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: token, exact: Boolean(wirksam) || token.indexOf(measuredPrefix) === 0 });
+      entries.push({ role: role, kind: kind, value: normalized, hex: hexOf(normalized), token: token, exact: Boolean(wirksam) || token.indexOf(measuredPrefix) === 0 });
     };
     // Gemeldet wird die Flaeche DES BEREICHS, in den geklickt wurde, und die Schrift des getroffenen
     // Elements — nicht der Hintergrund des ganzen Bildschirms.
     const area = areaAt(event.clientX, event.clientY) || element;
     const areaStil = getComputedStyle(area);
     const areaColour = areaStil.backgroundColor;
-    if (isVisibleColour(areaColour)) add("Fläche", areaColour, declaredVariable(area, ["background-color", "background"]), area, "backgroundColor");
+    if (isVisibleColour(areaColour)) add("Fläche", areaColour, declaredVariable(area, ["background-color", "background"]), area, "backgroundColor", "background");
     // Malt der Bereich seine Flaeche als Verlauf, steht die Farbe nicht in background-color. Ohne
     // diesen Fall bliebe genau so ein Bereich unveraenderbar.
     else if (paintsImage(area)) {
       const verlaufsfarbe = firstColourIn(areaStil.backgroundImage);
-      if (verlaufsfarbe) add("Fläche", verlaufsfarbe, declaredVariable(area, ["background-image", "background"]), area, "backgroundImage");
+      if (verlaufsfarbe) add("Fläche", verlaufsfarbe, declaredVariable(area, ["background-image", "background"]), area, "backgroundImage", "background");
     }
-    if ((element.textContent || "").trim()) add("Schrift", style.color, inheritedVariable(element, ["color"]), element, "color");
-    if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]), element, "borderTopColor");
+    if ((element.textContent || "").trim()) add("Schrift", style.color, inheritedVariable(element, ["color"]), element, "color", "text");
+    if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]), element, "borderTopColor", "border");
     const areaStyle = getComputedStyle(area);
-    if (area !== element && parseFloat(areaStyle.borderTopWidth || "0") > 0) add("Rahmen des Bereichs", areaStyle.borderTopColor, declaredVariable(area, ["border-top-color", "border-color", "border-top", "border"]), area, "borderTopColor");
+    if (area !== element && parseFloat(areaStyle.borderTopWidth || "0") > 0) add("Rahmen des Bereichs", areaStyle.borderTopColor, declaredVariable(area, ["border-top-color", "border-color", "border-top", "border"]), area, "borderTopColor", "border");
     const screen = element.closest(".werft-screen") || activeScreen();
     // Das Rechteck des Bereichs: damit umrandet das Studio genau das, was es aendert, und stellt
     // seinen Farbwaehler direkt daneben.
