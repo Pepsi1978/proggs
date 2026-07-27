@@ -113,8 +113,15 @@ export const createProjectSchema = z.object({
   platforms: z.array(platformSchema).min(1),
   prompt: z.string().max(50_000).default(""),
   designSystemVersionId: idSchema.nullable().default(null),
-  aiProfile: z.enum(["economy", "standard", "quality", "local", "custom"])
-}).strict();
+  aiProfile: z.enum(["economy", "standard", "quality", "local", "custom"]),
+  viewport: z.object({
+    width: z.number().int().min(240).max(4096),
+    height: z.number().int().min(240).max(4096),
+    device: z.string().min(1).max(80)
+  }).strict().optional()
+}).strict().superRefine((input, context) => {
+  if (input.viewport && !input.platforms.includes("android")) context.addIssue({ code: "custom", path: ["viewport"], message: "Ein Android-Viewport erfordert die Plattform Android." });
+});
 
 export const apiErrorSchema = z.object({
   code: z.string(),

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { DesignDocument } from "@werft/contracts";
 import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Trash2, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -564,6 +565,9 @@ function NewProject({ onClose }: { onClose(): void }) {
   const [type, setType] = useState("prototype");
   const [platforms, setPlatforms] = useState(["ios"]);
   const [prompt, setPrompt] = useState("");
+  const [deviceId, setDeviceId] = useState(referenceDevices[0]!.id);
+  const [landscape, setLandscape] = useState(false);
+  const initialDevice = stageDeviceFor(deviceId, landscape);
   const create = useMutation({
     mutationFn: () =>
       api<{ projectId: string }>("/projects", {
@@ -576,6 +580,7 @@ function NewProject({ onClose }: { onClose(): void }) {
           prompt,
           designSystemVersionId: null,
           aiProfile: "standard",
+          ...(platforms.includes("android") && initialDevice ? { viewport: { width: initialDevice.width, height: initialDevice.height, device: initialDevice.label } } : {}),
         }),
       }),
     onSuccess: async (data) => {
@@ -637,6 +642,26 @@ function NewProject({ onClose }: { onClose(): void }) {
             ))}
           </div>
         </label>
+        {platforms.includes("android") && (
+          <div>
+            <div className="form-row">
+              <label>
+                Android-Startgerät
+                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)}>
+                  {referenceDevices.map((device) => <option key={device.id} value={device.id}>{deviceLabel(device)}</option>)}
+                </select>
+              </label>
+              <label>
+                Ausrichtung
+                <div className="segments orientation" role="group" aria-label="Ausrichtung des Android-Startlayouts">
+                  <button type="button" className={landscape ? "" : "active"} onClick={() => setLandscape(false)}>Hoch</button>
+                  <button type="button" className={landscape ? "active" : ""} onClick={() => setLandscape(true)}>Quer</button>
+                </div>
+              </label>
+            </div>
+            {initialDevice && <small>Arbeitsfläche: {initialDevice.label} · {initialDevice.width} × {initialDevice.height} dp</small>}
+          </div>
+        )}
         {create.error && <p className="field-error">{create.error.message}</p>}
       </div>
       <div className="modal-actions">
@@ -967,8 +992,9 @@ function Studio() {
   });
   const design = useQuery({
     queryKey: ["design", projectId],
-    queryFn: () => api<{ revision: number; document: unknown }>(`/projects/${projectId}/design-document`),
+    queryFn: () => api<{ revision: number; document: DesignDocument }>(`/projects/${projectId}/design-document`),
   });
+  const draftFrame = design.data?.document.frames[0];
   const imported = useQuery({
     queryKey: ["project-import", projectId],
     queryFn: () => api<ProjectImport>(`/projects/${projectId}/import`),
@@ -980,10 +1006,19 @@ function Studio() {
   // Das Referenzgeraet gilt fuer die Buehne: leer heisst „so gross wie das Design selbst".
   const [deviceId, setDeviceId] = useState("");
   const [landscape, setLandscape] = useState(false);
+  const initializedDraftDevice = useRef<string | null>(null);
+  useEffect(() => {
+    if (imported.data?.imported !== false || draftFrame?.platform !== "android" || initializedDraftDevice.current === projectId) return;
+    initializedDraftDevice.current = projectId;
+    const device = referenceDevices.find((entry) => (entry.width === draftFrame.width && entry.height === draftFrame.height) || (entry.width === draftFrame.height && entry.height === draftFrame.width));
+    if (!device) return;
+    setDeviceId(device.id);
+    setLandscape(device.width === draftFrame.height && device.height === draftFrame.width);
+  }, [draftFrame, imported.data?.imported, projectId]);
   const referenceDevice = stageDeviceFor(deviceId, landscape);
   const designDevice = imported.data?.imported
     ? stageDeviceForDesign(imported.data.previewWidth, imported.data.previewHeight, landscape)
-    : null;
+    : draftFrame ? stageDeviceForDesign(draftFrame.width, draftFrame.height, landscape) : null;
   const stageDevice = referenceDevice ?? designDevice;
   // Der Neuaufbau wird OBEN bedient, laeuft aber unten auf der Buehne. Deshalb liegt er hier und
   // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
@@ -1185,6 +1220,7 @@ function Studio() {
     if (document.fullscreenElement) void document.exitFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht beendet werden", error));
   };
   const canRebuild = imported.data?.imported === true;
+  const showDevicePicker = canRebuild || draftFrame?.platform === "android";
   // Gibt es fuer das gewaehlte Geraet bereits eine eigene Fassung? Dann zeigt die Buehne sie; sonst
   // steht dort die Grundfassung, die die Flaeche des Geraets nicht ausnutzt.
   const deviceVariant = referenceDevice && imported.data?.imported
@@ -1219,7 +1255,7 @@ function Studio() {
         {/* Referenzgeraet: das Design wird auf der Flaeche gezeigt, die das gewaehlte Geraet einer
             App wirklich laesst — zugeklappt und aufgeklappt sind eigene Eintraege, hoch und quer
             eine eigene Achse daneben. */}
-        {canRebuild && (
+        {showDevicePicker && (
           <div className="device-picker">
             <select value={deviceId} title="Referenzgerät für die Bühne" aria-label="Referenzgerät" onChange={(event) => setDeviceId(event.target.value)}>
               <option value="">Größe des Designs</option>
@@ -1416,6 +1452,7 @@ function Studio() {
             setMode={setMode}
             imported={imported.data}
             device={stageDevice}
+            frame={draftFrame}
             deviceVariant={deviceVariant}
             rebuild={{ start: (options) => rebuild.mutate(options), pending: rebuild.isPending, error: rebuild.error, progress: rebuildProgress }}
             onScreenChange={setVisibleScreen}
@@ -2046,7 +2083,7 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
 type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, frame, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; frame: DesignDocument["frames"][number] | undefined; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -2181,7 +2218,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
         <IconButton label="Vorschau aktualisieren">
           <RotateCcw />
         </IconButton>
-        <span>iPhone 15 · 390</span>
+        <span>{frame?.platform === "android" ? `${device?.label ?? frame.device} · ${device?.width ?? frame.width} × ${device?.height ?? frame.height}` : "iPhone 15 · 390"}</span>
         {tools.map(([id, label, icon]) => (
           <button className={mode === id ? "active" : ""} onClick={() => setMode(id)} key={id}>
             {icon}
@@ -2211,11 +2248,17 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
       <div {...viewportProps} className={`frame-scroller ${viewportProps.className}`}>
         <div className="canvas-pan-content frame-content" style={contentStyle}>
           <div className="frames">
-            <PhoneFrame name="Onboarding" accent={accent} radius={radius} dark={dark} onboarding />
-            <PhoneFrame name="Dashboard" accent={accent} radius={radius} dark={dark} />
-            <AndroidFrame accent={accent} dark={dark} />
-            <WindowsFrame accent={accent} dark={dark} />
-            <WebFrame accent={accent} dark={dark} />
+            {frame?.platform === "android" ? (
+              <AndroidFrame accent={accent} dark={dark} width={device?.width ?? frame.width} height={device?.height ?? frame.height} device={device?.label ?? frame.device} />
+            ) : (
+              <>
+                <PhoneFrame name="Onboarding" accent={accent} radius={radius} dark={dark} onboarding />
+                <PhoneFrame name="Dashboard" accent={accent} radius={radius} dark={dark} />
+                <AndroidFrame accent={accent} dark={dark} />
+                <WindowsFrame accent={accent} dark={dark} />
+                <WebFrame accent={accent} dark={dark} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -2290,15 +2333,15 @@ function PhoneFrame({ name, accent, radius, dark, onboarding = false }: { name: 
     </div>
   );
 }
-function AndroidFrame({ accent, dark }: { accent: string; dark: boolean }) {
+function AndroidFrame({ accent, dark, width = 390, height = 760, device = "Pixel 9" }: { accent: string; dark: boolean; width?: number; height?: number; device?: string }) {
   return (
     <div className={`frame-wrap ${dark ? "preview-dark" : ""}`} style={{ "--preview-accent": accent } as React.CSSProperties}>
       <label>
         <strong>Dashboard</strong>
-        <span>Android · Pixel 9 · Standard</span>
+        <span>Android · {device}</span>
         <code>v14</code>
       </label>
-      <div className="android-frame">
+      <div className="android-frame" style={{ width, height }}>
         <div className="phone-status">
           <b>9:41</b>
         </div>
