@@ -37,6 +37,7 @@ import {
   type OpenAIAuthType,
   type WeeklyQuota,
 } from "./openai-quota"
+import { fileURLToPath } from "node:url"
 
 const QUOTA_POLL_MS = 60_000
 const QUOTA_RECHECK_DELAY_MS = 2_000
@@ -806,6 +807,7 @@ function View(props: {
 }
 
 const tui: TuiPlugin = async (api) => {
+  await api.theme.install(fileURLToPath(new URL("../themes/orng.json", import.meta.url)))
   const usageStore = createSessionUsageStore(api)
   const quotaStore = createOpenAIQuotaStore(api)
   api.slots.register({

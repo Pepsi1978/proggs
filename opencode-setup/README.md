@@ -196,7 +196,8 @@ Aktuell:
   Input-, Output- und Reasoning-Tokens, drei Modellpreise sowie die Gesamtkosten in US-Dollar. Cache-R/W-
   Tokens und Kosten-Einzelposten bleiben in der kompakten Anzeige verborgen. Ein mit der Maus
   bedienbares Dropdown zeigt beim Navigieren per Maus oder Pfeiltasten sofort eine Theme-Vorschau und
-  merkt sich die bestaetigte Auswahl; beim Abbrechen kehrt es zum vorherigen Theme zurueck.
+  merkt sich die bestaetigte Auswahl; beim Abbrechen kehrt es zum vorherigen Theme zurueck. Beim Theme
+  `orng` bleibt der Akzent im Dunkelmodus orange.
   Direkt darunter schaltet eine kompakte Dunkel/Hell-Auswahl die Variante des gewaehlten Themes um.
   Das Plugin bevorzugt die von
   OpenCode gespeicherte echte `cost`; bei fehlenden oder

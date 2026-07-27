@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.0 - 26.07.2026, 14:01 Uhr
+Stand: v1.14.1 - 27.07.2026, 20:59 Uhr
 
 ## Funktionen
 
@@ -42,6 +42,7 @@ Stand: v1.14.0 - 26.07.2026, 14:01 Uhr
 - Kumulative Session-Summen für Input, Output, Reasoning und Gesamtkosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
+- Beim Theme `orng` bleibt die Akzentfarbe auch im Dunkelmodus orange, statt auf Weiß zu wechseln.
 - Das aktive `AGENTS.md`-Profil bleibt vollständig gültig und hat bei Widersprüchen Vorrang.
 
 ## Vollständiger Installationsumfang

@@ -715,6 +715,15 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("frank-light")
   })
 
+  test("keeps the orng accent orange in dark mode", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    const theme = await Bun.file(new URL("../themes/orng.json", import.meta.url)).json()
+    expect(source).toContain('api.theme.install(fileURLToPath(new URL("../themes/orng.json", import.meta.url)))')
+    expect(theme.theme.accent).toEqual({ dark: "darkOrange", light: "lightAccent" })
+    expect(theme.theme.syntaxNumber).toEqual({ dark: "darkOrange", light: "#EC5B2B" })
+    expect(theme.defs.darkOrange).toBe("#EC5B2B")
+  })
+
   test("renders input, output, and split cache model prices with an explicit unit", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Inputpreis"')
