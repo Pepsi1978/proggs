@@ -235,11 +235,15 @@ class MainActivity : AppCompatActivity() {
                     ort.run(mapOf(inputName to tensor)).use { result ->
                         val audio = result.get(0) as OnnxTensor
                         outShape = (audio.info.shape).joinToString(" x ")
+                        // Am Stueck lesen: einzelne get()-Aufrufe auf dem ONNX-Puffer gehen
+                        // jedes Mal ueber die JNI-Grenze und sind um Groessenordnungen langsamer.
                         val buffer = audio.floatBuffer
                         rawSamples = buffer.remaining()
-                        while (buffer.hasRemaining()) {
-                            val value = kotlin.math.abs(buffer.get())
-                            if (value > peak) peak = value
+                        val values = FloatArray(rawSamples)
+                        buffer.get(values)
+                        for (value in values) {
+                            val magnitude = kotlin.math.abs(value)
+                            if (magnitude > peak) peak = magnitude
                         }
                         if (result.size() > 1) {
                             val lengths = result.get(1) as OnnxTensor
