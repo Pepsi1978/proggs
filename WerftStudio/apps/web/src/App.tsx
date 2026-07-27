@@ -814,7 +814,7 @@ function SettingsPage() {
   const nav = useNavigate();
   const { theme, setTheme } = useUi();
   return (
-    <BackPage title="Einstellungen" onBack={() => nav("/app/designs")} actions={<IconButton label="Theme wechseln" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun /> : <Moon />}</IconButton>}>
+    <BackPage title="Einstellungen" onBack={() => nav("/app/designs")} actions={<IconButton className="settings-theme-toggle" label="Theme wechseln" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun /> : <Moon />}</IconButton>}>
       <div className="settings-layout">
         <nav>
           <NavLink to="/app/settings/models">Modelle & Provider</NavLink>
@@ -886,48 +886,21 @@ function ProviderSettings() {
   return (
     <>
       <div className="section-head">
-        <p className="subtle">Verbindungen sind anbieterneutral. Credentials bleiben ausschließlich auf dem Server.</p>
+        <p className="subtle">Die OpenAI-Anmeldung wird verschlüsselt auf dem Server gespeichert.</p>
         <Button variant="primary" onClick={() => setOpen(true)}>
-          Verbindung hinzufügen
+          OpenAI verbinden
         </Button>
       </div>
       <div className="provider-grid">
         <Card title="OpenAI · Codex OAuth">
           <small>ChatGPT-Anmeldung · Tokens nur verschlüsselt auf dem Server</small>
-          <Status kind={connection.data?.connected ? "success" : "neutral"}>{connection.data?.connected ? "Verbunden" : "Nicht verbunden"}</Status>
+          <Status kind={connection.data?.connected ? "success" : "neutral"}>{connection.data?.connected ? "Konfiguriert" : "Nicht verbunden"}</Status>
           {connection.data?.connected && <small>{connection.data.email || connection.data.accountId || "OpenAI-Konto"}</small>}
-          <div className="caps"><span>GPT-5.6</span><span>Reasoning</span><span>Tools</span></div>
+          <div className="caps"><span>GPT-5.6</span><span>Reasoning</span></div>
           {connection.data?.connected ? <Button variant="danger" onClick={()=>disconnect.mutate()}>Verbindung trennen</Button> : <Button onClick={()=>setOpen(true)}>Mit OpenAI verbinden</Button>}
         </Card>
-        {[
-          ["Werft Intern", "Eigenes Modell · EU-Region", "Verbunden", "success"],
-          ["Lokal · Ollama", "Selbst gehostet", "Ungültig", "error"],
-        ].map(([name, kind, status, tone]) => (
-          <Card title={name!} key={name}>
-            <small>{kind}</small>
-            <Status kind={tone as "success" | "warning" | "error"}>{status}</Status>
-            <div className="caps">
-              <span>Text</span>
-              <span>Reasoning</span>
-              <span>Tools</span>
-            </div>
-            <Button>Erneut testen</Button>
-          </Card>
-        ))}
       </div>
-      {connection.data?.connected&&<Card title="GPT-5.6" sub="Gilt für Planung, Design, Code und visuelle Prüfung über deine Codex-Verbindung."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">XHigh</option><option value="max">Max</option></select></label></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
-      <Card title="Routing-Matrix" sub="Welches Modell übernimmt welche Aufgabe.">
-        {["Planung", "Design", "Code", "Visuelle Prüfung", "Bildgenerierung"].map((x) => (
-          <div className="routing-row" key={x}>
-            <strong>{x}</strong>
-            <select>
-              <option>Werft Intern</option>
-              {connection.data?.connected&&<option>{model.replace("gpt-5.6-","GPT-5.6 ")} · {effort}</option>}
-              <option>Lokal · Ollama</option>
-            </select>
-          </div>
-        ))}
-      </Card>
+      {connection.data?.connected&&<Card title="GPT-5.6" sub="Standard für OpenAI-KI-Läufe; im Gespräch pro Lauf überschreibbar."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">XHigh</option><option value="max">Max</option></select></label></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
       {open && (
         <Modal title="OpenAI mit Codex verbinden" onClose={() => {setOpen(false);setDevice(undefined)}}>
           <div className="modal-body oauth-dialog">
