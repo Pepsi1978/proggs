@@ -109,7 +109,8 @@ const bridgeScript = `<script ${bridgeMarker}>
       ".werft-screens { width: 100% !important; min-width: 0 !important; max-width: none !important; }",
       // Der Bildschirm fuellt die Flaeche und darf laenger werden als sie — dann wird gescrollt,
       // genau wie auf dem Geraet. Abgeschnitten wird nichts.
-      ".werft-screen { width: 100% !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; min-height: " + hoehe + "px !important; max-height: none !important; overflow-y: auto !important; overflow-x: hidden !important; }",
+      ".werft-screen { width: 100% !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; min-height: " + hoehe + "px !important; max-height: none !important; overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none !important; }",
+      ".werft-screen::-webkit-scrollbar { display: none; }",
       releaseFixedSizes(breite, hoehe)
     ].filter(Boolean).join("\\n");
     measure();

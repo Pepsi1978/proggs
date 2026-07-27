@@ -42,6 +42,12 @@ describe("preview canvas bridge", () => {
     expect(result).toContain("data-werft-highlight");
   });
 
+  it("versteckt den Scrollbalken, ohne das Scrollen des Bildschirms abzuschalten", () => {
+    const result = injectPreviewCanvasBridge("<!doctype html><body><section class=\"werft-screen\"></section></body>");
+    expect(result).toContain("overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none !important;");
+    expect(result).toContain(".werft-screen::-webkit-scrollbar { display: none; }");
+  });
+
   it("liefert syntaktisch gültiges JavaScript aus", () => {
     // Ein Tippfehler im eingebetteten Skript würde JEDE Vorschau lahmlegen und wäre in einem
     // reinen Textvergleich unsichtbar. `new Function` parst den Code, ohne ihn auszuführen.
