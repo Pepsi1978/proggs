@@ -1,6 +1,6 @@
 :root {
-  --werft-version: "Werft v0.20.1";
-  --werft-build-time: "27.07.2026 12:38 Uhr";
+  --werft-version: "Werft v0.20.2";
+  --werft-build-time: "27.07.2026 12:45 Uhr";
 }
 
 /* Die Statusleiste unter dem Design ist entfallen; sichtbar bleibt der Stand im Projektkopf. */

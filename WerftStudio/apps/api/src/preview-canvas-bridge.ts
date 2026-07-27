@@ -319,14 +319,12 @@ const bridgeScript = `<script ${bridgeMarker}>
       }
       // Die meisten Aufbauten sind gemischt: ein Teil der Farben steht in Variablen, der groessere
       // Teil fest in den Regeln. Waeren nur die Variablen regelbar, bliebe genau das unerreichbar,
-      // was man sieht (gemeldet an PerfectMoment: alle Flaechen dunkel, alle Regler hell). Deshalb
-      // kommen die uebrigen gezeichneten Farben dazu — ohne die, die schon eine Variable hat.
-      const abgedeckt = Object.keys(found).map((name) => normalizeColour(found[name]));
+      // was man sieht (gemeldet an PerfectMoment: alle Flaechen dunkel, alle Regler hell). Die fest
+      // geschriebenen Farben kommen deshalb dazu — auch dann, wenn zufaellig eine Variable denselben
+      // Wert traegt: gleiche Farbe heisst NICHT, dass diese Variable die Flaeche malt. Wer hier nach
+      // Farbgleichheit aussortiert, laesst genau den Regler uebrig, der nichts bewirkt.
       const measured = documentColours();
-      for (const name of Object.keys(measured)) {
-        if (abgedeckt.indexOf(normalizeColour(measured[name])) >= 0) delete measuredColours[name];
-        else found[name] = measured[name];
-      }
+      for (const name of Object.keys(measured)) found[name] = measured[name];
     } catch (error) { /* ohne lesbare Stylesheets bleibt die Vorschau bedienbar */ }
     finally { if (tuneStyle) tuneStyle.disabled = wasDisabled; }
     return found;
@@ -409,11 +407,16 @@ const bridgeScript = `<script ${bridgeMarker}>
     }
     return "";
   };
+  // Gesucht wird der Regler, der diese Stelle WIRKLICH aendert. Nennt die Regel keine Variable, ist
+  // die Farbe fest geschrieben — dann fuehrt nur die gemessene Farbe zum Ziel, nicht eine Variable,
+  // die zufaellig denselben Wert hat. Deshalb haben die gemessenen Vorrang.
   const tokenForColour = (value) => {
     const wanted = normalizeColour(value);
     if (!wanted) return "";
     const tokens = designTokens();
-    for (const name of Object.keys(tokens)) if (normalizeColour(tokens[name]) === wanted) return name;
+    const names = Object.keys(tokens);
+    for (const name of names) if (name.indexOf(measuredPrefix) === 0 && normalizeColour(tokens[name]) === wanted) return name;
+    for (const name of names) if (normalizeColour(tokens[name]) === wanted) return name;
     return "";
   };
   // Eine durchsichtige Flaeche zeigt die Farbe DAHINTER — gemeldet wird die, die man wirklich sieht,
