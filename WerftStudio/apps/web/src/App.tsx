@@ -990,7 +990,7 @@ function Studio() {
     composerDrag.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  const [panelTab, setPanelTab] = useState<"board" | "chat" | "comments" | "history">("board");
+  const [panelTab, setPanelTab] = useState<"board" | "chat" | "comments">("board");
   const commentStorageKey = `werft-comments-${projectId}`;
   const [comments, setComments] = useState<DesignComment[]>(() => {
     try { return JSON.parse(localStorage.getItem(`werft-comments-${projectId}`) ?? "[]") as DesignComment[]; }
@@ -1044,7 +1044,6 @@ function Studio() {
     catch { return []; }
   });
   useEffect(() => { try { localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-200))); } catch { /* Speicher voll: Verlauf bleibt dann nur in der Sitzung */ } }, [messages, chatStorageKey]);
-  const versions = useQuery({ queryKey: ["versions", projectId], queryFn: () => api<Array<{ id: string; number: number; reason: string; createdAt: string }>>(`/projects/${projectId}/versions`), enabled: activeTab === "history" });
   // Deterministisch aus den Projektquellen gemessene Erscheinungen — ohne KI-Lauf. Sie sind der
   // Rettungsanker für Designs, die vor der Theme-Unterstützung aufgebaut wurden.
   const measuredThemes = useQuery({
@@ -1239,10 +1238,9 @@ function Studio() {
         {leftOpen && (
           <aside className="left-panel">
             <div className="panel-tabs">
-              {boardAvailable && <button className={activeTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Design Board</button>}
+              {boardAvailable && <button className={activeTab === "board" ? "active" : ""} onClick={() => setPanelTab("board")}>Screens</button>}
               <button className={activeTab === "chat" ? "active" : ""} onClick={() => setPanelTab("chat")}>Gespräch</button>
               {boardAvailable && <button className={activeTab === "comments" ? "active" : ""} onClick={() => setPanelTab("comments")}>Kommentare{comments.length ? ` (${comments.length})` : ""}</button>}
-              <button className={activeTab === "history" ? "active" : ""} onClick={() => setPanelTab("history")}>Verlauf</button>
             </div>
             {activeTab === "comments" && (
               <div className="comment-list">
@@ -1310,17 +1308,6 @@ function Studio() {
                     ))}
                   </>
                 )}
-              </div>
-            )}
-            {activeTab === "history" && (
-              <div className="messages">
-                {versions.isLoading ? <div className="empty">Verlauf wird geladen …</div> : (versions.data ?? []).length === 0 ? <div className="empty">Noch keine gespeicherten Versionen.</div> : (versions.data ?? []).map((version) => (
-                  <div className="assistant-message" key={version.id}>
-                    v{version.number} · {version.reason}
-                    {"\n"}{new Date(version.createdAt).toLocaleString("de-DE")}
-                  </div>
-                ))}
-                <div className="empty">Das Gespräch bleibt unter „Gespräch“ dauerhaft gespeichert — du kannst dort jederzeit weitermachen.</div>
               </div>
             )}
             {activeTab === "chat" && <div className="messages">
