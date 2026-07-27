@@ -14,7 +14,7 @@ Version: v0.8.0 - 26.07.2026 21:23 Uhr
 | Preview/Export | Worker-Apps | Sandbox- und Exporttests |
 | Projektimport | `apps/web`, `apps/api`, `project_imports`, `jobs`, MinIO | Streaming-Ordnerimport, vollständige UI-Quellchunkung, Framework-/Pfadguard-Tests und echter Fortschrittsstatus |
 | OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
-| GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, Effort-, Priority- und Live-Verbindungstest |
+| GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, vollständige Effort- und Live-Verbindungstests |
 | Leinwand-Navigation | `apps/web`, `apps/api/preview-canvas-bridge.ts` | Zoom-Anker-, Zoomgrenzen- und Bridge-Injektionstests |
 | Leinwand-Vollbild | `apps/web/src/App.tsx` | Browser-Vollbild mit fokussiertem Canvas und getrennten Panel-Schaltern |
 | Import-Fidelity | `apps/api/src/import-reconstruction.ts`, `preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Plattform-/Quellviewport, unverändertes iframe-DOM, Assetbasis-, Dateivollständigkeits- und Fidelity-Prüfrunde |
@@ -29,7 +29,7 @@ Version: v0.8.0 - 26.07.2026 21:23 Uhr
 | Kommentaransicht | `apps/web/src/App.tsx` | Jeder abgeschickte Kommentar mit Element, Bildschirm, Anweisung und Ergebnis; „angewendet“ nur bei wirklich geschriebenen Dateien |
 | Live-Farbregler | `apps/api/src/preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Die aus den Projektquellen gemessenen Farbtoken werden gemeldet und direkt in der Vorschau überschrieben — ohne KI-Lauf, auf allen Bildschirmen |
 | Direkte Textänderung | `apps/api/src/server.ts`, `preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Text im Design an Ort und Stelle ändern, deterministisch ohne KI; nur bei genau einem Vorkommen, sonst gemeldete Mehrdeutigkeit. Live geprüft: eindeutiger Wortlaut angewendet und in der ausgelieferten Vorschau sichtbar (revision 1), fehlender Wortlaut und ein dreifach vorkommender abgelehnt |
-| Modellauswahl im Ablauf | `apps/web/src/App.tsx` | Auswahl am Eingabefeld statt nur in den Einstellungen; Effort und Fast bleiben unberührt |
+| Modellauswahl im Ablauf | `apps/web/src/App.tsx` | Modell und Effort werden am Eingabefeld gewählt und atomar an den nächsten Lauf übergeben |
 
 Offene oder fehlgeschlagene Gates dürfen nicht als bestanden markiert werden.
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DesignDocument } from "@werft/contracts";
-import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Trash2, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Send, Settings, Share2, Sparkles, Sun, Trash2, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
@@ -861,15 +861,15 @@ function ProviderSettings() {
   const [open, setOpen] = useState(false);
   const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
   const client = useQueryClient();
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
-  const [model,setModel]=useState("gpt-5.6-sol"),[effort,setEffort]=useState("high"),[fast,setFast]=useState(false);
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string; settings?: { model?: string; effort?: string } }>("/providers/openai") });
+  const [model,setModel]=useState("gpt-5.6-sol"),[effort,setEffort]=useState("medium");
   const start = useMutation({ mutationFn: () => api<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>("/providers/openai/auth/start", { method: "POST", body: "{}" }), onSuccess: (data) => { setDevice(data); window.open(data.verificationUri, "_blank", "noopener,noreferrer"); } });
   const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setOpen(false); await client.invalidateQueries({ queryKey: ["provider", "openai"] }); } else if (data.status === "expired") setDevice(undefined); else if (data.interval) setDevice((current) => (current ? { ...current, interval: Math.max(3, Math.min(30, data.interval!)) } : current)); } });
   const disconnect = useMutation({ mutationFn: () => api<{ connected: boolean }>("/providers/openai", { method: "DELETE" }), onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] }) });
-  const saveSettings=useMutation({mutationFn:()=>api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort,fast})}),onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
-  const testProvider=useMutation({mutationFn:async()=>{await api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort,fast})});return api<{ok:boolean;elapsedMs:number}>("/providers/openai/test",{method:"POST",body:"{}"})}});
+  const saveSettings=useMutation({mutationFn:()=>api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort})}),onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
+  const testProvider=useMutation({mutationFn:async()=>{await api("/providers/openai/settings",{method:"PATCH",body:JSON.stringify({model,effort})});return api<{ok:boolean;elapsedMs:number}>("/providers/openai/test",{method:"POST",body:"{}"})},onSuccess:()=>client.invalidateQueries({queryKey:["provider","openai"]})});
   useEffect(() => { if (!device || poll.isPending) return; const timer=setTimeout(()=>poll.mutate(device.authId),device.interval*1000); return()=>clearTimeout(timer); },[device,poll.isPending,poll.mutate]);
-  useEffect(()=>{const settings=connection.data?.settings;if(settings?.model)setModel(settings.model);if(settings?.effort)setEffort(settings.effort);if(typeof settings?.fast==="boolean")setFast(settings.fast)},[connection.data?.settings]);
+  useEffect(()=>{const settings=connection.data?.settings;if(settings?.model)setModel(settings.model);if(settings?.effort)setEffort(settings.effort)},[connection.data?.settings]);
   return (
     <>
       <div className="section-head">
@@ -902,14 +902,14 @@ function ProviderSettings() {
           </Card>
         ))}
       </div>
-      {connection.data?.connected&&<Card title="GPT-5.6 Modell & Thinking" sub="Gilt für Planung, Design, Code und visuelle Prüfung über deine Codex-Verbindung."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Thinking / Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">Extra High</option></select></label></div><div className="setting-row"><span><strong>Fast / Priority</strong><small>Verwendet dasselbe Modell mit service_tier=priority.</small></span><button className={`switch ${fast?"on":""}`} onClick={()=>setFast(!fast)}><i/></button></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
+      {connection.data?.connected&&<Card title="GPT-5.6" sub="Gilt für Planung, Design, Code und visuelle Prüfung über deine Codex-Verbindung."><div className="form-grid model-settings"><label>Modell<select value={model} onChange={(event)=>setModel(event.target.value)}><option value="gpt-5.6-sol">GPT-5.6 Sol</option><option value="gpt-5.6-terra">GPT-5.6 Terra</option><option value="gpt-5.6-luna">GPT-5.6 Luna</option></select></label><label>Effort<select value={effort} onChange={(event)=>setEffort(event.target.value)}><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">XHigh</option><option value="max">Max</option></select></label></div><div className="modal-actions">{saveSettings.isSuccess&&<Status kind="success">Gespeichert</Status>}{testProvider.isSuccess&&<Status kind="success">Live getestet · {testProvider.data.elapsedMs} ms</Status>}{(saveSettings.error||testProvider.error)&&<p className="field-error">{(saveSettings.error||testProvider.error) instanceof ApiError?(saveSettings.error||testProvider.error)?.message:"Modellkonfiguration fehlgeschlagen."}</p>}<span/><Button disabled={testProvider.isPending} onClick={()=>testProvider.mutate()}>{testProvider.isPending?"Test läuft …":"Verbindung testen"}</Button><Button variant="primary" disabled={saveSettings.isPending} onClick={()=>saveSettings.mutate()}>Modellwahl speichern</Button></div></Card>}
       <Card title="Routing-Matrix" sub="Welches Modell übernimmt welche Aufgabe.">
         {["Planung", "Design", "Code", "Visuelle Prüfung", "Bildgenerierung"].map((x) => (
           <div className="routing-row" key={x}>
             <strong>{x}</strong>
             <select>
               <option>Werft Intern</option>
-              {connection.data?.connected&&<option>{model.replace("gpt-5.6-","GPT-5.6 ")}{fast?" Fast":""} · {effort}</option>}
+              {connection.data?.connected&&<option>{model.replace("gpt-5.6-","GPT-5.6 ")} · {effort}</option>}
               <option>Lokal · Ollama</option>
             </select>
           </div>
@@ -1115,7 +1115,13 @@ function Studio() {
   const themeCss = measuredThemes.data && ((measuredThemes.data.themes.length > boardThemes.length) || !themesEffective)
     ? [measuredThemes.data.css, measuredThemes.data.overrideCss].filter(Boolean).join("\n")
     : undefined;
-  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string; fast?: boolean } }>("/providers/openai") });
+  const connection = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; settings?: { model?: string; effort?: string } }>("/providers/openai") });
+  const [runModel, setRunModel] = useState("gpt-5.6-sol");
+  const [runEffort, setRunEffort] = useState("medium");
+  useEffect(() => {
+    if (connection.data?.settings?.model) setRunModel(connection.data.settings.model);
+    if (connection.data?.settings?.effort) setRunEffort(connection.data.settings.effort);
+  }, [connection.data?.settings]);
   // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
   // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.
   const textEdit = useMutation({
@@ -1127,19 +1133,11 @@ function Studio() {
     },
     onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Text nicht geändert: ${error.message}` : "Die Textänderung ist fehlgeschlagen." }])
   });
-  // Modell UND Denktiefe gehören an die Stelle, an der sie benutzt werden. Beide gehen über denselben
-  // Weg: der ungeänderte Teil wird mitgeschickt, sonst setzt eine Wahl die andere zurück.
-  const pickSettings = useMutation({
-    mutationFn: (change: { model?: string; effort?: string }) => api("/providers/openai/settings", { method: "PATCH", body: JSON.stringify({
-      model: change.model ?? connection.data?.settings?.model ?? "gpt-5.6-sol",
-      effort: change.effort ?? connection.data?.settings?.effort ?? "high",
-      fast: connection.data?.settings?.fast ?? false
-    }) }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["provider", "openai"] })
-  });
   const chatRun = useMutation({
     mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
       message,
+      model: runModel,
+      effort: runEffort,
       ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
       ...(target ? { target: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName } } : {})
     }) }),
@@ -1400,40 +1398,40 @@ function Studio() {
               />
               <div className="composer-input">
                 <textarea style={{ height: composerHeight }} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
-                <Button variant="primary" className="composer-send" disabled={chatRun.isPending || !chat.trim()}>{chatRun.isPending ? "läuft …" : "Senden"}</Button>
               </div>
               <footer>
                 {connection.data?.connected ? (
-                  // Modell und Denktiefe stehen dort, wo sie benutzt werden — nicht nur in den
+                  // Modell und Effort stehen dort, wo sie benutzt werden — nicht nur in den
                   // Einstellungen. Jede Wahl schickt die andere unverändert mit.
                   <>
                     <select
                       aria-label="Modell für den nächsten Lauf"
-                      value={connection.data.settings?.model ?? "gpt-5.6-sol"}
-                      disabled={pickSettings.isPending}
-                      onChange={(event) => pickSettings.mutate({ model: event.target.value })}
+                      value={runModel}
+                      disabled={chatRun.isPending}
+                      onChange={(event) => setRunModel(event.target.value)}
                     >
                       <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
                       <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
                       <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
                     </select>
                     <select
-                      aria-label="Denktiefe für den nächsten Lauf"
-                      value={connection.data.settings?.effort ?? "high"}
-                      disabled={pickSettings.isPending}
-                      onChange={(event) => pickSettings.mutate({ effort: event.target.value })}
+                      aria-label="Effort für den nächsten Lauf"
+                      value={runEffort}
+                      disabled={chatRun.isPending}
+                      onChange={(event) => setRunEffort(event.target.value)}
                     >
-                      <option value="none">Ohne Nachdenken</option>
-                      <option value="low">Denktiefe niedrig</option>
-                      <option value="medium">Denktiefe mittel</option>
-                      <option value="high">Denktiefe hoch</option>
-                      <option value="xhigh">Denktiefe sehr hoch</option>
+                      <option value="none">None</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="xhigh">XHigh</option>
+                      <option value="max">Max</option>
                     </select>
                   </>
                 ) : (
                   <Link to="/app/settings/models">Kein Provider verbunden — jetzt verbinden</Link>
                 )}
-                {connection.data?.connected && connection.data.settings?.fast && <em className="composer-fast">Fast</em>}
+                <Button variant="primary" className="composer-send" aria-label="Senden" title="Senden" disabled={chatRun.isPending || !chat.trim()}><Send /></Button>
               </footer>
             </form>}
           </aside>

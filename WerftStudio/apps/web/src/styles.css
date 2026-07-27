@@ -84,7 +84,6 @@
 
 /* Modellauswahl direkt am Eingabefeld statt nur in den Einstellungen */
 .composer footer select{border:1px solid var(--color-line);border-radius:8px;background:var(--color-field);color:var(--color-text);font-size:11px;padding:3px 6px;max-width:150px}
-.composer footer .composer-fast{font-style:normal;font-size:10px;font-weight:600;padding:2px 6px;border-radius:999px;background:var(--color-accent-soft);color:var(--color-accent)}
 .composer footer a{font-size:11px;color:var(--color-accent)}
 
 /* Kommentaransicht: welche Anweisung auf welchem Element wirkte und was daraus wurde */
@@ -114,7 +113,7 @@
 .composer-grip:hover::before{background:var(--color-accent)}
 .composer-input{display:flex;align-items:flex-end;gap:8px}
 .composer-input textarea{flex:1;min-height:56px;resize:none}
-.composer-send{flex:none}
+.composer-send{flex:none;margin-left:auto;width:36px;height:36px;padding:0;border-radius:10px}.composer-send svg{width:17px;height:17px}
 .composer footer{gap:6px;margin-top:8px;flex-wrap:wrap}
 /* Sichtbares Zeichen, dass im Hintergrund gearbeitet wird */
 .working-message{display:flex;flex-direction:column;gap:4px}

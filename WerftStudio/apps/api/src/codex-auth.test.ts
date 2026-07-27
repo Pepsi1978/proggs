@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { codexModelFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
+import { codexEfforts, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 
 describe("Codex credential protection", () => {
   it("encrypts and decrypts credentials without exposing token text", () => {
@@ -19,8 +19,9 @@ describe("Codex credential protection", () => {
     expect(tokenIdentity(jwt({ "https://api.openai.com/auth": { chatgpt_account_id: "acct_1" } }), jwt({ email: "frank@example.de" }))).toEqual({ accountId: "acct_1", email: "frank@example.de" });
   });
 
-  it("maps Fast to the priority service tier without changing the model", () => {
-    expect(codexModelFields("gpt-5.6-terra", true)).toEqual({ model: "gpt-5.6-terra", service_tier: "priority" });
-    expect(codexModelFields("gpt-5.6-terra", false)).toEqual({ model: "gpt-5.6-terra" });
+  it("sends every GPT-5.6 effort exactly as selected without a priority tier", () => {
+    expect(codexEfforts).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
+    expect(codexRequestFields("gpt-5.6-terra", "none")).toEqual({ model: "gpt-5.6-terra", reasoning: { effort: "none", summary: "auto" }, include: ["reasoning.encrypted_content"] });
+    expect(codexRequestFields("gpt-5.6-luna", "max")).not.toHaveProperty("service_tier");
   });
 });

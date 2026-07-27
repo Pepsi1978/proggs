@@ -17,7 +17,7 @@ import { Client as MinioClient } from "minio";
 import { designFileName, designVariantsOf, generatedDesignPathPattern, sameVariantPattern } from "./design-variants.js";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
-import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
+import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
@@ -258,7 +258,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.10-20260727.2142" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.11-20260727.2151" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -297,20 +297,19 @@ app.get("/api/v1/me/preferences", async (request) => { const actor = actorOf(req
 app.patch("/api/v1/me/preferences", async (request) => { const actor = actorOf(request); const body = z.object({ baseRevision: z.number().int().nonnegative(), values: z.record(z.string(), z.unknown()) }).parse(request.body); const updated = await db.insert(userPreferences).values({ userId: actor.userId, organizationId: actor.organizationId, revision: 1, values: body.values }).onConflictDoUpdate({ target: [userPreferences.userId, userPreferences.organizationId], set: { revision: sql`${userPreferences.revision} + 1`, values: body.values, updatedAt: new Date() }, setWhere: eq(userPreferences.revision, body.baseRevision) }).returning(); if (!updated[0]) fail("REVISION_CONFLICT", 409, "Einstellungen wurden in einer anderen Sitzung geändert."); return updated[0]; });
 
 app.get("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, email: providerConnections.email, accountId: providerConnections.accountId, expiresAt: providerConnections.expiresAt, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).limit(1))[0]; return row ? { connected: row.status === "connected", ...row } : { connected: false, status: "disconnected", settings: {} }; });
-app.patch("/api/v1/providers/openai/settings", async (request) => { const actor = requireActorPermission(request, "provider.manage"); const settings = z.object({ model: z.enum(codexModels), effort: z.enum(codexEfforts), fast: z.boolean() }).strict().parse(request.body); const updated = await db.update(providerConnections).set({ settings, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ id: providerConnections.id }); if (!updated[0]) fail("OPENAI_NOT_CONNECTED", 409, "Bitte zuerst OpenAI verbinden."); return { settings }; });
+app.patch("/api/v1/providers/openai/settings", async (request) => { const actor = requireActorPermission(request, "provider.manage"); const settings = z.object({ model: z.enum(codexModels), effort: z.enum(codexEfforts) }).strict().parse(request.body); const updated = await db.update(providerConnections).set({ settings, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ id: providerConnections.id }); if (!updated[0]) fail("OPENAI_NOT_CONNECTED", 409, "Bitte zuerst OpenAI verbinden."); return { settings }; });
 app.post("/api/v1/providers/openai/test", { config: { rateLimit: { max: 5, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "provider.use"), connection = await validCodexConnection(actor.organizationId);
-  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("high"), fast: z.boolean().default(false) }).parse(connection.settings);
+  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("medium") }).parse(connection.settings);
   const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
   if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
-  const body: Record<string, unknown> = { ...codexModelFields(settings.model, settings.fast), instructions: "Antworte ausschließlich mit OK.", input: [{ role: "user", content: "Verbindungstest" }], store: false, stream: true };
-  if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
+  const body: Record<string, unknown> = { ...codexRequestFields(settings.model, settings.effort), instructions: "Antworte ausschließlich mit OK.", input: [{ role: "user", content: "Verbindungstest" }], store: false, stream: true };
   const started = Date.now();
   const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal: AbortSignal.timeout(120_000), headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
   const responseText = await response.text();
   if (!response.ok) fail("OPENAI_TEST_FAILED", 502, `OpenAI hat den Verbindungstest abgelehnt (HTTP ${response.status}).`);
   if (!responseText.includes("response.completed")) fail("OPENAI_TEST_INCOMPLETE", 502, "OpenAI hat den Verbindungstest nicht vollständig abgeschlossen.", true);
-  return { ok: true, model: settings.model, effort: settings.effort, fast: settings.fast, elapsedMs: Date.now() - started };
+  return { ok: true, model: settings.model, effort: settings.effort, elapsedMs: Date.now() - started };
 });
 app.post("/api/v1/providers/openai/auth/start", { config: { rateLimit: { max: 5, timeWindow: "10 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "provider.manage");
@@ -634,20 +633,20 @@ function extractJsonObject(text: string): string {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
   return start >= 0 && end > start ? text.slice(start, end + 1) : text;
 }
-type CodexRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void };
+type CodexRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void; model?: typeof codexModels[number]; effort?: typeof codexEfforts[number] };
 type CodexRunResult = { text: string; model: string; attempts: number; durationMs: number; inputChars: number; outputChars: number };
 async function codexRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: CodexRunOptions = {}): Promise<CodexRunResult> {
   const runStartedAt = Date.now();
   const connection = await validCodexConnection(organizationId);
-  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("high"), fast: z.boolean().default(false) }).parse(connection.settings);
+  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("medium") }).parse(connection.settings);
+  const model = options.model ?? settings.model, effort = options.effort ?? settings.effort;
   const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
   if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
-  const body: Record<string, unknown> = { ...codexModelFields(settings.model, settings.fast), instructions, input: [{ role: "user", content: input }], store: false, stream: true };
-  if (settings.effort !== "none") { body.reasoning = { effort: settings.effort, summary: "auto" }; body.include = ["reasoning.encrypted_content"]; }
+  const body: Record<string, unknown> = { ...codexRequestFields(model, effort), instructions, input: [{ role: "user", content: input }], store: false, stream: true };
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     options.onAttempt?.(attempt);
     const attemptStartedAt = Date.now();
-    log.info({ event: "codex.request.started", jobId: options.jobId, operation: options.operation, model: settings.model, effort: settings.effort, fast: settings.fast, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
+    log.info({ event: "codex.request.started", jobId: options.jobId, operation: options.operation, model, effort, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
     try {
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
       const response = await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${connection.credentials.accessToken}`, "chatgpt-account-id": accountId, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -656,8 +655,8 @@ async function codexRun(organizationId: string, instructions: string, input: str
       const outputText = parseCodexEventStream(raw);
       if (!outputText.trim()) fail("CHAT_EMPTY", 502, "OpenAI hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.", true);
       const durationMs = Date.now() - runStartedAt;
-      log.info({ event: "codex.request.completed", jobId: options.jobId, operation: options.operation, model: settings.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
-      return { text: outputText, model: settings.model, attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
+      log.info({ event: "codex.request.completed", jobId: options.jobId, operation: options.operation, model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
+      return { text: outputText, model, attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
     } catch (error) {
       if (!isRetryableCodexError(error) || attempt === 3) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
@@ -675,9 +674,11 @@ async function codexRun(organizationId: string, instructions: string, input: str
 app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message, screen, target } = z.object({
+  const { message, screen, target, model, effort } = z.object({
     message: z.string().min(1).max(8000),
     screen: z.string().max(200).optional(),
+    model: z.enum(codexModels).optional(),
+    effort: z.enum(codexEfforts).optional(),
     // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
     // eindeutig, ohne dass die KI raten oder nachfragen muss.
     target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
@@ -697,8 +698,8 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
     ? `\n\n=== MARKIERTER BEREICH (genau hier anwenden) ===\nBildschirm: ${target.screenName ?? screen ?? "unbekannt"}\nElement: ${target.label ?? target.selector}\nCSS-Pfad: ${target.selector}\nWörtlicher Ausschnitt aus der Datei:\n${target.html}`
     : "";
   const inputText = `Änderungswunsch:\n${message}${markedRegion}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
-  const { text: outputText, model } = await codexRun(actor.organizationId, chatInstructions, inputText, request.log);
-  const settings = { model };
+  const { text: outputText, model: usedModel } = await codexRun(actor.organizationId, chatInstructions, inputText, request.log, { ...(model ? { model } : {}), ...(effort ? { effort } : {}) });
+  const settings = { model: usedModel };
   const cleaned = extractJsonObject(outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
   let parsed: { reply?: string; changes?: Array<{ path?: string; edits?: Array<{ find?: string; replace?: string }> }>; files?: Array<{ path?: string; content?: string }> };
   try { parsed = JSON.parse(cleaned) as typeof parsed; }

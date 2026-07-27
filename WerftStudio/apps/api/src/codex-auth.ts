@@ -11,10 +11,10 @@ export const codexAuth = {
 } as const;
 
 export const codexModels = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const;
-export const codexEfforts = ["none", "low", "medium", "high", "xhigh"] as const;
+export const codexEfforts = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
-export function codexModelFields(model: typeof codexModels[number], fast: boolean): { model: string; service_tier?: "priority" } {
-  return fast ? { model, service_tier: "priority" } : { model };
+export function codexRequestFields(model: typeof codexModels[number], effort: typeof codexEfforts[number]) {
+  return { model, reasoning: { effort, summary: "auto" as const }, include: ["reasoning.encrypted_content"] };
 }
 
 export type CodexCredentials = { accessToken: string; refreshToken?: string; idToken?: string };
