@@ -149,6 +149,17 @@ describe("preview canvas bridge", () => {
     // Fenster ist immer so breit wie der Rahmen, den das Studio gerade aufspannt — nach einem
     // aufgeklappten Geraet bliebe die Buehne fuer immer in dessen Breite stehen.
     expect(code).toContain("Math.max(rect.width, screen.scrollWidth || 0)");
+    // Ein gewaehltes Format muss das Design UMBRECHEN wie ein gedrehtes Geraet: jede Angabe, die auf
+    // die urspruengliche Bildschirmgroesse festgenagelt ist, wird geloest, damit das Layout in die
+    // neue Flaeche fliesst statt in der alten Breite stehenzubleiben.
+    expect(code).toContain("releaseFixedSizes");
+    expect(code).toContain("const designSize");
+    expect(code).toContain('width: 100% !important');
+    // Die Hoehe wird auf die NEUE Flaeche gesetzt, nie auf auto: Inhalte, die sich an der
+    // Bildschirmhoehe ausrichten, verloeren sonst ihren Bezug und der Bereich klappt auf null
+    // zusammen — die Buehne bliebe leer (erlebt am 27.07.2026).
+    expect(code).not.toContain('declarations.push("height: auto !important;")');
+    expect(code).toContain('declarations.push("height: " + hoehe + "px !important;")');
     // Die Fensterbreite darf NUR noch als Rueckfall zaehlen, wenn es gar keinen Bildschirm gibt.
     const screenBranch = code!.indexOf("Math.max(rect.width, screen.scrollWidth");
     const windowFallback = code!.indexOf("document.documentElement.scrollWidth");

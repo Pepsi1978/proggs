@@ -47,6 +47,54 @@ const bridgeScript = `<script ${bridgeMarker}>
   // soll sich an das Geraet anpassen, nicht das Geraet an das Design.
   let forcedViewport = null;
   let viewportStyle = null;
+  // Die Groesse, fuer die dieses Design gebaut wurde. Jede Angabe, die genau darauf festgenagelt ist,
+  // muss beim Formatwechsel geloest werden — sonst bleibt das Layout in der alten Breite stehen und
+  // die neue Flaeche daneben leer.
+  const designSize = (() => {
+    const meta = document.querySelector('meta[name="werft-preview"]');
+    if (meta) {
+      try {
+        const parsed = JSON.parse((meta.getAttribute("content") || "{}").replace(/&quot;/g, '"'));
+        if (parsed && Number(parsed.width) > 0) return { width: Number(parsed.width), height: Number(parsed.height) || 0 };
+      } catch (error) { /* ohne Angabe wird unten gemessen */ }
+    }
+    const screen = document.querySelector(".werft-screen");
+    const rect = screen ? screen.getBoundingClientRect() : null;
+    return rect && rect.width ? { width: Math.round(rect.width), height: Math.round(rect.height) } : { width: 0, height: 0 };
+  })();
+
+  // Loest JEDE Regel, die auf die urspruengliche Designbreite oder -hoehe festgelegt ist. Erst
+  // dadurch fliesst das Layout in die neue Flaeche, statt in der alten Groesse stehen zu bleiben —
+  // genau das passiert auch, wenn man ein Handy dreht: die Flaeche aendert sich, der Inhalt ordnet
+  // sich neu, und nichts bleibt daneben leer.
+  const releaseFixedSizes = (breite, hoehe) => {
+    if (!designSize.width) return "";
+    const nahe = (value, ziel) => Boolean(value) && value.indexOf("px") >= 0 && ziel > 0 && Math.abs(parseFloat(value) - ziel) <= 2;
+    const parts = [];
+    for (const item of conditionalRules()) {
+      const rule = item.rule;
+      if (!rule.style || !rule.selectorText) continue;
+      const declarations = [];
+      if (nahe(rule.style.getPropertyValue("width"), designSize.width)) declarations.push("width: 100% !important;");
+      if (nahe(rule.style.getPropertyValue("min-width"), designSize.width)) declarations.push("min-width: 0 !important;");
+      if (nahe(rule.style.getPropertyValue("max-width"), designSize.width)) declarations.push("max-width: none !important;");
+      // NICHT auf auto: Inhalte, die sich an der Bildschirmhoehe ausrichten (absolut positioniert),
+      // verlieren damit ihren Bezug und der Bereich klappt auf null zusammen — die Buehne bliebe leer.
+      if (nahe(rule.style.getPropertyValue("height"), designSize.height)) declarations.push("height: " + hoehe + "px !important;");
+      if (nahe(rule.style.getPropertyValue("min-height"), designSize.height)) declarations.push("min-height: " + hoehe + "px !important;");
+      if (!declarations.length) continue;
+      const block = rule.selectorText + " { " + declarations.join(" ") + " }";
+      parts.push(item.condition ? item.condition + " { " + block + " }" : block);
+    }
+    // Dasselbe fuer Angaben, die direkt am Element stehen — der Aufbau schreibt die Bildschirmgroesse
+    // meist genau dort hin (style="width: 412px; min-height: 915px").
+    const inlineBreite = designSize.width + "px";
+    const inlineHoehe = designSize.height + "px";
+    parts.push('[style*="width:' + inlineBreite + '"], [style*="width: ' + inlineBreite + '"] { width: 100% !important; min-width: 0 !important; max-width: none !important; }');
+    if (designSize.height) parts.push('[style*="min-height:' + inlineHoehe + '"], [style*="min-height: ' + inlineHoehe + '"] { min-height: ' + hoehe + 'px !important; }');
+    return parts.join("\\n");
+  };
+
   const applyViewport = (width, height) => {
     forcedViewport = width > 0 && height > 0 ? { width: Math.round(width), height: Math.round(height) } : null;
     if (!viewportStyle) {
@@ -54,10 +102,16 @@ const bridgeScript = `<script ${bridgeMarker}>
       viewportStyle.setAttribute("data-werft-viewport", "");
       (document.head || document.documentElement).appendChild(viewportStyle);
     }
-    viewportStyle.textContent = forcedViewport
-      ? "html, body { width: " + forcedViewport.width + "px !important; height: " + forcedViewport.height + "px !important; min-width: 0 !important; max-width: none !important; margin: 0 !important; overflow: hidden !important; }\\n"
-        + ".werft-screens, .werft-screen { width: " + forcedViewport.width + "px !important; min-width: 0 !important; max-width: none !important; height: " + forcedViewport.height + "px !important; min-height: 0 !important; max-height: none !important; overflow: auto !important; }"
-      : "";
+    if (!forcedViewport) { viewportStyle.textContent = ""; measure(); return; }
+    const breite = forcedViewport.width, hoehe = forcedViewport.height;
+    viewportStyle.textContent = [
+      "html, body { width: " + breite + "px !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; margin: 0 !important; overflow: hidden !important; }",
+      ".werft-screens { width: 100% !important; min-width: 0 !important; max-width: none !important; }",
+      // Der Bildschirm fuellt die Flaeche und darf laenger werden als sie — dann wird gescrollt,
+      // genau wie auf dem Geraet. Abgeschnitten wird nichts.
+      ".werft-screen { width: 100% !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; min-height: " + hoehe + "px !important; max-height: none !important; overflow-y: auto !important; overflow-x: hidden !important; }",
+      releaseFixedSizes(breite, hoehe)
+    ].filter(Boolean).join("\\n");
     measure();
   };
 
@@ -915,16 +969,37 @@ const bridgeScript = `<script ${bridgeMarker}>
   }, true);
   document.addEventListener("focusout", () => { if (editing) finishTextEdit(); }, true);
 
+  // Schon beim Darueberfahren muss zu sehen sein, WELCHER Bereich getroffen wird und WELCHE Farbe
+  // dort gilt — sonst klickt man ins Blaue und wundert sich ueber das Ergebnis.
+  let lastHoverAt = 0;
   document.addEventListener("pointermove", (event) => {
     if (!markMode && !pickMode) return;
     // Im Pipettenmodus wird GENAU der Bereich umrandet, dessen Farbe der Klick melden wird. Sonst
     // zeigte der Rahmen ein Element und die Anzeige die Farbe eines anderen.
     const element = pickMode ? areaAt(event.clientX, event.clientY) : markableUnder(event.target);
-    if (element === markHover) return;
-    clearMarkHover();
-    if (!element) return;
-    markHover = element;
-    element.style.setProperty("outline", pickMode ? "2px solid #3157d5" : "2px solid #d97757", "important");
+    if (element !== markHover) {
+      clearMarkHover();
+      if (element) {
+        markHover = element;
+        element.style.setProperty("outline", pickMode ? "2px solid #3157d5" : "2px solid #d97757", "important");
+      }
+    }
+    if (!pickMode || !element) return;
+    const jetzt = Date.now();
+    if (jetzt - lastHoverAt < 60) return;
+    lastHoverAt = jetzt;
+    const style = getComputedStyle(element);
+    const eigen = style.backgroundColor;
+    const flaeche = isVisibleColour(eigen) ? normalizeColour(eigen) : normalizeColour(paintedBackground(element).value);
+    const rect = element.getBoundingClientRect();
+    post({
+      action: "colour-hover",
+      label: labelFor(element),
+      value: flaeche,
+      hex: hexOf(flaeche),
+      textHex: hexOf(normalizeColour(style.color)),
+      rect: { x: Math.round(rect.left + window.scrollX), y: Math.round(rect.top + window.scrollY), width: Math.round(rect.width), height: Math.round(rect.height) }
+    });
   }, true);
   // Farbe aufnehmen: der Klick meldet die Farben, die an diesem Element WIRKLICH gezeichnet werden,
   // samt der Token, aus denen sie stammen. Ohne diesen Weg bliebe unklar, welcher Regler zu welcher

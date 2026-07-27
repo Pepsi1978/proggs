@@ -1683,6 +1683,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const [commentText, setCommentText] = useState("");
   // Der aufgenommene Bereich: umrandet auf der Buehne, mit Farbwaehlern direkt daneben.
   const [pickedArea, setPickedArea] = useState<ColourPick | null>(null);
+  // Was gerade unter dem Zeiger liegt — noch vor dem Klick sichtbar.
+  const [hoverArea, setHoverArea] = useState<{ label: string; hex: string; textHex: string; rect: { x: number; y: number; width: number; height: number } } | null>(null);
   // Die Erscheinungen des DESIGNS, nicht die des Studios: importierte Apps bringen fast immer
   // mehrere mit — ohne Auswahl bliebe alles ausser der ersten unerreichbar.
   const [designThemes, setDesignThemes] = useState<DesignTheme[]>([]);
@@ -1700,7 +1702,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     if (!markMode) { setMarker(null); setCommentText(""); }
   }, [markMode, screens.length]);
   useEffect(() => { tellFrame({ action: "text", on: textMode }); }, [textMode, screens.length]);
-  useEffect(() => { tellFrame({ action: "pick", on: pickMode }); if (!pickMode) setPickedArea(null); }, [pickMode, screens.length]);
+  useEffect(() => { tellFrame({ action: "pick", on: pickMode }); if (!pickMode) { setPickedArea(null); setHoverArea(null); } }, [pickMode, screens.length]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1800,6 +1802,13 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       if (data.action === "mark-target") {
         const target = data as unknown as MarkTarget;
         if (target.rect && Number.isFinite(target.rect.width)) { setMarker(target); setCommentText(""); }
+        return;
+      }
+      // Schon beim Darueberfahren steht die erkannte Farbe da — man sieht vor dem Klick, was
+      // getroffen wird.
+      if (data.action === "colour-hover") {
+        const hover = data as unknown as { label?: string; hex?: string; textHex?: string; rect?: { x: number; y: number; width: number; height: number } };
+        setHoverArea(hover.rect && Number.isFinite(hover.rect.width) ? { label: hover.label ?? "", hex: hover.hex ?? "", textHex: hover.textHex ?? "", rect: hover.rect } : null);
         return;
       }
       // Die aufgenommene Farbe wird DIREKT an der angeklickten Stelle zum Ändern angeboten — und
@@ -2011,6 +2020,13 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       {/* Die Farbe wird DORT geaendert, wo sie aufgenommen wurde: der erkannte Bereich ist umrandet,
           sein Farbwaehler steht daneben und wirkt sofort. Den Weg ueber die Liste rechts braucht
           dafuer niemand mehr. */}
+      {pickMode && hoverArea && !pickedArea && (
+        <div className="pick-hover" style={{ left: offset.x + hoverArea.rect.x * zoom, top: Math.max(4, offset.y + hoverArea.rect.y * zoom - 30) }}>
+          <i style={{ backgroundImage: `linear-gradient(${hoverArea.hex || "transparent"}, ${hoverArea.hex || "transparent"})` }} />
+          <span>{hoverArea.hex || "ohne eigene Fläche"}</span>
+          <em>{hoverArea.label}</em>
+        </div>
+      )}
       {pickedArea && (
         <div className="pick-panel" style={pickPlacement} onPointerDown={(event) => event.stopPropagation()}>
           <header>
@@ -2230,7 +2246,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             auf Wunsch die Fassung fuer dieses Format. */}
         {imported.previewPath && device && !deviceVariant && !rebuild.pending && !rebuild.error && (
           <div className="stage-progress stage-hintbar">
-            <span>Dieses Design ist für {imported.previewWidth} × {imported.previewHeight} gebaut und füllt {device.label} deshalb nicht aus.</span>
+            <span>Umbruch des für {imported.previewWidth} × {imported.previewHeight} gebauten Designs auf {device.label}. Ein eigens für dieses Format entworfenes Layout entsteht erst beim Aufbau.</span>
             <Button variant="primary" onClick={onBuildForDevice}>Für {device.label} aufbauen</Button>
           </div>
         )}
