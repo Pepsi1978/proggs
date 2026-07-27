@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.4 – 27.07.2026 23:50
+Stand: v1.14.5 – 27.07.2026 23:57
 
 ## Funktionen
 

@@ -845,6 +845,9 @@ const tui: TuiPlugin = async (api) => {
   api.slots.register({
     order: 90,
     slots: {
+      sidebar_footer(_ctx, props) {
+        return <SidebarFooter api={api} sessionID={props.session_id} />
+      },
       sidebar_content(_ctx, props) {
         return (
           <box>
@@ -862,9 +865,6 @@ const tui: TuiPlugin = async (api) => {
     slots: {
       sidebar_title() {
         return <SidebarHeader api={api} />
-      },
-      sidebar_footer(_ctx, props) {
-        return <SidebarFooter api={api} sessionID={props.session_id} />
       },
       sidebar_content(_ctx, props) {
         return <View api={api} sessionID={props.session_id} usageStore={usageStore} quotaStore={quotaStore} />
