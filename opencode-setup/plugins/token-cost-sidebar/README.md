@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.1 - 27.07.2026, 20:59 Uhr
+Stand: v1.14.2 – 27.07.2026 22:45
 
 ## Funktionen
 
@@ -16,7 +16,7 @@ Stand: v1.14.1 - 27.07.2026, 20:59 Uhr
   oder benutzerdefinierte Varianten erscheinen ohne Plugin-Update und bleiben auswählbar.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
 - Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt unter OpenAI-Modellen.
-- Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Eine Leerzeile trennt den Block von der Effort-Auswahl.
+- Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
 - Versionszeile im Format `V.<Version> (<Datum>, <Uhrzeit>)` als erste Sidebar-Zeile direkt über Session.

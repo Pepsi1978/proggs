@@ -310,7 +310,7 @@ function EffortSelector(props: { api: TuiPluginApi }) {
 
   return (
     <Show when={levels().length > 0}>
-      <box flexDirection="row" paddingBottom={1}>
+      <box flexDirection="row">
         <For each={levels()}>
           {(item, index) => {
             const active = () => model()?.variant.current() === item.id
@@ -437,7 +437,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
   }
 
   return (
-    <box paddingBottom={1}>
+    <box>
       <text fg={theme().accent}>
         <span style={{ bold: true, underline: true }}>{shortLabel(modelMeta().label)}</span>
       </text>
