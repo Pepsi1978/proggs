@@ -1422,6 +1422,10 @@ function Studio() {
             themeRequest={themeRequest}
             themeCss={themeCss}
             onThemesChange={(themes, activeId, effective) => { setBoardThemes(themes); setActiveThemeId(activeId); if (effective !== undefined) setThemesEffective(effective); }}
+            tokens={designTokens}
+            overrides={activeOverrides}
+            onTuneToken={tuneToken}
+            onResetToken={resetToken}
             onColourPick={(pick) => {
               setColourPick(pick);
               // Ist die Farbe einem Regler zuzuordnen, wird genau dieser gezeigt — der Klick ins
@@ -1623,8 +1627,8 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
 // Eine im Design aufgenommene Farbe: was dort gezeichnet wird und aus welchem Token es stammt.
 type ColourEntry = { role: string; value: string; hex: string; token: string; exact: boolean };
-type ColourPick = { label: string; selector: string; screenName: string; entries: ColourEntry[]; at: number };
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: {
+type ColourPick = { label: string; selector: string; screenName: string; entries: ColourEntry[]; at: number; rect?: { x: number; y: number; width: number; height: number } };
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1645,6 +1649,10 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   themeRequest: { themeId: string; nonce: number } | null;
   themeCss: string | undefined;
   onColourPick(pick: ColourPick): void;
+  tokens: Record<string, string>;
+  overrides: Record<string, string>;
+  onTuneToken(name: string, value: string): void;
+  onResetToken(name: string): void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1673,6 +1681,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const pickMode = mode === "pick";
   const [marker, setMarker] = useState<MarkTarget | null>(null);
   const [commentText, setCommentText] = useState("");
+  // Der aufgenommene Bereich: umrandet auf der Buehne, mit Farbwaehlern direkt daneben.
+  const [pickedArea, setPickedArea] = useState<ColourPick | null>(null);
   // Die Erscheinungen des DESIGNS, nicht die des Studios: importierte Apps bringen fast immer
   // mehrere mit — ohne Auswahl bliebe alles ausser der ersten unerreichbar.
   const [designThemes, setDesignThemes] = useState<DesignTheme[]>([]);
@@ -1690,7 +1700,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     if (!markMode) { setMarker(null); setCommentText(""); }
   }, [markMode, screens.length]);
   useEffect(() => { tellFrame({ action: "text", on: textMode }); }, [textMode, screens.length]);
-  useEffect(() => { tellFrame({ action: "pick", on: pickMode }); }, [pickMode, screens.length]);
+  useEffect(() => { tellFrame({ action: "pick", on: pickMode }); if (!pickMode) setPickedArea(null); }, [pickMode, screens.length]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1792,10 +1802,20 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         if (target.rect && Number.isFinite(target.rect.width)) { setMarker(target); setCommentText(""); }
         return;
       }
-      // Eine aufgenommene Farbe geht direkt an die Farbleiste: dort wird sie samt Token angezeigt.
+      // Die aufgenommene Farbe wird DIREKT an der angeklickten Stelle zum Ändern angeboten — und
+      // zugleich an die Farbleiste gemeldet.
       if (data.action === "colour-pick") {
-        const picked = data as unknown as { label?: string; selector?: string; screenName?: string; entries?: ColourEntry[] };
-        onColourPick({ label: picked.label ?? "", selector: picked.selector ?? "", screenName: picked.screenName ?? "", entries: (picked.entries ?? []).filter((entry) => entry && entry.value), at: Date.now() });
+        const picked = data as unknown as { label?: string; selector?: string; screenName?: string; entries?: ColourEntry[]; rect?: { x: number; y: number; width: number; height: number } };
+        const pick: ColourPick = {
+          label: picked.label ?? "",
+          selector: picked.selector ?? "",
+          screenName: picked.screenName ?? "",
+          entries: (picked.entries ?? []).filter((entry) => entry && entry.value),
+          at: Date.now(),
+          ...(picked.rect && Number.isFinite(picked.rect.width) ? { rect: picked.rect } : {})
+        };
+        setPickedArea(pick);
+        onColourPick(pick);
         return;
       }
       // Nach dem Umschalten der Erscheinung gelten andere Farbwerte — die Regler bekommen sie sofort.
@@ -1948,6 +1968,23 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     };
   })();
 
+  // Das Farbfenster sitzt am erkannten Bereich, wird aber immer in die sichtbare Flaeche gezwungen —
+  // sonst laege es bei einem Bereich am unteren Rand halb ausserhalb und waere nicht bedienbar.
+  const pickPlacement = (() => {
+    const rect = pickedArea?.rect;
+    if (!rect) return undefined;
+    const width = 272, height = 46 + (pickedArea?.entries.length ?? 0) * 34;
+    const anchorLeft = offset.x + rect.x * zoom;
+    const anchorTop = offset.y + rect.y * zoom;
+    const anchorBottom = anchorTop + rect.height * zoom;
+    if (!viewportSize.width || !viewportSize.height) return { left: Math.max(edge, anchorLeft), top: Math.max(edge, anchorBottom + gap) };
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max));
+    const below = anchorBottom + gap;
+    const above = anchorTop - gap - height;
+    const top = below + height <= viewportSize.height - edge ? below : above >= edge ? above : clamp(below, edge, viewportSize.height - height - edge);
+    return { left: clamp(anchorLeft, edge, viewportSize.width - width - edge), top: clamp(top, edge, Math.max(edge, viewportSize.height - height - edge)) };
+  })();
+
   return (
     <div
       ref={viewportRef}
@@ -1969,7 +2006,39 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           allow="autoplay; fullscreen"
         />
         {marker && <div className="mark-frame" style={{ left: marker.rect.x, top: marker.rect.y, width: marker.rect.width, height: marker.rect.height }} />}
+        {pickedArea?.rect && <div className="mark-frame pick-frame" style={{ left: pickedArea.rect.x, top: pickedArea.rect.y, width: pickedArea.rect.width, height: pickedArea.rect.height }} />}
       </div>
+      {/* Die Farbe wird DORT geaendert, wo sie aufgenommen wurde: der erkannte Bereich ist umrandet,
+          sein Farbwaehler steht daneben und wirkt sofort. Den Weg ueber die Liste rechts braucht
+          dafuer niemand mehr. */}
+      {pickedArea && (
+        <div className="pick-panel" style={pickPlacement} onPointerDown={(event) => event.stopPropagation()}>
+          <header>
+            <strong title={pickedArea.selector}>{pickedArea.label || pickedArea.selector}</strong>
+            <button type="button" title="Schließen" onClick={() => setPickedArea(null)}><X /></button>
+          </header>
+          {pickedArea.entries.length === 0 && <small>An dieser Stelle wird keine eigene Farbe gezeichnet.</small>}
+          {pickedArea.entries.map((entry) => {
+            const current = entry.token ? (overrides[entry.token] ?? tokens[entry.token] ?? entry.value) : entry.value;
+            const changed = Boolean(entry.token && overrides[entry.token]);
+            return (
+              <label className="pick-row" key={`${entry.role}:${entry.value}`}>
+                <span>{entry.role}<small>{hexColour(current) || entry.hex || entry.value}</small></span>
+                <input
+                  type="color"
+                  value={hexColour(current) || "#000000"}
+                  disabled={!entry.token}
+                  title={entry.token ? `Ändert ${tokenTitle(entry.token)} — wirkt sofort` : "Diese Farbe hat keinen eigenen Regler"}
+                  onChange={(event) => { if (entry.token) onTuneToken(entry.token, event.target.value); }}
+                />
+                <button type="button" className="token-reset" disabled={!changed} title={changed ? "Diese Farbe zurücksetzen" : "Unverändert"} onClick={() => { if (entry.token) onResetToken(entry.token); }}>
+                  <Undo2 />
+                </button>
+              </label>
+            );
+          })}
+        </div>
+      )}
       {/* Das Eingabefenster steht ÜBER der Bühne, nicht in ihr: innerhalb wurde es vom Rand des
           Designs abgeschnitten und war nicht mehr benutzbar. Hier ist es immer vollständig sichtbar. */}
       {marker && (
@@ -2039,7 +2108,7 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
 type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, onBuildForDevice, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; onBuildForDevice(): void; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, onBuildForDevice, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; onBuildForDevice(): void; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -2131,6 +2200,10 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             themeRequest={themeRequest}
             themeCss={themeCss}
             onColourPick={onColourPick}
+            tokens={tokens}
+            overrides={overrides}
+            onTuneToken={onTuneToken}
+            onResetToken={onResetToken}
           />
         ) : (
           <div className="empty reconstruction-state">

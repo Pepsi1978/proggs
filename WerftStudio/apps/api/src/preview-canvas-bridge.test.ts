@@ -168,7 +168,11 @@ describe("preview canvas bridge", () => {
     // Regler diese Stelle. Blosse Farbgleichheit fuehrt sonst auf einen wirkungslosen Regler.
     expect(code).toContain("declaredVariable");
     expect(code).toContain("inheritedVariable");
-    expect(code).toContain("exact: Boolean(declared)");
+    // Dass eine Regel eine Variable nennt, genuegt nicht: eine spezifischere Regel kann sie mit
+    // einem festen Wert uebersteuern. Nur eine Variable, die die Farbe nachweislich bewegt, darf
+    // als Regler dieser Stelle gelten — sonst zeigt die Pipette auf einen wirkungslosen Regler.
+    expect(code).toContain("variableAffects");
+    expect(code).toContain("exact: Boolean(wirksam)");
     // Kurzform und Langform derselben Eigenschaft muessen beide erkannt werden.
     expect(code).toContain('["background-color", "background"]');
   });

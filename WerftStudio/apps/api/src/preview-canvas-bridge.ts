@@ -391,6 +391,27 @@ const bridgeScript = `<script ${bridgeMarker}>
     }
     return found;
   };
+  // Dass eine Regel eine Variable NENNT, heisst noch nicht, dass sie diese Stelle faerbt: eine
+  // spaetere oder spezifischere Regel kann sie mit einem festen Wert uebersteuern. Deshalb wird die
+  // Variable kurz verstellt und nachgesehen, ob sich die gezeichnete Farbe mitbewegt. Nur dann
+  // fuehrt ihr Regler wirklich zum Ziel — sonst zeigte die Pipette auf einen Regler, der die
+  // angeklickte Flaeche unveraendert laesst (gemeldet an PerfectMoment, 27.07.2026).
+  const variableAffects = (element, property, variable) => {
+    if (!(element instanceof Element) || !variable) return false;
+    const root = document.documentElement;
+    const before = getComputedStyle(element)[property];
+    const previous = root.style.getPropertyValue(variable);
+    const priority = root.style.getPropertyPriority(variable);
+    try {
+      root.style.setProperty(variable, "rgb(1, 2, 3)", "important");
+      return getComputedStyle(element)[property] !== before;
+    } catch (error) { return false; }
+    finally {
+      if (previous) root.style.setProperty(variable, previous, priority);
+      else root.style.removeProperty(variable);
+    }
+  };
+
   // Die Schriftfarbe wird oft weiter oben gesetzt und nur vererbt. Gesucht wird deshalb so lange
   // aufwaerts, wie die Farbe unveraendert von dort kommt — setzt ein Element sie selbst neu, endet
   // die Suche, damit nicht die Variable des Elternteils als Ursache ausgegeben wird.
@@ -429,6 +450,21 @@ const bridgeScript = `<script ${bridgeMarker}>
       node = node.parentElement;
     }
     return { value: "", from: null };
+  };
+  // DER BEREICH unter dem Zeiger: nicht einfach das oberste Element — das ist oft ein durchsichtiger
+  // Behaelter —, sondern das oberste, das an dieser Stelle wirklich eine Flaeche malt. Genau dieser
+  // Bereich wird umrandet und geaendert. Ohne das landete jeder Klick beim Bildschirmhintergrund,
+  // und ueberall stand dieselbe Farbe.
+  const areaAt = (x, y) => {
+    let stack = [];
+    try { stack = Array.prototype.slice.call(document.elementsFromPoint(x, y)); }
+    catch (error) { stack = []; }
+    for (const node of stack) {
+      if (node === document.body || node === document.documentElement) break;
+      if (!(node instanceof Element)) continue;
+      if (isVisibleColour(getComputedStyle(node).backgroundColor)) return node;
+    }
+    return stack.filter((node) => node instanceof Element && node !== document.body && node !== document.documentElement)[0] || null;
   };
 
   // Fuer die Farbabbildung wird die Bedingung mitgefuehrt, unter der eine Regel gilt: eine
@@ -782,24 +818,35 @@ const bridgeScript = `<script ${bridgeMarker}>
     const entries = [];
     // Die Markierung "exact" unterscheidet die belegte Zuordnung (die Regel nennt diese Variable)
     // von der blossen Farbgleichheit. Ohne sie liefe man auf einen Regler zu, der hier nichts tut.
-    const add = (role, value, declared) => {
+    const add = (role, value, declared, source, property) => {
       const normalized = normalizeColour(value);
       if (!normalized || !isVisibleColour(normalized)) return;
       if (entries.some((entry) => entry.value === normalized && entry.role === role)) return;
-      const token = declared || tokenForColour(value);
+      // Nur eine Variable, die diese Stelle nachweislich faerbt, darf als ihr Regler gelten.
+      const wirksam = declared && variableAffects(source, property, declared) ? declared : "";
+      const token = wirksam || tokenForColour(value);
       // Bei gemessenen Farben IST die Farbgleichheit die Zuordnung — dort wird genau diese Farbe
       // ersetzt. Nur bei echten Variablen bleibt blosse Gleichheit ein unsicherer Hinweis.
-      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: token, exact: Boolean(declared) || token.indexOf(measuredPrefix) === 0 });
+      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: token, exact: Boolean(wirksam) || token.indexOf(measuredPrefix) === 0 });
     };
-    const background = paintedBackground(element);
-    add("Fläche", background.value, declaredVariable(background.from, ["background-color", "background"]));
-    add("Schrift", style.color, inheritedVariable(element, ["color"]));
-    if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]));
+    // Gemeldet wird die Flaeche DES BEREICHS, in den geklickt wurde, und die Schrift des getroffenen
+    // Elements — nicht der Hintergrund des ganzen Bildschirms.
+    const area = areaAt(event.clientX, event.clientY) || element;
+    const areaColour = getComputedStyle(area).backgroundColor;
+    if (isVisibleColour(areaColour)) add("Fläche", areaColour, declaredVariable(area, ["background-color", "background"]), area, "backgroundColor");
+    if ((element.textContent || "").trim()) add("Schrift", style.color, inheritedVariable(element, ["color"]), element, "color");
+    if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]), element, "borderTopColor");
+    const areaStyle = getComputedStyle(area);
+    if (area !== element && parseFloat(areaStyle.borderTopWidth || "0") > 0) add("Rahmen des Bereichs", areaStyle.borderTopColor, declaredVariable(area, ["border-top-color", "border-color", "border-top", "border"]), area, "borderTopColor");
     const screen = element.closest(".werft-screen") || activeScreen();
+    // Das Rechteck des Bereichs: damit umrandet das Studio genau das, was es aendert, und stellt
+    // seinen Farbwaehler direkt daneben.
+    const rect = area.getBoundingClientRect();
     post({
       action: "colour-pick",
-      label: labelFor(element),
-      selector: selectorFor(element),
+      label: labelFor(area),
+      selector: selectorFor(area),
+      rect: { x: Math.round(rect.left + window.scrollX), y: Math.round(rect.top + window.scrollY), width: Math.round(rect.width), height: Math.round(rect.height) },
       entries: entries,
       screenId: screenIdOf(screen),
       screenName: screen && screen.dataset ? screen.dataset.screenName || "" : ""
