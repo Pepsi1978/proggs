@@ -575,21 +575,88 @@ const bridgeScript = `<script ${bridgeMarker}>
     }
     return { value: "", from: null };
   };
+  // Malt dieses Element eine Flaeche als Bild — meist ein Farbverlauf? Dann steht seine Farbe nicht
+  // in background-color, und ohne diese Pruefung wuerde die Flaeche uebersehen und die Farbe des
+  // dunklen Untergrunds gemeldet (gemeldet an PerfectMoment: „Flaeche viel zu dunkel").
+  const paintsImage = (node) => {
+    const bild = getComputedStyle(node).backgroundImage;
+    return Boolean(bild) && bild !== "none" && bild.indexOf("gradient") >= 0;
+  };
+  const rgbaParts = (value) => {
+    const parsed = /rgba?\\(([^)]+)\\)/.exec(value || "");
+    if (!parsed) return null;
+    const parts = parsed[1].split(",").map((part) => parseFloat(part));
+    if (parts.length < 3) return null;
+    return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
+  };
+  // Was an dieser Stelle WIRKLICH zu sehen ist: halbdurchsichtige Flaechen liegen uebereinander und
+  // ergeben zusammen erst die Farbe, die das Auge sieht. Wer nur die oberste Angabe meldet, nennt
+  // eine Farbe, die so nirgends erscheint.
+  const effectiveColourAt = (x, y) => {
+    const stack = stackAt(x, y);
+    const ebenen = [];
+    for (const node of stack) {
+      const stil = getComputedStyle(node);
+      if (paintsImage(node)) {
+        const farbe = firstColourIn(stil.backgroundImage);
+        const teile = farbe ? rgbaParts(normalizeColour(farbe)) : null;
+        if (teile) ebenen.push(teile);
+      }
+      const teile = rgbaParts(stil.backgroundColor);
+      if (teile && teile.a > 0.004) ebenen.push(teile);
+      if (teile && teile.a >= 0.999) break;
+    }
+    if (!ebenen.length) return "";
+    // Von hinten nach vorn uebereinanderlegen — genau so zeichnet der Browser.
+    let ergebnis = ebenen[ebenen.length - 1];
+    for (let index = ebenen.length - 2; index >= 0; index -= 1) {
+      const oben = ebenen[index];
+      const a = oben.a + ergebnis.a * (1 - oben.a);
+      if (a <= 0) continue;
+      ergebnis = {
+        r: (oben.r * oben.a + ergebnis.r * ergebnis.a * (1 - oben.a)) / a,
+        g: (oben.g * oben.a + ergebnis.g * ergebnis.a * (1 - oben.a)) / a,
+        b: (oben.b * oben.a + ergebnis.b * ergebnis.a * (1 - oben.a)) / a,
+        a: a
+      };
+    }
+    return "rgb(" + Math.round(ergebnis.r) + ", " + Math.round(ergebnis.g) + ", " + Math.round(ergebnis.b) + ")";
+  };
   // DER BEREICH unter dem Zeiger: nicht einfach das oberste Element — das ist oft ein durchsichtiger
   // Behaelter —, sondern das oberste, das an dieser Stelle wirklich eine Flaeche malt. Genau dieser
   // Bereich wird umrandet und geaendert. Ohne das landete jeder Klick beim Bildschirmhintergrund,
   // und ueberall stand dieselbe Farbe.
-  const areaAt = (x, y) => {
+  // Im Pipettenmodus liegt eine unsichtbare Ebene ueber dem Design. Nur so wird JEDE Stelle
+  // getroffen: ein deaktivierter Knopf („Sitzung beginnen") bekommt selbst keine Maus-Ereignisse,
+  // und ohne diese Ebene blieb er fuer die Pipette unerreichbar. Zum Nachsehen, was DARUNTER liegt,
+  // wird sie kurz durchlaessig geschaltet.
+  let pickLayer = null;
+  const pickLayerOn = (on) => {
+    if (!on) { if (pickLayer && pickLayer.parentNode) pickLayer.parentNode.removeChild(pickLayer); return; }
+    if (!pickLayer) {
+      pickLayer = document.createElement("div");
+      pickLayer.setAttribute("data-werft-pick-layer", "");
+      pickLayer.style.cssText = "position:fixed;inset:0;z-index:2147483000;background:transparent;cursor:crosshair";
+    }
+    (document.body || document.documentElement).appendChild(pickLayer);
+  };
+  const stackAt = (x, y) => {
+    const war = pickLayer && pickLayer.style.pointerEvents;
+    if (pickLayer) pickLayer.style.pointerEvents = "none";
     let stack = [];
     try { stack = Array.prototype.slice.call(document.elementsFromPoint(x, y)); }
     catch (error) { stack = []; }
+    if (pickLayer) pickLayer.style.pointerEvents = war || "";
+    return stack.filter((node) => node instanceof Element && node !== pickLayer);
+  };
+  const areaAt = (x, y) => {
+    const stack = stackAt(x, y);
     for (const node of stack) {
-      if (!(node instanceof Element)) continue;
-      if (isVisibleColour(getComputedStyle(node).backgroundColor)) return node;
+      if (isVisibleColour(getComputedStyle(node).backgroundColor) || paintsImage(node)) return node;
     }
     // Findet sich gar keine gezeichnete Flaeche, gilt der Bildschirm selbst als Bereich — die grosse
     // Hintergrundflaeche ist genauso eine Flaeche wie jede Karte darauf und muss aenderbar sein.
-    return stack.filter((node) => node instanceof Element)[0] || activeScreen() || document.body || null;
+    return stack[0] || activeScreen() || document.body || null;
   };
 
   // Fuer die Farbabbildung wird die Bedingung mitgefuehrt, unter der eine Regel gilt: eine
@@ -989,8 +1056,10 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (jetzt - lastHoverAt < 60) return;
     lastHoverAt = jetzt;
     const style = getComputedStyle(element);
-    const eigen = style.backgroundColor;
-    const flaeche = isVisibleColour(eigen) ? normalizeColour(eigen) : normalizeColour(paintedBackground(element).value);
+    // Gemeldet wird, was man an dieser Stelle WIRKLICH sieht — halbdurchsichtige Flaechen und
+    // Verlaeufe eingerechnet. Der reine Rohwert der obersten Angabe waere eine Farbe, die so nirgends
+    // erscheint.
+    const flaeche = effectiveColourAt(event.clientX, event.clientY) || normalizeColour(style.backgroundColor);
     const rect = element.getBoundingClientRect();
     post({
       action: "colour-hover",
@@ -1008,9 +1077,11 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (!pickMode) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    // Der Klick meldet IMMER etwas: frueher blieb er stumm, sobald er den Bildschirm selbst oder ein
-    // Element ohne eigene Flaeche traf — dann stand weiter die zuletzt getroffene Flaeche da.
-    const element = markableUnder(event.target) || areaAt(event.clientX, event.clientY) || activeScreen();
+    // Der Klick meldet IMMER etwas — auch ueber einem deaktivierten Knopf oder dem Bildschirm selbst.
+    // Gearbeitet wird mit der Zeigerposition, nicht mit dem Ereignisziel: das ist die unsichtbare
+    // Ebene, die den Klick ueberhaupt erst einfaengt.
+    const unter = stackAt(event.clientX, event.clientY);
+    const element = unter[0] || areaAt(event.clientX, event.clientY) || activeScreen();
     if (!element) return;
     const style = getComputedStyle(element);
     const entries = [];
@@ -1030,8 +1101,15 @@ const bridgeScript = `<script ${bridgeMarker}>
     // Gemeldet wird die Flaeche DES BEREICHS, in den geklickt wurde, und die Schrift des getroffenen
     // Elements — nicht der Hintergrund des ganzen Bildschirms.
     const area = areaAt(event.clientX, event.clientY) || element;
-    const areaColour = getComputedStyle(area).backgroundColor;
+    const areaStil = getComputedStyle(area);
+    const areaColour = areaStil.backgroundColor;
     if (isVisibleColour(areaColour)) add("Fläche", areaColour, declaredVariable(area, ["background-color", "background"]), area, "backgroundColor");
+    // Malt der Bereich seine Flaeche als Verlauf, steht die Farbe nicht in background-color. Ohne
+    // diesen Fall bliebe genau so ein Bereich unveraenderbar.
+    else if (paintsImage(area)) {
+      const verlaufsfarbe = firstColourIn(areaStil.backgroundImage);
+      if (verlaufsfarbe) add("Fläche", verlaufsfarbe, declaredVariable(area, ["background-image", "background"]), area, "backgroundImage");
+    }
     if ((element.textContent || "").trim()) add("Schrift", style.color, inheritedVariable(element, ["color"]), element, "color");
     if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]), element, "borderTopColor");
     const areaStyle = getComputedStyle(area);
@@ -1137,6 +1215,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "pick") {
       pickMode = Boolean(data.on);
       clearMarkHover();
+      pickLayerOn(pickMode);
       document.documentElement.style.cursor = pickMode || markMode ? "crosshair" : "";
       // Die Regler sollen beim Aufnehmen die Farben zeigen, die JETZT gelten.
       if (pickMode) publishScreens();

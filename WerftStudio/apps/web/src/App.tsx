@@ -5,7 +5,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, usePa
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
 import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor } from "./reference-devices";
-import { groupedTokens, hexColour, tokenTitle, usesMeasuredColours } from "./design-colours";
+import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -1006,11 +1006,7 @@ function Studio() {
   // Satz wuerde die eine Erscheinung mit den Werten der anderen ueberschreiben.
   const [tokenOverrides, setTokenOverrides] = useState<Record<string, Record<string, string>>>({});
   const [tuneRequest, setTuneRequest] = useState<{ overrides: Record<string, string>; nonce: number } | null>(null);
-  // Die im Design aufgenommene Farbe: sie zeigt, welcher Regler zu der angeklickten Stelle gehoert.
-  const [colourPick, setColourPick] = useState<ColourPick | null>(null);
-  const [highlightedToken, setHighlightedToken] = useState("");
   const activeOverrides = tokenOverrides[activeThemeId] ?? {};
-  const overrideCount = Object.values(tokenOverrides).reduce((sum, entries) => sum + Object.keys(entries).length, 0);
   const applyOverrides = (next: Record<string, Record<string, string>>, themeId: string) => {
     setTokenOverrides(next);
     setTuneRequest({ overrides: next[themeId] ?? {}, nonce: Date.now() });
@@ -1021,8 +1017,6 @@ function Studio() {
     delete remaining[name];
     applyOverrides({ ...tokenOverrides, [activeThemeId]: remaining }, activeThemeId);
   };
-  // „Alles zurueck" meint das ganze Projekt — auch die Erscheinungen, die gerade nicht zu sehen sind.
-  const resetAllTokens = () => applyOverrides({}, activeThemeId);
   // Beim Wechsel der Erscheinung gehen deren eigene Anpassungen mit; sonst bliebe der Satz der
   // vorherigen Erscheinung im Design stehen.
   const chooseTheme = (themeId: string) => {
@@ -1158,14 +1152,6 @@ function Studio() {
     restorePanels();
     if (document.fullscreenElement) void document.exitFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht beendet werden", error));
   };
-  // Der Regler zur aufgenommenen Farbe wird sichtbar gemacht und kurz hervorgehoben — bei dreissig
-  // Reglern waere er sonst irgendwo in der Liste und man muesste ihn suchen.
-  useEffect(() => {
-    if (!highlightedToken) return;
-    document.querySelector(`[data-token="${CSS.escape(highlightedToken)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
-    const timer = window.setTimeout(() => setHighlightedToken(""), 4_000);
-    return () => window.clearTimeout(timer);
-  }, [highlightedToken]);
   const canRebuild = imported.data?.imported === true;
   // Gibt es fuer das gewaehlte Geraet bereits eine eigene Fassung? Dann zeigt die Buehne sie; sonst
   // steht dort die Grundfassung, die die Flaeche des Geraets nicht ausnutzt.
@@ -1188,7 +1174,6 @@ function Studio() {
       {canvasFullscreen && (
         <div className="canvas-fullscreen-controls">
           <IconButton label="Bearbeitungsleiste ein- oder ausblenden" className={leftOpen ? "on" : ""} onClick={toggleLeft}><PanelLeft /></IconButton>
-          <IconButton label="Farbleiste ein- oder ausblenden" className={rightOpen ? "on" : ""} onClick={toggleRight}><PanelRight /></IconButton>
           {canRebuild && <IconButton label={rebuildLabel} disabled={rebuild.isPending} onClick={startRebuild}><RotateCcw /></IconButton>}
           <IconButton label="Vollbild beenden" onClick={exitCanvasFullscreen}><Minimize2 /></IconButton>
         </div>
@@ -1220,9 +1205,11 @@ function Studio() {
         <IconButton label="Bearbeitungsleiste ein- oder ausblenden" className={leftOpen ? "on" : ""} onClick={toggleLeft}>
           <PanelLeft />
         </IconButton>
-        <IconButton label="Farbleiste ein- oder ausblenden" className={rightOpen ? "on" : ""} onClick={toggleRight}>
-          <PanelRight />
-        </IconButton>
+        {!canRebuild && (
+          <IconButton label="Feineinstellungen ein- oder ausblenden" className={rightOpen ? "on" : ""} onClick={toggleRight}>
+            <PanelRight />
+          </IconButton>
+        )}
         {canRebuild && (
           <IconButton label={rebuildLabel} disabled={rebuild.isPending} onClick={startRebuild}>
             <RotateCcw />
@@ -1426,13 +1413,7 @@ function Studio() {
             overrides={activeOverrides}
             onTuneToken={tuneToken}
             onResetToken={resetToken}
-            onColourPick={(pick) => {
-              setColourPick(pick);
-              // Ist die Farbe einem Regler zuzuordnen, wird genau dieser gezeigt — der Klick ins
-              // Design fuehrt damit ohne Suchen zur passenden Einstellung.
-              const withToken = pick.entries.find((entry) => entry.token);
-              if (withToken) { setRightOpen(true); setHighlightedToken(withToken.token); }
-            }}
+            onColourPick={() => { /* Die aufgenommene Farbe wird direkt an der Stelle angeboten. */ }}
             onTextEdit={(before, after) => textEdit.mutate({ before, after })}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
@@ -1444,89 +1425,6 @@ function Studio() {
             }}
           />
         </section>
-        {rightOpen && imported.data?.imported && (
-          <aside className="right-panel">
-            <header>
-              <div>
-                <strong>Farben dieses Designs</strong>
-                <small>Wirken sofort auf allen Bildschirmen, ohne KI-Lauf</small>
-              </div>
-              <Button variant="ghost" disabled={!overrideCount} onClick={resetAllTokens} title="Setzt alle geänderten Farben aller Erscheinungen auf den Stand des Designs zurück">
-                Alle zurück{overrideCount ? ` (${overrideCount})` : ""}
-              </Button>
-            </header>
-            <div className="inspector token-list">
-              {/* Hell und Dunkel sind zwei verschiedene Farbsaetze. Ohne diese Zeile liesse sich nur
-                  der eine anfassen — der andere bliebe unerreichbar. */}
-              {boardThemes.length > 1 && (
-                <section className="token-group">
-                  <p className="token-group-title">Erscheinung <em>gilt für alle Bildschirme</em></p>
-                  <div className="segments theme-segments">
-                    {boardThemes.map((entry) => (
-                      <button type="button" key={entry.id} className={entry.id === activeThemeId ? "active" : ""} onClick={() => chooseTheme(entry.id)}>
-                        {entry.kind === "dark" ? <Moon /> : entry.kind === "light" ? <Sun /> : <Palette />}
-                        {themeLabel(entry, boardThemes)}
-                      </button>
-                    ))}
-                  </div>
-                  <small className="subtle">Jede Erscheinung hat eigene Farben — Änderungen gelten nur für die gewählte.</small>
-                </section>
-              )}
-              {/* Was gerade im Design angeklickt wurde: Farbe, Rolle und der Regler dahinter. */}
-              <section className="token-group picked-colour">
-                <p className="token-group-title">Farbe aus dem Design <em>Pipette in der Werkzeugleiste</em></p>
-                {colourPick ? (
-                  <>
-                    <strong title={colourPick.selector}>{colourPick.label || colourPick.selector}</strong>
-                    {colourPick.entries.length === 0 && <small className="subtle">An dieser Stelle wird keine eigene Farbe gezeichnet.</small>}
-                    {colourPick.entries.map((entry) => (
-                      <div className="picked-row" key={`${entry.role}:${entry.value}`}>
-                        <i style={{ backgroundImage: `linear-gradient(${entry.value}, ${entry.value})` }} />
-                        <span>{entry.role}<small>{entry.hex || entry.value}</small></span>
-                        {entry.token
-                          ? <button type="button" className={entry.exact ? "" : "loose"} title={entry.exact ? `Diese Stelle verwendet ${entry.token} — zum Regler springen` : `Diese Stelle hat einen festen Farbwert. ${entry.token} ist derselbe Ton — den Regler zu ändern wirkt hier NICHT.`} onClick={() => setHighlightedToken(entry.token)}>{entry.exact ? "" : "≈ "}{tokenTitle(entry.token)}</button>
-                          : <em title="Diese Farbe steht fest im Stylesheet und hat keinen eigenen Regler">fester Wert</em>}
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <small className="subtle">Pipette wählen und ins Design klicken — dann steht hier, welche Farbe dort gilt und welcher Regler sie ändert.</small>
-                )}
-              </section>
-              {usesMeasuredColours(designTokens) && (
-                <small className="subtle token-measured-hint">Farben ohne eigene Variable stehen hier ebenfalls — sie werden direkt in den Regeln geändert, in denen sie stehen. So ist jede Farbe regelbar, die das Design wirklich zeichnet.</small>
-              )}
-              {Object.keys(designTokens).length === 0 ? (
-                <div className="empty">In diesem Design ist noch keine Farbe zu messen. Sobald die Vorschau steht, erscheinen hier alle Farben, die es verwendet.</div>
-              ) : (
-                groupedTokens(designTokens).map((group) => (
-                  <section className="token-group" key={group.id}>
-                    <p className="token-group-title">{group.title} <em>{group.hint}</em></p>
-                    {group.entries.map(([name, value]) => {
-                      const current = activeOverrides[name] ?? value;
-                      const changed = Boolean(activeOverrides[name]);
-                      return (
-                        <div className={`token-row${highlightedToken === name ? " highlighted" : ""}${changed ? " changed" : ""}`} data-token={name} key={name}>
-                          <span title={`${name} · ${current}`}>{tokenTitle(name)}</span>
-                          <input
-                            type="color"
-                            aria-label={tokenTitle(name)}
-                            value={hexColour(current) || "#000000"}
-                            onChange={(event) => tuneToken(name, event.target.value)}
-                          />
-                          <button type="button" className="token-reset" disabled={!changed} title={changed ? "Diese Farbe auf den Stand des Designs zurücksetzen" : "Unverändert"} onClick={() => resetToken(name)}>
-                            <Undo2 />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </section>
-                ))
-              )}
-              <small className="subtle">Aus den Projektquellen gemessen — jede Farbe ist die, die das Design wirklich verwendet.</small>
-            </div>
-          </aside>
-        )}
         {rightOpen && !imported.data?.imported && (
           <aside className="right-panel">
             <header>

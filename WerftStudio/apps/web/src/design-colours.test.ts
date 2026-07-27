@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupedTokens, hexColour, tokenTitle } from "./design-colours.js";
+import { hexColour, tokenTitle } from "./design-colours.js";
 import { referenceDevices, stageDeviceFor } from "./reference-devices.js";
 
 describe("Farbregler", () => {
@@ -14,20 +14,6 @@ describe("Farbregler", () => {
     expect(hexColour("#12345678")).toBe("#123456");
     expect(hexColour("transparent")).toBe("");
     expect(hexColour("")).toBe("");
-  });
-
-  it("ordnet jede Farbe genau einem Bereich zu und laesst keine liegen", () => {
-    const groups = groupedTokens({
-      "--color-error": "#9b1c1c", "--color-accent": "#3157d5", "--color-border": "#d8dee8",
-      "--color-text-subtle": "#5d6978", "--color-bg": "#f5f7fa", "--zickzack": "#010203"
-    });
-    expect(groups.map((group) => group.title)).toEqual([
-      "Zustände und Meldungen", "Akzent und Bedienelemente", "Linien, Rahmen und Schatten", "Schrift", "Flächen und Hintergründe", "Weitere Farben"
-    ]);
-    expect(groups.flatMap((group) => group.entries).length).toBe(6);
-    // Jede Farbe steht in genau einem Bereich; doppelte oder verlorene Regler waeren beide falsch.
-    const names = groups.flatMap((group) => group.entries.map(([name]) => name));
-    expect(new Set(names).size).toBe(names.length);
   });
 
   it("macht aus Token-Namen lesbare Bezeichnungen", () => {
