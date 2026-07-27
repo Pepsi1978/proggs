@@ -795,8 +795,9 @@ function DsReview() {
   );
 }
 function BackPage({ title, onBack, actions, children }: { title: string; onBack(): void; actions?: ReactNode; children: ReactNode }) {
+  const { theme } = useUi();
   return (
-    <div className="back-page">
+    <div className="back-page" data-theme={theme}>
       <header>
         <IconButton label="Zurück" onClick={onBack}>
           <ArrowLeft />
@@ -821,8 +822,9 @@ function Card({ title, sub, children }: { title: string; sub?: string; children:
 
 function SettingsPage() {
   const nav = useNavigate();
+  const { theme, setTheme } = useUi();
   return (
-    <BackPage title="Einstellungen" onBack={() => nav("/app/designs")}>
+    <BackPage title="Einstellungen" onBack={() => nav("/app/designs")} actions={<IconButton label="Theme wechseln" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun /> : <Moon />}</IconButton>}>
       <div className="settings-layout">
         <nav>
           <NavLink to="/app/settings/models">Modelle & Provider</NavLink>
