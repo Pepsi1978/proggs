@@ -49,7 +49,12 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 when (mode) {
-                    MODE_VOCODER -> runVocoderProbe(log, steps, threads)
+                    MODE_VOCODER -> runVocoderProbe(
+                        log,
+                        steps,
+                        threads,
+                        intent.getStringExtra("model") ?: VOCODER_NAME,
+                    )
                     else -> runBenchmark(log, steps, promptLen, threads)
                 }
             } catch (error: Throwable) {
@@ -171,14 +176,14 @@ class MainActivity : AppCompatActivity() {
      * der CPU fehlschlagen. Ohne dieses Modell entsteht kein hoerbares Audio. Die Probe klaert
      * das, bevor die uebrige Pipeline gebaut wird.
      */
-    private fun runVocoderProbe(log: (String) -> Unit, frames: Int, threads: Int) {
-        val model = File(getExternalFilesDir("models"), VOCODER_NAME)
+    private fun runVocoderProbe(log: (String) -> Unit, frames: Int, threads: Int, fileName: String) {
+        val model = File(getExternalFilesDir("models"), fileName)
         if (!model.exists()) {
             log("Modell fehlt. Erwartet unter:")
             log(model.absolutePath)
             log("")
             log("Per adb pushen:")
-            log("adb push $VOCODER_NAME ${model.absolutePath}")
+            log("adb push $fileName ${model.absolutePath}")
             return
         }
         log("Modell: ${model.length() / 1024 / 1024} MB")
