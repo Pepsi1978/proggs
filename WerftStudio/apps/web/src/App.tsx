@@ -5,7 +5,7 @@ import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode,
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
-import { androidStartDevices, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
+import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
@@ -131,10 +131,10 @@ function Status({ kind = "neutral", children }: { kind?: "success" | "warning" |
     </span>
   );
 }
-function Modal({ title, children, width = "540px", onClose }: { title: string; children: ReactNode; width?: string; onClose(): void }) {
+function Modal({ title, children, width = "540px", className = "", onClose }: { title: string; children: ReactNode; width?: string; className?: string; onClose(): void }) {
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <section className="modal" style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
+      <section className={`modal ${className}`} style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <header>
           <h2>{title}</h2>
           <IconButton label="Schließen" onClick={onClose}>
@@ -462,7 +462,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
     },
   });
   return (
-    <Modal title="Design importieren" width="680px" onClose={upload.isPending ? () => {} : onClose}>
+    <Modal title="Design importieren" width="680px" className="import-modal" onClose={upload.isPending ? () => {} : onClose}>
       <div className="modal-body import-dialog">
         <p className="subtle">Misst Farben, Abmessungen, Typografie und Effekte exakt aus den Projektquellen und baut daraus jeden Bildschirm einzeln als durchklickbare, direkt bearbeitbare HTML-Version — anschließend wird das Ergebnis gegen die gemessenen Werte nachgeprüft.</p>
         <label>
@@ -648,14 +648,13 @@ function NewProject({ onClose }: { onClose(): void }) {
           </div>
         </label>
         {platforms.includes("android") && (
-          <div>
+          <div className="android-start-device">
             <label>
               Android-Startgerät
               <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)}>
                 {androidStartDevices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}
               </select>
             </label>
-            {initialDevice && <small>Arbeitsfläche: {initialDevice.label} · {initialDevice.width} × {initialDevice.height} dp</small>}
           </div>
         )}
         {create.error && <p className="field-error">{create.error.message}</p>}
@@ -1309,7 +1308,7 @@ function Studio() {
               <button type="button" className={landscape ? "" : "active"} title="Hochformat" onClick={() => setLandscape(false)}>Hoch</button>
               <button type="button" className={landscape ? "active" : ""} title="Querformat — Ansicht um 90 Grad gedreht" onClick={() => setLandscape(true)}>Quer</button>
             </div>
-            {stageDevice && <code title={`${referenceDevices.find((device) => device.id === deviceId)?.source ?? ""} — logische Fläche in CSS-Pixeln`}>{stageDevice.width} × {stageDevice.height}</code>}
+            {stageDevice && <code title={`${stageDevice.width} × ${stageDevice.height} CSS-Pixel · ${referenceDevices.find((device) => device.id === deviceId)?.source ?? "Designmaß"}`}>{aspectRatioLabel(stageDevice.width, stageDevice.height)}</code>}
           </div>
         )}
         <IconButton label="Bearbeitungsleiste ein- oder ausblenden" className={leftOpen ? "on" : ""} onClick={toggleLeft}>

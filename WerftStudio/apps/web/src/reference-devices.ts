@@ -16,6 +16,10 @@ export const referenceDevices: ReferenceDevice[] = [
 ];
 export const androidStartDevices = referenceDevices.filter((device) => !device.state || device.state === "zugeklappt");
 export const deviceLabel = (device: ReferenceDevice) => device.state ? `${device.name} · ${device.state}` : device.name;
+export function aspectRatioLabel(width: number, height: number): string {
+  const ratio = (Math.max(width, height) / Math.min(width, height)).toFixed(2).replace(/\.?0+$/, "").replace(".", ",");
+  return width <= height ? `1 : ${ratio}` : `${ratio} : 1`;
+}
 
 // Quer heisst: das Geraet um 90 Grad gedreht. Aufgeklappt und gedreht sind zwei getrennte Achsen —
 // beide Fold-Zustaende gibt es deshalb hoch UND quer.

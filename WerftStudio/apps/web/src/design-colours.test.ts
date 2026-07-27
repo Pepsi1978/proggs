@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hexColour, tokenTitle } from "./design-colours.js";
-import { androidStartDevices, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices.js";
+import { androidStartDevices, aspectRatioLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices.js";
 
 describe("Farbregler", () => {
   // Gemessen wird am lebenden Dokument; von dort kommen fast immer rgb()-Werte. Wurden sie nicht
@@ -26,6 +26,12 @@ describe("Farbregler", () => {
 });
 
 describe("Referenzgeraete", () => {
+  it("zeigt das Seitenverhaeltnis mit einer auf 1 normierten Seite", () => {
+    expect(aspectRatioLabel(412, 915)).toBe("1 : 2,22");
+    expect(aspectRatioLabel(915, 412)).toBe("2,22 : 1");
+    expect(aspectRatioLabel(800, 800)).toBe("1 : 1");
+  });
+
   it("startet Android-Designs nur mit den drei geschlossenen Hochformat-Geraeten", () => {
     expect(androidStartDevices.map((device) => device.id)).toEqual(["s23-ultra", "fold8-cover", "fold6-cover"]);
     expect(androidStartDevices.map((device) => device.name)).toEqual(["Galaxy S23 Ultra", "Galaxy Z Fold 8", "Galaxy Z Fold 6"]);

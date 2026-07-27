@@ -33,7 +33,7 @@ describe("preview canvas bridge", () => {
     // Strg-Zustands. Ohne ihn wäre jede Radbewegung wieder ein Zoom.
     expect(result).toContain("ctrlKey: Boolean(event.ctrlKey)");
     expect(result).toContain("deltaX: event.deltaX || 0");
-    expect(result).toContain("scrollableUnder");
+    expect(result).toContain("scrollStateUnder");
     expect(result).toContain('action: "screens"');
     expect(result).toContain('post({ action: "size"');
     expect(result).toContain('action: "navigate"');
@@ -46,6 +46,13 @@ describe("preview canvas bridge", () => {
     const result = injectPreviewCanvasBridge("<!doctype html><body><section class=\"werft-screen\"></section></body>");
     expect(result).toContain("overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none !important;");
     expect(result).toContain(".werft-screen::-webkit-scrollbar { display: none; }");
+  });
+
+  it("gibt das Mausrad am Rand eines scrollbaren Screens nicht an die Buehne weiter", () => {
+    const result = injectPreviewCanvasBridge("<!doctype html><body><section class=\"werft-screen\"></section></body>");
+    expect(result).toContain('return found && deltaY ? "edge" : "none"');
+    expect(result).toContain('if (scrollState === "edge") return;');
+    expect(result).toContain("overscroll-behavior-y: contain !important");
   });
 
   it("liefert syntaktisch gültiges JavaScript aus", () => {

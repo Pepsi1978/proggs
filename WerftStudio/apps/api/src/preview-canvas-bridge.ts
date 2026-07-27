@@ -109,7 +109,7 @@ const bridgeScript = `<script ${bridgeMarker}>
       ".werft-screens { width: 100% !important; min-width: 0 !important; max-width: none !important; }",
       // Der Bildschirm fuellt die Flaeche und darf laenger werden als sie — dann wird gescrollt,
       // genau wie auf dem Geraet. Abgeschnitten wird nichts.
-      ".werft-screen { width: 100% !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; min-height: " + hoehe + "px !important; max-height: none !important; overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none !important; }",
+      ".werft-screen { width: 100% !important; min-width: 0 !important; max-width: none !important; height: " + hoehe + "px !important; min-height: " + hoehe + "px !important; max-height: none !important; overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none !important; overscroll-behavior-y: contain !important; }",
       ".werft-screen::-webkit-scrollbar { display: none; }",
       releaseFixedSizes(breite, hoehe)
     ].filter(Boolean).join("\\n");
@@ -837,25 +837,29 @@ const bridgeScript = `<script ${bridgeMarker}>
   // Das Rad allein scrollt — im Design dort, wo das Original scrollt, sonst wandert die Buehne.
   // Vergroessert wird ausschliesslich mit gedrueckter Strg-Taste (oder per Touchpad-Zoom, den der
   // Browser ebenfalls mit ctrlKey meldet).
-  const scrollableUnder = (target, deltaY) => {
+  const scrollStateUnder = (target, deltaY) => {
     let node = target instanceof Element ? target : null;
+    let found = false;
     while (node && node !== document.body && node !== document.documentElement) {
       const style = getComputedStyle(node);
       const scrolls = /(auto|scroll|overlay)/.test(style.overflowY);
       if (scrolls && node.scrollHeight > node.clientHeight + 1) {
-        if (deltaY < 0 && node.scrollTop > 0) return true;
-        if (deltaY > 0 && node.scrollTop + node.clientHeight < node.scrollHeight - 1) return true;
+        found = true;
+        if (deltaY < 0 && node.scrollTop > 0) return "scroll";
+        if (deltaY > 0 && node.scrollTop + node.clientHeight < node.scrollHeight - 1) return "scroll";
       }
       node = node.parentElement;
     }
-    return false;
+    return found && deltaY ? "edge" : "none";
   };
 
   const send = (action, event) => post({ action, x: event.clientX, y: event.clientY, deltaX: event.deltaX || 0, deltaY: event.deltaY, ctrlKey: Boolean(event.ctrlKey) });
   let panning = false;
   document.addEventListener("wheel", (event) => {
-    if (!event.ctrlKey && scrollableUnder(event.target, event.deltaY)) return;
+    const scrollState = event.ctrlKey ? "none" : scrollStateUnder(event.target, event.deltaY);
+    if (scrollState === "scroll") return;
     event.preventDefault();
+    if (scrollState === "edge") return;
     send("wheel", event);
   }, { capture: true, passive: false });
   document.addEventListener("pointerdown", (event) => {
