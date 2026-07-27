@@ -34,14 +34,19 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { view.append(line + "\n") }
         }
 
+        val steps = intent.getIntExtra("steps", STEPS)
+        val promptLen = intent.getIntExtra("prompt", PROMPT_LEN)
+        val threads = intent.getIntExtra("threads", THREADS)
+
         log("Qwen TTS Bench ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_BUMPED_AT})")
         log("Geraet: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
         log("Kerne: ${Runtime.getRuntime().availableProcessors()}")
+        log("Lauf: $steps Schritte, Prompt $promptLen, Threads $threads")
         log("")
 
         Thread {
             try {
-                runBenchmark(log)
+                runBenchmark(log, steps, promptLen, threads)
             } catch (error: Throwable) {
                 log("FEHLER: ${error::class.java.simpleName}: ${error.message}")
                 Log.e(TAG, "Benchmark fehlgeschlagen", error)
@@ -49,7 +54,12 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun runBenchmark(log: (String) -> Unit) {
+    private fun runBenchmark(
+        log: (String) -> Unit,
+        steps: Int,
+        promptLen: Int,
+        threads: Int,
+    ) {
         val model = File(getExternalFilesDir("models"), MODEL_NAME)
         if (!model.exists()) {
             log("Modell fehlt. Erwartet unter:")
@@ -64,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         val env = OrtEnvironment.getEnvironment()
         val options = OrtSession.SessionOptions().apply {
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-            setIntraOpNumThreads(THREADS)
+            setIntraOpNumThreads(threads)
         }
 
         var session: OrtSession? = null
@@ -72,17 +82,17 @@ class MainActivity : AppCompatActivity() {
             session = env.createSession(model.absolutePath, options)
         } / 1_000_000
         val ort = session ?: return
-        log("Geladen in ${loadMs} ms, Threads: $THREADS")
+        log("Geladen in ${loadMs} ms")
         log("")
 
         // Zwischenspeicher (KV-Cache) mit dem Prompt vorbelegen.
-        var cache = Array(LAYERS * 2) { FloatArray(KV_HEADS * PROMPT_LEN * HEAD_DIM) }
-        var cacheLen = PROMPT_LEN
+        var cache = Array(LAYERS * 2) { FloatArray(KV_HEADS * promptLen * HEAD_DIM) }
+        var cacheLen = promptLen
 
         val outputNames = ort.outputNames.toList()
-        val timings = ArrayList<Long>(STEPS)
+        val timings = ArrayList<Long>(steps)
 
-        for (step in 0 until STEPS) {
+        for (step in 0 until steps) {
             val inputs = HashMap<String, OnnxTensor>()
             inputs["inputs_embeds"] = OnnxTensor.createTensor(
                 env,
@@ -132,16 +142,19 @@ class MainActivity : AppCompatActivity() {
         val avgMs = warm.average()
         val perSecond = 1000.0 / avgMs
         val realtime = perSecond / TOKENS_PER_AUDIO_SECOND
-        val sentenceSeconds = 4.0 * TOKENS_PER_AUDIO_SECOND / perSecond
+        val totalSeconds = timings.sum() / 1000.0
+        val audioSeconds = timings.size.toDouble() / TOKENS_PER_AUDIO_SECOND
 
         log("")
         log("======== ERGEBNIS ========")
-        log("Schritte:            ${timings.size}")
+        log("Schritte:            ${timings.size}  (= ${"%.1f".format(audioSeconds)} s Sprache)")
+        log("Erster Schritt:      ${timings.first()} ms")
+        log("Letzter Schritt:     ${timings.last()} ms")
         log("Mittel:              ${"%.0f".format(avgMs)} ms/Schritt")
         log("Tempo:               ${"%.1f".format(perSecond)} Schritte/s")
         log("Echtzeitfaktor:      ${"%.2f".format(realtime)} x")
         log("")
-        log("Fragesatz (4 s Sprache): ${"%.1f".format(sentenceSeconds)} s Rechenzeit")
+        log("Talker gesamt:       ${"%.1f".format(totalSeconds)} s fuer ${"%.1f".format(audioSeconds)} s Sprache")
         log("")
         log(if (realtime >= 1.0) "Schneller als Echtzeit." else "Langsamer als Echtzeit.")
     }
