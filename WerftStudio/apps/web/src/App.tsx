@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Settings, Share2, Sparkles, Sun, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
+import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor } from "./reference-devices";
+import { groupedTokens, hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -103,9 +105,9 @@ function Button({ children, variant = "secondary", className = "", ...props }: {
     </button>
   );
 }
-function IconButton({ label, children, ...props }: { label: string; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+function IconButton({ label, children, className = "", ...props }: { label: string; children: ReactNode; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button className="icon-button" aria-label={label} title={label} {...props}>
+    <button className={`icon-button ${className}`} aria-label={label} title={label} {...props}>
       {children}
     </button>
   );
@@ -281,13 +283,7 @@ function Hub() {
                 >
                   <X size={14} />
                 </button>
-                <div className="preview">
-                  {project.previewPath ? (
-                    <iframe className="card-preview" title={`Vorschau ${project.name}`} src={`${previewOriginFor()}${project.previewPath}`} loading="lazy" tabIndex={-1} sandbox="allow-scripts allow-same-origin" />
-                  ) : (
-                    <span>preview: {project.name.toLowerCase()}</span>
-                  )}
-                </div>
+                <ProjectThumbnail name={project.name} previewPath={project.previewPath} />
                 <div className="card-body">
                   <div>
                     <strong>{project.name}</strong>
@@ -321,6 +317,69 @@ function Hub() {
       {importOpen && <ImportProject onClose={() => setImportOpen(false)} />}
       {newOpen && <NewProject onClose={() => setNewOpen(false)} />}
     </HubShell>
+  );
+}
+
+// Die Karte zeigt das Design selbst, nicht ein Streifenmuster. Wie gross das Design ist, meldet die
+// Vorschau; erst mit dieser Zahl laesst sich der Bildschirm VOLLSTAENDIG in die Kachel einpassen —
+// ein fester Verkleinerungsfaktor zeigte je nach Projekt nur eine Ecke oder eine leere Flaeche.
+function ProjectThumbnail({ name, previewPath }: { name: string; previewPath: string | undefined }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [design, setDesign] = useState({ width: 412, height: 915 });
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data as { source?: string; action?: string; width?: number; height?: number } | null;
+      if (!data || data.source !== "werft-preview-canvas" || data.action !== "size") return;
+      if (event.source !== frameRef.current?.contentWindow) return;
+      if (!Number.isFinite(data.width) || !Number.isFinite(data.height) || !data.width || !data.height) return;
+      setDesign((current) => (current.width === Math.round(data.width!) && current.height === Math.round(data.height!) ? current : { width: Math.round(data.width!), height: Math.round(data.height!) }));
+      setShown(true);
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+  // Meldet eine Vorschau keine Groesse — etwa weil ihr Inhalt erst im Browser entsteht und leer
+  // bleibt —, wird sie nach kurzer Frist trotzdem gezeigt. Sonst haette die Karte gar nichts, und
+  // gerade an so einem Projekt sieht man am ehesten, dass mit ihm etwas nicht stimmt.
+  const showAnyway = () => window.setTimeout(() => setShown(true), 1_200);
+  useEffect(() => {
+    const element = boxRef.current;
+    if (!element || typeof ResizeObserver !== "function") return;
+    const measure = () => {
+      const rect = element.getBoundingClientRect();
+      setBox((current) => (Math.abs(current.width - rect.width) < 1 && Math.abs(current.height - rect.height) < 1 ? current : { width: rect.width, height: rect.height }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  if (!previewPath) return <div className="preview thumb" ref={boxRef}><span>Noch keine Vorschau · Design im Studio aufbauen</span></div>;
+  const separator = previewPath.includes("?") ? "&" : "?";
+  // Skaliert wird auf die BREITE der Kachel und oben angesetzt: ein hochformatiger Bildschirm waere
+  // vollstaendig eingepasst nur noch ein fingerbreiter Streifen, auf dem nichts zu erkennen ist. So
+  // steht der Kopf des Designs gross da — wie in jedem Entwurfswerkzeug. Ein flaches Design, das
+  // ganz hineinpasst, wird stattdessen mittig gesetzt.
+  const scale = box.width ? box.width / design.width : 0;
+  const offsetY = design.height * scale < box.height ? (box.height - design.height * scale) / 2 : 0;
+  return (
+    <div className={`preview thumb${shown ? " shown" : ""}`} ref={boxRef}>
+      <iframe
+        ref={frameRef}
+        className="card-preview"
+        title={`Vorschau ${name}`}
+        src={`${previewOriginFor()}${previewPath}${separator}werftStage=1`}
+        loading="lazy"
+        tabIndex={-1}
+        scrolling="no"
+        onLoad={showAnyway}
+        sandbox="allow-scripts allow-same-origin"
+        style={{ width: design.width, height: design.height, transform: `translate(0, ${offsetY}px) scale(${scale})` }}
+      />
+    </div>
   );
 }
 
@@ -868,7 +927,7 @@ function Studio() {
   const location = useLocation();
   const client = useQueryClient();
   const tab = location.pathname.split("/").at(-1) ?? "canvas";
-  const { theme, leftOpen, rightOpen, toggleLeft, toggleRight, mode, setMode, zoom, setZoom, setTheme, setModal, modal } = useUi();
+  const { theme, leftOpen, rightOpen, toggleLeft, toggleRight, setLeftOpen, setRightOpen, mode, setMode, zoom, setZoom, setTheme, setModal, modal } = useUi();
   const project = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => api<Project>(`/projects/${projectId}`),
@@ -885,6 +944,17 @@ function Studio() {
   const [radius, setRadius] = useState(18);
   const [darkPreview, setDarkPreview] = useState(false);
   const [canvasFullscreen, setCanvasFullscreen] = useState(false);
+  // Das Referenzgeraet gilt fuer die Buehne: leer heisst „so gross wie das Design selbst".
+  const [deviceId, setDeviceId] = useState("");
+  const [landscape, setLandscape] = useState(false);
+  const stageDevice = stageDeviceFor(deviceId, landscape);
+  // Der Neuaufbau wird OBEN bedient, laeuft aber unten auf der Buehne. Deshalb liegt er hier und
+  // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
+  const [rebuildProgress, setRebuildProgress] = useState<ReconstructionJob | null>(null);
+  const rebuild = useMutation({
+    mutationFn: ({ retryFailed, force }: { retryFailed: boolean; force?: boolean }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
+  });
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
   const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
@@ -928,12 +998,33 @@ function Studio() {
   const [themeRequest, setThemeRequest] = useState<{ themeId: string; nonce: number } | null>(null);
   // Die Farbregler arbeiten mit den Token, die der Aufbau aus den Projektquellen erzeugt hat.
   const [designTokens, setDesignTokens] = useState<Record<string, string>>({});
-  const [tokenOverrides, setTokenOverrides] = useState<Record<string, string>>({});
+  // Anpassungen werden JE ERSCHEINUNG gefuehrt: Hell und Dunkel haben eigene Farben, ein gemeinsamer
+  // Satz wuerde die eine Erscheinung mit den Werten der anderen ueberschreiben.
+  const [tokenOverrides, setTokenOverrides] = useState<Record<string, Record<string, string>>>({});
   const [tuneRequest, setTuneRequest] = useState<{ overrides: Record<string, string>; nonce: number } | null>(null);
-  const tuneToken = (name: string, value: string) => {
-    const next = { ...tokenOverrides, [name]: value };
+  // Die im Design aufgenommene Farbe: sie zeigt, welcher Regler zu der angeklickten Stelle gehoert.
+  const [colourPick, setColourPick] = useState<ColourPick | null>(null);
+  const [highlightedToken, setHighlightedToken] = useState("");
+  const activeOverrides = tokenOverrides[activeThemeId] ?? {};
+  const overrideCount = Object.values(tokenOverrides).reduce((sum, entries) => sum + Object.keys(entries).length, 0);
+  const applyOverrides = (next: Record<string, Record<string, string>>, themeId: string) => {
     setTokenOverrides(next);
-    setTuneRequest({ overrides: next, nonce: Date.now() });
+    setTuneRequest({ overrides: next[themeId] ?? {}, nonce: Date.now() });
+  };
+  const tuneToken = (name: string, value: string) => applyOverrides({ ...tokenOverrides, [activeThemeId]: { ...activeOverrides, [name]: value } }, activeThemeId);
+  const resetToken = (name: string) => {
+    const remaining = { ...activeOverrides };
+    delete remaining[name];
+    applyOverrides({ ...tokenOverrides, [activeThemeId]: remaining }, activeThemeId);
+  };
+  // „Alles zurueck" meint das ganze Projekt — auch die Erscheinungen, die gerade nicht zu sehen sind.
+  const resetAllTokens = () => applyOverrides({}, activeThemeId);
+  // Beim Wechsel der Erscheinung gehen deren eigene Anpassungen mit; sonst bliebe der Satz der
+  // vorherigen Erscheinung im Design stehen.
+  const chooseTheme = (themeId: string) => {
+    setActiveThemeId(themeId);
+    setThemeRequest({ themeId, nonce: Date.now() });
+    setTuneRequest({ overrides: tokenOverrides[themeId] ?? {}, nonce: Date.now() + 1 });
   };
   // Ohne importiertes Design gibt es kein Board — dann bleibt das Gespräch der Einstieg, statt einen
   // leeren Reiter vorzublenden.
@@ -1016,6 +1107,7 @@ function Studio() {
         c: "comment",
         e: "edit",
         d: "draw",
+        f: "pick",
       };
       if (map[e.key.toLowerCase()]) setMode(map[e.key.toLowerCase()]!);
       if (e.key === "0") setZoom(1);
@@ -1027,9 +1119,21 @@ function Studio() {
     addEventListener("keydown", handler);
     return () => removeEventListener("keydown", handler);
   }, [setMode, setZoom, toggleLeft, toggleRight, setModal]);
+  // Im Vollbild sind beide Leisten zunaechst zu — es soll nur das Design zu sehen sein. Beim
+  // Verlassen kommt GENAU der Stand zurueck, der vorher galt; sonst waeren die Leisten nach einem
+  // einzigen Vollbild-Ausflug dauerhaft verschwunden.
+  const panelsBeforeFullscreen = useRef<{ left: boolean; right: boolean } | null>(null);
+  const restorePanels = () => {
+    const before = panelsBeforeFullscreen.current;
+    panelsBeforeFullscreen.current = null;
+    if (!before) return;
+    setLeftOpen(before.left);
+    setRightOpen(before.right);
+  };
   useEffect(() => {
-    const handleFullscreenChange = () => { if (!document.fullscreenElement) setCanvasFullscreen(false); };
-    const handleFullscreenEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setCanvasFullscreen(false); };
+    const leaveFullscreen = () => { setCanvasFullscreen(false); restorePanels(); };
+    const handleFullscreenChange = () => { if (!document.fullscreenElement) leaveFullscreen(); };
+    const handleFullscreenEscape = (event: KeyboardEvent) => { if (event.key === "Escape") leaveFullscreen(); };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("keydown", handleFullscreenEscape);
     return () => {
@@ -1039,21 +1143,36 @@ function Studio() {
   }, []);
   const enterCanvasFullscreen = () => {
     nav(`/app/projects/${projectId}/studio/canvas`);
-    if (leftOpen) toggleLeft();
-    if (rightOpen) toggleRight();
+    panelsBeforeFullscreen.current = { left: leftOpen, right: rightOpen };
+    setLeftOpen(false);
+    setRightOpen(false);
     setCanvasFullscreen(true);
     if (document.documentElement.requestFullscreen) void document.documentElement.requestFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht gestartet werden", error));
   };
   const exitCanvasFullscreen = () => {
     setCanvasFullscreen(false);
+    restorePanels();
     if (document.fullscreenElement) void document.exitFullscreen().catch((error) => console.warn("Browser-Vollbild konnte nicht beendet werden", error));
   };
+  // Der Regler zur aufgenommenen Farbe wird sichtbar gemacht und kurz hervorgehoben — bei dreissig
+  // Reglern waere er sonst irgendwo in der Liste und man muesste ihn suchen.
+  useEffect(() => {
+    if (!highlightedToken) return;
+    document.querySelector(`[data-token="${CSS.escape(highlightedToken)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const timer = window.setTimeout(() => setHighlightedToken(""), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedToken]);
+  const canRebuild = imported.data?.imported === true;
+  const rebuildLabel = imported.data?.imported && imported.data.reconstructed ? "Design neu aus den Quellen aufbauen" : "Design aus den Quellen aufbauen";
+  const startRebuild = () => rebuild.mutate({ retryFailed: true, force: imported.data?.imported === true && imported.data.reconstructed });
   if (project.isError) return <Navigate to="/app/designs" />;
   return (
     <div className={`studio${canvasFullscreen ? " canvas-fullscreen" : ""}`} data-theme={theme}>
       {canvasFullscreen && (
         <div className="canvas-fullscreen-controls">
-          <IconButton label="Gesprächspanel ein- oder ausblenden" onClick={toggleLeft}><PanelLeft /></IconButton>
+          <IconButton label="Bearbeitungsleiste ein- oder ausblenden" className={leftOpen ? "on" : ""} onClick={toggleLeft}><PanelLeft /></IconButton>
+          <IconButton label="Farbleiste ein- oder ausblenden" className={rightOpen ? "on" : ""} onClick={toggleRight}><PanelRight /></IconButton>
+          {canRebuild && <IconButton label={rebuildLabel} disabled={rebuild.isPending} onClick={startRebuild}><RotateCcw /></IconButton>}
           <IconButton label="Vollbild beenden" onClick={exitCanvasFullscreen}><Minimize2 /></IconButton>
         </div>
       )}
@@ -1063,9 +1182,35 @@ function Studio() {
         </IconButton>
         <strong>{project.data?.name ?? "Projekt wird geladen …"}</strong>
         <span />
-        <IconButton label="Bearbeitungsleiste ein- oder ausblenden" onClick={toggleLeft}>
+        {/* Referenzgeraet: das Design wird auf der Flaeche gezeigt, die das gewaehlte Geraet einer
+            App wirklich laesst — zugeklappt und aufgeklappt sind eigene Eintraege, hoch und quer
+            eine eigene Achse daneben. */}
+        {canRebuild && (
+          <div className="device-picker">
+            <select value={deviceId} title="Referenzgerät für die Bühne" aria-label="Referenzgerät" onChange={(event) => setDeviceId(event.target.value)}>
+              <option value="">Größe des Designs</option>
+              {referenceDevices.map((device) => (
+                <option key={device.id} value={device.id}>{deviceLabel(device)}</option>
+              ))}
+            </select>
+            <div className="segments orientation" role="group" aria-label="Ausrichtung">
+              <button type="button" className={landscape ? "" : "active"} disabled={!deviceId} title="Hochformat" onClick={() => setLandscape(false)}>Hoch</button>
+              <button type="button" className={landscape ? "active" : ""} disabled={!deviceId} title="Querformat — Gerät um 90 Grad gedreht" onClick={() => setLandscape(true)}>Quer</button>
+            </div>
+            {stageDevice && <code title={`${referenceDevices.find((device) => device.id === deviceId)?.source ?? ""} — logische Fläche in CSS-Pixeln`}>{stageDevice.width} × {stageDevice.height}</code>}
+          </div>
+        )}
+        <IconButton label="Bearbeitungsleiste ein- oder ausblenden" className={leftOpen ? "on" : ""} onClick={toggleLeft}>
           <PanelLeft />
         </IconButton>
+        <IconButton label="Farbleiste ein- oder ausblenden" className={rightOpen ? "on" : ""} onClick={toggleRight}>
+          <PanelRight />
+        </IconButton>
+        {canRebuild && (
+          <IconButton label={rebuildLabel} disabled={rebuild.isPending} onClick={startRebuild}>
+            <RotateCcw />
+          </IconButton>
+        )}
         <IconButton label="Design im Vollbild anzeigen" onClick={enterCanvasFullscreen}>
           <Maximize2 />
         </IconButton>
@@ -1120,7 +1265,7 @@ function Studio() {
                           key={theme.id}
                           className={`board-theme${theme.id === activeThemeId ? " active" : ""}`}
                           title={theme.name}
-                          onClick={() => { setActiveThemeId(theme.id); setThemeRequest({ themeId: theme.id, nonce: Date.now() }); }}
+                          onClick={() => chooseTheme(theme.id)}
                         >
                           {/* Die Farbe liegt als Bild ÜBER dem weißen Grund: halbdurchsichtige
                               Designfarben bleiben so erkennbar statt mit dem Panel zu verschmelzen. */}
@@ -1246,6 +1391,8 @@ function Studio() {
             mode={mode}
             setMode={setMode}
             imported={imported.data}
+            device={stageDevice}
+            rebuild={{ start: (options) => rebuild.mutate(options), pending: rebuild.isPending, error: rebuild.error, progress: rebuildProgress }}
             onScreenChange={setVisibleScreen}
             onScreensChange={setBoardScreens}
             onActiveScreenChange={setActiveScreenId}
@@ -1256,6 +1403,13 @@ function Studio() {
             themeRequest={themeRequest}
             themeCss={themeCss}
             onThemesChange={(themes, activeId, effective) => { setBoardThemes(themes); setActiveThemeId(activeId); if (effective !== undefined) setThemesEffective(effective); }}
+            onColourPick={(pick) => {
+              setColourPick(pick);
+              // Ist die Farbe einem Regler zuzuordnen, wird genau dieser gezeigt — der Klick ins
+              // Design fuehrt damit ohne Suchen zur passenden Einstellung.
+              const withToken = pick.entries.find((entry) => entry.token);
+              if (withToken) { setRightOpen(true); setHighlightedToken(withToken.token); }
+            }}
             onTextEdit={(before, after) => textEdit.mutate({ before, after })}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
@@ -1267,32 +1421,82 @@ function Studio() {
             }}
           />
         </section>
-        {rightOpen && imported.data?.imported && Object.keys(designTokens).length > 0 && (
+        {rightOpen && imported.data?.imported && (
           <aside className="right-panel">
             <header>
               <div>
                 <strong>Farben dieses Designs</strong>
                 <small>Wirken sofort auf allen Bildschirmen, ohne KI-Lauf</small>
               </div>
-              <Button
-                variant="ghost"
-                disabled={!Object.keys(tokenOverrides).length}
-                onClick={() => { setTokenOverrides({}); setTuneRequest({ overrides: {}, nonce: Date.now() }); }}
-              >
-                Zurücksetzen
+              <Button variant="ghost" disabled={!overrideCount} onClick={resetAllTokens} title="Setzt alle geänderten Farben aller Erscheinungen auf den Stand des Designs zurück">
+                Alle zurück{overrideCount ? ` (${overrideCount})` : ""}
               </Button>
             </header>
             <div className="inspector token-list">
-              {Object.entries(designTokens).map(([name, value]) => (
-                <label className="token-row" key={name}>
-                  <span title={name}>{name.replace(/^--/, "")}</span>
-                  <input
-                    type="color"
-                    value={/^#[0-9a-fA-F]{6}$/.test(tokenOverrides[name] ?? value) ? (tokenOverrides[name] ?? value) : "#000000"}
-                    onChange={(event) => tuneToken(name, event.target.value)}
-                  />
-                </label>
-              ))}
+              {/* Hell und Dunkel sind zwei verschiedene Farbsaetze. Ohne diese Zeile liesse sich nur
+                  der eine anfassen — der andere bliebe unerreichbar. */}
+              {boardThemes.length > 1 && (
+                <section className="token-group">
+                  <p className="token-group-title">Erscheinung <em>gilt für alle Bildschirme</em></p>
+                  <div className="segments theme-segments">
+                    {boardThemes.map((entry) => (
+                      <button type="button" key={entry.id} className={entry.id === activeThemeId ? "active" : ""} onClick={() => chooseTheme(entry.id)}>
+                        {entry.kind === "dark" ? <Moon /> : entry.kind === "light" ? <Sun /> : <Palette />}
+                        {themeLabel(entry, boardThemes)}
+                      </button>
+                    ))}
+                  </div>
+                  <small className="subtle">Jede Erscheinung hat eigene Farben — Änderungen gelten nur für die gewählte.</small>
+                </section>
+              )}
+              {/* Was gerade im Design angeklickt wurde: Farbe, Rolle und der Regler dahinter. */}
+              <section className="token-group picked-colour">
+                <p className="token-group-title">Farbe aus dem Design <em>Pipette in der Werkzeugleiste</em></p>
+                {colourPick ? (
+                  <>
+                    <strong title={colourPick.selector}>{colourPick.label || colourPick.selector}</strong>
+                    {colourPick.entries.length === 0 && <small className="subtle">An dieser Stelle wird keine eigene Farbe gezeichnet.</small>}
+                    {colourPick.entries.map((entry) => (
+                      <div className="picked-row" key={`${entry.role}:${entry.value}`}>
+                        <i style={{ backgroundImage: `linear-gradient(${entry.value}, ${entry.value})` }} />
+                        <span>{entry.role}<small>{entry.hex || entry.value}</small></span>
+                        {entry.token
+                          ? <button type="button" className={entry.exact ? "" : "loose"} title={entry.exact ? `Diese Stelle verwendet ${entry.token} — zum Regler springen` : `Diese Stelle hat einen festen Farbwert. ${entry.token} ist derselbe Ton — den Regler zu ändern wirkt hier NICHT.`} onClick={() => setHighlightedToken(entry.token)}>{entry.exact ? "" : "≈ "}{tokenTitle(entry.token)}</button>
+                          : <em title="Diese Farbe steht fest im Stylesheet und hat keinen eigenen Regler">fester Wert</em>}
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <small className="subtle">Pipette wählen und ins Design klicken — dann steht hier, welche Farbe dort gilt und welcher Regler sie ändert.</small>
+                )}
+              </section>
+              {Object.keys(designTokens).length === 0 ? (
+                <div className="empty">Dieses Design führt seine Farben nicht als Variablen, sondern fest im Stylesheet. Nach „Neu aufbauen“ oben in der Leiste sind sie hier einzeln regelbar.</div>
+              ) : (
+                groupedTokens(designTokens).map((group) => (
+                  <section className="token-group" key={group.id}>
+                    <p className="token-group-title">{group.title} <em>{group.hint}</em></p>
+                    {group.entries.map(([name, value]) => {
+                      const current = activeOverrides[name] ?? value;
+                      const changed = Boolean(activeOverrides[name]);
+                      return (
+                        <div className={`token-row${highlightedToken === name ? " highlighted" : ""}${changed ? " changed" : ""}`} data-token={name} key={name}>
+                          <span title={`${name} · ${current}`}>{tokenTitle(name)}</span>
+                          <input
+                            type="color"
+                            aria-label={tokenTitle(name)}
+                            value={hexColour(current) || "#000000"}
+                            onChange={(event) => tuneToken(name, event.target.value)}
+                          />
+                          <button type="button" className="token-reset" disabled={!changed} title={changed ? "Diese Farbe auf den Stand des Designs zurücksetzen" : "Unverändert"} onClick={() => resetToken(name)}>
+                            <Undo2 />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </section>
+                ))
+              )}
               <small className="subtle">Aus den Projektquellen gemessen — jede Farbe ist die, die das Design wirklich verwendet.</small>
             </div>
           </aside>
@@ -1395,11 +1599,15 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 
 // Die Bühne zeigt GENAU EINEN Bildschirm — so groß wie möglich, vollständig sichtbar und echt
 // durchklickbar, genau wie die App auf dem Gerät. Kein Nebeneinander, keine Leisten: nur das Design.
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss }: {
+// Eine im Design aufgenommene Farbe: was dort gezeichnet wird und aus welchem Token es stammt.
+type ColourEntry = { role: string; value: string; hex: string; token: string; exact: boolean };
+type ColourPick = { label: string; selector: string; screenName: string; entries: ColourEntry[]; at: number };
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
   previewHeight: number;
+  device: StageDevice;
   zoom: number;
   setZoom(value: number): void;
   onScreenChange(name: string | null): void;
@@ -1414,6 +1622,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void;
   themeRequest: { themeId: string; nonce: number } | null;
   themeCss: string | undefined;
+  onColourPick(pick: ColourPick): void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -1425,7 +1634,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const sizeRef = useRef({ width: previewWidth, height: previewHeight });
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
-  const [size, setSize] = useState({ width: previewWidth, height: previewHeight });
+  // Ohne Referenzgeraet misst sich das Dokument selbst. Ist eines gewaehlt, gilt AUSSCHLIESSLICH
+  // dessen Flaeche — sonst zoege die Selbstmessung die Buehne sofort wieder auf die Groesse zurueck,
+  // mit der das Design aufgebaut wurde, und die Geraetewahl bliebe wirkungslos.
+  const [measuredSize, setMeasuredSize] = useState({ width: previewWidth, height: previewHeight });
+  const size = device ? { width: device.width, height: device.height } : measuredSize;
   // Die Groesse der Buehne und die des Eingabefensters entscheiden, wohin das Fenster passt. Ohne
   // beide Werte laesst sich nicht garantieren, dass es vollstaendig sichtbar bleibt.
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -1435,6 +1648,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   const { mode, setMode } = useUi();
   const markMode = mode === "comment";
   const textMode = mode === "edit";
+  const pickMode = mode === "pick";
   const [marker, setMarker] = useState<MarkTarget | null>(null);
   const [commentText, setCommentText] = useState("");
   // Die Erscheinungen des DESIGNS, nicht die des Studios: importierte Apps bringen fast immer
@@ -1454,6 +1668,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     if (!markMode) { setMarker(null); setCommentText(""); }
   }, [markMode, screens.length]);
   useEffect(() => { tellFrame({ action: "text", on: textMode }); }, [textMode, screens.length]);
+  useEffect(() => { tellFrame({ action: "pick", on: pickMode }); }, [pickMode, screens.length]);
 
   const separator = previewPath.includes("?") ? "&" : "?";
   const stageUrl = `${previewOrigin}${previewPath}${separator}werftStage=1`;
@@ -1555,6 +1770,17 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         if (target.rect && Number.isFinite(target.rect.width)) { setMarker(target); setCommentText(""); }
         return;
       }
+      // Eine aufgenommene Farbe geht direkt an die Farbleiste: dort wird sie samt Token angezeigt.
+      if (data.action === "colour-pick") {
+        const picked = data as unknown as { label?: string; selector?: string; screenName?: string; entries?: ColourEntry[] };
+        onColourPick({ label: picked.label ?? "", selector: picked.selector ?? "", screenName: picked.screenName ?? "", entries: (picked.entries ?? []).filter((entry) => entry && entry.value), at: Date.now() });
+        return;
+      }
+      // Nach dem Umschalten der Erscheinung gelten andere Farbwerte — die Regler bekommen sie sofort.
+      if (data.action === "tokens") {
+        onTokensChange((data as unknown as { tokens?: Record<string, string> }).tokens ?? {});
+        return;
+      }
       if (data.action === "screens") {
         const list = (data.screens ?? []).filter((screen) => screen && typeof screen.id === "string");
         setScreens(list);
@@ -1579,7 +1805,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       }
       if (data.action === "size" && Number.isFinite(data.width) && Number.isFinite(data.height)) {
         const next = { width: Math.round(data.width!), height: Math.round(data.height!) };
-        setSize((current) => (current.width === next.width && current.height === next.height ? current : next));
+        setMeasuredSize((current) => (current.width === next.width && current.height === next.height ? current : next));
         return;
       }
       const frame = frameRef.current;
@@ -1637,6 +1863,17 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     tellFrame({ action: "screen", screenId: screenRequest.screenId });
   }, [screenRequest?.nonce]);
 
+  // Das Referenzgeraet wird dem Dokument mitgeteilt: der Rahmen bekommt die Geraeteflaeche, damit
+  // die Media-Queries des Designs genau so greifen wie auf dem Geraet, und die Bildschirme im
+  // Dokument werden auf dieselbe Flaeche gezwungen. Danach wird wieder vollstaendig eingepasst.
+  useEffect(() => {
+    tellFrame({ action: "viewport", width: device?.width ?? 0, height: device?.height ?? 0 });
+    // Ohne Geraet gilt wieder die Groesse des Designs. Sie wird auf den bekannten Ausgangswert
+    // gesetzt, bis die Vorschau selbst gemessen hat — sonst bliebe die zuletzt erzwungene stehen.
+    if (!device) setMeasuredSize({ width: previewWidth, height: previewHeight });
+    userAdjusted.current = false;
+    requestAnimationFrame(() => { if (!userAdjusted.current) fitStage(); });
+  }, [device?.id, device?.width, device?.height, screens.length]);
   // Farbregler wirken sofort im Design — ohne KI-Lauf und auf allen Bildschirmen zugleich.
   useEffect(() => { if (tuneRequest) tellFrame({ action: "tune", overrides: tuneRequest.overrides }); }, [tuneRequest?.nonce]);
   // Die Wahl aus dem Design Board gilt für ALLE Bildschirme: umgeschaltet wird am Dokument selbst,
@@ -1746,6 +1983,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         <button type="button" className={!markMode && !textMode ? "active" : ""} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
         <button type="button" className={textMode ? "active" : ""} onClick={() => setMode("edit")} title="Text direkt ändern (E) — wirkt sofort, ohne KI"><PenLine /></button>
         <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
+        <button type="button" className={pickMode ? "active" : ""} onClick={() => setMode(pickMode ? "interact" : "pick")} title="Farbe im Design aufnehmen (F) — zeigt, welche Farbe hier gilt und welcher Regler sie ändert"><Pipette /></button>
         {designThemes.length > 1 && (
           <button
             type="button"
@@ -1777,18 +2015,15 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["edit", "Bearbeiten", <PenLine />],
   ["draw", "Zeichnen", <WandSparkles />],
 ];
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined }) {
-  const client = useQueryClient();
+// Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
+type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [offset, setOffset] = useState<CanvasPoint>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
-  const [reconstructionProgress, setReconstructionProgress] = useState<ReconstructionJob | null>(null);
-  const reconstruct = useMutation({
-    mutationFn: ({ retryFailed, force }: { retryFailed: boolean; force?: boolean }) => reconstructProject(projectId, setReconstructionProgress, retryFailed, force ?? false),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
-  });
+  const reconstructionProgress = rebuild.progress;
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -1836,7 +2071,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     return () => viewport.removeEventListener("wheel", handleWheel);
   }, [zoom, setZoom, imported?.imported]);
   useEffect(() => {
-    if (imported?.imported && !imported.previewPath && !reconstruct.isPending && !reconstruct.error) reconstruct.mutate({ retryFailed: false });
+    if (imported?.imported && !imported.previewPath && !rebuild.pending && !rebuild.error) rebuild.start({ retryFailed: false });
   }, [imported?.imported, imported?.imported ? imported.previewPath : undefined, projectId]);
   const viewportProps = {
     ref: viewportRef,
@@ -1858,6 +2093,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             previewPath={imported.previewPath}
             previewWidth={imported.previewWidth}
             previewHeight={imported.previewHeight}
+            device={device}
             zoom={zoom}
             setZoom={setZoom}
             onScreenChange={onScreenChange}
@@ -1872,32 +2108,26 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             onThemesChange={onThemesChange}
             themeRequest={themeRequest}
             themeCss={themeCss}
+            onColourPick={onColourPick}
           />
         ) : (
           <div className="empty reconstruction-state">
-            <strong>{reconstruct.error ? "Die HTML-Version konnte noch nicht fertiggestellt werden." : "Das Ist-Design wird automatisch als HTML aufgebaut."}</strong>
-            {!reconstruct.error && <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />}
+            <strong>{rebuild.error ? "Die HTML-Version konnte noch nicht fertiggestellt werden." : "Das Ist-Design wird automatisch als HTML aufgebaut."}</strong>
+            {!rebuild.error && <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />}
             <span>{reconstructionProgress?.result?.message ?? "Alle UI-Quellen, Themes, Ressourcen und Abmessungen werden geprüft."}</span>
             {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
             {(reconstructionProgress?.result?.totalOperations ?? 0) > 0 ? <small>{reconstructionProgress?.result?.completedOperations ?? 0} von {reconstructionProgress?.result?.totalOperations} KI-Schritten abgeschlossen{reconstructionProgress?.result?.retryCount ? ` · ${reconstructionProgress.result.retryCount} Verbindungswiederholung${reconstructionProgress.result.retryCount === 1 ? "" : "en"}` : ""}</small> : null}
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
-            {reconstruct.error && <Button variant="primary" onClick={() => reconstruct.mutate({ retryFailed: true })}>Rekonstruktion erneut starten</Button>}
-            {reconstruct.error && <p className="field-error">{reconstruct.error instanceof ApiError ? reconstruct.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
+            {rebuild.error && <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true })}>Rekonstruktion erneut starten</Button>}
+            {rebuild.error && <p className="field-error">{rebuild.error instanceof ApiError ? rebuild.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}
         {/* Der Aufbau laeuft in Minuten und muss sichtbar bleiben — aber nur waehrend er laeuft.
             Sonst steht ueber dem Design dauerhaft Text, der nicht zum Design gehoert. */}
-        {imported.previewPath && reconstruct.isPending && (
+        {imported.previewPath && rebuild.pending && (
           <div className="stage-progress">
             <span>{reconstructionProgress?.result?.message ?? "Design wird aus den Quellen aufgebaut."}</span>
             <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
-          </div>
-        )}
-        {imported.previewPath && !reconstruct.isPending && (
-          <div className="stage-tools">
-            <button type="button" onClick={() => reconstruct.mutate({ retryFailed: true, force: imported.reconstructed })} title="Baut alle Bildschirme neu aus dem Quellcode auf — dauert je nach Projektgröße einige Minuten.">
-              <RotateCcw />{imported.reconstructed ? "Neu aufbauen" : "Aus Quellen aufbauen"}
-            </button>
           </div>
         )}
       </div>

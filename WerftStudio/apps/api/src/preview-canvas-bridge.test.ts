@@ -120,6 +120,56 @@ describe("preview canvas bridge", () => {
     expect(code).toContain('action: "theme-changed"');
   });
 
+  // Ein gewaehltes Referenzgeraet gibt die Flaeche vor; das Design passt sich an, nicht umgekehrt.
+  it("zwingt das Dokument auf die Flaeche des gewaehlten Referenzgeraets", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("applyViewport");
+    expect(code).toContain("data-werft-viewport");
+    expect(code).toContain('data.action === "viewport"');
+    // Gemessen wird der BILDSCHIRM. Wer das Fenster mitmisst, kann nie wieder schmaler werden: das
+    // Fenster ist immer so breit wie der Rahmen, den das Studio gerade aufspannt — nach einem
+    // aufgeklappten Geraet bliebe die Buehne fuer immer in dessen Breite stehen.
+    expect(code).toContain("Math.max(rect.width, screen.scrollWidth || 0)");
+    // Die Fensterbreite darf NUR noch als Rueckfall zaehlen, wenn es gar keinen Bildschirm gibt.
+    const screenBranch = code!.indexOf("Math.max(rect.width, screen.scrollWidth");
+    const windowFallback = code!.indexOf("document.documentElement.scrollWidth");
+    expect(screenBranch).toBeGreaterThan(0);
+    expect(windowFallback).toBeGreaterThan(screenBranch);
+  });
+
+  // Ein Klick ins Design muss sagen, WELCHE Farbe dort gilt und welcher Regler sie aendert.
+  it("nimmt Farben aus dem Design auf und belegt die Zuordnung zum Regler", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain('action: "colour-pick"');
+    expect(code).toContain("pickMode");
+    expect(code).toContain("paintedBackground");
+    // Die Zuordnung muss belegt sein: nur wenn die Regel wirklich var(--x) nennt, aendert der
+    // Regler diese Stelle. Blosse Farbgleichheit fuehrt sonst auf einen wirkungslosen Regler.
+    expect(code).toContain("declaredVariable");
+    expect(code).toContain("inheritedVariable");
+    expect(code).toContain("exact: Boolean(declared)");
+    // Kurzform und Langform derselben Eigenschaft muessen beide erkannt werden.
+    expect(code).toContain('["background-color", "background"]');
+  });
+
+  // Jede Erscheinung hat eigene Farbwerte. Frueher wurden nur die Bloecke ohne Erscheinungs-
+  // bedingung gelesen: im Dunkelmodus zeigte und aenderte der Regler die Farben des hellen.
+  it("liest die Farbwerte der GERADE geltenden Erscheinung", () => {
+    const html = injectPreviewCanvasBridge("<!doctype html><body></body>");
+    const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(() => new Function(code!)).not.toThrow();
+    expect(code).toContain("tokenNames");
+    expect(code).toContain("getComputedStyle(document.documentElement)");
+    expect(code).toContain('post({ action: "tokens", tokens: designTokens()');
+    // Zum Messen wird der eigene Regler-Block stillgelegt, sonst waere der Ausgangswert nach der
+    // ersten Aenderung verloren und „zuruecksetzen" haette kein Ziel mehr.
+    expect(code).toContain("tuneStyle.disabled = true");
+  });
+
   // Ein Mond- oder Sonnensymbol IM Design soll auch wirklich umschalten.
   it("verdrahtet einen Umschalter im Design selbst", () => {
     const html = injectPreviewCanvasBridge("<!doctype html><body></body>");

@@ -14,7 +14,7 @@
 
 /* Echte Mini-Vorschau auf Projektkarten */
 .project-card .preview{overflow:hidden;position:relative}
-.project-card .card-preview{width:400%;height:400%;transform:scale(.25);transform-origin:0 0;border:0;pointer-events:none;background:#fff}
+.project-card 
 
 /* Leinwand-Navigation */
 .canvas-viewport{position:relative;overflow:hidden;min-width:0;min-height:0}.canvas-viewport.panning{cursor:grabbing}.canvas-pan-content{transform-origin:0 0;will-change:transform}.frame-scroller.canvas-viewport{overflow:hidden}.frame-content{width:max-content;min-width:100%;min-height:100%}.imported-canvas>.canvas-viewport{width:100%;height:100%}
@@ -134,3 +134,46 @@
 .board-theme.active{border-color:var(--color-accent);background:var(--color-accent-soft);color:var(--color-accent);font-weight:600}
 .board-theme i{width:12px;height:12px;border-radius:50%;border:1px solid var(--color-line);flex:none;background-color:#fff;background-clip:padding-box}
 .board-theme-hint{color:var(--color-warning);font-size:11px;line-height:1.4}
+/* Vollbild: die Bedienung sitzt oben rechts, die Werkzeuge ruecken darunter — vorher lagen beide
+   auf derselben Stelle und verdeckten sich gegenseitig. */
+.canvas-fullscreen .stage-modes{top:62px}
+.canvas-fullscreen .stage-tools{top:62px}
+.canvas-fullscreen-controls .icon-button{width:32px;height:32px}
+/* Ein eingeschalteter Leisten-Schalter ist als solcher erkennbar. */
+.icon-button.on{border-color:var(--color-accent);background:var(--color-accent-soft);color:var(--color-accent)}
+/* Referenzgeraet in der Projektleiste */
+.device-picker{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.device-picker select{min-height:32px;padding:0 8px;max-width:210px;font-size:12px}
+.device-picker code{font:11px var(--font-mono);background:var(--color-hover);padding:2px 8px;border-radius:6px;white-space:nowrap}
+.segments.orientation{flex:none}
+.segments.orientation button{min-height:32px;padding:0 10px;font-size:12px}
+/* Farbleiste: Bereiche mit Ueberschrift, aufgenommene Farbe, Rueckgaengig je Farbe */
+.right-panel .inspector{overflow-y:auto;height:calc(100% - 66px)}
+.token-group{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--color-line-subtle)}
+.token-group:last-of-type{border-bottom:0}
+.token-group-title{margin:0;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-subtle);display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.token-group-title em{font-style:normal;font-weight:500;letter-spacing:0;text-transform:none;color:var(--color-disabled)}
+.token-row{padding:3px 6px;border-radius:8px;border:1px solid transparent}
+.token-row.changed{border-color:var(--color-accent-soft);background:var(--color-accent-soft)}
+.token-row.highlighted{border-color:var(--color-accent);box-shadow:0 0 0 2px var(--color-accent-soft)}
+.token-reset{width:26px;height:24px;flex:none;padding:0;border:1px solid var(--color-line);border-radius:6px;background:var(--color-surface);color:var(--color-text-subtle);display:grid;place-items:center;cursor:pointer}
+.token-reset:hover:not(:disabled){background:var(--color-hover);color:var(--color-text)}
+.token-reset:disabled{opacity:.3;cursor:default}
+.token-reset svg{width:13px;height:13px}
+.theme-segments button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.theme-segments svg{width:14px;height:14px}
+.picked-colour strong{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picked-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.picked-row i{width:22px;height:22px;flex:none;border-radius:6px;border:1px solid var(--color-line);background-color:#fff;background-clip:padding-box}
+.picked-row>span{flex:1;display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.picked-row>span small{color:var(--color-disabled);font:11px var(--font-mono)}
+.picked-row button{max-width:52%;padding:4px 8px;border:1px solid var(--color-line);border-radius:999px;background:var(--color-surface);color:var(--color-accent);font-size:11px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picked-row button:hover{background:var(--color-accent-soft)}
+.picked-row em{font-style:normal;font-size:11px;color:var(--color-disabled)}
+/* Projektkarte: echte, vollstaendig eingepasste Miniatur des Designs */
+.preview.thumb{overflow:hidden;position:relative;padding:0}
+.preview.thumb>span{padding:0 14px;text-align:center;line-height:1.5}
+.preview.thumb .card-preview{position:absolute;left:0;top:0;width:auto;height:auto;transform-origin:0 0;border:0;pointer-events:none;background:#fff;transition:opacity .2s}
+.preview.thumb:not(.shown) .card-preview{opacity:0}
+.preview.thumb.shown{background:#fff}
+.picked-row button.loose{color:var(--color-text-subtle);border-style:dashed}

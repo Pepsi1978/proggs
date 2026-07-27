@@ -41,15 +41,44 @@ const bridgeScript = `<script ${bridgeMarker}>
     try { window.postMessage({ source: "werft-studio-screen", screenId }, "*"); } catch (error) { /* ohne Schaltlogik bleibt der einzige Bildschirm stehen */ }
   };
 
+  // Ein gewaehltes Referenzgeraet gibt die Flaeche vor. Dann wird NICHT mehr gemessen: das Design
+  // soll sich an das Geraet anpassen, nicht das Geraet an das Design.
+  let forcedViewport = null;
+  let viewportStyle = null;
+  const applyViewport = (width, height) => {
+    forcedViewport = width > 0 && height > 0 ? { width: Math.round(width), height: Math.round(height) } : null;
+    if (!viewportStyle) {
+      viewportStyle = document.createElement("style");
+      viewportStyle.setAttribute("data-werft-viewport", "");
+      (document.head || document.documentElement).appendChild(viewportStyle);
+    }
+    viewportStyle.textContent = forcedViewport
+      ? "html, body { width: " + forcedViewport.width + "px !important; height: " + forcedViewport.height + "px !important; min-width: 0 !important; max-width: none !important; margin: 0 !important; overflow: hidden !important; }\\n"
+        + ".werft-screens, .werft-screen { width: " + forcedViewport.width + "px !important; min-width: 0 !important; max-width: none !important; height: " + forcedViewport.height + "px !important; min-height: 0 !important; max-height: none !important; overflow: auto !important; }"
+      : "";
+    measure();
+  };
+
   const measure = () => {
+    if (forcedViewport) { post({ action: "size", width: forcedViewport.width, height: forcedViewport.height, screenId: screenIdOf(activeScreen()) }); return; }
     const screen = activeScreen();
-    const element = screen || document.body;
+    // Gemessen wird der BILDSCHIRM, nicht das Fenster: das Fenster ist immer so breit wie der Rahmen,
+    // den das Studio gerade aufspannt. Wer es mitmisst, kann nie wieder schmaler werden — nach einem
+    // aufgeklappten Referenzgeraet bliebe die Buehne fuer immer in dessen Breite stehen.
+    if (screen) {
+      const rect = screen.getBoundingClientRect();
+      const width = Math.round(Math.max(rect.width, screen.scrollWidth || 0));
+      const height = Math.round(Math.max(rect.height, screen.scrollHeight || 0));
+      if (width && height) post({ action: "size", width, height, screenId: screenIdOf(screen) });
+      return;
+    }
+    const element = document.body;
     if (!element) return;
     const rect = element.getBoundingClientRect();
     const width = Math.round(Math.max(rect.width, element.scrollWidth || 0, document.documentElement.scrollWidth || 0));
     const height = Math.round(Math.max(rect.height, element.scrollHeight || 0));
     if (!width || !height) return;
-    post({ action: "size", width, height, screenId: screenIdOf(screen) });
+    post({ action: "size", width, height, screenId: "" });
   };
 
   // Die Bildschirme heissen intern z. B. "compose:HistoryScreen"; verlinkt wird im Design aber oft
@@ -173,6 +202,9 @@ const bridgeScript = `<script ${bridgeMarker}>
     root.setAttribute("data-theme", theme.kind === "dark" ? "dark" : "light");
     root.style.setProperty("color-scheme", theme.kind === "dark" ? "dark" : "light");
     post({ action: "theme-changed", themeId: theme.id });
+    // Jede Erscheinung hat ihre EIGENEN Farbwerte. Ohne diese Meldung zeigten die Regler nach dem
+    // Umschalten weiter die Farben der vorherigen Erscheinung.
+    post({ action: "tokens", tokens: designTokens(), themeId: theme.id });
     measure();
   };
   const nextThemeId = () => {
@@ -185,24 +217,135 @@ const bridgeScript = `<script ${bridgeMarker}>
   // nicht mit erfundenen Reglern. Dadurch trifft jede Anpassung genau die Farbe, die das Design
   // wirklich verwendet, und wirkt auf allen Bildschirmen zugleich.
   const colorLike = /^(#[0-9a-fA-F]{3,8}|rgba?\\(|hsla?\\()/;
+  // Die NAMEN der Farbtoken stehen in den Variablenbloecken — auch in denen, die nur fuer eine
+  // bestimmte Erscheinung gelten. Der WERT wird dagegen am lebenden Dokument gelesen, also immer
+  // der, der GERADE gilt. Frueher wurden ausschliesslich Bloecke ohne Erscheinungsbedingung gelesen:
+  // im Dunkelmodus zeigte der Regler deshalb die helle Farbe und griff ins Leere.
+  const tokenNames = () => {
+    const names = [];
+    for (const rule of styleRules()) {
+      if (!rule.style || !rule.selectorText) continue;
+      const selector = rule.selectorText;
+      if (selector.indexOf(":root") < 0 && selector.indexOf("html") < 0 && selector.indexOf("body") < 0) continue;
+      for (const name of Array.prototype.slice.call(rule.style)) {
+        if (name.slice(0, 2) !== "--" || names.indexOf(name) >= 0) continue;
+        if (colorLike.test(String(rule.style.getPropertyValue(name)).trim())) names.push(name);
+      }
+    }
+    return names;
+  };
   const designTokens = () => {
+    // Zum Messen wird der eigene Regler-Block kurz stillgelegt: gemeldet werden die Farben des
+    // DESIGNS, nicht die bereits vorgenommenen Anpassungen — sonst waere der Ausgangswert nach der
+    // ersten Aenderung unwiederbringlich weg und „zuruecksetzen" haette nichts, wohin es koennte.
+    const wasDisabled = tuneStyle ? tuneStyle.disabled : false;
+    if (tuneStyle) tuneStyle.disabled = true;
     const found = {};
     try {
-      for (const sheet of Array.prototype.slice.call(document.styleSheets)) {
-        let rules = null;
-        try { rules = sheet.cssRules; } catch (error) { continue; }
-        for (const rule of Array.prototype.slice.call(rules || [])) {
-          if (!rule.style || !rule.selectorText || rule.selectorText.indexOf(":root") < 0) continue;
-          if (rule.selectorText.indexOf("data-theme") >= 0) continue;
-          for (const name of Array.prototype.slice.call(rule.style)) {
-            if (name.slice(0, 2) !== "--") continue;
-            const value = String(rule.style.getPropertyValue(name)).trim();
-            if (colorLike.test(value)) found[name] = value;
-          }
-        }
+      const computed = getComputedStyle(document.documentElement);
+      for (const name of tokenNames()) {
+        const value = String(computed.getPropertyValue(name) || "").trim();
+        if (colorLike.test(value)) found[name] = value;
       }
     } catch (error) { /* ohne lesbare Stylesheets bleibt die Vorschau bedienbar */ }
+    finally { if (tuneStyle) tuneStyle.disabled = wasDisabled; }
     return found;
+  };
+
+  // Farbwerte stehen im Stylesheet in jeder Schreibweise. Verglichen und angezeigt wird deshalb der
+  // Wert, den der Browser selbst daraus macht.
+  const colourProbe = document.createElement("span");
+  colourProbe.setAttribute("data-werft-colour-probe", "");
+  colourProbe.style.display = "none";
+  const normalizeColour = (value) => {
+    if (!value) return "";
+    try {
+      if (!colourProbe.parentNode) (document.body || document.documentElement).appendChild(colourProbe);
+      colourProbe.style.color = "";
+      colourProbe.style.color = String(value).trim();
+      if (!colourProbe.style.color) return "";
+      return getComputedStyle(colourProbe).color || "";
+    } catch (error) { return ""; }
+  };
+  const hexOf = (value) => {
+    const parsed = /rgba?\\(([^)]+)\\)/.exec(value || "");
+    if (!parsed) return "";
+    const parts = parsed[1].split(",").map((part) => parseFloat(part));
+    if (parts.length < 3) return "";
+    const hex = (number) => ("0" + Math.max(0, Math.min(255, Math.round(number))).toString(16)).slice(-2);
+    return "#" + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
+  };
+  const isVisibleColour = (value) => {
+    const parsed = /rgba?\\(([^)]+)\\)/.exec(value || "");
+    if (!parsed) return false;
+    const parts = parsed[1].split(",").map((part) => parseFloat(part));
+    return parts.length < 4 || parts[3] > 0.05;
+  };
+  // Welches Token steckt hinter dieser Farbe? Zuerst wird nachgesehen, welche Regel die Eigenschaft
+  // an DIESEM Element setzt und ob sie eine Variable nennt — das ist die einzige sichere Zuordnung.
+  // Ein blosser Farbvergleich wuerde sonst zufaellige Gleichheit als Zusammenhang ausgeben (weisse
+  // Schrift traefe auf eine weisse Flaechenfarbe, und der falsche Regler bliebe wirkungslos).
+  // Geprueft werden ALLE Schreibweisen einer Farbe: „background: var(--x)" ist genauso gueltig wie
+  // „background-color: var(--x)". Ohne die Kurzformen bliebe die haeufigste Schreibweise unerkannt.
+  const declaredVariable = (element, properties) => {
+    if (!(element instanceof Element)) return "";
+    const variableIn = (value) => {
+      const match = /var\\(\\s*(--[A-Za-z0-9_-]+)/.exec(value || "");
+      return match ? match[1] : "";
+    };
+    const firstIn = (style) => {
+      for (const property of properties) {
+        const variable = variableIn(style.getPropertyValue(property));
+        if (variable) return variable;
+      }
+      return "";
+    };
+    const inline = element.style ? firstIn(element.style) : "";
+    if (inline) return inline;
+    let found = "";
+    for (const rule of styleRules()) {
+      if (!rule.style || !rule.selectorText) continue;
+      const variable = firstIn(rule.style);
+      if (!variable) continue;
+      let matches = false;
+      try { matches = element.matches(rule.selectorText); } catch (error) { matches = false; }
+      if (matches) found = variable;
+    }
+    return found;
+  };
+  // Die Schriftfarbe wird oft weiter oben gesetzt und nur vererbt. Gesucht wird deshalb so lange
+  // aufwaerts, wie die Farbe unveraendert von dort kommt — setzt ein Element sie selbst neu, endet
+  // die Suche, damit nicht die Variable des Elternteils als Ursache ausgegeben wird.
+  const inheritedVariable = (element, properties) => {
+    if (!(element instanceof Element)) return "";
+    const wanted = getComputedStyle(element).getPropertyValue(properties[0]);
+    let node = element;
+    while (node && node.nodeType === 1) {
+      const own = declaredVariable(node, properties);
+      if (own) return own;
+      const parent = node.parentElement;
+      if (!parent || getComputedStyle(parent).getPropertyValue(properties[0]) !== wanted) return "";
+      node = parent;
+    }
+    return "";
+  };
+  const tokenForColour = (value) => {
+    const wanted = normalizeColour(value);
+    if (!wanted) return "";
+    const tokens = designTokens();
+    for (const name of Object.keys(tokens)) if (normalizeColour(tokens[name]) === wanted) return name;
+    return "";
+  };
+  // Eine durchsichtige Flaeche zeigt die Farbe DAHINTER — gemeldet wird die, die man wirklich sieht,
+  // samt dem Element, von dem sie stammt: nur dort steht, welche Variable sie setzt.
+  const paintedBackground = (element) => {
+    let node = element;
+    while (node && node.nodeType === 1) {
+      const value = getComputedStyle(node).backgroundColor;
+      if (isVisibleColour(value)) return { value: value, from: node };
+      node = node.parentElement;
+    }
+    return { value: "", from: null };
   };
 
   let tuneStyle = null;
@@ -324,6 +467,7 @@ const bridgeScript = `<script ${bridgeMarker}>
   // seinem WOERTLICHEN Ausschnitt gemeldet. Nur so trifft ein Aenderungswunsch spaeter genau das
   // gemeinte Element statt irgendeines gleichnamigen.
   let markMode = false;
+  let pickMode = false;
   let markHover = null;
   const clearMarkHover = () => { if (markHover) markHover.style.removeProperty("outline"); markHover = null; };
   // Markiert wird genau das Element unter dem Zeiger; Seite und Body selbst sind kein Bereich.
@@ -484,13 +628,46 @@ const bridgeScript = `<script ${bridgeMarker}>
   document.addEventListener("focusout", () => { if (editing) finishTextEdit(); }, true);
 
   document.addEventListener("pointermove", (event) => {
-    if (!markMode) return;
+    if (!markMode && !pickMode) return;
     const element = markableUnder(event.target);
     if (element === markHover) return;
     clearMarkHover();
     if (!element) return;
     markHover = element;
     element.style.setProperty("outline", "2px solid #d97757", "important");
+  }, true);
+  // Farbe aufnehmen: der Klick meldet die Farben, die an diesem Element WIRKLICH gezeichnet werden,
+  // samt der Token, aus denen sie stammen. Ohne diesen Weg bliebe unklar, welcher Regler zu welcher
+  // Stelle im Design gehoert.
+  document.addEventListener("click", (event) => {
+    if (!pickMode) return;
+    const element = markableUnder(event.target);
+    if (!element) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const style = getComputedStyle(element);
+    const entries = [];
+    // Die Markierung "exact" unterscheidet die belegte Zuordnung (die Regel nennt diese Variable)
+    // von der blossen Farbgleichheit. Ohne sie liefe man auf einen Regler zu, der hier nichts tut.
+    const add = (role, value, declared) => {
+      const normalized = normalizeColour(value);
+      if (!normalized || !isVisibleColour(normalized)) return;
+      if (entries.some((entry) => entry.value === normalized && entry.role === role)) return;
+      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: declared || tokenForColour(value), exact: Boolean(declared) });
+    };
+    const background = paintedBackground(element);
+    add("Fläche", background.value, declaredVariable(background.from, ["background-color", "background"]));
+    add("Schrift", style.color, inheritedVariable(element, ["color"]));
+    if (parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderLeftWidth || "0") > 0) add("Rahmen", style.borderTopColor, declaredVariable(element, ["border-top-color", "border-color", "border-top", "border"]));
+    const screen = element.closest(".werft-screen") || activeScreen();
+    post({
+      action: "colour-pick",
+      label: labelFor(element),
+      selector: selectorFor(element),
+      entries: entries,
+      screenId: screenIdOf(screen),
+      screenName: screen && screen.dataset ? screen.dataset.screenName || "" : ""
+    });
   }, true);
   document.addEventListener("click", (event) => {
     if (!markMode) return;
@@ -560,6 +737,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "highlight") document.documentElement.setAttribute("data-werft-highlight", data.on ? "on" : "off");
     if (data.action === "screen") showScreen(data.screenId);
     if (data.action === "measure") measure();
+    if (data.action === "viewport") applyViewport(Number(data.width) || 0, Number(data.height) || 0);
     if (data.action === "tune") applyTune(data.overrides);
     if (data.action === "theme-css") { applyThemeCss(typeof data.css === "string" ? data.css : ""); publishScreens(); }
     if (data.action === "theme") {
@@ -573,7 +751,14 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (data.action === "mark") {
       markMode = Boolean(data.on);
       clearMarkHover();
-      document.documentElement.style.cursor = markMode ? "crosshair" : "";
+      document.documentElement.style.cursor = markMode ? "crosshair" : pickMode ? "crosshair" : "";
+    }
+    if (data.action === "pick") {
+      pickMode = Boolean(data.on);
+      clearMarkHover();
+      document.documentElement.style.cursor = pickMode || markMode ? "crosshair" : "";
+      // Die Regler sollen beim Aufnehmen die Farben zeigen, die JETZT gelten.
+      if (pickMode) publishScreens();
     }
     if (data.action === "text") {
       textMode = Boolean(data.on);
