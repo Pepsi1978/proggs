@@ -19,6 +19,17 @@ export const deviceLabel = (device: ReferenceDevice) => device.state ? `${device
 // Quer heisst: das Geraet um 90 Grad gedreht. Aufgeklappt und gedreht sind zwei getrennte Achsen —
 // beide Fold-Zustaende gibt es deshalb hoch UND quer.
 export type StageDevice = { id: string; label: string; width: number; height: number } | null;
+export function stageDeviceForDesign(width: number, height: number, landscape: boolean): StageDevice {
+  const shortSide = Math.min(width, height);
+  const longSide = Math.max(width, height);
+  return {
+    id: "design-size",
+    label: `Größe des Designs · ${landscape ? "quer" : "hoch"}`,
+    width: landscape ? longSide : shortSide,
+    height: landscape ? shortSide : longSide
+  };
+}
+
 export function stageDeviceFor(deviceId: string, landscape: boolean): StageDevice {
   const device = referenceDevices.find((entry) => entry.id === deviceId);
   if (!device) return null;

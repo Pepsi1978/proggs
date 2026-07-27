@@ -4,7 +4,7 @@ import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode,
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
-import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor } from "./reference-devices";
+import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
@@ -957,7 +957,11 @@ function Studio() {
   // Das Referenzgeraet gilt fuer die Buehne: leer heisst „so gross wie das Design selbst".
   const [deviceId, setDeviceId] = useState("");
   const [landscape, setLandscape] = useState(false);
-  const stageDevice = stageDeviceFor(deviceId, landscape);
+  const referenceDevice = stageDeviceFor(deviceId, landscape);
+  const designDevice = imported.data?.imported
+    ? stageDeviceForDesign(imported.data.previewWidth, imported.data.previewHeight, landscape)
+    : null;
+  const stageDevice = referenceDevice ?? designDevice;
   // Der Neuaufbau wird OBEN bedient, laeuft aber unten auf der Buehne. Deshalb liegt er hier und
   // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
   const [rebuildProgress, setRebuildProgress] = useState<ReconstructionJob | null>(null);
@@ -1161,18 +1165,18 @@ function Studio() {
   const canRebuild = imported.data?.imported === true;
   // Gibt es fuer das gewaehlte Geraet bereits eine eigene Fassung? Dann zeigt die Buehne sie; sonst
   // steht dort die Grundfassung, die die Flaeche des Geraets nicht ausnutzt.
-  const deviceVariant = stageDevice && imported.data?.imported
-    ? imported.data.variants.find((variant) => variant.width === stageDevice.width && variant.height === stageDevice.height)
+  const deviceVariant = referenceDevice && imported.data?.imported
+    ? imported.data.variants.find((variant) => variant.width === referenceDevice.width && variant.height === referenceDevice.height)
     : undefined;
-  const rebuildLabel = stageDevice
-    ? deviceVariant ? `Fassung für ${stageDevice.label} neu aufbauen` : `Design für ${stageDevice.label} aufbauen`
+  const rebuildLabel = referenceDevice
+    ? deviceVariant ? `Fassung für ${referenceDevice.label} neu aufbauen` : `Design für ${referenceDevice.label} aufbauen`
     : imported.data?.imported && imported.data.reconstructed ? "Design neu aus den Quellen aufbauen" : "Design aus den Quellen aufbauen";
   // Mit gewaehltem Geraet wird FUER DESSEN Flaeche gebaut — genau das macht aus dem Rahmen eine
   // echte Geraeteansicht statt eines zu gross gezogenen Handybildschirms.
   const startRebuild = () => rebuild.mutate({
     retryFailed: true,
     force: imported.data?.imported === true && imported.data.reconstructed,
-    ...(stageDevice ? { viewport: { width: stageDevice.width, height: stageDevice.height, device: stageDevice.label } } : {})
+    ...(referenceDevice ? { viewport: { width: referenceDevice.width, height: referenceDevice.height, device: referenceDevice.label } } : {})
   });
   if (project.isError) return <Navigate to="/app/designs" />;
   return (
@@ -1202,8 +1206,8 @@ function Studio() {
               ))}
             </select>
             <div className="segments orientation" role="group" aria-label="Ausrichtung">
-              <button type="button" className={landscape ? "" : "active"} disabled={!deviceId} title="Hochformat" onClick={() => setLandscape(false)}>Hoch</button>
-              <button type="button" className={landscape ? "active" : ""} disabled={!deviceId} title="Querformat — Gerät um 90 Grad gedreht" onClick={() => setLandscape(true)}>Quer</button>
+              <button type="button" className={landscape ? "" : "active"} title="Hochformat" onClick={() => setLandscape(false)}>Hoch</button>
+              <button type="button" className={landscape ? "active" : ""} title="Querformat — Ansicht um 90 Grad gedreht" onClick={() => setLandscape(true)}>Quer</button>
             </div>
             {stageDevice && <code title={`${referenceDevices.find((device) => device.id === deviceId)?.source ?? ""} — logische Fläche in CSS-Pixeln`}>{stageDevice.width} × {stageDevice.height}</code>}
           </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hexColour, tokenTitle } from "./design-colours.js";
-import { referenceDevices, stageDeviceFor } from "./reference-devices.js";
+import { referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices.js";
 
 describe("Farbregler", () => {
   // Gemessen wird am lebenden Dokument; von dort kommen fast immer rgb()-Werte. Wurden sie nicht
@@ -26,6 +26,12 @@ describe("Farbregler", () => {
 });
 
 describe("Referenzgeraete", () => {
+  it("dreht auch die Groesse des Designs zwischen Hoch- und Querformat", () => {
+    expect(stageDeviceForDesign(412, 912, false)).toEqual({ id: "design-size", label: "Größe des Designs · hoch", width: 412, height: 912 });
+    expect(stageDeviceForDesign(412, 912, true)).toEqual({ id: "design-size", label: "Größe des Designs · quer", width: 912, height: 412 });
+    expect(stageDeviceForDesign(912, 412, false)).toEqual({ id: "design-size", label: "Größe des Designs · hoch", width: 412, height: 912 });
+  });
+
   it("dreht das Geraet fuer das Querformat, statt eine zweite Liste zu fuehren", () => {
     const upright = stageDeviceFor("fold6-main", false);
     const turned = stageDeviceFor("fold6-main", true);
