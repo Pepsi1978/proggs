@@ -14,6 +14,7 @@ export const referenceDevices: ReferenceDevice[] = [
   { id: "fold6-cover", name: "Galaxy Z Fold 6", state: "zugeklappt", width: 369, height: 905, source: "968 × 2376 px · 2,625×" },
   { id: "fold6-main", name: "Galaxy Z Fold 6", state: "aufgeklappt", width: 928, height: 1080, source: "1856 × 2160 px · 2,0×" },
 ];
+export const androidStartDevices = referenceDevices.filter((device) => !device.state || device.state === "zugeklappt");
 export const deviceLabel = (device: ReferenceDevice) => device.state ? `${device.name} · ${device.state}` : device.name;
 
 // Quer heisst: das Geraet um 90 Grad gedreht. Aufgeklappt und gedreht sind zwei getrennte Achsen —

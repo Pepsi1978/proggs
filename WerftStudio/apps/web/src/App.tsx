@@ -5,7 +5,7 @@ import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode,
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
-import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
+import { androidStartDevices, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
@@ -563,11 +563,10 @@ function NewProject({ onClose }: { onClose(): void }) {
   const client = useQueryClient();
   const [name, setName] = useState("Unbenanntes Design");
   const [type, setType] = useState("prototype");
-  const [platforms, setPlatforms] = useState(["ios"]);
+  const [platforms, setPlatforms] = useState(["android"]);
   const [prompt, setPrompt] = useState("");
-  const [deviceId, setDeviceId] = useState(referenceDevices[0]!.id);
-  const [landscape, setLandscape] = useState(false);
-  const initialDevice = stageDeviceFor(deviceId, landscape);
+  const [deviceId, setDeviceId] = useState(androidStartDevices[0]!.id);
+  const initialDevice = stageDeviceFor(deviceId, false);
   const create = useMutation({
     mutationFn: () =>
       api<{ projectId: string }>("/projects", {
@@ -644,21 +643,12 @@ function NewProject({ onClose }: { onClose(): void }) {
         </label>
         {platforms.includes("android") && (
           <div>
-            <div className="form-row">
-              <label>
-                Android-Startgerät
-                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)}>
-                  {referenceDevices.map((device) => <option key={device.id} value={device.id}>{deviceLabel(device)}</option>)}
-                </select>
-              </label>
-              <label>
-                Ausrichtung
-                <div className="segments orientation" role="group" aria-label="Ausrichtung des Android-Startlayouts">
-                  <button type="button" className={landscape ? "" : "active"} onClick={() => setLandscape(false)}>Hoch</button>
-                  <button type="button" className={landscape ? "active" : ""} onClick={() => setLandscape(true)}>Quer</button>
-                </div>
-              </label>
-            </div>
+            <label>
+              Android-Startgerät
+              <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)}>
+                {androidStartDevices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}
+              </select>
+            </label>
             {initialDevice && <small>Arbeitsfläche: {initialDevice.label} · {initialDevice.width} × {initialDevice.height} dp</small>}
           </div>
         )}

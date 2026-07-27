@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hexColour, tokenTitle } from "./design-colours.js";
-import { referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices.js";
+import { androidStartDevices, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices.js";
 
 describe("Farbregler", () => {
   // Gemessen wird am lebenden Dokument; von dort kommen fast immer rgb()-Werte. Wurden sie nicht
@@ -26,6 +26,12 @@ describe("Farbregler", () => {
 });
 
 describe("Referenzgeraete", () => {
+  it("startet Android-Designs nur mit den drei geschlossenen Hochformat-Geraeten", () => {
+    expect(androidStartDevices.map((device) => device.id)).toEqual(["s23-ultra", "fold8-cover", "fold6-cover"]);
+    expect(androidStartDevices.map((device) => device.name)).toEqual(["Galaxy S23 Ultra", "Galaxy Z Fold 8", "Galaxy Z Fold 6"]);
+    expect(androidStartDevices.every((device) => stageDeviceFor(device.id, false)!.height > stageDeviceFor(device.id, false)!.width)).toBe(true);
+  });
+
   it("dreht auch die Groesse des Designs zwischen Hoch- und Querformat", () => {
     expect(stageDeviceForDesign(412, 912, false)).toEqual({ id: "design-size", label: "Größe des Designs · hoch", width: 412, height: 912 });
     expect(stageDeviceForDesign(412, 912, true)).toEqual({ id: "design-size", label: "Größe des Designs · quer", width: 912, height: 412 });
