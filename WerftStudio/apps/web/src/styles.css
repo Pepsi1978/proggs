@@ -177,3 +177,6 @@
 .preview.thumb:not(.shown) .card-preview{opacity:0}
 .preview.thumb.shown{background:#fff}
 .picked-row button.loose{color:var(--color-text-subtle);border-style:dashed}
+.stage-progress.stage-error{border-color:var(--color-error);align-items:flex-start}
+.stage-progress.stage-error strong{color:var(--color-error)}
+.stage-progress.stage-error .button{align-self:flex-end}

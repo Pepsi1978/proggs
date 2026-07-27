@@ -2130,6 +2130,15 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
           </div>
         )}
+        {/* Scheitert der Neuaufbau, waehrend schon ein Design steht, blieb das bisher still: der
+            Knopf oben ging aus, und nichts sagte warum. Der Grund gehoert an die Buehne. */}
+        {imported.previewPath && !rebuild.pending && rebuild.error && (
+          <div className="stage-progress stage-error">
+            <strong>Der Neuaufbau ist fehlgeschlagen — das bisherige Design bleibt unverändert.</strong>
+            <span>{rebuild.error instanceof ApiError ? rebuild.error.message : "Der Aufbau aus den Quellen konnte nicht abgeschlossen werden."}</span>
+            <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true, force: imported.reconstructed })}>Erneut versuchen</Button>
+          </div>
+        )}
       </div>
     );
   }
