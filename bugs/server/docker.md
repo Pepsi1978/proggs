@@ -49,6 +49,7 @@
 | "Permission denied" beim Schreiben in bind-gemounteten Ordner (non-root) | Bind-Mount = Host-uid/gid gilt direkt → Host-Ordner auf Container-uid `chown` ODER Container-uid == Host-uid. NIE `chmod 777` (§4) |
 | `bind: cannot assign requested address` beim Boot | Daemon bindet an IP (WireGuard `10.8.0.1`), die beim Boot noch fehlt → systemd-Drop-in `After=wg-quick@wg0.service` + `restart: unless-stopped` als Selbstheilung (§5) |
 | Root-Disk laeuft voll, Container/Host sterben | `json-file` (Default) rotiert OHNE `max-size`/`max-file` NICHT → `daemon.json` `log-opts` ODER `local`-Driver; danach Container NEU erstellen (§6) |
+| Disk voll, aber Images/Volumes klein — `/var/lib/containerd` riesig | BUILD-CACHE waechst bei jedem `--build`-Deploy UNBEGRENZT (keine GC-Policy per Default) → `docker system df` zeigt "Build Cache … RECLAIMABLE"; Fix: `builder.gc` in `daemon.json` + Cron `docker builder prune -f --max-used-space=10GB` (§6.11) |
 | Variable in `.env`, aber im Container leer | Auto-`.env` speist nur `${VAR}`-Interpolation der compose.yaml, NICHT den Container → `env_file:`/`environment:` nutzen (§6) |
 | Logs in UTC trotz `TZ=Europe/Berlin` | `tzdata` fehlt im slim/alpine-Image → `tzdata` installieren ODER `/etc/localtime`+`/etc/timezone` `:ro` mounten (§7) |
 | `:latest` driftet / `compose up` zieht nicht neu | Per Tag/`@sha256:`-Digest pinnen; `docker compose pull` / `pull_policy: always` (§7) |
@@ -489,6 +490,21 @@ Vorteil: versioniert im Repo, keine Host-Aenderung. **Empfehlung fuer den second
 - **Ursache:** `ARG` existiert nur beim Build (nicht zur Laufzeit); ARG/ENV-Werte erscheinen in `docker history`/Image-Metadaten → jedes via build-arg uebergebene Token leakt.
 - **FIX:** Laufzeit-Wert → `ENV`/`environment:`/`env_file:` (nicht `ARG`). Secrets NIE via ARG/ENV → **BuildKit Secret-Mounts** `RUN --mount=type=secret,id=tok ...` + `docker build --secret id=tok,src=./token.txt`. Build-check `SecretsUsedInArgOrEnv` warnt. (Der second-brain-Stack uebergibt Keys via `env_file:` zur Laufzeit, kein build-arg → sauber.)
 - **Quelle:** docs.docker.com/build/building/secrets/
+
+---
+
+### 6.11 (KRITISCH, SELBST ERLEBT 27.07.2026) Build-Cache waechst unbegrenzt → 54 GB Bau-Abfall
+- **Symptom:** Root-Disk 62 % voll (60 GB von 96 GB), obwohl die Anwendungen winzig sind. `du -sh /var/lib/docker` zeigt nur 6,9 GB — die Belegung ist scheinbar "unsichtbar". Erst `du -xh --max-depth=1 /var/lib` findet sie: **`/var/lib/containerd` = 54 GB** (2983 Snapshot-Schichten, aelteste 5 Wochen alt).
+- **Ursache:** Docker 29 nutzt den **containerd-Snapshotter** (`docker info` → `driver-type: io.containerd.snapshotter.v1`). Der BuildKit-Cache liegt damit NICHT unter `/var/lib/docker`, sondern unter `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots` — wer nur `/var/lib/docker` misst, sucht am falschen Ort. Ohne `builder.gc` in `daemon.json` gibt es **keine automatische Garbage Collection**: jeder Deploy per `docker compose up -d --build` (siehe `second-brain-server/DEPLOY.md`) legt neue Zwischenschichten an, die NIE wieder verschwinden. Bei 12 selbst gebauten Diensten (second-brain + werft-studio): ~54 GB in gut vier Wochen.
+- **Erkennen (immer zuerst messen):** `docker system df` → Zeile `Build Cache` mit `RECLAIMABLE`-Spalte. Hier: `54.81GB / 54.41GB (99 %)` bei nur 2,95 GB Images.
+- **FIX (funktionserhaltend, zwei Schichten):**
+  1. **Sofort:** `docker builder prune -af` → gab 54,81 GB frei, Belegung 62 % → 10 %, alle 18 Container liefen unterbrechungsfrei weiter. Nur Bau-Zwischenschichten fallen weg; Images/Container/**Volumes** bleiben unangetastet (vgl. Warnung in §6.4).
+  2. **Dauerhaft (Praevention):** `/etc/docker/daemon.json` → `"builder": {"gc": {"enabled": true, "policy": [{"keepDuration":"168h","reservedSpace":"10GB"},{"reservedSpace":"10GB"},{"reservedSpace":"10GB","all":true}]}}`. **Vor dem Neustart IMMER `dockerd --validate --config-file=/etc/docker/daemon.json`** — eine kaputte `daemon.json` verhindert den Daemon-Start und killt damit ALLE Dienste. Die Policy wird erst mit einem Daemon-Neustart aktiv (bei `Live Restore Enabled: false` = kurze Downtime), deshalb als Netz darunter:
+  3. **Cron (wirkt sofort, ohne Neustart):** `30 3 * * 0 /opt/second-brain/scripts/docker-cache-cleanup.sh` (Repo: `second-brain-server/scripts/docker-cache-cleanup.sh`) — begrenzt den Cache woechentlich auf 10 GB und loggt vorher/nachher.
+- **Flag-Falle (Docker 28+/29):** `--keep-storage` existiert NICHT mehr. Gueltig sind `--max-used-space`, `--min-free-space`, `--reserved-space` (per `docker builder prune --help` verifizieren). In `daemon.json` heissen die Policy-Felder `reservedSpace`, `keepDuration`, `filter`, `all`.
+- **Kosten des Fixes:** nur der jeweils naechste Bau eines Dienstes ist einmalig langsamer (Cache wird neu aufgebaut). Kein Funktionsverlust.
+- **Versionen:** Docker Engine 29.6.0 / buildx 0.35.0 / containerd-Snapshotter aktiv.
+- **Quelle:** docs.docker.com/build/cache/garbage-collection/ · docs.docker.com/engine/manage-resources/pruning/ · eigener Vorfall 27.07.2026
 
 ---
 

@@ -172,6 +172,26 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
    tote Verbindungen und das Cockpit "haengt" beim Neuladen. Bei neuen Peers den Eintrag mitgeben
    (Laufzeit-Aenderung: `wg set wg0 peer <pubkey> persistent-keepalive 25`).
 
+## Disk-Wartung: der `--build`-Deploy hinterlaesst Bau-Abfall
+
+Jedes `--build` legt BuildKit-Zwischenschichten ab, die **von allein nie verschwinden**. Am 27.07.2026
+hatten sich so **54 GB** angesammelt (Root-Disk 62 % voll, obwohl beide Stacks zusammen nur ~6 GB
+brauchen). Seitdem raeumt der Server selbst auf — zwei Schichten:
+
+| Schicht | Was | Wo |
+|---------|-----|-----|
+| Praevention | `builder.gc`-Policy (max ~10 GB Cache) | `/etc/docker/daemon.json` auf dem VPS |
+| Netz darunter | Cron sonntags 3:30: `docker-cache-cleanup.sh` | Repo: `scripts/docker-cache-cleanup.sh` |
+
+**Selbst nachsehen:** `docker system df` — die Spalte `RECLAIMABLE` bei `Build Cache` ist der Abfall.
+Steigt sie dauerhaft ueber ~10 GB, greift die Automatik nicht (dann `crontab -l` und das Log
+`/opt/second-brain/brain-logs/docker-cache-cleanup.jsonl` pruefen).
+
+**Wichtig:** Nur `docker builder prune` verwenden. **NIE** `docker system prune -a --volumes` — das
+loescht die Volumes von Postgres, Qdrant und MinIO, also echte Daten (siehe `bugs/server/docker.md` §6.4).
+Die Diagnose-Falle: `du -sh /var/lib/docker` zeigt den Cache NICHT, er liegt unter
+`/var/lib/containerd` (containerd-Snapshotter) — Details in `bugs/server/docker.md` §6.11.
+
 ## Faustregel
 
 > Aendern (lokal/Repo) → committen + pushen → **scp** auf den VPS → **`docker compose up -d --build --no-deps <dienst>`** → Health pruefen.
