@@ -181,9 +181,6 @@
 .stage-progress.stage-error strong{color:var(--color-error)}
 .stage-progress.stage-error .button{align-self:flex-end}
 .token-measured-hint{display:block;padding:8px 10px;border:1px solid var(--color-line-subtle);border-radius:10px;background:var(--color-hover);line-height:1.45}
-.stage-progress.stage-hintbar{flex-direction:row;align-items:center;gap:12px}
-.stage-progress.stage-hintbar span{flex:1;line-height:1.4}
-.stage-progress.stage-hintbar .button{flex:none;min-height:32px}
 /* Farbe aufnehmen: erkannter Bereich umrandet, Farbwaehler direkt daneben */
 .mark-frame.pick-frame{border-color:#3157d5;box-shadow:0 0 0 9999px rgba(18,32,47,.12)}
 .pick-panel{position:absolute;z-index:34;width:272px;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-surface);box-shadow:var(--shadow-lg)}

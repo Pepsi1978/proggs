@@ -1407,7 +1407,6 @@ function Studio() {
             imported={imported.data}
             device={stageDevice}
             deviceVariant={deviceVariant}
-            onBuildForDevice={startRebuild}
             rebuild={{ start: (options) => rebuild.mutate(options), pending: rebuild.isPending, error: rebuild.error, progress: rebuildProgress }}
             onScreenChange={setVisibleScreen}
             onScreensChange={setBoardScreens}
@@ -2037,7 +2036,7 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
 type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, onBuildForDevice, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; onBuildForDevice(): void; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -2152,15 +2151,6 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           <div className="stage-progress">
             <span>{reconstructionProgress?.result?.message ?? "Design wird aus den Quellen aufgebaut."}</span>
             <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
-          </div>
-        )}
-        {/* Ein fuer 412 Punkte gebautes Design nutzt die Flaeche eines aufgeklappten Foldables nicht
-            von selbst — es steht dann in der Ecke des Rahmens. Diese Zeile sagt genau das und baut
-            auf Wunsch die Fassung fuer dieses Format. */}
-        {imported.previewPath && device && !deviceVariant && !rebuild.pending && !rebuild.error && (
-          <div className="stage-progress stage-hintbar">
-            <span>Umbruch des für {imported.previewWidth} × {imported.previewHeight} gebauten Designs auf {device.label}. Ein eigens für dieses Format entworfenes Layout entsteht erst beim Aufbau.</span>
-            <Button variant="primary" onClick={onBuildForDevice}>Für {device.label} aufbauen</Button>
           </div>
         )}
         {/* Scheitert der Neuaufbau, waehrend schon ein Design steht, blieb das bisher still: der
