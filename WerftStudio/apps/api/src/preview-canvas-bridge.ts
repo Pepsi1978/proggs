@@ -230,18 +230,51 @@ const bridgeScript = `<script ${bridgeMarker}>
   // bestimmte Erscheinung gelten. Der WERT wird dagegen am lebenden Dokument gelesen, also immer
   // der, der GERADE gilt. Frueher wurden ausschliesslich Bloecke ohne Erscheinungsbedingung gelesen:
   // im Dunkelmodus zeigte der Regler deshalb die helle Farbe und griff ins Leere.
+  // Farbvariablen stehen NICHT nur auf :root. Viele Aufbauten setzen sie je Bildschirm
+  // (#pm-start-screen { --background: #181209 }) — wer nur :root liest, findet dort die HELLEN Werte
+  // und bietet Regler an, die das dunkle Design gar nicht betreffen (gemeldet an PerfectMoment).
   const tokenNames = () => {
     const names = [];
-    for (const rule of styleRules()) {
+    for (const item of conditionalRules()) {
+      const rule = item.rule;
       if (!rule.style || !rule.selectorText) continue;
-      const selector = rule.selectorText;
-      if (selector.indexOf(":root") < 0 && selector.indexOf("html") < 0 && selector.indexOf("body") < 0) continue;
+      let greift = false;
+      try { greift = Boolean(document.querySelector(rule.selectorText)); } catch (error) { greift = false; }
+      if (!greift) continue;
       for (const name of Array.prototype.slice.call(rule.style)) {
         if (name.slice(0, 2) !== "--" || names.indexOf(name) >= 0) continue;
         if (colorLike.test(String(rule.style.getPropertyValue(name)).trim())) names.push(name);
       }
     }
     return names;
+  };
+  // Gemessen wird dort, wo das Design GERADE zeichnet: der sichtbare Bildschirm erbt oder setzt die
+  // Variablen, die fuer ihn gelten. Am Wurzelelement stuenden die Werte einer anderen Erscheinung.
+  const tokenHost = () => activeScreen() || document.body || document.documentElement;
+  // Zu JEDER Farbvariable das Element, an dem sie festgelegt wird. Viele Aufbauten setzen sie nicht
+  // auf :root, sondern auf einem Element IM Bildschirm (#pm-start-screen { --background: … }).
+  // Wer dort nicht misst, liest die Werte einer ganz anderen Erscheinung — im dunklen Design standen
+  // deshalb die hellen Farben in den Reglern, und ihr Verstellen blieb ohne jede Wirkung.
+  const tokenDefinitions = () => {
+    const found = {};
+    const screen = activeScreen();
+    const imBildschirm = (node) => Boolean(screen && (node === screen || screen.contains(node)));
+    for (const item of conditionalRules()) {
+      const rule = item.rule;
+      if (!rule.style || !rule.selectorText) continue;
+      const namen = Array.prototype.slice.call(rule.style).filter((name) => name.slice(0, 2) === "--" && colorLike.test(String(rule.style.getPropertyValue(name)).trim()));
+      if (!namen.length) continue;
+      let knoten = [];
+      try { knoten = Array.prototype.slice.call(document.querySelectorAll(rule.selectorText)); } catch (error) { continue; }
+      if (!knoten.length) continue;
+      const treffer = knoten.filter(imBildschirm)[0] || knoten[0];
+      for (const name of namen) {
+        const bisher = found[name];
+        // Eine Festlegung IM sichtbaren Bildschirm schlaegt jede allgemeine.
+        if (!bisher || (imBildschirm(treffer) && !imBildschirm(bisher))) found[name] = treffer;
+      }
+    }
+    return found;
   };
   // Ein Regler taugt nur etwas, wenn seine Variable im Design auch BENUTZT wird. Ein Aufbau, der
   // seine Farben fest ins Stylesheet schreibt, fuehrt sonst eine Reihe wirkungsloser Regler.
@@ -268,9 +301,20 @@ const bridgeScript = `<script ${bridgeMarker}>
   const roleOf = (property) => property.indexOf("background") >= 0 ? "background"
     : property.indexOf("border") >= 0 || property.indexOf("outline") >= 0 || property.indexOf("shadow") >= 0 ? "border"
     : property === "color" || property.indexOf("-color") < 0 ? "text" : "";
+  // In Kurzformen steht die Farbe MITTEN im Wert: "1px solid #3a3020", "#181209 radial-gradient(…)".
+  // Wer den ganzen Wert als Farbe zu lesen versucht, findet dort keine — genau diese Farben fehlten
+  // in der Liste und liessen sich nicht aendern.
+  const firstColourIn = (value) => {
+    const match = /(#[0-9a-fA-F]{3,8}|rgba?\\([^)]*\\)|hsla?\\([^)]*\\))/.exec(String(value || ""));
+    return match ? match[1] : "";
+  };
   const documentColours = () => {
     const counted = new Map();
-    for (const rule of styleRules()) {
+    // Auch Regeln aus @media- und @supports-Bloecken: dort stehen bei fast jedem Aufbau die Farben
+    // der dunklen Erscheinung — also genau die, die man sieht. Wer nur die oberste Ebene liest,
+    // findet sie nie und bietet Regler an, die nichts mit dem Sichtbaren zu tun haben.
+    for (const item of conditionalRules()) {
+      const rule = item.rule;
       if (!rule.style || !rule.selectorText) continue;
       // Nur Regeln, die im Dokument ueberhaupt greifen — sonst faende man Farben ungenutzter Klassen.
       let matches = false;
@@ -280,12 +324,28 @@ const bridgeScript = `<script ${bridgeMarker}>
         if (property.slice(0, 2) === "--") continue;
         const role = roleOf(property);
         if (!role) continue;
-        const value = String(rule.style.getPropertyValue(property)).trim();
-        if (!colorLike.test(value)) continue;
-        const normalized = normalizeColour(value);
-        if (!normalized || !isVisibleColour(normalized)) continue;
+        const colour = firstColourIn(rule.style.getPropertyValue(property));
+        if (!colour) continue;
+        const normalized = normalizeColour(colour);
+        if (!normalized || !isOpaqueColour(normalized)) continue;
         const key = role + "|" + normalized;
-        const entry = counted.get(key) ?? { role: role, value: normalized, source: value, count: 0 };
+        const entry = counted.get(key) ?? { role: role, value: normalized, source: colour, count: 0 };
+        entry.count += 1;
+        counted.set(key, entry);
+      }
+    }
+    // Farben, die direkt am Element stehen: der Aufbau schreibt viele davon ins Markup. Ohne diesen
+    // Durchgang fehlten genau die Flaechen, die man am haeufigsten anklickt.
+    for (const node of Array.prototype.slice.call(document.querySelectorAll("[style]"))) {
+      for (const property of Array.prototype.slice.call(node.style)) {
+        const role = roleOf(property);
+        if (!role) continue;
+        const colour = firstColourIn(node.style.getPropertyValue(property));
+        if (!colour) continue;
+        const normalized = normalizeColour(colour);
+        if (!normalized || !isOpaqueColour(normalized)) continue;
+        const key = role + "|" + normalized;
+        const entry = counted.get(key) ?? { role: role, value: normalized, source: colour, count: 0 };
         entry.count += 1;
         counted.set(key, entry);
       }
@@ -312,9 +372,10 @@ const bridgeScript = `<script ${bridgeMarker}>
     if (tuneStyle) tuneStyle.disabled = true;
     const found = {};
     try {
-      const computed = getComputedStyle(document.documentElement);
+      const definitionen = tokenDefinitions();
+      const fallback = tokenHost();
       for (const name of usedTokenNames()) {
-        const value = String(computed.getPropertyValue(name) || "").trim();
+        const value = String(getComputedStyle(definitionen[name] || fallback).getPropertyValue(name) || "").trim();
         if (colorLike.test(value)) found[name] = value;
       }
       // Die meisten Aufbauten sind gemischt: ein Teil der Farben steht in Variablen, der groessere
@@ -353,6 +414,14 @@ const bridgeScript = `<script ${bridgeMarker}>
     const hex = (number) => ("0" + Math.max(0, Math.min(255, Math.round(number))).toString(16)).slice(-2);
     return "#" + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
   };
+  // Halbdurchsichtige Farben sind Schatten, Schleier und Trennlinien — als Flaechenregler waeren sie
+  // nur Ballast, und mehrere von ihnen sehen als Hex-Wert identisch aus.
+  const isOpaqueColour = (value) => {
+    const parsed = /rgba?\(([^)]+)\)/.exec(value || "");
+    if (!parsed) return false;
+    const parts = parsed[1].split(",").map((part) => parseFloat(part));
+    return parts.length < 4 || parts[3] >= 0.9;
+  };
   const isVisibleColour = (value) => {
     const parsed = /rgba?\\(([^)]+)\\)/.exec(value || "");
     if (!parsed) return false;
@@ -381,7 +450,8 @@ const bridgeScript = `<script ${bridgeMarker}>
     const inline = element.style ? firstIn(element.style) : "";
     if (inline) return inline;
     let found = "";
-    for (const rule of styleRules()) {
+    for (const item of conditionalRules()) {
+      const rule = item.rule;
       if (!rule.style || !rule.selectorText) continue;
       const variable = firstIn(rule.style);
       if (!variable) continue;
@@ -460,11 +530,12 @@ const bridgeScript = `<script ${bridgeMarker}>
     try { stack = Array.prototype.slice.call(document.elementsFromPoint(x, y)); }
     catch (error) { stack = []; }
     for (const node of stack) {
-      if (node === document.body || node === document.documentElement) break;
       if (!(node instanceof Element)) continue;
       if (isVisibleColour(getComputedStyle(node).backgroundColor)) return node;
     }
-    return stack.filter((node) => node instanceof Element && node !== document.body && node !== document.documentElement)[0] || null;
+    // Findet sich gar keine gezeichnete Flaeche, gilt der Bildschirm selbst als Bereich — die grosse
+    // Hintergrundflaeche ist genauso eine Flaeche wie jede Karte darauf und muss aenderbar sein.
+    return stack.filter((node) => node instanceof Element)[0] || activeScreen() || document.body || null;
   };
 
   // Fuer die Farbabbildung wird die Bedingung mitgefuehrt, unter der eine Regel gilt: eine
@@ -496,14 +567,41 @@ const bridgeScript = `<script ${bridgeMarker}>
       for (const property of Array.prototype.slice.call(item.rule.style)) {
         if (property.slice(0, 2) === "--" || roleOf(property) !== entry.role) continue;
         const current = String(item.rule.style.getPropertyValue(property)).trim();
-        if (!colorLike.test(current) || normalizeColour(current) !== entry.value) continue;
-        declarations.push(property + ": " + value + " !important;");
+        const colour = firstColourIn(current);
+        if (!colour || normalizeColour(colour) !== entry.value) continue;
+        // Ersetzt wird die Farbe IM Wert: aus "1px solid #3a3020" wird "1px solid #ff0000", der
+        // Rest der Angabe bleibt unangetastet.
+        declarations.push(property + ": " + current.split(colour).join(value) + " !important;");
       }
       if (!declarations.length) continue;
       const block = item.rule.selectorText + " { " + declarations.join(" ") + " }";
       parts.push(item.condition ? item.condition + " { " + block + " }" : block);
     }
     return parts.join("\\n");
+  };
+
+  // Farben, die direkt am Element stehen, erreicht kein Stylesheet-Block: sie werden am Element
+  // selbst gesetzt. Die urspruenglichen Werte werden gesichert, damit „zuruecksetzen" sie
+  // vollstaendig wiederherstellt.
+  let inlineTuned = [];
+  const clearInlineTune = () => {
+    for (const item of inlineTuned) {
+      if (item.value) item.node.style.setProperty(item.property, item.value, item.priority);
+      else item.node.style.removeProperty(item.property);
+    }
+    inlineTuned = [];
+  };
+  const recolourInline = (entry, value) => {
+    for (const node of Array.prototype.slice.call(document.querySelectorAll("[style]"))) {
+      for (const property of Array.prototype.slice.call(node.style)) {
+        if (roleOf(property) !== entry.role) continue;
+        const current = node.style.getPropertyValue(property);
+        const colour = firstColourIn(current);
+        if (!colour || normalizeColour(colour) !== entry.value) continue;
+        inlineTuned.push({ node: node, property: property, value: current, priority: node.style.getPropertyPriority(property) });
+        node.style.setProperty(property, current.split(colour).join(value), "important");
+      }
+    }
   };
 
   let tuneStyle = null;
@@ -515,11 +613,32 @@ const bridgeScript = `<script ${bridgeMarker}>
     }
     const variables = [];
     const blocks = [];
+    clearInlineTune();
+    const geaenderteVariablen = [];
     for (const name of Object.keys(overrides || {})) {
       if (name.indexOf(measuredPrefix) === 0) {
         const entry = measuredColours[name];
-        if (entry) blocks.push(recolourRules(entry, overrides[name]));
-      } else variables.push("  " + name + ": " + overrides[name] + ";");
+        if (entry) { blocks.push(recolourRules(entry, overrides[name])); recolourInline(entry, overrides[name]); }
+      } else { variables.push("  " + name + ": " + overrides[name] + ";"); geaenderteVariablen.push(name); }
+    }
+    // Definiert das Design eine Variable auf einzelnen Elementen — viele Aufbauten setzen sie je
+    // Bildschirm —, ist ein Block auf :root wirkungslos: die Regel am Element ist spezifischer.
+    // Der neue Wert bekommt deshalb DENSELBEN Selektor wie die Regel, die ihn festlegt. Alles steht
+    // damit in einem einzigen Block: ihn zu leeren nimmt jede Anpassung restlos zurueck — am Element
+    // gesetzte Werte muessten dagegen einzeln zurueckgeschrieben werden und blieben bei jedem
+    // verpassten Schritt stehen.
+    if (geaenderteVariablen.length) {
+      for (const item of conditionalRules()) {
+        const rule = item.rule;
+        if (!rule.style || !rule.selectorText) continue;
+        const treffer = geaenderteVariablen.filter((name) => rule.style.getPropertyValue(name));
+        if (!treffer.length) continue;
+        let greift = false;
+        try { greift = Boolean(document.querySelector(rule.selectorText)); } catch (error) { greift = false; }
+        if (!greift) continue;
+        const block = rule.selectorText + " { " + treffer.map((name) => name + ": " + overrides[name] + " !important;").join(" ") + " }";
+        blocks.push(item.condition ? item.condition + " { " + block + " }" : block);
+      }
     }
     // Hoehere Spezifitaet als ":root", damit die Anpassung auch das Dunkel-Theme uebersteuert.
     if (variables.length) blocks.unshift(":root:root:root {\\n" + variables.join("\\n") + "\\n}");
@@ -798,22 +917,26 @@ const bridgeScript = `<script ${bridgeMarker}>
 
   document.addEventListener("pointermove", (event) => {
     if (!markMode && !pickMode) return;
-    const element = markableUnder(event.target);
+    // Im Pipettenmodus wird GENAU der Bereich umrandet, dessen Farbe der Klick melden wird. Sonst
+    // zeigte der Rahmen ein Element und die Anzeige die Farbe eines anderen.
+    const element = pickMode ? areaAt(event.clientX, event.clientY) : markableUnder(event.target);
     if (element === markHover) return;
     clearMarkHover();
     if (!element) return;
     markHover = element;
-    element.style.setProperty("outline", "2px solid #d97757", "important");
+    element.style.setProperty("outline", pickMode ? "2px solid #3157d5" : "2px solid #d97757", "important");
   }, true);
   // Farbe aufnehmen: der Klick meldet die Farben, die an diesem Element WIRKLICH gezeichnet werden,
   // samt der Token, aus denen sie stammen. Ohne diesen Weg bliebe unklar, welcher Regler zu welcher
   // Stelle im Design gehoert.
   document.addEventListener("click", (event) => {
     if (!pickMode) return;
-    const element = markableUnder(event.target);
-    if (!element) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    // Der Klick meldet IMMER etwas: frueher blieb er stumm, sobald er den Bildschirm selbst oder ein
+    // Element ohne eigene Flaeche traf — dann stand weiter die zuletzt getroffene Flaeche da.
+    const element = markableUnder(event.target) || areaAt(event.clientX, event.clientY) || activeScreen();
+    if (!element) return;
     const style = getComputedStyle(element);
     const entries = [];
     // Die Markierung "exact" unterscheidet die belegte Zuordnung (die Regel nennt diese Variable)

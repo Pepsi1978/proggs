@@ -184,7 +184,13 @@ describe("preview canvas bridge", () => {
     const code = /<script data-werft-canvas-bridge>([\s\S]*?)<\/script>/.exec(html)?.[1];
     expect(() => new Function(code!)).not.toThrow();
     expect(code).toContain("tokenNames");
-    expect(code).toContain("getComputedStyle(document.documentElement)");
+    // Gemessen wird am sichtbaren Bildschirm, nicht am Wurzelelement: viele Aufbauten setzen ihre
+    // Farbvariablen je Bildschirm, und am Wurzelelement stuenden die Werte einer anderen Erscheinung.
+    expect(code).toContain("const tokenHost = () => activeScreen()");
+    // Jede Variable wird DORT gemessen, wo das Design sie festlegt — oft auf einem Element im
+    // Bildschirm statt auf :root. Sonst stehen die Farben einer anderen Erscheinung in den Reglern.
+    expect(code).toContain("tokenDefinitions");
+    expect(code).toContain("getComputedStyle(definitionen[name] || fallback)");
     expect(code).toContain('post({ action: "tokens", tokens: designTokens()');
     // Zum Messen wird der eigene Regler-Block stillgelegt, sonst waere der Ausgangswert nach der
     // ersten Aenderung verloren und „zuruecksetzen" haette kein Ziel mehr.
