@@ -37,19 +37,24 @@ class MainActivity : AppCompatActivity() {
         val steps = intent.getIntExtra("steps", STEPS)
         val promptLen = intent.getIntExtra("prompt", PROMPT_LEN)
         val threads = intent.getIntExtra("threads", THREADS)
+        val mode = intent.getStringExtra("mode") ?: MODE_TALKER
 
         log("Qwen TTS Bench ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_BUMPED_AT})")
         log("Geraet: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
         log("Kerne: ${Runtime.getRuntime().availableProcessors()}")
-        log("Lauf: $steps Schritte, Prompt $promptLen, Threads $threads")
+        log("Modus: $mode")
+        if (mode == MODE_TALKER) log("Lauf: $steps Schritte, Prompt $promptLen, Threads $threads")
         log("")
 
         Thread {
             try {
-                runBenchmark(log, steps, promptLen, threads)
+                when (mode) {
+                    MODE_VOCODER -> runVocoderProbe(log, steps, threads)
+                    else -> runBenchmark(log, steps, promptLen, threads)
+                }
             } catch (error: Throwable) {
                 log("FEHLER: ${error::class.java.simpleName}: ${error.message}")
-                Log.e(TAG, "Benchmark fehlgeschlagen", error)
+                Log.e(TAG, "Lauf fehlgeschlagen", error)
             }
         }.start()
     }
@@ -159,6 +164,102 @@ class MainActivity : AppCompatActivity() {
         log(if (realtime >= 1.0) "Schneller als Echtzeit." else "Langsamer als Echtzeit.")
     }
 
+    /**
+     * Prueft, ob der Vocoder (12-Hz-Tokenizer-Decoder) auf diesem Geraet ueberhaupt laeuft.
+     *
+     * Der Modell-Anbieter meldet, dass dieses Modell ConvInteger-Operationen benutzt, die auf
+     * der CPU fehlschlagen. Ohne dieses Modell entsteht kein hoerbares Audio. Die Probe klaert
+     * das, bevor die uebrige Pipeline gebaut wird.
+     */
+    private fun runVocoderProbe(log: (String) -> Unit, frames: Int, threads: Int) {
+        val model = File(getExternalFilesDir("models"), VOCODER_NAME)
+        if (!model.exists()) {
+            log("Modell fehlt. Erwartet unter:")
+            log(model.absolutePath)
+            log("")
+            log("Per adb pushen:")
+            log("adb push $VOCODER_NAME ${model.absolutePath}")
+            return
+        }
+        log("Modell: ${model.length() / 1024 / 1024} MB")
+
+        val env = OrtEnvironment.getEnvironment()
+        val options = OrtSession.SessionOptions().apply {
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            setIntraOpNumThreads(threads)
+        }
+
+        var session: OrtSession? = null
+        val loadMs = measureNanoTime {
+            session = env.createSession(model.absolutePath, options)
+        } / 1_000_000
+        val ort = session ?: return
+        log("Geladen in $loadMs ms — ConvInteger wird also geladen.")
+        log("")
+
+        log("Eingaben:")
+        ort.inputInfo.forEach { (name, info) -> log("  $name: ${describe(info)}") }
+        log("Ausgaben:")
+        ort.outputInfo.forEach { (name, info) -> log("  $name: ${describe(info)}") }
+        log("")
+
+        val inputName = ort.inputNames.first()
+        val layouts = listOf(
+            longArrayOf(1, frames.toLong(), CODEBOOKS.toLong()) to "1 x T=$frames x C=$CODEBOOKS",
+            longArrayOf(1, CODEBOOKS.toLong(), frames.toLong()) to "1 x C=$CODEBOOKS x T=$frames",
+        )
+
+        for ((shape, label) in layouts) {
+            log("Versuch mit $label ...")
+            try {
+                val codes = LongArray((shape[1] * shape[2]).toInt()) {
+                    (it * 37 % CODE_RANGE).toLong()
+                }
+                var samples = FloatArray(0)
+                val runMs = measureNanoTime {
+                    OnnxTensor.createTensor(env, LongBuffer.wrap(codes), shape).use { tensor ->
+                        ort.run(mapOf(inputName to tensor)).use { result ->
+                            samples = flatten(result.get(0) as OnnxTensor)
+                        }
+                    }
+                } / 1_000_000
+
+                val seconds = samples.size.toDouble() / SAMPLE_RATE
+                val expected = frames.toDouble() / TOKENS_PER_AUDIO_SECOND
+                var peak = 0f
+                for (value in samples) if (kotlin.math.abs(value) > peak) peak = kotlin.math.abs(value)
+
+                log("")
+                log("======== VOCODER LAEUFT ========")
+                log("Samples:        ${samples.size}  (= ${"%.2f".format(seconds)} s bei $SAMPLE_RATE Hz)")
+                log("Erwartet:       ${"%.2f".format(expected)} s aus $frames Frames")
+                log("Rechenzeit:     $runMs ms")
+                if (runMs > 0) log("Echtzeitfaktor: ${"%.2f".format(seconds * 1000 / runMs)} x")
+                log("Spitzenpegel:   ${"%.3f".format(peak)}")
+                ort.close()
+                return
+            } catch (error: Throwable) {
+                log("  fehlgeschlagen: ${error.message?.take(300)}")
+            }
+        }
+
+        ort.close()
+        log("")
+        log("Kein Eingabe-Layout hat funktioniert.")
+    }
+
+    private fun describe(info: ai.onnxruntime.NodeInfo): String {
+        val tensor = info.info as? ai.onnxruntime.TensorInfo ?: return info.info.toString()
+        return "${tensor.type} [${tensor.shape.joinToString(", ")}]"
+    }
+
+    private fun flatten(tensor: OnnxTensor): FloatArray {
+        val buffer = tensor.floatBuffer
+        val out = FloatArray(buffer.remaining())
+        buffer.get(out)
+        return out
+    }
+
     private fun readFloats(
         outputs: OrtSession.Result,
         names: List<String>,
@@ -174,6 +275,15 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         const val TAG = "QwenTtsBench"
         const val MODEL_NAME = "talker_decode_q.onnx"
+        const val VOCODER_NAME = "tokenizer12hz_decode_q.onnx"
+
+        const val MODE_TALKER = "talker"
+        const val MODE_VOCODER = "vocoder"
+
+        // Der 12-Hz-Tokenizer benutzt 16 Codebuecher; Codes liegen unter 1024.
+        const val CODEBOOKS = 16
+        const val CODE_RANGE = 1000
+        const val SAMPLE_RATE = 24000
 
         // Architektur des Qwen3-TTS-0.6B-Talkers.
         const val LAYERS = 28

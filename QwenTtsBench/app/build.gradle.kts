@@ -11,9 +11,9 @@ android {
         applicationId = "de.frank.qwenttsbench"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.01.0"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.07.2026, 13:25 Uhr\"")
+        versionCode = 3
+        versionName = "1.02.0"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.07.2026, 13:56 Uhr\"")
     }
 
     buildTypes {
