@@ -1490,7 +1490,7 @@ function Studio() {
                 )}
               </section>
               {usesMeasuredColours(designTokens) && (
-                <small className="subtle token-measured-hint">Dieses Design führt keine Farbvariablen. Gezeigt werden deshalb die Farben, die es tatsächlich zeichnet — geändert werden sie direkt in den Regeln, in denen sie stehen.</small>
+                <small className="subtle token-measured-hint">Farben ohne eigene Variable stehen hier ebenfalls — sie werden direkt in den Regeln geändert, in denen sie stehen. So ist jede Farbe regelbar, die das Design wirklich zeichnet.</small>
               )}
               {Object.keys(designTokens).length === 0 ? (
                 <div className="empty">In diesem Design ist noch keine Farbe zu messen. Sobald die Vorschau steht, erscheinen hier alle Farben, die es verwendet.</div>

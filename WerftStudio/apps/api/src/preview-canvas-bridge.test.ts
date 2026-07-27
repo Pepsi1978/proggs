@@ -1,5 +1,22 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { injectPreviewCanvasBridge, rewriteRootRelativeAssets, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
+import { injectPreviewCanvasBridge, previewBridgeVersion, rewriteRootRelativeAssets, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
+
+// Die Vorschau wird mit ETag ausgeliefert. Haengt dessen Kennung nicht am INHALT der Bruecke, liefert
+// der Server auf eine unveraenderte Revision ein 304 — und der Browser zeigt weiter die alte Bruecke
+// aus seinem Zwischenspeicher. Genau so blieb eine reparierte Pipette beim Benutzer wirkungslos
+// (27.07.2026). Diese Pruefung schliesst den Rueckfall aus.
+describe("Kennung der Vorschau-Bruecke", () => {
+  it("aendert sich mit dem Inhalt der Bruecke", () => {
+    expect(previewBridgeVersion).toMatch(/^[A-Za-z0-9_-]{12}$/);
+  });
+
+  it("steht im ETag der Vorschau — und nicht als handgepflegte Zahl", () => {
+    const server = readFileSync(new URL("./server.ts", import.meta.url), "utf8");
+    expect(server).toContain("${previewBridgeVersion}");
+    expect(server).not.toMatch(/canvas-bridge-v\d/);
+  });
+});
 
 describe("preview canvas bridge", () => {
   it("injects the bridge before the closing body", () => {

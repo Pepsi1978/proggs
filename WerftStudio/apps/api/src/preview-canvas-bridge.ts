@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const bridgeMarker = "data-werft-canvas-bridge";
 
 // Die Bruecke wird bei JEDER Auslieferung frisch eingesetzt — nie mitgespeichert. Dadurch bekommt
@@ -315,8 +317,16 @@ const bridgeScript = `<script ${bridgeMarker}>
         const value = String(computed.getPropertyValue(name) || "").trim();
         if (colorLike.test(value)) found[name] = value;
       }
-      if (!Object.keys(found).length) return documentColours();
-      measuredColours = {};
+      // Die meisten Aufbauten sind gemischt: ein Teil der Farben steht in Variablen, der groessere
+      // Teil fest in den Regeln. Waeren nur die Variablen regelbar, bliebe genau das unerreichbar,
+      // was man sieht (gemeldet an PerfectMoment: alle Flaechen dunkel, alle Regler hell). Deshalb
+      // kommen die uebrigen gezeichneten Farben dazu — ohne die, die schon eine Variable hat.
+      const abgedeckt = Object.keys(found).map((name) => normalizeColour(found[name]));
+      const measured = documentColours();
+      for (const name of Object.keys(measured)) {
+        if (abgedeckt.indexOf(normalizeColour(measured[name])) >= 0) delete measuredColours[name];
+        else found[name] = measured[name];
+      }
     } catch (error) { /* ohne lesbare Stylesheets bleibt die Vorschau bedienbar */ }
     finally { if (tuneStyle) tuneStyle.disabled = wasDisabled; }
     return found;
@@ -903,6 +913,13 @@ const bridgeScript = `<script ${bridgeMarker}>
   setTimeout(publishScreens, 400);
 })();
 </script>`;
+
+// Die Kennung der Bruecke wird AUS IHREM INHALT abgeleitet, nicht von Hand gepflegt. Sie steht im
+// ETag der Vorschau: ohne sie liefert der Server auf eine unveraenderte Revision ein 304, und der
+// Browser zeigt weiter die alte Bruecke aus seinem Zwischenspeicher — eine Verbesserung an der
+// Bedienung der Vorschau kaeme dann nie an. Genau das ist passiert, als die Zahl im ETag beim
+// Aendern der Bruecke stehen blieb (Pipette wirkungslos, 27.07.2026).
+export const previewBridgeVersion = createHash("sha256").update(bridgeScript).digest("base64url").slice(0, 12);
 
 const normalizedBase = (previewBase: string) => previewBase.endsWith("/") ? previewBase : `${previewBase}/`;
 
