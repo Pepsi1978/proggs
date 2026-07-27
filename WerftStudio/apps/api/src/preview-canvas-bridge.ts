@@ -116,10 +116,17 @@ const bridgeScript = `<script ${bridgeMarker}>
   // (Meta-Angabe des Aufbaus); fehlt sie, weil das Design vor dieser Fassung aufgebaut wurde, wird
   // sie aus den Stilregeln abgeleitet. So bleibt auch ein alter Aufbau umschaltbar.
   const themeSelectorPattern = /\\[data-werft-theme="([^"]+)"\\]/g;
+  // Die eigenen Bloecke gehoeren NICHT zum Design: wer sie mitliest, misst die eigenen Anpassungen
+  // als Designfarbe und verliert damit den Ausgangswert.
+  const ownSheet = (sheet) => {
+    const node = sheet.ownerNode;
+    return Boolean(node && node.hasAttribute && (node.hasAttribute("data-werft-tune") || node.hasAttribute("data-werft-viewport") || node.hasAttribute("data-werft-canvas-style")));
+  };
   const styleRules = () => {
     const collected = [];
     try {
       for (const sheet of Array.prototype.slice.call(document.styleSheets)) {
+        if (ownSheet(sheet)) continue;
         let rules = null;
         try { rules = sheet.cssRules; } catch (error) { continue; }
         for (const rule of Array.prototype.slice.call(rules || [])) collected.push(rule);
@@ -234,6 +241,67 @@ const bridgeScript = `<script ${bridgeMarker}>
     }
     return names;
   };
+  // Ein Regler taugt nur etwas, wenn seine Variable im Design auch BENUTZT wird. Ein Aufbau, der
+  // seine Farben fest ins Stylesheet schreibt, fuehrt sonst eine Reihe wirkungsloser Regler.
+  const usedTokenNames = () => {
+    const declared = tokenNames();
+    if (!declared.length) return [];
+    // Gelesen wird der REGELTEXT: eine Kurzform wie „background: var(--x)" laesst sich nicht in
+    // Einzelwerte zerlegen, solange die Variable nicht aufgeloest ist — ueber die Eigenschaften
+    // einzeln gesucht bliebe sie unsichtbar, und der Regler fehlte in der Liste.
+    let text = "";
+    for (const rule of styleRules()) {
+      if (!rule.cssText) continue;
+      if (rule.cssText.indexOf("var(") >= 0) text += rule.cssText;
+    }
+    return declared.filter((name) => new RegExp("var\\\\(\\\\s*" + name + "\\\\s*[,)]").test(text));
+  };
+
+  // Steht keine einzige benutzte Variable zur Verfuegung, werden die Farben genommen, die das Design
+  // TATSAECHLICH zeichnet — aus seinen eigenen Regeln gelesen und nach Haeufigkeit geordnet. Ohne
+  // das haette man vor einer Liste gestanden, die nichts bewirkt (gemeldet an PerfectMoment: alle
+  // Farben stehen dort fest im Stylesheet).
+  const measuredPrefix = "--gemessen-";
+  let measuredColours = {};
+  const roleOf = (property) => property.indexOf("background") >= 0 ? "background"
+    : property.indexOf("border") >= 0 || property.indexOf("outline") >= 0 || property.indexOf("shadow") >= 0 ? "border"
+    : property === "color" || property.indexOf("-color") < 0 ? "text" : "";
+  const documentColours = () => {
+    const counted = new Map();
+    for (const rule of styleRules()) {
+      if (!rule.style || !rule.selectorText) continue;
+      // Nur Regeln, die im Dokument ueberhaupt greifen — sonst faende man Farben ungenutzter Klassen.
+      let matches = false;
+      try { matches = Boolean(document.querySelector(rule.selectorText)); } catch (error) { matches = false; }
+      if (!matches) continue;
+      for (const property of Array.prototype.slice.call(rule.style)) {
+        if (property.slice(0, 2) === "--") continue;
+        const role = roleOf(property);
+        if (!role) continue;
+        const value = String(rule.style.getPropertyValue(property)).trim();
+        if (!colorLike.test(value)) continue;
+        const normalized = normalizeColour(value);
+        if (!normalized || !isVisibleColour(normalized)) continue;
+        const key = role + "|" + normalized;
+        const entry = counted.get(key) ?? { role: role, value: normalized, source: value, count: 0 };
+        entry.count += 1;
+        counted.set(key, entry);
+      }
+    }
+    const byRole = { background: [], text: [], border: [] };
+    for (const entry of [...counted.values()].sort((a, b) => b.count - a.count)) byRole[entry.role].push(entry);
+    const found = {};
+    measuredColours = {};
+    for (const role of ["background", "text", "border"]) {
+      byRole[role].slice(0, 8).forEach((entry, index) => {
+        const name = measuredPrefix + role + "-" + (index + 1);
+        found[name] = entry.value;
+        measuredColours[name] = entry;
+      });
+    }
+    return found;
+  };
+
   const designTokens = () => {
     // Zum Messen wird der eigene Regler-Block kurz stillgelegt: gemeldet werden die Farben des
     // DESIGNS, nicht die bereits vorgenommenen Anpassungen — sonst waere der Ausgangswert nach der
@@ -243,10 +311,12 @@ const bridgeScript = `<script ${bridgeMarker}>
     const found = {};
     try {
       const computed = getComputedStyle(document.documentElement);
-      for (const name of tokenNames()) {
+      for (const name of usedTokenNames()) {
         const value = String(computed.getPropertyValue(name) || "").trim();
         if (colorLike.test(value)) found[name] = value;
       }
+      if (!Object.keys(found).length) return documentColours();
+      measuredColours = {};
     } catch (error) { /* ohne lesbare Stylesheets bleibt die Vorschau bedienbar */ }
     finally { if (tuneStyle) tuneStyle.disabled = wasDisabled; }
     return found;
@@ -348,6 +418,45 @@ const bridgeScript = `<script ${bridgeMarker}>
     return { value: "", from: null };
   };
 
+  // Fuer die Farbabbildung wird die Bedingung mitgefuehrt, unter der eine Regel gilt: eine
+  // Zwillingsregel ausserhalb ihres @media-Blocks wuerde sonst ueberall greifen.
+  const conditionalRules = () => {
+    const collected = [];
+    const walk = (list, condition) => {
+      for (const rule of Array.prototype.slice.call(list || [])) {
+        if (rule.cssRules && rule.conditionText !== undefined) walk(rule.cssRules, condition ? condition + " and " + rule.conditionText : "@media " + rule.conditionText);
+        else if (rule.style && rule.selectorText) collected.push({ rule: rule, condition: condition });
+      }
+    };
+    try {
+      for (const sheet of Array.prototype.slice.call(document.styleSheets)) {
+        if (ownSheet(sheet)) continue;
+        try { walk(sheet.cssRules, ""); } catch (error) { continue; }
+      }
+    } catch (error) { /* Fremd-Stylesheets duerfen die Vorschau nicht anhalten */ }
+    return collected;
+  };
+
+  // Eine gemessene Farbe hat keinen Regler im Design — geaendert wird sie deshalb dort, wo sie
+  // wirklich steht: jede Regel, die genau diese Farbe in dieser Rolle nennt, bekommt eine
+  // Zwillingsregel mit der neuen. Dasselbe Verfahren nutzt der Aufbau fuer den Erscheinungswechsel.
+  const recolourRules = (entry, value) => {
+    const parts = [];
+    for (const item of conditionalRules()) {
+      const declarations = [];
+      for (const property of Array.prototype.slice.call(item.rule.style)) {
+        if (property.slice(0, 2) === "--" || roleOf(property) !== entry.role) continue;
+        const current = String(item.rule.style.getPropertyValue(property)).trim();
+        if (!colorLike.test(current) || normalizeColour(current) !== entry.value) continue;
+        declarations.push(property + ": " + value + " !important;");
+      }
+      if (!declarations.length) continue;
+      const block = item.rule.selectorText + " { " + declarations.join(" ") + " }";
+      parts.push(item.condition ? item.condition + " { " + block + " }" : block);
+    }
+    return parts.join("\\n");
+  };
+
   let tuneStyle = null;
   const applyTune = (overrides) => {
     if (!tuneStyle) {
@@ -355,9 +464,17 @@ const bridgeScript = `<script ${bridgeMarker}>
       tuneStyle.setAttribute("data-werft-tune", "");
       (document.head || document.documentElement).appendChild(tuneStyle);
     }
-    const body = Object.keys(overrides || {}).map((name) => "  " + name + ": " + overrides[name] + ";").join("\\n");
+    const variables = [];
+    const blocks = [];
+    for (const name of Object.keys(overrides || {})) {
+      if (name.indexOf(measuredPrefix) === 0) {
+        const entry = measuredColours[name];
+        if (entry) blocks.push(recolourRules(entry, overrides[name]));
+      } else variables.push("  " + name + ": " + overrides[name] + ";");
+    }
     // Hoehere Spezifitaet als ":root", damit die Anpassung auch das Dunkel-Theme uebersteuert.
-    tuneStyle.textContent = body ? ":root:root:root {\\n" + body + "\\n}" : "";
+    if (variables.length) blocks.unshift(":root:root:root {\\n" + variables.join("\\n") + "\\n}");
+    tuneStyle.textContent = blocks.filter(Boolean).join("\\n");
   };
 
   let themeStyleElement = null;
@@ -605,7 +722,10 @@ const bridgeScript = `<script ${bridgeMarker}>
   // nur seinen Text treffen wollte. Nur innerhalb des gerade bearbeiteten Textes arbeitet die Maus
   // normal weiter — dort setzt sie die Schreibmarke und markiert.
   const insideEditing = (target) => Boolean(editing && target instanceof Node && (editing === target || editing.contains(target)));
+  // Im Stift- UND im Pipettenmodus darf das Design nicht mehr auf Klicks reagieren: sonst schaltet
+  // ein Bedienelement um oder der Bildschirm wechselt, waehrend man nur eine Farbe treffen wollte.
   const blockWhileEditing = (event) => {
+    if (pickMode && !markMode) { event.preventDefault(); event.stopImmediatePropagation(); return; }
     if (!textMode || insideEditing(event.target)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -653,7 +773,10 @@ const bridgeScript = `<script ${bridgeMarker}>
       const normalized = normalizeColour(value);
       if (!normalized || !isVisibleColour(normalized)) return;
       if (entries.some((entry) => entry.value === normalized && entry.role === role)) return;
-      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: declared || tokenForColour(value), exact: Boolean(declared) });
+      const token = declared || tokenForColour(value);
+      // Bei gemessenen Farben IST die Farbgleichheit die Zuordnung — dort wird genau diese Farbe
+      // ersetzt. Nur bei echten Variablen bleibt blosse Gleichheit ein unsicherer Hinweis.
+      entries.push({ role: role, value: normalized, hex: hexOf(normalized), token: token, exact: Boolean(declared) || token.indexOf(measuredPrefix) === 0 });
     };
     const background = paintedBackground(element);
     add("Fläche", background.value, declaredVariable(background.from, ["background-color", "background"]));

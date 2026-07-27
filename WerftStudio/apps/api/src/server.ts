@@ -14,6 +14,7 @@ import { applyDesignOperations, validateDesignReferences } from "@werft/design-m
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
 import { Client as MinioClient } from "minio";
+import { designFileName, designVariantsOf, generatedDesignPathPattern, sameVariantPattern } from "./design-variants.js";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModelFields, codexModels, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
@@ -243,7 +244,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.19.0-20260727.1159" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.20.0-20260727.1228" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -423,7 +424,12 @@ app.get("/api/v1/projects/:projectId/import", async (request) => {
   // `reconstructed` unterscheidet das aus den Quellen aufgebaute Design von einer nur gefundenen
   // HTML-Datei; nur Ersteres darf als originalgetreu aufgebaut angezeigt werden.
   const reconstructed = row.imported.entryPath.startsWith(".werft-generated/");
-  return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, ...(row.imported.entryPath ? { previewPath: `/api/v1/previews/${projectId}/${previewToken(projectId)}/${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+  // Welche Geraeteformate bereits eigens aufgebaut sind. Die Buehne zeigt zum gewaehlten Geraet
+  // dessen Fassung; fuer die uebrigen bleibt die Grundfassung sichtbar, bis sie gebaut werden.
+  const previewBase = `/api/v1/previews/${projectId}/${previewToken(projectId)}/`;
+  const variants = designVariantsOf(row.imported.manifest.map((file) => file.path))
+    .map(({ width, height, path }) => ({ width, height, previewPath: `${previewBase}${path}?revision=${row.revision}` }));
+  return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, variants, ...(row.imported.entryPath ? { previewPath: `${previewBase}${row.imported.entryPath}?revision=${row.revision}` } : {}) };
 });
 // Alle Erscheinungen eines Projekts — Hell, Dunkel und eigene Farbthemes — deterministisch aus den
 // Quellen gemessen, ohne KI. Ein Design, das vor dieser Fassung aufgebaut wurde, kennt nur EIN Theme;
@@ -765,7 +771,6 @@ async function updateReconstructionJob(jobId: string, runAttempt: number, status
   const updated = await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`)).returning({ id: jobs.id });
   if (!updated[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
 }
-const generatedDesignPathPattern = /^\.werft-generated\/[0-9a-f-]+(?:\/\d+)?\/design\.html$/i;
 // Grenzen der deterministischen Messung: sie soll Sekunden dauern und darf den Speicher nicht sprengen.
 const maxFactFileBytes = 2 * 1024 * 1024, maxFactFiles = 6_000, factReadConcurrency = 12, maxReconstructedScreens = 24;
 const maxScreenSourceChars = 90_000, maxPublishedProbes = 40, analysisBatchChars = 220_000;
@@ -843,7 +848,7 @@ async function compactReconstructionEvidence(summaries: string[], run: Reconstru
   }
   return current;
 }
-async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, previousProbes: ReconstructionProbe[] = []) {
+async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }) {
   const jobStartedAt = Date.now();
   const startedAt = new Date(jobStartedAt).toISOString();
   const probes: ReconstructionProbe[] = previousProbes.map((probe) => ({ ...probe }));
@@ -982,6 +987,10 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") }));
     const facts = extractDesignFacts(platform, factTexts);
     if (facts.viewport) profile = { width: facts.viewport.width, height: facts.viewport.height, device: facts.viewport.device, density: facts.viewport.density };
+    // Ist ein Referenzgeraet gewaehlt, wird FUER DESSEN Flaeche gebaut: nur so entsteht ein Design,
+    // das die Breite eines aufgeklappten Foldables oder das Querformat wirklich nutzt, statt in der
+    // Ecke des Rahmens zu stehen. Die gemessene Punktdichte des Projekts bleibt dabei erhalten.
+    if (targetViewport) profile = { width: targetViewport.width, height: targetViewport.height, device: targetViewport.device, density: profile.density };
     const factSheet = renderFactSheet(facts);
     const assetLibrary = renderAssetLibrary(facts);
     const measuredValues = factCount(facts);
@@ -1090,10 +1099,14 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       if (repairedReport.score >= report.score) { html = repairedHtml; report = repairedReport; }
     }
     const fidelityScore = report.score;
-    const designPath = `.werft-generated/${jobId}/${runAttempt}/design.html`;
+    const designFile = designFileName(targetViewport);
+    const variantPattern = sameVariantPattern(designFile);
+    const designPath = `.werft-generated/${jobId}/${runAttempt}/${designFile}`;
     const data = Buffer.from(html, "utf8");
     const designObjectKey = `${row.imported.objectPrefix}${designPath}`;
-    const oldGeneratedPaths = row.imported.manifest.filter((file) => generatedDesignPathPattern.test(file.path) && file.path !== designPath).map((file) => file.path);
+    // Aufgeraeumt wird nur die VORHERIGE Fassung DIESES Formats — die Fassungen der anderen Formate
+    // bleiben liegen, sonst waere nach jedem Aufbau nur noch ein einziges Format vorhanden.
+    const oldGeneratedPaths = row.imported.manifest.filter((file) => variantPattern.test(file.path) && file.path !== designPath).map((file) => file.path);
     let stored: { revision: number; state: ReconstructionState } | undefined;
     await publishMilestone(98, reconstructionState("store", "Das vollständig geprüfte HTML wird atomar gespeichert.", reconstructionTodos.length, processedFiles, sources.length, processedBytes, totalBytes), 0, 0);
     try {
@@ -1103,9 +1116,12 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
         if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
         if (current.revision !== row.revision) fail("REVISION_CONFLICT", 409, "Das importierte UI wurde während der Rekonstruktion geändert. Die Analyse wird auf dem aktuellen Stand neu gestartet.", true);
-        const manifest = [...current.imported.manifest.filter((file) => !generatedDesignPathPattern.test(file.path)), { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
+        const manifest = [...current.imported.manifest.filter((file) => !variantPattern.test(file.path)), { path: designPath, size: data.byteLength, mime: "text/html; charset=utf-8" }];
         const revision = current.revision + 1;
-        await tx.update(projectImports).set({ entryPath: designPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
+        // Die Startseite bleibt die Grundfassung: eine Formatfassung ist eine ZUSAETZLICHE Ansicht,
+        // kein Ersatz — sonst waere nach dem Aufbau fuer ein Foldable das Grundformat verschwunden.
+        const nextEntryPath = targetViewport ? current.imported.entryPath : designPath;
+        await tx.update(projectImports).set({ entryPath: nextEntryPath, manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0), fileCount: manifest.length }).where(eq(projectImports.projectId, projectId));
         await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
         await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstructed", targetType: "project", targetId: projectId, result: "success", metadata: { sourceFiles: sources.length, sourceBytes: totalBytes, outputBytes: data.byteLength, revision, platform, profile, measuredValues, screens: screenPlan.length, fidelityScore, openIssues: report.issues.length, elapsedMs: Date.now() - jobStartedAt, retryCount, probes }, correlationId });
         const state = runtimeState(reconstructionState("completed", `Alle ${screenPlan.length} Bildschirme aufgebaut und nachgemessen: ${fidelityScore} % der ${report.checked} geprüften Quellwerte stimmen exakt.`, reconstructionTodos.length, sources.length, sources.length, totalBytes, totalBytes, { entryPath: designPath, revision }), 100, 0);
@@ -1186,15 +1202,23 @@ reconstructionReaper.unref();
 app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit: { max: 6, timeWindow: "10 minutes" } } }, async (request, reply) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { retryFailed, force } = z.object({ retryFailed: z.boolean().optional().default(false), force: z.boolean().optional().default(false) }).strict().parse(request.body ?? {});
+  // Das Zielformat entscheidet, FUER WELCHE Flaeche gebaut wird. Ohne Angabe entsteht die
+  // Grundfassung in der Groesse, die das Projekt selbst nennt.
+  const { retryFailed, force, viewport } = z.object({
+    retryFailed: z.boolean().optional().default(false),
+    force: z.boolean().optional().default(false),
+    viewport: z.object({ width: z.number().int().min(240).max(4096), height: z.number().int().min(240).max(4096), device: z.string().min(1).max(80) }).optional()
+  }).strict().parse(request.body ?? {});
   const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
-  const idempotencyKey = `${projectId}:${imported.revision}`;
+  // Das Format gehoert in den Idempotenzschluessel: sonst gaebe der Aufbau fuer ein zweites Format
+  // den Lauf des ersten zurueck, und die zweite Fassung entstuende nie.
+  const idempotencyKey = `${projectId}:${imported.revision}:${viewport ? `${viewport.width}x${viewport.height}` : "basis"}`;
   const queuedState = reconstructionState("queued", "HTML-Rekonstruktion wird vorbereitet.", 0, 0, 0, 0, 0);
   const candidateId = uuidv7();
-  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
+  const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision, ...(viewport ? { viewport } : {}) }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
   if (inserted[0]) {
-    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id, [], viewport).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
     return reply.status(202).send({ jobId: candidateId, status: "queued" });
   }
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
@@ -1205,7 +1229,7 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
   const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };
   const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
-  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, previousProbes).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, previousProbes, viewport).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
 });
 app.get("/api/v1/jobs/:jobId", async (request) => {

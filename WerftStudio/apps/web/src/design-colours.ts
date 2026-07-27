@@ -30,8 +30,13 @@ const tokenWords: Record<string, string> = {
 };
 // „--md-sys-color-on-surface-variant" ist kein Name, den man liest. Die Herkunft bleibt im Titel
 // stehen; angezeigt wird eine lesbare Fassung.
+// Fuehrt ein Design keine Farbvariablen, treten an ihre Stelle die Farben, die es tatsaechlich
+// zeichnet. Sie tragen dieses Praefix und werden direkt in den Regeln ersetzt, in denen sie stehen.
+export const measuredPrefix = "--gemessen-";
+export const usesMeasuredColours = (tokens: Record<string, string>) => Object.keys(tokens).some((name) => name.startsWith(measuredPrefix));
+
 export function tokenTitle(name: string): string {
-  const bare = name.replace(/^--/, "").replace(/^(md-sys-|md-ref-|mat-|sys-|ref-|werft-|app-|theme-|color-|colour-|c-)+/i, "").replace(/-?colou?r-?/gi, "-");
+  const bare = name.replace(/^--/, "").replace(/^(gemessen-|md-sys-|md-ref-|mat-|sys-|ref-|werft-|app-|theme-|color-|colour-|c-)+/i, "").replace(/-?colou?r-?/gi, "-");
   const words = bare.split(/[-_]+/).filter(Boolean).map((word) => tokenWords[word.toLowerCase()] ?? word);
   const label = words.join(" ").trim();
   if (!label) return name.replace(/^--/, "");

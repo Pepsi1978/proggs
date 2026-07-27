@@ -5,14 +5,17 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, usePa
 import { api, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, type CanvasPoint } from "./canvas-navigation";
 import { type StageDevice, deviceLabel, referenceDevices, stageDeviceFor } from "./reference-devices";
-import { groupedTokens, hexColour, tokenTitle } from "./design-colours";
+import { groupedTokens, hexColour, tokenTitle, usesMeasuredColours } from "./design-colours";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; previewPath?: string };
+// Fuer jedes Geraeteformat kann eine eigene Fassung des Designs aufgebaut sein; ohne sie zeigt die
+// Buehne die Grundfassung, die die zusaetzliche Flaeche nicht nutzt.
+type DesignVariant = { width: number; height: number; previewPath: string };
+type ProjectImport = { imported: false } | { imported: true; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; variants: DesignVariant[]; previewPath?: string };
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
 type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number };
 type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null; attempts?: number; heartbeatAt?: string };
@@ -51,8 +54,9 @@ function ProgressMeters({ percent, phaseProgress, elapsedMs, estimatedRemainingM
     </div>
   );
 }
-async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false): Promise<ReconstructionJob> {
-  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force }) });
+type RebuildViewport = { width: number; height: number; device: string };
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false, viewport?: RebuildViewport): Promise<ReconstructionJob> {
+  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force, ...(viewport ? { viewport } : {}) }) });
   let networkRetries = 0;
   let interruptedRestarts = 0;
   for (;;) {
@@ -70,7 +74,7 @@ async function reconstructProject(projectId: string, onProgress: (job: Reconstru
     if (job.status === "completed") return job;
     if (job.status === "failed" && job.errorCode === "RECONSTRUCT_INTERRUPTED" && interruptedRestarts < 1) {
       interruptedRestarts += 1;
-      started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed: true }) });
+      started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed: true, ...(viewport ? { viewport } : {}) }) });
       continue;
     }
     if (job.status === "failed") throw new ApiError(job.errorCode ?? "RECONSTRUCT_FAILED", job.result?.message ?? "Die HTML-Rekonstruktion ist fehlgeschlagen.", 500);
@@ -952,7 +956,7 @@ function Studio() {
   // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
   const [rebuildProgress, setRebuildProgress] = useState<ReconstructionJob | null>(null);
   const rebuild = useMutation({
-    mutationFn: ({ retryFailed, force }: { retryFailed: boolean; force?: boolean }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false),
+    mutationFn: ({ retryFailed, force, viewport }: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false, viewport),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
@@ -1163,8 +1167,21 @@ function Studio() {
     return () => window.clearTimeout(timer);
   }, [highlightedToken]);
   const canRebuild = imported.data?.imported === true;
-  const rebuildLabel = imported.data?.imported && imported.data.reconstructed ? "Design neu aus den Quellen aufbauen" : "Design aus den Quellen aufbauen";
-  const startRebuild = () => rebuild.mutate({ retryFailed: true, force: imported.data?.imported === true && imported.data.reconstructed });
+  // Gibt es fuer das gewaehlte Geraet bereits eine eigene Fassung? Dann zeigt die Buehne sie; sonst
+  // steht dort die Grundfassung, die die Flaeche des Geraets nicht ausnutzt.
+  const deviceVariant = stageDevice && imported.data?.imported
+    ? imported.data.variants.find((variant) => variant.width === stageDevice.width && variant.height === stageDevice.height)
+    : undefined;
+  const rebuildLabel = stageDevice
+    ? deviceVariant ? `Fassung für ${stageDevice.label} neu aufbauen` : `Design für ${stageDevice.label} aufbauen`
+    : imported.data?.imported && imported.data.reconstructed ? "Design neu aus den Quellen aufbauen" : "Design aus den Quellen aufbauen";
+  // Mit gewaehltem Geraet wird FUER DESSEN Flaeche gebaut — genau das macht aus dem Rahmen eine
+  // echte Geraeteansicht statt eines zu gross gezogenen Handybildschirms.
+  const startRebuild = () => rebuild.mutate({
+    retryFailed: true,
+    force: imported.data?.imported === true && imported.data.reconstructed,
+    ...(stageDevice ? { viewport: { width: stageDevice.width, height: stageDevice.height, device: stageDevice.label } } : {})
+  });
   if (project.isError) return <Navigate to="/app/designs" />;
   return (
     <div className={`studio${canvasFullscreen ? " canvas-fullscreen" : ""}`} data-theme={theme}>
@@ -1392,6 +1409,8 @@ function Studio() {
             setMode={setMode}
             imported={imported.data}
             device={stageDevice}
+            deviceVariant={deviceVariant}
+            onBuildForDevice={startRebuild}
             rebuild={{ start: (options) => rebuild.mutate(options), pending: rebuild.isPending, error: rebuild.error, progress: rebuildProgress }}
             onScreenChange={setVisibleScreen}
             onScreensChange={setBoardScreens}
@@ -1470,8 +1489,11 @@ function Studio() {
                   <small className="subtle">Pipette wählen und ins Design klicken — dann steht hier, welche Farbe dort gilt und welcher Regler sie ändert.</small>
                 )}
               </section>
+              {usesMeasuredColours(designTokens) && (
+                <small className="subtle token-measured-hint">Dieses Design führt keine Farbvariablen. Gezeigt werden deshalb die Farben, die es tatsächlich zeichnet — geändert werden sie direkt in den Regeln, in denen sie stehen.</small>
+              )}
               {Object.keys(designTokens).length === 0 ? (
-                <div className="empty">Dieses Design führt seine Farben nicht als Variablen, sondern fest im Stylesheet. Nach „Neu aufbauen“ oben in der Leiste sind sie hier einzeln regelbar.</div>
+                <div className="empty">In diesem Design ist noch keine Farbe zu messen. Sobald die Vorschau steht, erscheinen hier alle Farben, die es verwendet.</div>
               ) : (
                 groupedTokens(designTokens).map((group) => (
                   <section className="token-group" key={group.id}>
@@ -1980,7 +2002,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
         </form>
       )}
       <div className="stage-modes">
-        <button type="button" className={!markMode && !textMode ? "active" : ""} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
+        <button type="button" className={!markMode && !textMode && !pickMode ? "active" : ""} onClick={() => setMode("interact")} title="Interagieren (V)"><MousePointer2 /></button>
         <button type="button" className={textMode ? "active" : ""} onClick={() => setMode("edit")} title="Text direkt ändern (E) — wirkt sofort, ohne KI"><PenLine /></button>
         <button type="button" className={markMode ? "active" : ""} onClick={() => setMode("comment")} title="Bereich markieren und kommentieren (C)"><MessageSquare /></button>
         <button type="button" className={pickMode ? "active" : ""} onClick={() => setMode(pickMode ? "interact" : "pick")} title="Farbe im Design aufnehmen (F) — zeigt, welche Farbe hier gilt und welcher Regler sie ändert"><Pipette /></button>
@@ -2016,8 +2038,8 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["draw", "Zeichnen", <WandSparkles />],
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
-type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void }) {
+type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, deviceVariant, onBuildForDevice, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; deviceVariant: DesignVariant | undefined; onBuildForDevice(): void; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -2088,9 +2110,9 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
       <div className="canvas imported-canvas">
         {imported.previewPath ? (
           <DesignStage
-            key={`${projectId}:${imported.revision}`}
+            key={`${projectId}:${imported.revision}:${deviceVariant?.previewPath ?? "basis"}`}
             previewOrigin={previewOrigin}
-            previewPath={imported.previewPath}
+            previewPath={deviceVariant?.previewPath ?? imported.previewPath}
             previewWidth={imported.previewWidth}
             previewHeight={imported.previewHeight}
             device={device}
@@ -2128,6 +2150,15 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           <div className="stage-progress">
             <span>{reconstructionProgress?.result?.message ?? "Design wird aus den Quellen aufgebaut."}</span>
             <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
+          </div>
+        )}
+        {/* Ein fuer 412 Punkte gebautes Design nutzt die Flaeche eines aufgeklappten Foldables nicht
+            von selbst — es steht dann in der Ecke des Rahmens. Diese Zeile sagt genau das und baut
+            auf Wunsch die Fassung fuer dieses Format. */}
+        {imported.previewPath && device && !deviceVariant && !rebuild.pending && !rebuild.error && (
+          <div className="stage-progress stage-hintbar">
+            <span>Dieses Design ist für {imported.previewWidth} × {imported.previewHeight} gebaut und füllt {device.label} deshalb nicht aus.</span>
+            <Button variant="primary" onClick={onBuildForDevice}>Für {device.label} aufbauen</Button>
           </div>
         )}
         {/* Scheitert der Neuaufbau, waehrend schon ein Design steht, blieb das bisher still: der
