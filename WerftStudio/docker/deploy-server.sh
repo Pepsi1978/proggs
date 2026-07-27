@@ -26,6 +26,11 @@ if ! grep -q '^WERFT_ADMIN_PASSWORD=' .env; then
 fi
 
 chmod 600 .env
+mkdir -p /var/lib/werft-studio-maintenance
 docker compose -f compose.server.yaml config --quiet
 docker compose -f compose.server.yaml up -d --build
+install -m 0644 docker/werft-docker-cache-prune.service docker/werft-docker-cache-prune.timer docker/werft-docker-cache-prune.path /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now werft-docker-cache-prune.timer werft-docker-cache-prune.path
+systemctl start werft-docker-cache-prune.service
 docker compose -f compose.server.yaml ps

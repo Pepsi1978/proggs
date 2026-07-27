@@ -30,6 +30,7 @@ import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedAr
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
 import { previewBridgeVersion, injectPreviewCanvasBridge, rewriteRootRelativeCss, rewriteRootRelativeJavaScript } from "./preview-canvas-bridge.js";
 import { cleanupOrphanedObjects } from "./storage-cleanup.js";
+import { requestHostCacheCleanup } from "./host-cache-cleanup.js";
 
 type Actor = { userId: string; organizationId: string; role: Role };
 type PendingCodexAuth = { userId: string; organizationId: string; deviceAuthId: string; userCode: string; expiresAt: number; interval: number };
@@ -44,7 +45,8 @@ const env = z.object({
   S3_ENDPOINT: z.string().url().default("http://localhost:9000"),
   S3_BUCKET: z.string().min(3).default("werft"),
   S3_ACCESS_KEY: z.string().min(3).default("werft-local"),
-  S3_SECRET_KEY: z.string().min(8).default("werft-local-secret")
+  S3_SECRET_KEY: z.string().min(8).default("werft-local-secret"),
+  HOST_MAINTENANCE_DIR: z.string().min(1).default("/maintenance")
 }).parse(process.env);
 if (env.NODE_ENV === "production" && env.SESSION_SECRET === localSecret) throw new Error("SESSION_SECRET muss in Produktion explizit gesetzt sein");
 const { db, client } = createDatabase(env.DATABASE_URL);
@@ -54,6 +56,7 @@ const s3Endpoint = new URL(env.S3_ENDPOINT);
 const objectStore = new MinioClient({ endPoint: s3Endpoint.hostname, port: Number(s3Endpoint.port || (s3Endpoint.protocol === "https:" ? 443 : 80)), useSSL: s3Endpoint.protocol === "https:", accessKey: env.S3_ACCESS_KEY, secretKey: env.S3_SECRET_KEY });
 let bucketReady: Promise<void> | undefined;
 const pendingCodexAuth = new Map<string, PendingCodexAuth>();
+let activeHostCacheCleanup: Promise<Awaited<ReturnType<typeof requestHostCacheCleanup>>> | undefined;
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
 // parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts.
@@ -69,6 +72,12 @@ const hashJson = (value: unknown) => createHash("sha256").update(JSON.stringify(
 const previewToken = (projectId: string) => createHmac("sha256", env.SESSION_SECRET).update(`preview:${projectId}`).digest("base64url");
 const validPreviewToken = (projectId: string, token: string) => { const expected = Buffer.from(previewToken(projectId)); const actual = Buffer.from(token); return expected.length === actual.length && timingSafeEqual(expected, actual); };
 const ensureBucket = () => bucketReady ??= (async () => { if (!(await objectStore.bucketExists(env.S3_BUCKET))) await objectStore.makeBucket(env.S3_BUCKET); })();
+async function cleanupHostBuildCache() {
+  activeHostCacheCleanup ??= requestHostCacheCleanup(env.HOST_MAINTENANCE_DIR);
+  const cleanup = activeHostCacheCleanup;
+  try { return await cleanup; }
+  finally { if (activeHostCacheCleanup === cleanup) activeHostCacheCleanup = undefined; }
+}
 async function cleanupOrphanImportObjects(manual = false) {
   await ensureBucket();
   const imports = await db.select({ objectPrefix: projectImports.objectPrefix, manifest: projectImports.manifest }).from(projectImports);
@@ -249,7 +258,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.8-20260727.2118" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.9-20260727.2124" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -342,7 +351,14 @@ app.delete("/api/v1/providers/openai", async (request) => { const actor = requir
 
 app.post("/api/v1/storage/cleanup", async (request) => {
   const actor = requireActorPermission(request, "project.delete");
-  const result = await cleanupOrphanImportObjects(true);
+  let host;
+  try { host = await cleanupHostBuildCache(); }
+  catch (error) {
+    request.log.error({ err: error, event: "storage.host_cleanup_failed" }, "Docker-Build-Cache konnte nicht bereinigt werden");
+    fail("HOST_CACHE_CLEANUP_FAILED", 503, "Der Server-Cache konnte nicht bereinigt werden. Bitte den Host-Dienst prüfen.", true);
+  }
+  const objects = await cleanupOrphanImportObjects(true);
+  const result = { ...objects, objectStoreFreedBytes: objects.freedBytes, buildCacheFreedBytes: host.freedBytes, freedBytes: objects.freedBytes + host.freedBytes, usedBytes: host.usedBytes };
   await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "storage.cleaned", targetType: "organization", result: "success", metadata: result, correlationId: request.id });
   return result;
 });

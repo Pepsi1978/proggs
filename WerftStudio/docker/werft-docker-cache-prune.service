@@ -1,6 +1,7 @@
 [Unit]
 Description=Begrenzt ungenutzten Docker-Build-Cache
+After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/docker builder prune --force --max-used-space=2GB --reserved-space=1GB
+ExecStart=/bin/sh /opt/werft-studio/docker/prune-docker-cache.sh

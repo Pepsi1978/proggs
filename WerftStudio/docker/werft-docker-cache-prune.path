@@ -1,0 +1,9 @@
+[Unit]
+Description=Manuelle Werft-Build-Cache-Bereinigung
+
+[Path]
+PathExists=/var/lib/werft-studio-maintenance/prune.request
+Unit=werft-docker-cache-prune.service
+
+[Install]
+WantedBy=multi-user.target

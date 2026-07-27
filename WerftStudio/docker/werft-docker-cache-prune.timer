@@ -2,8 +2,8 @@
 Description=Tägliche Bereinigung des ungenutzten Docker-Build-Caches
 
 [Timer]
-OnCalendar=*-*-* 03:30:00
-RandomizedDelaySec=30m
+OnCalendar=hourly
+RandomizedDelaySec=5m
 Persistent=true
 Unit=werft-docker-cache-prune.service
 

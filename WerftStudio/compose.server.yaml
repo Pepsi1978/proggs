@@ -91,6 +91,9 @@ services:
       S3_ACCESS_KEY: ${WERFT_S3_ACCESS_KEY}
       S3_SECRET_KEY: ${WERFT_S3_SECRET_KEY}
       SESSION_SECRET: ${WERFT_SESSION_SECRET}
+      HOST_MAINTENANCE_DIR: /maintenance
+    volumes:
+      - /var/lib/werft-studio-maintenance:/maintenance
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s

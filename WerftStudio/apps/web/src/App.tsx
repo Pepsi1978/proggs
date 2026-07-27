@@ -811,17 +811,21 @@ function SettingsPage() {
   );
 }
 function StorageCleanupButton() {
-  const cleanup = useMutation({ mutationFn: () => api<{ removedIncompleteUploads: number; removedObjects: number; freedBytes: number }>("/storage/cleanup", { method: "POST", body: "{}" }) });
+  const cleanup = useMutation({ mutationFn: () => api<{ removedIncompleteUploads: number; removedObjects: number; objectStoreFreedBytes: number; buildCacheFreedBytes: number; freedBytes: number; usedBytes: number }>("/storage/cleanup", { method: "POST", body: "{}" }) });
+  const freed = cleanup.data?.freedBytes ?? 0;
+  const freedText = freed >= 1024 ** 3
+    ? `${(freed / 1024 ** 3).toLocaleString("de-DE", { maximumFractionDigits: 2 })} GB`
+    : `${(freed / 1024 ** 2).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
   const message = cleanup.data
-    ? cleanup.data.removedObjects || cleanup.data.removedIncompleteUploads
-      ? `${(cleanup.data.freedBytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB freigegeben`
-      : "Cache ist bereits sauber"
+    ? freed > 0
+      ? `${freedText} freigegeben`
+      : `Cleanup ausgeführt · Server belegt ${(cleanup.data.usedBytes / 1024 ** 3).toLocaleString("de-DE", { maximumFractionDigits: 1 })} GB`
     : undefined;
   return (
     <div className="storage-cleanup">
-      <button disabled={cleanup.isPending} onClick={() => window.confirm("Unnötige Cache-Dateien löschen? Alle aktiven Designs und ihre Quelldateien bleiben erhalten.") && cleanup.mutate()}>
+      <button disabled={cleanup.isPending} onClick={() => window.confirm("Ungenutzten Docker-Build-Cache und verwaiste Werft-Dateien löschen? Alle aktiven Designs und ihre Quelldateien bleiben erhalten.") && cleanup.mutate()}>
         <Trash2 />
-        <span>{cleanup.isPending ? "Räume auf …" : "Cache leeren"}</span>
+        <span>{cleanup.isPending ? "Server wird aufgeräumt …" : "Cache leeren"}</span>
       </button>
       {message && <small>{message}</small>}
       {cleanup.error && <small className="field-error">{cleanup.error instanceof ApiError ? cleanup.error.message : "Cache konnte nicht geleert werden."}</small>}
