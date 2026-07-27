@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.2 – 27.07.2026 22:45
+Stand: v1.14.3 – 27.07.2026 23:19
 
 ## Funktionen
 
@@ -25,10 +25,10 @@ Stand: v1.14.2 – 27.07.2026 22:45
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.
 - Injektion der passenden Arbeitsanweisung in jeden neuen Modellaufruf.
 - Kompakte Context-Anzeige mit drei Preisen (`Inputpreis`, `Outputpreis`, `Cachepreis`), den
-  Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`, `Reasoning Token` sowie
-  einer Leerzeile vor den Einzelposten `Cachekosten` samt live aktualisiertem Verhältnis zu den
+  grau dargestellten Tokenwerten `Cache Token` (`Read | Write`), `Input Token`, `Output Token`,
+  `Reasoning Token` sowie direkt anschließend den Einzelposten `Cachekosten` samt live aktualisiertem Verhältnis zu den
   Inputkosten im Format `(3,5 zu 1)`, `Inputkosten`, `Outputkosten`,
-  `Reasoningkosten` und abschließend den vollständig fett hervorgehobenen `Gesamtkosten`
+  `Reasoningkosten` und abschließend den vollständig fett und rot hervorgehobenen `Gesamtkosten`
   einschließlich Dollarwert.
 - Preise und Gesamtkosten werden einheitlich in US-Dollar angezeigt; eine Wechselkursabfrage oder
   EUR-Umrechnung findet nicht statt.
@@ -126,7 +126,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
 8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
-9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier Tokenzeilen; eine Leerzeile trennt `Reasoning Token` von `Cachekosten (<Verhältnis> zu 1)`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und der ganz unten fett dargestellten Zeile `Gesamtkosten`.
+9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier grauen Tokenzeilen; direkt auf `Reasoning Token` folgen `Cachekosten (<Verhältnis> zu 1)`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und die ganz unten fett und rot dargestellte Zeile `Gesamtkosten`.
 
 Tests im Repo:
 

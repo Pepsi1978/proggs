@@ -480,7 +480,7 @@ describe("models.dev pricing", () => {
     expect(latestServiceTier(records, "openai", "missing")).toBeUndefined()
   })
 
-  test("renders the requested Context rows with a gap before costs", async () => {
+  test("renders muted Context values without a gap before costs", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const contextBlock = source.match(/>Context<\/span><\/text>([\s\S]*?)<ThemeSelect/)?.[1] ?? ""
     const labels = [...contextBlock.matchAll(/label="([^"]+)"/g)].map((match) => match[1])
@@ -508,9 +508,11 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Reasoning Token"')
     expect(source.indexOf('label="Input Token"')).toBeLessThan(source.indexOf('label="Output Token"'))
     expect(source.indexOf('label="Output Token"')).toBeLessThan(source.indexOf('label="Reasoning Token"'))
-    expect(contextBlock.indexOf('label="Reasoning Token"')).toBeLessThan(contextBlock.indexOf('<box height={1} />'))
-    expect(contextBlock.indexOf('<box height={1} />')).toBeLessThan(contextBlock.indexOf('label="Cachekosten"'))
-    expect(source).not.toContain('label="Reasoning Token" value={formatInt(totals().reasoning)} muted')
+    expect(contextBlock).not.toContain('<box height={1} />')
+    expect(source).toContain('label="Cache Token"\n          value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}\n          muted')
+    expect(source).toContain('label="Input Token"\n          value={formatInt(totals().input)}\n          muted')
+    expect(source).toContain('label="Output Token" value={formatInt(totals().output)} muted')
+    expect(source).toContain('label="Reasoning Token" value={formatInt(totals().reasoning)} muted')
     expect(source).not.toContain('label="Gesamt"')
     expect(source.indexOf('label="Cachepreis"')).toBeLessThan(source.indexOf('label="Cache Token"'))
     expect(source.indexOf('label="Cache Token"')).toBeLessThan(source.indexOf('label="Input Token"'))
@@ -584,12 +586,12 @@ describe("models.dev pricing", () => {
   test("persists work mode per session and creates binding model instructions", async () => {
     const directory = await mkdtemp(join(tmpdir(), "opencode-work-mode-"))
     try {
-      expect(await readWorkMode("session-a", directory)).toBe(DEFAULT_WORK_MODE)
+      expect(await readWorkMode("session-a", directory)).toBe(initialWorkMode())
       writeWorkMode("session-a", "normal", directory)
       expect(await readWorkMode("session-a", directory)).toBe("normal")
       writeWorkMode("session-a", "gruendlich", directory)
       expect(await readWorkMode("session-a", directory)).toBe("gruendlich")
-      expect(await readWorkMode("session-b", directory)).toBe(DEFAULT_WORK_MODE)
+      expect(await readWorkMode("session-b", directory)).toBe(initialWorkMode())
       expect(initialWorkMode({ OPENLAUNCHER_WORK_MODE: "frei" })).toBe("frei")
       expect(initialWorkMode({ OPENLAUNCHER_WORK_MODE: "unbekannt" })).toBe(DEFAULT_WORK_MODE)
       expect(workModeInstruction("frei")).toBeUndefined()
@@ -766,7 +768,8 @@ describe("models.dev pricing", () => {
     expect(source.indexOf('label="Inputkosten"')).toBeLessThan(source.indexOf('label="Outputkosten"'))
     expect(source.indexOf('label="Outputkosten"')).toBeLessThan(source.indexOf('label="Reasoningkosten"'))
     expect(source.indexOf('label="Reasoningkosten"')).toBeLessThan(source.indexOf('label="Gesamtkosten"'))
-    expect(source).toMatch(/label="Gesamtkosten"[\s\S]*?bold/)
+    expect(source).toMatch(/label="Gesamtkosten"[^>]*error bold/)
+    expect(source).toContain("props.error ? theme().error : props.muted ? theme().textMuted : theme().text")
     expect(source).toContain('<span style={{ bold: props.bold }}>{props.value}</span>')
     expect(source).toContain("formatUsd(money().usd)")
     expect(source).toContain('componentCost("inputUsd")')

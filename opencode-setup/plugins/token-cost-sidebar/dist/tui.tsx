@@ -180,15 +180,15 @@ function formatUsdPerMillion(value: number): string {
   return `${formatUsd(value)} / 1M`
 }
 
-function Row(props: { label: string; detail?: string; value: string; muted?: boolean; bold?: boolean; api: TuiPluginApi }) {
+function Row(props: { label: string; detail?: string; value: string; muted?: boolean; error?: boolean; bold?: boolean; api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   return (
     <box flexDirection="row">
-      <text fg={props.muted ? theme().textMuted : theme().text}>
+      <text fg={props.error ? theme().error : props.muted ? theme().textMuted : theme().text}>
         <span style={{ bold: props.bold }}>{props.label}</span>{props.detail ? ` ${props.detail}` : ""}
       </text>
       <box flexGrow={1} />
-      <text fg={props.muted ? theme().textMuted : theme().text}>
+      <text fg={props.error ? theme().error : props.muted ? theme().textMuted : theme().text}>
         <span style={{ bold: props.bold }}>{props.value}</span>
       </text>
     </box>
@@ -781,15 +781,16 @@ function View(props: {
           api={props.api}
           label="Cache Token"
           value={`${formatInt(totals().cacheRead)} | ${formatInt(totals().cacheWrite)}`}
+          muted
         />
         <Row
           api={props.api}
           label="Input Token"
           value={formatInt(totals().input)}
+          muted
         />
-        <Row api={props.api} label="Output Token" value={formatInt(totals().output)} />
-        <Row api={props.api} label="Reasoning Token" value={formatInt(totals().reasoning)} />
-        <box height={1} />
+        <Row api={props.api} label="Output Token" value={formatInt(totals().output)} muted />
+        <Row api={props.api} label="Reasoning Token" value={formatInt(totals().reasoning)} muted />
         <Row
           api={props.api}
           label="Cachekosten"
@@ -799,7 +800,7 @@ function View(props: {
         <Row api={props.api} label="Inputkosten" value={componentCost("inputUsd")} />
         <Row api={props.api} label="Outputkosten" value={componentCost("outputUsd")} />
         <Row api={props.api} label="Reasoningkosten" value={componentCost("reasoningUsd")} />
-        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} bold />
+        <Row api={props.api} label="Gesamtkosten" value={money().available ? formatUsd(money().usd) : "nicht verfügbar"} error bold />
         <ThemeSelect api={props.api} />
       </box>
     </Show>
