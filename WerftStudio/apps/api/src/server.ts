@@ -497,7 +497,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.30.0-20260728.2050" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.30.1-20260728.2059" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1007,7 +1007,13 @@ app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
   }
   request.log.info({ event: "export.package", projectId, files: row.imported.manifest.length, designFiles: designFiles.length, ...(designReport ?? {}) }, "Projektexport zusammengestellt");
   const archive = archiver("zip", { zlib: { level: 6 } });
-  for (const file of row.imported.manifest) archive.append(await readObject(`${row.imported.objectPrefix}${file.path}`), { name: file.path });
+  // Wurde ein frueherer Export wieder importiert, liegt sein Designpaket als Quelldatei im Projekt.
+  // Dann gilt das FRISCH erzeugte — zwei gleichnamige Eintraege im Archiv waeren sonst unaufloesbar.
+  const ersetzt = new Set(designFiles.map((file) => file.path));
+  for (const file of row.imported.manifest) {
+    if (ersetzt.has(file.path)) continue;
+    archive.append(await readObject(`${row.imported.objectPrefix}${file.path}`), { name: file.path });
+  }
   for (const file of designFiles) archive.append(Buffer.from(file.content, "utf8"), { name: file.path });
   void archive.finalize();
   return reply.header("content-type", "application/zip").header("content-disposition", `attachment; filename="${encodeURIComponent(fileName)}"`).send(archive);
