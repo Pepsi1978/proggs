@@ -15,7 +15,7 @@ description: >-
   Findet der Skill den passenden Design-Ordner
   nicht automatisch, fragt er den Benutzer nach dem Pfad. Nutze diesen Skill IMMER wenn der
   Benutzer sagt "Design umsetzen", "Design-Umsetzer", "setze das Design um", "setze mein
-  Cloud-Design um", "Design aus dem Designs-Ordner umsetzen", "mach das Design in die App",
+  Cloud-Design um", "Design aus dem Designs-Ordner umsetzen", "Werft-Studio-Design umsetzen", "mach das Design in die App",
   "Design 1 zu 1 umsetzen", "Design in Jetpack Compose umsetzen", "uebernimm das Design",
   "setze den Design-Entwurf um", "implementiere das Design", "/design-umsetzer", oder
   irgendetwas das damit zu tun hat einen fertigen Design-Entwurf (Claude Designs / Cloud
@@ -25,7 +25,7 @@ description: >-
 
 # Design-Umsetzer: Claude-Design 1:1 in Jetpack Compose umsetzen
 
-**Version:** v1.1.1 - 17.07.2026 21:20 Uhr
+**Version:** v1.2.0 - 28.07.2026 20:50 Uhr
 
 Du bist der weltbeste Android-Umsetzer fuer fertige Design-Entwuerfe. Deine einzige
 Aufgabe: Ein mit **Claude Designs** ("Cloud Designs") erstellter und im Repo abgelegter
@@ -125,6 +125,23 @@ Projekt-Unterordners immer dessen **gesamten Verzeichnisbaum rekursiv** erfassen
 ungewoehnliche Dateiendungen, versteckte Dateien und tief verschachtelte Assets gehoeren
 zum Designprojekt und duerfen nicht uebersehen werden.
 
+**Zweite Herkunft: Werft Studio.** Neben den Claude-Designs (`*.dc.html`) gibt es Entwuerfe,
+die mit **Werft Studio** gebaut und dort ueber "Projekt als ZIP herunterladen" ausgepackt
+wurden. Die erkennst du sicher an einem Unterordner **`WERFT-DESIGN/`**. Er ist dann die
+PRIMAERE Quelle — nicht die uebrigen Projektdateien, die daneben liegen:
+
+| Pfad im Design-Ordner | Inhalt | Rolle |
+|-----------------------|--------|-------|
+| `WERFT-DESIGN/design-tokens.json` | Alle gemessenen Werte maschinenlesbar | **VERBINDLICH** — Erscheinungen mit vollstaendigen Token-Tabellen, Bildschirme, Farben, Masse, Typografie, Radien, Effekte, Assets, Texte |
+| `WERFT-DESIGN/DESIGN-SPEC.md` | Dieselben Werte lesbar + Bildschirm-Tabelle | Checkliste fuer den Vollstaendigkeits-Abgleich |
+| `WERFT-DESIGN/bildschirme/<erscheinung>/<nr>-<name>.html` | JEDER Bildschirm in JEDER Erscheinung als eigene Datei | So muss der Bildschirm in genau dieser Erscheinung aussehen |
+| `WERFT-DESIGN/bildschirme/design.css` | Gemeinsames Stylesheet aller Bildschirme | Die Regeln, die in den Einzeldateien greifen |
+| `WERFT-DESIGN/design.html` | Das durchklickbare Gesamtdesign | Klickweg/Navigation, Umschalter fuer Bildschirm und Erscheinung |
+| Uebriger Ordnerinhalt | Originalprojekt mit Bildern, Fonts, Audio, Daten | Wie gehabt vollstaendig inventarisieren |
+
+Liegt `WERFT-DESIGN/` vor, entfaellt die Suche nach `*.dc.html`: `design-tokens.json` ersetzt
+die Token-Extraktion aus dem HTML. Fehlt der Ordner, ist es ein Claude-Design (Tabelle oben).
+
 **Ablauf:**
 
 1. `Glob("Designs/*")` bzw. `ls ~/proggs/Designs/` — alle **Unterordner** auflisten
@@ -179,6 +196,28 @@ Verwendungsstelle/Trigger**. Binaerdateien inhaltlich bytegenau uebernehmen, nic
 kodieren, komprimieren, ersetzen oder durch aehnliche Stock-Assets austauschen. Nur wenn
 Androids Ressourcenregeln es erzwingen, Dateinamen legal normalisieren und die Umbenennung
 im Quelle-Ziel-Mapping dokumentieren.
+
+### Werft-Studio-Paket: Werte LESEN statt extrahieren
+
+Enthaelt der Design-Ordner `WERFT-DESIGN/`, laeuft Phase 1 anders — und deutlich genauer:
+
+1. `WERFT-DESIGN/design-tokens.json` **vollstaendig** lesen. Alles darin ist deterministisch
+   aus den Quellen gemessen; nichts davon schaetzen, runden oder "vereinheitlichen".
+   - `erscheinungen[]` — jede mit `id`, `art` (light/dark/other) und **vollstaendiger**
+     `tokens`-Tabelle. ALLE werden als umschaltbare Themes umgesetzt, nicht nur die erste.
+   - `bildschirme[]` — nummeriert, mit `istStart`, `navigiertZu` und je Erscheinung dem Pfad
+     zur Einzeldatei. Das ist das Screen-Inventar aus E2, fertig und ohne Raten.
+   - `farben`, `masse`, `typografie`, `formen`, `effekte`, `assets`, `texte` — die Abschnitte
+     A bis D und H dieser Phase, bereits exakt.
+   - `vollstaendigkeit.nichtAufgebaut` — hier stehen Bildschirme, die dem Design FEHLEN. Ist
+     die Liste nicht leer, dem Benutzer melden, BEVOR gebaut wird.
+2. Jeden Bildschirm in **JEDER** Erscheinung ansehen
+   (`bildschirme/<erscheinung>/<nr>-<name>.html`); dort steht das fertige Markup mit seinen
+   Klassen, die zugehoerigen Regeln in `bildschirme/design.css`. Ein Bildschirm gilt erst als
+   erfasst, wenn er in allen Erscheinungen angesehen wurde.
+3. `design.html` fuer den Klickweg: `data-werft-navigate="<ziel-id>"` ist die Navigation,
+   `data-screen-id`/`data-screen-name` die Bildschirm-Kennung.
+4. Die Punkte A bis H unten nur noch fuer das ergaenzen, was im JSON nicht steht.
 
 > Technische Details zum Aufbau der Claude-Design-Dateien (wo genau welche Werte stehen,
 > wie `<x-dc>`, Props, `data-t`-Themes und die `{{ }}`-Platzhalter funktionieren):
@@ -364,6 +403,8 @@ Uebersetze die Tokens aus Phase 1 in konkrete Compose-Bausteine — mit **exakte
   in den Hex-Alpha-Kanal uebernehmen (z.B. `rgba(106,92,255,.13)` → `Color(0x216A5CFF)`;
   Alpha 0.13 ≈ 0x21). Rechne Alpha exakt: `round(alpha*255)` → 2-stellig hex.
 - **Multi-Theme (alle Themes!):** Fuer JEDES gefundene Theme ein eigenes `ColorScheme`
+  (bei einem Werft-Paket: fuer jeden Eintrag aus `erscheinungen[]` — die `id` wird der Name
+  des Themes, die `tokens`-Tabelle sein vollstaendiger Farbsatz)
   (Light + Dark je Variante). Einen Theme-Enum + Umschalter (z.B. in Einstellungen /
   DataStore) anlegen, sodass der Nutzer wie im Entwurf zwischen den Themes wechseln kann.
   Die Design-Variablen (`--bg0/--bg1`-Gradient, `--card`, `--acc`, `--glow` …) auf
@@ -466,6 +507,9 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
     Buttons, keine Sackgassen, kein Platzhalter)
   - Sind **alle** Zustaende (leer/aktiv/ausgewaehlt/Fehler/Ladephase) vorhanden?
   - Sind **alle** Themes und **alle** Effekte/Animationen umgesetzt?
+  - Bei einem Werft-Paket: ist **jeder** Bildschirm aus `design-tokens.json` in **jeder**
+    Erscheinung nachgebaut? Die Tabelle in `DESIGN-SPEC.md` ist die Abhakliste — jede Zeile
+    mal jede Erscheinung.
   - Sind **alle** relevanten Begleitdateien vorhanden und funktional verdrahtet?
   Fehlt auch nur EIN Punkt, ist die Umsetzung **nicht fertig** — nachziehen, bis das
   Inventar zu 100% abgehakt ist. Am Ende die abgehakte Inventarliste kurz berichten.
