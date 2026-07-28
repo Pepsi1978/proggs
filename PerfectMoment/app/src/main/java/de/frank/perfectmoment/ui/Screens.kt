@@ -1400,31 +1400,44 @@ fun SettingsScreen(
             }
             SettingsSection("Sicherung") {
                 SettingRow(
+                    "Google Drive",
+                    if (viewModel.driveConnected) "Verbunden" else "Nicht verbunden",
+                    supporting = viewModel.backupState,
+                    statusColor = if (viewModel.driveConnected) colors.success else null,
+                )
+                SettingRow(
                     "Jetzt sichern",
                     value = if (viewModel.backupBusy) "…" else null,
-                    supporting = if (viewModel.backupTargetChosen) {
-                        viewModel.backupState
-                    } else {
-                        "Ort einmal wählen — z.B. Google Drive"
-                    },
-                    onClick = viewModel::saveToFile,
+                    supporting = "Aufhänger, Skills und Verlauf hochladen",
+                    onClick = viewModel::backupNow,
                     showChevron = !viewModel.backupBusy,
-                    statusColor = if (viewModel.backupTargetChosen) colors.success else null,
                 )
                 SettingRow(
                     "Wiederherstellen",
-                    supporting = "Sicherungsdatei auswählen und einspielen",
-                    onClick = viewModel::restoreFromFileRequested,
+                    supporting = "Sicherung aus Google Drive holen",
+                    onClick = viewModel::restoreNow,
                     showChevron = !viewModel.backupBusy,
-                    divider = viewModel.backupTargetChosen,
                 )
-                if (viewModel.backupTargetChosen) {
+                if (viewModel.driveConnected) {
                     SettingRow(
-                        "Anderen Ort wählen",
-                        onClick = viewModel::forgetBackupTarget,
-                        divider = false,
+                        "Verbindung trennen",
+                        onClick = viewModel::disconnectDrive,
+                        valueColor = colors.warning,
                     )
                 }
+                // Notnagel, falls der Drive-Zugang einmal klemmt.
+                SettingRow(
+                    "In Datei sichern",
+                    supporting = "Ohne Google-Konto — Ort selbst wählen",
+                    onClick = viewModel::saveToFile,
+                    showChevron = !viewModel.backupBusy,
+                )
+                SettingRow(
+                    "Aus Datei einspielen",
+                    onClick = viewModel::restoreFromFileRequested,
+                    showChevron = !viewModel.backupBusy,
+                    divider = false,
+                )
             }
             SettingsSection("Über") {
                 Text(
