@@ -11,7 +11,7 @@ import { can, type Role } from "@werft/authz";
 import { applyOperationsSchema, createProjectSchema, designDocumentSchema, type DesignDocument } from "@werft/contracts";
 import { auditEvents, createDatabase, designOperations, designSnapshots, drafts, jobs, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
 import { applyDesignOperations, validateDesignReferences } from "@werft/design-model";
-import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
 import { Client as MinioClient } from "minio";
 import { designFileName, designVariantsOf, generatedDesignPathPattern, sameVariantPattern } from "./design-variants.js";
@@ -407,7 +407,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.27.0-20260728.1453" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.27.1-20260728.1458" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1014,7 +1014,7 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
       if (snapshotBytes <= maxSnapshotBytes) {
         await tx.insert(designSnapshots).values({ id: uuidv7(), organizationId: actor.organizationId, projectId, revision: current.revision, label, files: previous.map((entry) => ({ path: entry.path, mime: entry.mime, content: entry.data.toString("utf8") })) });
         const keep = await tx.select({ id: designSnapshots.id }).from(designSnapshots).where(eq(designSnapshots.projectId, projectId)).orderBy(desc(designSnapshots.createdAt)).limit(maxDesignSnapshots);
-        await tx.delete(designSnapshots).where(and(eq(designSnapshots.projectId, projectId), sql`${designSnapshots.id} <> all(${keep.map((row) => row.id)})`));
+        if (keep.length) await tx.delete(designSnapshots).where(and(eq(designSnapshots.projectId, projectId), notInArray(designSnapshots.id, keep.map((row) => row.id))));
       }
       await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
       await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
