@@ -1,8 +1,7 @@
 package de.frank.perfectmoment.backup
 
-import android.app.Activity
+import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -24,8 +23,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  */
 class DriveAuth(private val context: Context) {
 
-    /** Permission is still missing and needs a screen the user can answer. */
-    class NeedsConsent(val intent: Intent) : Exception("Zugriff auf Google Drive muss bestätigt werden")
+    /**
+     * Permission is still missing and needs a screen the user can answer. The caller shows
+     * [pendingIntent] and repeats the operation afterwards — approving alone does nothing.
+     */
+    class NeedsConsent(val pendingIntent: PendingIntent) :
+        Exception("Zugriff auf Google Drive muss bestätigt werden")
 
     private val request = AuthorizationRequest.builder()
         .setRequestedScopes(listOf(Scope(DRIVE_APPDATA)))
@@ -37,10 +40,10 @@ class DriveAuth(private val context: Context) {
      */
     suspend fun accessToken(): String {
         val result = authorize()
-        result.pendingIntent?.let { pending ->
-            if (result.hasResolution()) {
-                throw NeedsConsent(Intent().apply { putExtra(EXTRA_PENDING, pending) })
-            }
+        if (result.hasResolution()) {
+            val pending = result.pendingIntent
+                ?: throw IllegalStateException("Google verlangt eine Freigabe, liefert aber keinen Dialog.")
+            throw NeedsConsent(pending)
         }
         return result.accessToken
             ?: throw IllegalStateException("Google hat keinen Zugang zurückgegeben")
@@ -79,9 +82,5 @@ class DriveAuth(private val context: Context) {
 
     companion object {
         const val DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata"
-        const val EXTRA_PENDING = "pm_pending_consent"
-
-        /** Result of the consent screen — the caller simply retries afterwards. */
-        fun wasApproved(resultCode: Int): Boolean = resultCode == Activity.RESULT_OK
     }
 }

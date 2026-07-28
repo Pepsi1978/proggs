@@ -288,10 +288,25 @@ class AppViewModel(
         }
     }
 
-    fun consentHandled() {
+    /**
+     * Nach Googles Freigabe wird die Aktion fortgesetzt, die sie ausgelöst hat. Ohne das endet der
+     * Vorgang still, sobald der Freigabe-Dialog zugeht — der Nutzer bestätigt und nichts geschieht.
+     */
+    fun consentHandled(approved: Boolean) {
         backupConsent = null
-        refreshBackupState()
+        val pending = pendingBackupAction
+        pendingBackupAction = null
+        when {
+            approved && pending != null -> runBackupAction(pending)
+            !approved -> {
+                message = "Ohne die Freigabe kann nicht mit Google Drive gesichert werden."
+                refreshBackupState()
+            }
+            else -> refreshBackupState()
+        }
     }
+
+    private var pendingBackupAction: (suspend (BackupRepository) -> String)? = null
 
     private fun runBackupAction(action: suspend (BackupRepository) -> String) {
         if (backupBusy) return
@@ -302,10 +317,9 @@ class AppViewModel(
                 driveConnected = true
                 backupState = BackupStatus.describe(appContext)
             } catch (consent: DriveAuth.NeedsConsent) {
-                // Google will die Freigabe zeigen — danach probiert der Nutzer erneut.
-                backupConsent = consent.intent
-                    .getParcelableExtra<android.app.PendingIntent>(DriveAuth.EXTRA_PENDING)
-                    ?.intentSender
+                // Freigabe zeigen und die Aktion danach genau hier fortsetzen.
+                pendingBackupAction = action
+                backupConsent = consent.pendingIntent.intentSender
             } catch (error: Exception) {
                 message = error.message ?: "Die Sicherung hat nicht geklappt."
             } finally {
