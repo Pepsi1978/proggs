@@ -116,9 +116,10 @@ fun Modifier.pmClickable(
     shape: Shape = RectangleShape,
     lift: Boolean = false,
     pressBorder: Color? = null,
+    source: MutableInteractionSource? = null,
     onClick: () -> Unit,
 ): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
+    val interactionSource = source ?: remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val press = animateFloatAsState(
         targetValue = if (pressed && enabled) 1f else 0f,
@@ -397,6 +398,14 @@ fun PrimaryButton(
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
     val motionActive = LocalMotionActive.current
+    // .pm-start__primary:active — the gold flow gives way to the plain surface with a gold rim
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressState = animateFloatAsState(
+        targetValue = if (pressed && enabled) 1f else 0f,
+        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "Knopfdruck",
+    )
     // pm-fx-gold-flow 8s ease-in-out infinite -> 4s each way with RepeatMode.Reverse
     val flowState: State<Float> = if (enabled && !reduced && motionActive) {
         val transition = rememberInfiniteTransition(label = "Goldfluss")
@@ -422,7 +431,13 @@ fun PrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(height.dp)
-            .pmClickable(enabled = enabled, role = Role.Button, shape = shape, onClick = onClick)
+            .pmClickable(
+                enabled = enabled,
+                role = Role.Button,
+                shape = shape,
+                source = interactionSource,
+                onClick = onClick,
+            )
             .shadow(
                 elevation = if (enabled) 12.dp else 0.dp,
                 shape = shape,
@@ -443,6 +458,8 @@ fun PrimaryButton(
                 val linePx = 1.dp.toPx()
                 val highlight = Color.White.copy(alpha = 0.28f)
                 val disabled = colors.surface2
+                val pressedSurface = colors.surface
+                val rim = colors.goldHi
                 onDrawBehind {
                     if (!enabled) {
                         drawRect(disabled)
@@ -457,6 +474,15 @@ fun PrimaryButton(
                         Offset(size.width - cornerPx, linePx),
                         linePx,
                     )
+                    // :active — background: surface, box-shadow: 0 0 0 1px gold-hi
+                    val press = pressState.value
+                    if (press > 0f) {
+                        drawRect(pressedSurface.copy(alpha = press))
+                        drawRect(
+                            rim.copy(alpha = press),
+                            style = Stroke(1.dp.toPx()),
+                        )
+                    }
                 }
             },
         contentAlignment = Alignment.Center,
@@ -540,6 +566,34 @@ fun ParameterCard(
     }
 }
 
+/**
+ * Sweep the design runs across a settings row on interaction:
+ * `background-image: linear-gradient(90deg, transparent 0 45%, accent 8% 100%)`,
+ * `background-size: 220% 100%`, moving from `0 0` to `100% 0` over 360ms.
+ */
+@Composable
+private fun Modifier.pmRowSweep(press: State<Float>): Modifier {
+    val colors = LocalPmColors.current
+    return drawWithCache {
+        val gradient = Brush.linearGradient(
+            0f to Color.Transparent,
+            0.45f to Color.Transparent,
+            1f to colors.gold.copy(alpha = 0.08f),
+            start = Offset.Zero,
+            end = Offset(size.width * 2.2f, 0f),
+        )
+        val sweepSize = Size(size.width * 2.2f, size.height)
+        val travel = size.width * 1.2f
+        onDrawBehind {
+            val progress = press.value
+            if (progress <= 0f) return@onDrawBehind
+            withTransform({ translate(-travel * progress, 0f) }) {
+                drawRect(gradient, topLeft = Offset.Zero, size = sweepSize)
+            }
+        }
+    }
+}
+
 /** Slider handle of the design: `box-shadow: 0 0 0 6px accent 9%, 0 6px 18px accent 30%`. */
 @Composable
 fun PmSliderThumb() {
@@ -589,10 +643,24 @@ fun SettingRow(
     valueFontSize: Int = 14,
 ) {
     val colors = LocalPmColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val sweep = animateFloatAsState(
+        targetValue = if (pressed && onClick != null) 1f else 0f,
+        animationSpec = tween(360),
+        label = "Zeilenwisch",
+    )
     Box {
         Row(
             modifier = Modifier.fillMaxWidth().height(if (supporting == null) 60.dp else 72.dp)
-                .then(if (onClick != null) Modifier.pmClickable(onClick = onClick) else Modifier)
+                .then(
+                    if (onClick != null) {
+                        Modifier.pmClickable(source = interactionSource, onClick = onClick)
+                    } else {
+                        Modifier
+                    },
+                )
+                .pmRowSweep(sweep)
                 .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

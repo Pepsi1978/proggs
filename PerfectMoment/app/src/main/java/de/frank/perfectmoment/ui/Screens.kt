@@ -292,7 +292,9 @@ fun StartScreen(
                     Column(
                         // .pm-start__hook — rises and glows on touch
                         Modifier.size(168.dp)
-                            .pmClickable(shape = shape, lift = true) { viewModel.selectHook(hook) }
+                            .pmClickable(shape = shape, lift = true, pressBorder = colors.gold) {
+                                viewModel.selectHook(hook)
+                            }
                             .then(
                                 if (selected) Modifier.shadow(
                                     14.dp,
