@@ -122,6 +122,10 @@
 .working-message{display:flex;flex-direction:column;gap:4px}
 .working-line{display:flex;align-items:center;gap:8px;font-weight:600}
 .working-message small{color:var(--color-text-subtle);font-size:11px}
+/* Der laufende Schritt kann mehrzeilig werden — er soll umbrechen statt die Blase zu sprengen. */
+.working-line{flex-wrap:wrap;line-height:1.45}
+.working-cancel{align-self:flex-start;margin-top:6px;padding:4px 10px;border:1px solid var(--color-line);border-radius:999px;background:var(--color-surface);color:var(--color-text-subtle);font-size:11px;cursor:pointer}
+.working-cancel:hover{border-color:var(--color-error);color:var(--color-error)}
 .working-dots{display:inline-flex;gap:4px;align-items:center}
 .working-dots i{width:6px;height:6px;border-radius:50%;background:var(--color-accent);animation:werft-working 1.05s infinite ease-in-out}
 .working-dots i:nth-child(2){animation-delay:.16s}

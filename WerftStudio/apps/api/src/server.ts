@@ -19,9 +19,9 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
-import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails } from "./openrouter.js";
+import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails, type OpenRouterStreamResult } from "./openrouter.js";
 import { applyChatEdits, parseChatResponse, repairBriefing, verifyFileWrite, type ChatEdit, type FileReport, type ParsedChatResponse } from "./chat-edit.js";
-import { designMap, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
+import { designMap, designScreens, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
@@ -276,7 +276,11 @@ app.setErrorHandler((error, request, reply) => {
   const statusCode = typeof details.statusCode === "number" ? details.statusCode : error instanceof z.ZodError ? 400 : 500;
   const code = typeof details.code === "string" ? details.code : error instanceof z.ZodError ? "VALIDATION_FAILED" : "INTERNAL_ERROR";
   request.log.error({ err: error, code }, "request failed");
-  return reply.status(statusCode).send({ code, message: statusCode >= 500 ? "Die Anfrage konnte nicht abgeschlossen werden." : normalized.message, retryable: details.retryable === true, correlationId: request.id });
+  // `expose` kennzeichnet Meldungen, die nichts Internes verraten, aber alles sagen, was der Benutzer
+  // wissen muss — etwa welcher Modellanbieter abgebrochen hat. Ohne diese Ausnahme landete jeder
+  // Anbieterausfall als nichtssagendes „Die Anfrage konnte nicht abgeschlossen werden." beim Benutzer.
+  const message = statusCode < 500 || details.expose === true ? normalized.message : "Die Anfrage konnte nicht abgeschlossen werden.";
+  return reply.status(statusCode).send({ code, message, retryable: details.retryable === true, correlationId: request.id });
 });
 
 app.addHook("onSend", async (request, reply) => { reply.header("x-correlation-id", request.id); });
@@ -403,7 +407,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.25.1-20260728.1418" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.26.0-20260728.1445" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -892,7 +896,7 @@ function buildChatInstructions(scope: "global" | "screen" | "marked"): string {
   ].join("\n");
 }
 type ModelRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void; selection?: ModelSelection };
-type ModelRunResult = { text: string; provider: ProviderId; model: string; effort?: string; attempts: number; durationMs: number; inputChars: number; outputChars: number; truncated: boolean };
+type ModelRunResult = { text: string; provider: ProviderId; model: string; effort?: string; attempts: number; durationMs: number; inputChars: number; outputChars: number; truncated: boolean; servedBy?: string };
 async function modelRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: ModelRunOptions = {}): Promise<ModelRunResult> {
   const runStartedAt = Date.now();
   const selection = await resolveModelSelection(organizationId, options.selection);
@@ -916,19 +920,25 @@ async function modelRun(organizationId: string, instructions: string, input: str
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
       const response = codexConnection
         ? await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${codexConnection.credentials.accessToken}`, "chatgpt-account-id": accountId!, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify({ ...codexRequestFields(codexModel!, codexEffort!), instructions, input: [{ role: "user", content: input }], store: false, stream: true }) })
-        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens)) });
+        // Ab dem zweiten Versuch darf OpenRouter auf einen anderen Anbieter ausweichen: der gewählte
+        // bleibt erste Wahl, aber ein Ausfall bei ihm soll nicht den ganzen Lauf kosten.
+        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens, attempt > 1)) });
       const raw = await response.text();
       if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : openRouterHttpError(response.status, response.headers.get("retry-after"));
       const stream = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
       const outputText = stream.text;
       if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
       const durationMs = Date.now() - runStartedAt;
-      log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw), truncated: stream.truncated }, "KI-Lauf abgeschlossen");
-      return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length, truncated: stream.truncated };
+      const servedBy = selection.provider === "openrouter" ? (stream as OpenRouterStreamResult).servedBy : undefined;
+      log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw), truncated: stream.truncated, ...(servedBy ? { servedBy } : {}) }, "KI-Lauf abgeschlossen");
+      return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length, truncated: stream.truncated, ...(servedBy ? { servedBy } : {}) };
     } catch (error) {
       if (!isRetryableCodexError(error) || attempt === 3) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
         log.warn({ err: error, event: "model.request.failed", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
+        // Der Benutzer soll wissen, dass es NICHT an seinem Wunsch lag und was er tun kann. Ohne diesen
+        // Zusatz stand da nur die nackte Anbietermeldung ohne jeden Hinweis auf den nächsten Schritt.
+        if (details.expose === true && error instanceof Error && attempt > 1) error.message += ` Auch ${attempt} Versuche mit Ausweichen auf andere Anbieter blieben erfolglos. Versuch es gleich erneut oder wähle oben ein anderes Modell.`;
         if (typeof details.code === "string") throw error;
         fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.`, true);
       }
@@ -1023,23 +1033,26 @@ const maxChatRounds = 3;
 // Anfrage über jede vernünftige Wartezeit hinaus offen halten; angefangene Arbeit ist ohnehin schon
 // geschrieben, und der nächste Zuruf macht dort weiter.
 const chatRoundDeadlineMs = 300_000;
-app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, timeWindow: "5 minutes" } } }, async (request) => {
+const chatBodySchema = z.object({
+  message: z.string().min(1).max(8000),
+  screen: z.string().max(200).optional(),
+  provider: z.enum(providerIds).optional(),
+  model: z.string().min(1).max(300).optional(),
+  effort: z.string().min(1).max(20).optional(),
+  // Ohne Verlauf begann jede Nachricht bei null: stellte die KI eine Rueckfrage, kannte sie die
+  // eigene Frage beim naechsten Mal nicht mehr. Der Verlauf macht aus Einzelschuessen ein Gespraech.
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(6000) }).strict()).max(24).optional(),
+  // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
+  // eindeutig, ohne dass die KI raten oder nachfragen muss.
+  target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
+}).strict();
+// Ein Lauf dauert je nach Modell eine knappe bis zwei Minuten. Ohne Zwischenmeldungen sieht man in
+// dieser Zeit NICHTS und weiss nicht, ob überhaupt gearbeitet wird. Die Meldungen dieses Rückrufs
+// gehen live in das Gespräch; im JSON-Betrieb läuft er ins Leere.
+type ChatProgress = (event: string, data: Record<string, unknown>) => void;
+async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId: string, body: z.infer<typeof chatBodySchema>, emit: ChatProgress, signal?: AbortSignal) {
   const chatStartedAt = Date.now();
-  const actor = requireActorPermission(request, "design.edit");
-  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message, screen, target, provider, model, effort, history } = z.object({
-    message: z.string().min(1).max(8000),
-    screen: z.string().max(200).optional(),
-    provider: z.enum(providerIds).optional(),
-    model: z.string().min(1).max(300).optional(),
-    effort: z.string().min(1).max(20).optional(),
-    // Ohne Verlauf begann jede Nachricht bei null: stellte die KI eine Rueckfrage, kannte sie die
-    // eigene Frage beim naechsten Mal nicht mehr. Der Verlauf macht aus Einzelschuessen ein Gespraech.
-    history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(6000) }).strict()).max(24).optional(),
-    // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
-    // eindeutig, ohne dass die KI raten oder nachfragen muss.
-    target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
-  }).strict().parse(request.body);
+  const { message, screen, target, provider, model, effort, history } = body;
   if (Boolean(provider) !== Boolean(model)) fail("MODEL_SELECTION_INCOMPLETE", 400, "Provider und Modell müssen gemeinsam ausgewählt werden.");
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
@@ -1059,6 +1072,7 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, t
   let revision = row.revision;
   let briefing: string | undefined;
   let round = 0;
+  emit("start", { scope, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), maxRounds: maxChatRounds, screen: screen ?? null, marked: Boolean(target) });
   for (; round < maxChatRounds; round += 1) {
     // Jede Runde liest den FRISCHEN Stand: die Edits der vorherigen Runde stehen schon in den Dateien,
     // und das Modell soll gegen das arbeiten, was jetzt wirklich dort steht.
@@ -1093,7 +1107,21 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, t
       omitted.length ? `=== NICHT MITGELIEFERT (passen nicht in dein Kontextfenster; ändere sie nicht) ===\n${omitted.map((file) => file.path).join(", ")}` : "",
       `=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`
     ].filter(Boolean).join("\n\n");
-    const result = await modelRun(actor.organizationId, instructions, input, request.log, { selection, operation: `chat.runde.${round + 1}` });
+    emit("denkt", { round: round + 1, files: selected.length, inputChars: input.length, screens: designScreens(entryHtml).length, omitted: omitted.length, excerpt: Boolean(excerptNote) });
+    let result: ModelRunResult;
+    try {
+      result = await modelRun(actor.organizationId, instructions, input, request.log, { selection, operation: `chat.runde.${round + 1}`, ...(signal ? { signal } : {}) });
+    } catch (error) {
+      // Fällt eine NACHARBEITSRUNDE aus, ist die Arbeit der vorherigen Runden längst geschrieben.
+      // Sie mit einer Ausnahme wegzuwerfen, wäre der schlimmste aller Ausgänge: der Benutzer sähe
+      // eine reine Fehlermeldung, obwohl sein Design bereits verändert wurde.
+      if (!changedFiles.size) throw error;
+      notes.push(`Die Nacharbeit konnte nicht abgeschlossen werden: ${error instanceof Error ? error.message : "unbekannter Fehler"} Das bereits Übernommene ist gespeichert.`);
+      request.log.warn({ err: error, event: "chat.round.failed", projectId, round: round + 1, changedFiles: changedFiles.size }, "Nacharbeitsrunde fehlgeschlagen; Teilstand bleibt erhalten");
+      break;
+    }
+    if (result.servedBy && result.attempts > 1) notes.push(`Der gewählte Anbieter war nicht erreichbar — der Lauf wurde von „${result.servedBy}“ bedient.`);
+    emit("uebernimmt", { round: round + 1, outputChars: result.outputChars, durationMs: result.durationMs, ...(result.servedBy ? { servedBy: result.servedBy } : {}) });
     const parsed = parseChatResponse(result.text);
     const truncated = parsed.truncated || result.truncated;
     // Die Zusammenfassung der ERSTEN Runde beschreibt die eigentliche Arbeit; eine Nacharbeitsrunde
@@ -1116,8 +1144,10 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, t
       filesWritten: applyResult.applied.length
     });
     request.log.info({ event: "chat.round.completed", projectId, scope, ...probes.at(-1) }, "KI-Bearbeitungsrunde abgeschlossen");
+    emit("runde", { ...probes.at(-1), changedFiles: applyResult.applied.length });
     briefing = repairBriefing(applyResult.reports, truncated);
     if (!briefing) break;
+    emit("nacharbeit", { round: round + 2, offen: applyResult.reports.flatMap((report) => report.outcomes).filter((outcome) => outcome.status === "not-found" || outcome.status === "ambiguous").length, truncated });
     // Kein Fortschritt mehr: eine weitere Runde mit derselben Rückmeldung wäre nur teurer Leerlauf.
     if (!applyResult.applied.length && round > 0) {
       notes.push(...applyResult.reports.flatMap((report) => [...report.issues.map((issue) => `${report.path}: ${issue}`), ...report.outcomes.filter((outcome) => outcome.status === "not-found").map((outcome) => `${report.path}: Die Textstelle „${outcome.find.replace(/\s+/g, " ").slice(0, 70)}…“ war nicht auffindbar.`)]).slice(0, 8));
@@ -1127,15 +1157,46 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, t
     if (Date.now() - chatStartedAt > chatRoundDeadlineMs) { notes.push("Die Nacharbeit wurde nach der vereinbarten Wartezeit beendet. Das bisher Geänderte ist gespeichert — schick die Nachricht nochmal ab, um weiterzumachen."); break; }
   }
   const totalApplied = probes.reduce((sum, probe) => sum + probe.editsApplied, 0);
-  request.log.info({ event: "chat.completed", projectId, scope, rounds: probes.length, changedFiles: changedFiles.size, editsApplied: totalApplied, ...settings }, "KI-Bearbeitung abgeschlossen");
+  request.log.info({ event: "chat.completed", projectId, scope, rounds: probes.length, changedFiles: changedFiles.size, editsApplied: totalApplied, durationMs: Date.now() - chatStartedAt, ...settings }, "KI-Bearbeitung abgeschlossen");
   return {
     reply: replyText || (changedFiles.size ? `Änderungen umgesetzt (${changedFiles.size} Datei(en)).` : "Es war keine Dateiänderung nötig."),
     changedFiles: [...changedFiles],
     skipped: notes,
     revision,
     rounds: probes.length,
-    editsApplied: totalApplied
+    editsApplied: totalApplied,
+    durationMs: Date.now() - chatStartedAt
   };
+}
+app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, timeWindow: "5 minutes" } } }, async (request, reply) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const body = chatBodySchema.parse(request.body);
+  // Wer den Fortschritt sehen will, fragt einen Ereignisstrom an. Wer das nicht tut (Skripte, ältere
+  // Oberflächen), bekommt unverändert die eine JSON-Antwort am Ende.
+  if (!String(request.headers.accept ?? "").includes("text/event-stream")) return runChatPipeline(request, actor, projectId, body, () => {});
+  reply.hijack();
+  const stream = reply.raw;
+  stream.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no", "x-correlation-id": request.id });
+  const send = (event: string, data: unknown) => { if (!stream.writableEnded) stream.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); };
+  // Ein Zeichen alle fünf Sekunden: es hält Proxys davon ab, die stille Verbindung zu kappen, und
+  // beweist der Oberfläche, dass der Lauf noch lebt.
+  const heartbeat = setInterval(() => { if (!stream.writableEnded) stream.write(`: puls ${Date.now()}\n\n`); }, 5_000);
+  // Bricht der Benutzer ab (Fenster zu, Knopf „Abbrechen"), wird auch der laufende Modellaufruf
+  // beendet — statt ihn im Hintergrund weiterlaufen und Geld kosten zu lassen.
+  const controller = new AbortController();
+  request.raw.on("close", () => { if (!stream.writableEnded) controller.abort(Object.assign(new Error("Der Lauf wurde abgebrochen."), { code: "CHAT_ABORTED" })); });
+  try {
+    send("done", await runChatPipeline(request, actor, projectId, body, send, controller.signal));
+  } catch (error) {
+    const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
+    const aborted = controller.signal.aborted;
+    if (!aborted) request.log.error({ err: error, projectId }, "KI-Bearbeitung fehlgeschlagen");
+    send("error", { code: typeof details.code === "string" ? details.code : "INTERNAL_ERROR", message: aborted ? "Der Lauf wurde abgebrochen. Bereits übernommene Änderungen bleiben erhalten." : error instanceof Error && typeof details.statusCode === "number" && details.statusCode < 500 ? error.message : "Die Anfrage konnte nicht abgeschlossen werden.", retryable: details.retryable === true });
+  } finally {
+    clearInterval(heartbeat);
+    if (!stream.writableEnded) stream.end();
+  }
 });
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
 type ReconstructionProbe = {

@@ -37,7 +37,7 @@ describe("OpenRouter adapter", () => {
   it("reassembles streamed chat completions and rejects in-stream errors", () => {
     const raw = 'data: {"choices":[{"delta":{"content":"Hallo "}}]}\n: keepalive\ndata: {"choices":[{"delta":{"content":"Welt"}},{"finish_reason":"stop"}]}\ndata: [DONE]';
     expect(parseOpenRouterEventStream(raw)).toMatchObject({ text: "Hallo Welt", truncated: false });
-    expect(() => parseOpenRouterEventStream('data: {"error":{"message":"kaputt"}}')).toThrow("OpenRouter hat den KI-Lauf abgebrochen.");
+    expect(() => parseOpenRouterEventStream('data: {"error":{"message":"kaputt"}}')).toThrow("OpenRouter hat den KI-Lauf abgebrochen: kaputt");
   });
 
   it("reports a stream that was cut off by the output limit", () => {
@@ -76,5 +76,30 @@ describe("OpenRouter adapter", () => {
     expect(openRouterHttpError(402)).toMatchObject({ code: "OPENROUTER_CREDITS_REQUIRED", retryable: false });
     expect(openRouterHttpError(503)).toMatchObject({ code: "CHAT_UPSTREAM", retryable: true });
     expect(openRouterHttpError(429, "7")).toMatchObject({ retryable: true, retryAfterMs: 7_000 });
+  });
+});
+
+describe("Anbieterausfall", () => {
+  it("weicht ab dem zweiten Versuch auf andere Anbieter aus", () => {
+    // Ein fest genagelter Anbieter mit 82 % Verfügbarkeit liess alle drei Versuche an derselben
+    // kaputten Gegenstelle scheitern — der Lauf war verloren, obwohl andere Anbieter bereitstanden.
+    expect(openRouterRequest("vendor/model", "S", "E", undefined, "gmicloud", 32_000, false)).toMatchObject({ provider: { order: ["gmicloud"], allow_fallbacks: false } });
+    expect(openRouterRequest("vendor/model", "S", "E", undefined, "gmicloud", 32_000, true)).toMatchObject({ provider: { order: ["gmicloud"], allow_fallbacks: true } });
+  });
+
+  it("nennt Anbieter und Wortlaut statt einer nichtssagenden Meldung", () => {
+    const error = openRouterHttpError(502, null, "upstream connection reset", "GMICloud");
+    expect(error.message).toBe("Der Anbieter GMICloud hat den KI-Lauf abgelehnt (HTTP 502): upstream connection reset");
+    expect(error).toMatchObject({ code: "CHAT_UPSTREAM", retryable: true, expose: true, providerName: "GMICloud" });
+  });
+
+  it("reicht den Wortlaut eines Fehlers aus dem Strom durch", () => {
+    expect(() => parseOpenRouterEventStream('data: {"error":{"code":502,"message":"Provider returned error","metadata":{"provider_name":"GMICloud"}}}'))
+      .toThrow("Der Anbieter GMICloud hat den KI-Lauf abgelehnt (HTTP 502): Provider returned error");
+  });
+
+  it("merkt sich, welcher Anbieter den Lauf wirklich bedient hat", () => {
+    const raw = 'data: {"provider":"Novita","choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\ndata: [DONE]';
+    expect(parseOpenRouterEventStream(raw)).toMatchObject({ text: "ok", servedBy: "Novita" });
   });
 });

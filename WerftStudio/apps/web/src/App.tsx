@@ -3,10 +3,11 @@ import type { DesignDocument } from "@werft/contracts";
 import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Download, FileArchive, FileText, FolderOpen, Grid2X2, History, Home, Image, LayoutDashboard, Maximize2, MessageSquare, Minimize2, Minus, Moon, MoreHorizontal, MousePointer2, Palette, PanelLeft, PanelRight, PenLine, Pipette, Play, Plus, RotateCcw, Search, Send, Settings, Share2, Sparkles, Sun, Trash2, Undo2, Upload, Users, WandSparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
-import { api, apiFormProgress, ApiError } from "./api";
+import { api, apiEventStream, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
 import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
+import { chatStepText, designFileLabel } from "./chat-progress";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -98,7 +99,7 @@ async function reconstructProject(projectId: string, onProgress: (job: Reconstru
 
 // Ein laufender KI-Auftrag muss SICHTBAR laufen: wandernde Punkte, die verstrichene Zeit und worauf
 // gerade gearbeitet wird. Ohne dieses Zeichen ist nicht erkennbar, ob noch etwas passiert.
-function WorkingIndicator({ detail }: { detail: string }) {
+function WorkingIndicator({ detail, step, onCancel }: { detail: string; step?: string; onCancel?: () => void }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => setSeconds((value) => value + 1), 1_000);
@@ -109,9 +110,10 @@ function WorkingIndicator({ detail }: { detail: string }) {
     <div className="assistant-message working-message">
       <span className="working-line">
         <span className="working-dots" aria-hidden="true"><i /><i /><i /></span>
-        Die KI arbeitet am Design … {minutes}:{String(seconds % 60).padStart(2, "0")}
+        {step || "Die KI arbeitet am Design …"} {minutes}:{String(seconds % 60).padStart(2, "0")}
       </span>
       <small>{detail} · das kann je nach Modell ein bis zwei Minuten dauern</small>
+      {onCancel && <button type="button" className="working-cancel" onClick={onCancel}>Abbrechen</button>}
     </div>
   );
 }
@@ -1223,22 +1225,37 @@ function Studio() {
     },
     onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Text nicht geändert: ${error.message}` : "Die Textänderung ist fehlgeschlagen." }])
   });
+  // Was gerade passiert — live aus dem Ereignisstrom des Servers. Ohne diese Meldungen sieht man
+  // waehrend eines ein- bis zweiminuetigen Laufs nichts und weiss nicht, ob ueberhaupt gearbeitet wird.
+  const [chatStep, setChatStep] = useState<string>("");
+  const chatAbort = useRef<AbortController | null>(null);
   const chatRun = useMutation({
     // Der Verlauf geht MIT: erst dadurch weiss das Modell, was vorher besprochen und geaendert wurde,
     // statt jede Nachricht als ersten Satz eines fremden Gespraechs zu behandeln.
-    mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
-      message,
-      history: messages.slice(-12).map((entry) => ({ role: entry.role, text: entry.text.slice(0, 6000) })),
-      ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
-      ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
-      ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
-      ...(target ? { target: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName } } : {})
-    }) }),
+    mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => {
+      chatAbort.current?.abort();
+      const controller = new AbortController();
+      chatAbort.current = controller;
+      setChatStep("Auftrag wird vorbereitet …");
+      return apiEventStream<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number; durationMs?: number }>(`/projects/${projectId}/chat`, {
+        message,
+        history: messages.slice(-12).map((entry) => ({ role: entry.role, text: entry.text.slice(0, 6000) })),
+        ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
+        ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
+        ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
+        ...(target ? { target: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName } } : {})
+      }, (event, data) => setChatStep(chatStepText(event, data)), controller.signal);
+    },
+    onSettled: () => { chatAbort.current = null; setChatStep(""); },
     onSuccess: async (data) => {
       const parts = [data.reply];
       if (data.changedFiles.length) {
-        const detail = [data.editsApplied ? `${data.editsApplied} Änderung${data.editsApplied === 1 ? "" : "en"}` : "", (data.rounds ?? 1) > 1 ? `${data.rounds} Runden` : ""].filter(Boolean).join(", ");
-        parts.push(`✓ Geändert: ${data.changedFiles.join(", ")}${detail ? ` (${detail})` : ""}`);
+        const detail = [
+          data.editsApplied ? `${data.editsApplied} Änderung${data.editsApplied === 1 ? "" : "en"}` : "",
+          (data.rounds ?? 1) > 1 ? `${data.rounds} Runden` : "",
+          data.durationMs ? `${Math.round(data.durationMs / 1000)} s` : ""
+        ].filter(Boolean).join(" · ");
+        parts.push(`✓ Geändert: ${[...new Set(data.changedFiles.map(designFileLabel))].join(", ")}${detail ? ` (${detail})` : ""}`);
       }
       if (data.skipped?.length) parts.push(`⚠ Offen geblieben:\n${data.skipped.join("\n")}`);
       setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
@@ -1247,7 +1264,7 @@ function Studio() {
       setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : {
         ...comment,
         status: data.changedFiles.length ? "angewendet" : "ohne Änderung",
-        detail: data.changedFiles.length ? data.changedFiles.join(", ") : data.reply.slice(0, 200)
+        detail: data.changedFiles.length ? [...new Set(data.changedFiles.map(designFileLabel))].join(", ") : data.reply.slice(0, 200)
       }));
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
@@ -1255,9 +1272,15 @@ function Studio() {
       // Ohne diese Neuvermessung legte die Vorschau den ALTEN Farbstand wieder darueber.
       await client.invalidateQueries({ queryKey: ["themes", projectId] });
     },
-    onError: (error) => {
-      setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }]);
-      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : { ...comment, status: "fehlgeschlagen", detail: error instanceof ApiError ? error.message : "Der KI-Lauf ist fehlgeschlagen." }));
+    onError: async (error) => {
+      // Ein Abbruch ist kein Fehler: bereits übernommene Änderungen sind gespeichert, und die Ansicht
+      // muss sie zeigen — sonst stünde im Studio ein Stand, den es auf dem Server nicht mehr gibt.
+      const abgebrochen = error instanceof DOMException && error.name === "AbortError";
+      setMessages((all) => [...all, { role: "assistant", text: abgebrochen ? "Abgebrochen. Was bis dahin übernommen wurde, ist gespeichert." : error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }]);
+      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : { ...comment, status: abgebrochen ? "ohne Änderung" : "fehlgeschlagen", detail: abgebrochen ? "Abgebrochen." : error instanceof ApiError ? error.message : "Der KI-Lauf ist fehlgeschlagen." }));
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+      await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+      await client.invalidateQueries({ queryKey: ["themes", projectId] });
     }
   });
   useEffect(() => {
@@ -1476,7 +1499,11 @@ function Studio() {
               {/* Der Umfang wird serverseitig aus dem Wunsch bestimmt — hier stand vorher „Bildschirm X",
                   auch wenn der Wunsch das ganze Design meinte. Angezeigt wird deshalb, WOMIT gearbeitet
                   wird und was gerade sichtbar ist, statt eine Behauptung über den Umfang. */}
-              {chatRun.isPending && <WorkingIndicator detail={`${runModel?.name ?? "Standardmodell"}${visibleScreen ? ` · sichtbar: ${visibleScreen}` : ""}`} />}
+              {chatRun.isPending && <WorkingIndicator
+                detail={`${runModel?.name ?? "Standardmodell"}${visibleScreen ? ` · sichtbar: ${visibleScreen}` : ""}`}
+                step={chatStep}
+                onCancel={() => chatAbort.current?.abort()}
+              />}
             </div>}
             {activeTab === "chat" && <form
               className="composer"

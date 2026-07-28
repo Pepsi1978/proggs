@@ -136,14 +136,18 @@ export function normalizeOpenRouterModels(data: unknown): OpenRouterModel[] {
 // ihren eigenen, oft winzigen Standardwert — die JSON-Antwort brach mitten in einem Edit ab und der
 // gesamte Lauf galt als „kein gültiges JSON". Der Wert wird jetzt bewusst hoch angesetzt und, wo der
 // Anbieter ein Maximum meldet, daran ausgerichtet.
-export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string, maxTokens?: number) {
+// `allow_fallbacks: false` nagelt jeden Versuch auf denselben Anbieter. Fällt der aus — und einer der
+// gespeicherten Anbieter liegt bei 82 % Verfügbarkeit — scheitern alle drei Versuche an derselben
+// kaputten Gegenstelle. Der gewählte Anbieter bleibt deshalb erste Wahl, aber ab dem zweiten Versuch
+// darf OpenRouter auf einen anderen ausweichen, statt den Lauf verloren zu geben.
+export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string, maxTokens?: number, allowFallbacks = false) {
   return {
     model,
     messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
     stream: true,
     ...(maxTokens && maxTokens > 0 ? { max_tokens: Math.floor(maxTokens) } : {}),
     ...(effort ? { reasoning: { effort } } : {}),
-    ...(selectedProvider ? { provider: { order: [selectedProvider], allow_fallbacks: false, require_parameters: true } } : {})
+    ...(selectedProvider ? { provider: { order: [selectedProvider], allow_fallbacks: allowFallbacks, require_parameters: true } } : {})
   };
 }
 
@@ -162,7 +166,7 @@ export function assertOpenRouterContext(model: OpenRouterModel, instructions: st
   throw Object.assign(new Error(`Die Eingabe ist für ${model.name} zu groß (rund ${Math.round(inputTokens / 1000)}k von ${Math.round(model.contextLength / 1000)}k Token). Wähle ein Modell mit größerem Kontextfenster oder markiere den Bereich, der geändert werden soll.`), { code: "MODEL_CONTEXT_TOO_SMALL", statusCode: 400, retryable: false });
 }
 
-export type OpenRouterStreamResult = { text: string; finishReason?: string; truncated: boolean };
+export type OpenRouterStreamResult = { text: string; finishReason?: string; truncated: boolean; servedBy?: string };
 
 // `finish_reason: "length"` heisst: der Anbieter hat mitten im Satz abgeschaltet. Bisher wurde das
 // nicht ausgewertet — die abgeschnittene Antwort lief unbemerkt in den JSON-Parser und der ganze
@@ -170,35 +174,43 @@ export type OpenRouterStreamResult = { text: string; finishReason?: string; trun
 export function parseOpenRouterEventStream(raw: string): OpenRouterStreamResult {
   let output = "";
   let finishReason: string | undefined;
+  // Welcher Anbieter den Lauf wirklich bedient hat — wichtig, wenn auf einen anderen ausgewichen wurde.
+  let servedBy: string | undefined;
   for (const line of raw.split("\n")) {
     if (!line.startsWith("data:")) continue;
     const payload = line.slice(5).trim();
     if (!payload || payload === "[DONE]") continue;
     try {
-      const event = JSON.parse(payload) as { error?: { code?: number | string; metadata?: { error_type?: string } }; choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown }; finish_reason?: unknown; native_finish_reason?: unknown }> };
+      const event = JSON.parse(payload) as { error?: { code?: number | string; message?: unknown; metadata?: { error_type?: string; provider_name?: string; raw?: unknown } }; provider?: unknown; choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown }; finish_reason?: unknown; native_finish_reason?: unknown }> };
       if (event.error) {
-        if (typeof event.error.code === "number") throw openRouterHttpError(event.error.code);
+        // Der Wortlaut des Anbieters wird MITGENOMMEN. Ohne ihn stand beim Benutzer nur „Die Anfrage
+        // konnte nicht abgeschlossen werden." — ohne jeden Hinweis, dass der Anbieter schuld war.
+        const providerName = typeof event.error.metadata?.provider_name === "string" ? event.error.metadata.provider_name : undefined;
+        const detail = typeof event.error.message === "string" && event.error.message.trim() ? event.error.message.trim().slice(0, 300) : undefined;
+        if (typeof event.error.code === "number") throw openRouterHttpError(event.error.code, undefined, detail, providerName);
         const errorType = `${event.error.code ?? ""} ${event.error.metadata?.error_type ?? ""}`.toLowerCase();
         const retryable = ["rate_limit", "server", "provider", "timeout", "overloaded", "unavailable"].some((type) => errorType.includes(type));
-        throw Object.assign(new Error("OpenRouter hat den KI-Lauf abgebrochen."), { code: "CHAT_UPSTREAM", statusCode: 502, retryable });
+        throw Object.assign(new Error(`${providerName ? `Der Anbieter ${providerName}` : "OpenRouter"} hat den KI-Lauf abgebrochen${detail ? `: ${detail}` : "."}`), { code: "CHAT_UPSTREAM", statusCode: 502, retryable, expose: true, ...(providerName ? { providerName } : {}) });
       }
       const choice = event.choices?.[0];
       const content = choice?.delta?.content ?? choice?.message?.content;
       if (typeof content === "string") output += content;
       const reason = choice?.finish_reason ?? choice?.native_finish_reason;
       if (typeof reason === "string" && reason) finishReason = reason;
+      if (typeof event.provider === "string" && event.provider) servedBy = event.provider;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error) throw error;
     }
   }
-  return { text: output, ...(finishReason ? { finishReason } : {}), truncated: finishReason === "length" || finishReason === "MAX_TOKENS" };
+  return { text: output, ...(finishReason ? { finishReason } : {}), ...(servedBy ? { servedBy } : {}), truncated: finishReason === "length" || finishReason === "MAX_TOKENS" };
 }
 
-export function openRouterHttpError(status: number, retryAfter?: string | null) {
+export function openRouterHttpError(status: number, retryAfter?: string | null, detail?: string, providerName?: string) {
   const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
   const retryAfterMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0 ? retryAfterSeconds * 1_000 : undefined;
-  if (status === 401) return Object.assign(new Error("Der OpenRouter-API-Key ist ungültig oder wurde deaktiviert."), { code: "OPENROUTER_AUTH_INVALID", statusCode: 401, retryable: false });
-  if (status === 402) return Object.assign(new Error("Das OpenRouter-Konto verfügt nicht über ausreichendes Guthaben."), { code: "OPENROUTER_CREDITS_REQUIRED", statusCode: 402, retryable: false });
-  return Object.assign(new Error(`OpenRouter hat den KI-Lauf abgelehnt (HTTP ${status}).`), { code: "CHAT_UPSTREAM", statusCode: 502, retryable: [408, 409, 425, 429, 500, 502, 503, 504].includes(status), ...(retryAfterMs === undefined ? {} : { retryAfterMs }) });
+  if (status === 401) return Object.assign(new Error("Der OpenRouter-API-Key ist ungültig oder wurde deaktiviert."), { code: "OPENROUTER_AUTH_INVALID", statusCode: 401, retryable: false, expose: true });
+  if (status === 402) return Object.assign(new Error("Das OpenRouter-Konto verfügt nicht über ausreichendes Guthaben."), { code: "OPENROUTER_CREDITS_REQUIRED", statusCode: 402, retryable: false, expose: true });
+  const wer = providerName ? `Der Anbieter ${providerName}` : "OpenRouter";
+  return Object.assign(new Error(`${wer} hat den KI-Lauf abgelehnt (HTTP ${status})${detail ? `: ${detail}` : "."}`), { code: "CHAT_UPSTREAM", statusCode: 502, retryable: [408, 409, 425, 429, 500, 502, 503, 504].includes(status), expose: true, ...(providerName ? { providerName } : {}), ...(retryAfterMs === undefined ? {} : { retryAfterMs }) });
 }
 import { Buffer } from "node:buffer";

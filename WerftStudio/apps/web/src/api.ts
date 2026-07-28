@@ -7,6 +7,41 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// Ein Lauf am Design dauert je nach Modell eine knappe bis zwei Minuten. Statt einer stillen Wartezeit
+// liest diese Funktion den Ereignisstrom des Servers mit und meldet jeden Schritt sofort weiter.
+// Ein `signal` bricht den Lauf ab — der Server beendet dann auch den laufenden Modellaufruf.
+export async function apiEventStream<T>(path: string, body: unknown, onEvent: (event: string, data: Record<string, unknown>) => void, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`/api/v1${path}`, { method: "POST", credentials: "include", ...(signal ? { signal } : {}), headers: { "content-type": "application/json", accept: "text/event-stream" }, body: JSON.stringify(body) });
+  if (!response.ok || !response.body) {
+    const failure = await response.json().catch(() => ({ code: "NETWORK_ERROR", message: "Serverantwort konnte nicht gelesen werden." })) as { code: string; message: string };
+    throw new ApiError(failure.code, failure.message, response.status);
+  }
+  const reader = response.body.getReader(), decoder = new TextDecoder();
+  let buffer = "", result: T | undefined, failure: ApiError | undefined;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    for (let cut = buffer.indexOf("\n\n"); cut >= 0; cut = buffer.indexOf("\n\n")) {
+      const frame = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      const lines = frame.split("\n");
+      const event = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+      const payload = lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("");
+      if (!event || !payload) continue; // Pulszeilen (": puls …") halten nur die Verbindung offen.
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(payload) as Record<string, unknown>; }
+      catch { continue; }
+      if (event === "done") result = data as T;
+      else if (event === "error") failure = new ApiError(String(data.code ?? "INTERNAL_ERROR"), String(data.message ?? "Der Lauf ist fehlgeschlagen."), 500);
+      else onEvent(event, data);
+    }
+  }
+  if (failure) throw failure;
+  if (!result) throw new ApiError("CHAT_STREAM_INCOMPLETE", "Die Verbindung ist während des Laufs abgerissen. Bereits übernommene Änderungen bleiben erhalten.", 0);
+  return result;
+}
+
 export function apiFormProgress<T>(path: string, body: FormData, onProgress: (loaded: number, total: number) => void): Promise<T> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
