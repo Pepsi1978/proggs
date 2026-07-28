@@ -500,13 +500,13 @@ fun RecorderControl(
     val ringPhase: Float
     val spinnerRotation: Float
     when {
-        reduced || state == RecordingState.IDLE -> {
+        reduced -> {
             pulse = 0.45f
             shimmer = 0f
             ringPhase = 0f
             spinnerRotation = 0f
         }
-        state == RecordingState.RECORDING -> {
+        state != RecordingState.PROCESSING -> {
             val transition = rememberInfiniteTransition(label = "Aufnahme")
             pulse = transition.animateFloat(
                 initialValue = 0.3f,
@@ -523,12 +523,16 @@ fun RecorderControl(
                 animationSpec = infiniteRepeatable(tween(4_500, easing = LinearEasing), RepeatMode.Restart),
                 label = "Aufnahmeschimmer",
             ).value
-            ringPhase = transition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
-                label = "Aufnahmeringe",
-            ).value
+            ringPhase = if (state == RecordingState.RECORDING) {
+                transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
+                    label = "Aufnahmeringe",
+                ).value
+            } else {
+                0f
+            }
             spinnerRotation = 0f
         }
         else -> {
