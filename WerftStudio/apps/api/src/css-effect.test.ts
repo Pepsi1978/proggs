@@ -107,3 +107,21 @@ describe("Design verstehen, bevor gearbeitet wird", () => {
     expect(scale.radien).toEqual(["20px"]);
   });
 });
+
+describe("Eigene Nachfolgeregel", () => {
+  it("zählt eine Änderung als umgesetzt, wenn eine SELBST ergänzte, spezifischere Regel gewinnt", () => {
+    // Genau der Weg, den die Rückmeldung empfiehlt: statt der Klassenregel eine Regel mit
+    // vorangestelltem Bildschirm-Container. Die alte Regel verliert dann — die Absicht ist aber erfüllt.
+    const vorher = '<style>.screen button { padding: 0 } .karte { padding: 16px }</style><div class="screen"><button class="karte">x</button></div>';
+    const nachher = '<style>.screen button { padding: 0 } .karte { padding: 20px } .screen .karte { padding: 20px }</style><div class="screen"><button class="karte">x</button></div>';
+    const summary = summariseEffect(vorher, nachher);
+    expect(summary.tot).toBe(0);
+    expect(summary.findings.find((finding) => finding.selector === ".karte")?.status).toBe("ersetzt");
+  });
+
+  it("meldet weiterhin einen echten Fehlschlag, wenn eine ALTE Regel gewinnt", () => {
+    const vorher = '<style>.screen button { padding: 0 } .karte { padding: 16px }</style><div class="screen"><button class="karte">x</button></div>';
+    const nachher = vorher.replace(".karte { padding: 16px }", ".karte { padding: 20px }");
+    expect(summariseEffect(vorher, nachher).tot).toBe(1);
+  });
+});

@@ -219,7 +219,7 @@ const conflicts = (left: string, right: string) => {
 
 // ---------------------------------------------------------------- Wirkung prüfen
 
-export type EffectStatus = "wirksam" | "ueberschrieben" | "kein-element" | "unsicher";
+export type EffectStatus = "wirksam" | "ersetzt" | "ueberschrieben" | "kein-element" | "unsicher";
 export type EffectFinding = {
   selector: string;
   property: string;
@@ -235,7 +235,11 @@ export type EffectFinding = {
 // `:hover`-Zwilling oder ein Druck-Stylesheet darf nicht als Gewinner gemeldet werden.
 const cascadeRelevant = (rule: CssRule, selector: string) => !stateWords.test(selector) && !/print/i.test(rule.media);
 
-export function analyseEffect(html: string, changes: Array<{ selector: string; property: string; value: string; media: string; order: number }>): EffectFinding[] {
+// `bekannteSelektoren` sind die Selektoren, die es VOR dem Lauf schon gab. Verliert eine geänderte
+// Regel gegen eine Regel, die der Lauf selbst neu angelegt hat (typisch: dieselbe Klasse, aber mit
+// vorangestelltem Bildschirm-Container), dann ist die Absicht sehr wohl umgesetzt — nur eben über den
+// spezifischeren Weg. Das als Fehlschlag zu melden wäre falsch und würde die Nacharbeit im Kreis schicken.
+export function analyseEffect(html: string, changes: Array<{ selector: string; property: string; value: string; media: string; order: number }>, bekannteSelektoren?: Set<string>): EffectFinding[] {
   const rules = parseCss(styleBlocksOf(html));
   const nodes = parseDom(html);
   // Vorsortierung: nur Regeln prüfen, deren rechtester Teil überhaupt zum Element passen kann.
@@ -288,9 +292,11 @@ export function analyseEffect(html: string, changes: Array<{ selector: string; p
     }
     // Nur wenn die Regel bei JEDEM geprüften Element verliert, ist sie wirklich wirkungslos.
     const komplettTot = verloren.length === stichprobe.length && stichprobe.length > 0;
+    // Gewinnt eine Regel, die dieser Lauf selbst neu geschrieben hat? Dann ist die Absicht umgesetzt.
+    const eigenerNachfolger = komplettTot && bekannteSelektoren !== undefined && !bekannteSelektoren.has(verloren[0]!.selector);
     findings.push({
       selector: change.selector, property: change.property, value: change.value,
-      status: komplettTot ? "ueberschrieben" : unsicher ? "unsicher" : "wirksam",
+      status: eigenerNachfolger ? "ersetzt" : komplettTot ? "ueberschrieben" : unsicher ? "unsicher" : "wirksam",
       elements: treffer.length, screens,
       ...(komplettTot ? { beatenBy: verloren[0]!.selector, beatenValue: verloren[0]!.value } : {})
     });
@@ -388,9 +394,10 @@ export type EffectSummary = { findings: EffectFinding[]; wirksam: number; tot: n
 export function summariseEffect(before: string, after: string): EffectSummary {
   const changes = changedDeclarations(before, after);
   if (!changes.length) return { findings: [], wirksam: 0, tot: 0, screens: [] };
-  const findings = analyseEffect(after, changes);
+  const bekannt = new Set(parseCss(styleBlocksOf(before)).flatMap((rule) => rule.selectors));
+  const findings = analyseEffect(after, changes, bekannt);
   const tot = findings.filter((finding) => finding.status === "ueberschrieben" || finding.status === "kein-element");
-  const wirksam = findings.filter((finding) => finding.status === "wirksam" || finding.status === "unsicher");
+  const wirksam = findings.filter((finding) => finding.status !== "ueberschrieben" && finding.status !== "kein-element");
   const screens = [...new Set(wirksam.flatMap((finding) => finding.screens))];
   // Die Rückmeldung nennt den GEWINNER — damit weiss das Modell, wo es wirklich ansetzen muss.
   const zeilen = tot.slice(0, 12).map((finding) => finding.status === "kein-element"
