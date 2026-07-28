@@ -99,7 +99,7 @@ class MainActivity : FragmentActivity() {
                 // Google fragt die Freigabe für Drive in einem eigenen Bildschirm ab.
                 val consentLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.StartIntentSenderForResult(),
-                ) { result -> viewModel.consentHandled(result.resultCode == RESULT_OK) }
+                ) { result -> viewModel.consentHandled(result.data) }
                 LaunchedEffect(viewModel.backupConsent) {
                     viewModel.backupConsent?.let { sender ->
                         consentLauncher.launch(IntentSenderRequest.Builder(sender).build())

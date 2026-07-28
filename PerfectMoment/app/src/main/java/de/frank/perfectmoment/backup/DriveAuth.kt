@@ -2,6 +2,9 @@ package de.frank.perfectmoment.backup
 
 import android.app.PendingIntent
 import android.content.Context
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.ApiException
+import android.content.Intent
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -38,7 +41,14 @@ class DriveAuth(private val context: Context) {
      * @throws NeedsConsent when the user has to pick an account or approve access — hand the intent
      *   to an [android.app.Activity] and call again afterwards.
      */
+    /** Zugang aus dem Freigabe-Bildschirm, gültig für die folgende Anfrage. */
+    private var tokenFromConsent: String? = null
+
     suspend fun accessToken(): String {
+        tokenFromConsent?.let { token ->
+            tokenFromConsent = null
+            return token
+        }
         val result = authorize()
         if (result.hasResolution()) {
             val pending = result.pendingIntent
@@ -47,6 +57,36 @@ class DriveAuth(private val context: Context) {
         }
         return result.accessToken
             ?: throw IllegalStateException("Google hat keinen Zugang zurückgegeben")
+    }
+
+    /**
+     * Liest Googles Antwort auf den Freigabe-Bildschirm. Der Rückgabewert der Activity sagt nichts
+     * darüber aus, ob der Zugriff erteilt wurde — erst dieses Ergebnis tut es, und im Fehlerfall
+     * nennt es den Grund.
+     */
+    fun readConsentResult(data: Intent?): Result<Boolean> = runCatching {
+        val result = Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(data)
+        tokenFromConsent = result.accessToken
+        result.accessToken != null
+    }.recoverCatching { error ->
+        throw IllegalStateException(explain(error), error)
+    }
+
+    /** Übersetzt Googles Fehlercodes in etwas, mit dem sich das Problem beheben lässt. */
+    private fun explain(error: Throwable): String {
+        val status = (error as? ApiException)?.statusCode
+        return when (status) {
+            CommonStatusCodes.DEVELOPER_ERROR ->
+                "Google erkennt die App nicht. In der Cloud Console fehlt eine OAuth-Client-ID vom " +
+                    "Typ Android für de.frank.perfectmoment mit dem SHA-1 dieser App."
+            CommonStatusCodes.SIGN_IN_REQUIRED ->
+                "Die Anmeldung wurde nicht abgeschlossen."
+            CommonStatusCodes.NETWORK_ERROR ->
+                "Keine Verbindung zu Google."
+            CommonStatusCodes.CANCELED, null ->
+                "Die Freigabe wurde abgebrochen."
+            else -> "Google meldet Fehler $status: ${error.message}"
+        }
     }
 
     /** True once Drive access has been granted, without showing anything to the user. */

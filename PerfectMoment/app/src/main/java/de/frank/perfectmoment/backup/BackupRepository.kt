@@ -29,6 +29,9 @@ class BackupRepository(
 
     suspend fun disconnect() = auth.disconnect()
 
+    /** Reicht Googles Antwort auf den Freigabe-Bildschirm weiter. */
+    fun readConsentResult(data: android.content.Intent?) = auth.readConsentResult(data)
+
     /** Collects the current state and writes it to Drive. */
     suspend fun backupNow(): Summary {
         val token = auth.accessToken()

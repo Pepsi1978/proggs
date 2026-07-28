@@ -293,10 +293,17 @@ class AppViewModel(
      * erteiltes Recht nicht verlässlich über den Rückgabewert zurück. Ob es geklappt hat, zeigt erst
      * der zweite Versuch: Kommt dann wieder eine Freigabe-Anfrage, wurde wirklich abgelehnt.
      */
-    fun consentHandled(@Suppress("UNUSED_PARAMETER") approved: Boolean) {
+    fun consentHandled(data: android.content.Intent?) {
         backupConsent = null
         val pending = pendingBackupAction
         pendingBackupAction = null
+        val outcome = container.backupRepository.readConsentResult(data)
+        outcome.exceptionOrNull()?.let { error ->
+            // Google nennt hier den Grund — ohne das bliebe nur ein stummer Abbruch.
+            message = error.message ?: "Die Freigabe hat nicht geklappt."
+            refreshBackupState()
+            return
+        }
         if (pending == null) {
             refreshBackupState()
             return
