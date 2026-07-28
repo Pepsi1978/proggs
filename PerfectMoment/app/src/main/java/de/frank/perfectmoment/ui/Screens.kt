@@ -2,6 +2,7 @@ package de.frank.perfectmoment.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -93,12 +94,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -107,7 +114,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +128,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.auth.QuestionPerspective
@@ -151,10 +161,18 @@ fun PmTextArea(
     mono: Boolean = false,
     singleLine: Boolean = false,
     textSize: Int = if (mono) 13 else 15,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(18.dp),
+    radius: Int = if (singleLine) 16 else 20,
 ) {
     val colors = LocalPmColors.current
-    val shape = RoundedCornerShape(if (singleLine) 16.dp else 20.dp)
+    val reduced = LocalReducedMotion.current
+    val shape = RoundedCornerShape(radius.dp)
+    var focused by remember { mutableStateOf(false) }
+    val focusAlpha by animateFloatAsState(
+        targetValue = if (focused) 1f else 0f,
+        animationSpec = tween(if (reduced) 200 else 280),
+        label = "Feldfokus",
+    )
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -167,7 +185,10 @@ fun PmTextArea(
             lineHeight = if (mono) (textSize * 1.6f).sp else (textSize * 1.55f).sp,
             fontWeight = if (singleLine) FontWeight.Medium else FontWeight.Normal,
         ),
-        modifier = modifier.background(colors.surface, shape).padding(contentPadding),
+        modifier = modifier.pmGlassSurface(colors, radius)
+            .border(2.dp, colors.gold.copy(alpha = 0.52f * focusAlpha), shape)
+            .onFocusChanged { focused = it.isFocused }
+            .padding(contentPadding),
         decorationBox = { inner ->
             Box(Modifier.fillMaxSize()) {
                 if (value.isEmpty()) {
@@ -198,19 +219,26 @@ fun StartScreen(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 108.dp),
         ) {
             Row(
-                Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 20.dp),
+                Modifier.fillMaxWidth().height(56.dp).pmHeaderSurface(colors).padding(horizontal = 24.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    "Perfect Moment",
-                    color = colors.gold,
-                    fontFamily = Inter,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp,
-                    modifier = Modifier.weight(1f),
-                )
+                GoldWordmark("Perfect Moment", Modifier.weight(1f))
                 Box(
-                    Modifier.size(36.dp).background(colors.surface, RoundedCornerShape(12.dp))
+                    Modifier.size(36.dp).drawWithCache {
+                        val inset = 4.dp.toPx()
+                        val visualSize = Size(44.dp.toPx(), 44.dp.toPx())
+                        val corner = CornerRadius(16.dp.toPx())
+                        onDrawBehind {
+                            drawRoundRect(colors.surface, Offset(-inset, -inset), visualSize, corner)
+                            drawRoundRect(
+                                colors.gold.copy(alpha = 0.18f),
+                                Offset(-inset, -inset),
+                                visualSize,
+                                corner,
+                                style = Stroke(1.dp.toPx()),
+                            )
+                        }
+                    }
                         .pmClickable { viewModel.setTheme(if (darkThemeActive) "light" else "dark") },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -237,23 +265,45 @@ fun StartScreen(
                 )
             }
             LazyRow(
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.height(188.dp),
             ) {
                 items(viewModel.hooks, key = HookEntity::id) { hook ->
                     val selected = hook.id == viewModel.selectedHookId
-                    val shape = RoundedCornerShape(20.dp)
+                    val shape = RoundedCornerShape(32.dp)
                     val iconColor = hookDisplayColor(hook, colors.dark)
                     Column(
                         Modifier.size(168.dp)
-                            .background(if (selected) colors.surface2 else colors.surface, shape)
-                            .border(1.5.dp, if (selected) colors.gold else Color.Transparent, shape)
+                            .then(
+                                if (selected) Modifier.shadow(
+                                    14.dp,
+                                    shape,
+                                    ambientColor = colors.gold.copy(alpha = 0.24f),
+                                    spotColor = colors.gold.copy(alpha = 0.24f),
+                                ) else Modifier,
+                            )
+                            .pmGlassSurface(colors, 32, if (selected) colors.surface2 else colors.surface)
+                            .border(3.dp, if (selected) colors.goldHi else Color.Transparent, shape)
                             .pmClickable { viewModel.selectHook(hook) }
-                            .padding(16.dp),
+                            .padding(22.dp),
                     ) {
                         Box(
-                            Modifier.size(42.dp).background(iconColor.copy(alpha = 0.15f), CircleShape),
+                            Modifier.size(44.dp).shadow(
+                                8.dp,
+                                CircleShape,
+                                ambientColor = iconColor.copy(alpha = 0.14f),
+                                spotColor = iconColor.copy(alpha = 0.14f),
+                            ).clip(CircleShape).drawWithCache {
+                                val disc = Brush.radialGradient(
+                                    0f to Color.White.copy(alpha = 0.18f),
+                                    0.48f to iconColor.copy(alpha = 0.15f),
+                                    1f to iconColor.copy(alpha = 0.15f),
+                                    center = Offset(size.width * 0.34f, size.height * 0.28f),
+                                    radius = size.maxDimension,
+                                )
+                                onDrawBehind { drawCircle(disc) }
+                            },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -272,26 +322,27 @@ fun StartScreen(
                             lineHeight = 22.4.sp,
                             maxLines = 4,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(top = 16.dp),
                         )
                     }
                 }
             }
-            SectionLabel("Oder eigene Frage", Modifier.padding(start = 20.dp, top = 12.dp, bottom = 10.dp))
+            SectionLabel("Oder eigene Frage", Modifier.padding(start = 24.dp, top = 14.dp, bottom = 10.dp))
             PmTextArea(
                 value = viewModel.topic,
                 onValueChange = viewModel::updateTopic,
                 placeholder = "Was möchtest du hören?",
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp, max = 144.dp).padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 144.dp, max = 180.dp).padding(horizontal = 24.dp),
+                contentPadding = PaddingValues(horizontal = 22.dp, vertical = 18.dp),
+                radius = 32,
             )
             Row(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
+                Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f))
-                ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f))
-                ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f))
+                ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), radius = 32, horizontalPadding = 4)
+                ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.4f), radius = 32, horizontalPadding = 4)
+                ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), radius = 32, horizontalPadding = 4)
             }
             Row(
                 Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 38.dp),
@@ -355,6 +406,9 @@ fun SessionScreen(
     var interactionTick by remember { mutableIntStateOf(0) }
     var showStopDialog by remember { mutableStateOf(false) }
     var resumeAfterStopDialog by remember { mutableStateOf(false) }
+    val endRing = remember { Animatable(0f) }
+    val endExit = remember { Animatable(0f) }
+    val density = LocalDensity.current
     val dimAlpha by animateFloatAsState(
         if (dimmed) 0.88f else 0f,
         tween(if (reduced) 200 else if (dimmed) 4_000 else 300),
@@ -364,6 +418,22 @@ fun SessionScreen(
         if (!viewModel.introVisible && state?.phase != Phase.ENDED) {
             delay(30_000)
             dimmed = true
+        }
+    }
+    LaunchedEffect(state?.phase) {
+        if (state?.phase == Phase.ENDED) {
+            endRing.snapTo(0f)
+            endExit.snapTo(0f)
+            endRing.animateTo(
+                1f,
+                tween(if (reduced) 200 else 2_000, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
+            )
+            delay(6_000)
+            endExit.animateTo(
+                1f,
+                tween(if (reduced) 200 else 700, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+            )
+            viewModel.finishEndedSession()
         }
     }
     Box(
@@ -389,6 +459,7 @@ fun SessionScreen(
                 if (resumeAfterStopDialog) viewModel.togglePause()
                 showStopDialog = true
             },
+            modifier = if (showStopDialog) Modifier.blur(8.dp) else Modifier,
         )
         if (viewModel.introVisible) SessionIntroOverlay(viewModel)
         if (!viewModel.introVisible && state == null && viewModel.sessionError == null) {
@@ -415,11 +486,24 @@ fun SessionScreen(
         viewModel.sessionError?.let { SessionErrorOverlay(viewModel, it) }
         if (state?.phase == Phase.ENDED) {
             Box(
-                Modifier.fillMaxSize().background(colors.background).pmClickable { viewModel.finishEndedSession() },
+                Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.75f))
+                    .graphicsLayer { translationY = with(density) { 915.dp.toPx() } * endExit.value }
+                    .pmClickable(animatePress = false) { viewModel.finishEndedSession() },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                    Box(Modifier.size(64.dp).background(colors.gold, CircleShape))
+                    Box(
+                        Modifier.size(64.dp).graphicsLayer {
+                            scaleX = endRing.value
+                            scaleY = endRing.value
+                            alpha = 1f - endRing.value * 0.15f
+                        }.shadow(
+                            18.dp,
+                            CircleShape,
+                            ambientColor = colors.gold.copy(alpha = 0.32f),
+                            spotColor = colors.gold.copy(alpha = 0.32f),
+                        ).background(colors.gold, CircleShape),
+                    )
                     Text(
                         "„Der perfekte Moment ist hier.“",
                         color = colors.goldHi,
@@ -436,7 +520,7 @@ fun SessionScreen(
         if (dimAlpha > 0.001f && state?.phase != Phase.ENDED) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = dimAlpha))
-                    .pmClickable {
+                    .pmClickable(animatePress = false) {
                         dimmed = false
                         interactionTick++
                     },
@@ -462,27 +546,43 @@ private fun SessionStopDialog(
     onSave: () -> Unit,
 ) {
     val colors = LocalPmColors.current
-    Dialog(onDismissRequest = onDismiss) {
-        PmCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth().padding(22.dp)) {
-                Text(
-                    "Sitzung stoppen?",
-                    color = colors.text1,
-                    fontFamily = Inter,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                )
-                Text(
-                    "Möchten Sie die Sitzung komplett beenden oder an diesem Punkt speichern?",
-                    color = colors.text2,
-                    fontFamily = Inter,
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 20.dp),
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlineButton("Beenden", colors.text2, onEnd, Modifier.weight(1f), height = 48)
-                    PrimaryButton("Speichern", onSave, Modifier.weight(1f), height = 48)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f))
+                    .pmClickable(animatePress = false, onClick = onDismiss),
+            )
+            PmCard(
+                Modifier.fillMaxWidth().align(Alignment.Center).padding(horizontal = 24.dp).shadow(
+                    24.dp,
+                    RoundedCornerShape(32.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.38f),
+                    spotColor = Color.Black.copy(alpha = 0.38f),
+                ),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(28.dp)) {
+                    Text(
+                        "Sitzung stoppen?",
+                        color = colors.text1,
+                        fontFamily = Inter,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 20.sp,
+                    )
+                    Text(
+                        "Möchten Sie die Sitzung komplett beenden oder an diesem Punkt speichern?",
+                        color = colors.text2,
+                        fontFamily = Inter,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 20.dp),
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlineButton("Beenden", colors.text2, onEnd, Modifier.weight(1f), height = 48)
+                        PrimaryButton("Speichern", onSave, Modifier.weight(1f), height = 48)
+                    }
                 }
             }
         }
@@ -496,6 +596,7 @@ private fun SessionQuestions(
     onToggleSpeaker: () -> Unit,
     onTogglePause: () -> Unit,
     onStop: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
@@ -509,7 +610,7 @@ private fun SessionQuestions(
             listState.animateScrollToItem(current, scrollOffset = -viewportOffset)
         }
     }
-    Box(Modifier.fillMaxSize()) {
+    Box(modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 96.dp, bottom = 240.dp),
@@ -521,22 +622,22 @@ private fun SessionQuestions(
                 val animationDuration = if (reduced) 200 else 700
                 val itemAlpha by animateFloatAsState(
                     targetValue = if (active) 1f else if (past) 0.3f else 0.55f,
-                    animationSpec = tween(animationDuration),
+                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
                     label = "Frage Deckkraft",
                 )
                 val questionSize by animateFloatAsState(
                     targetValue = if (active) 32f else 20f,
-                    animationSpec = tween(animationDuration),
+                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
                     label = "Frage Größe",
                 )
                 val questionColor by animateColorAsState(
                     targetValue = if (active) colors.goldHi else if (past) colors.text3 else colors.text2,
-                    animationSpec = tween(animationDuration),
+                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
                     label = "Frage Farbe",
                 )
                 val emojiScale by animateFloatAsState(
                     targetValue = if (active) 1.15f else 1f,
-                    animationSpec = tween(animationDuration),
+                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
                     label = "Emoji Größe",
                 )
                 Row(
@@ -567,11 +668,27 @@ private fun SessionQuestions(
         }
         Row(
             Modifier.fillMaxWidth().height(56.dp).align(Alignment.TopCenter)
-                .background(Brush.verticalGradient(listOf(colors.background, colors.background.copy(alpha = 0f))))
+                .pmHeaderSurface(colors)
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Spacer(Modifier.weight(1f))
+            Text(
+                runtime?.topic.orEmpty(),
+                color = colors.text2,
+                fontFamily = Inter,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            val waiting = state?.offline == true || state?.phase == Phase.WAITING_NETWORK
+            Box(
+                Modifier.size(8.dp).then(
+                    if (waiting) Modifier.border(1.dp, colors.goldDim, CircleShape)
+                    else Modifier.background(colors.goldDim, CircleShape),
+                ),
+            )
+            Spacer(Modifier.width(12.dp))
             SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
         }
         if (state != null) {
@@ -584,7 +701,7 @@ private fun SessionQuestions(
                 val controlShape = RoundedCornerShape(14.dp)
                 Box(
                     Modifier.size(48.dp).background(colors.surface2, controlShape)
-                        .border(1.dp, colors.goldDim, controlShape)
+                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape)
                         .pmClickable(onClick = onTogglePause),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -597,7 +714,7 @@ private fun SessionQuestions(
                 }
                 Box(
                     Modifier.size(48.dp).background(colors.surface2, controlShape)
-                        .border(1.dp, colors.goldDim, controlShape)
+                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape)
                         .pmClickable(onClick = onStop),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -612,7 +729,7 @@ private fun SessionQuestions(
 private fun PreparationBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalPmColors.current
     Row(
-        modifier = modifier.background(colors.surface2, RoundedCornerShape(14.dp))
+        modifier = modifier.pmGlassSurface(colors, 14, colors.surface2)
             .pmClickable(onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -629,6 +746,16 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
     val progress = remember { Animatable(0f) }
+    val pulseTransition = rememberInfiniteTransition(label = "Fortschrittsring")
+    val speakingPulse by pulseTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = if (reduced) 0.25f else 0.50f,
+        animationSpec = infiniteRepeatable(
+            tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
+        label = "Bernsteinpuls",
+    )
     LaunchedEffect(state.phase, state.currentIndex, state.currentRep, state.paused) {
         if (state.paused) return@LaunchedEffect
         progress.snapTo(if (state.phase == Phase.SPEAKING) 1f else 0f)
@@ -639,32 +766,52 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
         }
         if (pause > 0) progress.animateTo(1f, tween(if (reduced) 200 else pause.toInt()))
     }
-    Box(
-        Modifier.size(64.dp).background(colors.surface2, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawCircle(colors.goldDim.copy(alpha = 0.45f), style = Stroke(2.5.dp.toPx()))
-            drawArc(
-                color = if (state.phase == Phase.SPEAKING) colors.amber else colors.gold,
-                startAngle = -90f,
-                sweepAngle = 360f * progress.value,
-                useCenter = false,
-                style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
-            )
-        }
-        val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
-                color = colors.text2,
-                fontFamily = JetBrainsMono,
-                fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
-            )
-            if (runtime.config.isEndless) {
-                Text("∞", color = colors.gold, fontFamily = Inter, fontSize = 11.sp, lineHeight = 11.sp)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(64.dp).background(colors.surface2, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(colors.goldDim.copy(alpha = 0.28f), style = Stroke(2.5.dp.toPx()))
+                drawArc(
+                    color = if (state.phase == Phase.SPEAKING) colors.amber.copy(alpha = speakingPulse) else colors.gold,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress.value,
+                    useCenter = false,
+                    style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
+                )
             }
+            val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
+                    color = colors.text2,
+                    fontFamily = JetBrainsMono,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                )
+                if (runtime.config.isEndless) {
+                    Text("∞", color = colors.gold, fontFamily = Inter, fontSize = 11.sp, lineHeight = 11.sp)
+                }
+            }
+        }
+        Text(
+            "Frage ${state.currentIndex + 1} · Wiederholung ${state.currentRep} von ${runtime.config.repsPerQuestion}",
+            color = colors.text3,
+            fontFamily = Inter,
+            fontSize = 12.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        if (state.offline) {
+            Text(
+                "Keine Verbindung — die Sitzung wartet.",
+                color = colors.text3,
+                fontFamily = Inter,
+                fontSize = 12.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 3.dp),
+            )
         }
     }
 }
@@ -672,6 +819,7 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
 @Composable
 private fun SessionIntroOverlay(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    val density = LocalDensity.current
     Box(Modifier.fillMaxSize().background(colors.background)) {
         PreparationBackButton(
             onClick = viewModel::stopSession,
@@ -685,10 +833,17 @@ private fun SessionIntroOverlay(viewModel: AppViewModel) {
             Text(
                 "„${viewModel.introQuestion}“",
                 color = colors.goldHi,
-                fontFamily = Newsreader,
-                fontWeight = FontWeight.Light,
-                fontSize = 28.sp,
-                lineHeight = 42.sp,
+                style = TextStyle(
+                    fontFamily = Newsreader,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 28.sp,
+                    lineHeight = 42.sp,
+                    shadow = Shadow(
+                        colors.gold.copy(alpha = 0.10f),
+                        Offset(0f, with(density) { 4.dp.toPx() }),
+                        with(density) { 24.dp.toPx() },
+                    ),
+                ),
                 modifier = Modifier.padding(top = 22.dp, bottom = 22.dp),
             )
             PrimaryButton("Antworten & beginnen", viewModel::openIntroSheet)
@@ -760,7 +915,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                         containerColor = colors.surface,
                         tonalElevation = 0.dp,
                         shadowElevation = 12.dp,
-                        border = BorderStroke(1.dp, colors.goldDim.copy(alpha = 0.45f)),
+                        border = BorderStroke(1.dp, colors.goldDim.copy(alpha = 0.26f)),
                         modifier = Modifier.width(220.dp),
                     ) {
                         HistorySort.entries.forEach { sort ->
@@ -801,17 +956,18 @@ fun HistoryScreen(viewModel: AppViewModel) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(
-                    Modifier.size(88.dp).border(1.5.dp, colors.goldDim.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) { Box(Modifier.size(12.dp).background(colors.goldDim, CircleShape)) }
+                OrbitRing(
+                    Modifier.size(88.dp).border(1.5.dp, colors.goldDim.copy(alpha = 0.30f), CircleShape),
+                ) {
+                    Box(Modifier.size(12.dp).background(colors.goldDim, CircleShape))
+                }
                 Text("Noch keine Sitzungen.", color = colors.text3, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.padding(top = 20.dp))
             }
         } else {
             val sortedSessions = viewModel.sortedSessions
             val topSessions = sortedSessions.take(3)
             LazyColumn(
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "top-three") {
@@ -820,7 +976,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                         Modifier
                             .fillMaxWidth()
                             .background(colors.surface2, topShape)
-                            .border(1.5.dp, colors.goldDim.copy(alpha = 0.85f), topShape)
+                            .border(1.5.dp, colors.goldDim.copy(alpha = 0.50f), topShape)
                             .padding(12.dp),
                     ) {
                         Row(
@@ -954,7 +1110,7 @@ private fun DismissibleHistoryRow(
 private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () -> Unit) {
     val colors = LocalPmColors.current
     PmCard(Modifier.fillMaxWidth().pmClickable(onClick = onClick)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rank != null) {
                 val rankColor = when (rank) {
                     1 -> Color(0xFF5B8DEF)
@@ -1004,13 +1160,14 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
 @Composable
 fun HistoryDetailScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    val density = LocalDensity.current
     val detail = viewModel.historyDetail
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("", viewModel::back)
         if (detail == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingDots() }
         } else {
-            LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp)) {
+            LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp)) {
                 item {
                     val resumable = detail.session.resumeQuestionIndex != null
                     PrimaryButton(
@@ -1027,7 +1184,7 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
                     }
                     PmCard(Modifier.fillMaxWidth().padding(top = 12.dp).pmClickable { viewModel.toggleRandomReplay() }) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Zufällige Reihenfolge", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
                                 Text("Fragen werden gemischt abgespielt", color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
@@ -1052,7 +1209,18 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                 items(detail.questions, key = { it.id }) { question ->
                     Row(Modifier.fillMaxWidth().padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
                         Text(question.emoji, fontSize = 20.sp, lineHeight = 28.sp)
-                        Text(question.text, color = colors.text2, style = PmTextStyles.question, modifier = Modifier.weight(1f))
+                        Text(
+                            question.text,
+                            color = colors.text2,
+                            style = PmTextStyles.question.copy(
+                                shadow = Shadow(
+                                    colors.gold.copy(alpha = 0.10f),
+                                    Offset(0f, with(density) { 4.dp.toPx() }),
+                                    with(density) { 24.dp.toPx() },
+                                ),
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
@@ -1079,7 +1247,7 @@ fun SettingsScreen(
         ScreenHeader("Einstellungen", viewModel::back)
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 40.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
             SettingsSection("Ablauf") {
@@ -1164,12 +1332,23 @@ fun SettingsScreen(
                 }
             }
             SettingsSection("Über") {
-                Text(
+                SettingRow(
+                    "Version",
                     "V.${viewModel.versionName} (${viewModel.versionStand})",
-                    color = colors.text2,
-                    fontFamily = JetBrainsMono,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                    valueFontFamily = JetBrainsMono,
+                    valueFontSize = 12,
+                )
+                SettingRow(
+                    "Paketname",
+                    viewModel.packageName,
+                    valueFontFamily = JetBrainsMono,
+                    valueFontSize = 12,
+                )
+                SettingRow(
+                    "Rohdaten",
+                    onClick = { viewModel.navigate(AppScreen.RAW_DATA) },
+                    divider = false,
+                    showChevron = true,
                 )
             }
         }
@@ -1179,7 +1358,7 @@ fun SettingsScreen(
 @Composable
 private fun QuestionPerspectiveSetting(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text("Frageperspektive", color = colors.text1, fontFamily = Inter, fontSize = 15.sp)
         Text(
             "Wie die KI ihre Fragen formuliert",
@@ -1232,13 +1411,19 @@ private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
     }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface2))
+    Box(
+        Modifier.fillMaxWidth().height(1.dp).background(
+            Brush.horizontalGradient(
+                listOf(Color.Transparent, colors.gold.copy(alpha = 0.11f), colors.surface2, Color.Transparent),
+            ),
+        ),
+    )
 }
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable () -> Unit) {
     Column {
-        SectionLabel(title, Modifier.padding(bottom = 10.dp))
+        SectionLabel(title, Modifier.padding(bottom = 10.dp), decorated = true)
         PmCard(Modifier.fillMaxWidth()) { Column { content() } }
     }
 }
@@ -1256,7 +1441,7 @@ private fun SecureKeyRow(
     val colors = LocalPmColors.current
     Box {
         Row(
-            Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -1284,7 +1469,15 @@ private fun SecureKeyRow(
                 modifier = Modifier.padding(start = 10.dp).size(20.dp).pmClickable(onClick = onToggleVisibility),
             )
         }
-        if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface2).align(Alignment.BottomCenter))
+        if (divider) {
+            Box(
+                Modifier.fillMaxWidth().height(1.dp).background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, colors.gold.copy(alpha = 0.11f), colors.surface2, Color.Transparent),
+                    ),
+                ).align(Alignment.BottomCenter),
+            )
+        }
     }
 }
 
@@ -1307,7 +1500,7 @@ fun HooksScreen(viewModel: AppViewModel) {
             titleSize = 24,
         )
         LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(viewModel.hooks, key = HookEntity::id) { hook ->
@@ -1333,7 +1526,7 @@ fun HooksScreen(viewModel: AppViewModel) {
                         }
                         .pmClickable { viewModel.openHookEditor(hook) },
                 ) {
-                    Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             Modifier.size(38.dp).background(iconColor.copy(alpha = 0.15f), CircleShape),
                             contentAlignment = Alignment.Center,
@@ -1427,6 +1620,7 @@ fun HookEditorScreen(viewModel: AppViewModel) {
                 singleLine = true,
                 textSize = 40,
                 modifier = Modifier.size(88.dp),
+                radius = 20,
             )
             Text("Antippen öffnet die Emoji-Tastatur", color = colors.text3, fontFamily = Inter, fontSize = 12.sp)
             PmTextArea(
@@ -1435,6 +1629,7 @@ fun HookEditorScreen(viewModel: AppViewModel) {
                 placeholder = "Text des Aufhängers",
                 modifier = Modifier.fillMaxWidth().height(140.dp),
                 textSize = 16,
+                radius = 26,
             )
         }
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1461,12 +1656,28 @@ fun SkillsScreen(viewModel: AppViewModel) {
             },
         )
         LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(viewModel.skills, key = SkillEntity::id) { skill ->
-                PmCard(Modifier.fillMaxWidth().pmClickable { viewModel.selectSkill(skill) }) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                val selected = viewModel.activeSkill?.id == skill.id
+                val shape = RoundedCornerShape(32.dp)
+                PmCard(
+                    Modifier.fillMaxWidth().then(
+                        if (selected) Modifier.shadow(
+                            12.dp,
+                            shape,
+                            ambientColor = colors.gold.copy(alpha = 0.24f),
+                            spotColor = colors.gold.copy(alpha = 0.24f),
+                        ).border(3.dp, colors.goldHi, shape) else Modifier,
+                    ).semantics { this.selected = selected }
+                        .pmClickable(role = Role.RadioButton) { viewModel.selectSkill(skill) },
+                    color = if (selected) colors.surface2 else colors.surface,
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 22.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Column(Modifier.weight(1f)) {
                             Text(skill.name, color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 16.sp)
                             Text(
@@ -1486,7 +1697,7 @@ fun SkillsScreen(viewModel: AppViewModel) {
                             modifier = Modifier.size(20.dp).pmClickable { viewModel.openSkillEditor(skill) },
                         )
                         Spacer(Modifier.width(14.dp))
-                        CheckMark(viewModel.activeSkill?.id == skill.id)
+                        CheckMark(selected)
                     }
                 }
             }
@@ -1520,6 +1731,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
                     singleLine = true,
                     textSize = 16,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
+                    radius = 18,
                 )
             }
             PmTextArea(
@@ -1530,6 +1742,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
                 modifier = Modifier.fillMaxWidth().weight(1f).onFocusChanged {
                     skillTextFocused = it.isFocused
                 },
+                radius = 22,
             )
             if (!skillTextEditing) {
                 PmCard(Modifier.fillMaxWidth()) {
@@ -1553,6 +1766,7 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
                                 modifier = Modifier.fillMaxWidth().height(180.dp)
                                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                                 textSize = 12,
+                                radius = 22,
                             )
                         }
                     }
@@ -1574,15 +1788,16 @@ fun VoiceScreen(viewModel: AppViewModel) {
     val voices = if (isGoogle) TtsCatalog.googleVoices else TtsCatalog.edgeVoices
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Stimme", viewModel::back)
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Segment("Microsoft Edge", !isGoogle, { viewModel.updateVoiceTab(TtsProvider.EDGE) }, Modifier.weight(1f))
             Segment("Google Chirp 3 HD", isGoogle, { viewModel.updateVoiceTab(TtsProvider.GOOGLE_CLOUD) }, Modifier.weight(1f))
         }
         if (noKey) {
-            Box(
+            PmCard(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)
-                    .background(colors.surface2, RoundedCornerShape(16.dp)).pmClickable { viewModel.navigate(AppScreen.SETTINGS) }
-                    .padding(16.dp),
+                    .pmClickable { viewModel.navigate(AppScreen.SETTINGS) },
+                radius = 20,
+                color = colors.surface2,
             ) {
                 Text(
                     "Bitte zuerst einen Google-API-Schlüssel hinterlegen. Zu den Einstellungen",
@@ -1590,25 +1805,36 @@ fun VoiceScreen(viewModel: AppViewModel) {
                     fontFamily = Inter,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
+                    modifier = Modifier.padding(16.dp),
                 )
             }
         }
         LazyColumn(
             modifier = Modifier.alpha(if (noKey) 0.35f else 1f),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 0.dp, bottom = 32.dp),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(voices, key = { it.id }) { voice ->
                 val selected = if (isGoogle) viewModel.googleVoice == voice.id else viewModel.edgeVoice == voice.id
                 val starred = voice.name in setOf("Seraphina", "Florian") || voice.id in viewModel.favoriteVoiceIds
+                val shape = RoundedCornerShape(20.dp)
                 PmCard(
-                    Modifier.fillMaxWidth().height(60.dp).pmCombinedClickable(
+                    Modifier.fillMaxWidth().height(60.dp).then(
+                        if (selected) Modifier.shadow(
+                            12.dp,
+                            shape,
+                            ambientColor = colors.gold.copy(alpha = 0.24f),
+                            spotColor = colors.gold.copy(alpha = 0.24f),
+                        ).border(3.dp, colors.goldHi, shape) else Modifier,
+                    ).semantics { this.selected = selected }.pmCombinedClickable(
                         enabled = !noKey,
                         onClick = { viewModel.selectVoice(voice) },
                         onLongClick = { viewModel.toggleFavoriteVoice(voice) },
                     ),
+                    radius = 20,
+                    color = if (selected) colors.surface2 else colors.surface,
                 ) {
-                    Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (starred) {
                             Text("★", color = colors.gold, fontSize = 13.sp, modifier = Modifier.padding(end = 7.dp))
                         }
@@ -1664,7 +1890,7 @@ fun ChatGptScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(Modifier.size(96.dp).border(1.5.dp, colors.gold, CircleShape), contentAlignment = Alignment.Center) {
+                OrbitRing(Modifier.size(96.dp).border(1.5.dp, colors.gold.copy(alpha = 0.36f), CircleShape)) {
                     Box(Modifier.size(14.dp).background(colors.goldHi, CircleShape))
                 }
                 Text(
@@ -1728,6 +1954,7 @@ private fun DeviceCodeState(
     openDevicePage: (String) -> Unit,
 ) {
     val colors = LocalPmColors.current
+    val density = LocalDensity.current
     val info = viewModel.deviceAuthInfo
     val expired = viewModel.chatGptState == ChatGptState.EXPIRED
     val code = info?.userCode.orEmpty()
@@ -1746,9 +1973,15 @@ private fun DeviceCodeState(
                 Text(
                     group,
                     color = if (expired) colors.text3 else colors.goldHi,
-                    fontFamily = JetBrainsMono,
-                    fontSize = 40.sp,
-                    letterSpacing = 4.sp,
+                    style = TextStyle(
+                        fontFamily = JetBrainsMono,
+                        fontSize = 40.sp,
+                        letterSpacing = 4.sp,
+                        shadow = Shadow(
+                            colors.goldHi.copy(alpha = if (expired) 0f else 0.28f),
+                            blurRadius = with(density) { 28.dp.toPx() },
+                        ),
+                    ),
                     textDecoration = if (expired) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                     maxLines = 1,
                 )
@@ -1813,7 +2046,7 @@ private fun SmallPill(text: String, onClick: () -> Unit) {
 fun RawDataScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Rohdaten", viewModel::back)
+        ScreenHeader("Rohdaten", viewModel::back, horizontalPadding = 20)
         LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp)) {
             item { RawHeading("Sitzungen (${viewModel.rawSessions.size})") }
             viewModel.rawSessions.forEach { detail ->
@@ -1847,7 +2080,7 @@ private fun RawHeading(text: String) {
 @Composable
 private fun RawBlock(text: String) {
     val colors = LocalPmColors.current
-    PmCard(Modifier.fillMaxWidth().padding(bottom = 10.dp), radius = 16) {
+    PmCard(Modifier.fillMaxWidth().padding(bottom = 10.dp), radius = 22) {
         Text(text, color = colors.text2, style = PmTextStyles.mono, modifier = Modifier.padding(16.dp))
     }
 }

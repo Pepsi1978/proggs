@@ -3,11 +3,14 @@ package de.frank.perfectmoment.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -31,7 +34,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,7 +72,7 @@ fun PerfectMomentApp(
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
     val appLockEnabled by viewModel.appLockEnabled.collectAsStateWithLifecycle()
     val reduced = LocalReducedMotion.current
-    val duration = if (reduced) 200 else 450
+    val duration = 650
     val screenOffset = with(LocalDensity.current) { 14.dp.roundToPx() }
     val canCancelSessionPreparation = viewModel.screen == AppScreen.SESSION &&
         viewModel.sheet == null &&
@@ -79,17 +89,26 @@ fun PerfectMomentApp(
         AnimatedContent(
             targetState = viewModel.screen,
             transitionSpec = {
-                val enter = if (targetState == AppScreen.SESSION) {
-                    slideInVertically(tween(if (reduced) 200 else 700, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+                if (reduced) {
+                    EnterTransition.None togetherWith ExitTransition.None
                 } else {
-                    fadeIn(tween(duration)) + slideInVertically(
-                        tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-                    ) { screenOffset }
+                    val enter = if (targetState == AppScreen.SESSION) {
+                        slideInVertically(tween(700, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+                    } else {
+                        fadeIn(tween(duration)) + slideInVertically(
+                            tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                        ) { screenOffset } + scaleIn(
+                            animationSpec = tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                            initialScale = 0.985f,
+                        )
+                    }
+                    enter togetherWith fadeOut(tween(duration / 2))
                 }
-                enter togetherWith fadeOut(tween(duration / 2))
             },
             label = "Navigation",
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().then(
+                if (viewModel.sheet != null || viewModel.message != null) Modifier.blur(8.dp) else Modifier,
+            ),
         ) { screen ->
             when (screen) {
                 AppScreen.START -> StartScreen(
@@ -140,24 +159,50 @@ private fun AppBottomSheet(
     val visibility = remember(sheet) {
         MutableTransitionState(false).apply { targetState = true }
     }
+    val reduced = LocalReducedMotion.current
+    val optionSheet = sheet == AppSheet.PROVIDER || sheet == AppSheet.MODEL || sheet == AppSheet.REASONING
+    val panelShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     Box(Modifier.fillMaxSize()) {
         Box(
-            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))
-                .pmClickable(onClick = viewModel::closeSheet),
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (optionSheet) 0.48f else 0.55f))
+                .pmClickable(animatePress = false, onClick = viewModel::closeSheet),
         )
         AnimatedVisibility(
             visibleState = visibility,
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(
-                tween(
-                    if (LocalReducedMotion.current) 200 else 400,
-                    easing = CubicBezierEasing(0.2f, 0f, 0f, 1f),
-                ),
+                tween(if (reduced) 200 else 400, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
             ) { it },
         ) {
             Column(
                 Modifier.fillMaxWidth()
-                    .background(colors.surface2, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .shadow(
+                        18.dp,
+                        panelShape,
+                        ambientColor = Color.Black.copy(alpha = 0.34f),
+                        spotColor = Color.Black.copy(alpha = 0.34f),
+                    )
+                    .clip(panelShape)
+                    .background(colors.surface2)
+                    .drawWithCache {
+                        val sheen = Brush.linearGradient(
+                            listOf(
+                                if (colors.dark) colors.goldHi.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.48f),
+                                Color.Transparent,
+                            ),
+                            start = Offset.Zero,
+                            end = Offset(size.width, size.height),
+                        )
+                        onDrawBehind {
+                            drawRect(sheen)
+                            drawLine(
+                                colors.goldHi.copy(alpha = 0.24f),
+                                Offset(0f, 0.5.dp.toPx()),
+                                Offset(size.width, 0.5.dp.toPx()),
+                                1.dp.toPx(),
+                            )
+                        }
+                    }
                     .padding(start = 28.dp, end = 28.dp, top = 28.dp, bottom = 44.dp),
             ) {
                 when (sheet) {
@@ -213,7 +258,7 @@ private fun SliderBlock(
     suffix: String,
 ) {
     val colors = LocalPmColors.current
-    SectionLabel(label)
+    SectionLabel(label, decorated = true)
     Text(
         "$value $suffix",
         color = colors.goldHi,
@@ -238,7 +283,7 @@ private fun SliderBlock(
 
 @Composable
 private fun DurationSheet(viewModel: AppViewModel) {
-    SectionLabel("Sitzungsdauer", Modifier.padding(bottom = 16.dp))
+    SectionLabel("Sitzungsdauer", Modifier.padding(bottom = 16.dp), decorated = true)
     listOf(10, 20, 30, 45, 60, 90, 120, 0).chunked(4).forEach { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { duration ->
@@ -260,16 +305,28 @@ private data class OptionRow(val label: String, val selected: Boolean, val onCli
 @Composable
 private fun OptionSheet(title: String, rows: List<OptionRow>) {
     val colors = LocalPmColors.current
-    SectionLabel(title, Modifier.padding(start = 8.dp, bottom = 12.dp))
+    SectionLabel(title, Modifier.padding(start = 8.dp, bottom = 12.dp), decorated = true)
     rows.forEachIndexed { index, row ->
         Row(
-            Modifier.fillMaxWidth().height(58.dp).pmClickable(onClick = row.onClick).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(58.dp).drawWithCache {
+                onDrawBehind {
+                    if (row.selected) drawRect(colors.amber, size = Size(3.dp.toPx(), size.height))
+                }
+            }.pmClickable(onClick = row.onClick).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(row.label, color = colors.text1, fontFamily = Inter, fontSize = 16.sp, modifier = Modifier.weight(1f))
             CheckMark(row.selected)
         }
-        if (index != rows.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface))
+        if (index != rows.lastIndex) {
+            Box(
+                Modifier.fillMaxWidth().height(1.dp).background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, colors.gold.copy(alpha = 0.11f), colors.surface, Color.Transparent),
+                    ),
+                ),
+            )
+        }
     }
 }
 
@@ -279,7 +336,7 @@ private fun IntroAnswerSheet(
     microphonePermissionGranted: Boolean,
     requestMicrophonePermission: () -> Unit,
 ) {
-    SectionLabel("Deine Antwort")
+    SectionLabel("Deine Antwort", decorated = true)
     PmTextArea(
         value = viewModel.introText,
         onValueChange = viewModel::updateIntroText,
@@ -310,7 +367,8 @@ private fun IntroAnswerSheet(
 private fun MessageOverlay(message: String, onDismiss: () -> Unit) {
     val colors = LocalPmColors.current
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).pmClickable(onClick = onDismiss),
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
+            .pmClickable(animatePress = false, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         PmCard(Modifier.fillMaxWidth().padding(horizontal = 36.dp)) {

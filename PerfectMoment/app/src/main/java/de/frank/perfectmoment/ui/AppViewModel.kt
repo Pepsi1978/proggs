@@ -38,6 +38,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -360,7 +361,10 @@ class AppViewModel(
     fun setDuration(value: Int) {
         durationMinutes = value
         settings.sessionDurationMin = value
-        sheet = null
+        viewModelScope.launch {
+            delay(100)
+            if (sheet == AppSheet.DURATION) sheet = null
+        }
     }
 
     fun setTheme(value: String) {

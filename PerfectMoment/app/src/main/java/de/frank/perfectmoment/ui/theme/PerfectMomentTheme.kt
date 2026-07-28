@@ -18,20 +18,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.perfectmoment.R
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Immutable
 data class PmColors(
@@ -194,41 +201,147 @@ fun BreathingBackground(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val progress = if (reduced) {
-        0.45f
+    val progressState: State<Float>
+    val auroraProgressState: State<Float>
+    if (reduced) {
+        progressState = remember { mutableFloatStateOf(0f) }
+        auroraProgressState = remember { mutableFloatStateOf(0f) }
     } else {
         val transition = rememberInfiniteTransition(label = "Atemhintergrund")
-        transition.animateFloat(
+        progressState = transition.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
                 animation = tween(
-                    durationMillis = if (session) 15_000 else 10_000,
+                    durationMillis = if (session) 30_000 else 20_000,
                     easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f),
                 ),
                 repeatMode = RepeatMode.Reverse,
             ),
             label = "Atemhelligkeit",
-        ).value
+        )
+        auroraProgressState = transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(18_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "Aurora",
+        )
     }
     Box(modifier.fillMaxSize()) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRect(colors.background)
-            val center = Offset(
-                x = size.width * 0.5f - 6f * density * progress,
-                y = size.height * 0.35f + 8f * density * progress,
-            )
+            val progress = progressState.value
+            val backgroundLine = gradientLine(size, 145f)
             drawRect(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        colors.breath.copy(alpha = colors.breath.alpha * progress),
-                        Color.Transparent,
-                    ),
-                    center = center,
-                    radius = size.maxDimension * 0.72f,
+                Brush.linearGradient(
+                    0f to mix(colors.background, colors.gold, 0.04f),
+                    0.52f to colors.background,
+                    1f to mix(colors.background, colors.goldHi, 0.03f),
+                    start = backgroundLine.first,
+                    end = backgroundLine.second,
                 ),
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0f to colors.goldHi.copy(alpha = 0.16f),
+                    0.72f to Color.Transparent,
+                    1f to Color.Transparent,
+                    center = Offset(size.width * 1.08f, size.height * -0.04f),
+                    radius = 300.dp.toPx(),
+                ),
+                radius = 300.dp.toPx(),
+                center = Offset(size.width * 1.08f, size.height * -0.04f),
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0f to colors.gold.copy(alpha = 0.09f),
+                    0.74f to Color.Transparent,
+                    1f to Color.Transparent,
+                    center = Offset(size.width * -0.14f, size.height * 0.82f),
+                    radius = 360.dp.toPx(),
+                ),
+                radius = 360.dp.toPx(),
+                center = Offset(size.width * -0.14f, size.height * 0.82f),
+            )
+            val breathOpacity = if (reduced) {
+                0.45f
+            } else if (progress < 0.5f) {
+                0.15f + 0.57f * progress * 2f
+            } else {
+                0.72f + 0.28f * (progress - 0.5f) * 2f
+            }
+            val breathCenter = Offset(
+                x = size.width * 0.5f - if (reduced) 0f else 6.dp.toPx() * progress,
+                y = size.height * 0.35f + if (reduced) 0f else 8.dp.toPx() * progress,
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0f to colors.breath.copy(alpha = colors.breath.alpha * breathOpacity),
+                    1f to Color.Transparent,
+                    center = breathCenter,
+                    radius = size.maxDimension * 0.72f * (1f + if (reduced) 0f else 0.02f * progress),
+                ),
+                radius = size.maxDimension * 0.72f * (1f + if (reduced) 0f else 0.02f * progress),
+                center = breathCenter,
             )
         }
         content()
+        Canvas(Modifier.fillMaxSize()) {
+            val auroraProgress = auroraProgressState.value
+            val auroraOpacity = if (reduced) {
+                1f
+            } else if (auroraProgress < 0.5f) {
+                    0.10f + 0.12f * auroraProgress * 2f
+                } else {
+                    0.22f - 0.08f * (auroraProgress - 0.5f) * 2f
+                }
+                val travel = size.width * auroraProgress
+                drawRect(
+                    brush = Brush.linearGradient(
+                        0f to Color.Transparent,
+                        0.38f to Color.Transparent,
+                        0.48f to colors.goldHi.copy(alpha = 0.08f),
+                        0.58f to Color.Transparent,
+                        1f to Color.Transparent,
+                        start = Offset(-size.width + travel, size.height),
+                        end = Offset(size.width * 1.4f + travel, 0f),
+                    ),
+                    alpha = auroraOpacity,
+                    blendMode = BlendMode.Softlight,
+                )
+                drawRect(
+                    brush = Brush.radialGradient(
+                        0f to colors.gold.copy(alpha = 0.07f),
+                        0.66f to Color.Transparent,
+                        1f to Color.Transparent,
+                        center = Offset(
+                            size.width * (0.50f + 0.02f * auroraProgress),
+                            size.height * (0.35f - 0.02f * auroraProgress),
+                        ),
+                        radius = size.maxDimension * 0.66f,
+                    ),
+                    alpha = auroraOpacity,
+                    blendMode = BlendMode.Softlight,
+                )
+        }
     }
+}
+
+private fun mix(from: Color, to: Color, amount: Float): Color = Color(
+    red = from.red + (to.red - from.red) * amount,
+    green = from.green + (to.green - from.green) * amount,
+    blue = from.blue + (to.blue - from.blue) * amount,
+    alpha = from.alpha + (to.alpha - from.alpha) * amount,
+)
+
+private fun gradientLine(size: Size, cssAngleDegrees: Float): Pair<Offset, Offset> {
+    val radians = Math.toRadians(cssAngleDegrees.toDouble()).toFloat()
+    val x = sin(radians)
+    val y = -cos(radians)
+    val halfLength = (abs(size.width * x) + abs(size.height * y)) / 2f
+    val center = Offset(size.width / 2f, size.height / 2f)
+    return center - Offset(x * halfLength, y * halfLength) to
+        center + Offset(x * halfLength, y * halfLength)
 }

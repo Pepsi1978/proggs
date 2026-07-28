@@ -4,6 +4,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -13,8 +14,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,12 +47,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -56,30 +74,185 @@ import androidx.compose.ui.unit.sp
 import de.frank.perfectmoment.ui.theme.Inter
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
+import de.frank.perfectmoment.ui.theme.PmColors
 import de.frank.perfectmoment.ui.theme.PmTextStyles
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
+@Composable
 fun Modifier.pmClickable(
     enabled: Boolean = true,
+    animatePress: Boolean = true,
+    role: Role? = null,
     onClick: () -> Unit,
-): Modifier = clickable(
-    interactionSource = null,
-    indication = null,
-    enabled = enabled,
-    onClick = onClick,
-)
+): Modifier {
+    val reduced = LocalReducedMotion.current
+    val colors = LocalPmColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (enabled && animatePress && pressed && !reduced) 0.985f else 1f,
+        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "Druckskalierung",
+    )
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }.then(
+        if (enabled && pressed) {
+            Modifier.drawWithCache {
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = CornerRadius(10.dp.toPx()))
+                }
+            }
+        } else {
+            Modifier
+        },
+    ).then(
+        if (focused) {
+            Modifier.drawWithCache {
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        colors.goldHi.copy(alpha = 0.72f),
+                        cornerRadius = CornerRadius(10.dp.toPx()),
+                        style = Stroke(3.dp.toPx()),
+                    )
+                }
+            }
+        } else {
+            Modifier
+        },
+    ).clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        enabled = enabled,
+        role = role,
+        onClick = onClick,
+    )
+}
 
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun Modifier.pmCombinedClickable(
     enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-): Modifier = combinedClickable(
-    interactionSource = null,
-    indication = null,
-    enabled = enabled,
-    onClick = onClick,
-    onLongClick = onLongClick,
-)
+): Modifier {
+    val reduced = LocalReducedMotion.current
+    val colors = LocalPmColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (enabled && pressed && !reduced) 0.985f else 1f,
+        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "Langdruckskalierung",
+    )
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }.then(
+        if (enabled && pressed) {
+            Modifier.drawWithCache {
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = CornerRadius(10.dp.toPx()))
+                }
+            }
+        } else {
+            Modifier
+        },
+    ).then(
+        if (focused) {
+            Modifier.drawWithCache {
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        colors.goldHi.copy(alpha = 0.72f),
+                        cornerRadius = CornerRadius(10.dp.toPx()),
+                        style = Stroke(3.dp.toPx()),
+                    )
+                }
+            }
+        } else {
+            Modifier
+        },
+    ).combinedClickable(
+        interactionSource = interactionSource,
+        indication = null,
+        enabled = enabled,
+        onClick = onClick,
+        onLongClick = onLongClick,
+    )
+}
+
+fun Modifier.pmHeaderSurface(colors: PmColors): Modifier = drawWithCache {
+    val background = Brush.verticalGradient(
+        0f to colors.background.copy(alpha = 0.92f),
+        0.72f to colors.background.copy(alpha = 0.54f),
+        1f to Color.Transparent,
+    )
+    onDrawBehind {
+        drawRect(background)
+        val stroke = 1.dp.toPx()
+        drawLine(
+            colors.gold.copy(alpha = 0.08f),
+            Offset(0f, size.height - stroke / 2f),
+            Offset(size.width, size.height - stroke / 2f),
+            strokeWidth = stroke,
+        )
+    }
+}
+
+fun Modifier.pmGlassSurface(
+    colors: PmColors,
+    radius: Int,
+    color: Color = colors.surface,
+): Modifier {
+    val shape = RoundedCornerShape(radius.dp)
+    val shadowColor = if (colors.dark) Color.Black.copy(alpha = 0.22f) else Color(0x1F785418)
+    return shadow(
+        elevation = if (colors.dark) 14.dp else 12.dp,
+        shape = shape,
+        ambientColor = shadowColor,
+        spotColor = shadowColor,
+    ).clip(shape).drawWithCache {
+        val corner = CornerRadius(radius.dp.toPx())
+        val highlight = if (colors.dark) colors.goldHi.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.48f)
+        val edge = colors.gold.copy(alpha = if (colors.dark) 0.18f else 0.20f)
+        val sheenLine = gradientLine(size, 145f)
+        val sheen = Brush.linearGradient(
+            0f to highlight,
+            0.38f to Color.Transparent,
+            1f to Color.Transparent,
+            start = sheenLine.first,
+            end = sheenLine.second,
+        )
+        val accent = Brush.radialGradient(
+            0f to colors.gold.copy(alpha = 0.08f),
+            0.42f to Color.Transparent,
+            1f to Color.Transparent,
+            center = Offset(size.width * 0.92f, size.height * 0.04f),
+            radius = size.maxDimension * 0.72f,
+        )
+        onDrawBehind {
+            drawRoundRect(color, cornerRadius = corner)
+            drawRoundRect(sheen, cornerRadius = corner)
+            drawRoundRect(accent, cornerRadius = corner)
+            drawRoundRect(edge, cornerRadius = corner, style = Stroke(1.dp.toPx()))
+            drawLine(
+                if (colors.dark) colors.goldHi.copy(alpha = 0.09f) else Color.White.copy(alpha = 0.64f),
+                Offset(radius.dp.toPx(), 1.dp.toPx()),
+                Offset(size.width - radius.dp.toPx(), 1.dp.toPx()),
+                strokeWidth = 1.dp.toPx(),
+            )
+        }
+    }
+}
 
 @Composable
 fun ScreenHeader(
@@ -87,10 +260,12 @@ fun ScreenHeader(
     onBack: (() -> Unit)? = null,
     action: (@Composable () -> Unit)? = null,
     titleSize: Int = 26,
+    horizontalPadding: Int = 24,
 ) {
     val colors = LocalPmColors.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().height(56.dp).pmHeaderSurface(colors)
+            .padding(horizontal = horizontalPadding.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
@@ -118,33 +293,37 @@ fun ScreenHeader(
 }
 
 @Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text.uppercase(),
-        style = PmTextStyles.section,
-        color = LocalPmColors.current.text2,
-        modifier = modifier,
-    )
+fun SectionLabel(text: String, modifier: Modifier = Modifier, decorated: Boolean = false) {
+    val colors = LocalPmColors.current
+    val glow = with(LocalDensity.current) { 18.dp.toPx() }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = text.uppercase(),
+            style = PmTextStyles.section.copy(
+                shadow = if (decorated) Shadow(colors.gold.copy(alpha = 0.16f), blurRadius = glow) else null,
+            ),
+            color = colors.text2,
+        )
+        if (decorated) {
+            Box(
+                Modifier.weight(1f).padding(start = 10.dp).height(1.dp).background(
+                    Brush.horizontalGradient(listOf(colors.gold.copy(alpha = 0.24f), Color.Transparent)),
+                ),
+            )
+        }
+    }
 }
 
 @Composable
 fun PmCard(
     modifier: Modifier = Modifier,
-    radius: Int = 20,
+    radius: Int = 32,
     color: Color = LocalPmColors.current.surface,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalPmColors.current
-    val shape = RoundedCornerShape(radius.dp)
     Box(
-        modifier = modifier
-            .shadow(
-                elevation = if (colors.dark) 0.dp else 2.dp,
-                shape = shape,
-                ambientColor = Color(0x14785418),
-                spotColor = Color(0x14785418),
-            )
-            .background(color, shape),
+        modifier = modifier.pmGlassSurface(colors, radius, color),
     ) { content() }
 }
 
@@ -158,25 +337,57 @@ fun PrimaryButton(
     textSize: Int = 16,
 ) {
     val colors = LocalPmColors.current
-    val background = if (enabled) {
-        Brush.horizontalGradient(listOf(colors.gold, colors.goldHi))
-    } else {
-        Brush.linearGradient(listOf(colors.surface2, colors.surface2))
+    val reduced = LocalReducedMotion.current
+    val transition = rememberInfiniteTransition(label = "Goldfluss")
+    val flow by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (enabled && !reduced) 1f else 0f,
+        animationSpec = infiniteRepeatable(
+            tween(4_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
+        label = "Goldposition",
+    )
+    val radius = when {
+        height >= 60 -> 32
+        height >= 56 -> 28
+        else -> 26
     }
+    val shape = RoundedCornerShape(radius.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height.dp)
             .shadow(
-                elevation = if (enabled) 6.dp else 0.dp,
-                shape = RoundedCornerShape((height / 2).dp),
-                ambientColor = colors.gold.copy(alpha = 0.3f),
-                spotColor = colors.gold.copy(alpha = 0.3f),
+                elevation = if (enabled) 12.dp else 0.dp,
+                shape = shape,
+                ambientColor = colors.gold.copy(alpha = 0.28f),
+                spotColor = colors.gold.copy(alpha = 0.28f),
             )
-            .background(background, RoundedCornerShape((height / 2).dp))
-            .then(if (enabled) Modifier.pmClickable(onClick = onClick) else Modifier),
+            .clip(shape)
+            .pmClickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
+        Canvas(Modifier.matchParentSize()) {
+            if (enabled) {
+                val startX = -size.width * 0.9f * flow
+                drawRect(
+                    Brush.linearGradient(
+                        colors = listOf(colors.gold, colors.goldHi, colors.gold),
+                        start = Offset(startX, 0f),
+                        end = Offset(startX + size.width * 1.9f, 0f),
+                    ),
+                )
+                drawLine(
+                    Color.White.copy(alpha = 0.28f),
+                    Offset(radius.dp.toPx(), 1.dp.toPx()),
+                    Offset(size.width - radius.dp.toPx(), 1.dp.toPx()),
+                    1.dp.toPx(),
+                )
+            } else {
+                drawRect(colors.surface2)
+            }
+        }
         Text(
             text = text,
             color = if (enabled) colors.background else colors.text3,
@@ -197,8 +408,8 @@ fun OutlineButton(
 ) {
     Box(
         modifier = modifier.fillMaxWidth().height(height.dp)
-            .border(1.dp, color, RoundedCornerShape((height / 2).dp))
-            .pmClickable(onClick = onClick),
+            .border(1.dp, color.copy(alpha = 0.42f), RoundedCornerShape((height / 2).dp))
+            .pmClickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = color, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
@@ -212,11 +423,16 @@ fun ParameterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    radius: Int = 28,
+    horizontalPadding: Int = 12,
 ) {
     val colors = LocalPmColors.current
-    PmCard(modifier.pmClickable(onClick = onClick)) {
+    PmCard(modifier.pmClickable(onClick = onClick), radius = radius) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = if (compact) 10.dp else 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = horizontalPadding.dp,
+                vertical = if (compact) 12.dp else 14.dp,
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -226,7 +442,9 @@ fun ParameterCard(
                 fontWeight = FontWeight.Medium,
                 fontSize = if (compact) 10.sp else 11.sp,
                 letterSpacing = 0.8.sp,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
                 value,
@@ -234,7 +452,8 @@ fun ParameterCard(
                 fontFamily = Inter,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = if (compact) 16.sp else 18.sp,
-                modifier = Modifier.padding(top = if (compact) 3.dp else 4.dp),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = if (compact) 3.dp else 4.dp),
             )
         }
     }
@@ -246,7 +465,8 @@ fun PmSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Box(
         modifier = Modifier.size(width = 52.dp, height = 32.dp)
             .background(if (checked) colors.gold else colors.surface2, CircleShape)
-            .pmClickable { onCheckedChange(!checked) },
+            .semantics { stateDescription = if (checked) "Ein" else "Aus" }
+            .pmClickable(role = Role.Switch) { onCheckedChange(!checked) },
     ) {
         Box(
             modifier = Modifier.padding(3.dp).size(26.dp)
@@ -273,9 +493,9 @@ fun SettingRow(
     val colors = LocalPmColors.current
     Box {
         Row(
-            modifier = Modifier.fillMaxWidth().height(if (supporting == null) 60.dp else 68.dp)
+            modifier = Modifier.fillMaxWidth().height(if (supporting == null) 60.dp else 72.dp)
                 .then(if (onClick != null) Modifier.pmClickable(onClick = onClick) else Modifier)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -305,12 +525,23 @@ fun SettingRow(
                     imageVector = Icons.Outlined.ChevronRight,
                     contentDescription = null,
                     tint = colors.goldDim,
-                    modifier = Modifier.padding(start = 6.dp).size(18.dp),
+                    modifier = Modifier.padding(start = 10.dp).size(18.dp),
                 )
             }
         }
         if (divider) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surface2).align(Alignment.BottomCenter))
+            Box(
+                Modifier.fillMaxWidth().height(1.dp).background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            mix(colors.surface2, colors.gold, 0.20f).copy(alpha = 0.56f),
+                            colors.surface2.copy(alpha = 0.56f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ).align(Alignment.BottomCenter),
+            )
         }
     }
 }
@@ -323,11 +554,24 @@ fun Segment(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPmColors.current
+    val shape = RoundedCornerShape(22.dp)
     Box(
-        modifier = modifier.height(44.dp).background(
-            if (selected) colors.gold else colors.surface2,
-            RoundedCornerShape(22.dp),
-        ).pmClickable(onClick = onClick),
+        modifier = modifier.height(44.dp)
+            .then(
+                if (selected) {
+                    Modifier.shadow(
+                        12.dp,
+                        shape,
+                        ambientColor = colors.gold.copy(alpha = 0.24f),
+                        spotColor = colors.gold.copy(alpha = 0.24f),
+                    ).border(3.dp, colors.goldHi, shape)
+                } else {
+                    Modifier
+                },
+            )
+            .background(if (selected) colors.gold else colors.surface2, shape)
+            .semantics { this.selected = selected }
+            .pmClickable(role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -354,19 +598,22 @@ fun RecorderControl(
     val pulse by transition.animateFloat(
         initialValue = if (reduced) 0.45f else 0.3f,
         targetValue = if (reduced) 0.45f else 0.95f,
-        animationSpec = infiniteRepeatable(tween(1_600), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(1_600, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
         label = "Aufnahmeglühen",
     )
     val shimmer by transition.animateFloat(
         initialValue = 0f,
         targetValue = if (reduced) 0f else 360f,
-        animationSpec = infiniteRepeatable(tween(4_500), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(4_500, easing = LinearEasing), RepeatMode.Restart),
         label = "Aufnahmeschimmer",
     )
     val ringPhase by transition.animateFloat(
         initialValue = 0f,
         targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(tween(1_600), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
         label = "Aufnahmeringe",
     )
     val spinnerRotation by transition.animateFloat(
@@ -374,6 +621,15 @@ fun RecorderControl(
         targetValue = if (reduced) 0f else 360f,
         animationSpec = infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart),
         label = "Verarbeitung",
+    )
+    val recorderPulse by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(
+            tween(1_600, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
+        label = "Aufnahmeschatten",
     )
     val recorderBrush = when (state) {
         RecordingState.IDLE -> Brush.linearGradient(listOf(colors.gold, colors.goldHi))
@@ -399,7 +655,14 @@ fun RecorderControl(
                 }
             }
             Box(
-                Modifier.size(buttonSize).background(recorderBrush, CircleShape)
+                Modifier.size(buttonSize).shadow(
+                    elevation = (14f + 4f * recorderPulse).dp,
+                    shape = CircleShape,
+                    ambientColor = (if (state == RecordingState.RECORDING) colors.amber else colors.gold)
+                        .copy(alpha = 0.28f + 0.14f * recorderPulse),
+                    spotColor = (if (state == RecordingState.RECORDING) colors.amber else colors.gold)
+                        .copy(alpha = 0.28f + 0.14f * recorderPulse),
+                ).background(recorderBrush, CircleShape)
                     .pmClickable(enabled = state != RecordingState.PROCESSING, onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
@@ -468,19 +731,119 @@ fun LoadingDots(modifier: Modifier = Modifier) {
     )
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(3) { index ->
-            Box(Modifier.size(8.dp).background(colors.gold.copy(alpha = (phase - index * 0.16f).coerceIn(0.2f, 1f)), CircleShape))
+            val localPhase = (phase - index * 0.16f).coerceIn(0.2f, 1f)
+            Box(
+                Modifier.size(8.dp).graphicsLayer { translationY = -2.dp.toPx() * localPhase }
+                    .shadow(
+                        5.dp,
+                        CircleShape,
+                        ambientColor = colors.gold.copy(alpha = 0.40f),
+                        spotColor = colors.gold.copy(alpha = 0.40f),
+                    )
+                    .background(colors.gold.copy(alpha = localPhase), CircleShape),
+            )
         }
     }
 }
 
 @Composable
-fun CheckMark(visible: Boolean) {
-    Icon(
-        Icons.Outlined.Check,
-        contentDescription = if (visible) "Ausgewählt" else null,
-        tint = LocalPmColors.current.gold.copy(alpha = if (visible) 1f else 0.12f),
-        modifier = Modifier.size(24.dp),
+fun OrbitRing(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val colors = LocalPmColors.current
+    val reduced = LocalReducedMotion.current
+    val transition = rememberInfiniteTransition(label = "Orbit")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(
+            tween(2_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
+        label = "Orbitpuls",
     )
+    Box(
+        modifier = modifier.graphicsLayer {
+            scaleX = 1f + phase * 0.045f
+            scaleY = 1f + phase * 0.045f
+            alpha = if (reduced) 1f else 0.72f + phase * 0.28f
+        }.shadow(
+            12.dp,
+            CircleShape,
+            ambientColor = colors.gold.copy(alpha = 0.18f),
+            spotColor = colors.gold.copy(alpha = 0.18f),
+        ),
+        contentAlignment = Alignment.Center,
+        content = content,
+    )
+}
+
+@Composable
+fun GoldWordmark(text: String, modifier: Modifier = Modifier) {
+    val colors = LocalPmColors.current
+    val reduced = LocalReducedMotion.current
+    val transition = rememberInfiniteTransition(label = "Wortmarke")
+    val flow by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(
+            tween(5_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
+        label = "Wortmarkenfluss",
+    )
+    BoxWithConstraints(modifier) {
+        val density = LocalDensity.current
+        val width = with(density) { maxWidth.toPx() }.coerceAtLeast(1f)
+        Text(
+            text,
+            style = TextStyle(
+                brush = Brush.horizontalGradient(
+                    listOf(colors.gold, colors.goldHi, colors.gold),
+                    startX = -width * flow,
+                    endX = width * (2f - flow),
+                ),
+                shadow = Shadow(colors.gold.copy(alpha = 0.16f), blurRadius = with(density) { 24.dp.toPx() }),
+            ),
+            fontFamily = Inter,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+        )
+    }
+}
+
+private fun mix(from: Color, to: Color, amount: Float): Color = Color(
+    red = from.red + (to.red - from.red) * amount,
+    green = from.green + (to.green - from.green) * amount,
+    blue = from.blue + (to.blue - from.blue) * amount,
+    alpha = from.alpha + (to.alpha - from.alpha) * amount,
+)
+
+private fun gradientLine(size: Size, cssAngleDegrees: Float): Pair<Offset, Offset> {
+    val radians = Math.toRadians(cssAngleDegrees.toDouble()).toFloat()
+    val x = sin(radians)
+    val y = -cos(radians)
+    val halfLength = (abs(size.width * x) + abs(size.height * y)) / 2f
+    val center = Offset(size.width / 2f, size.height / 2f)
+    return center - Offset(x * halfLength, y * halfLength) to
+        center + Offset(x * halfLength, y * halfLength)
+}
+
+@Composable
+fun CheckMark(visible: Boolean) {
+    val colors = LocalPmColors.current
+    Box(
+        Modifier.size(24.dp).background(if (visible) colors.gold else colors.surface2, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Outlined.Check,
+            contentDescription = if (visible) "Ausgewählt" else null,
+            tint = colors.background.copy(alpha = if (visible) 1f else 0f),
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }
 
 @Composable
@@ -491,7 +854,10 @@ fun SpeakerButton(speaking: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val pulse by transition.animateFloat(
         initialValue = 0.25f,
         targetValue = if (reduced) 0.25f else 0.5f,
-        animationSpec = infiniteRepeatable(tween(1_200), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+            RepeatMode.Reverse,
+        ),
         label = "Lautsprecherpuls",
     )
     Box(

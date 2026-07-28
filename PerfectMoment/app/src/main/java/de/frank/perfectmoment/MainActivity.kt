@@ -40,7 +40,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.ui.AppScreen
 import de.frank.perfectmoment.ui.AppViewModel
 import de.frank.perfectmoment.ui.PerfectMomentApp
+import de.frank.perfectmoment.ui.OrbitRing
 import de.frank.perfectmoment.ui.PrimaryButton
 import de.frank.perfectmoment.ui.theme.BreathingBackground
 import de.frank.perfectmoment.ui.theme.Inter
@@ -219,24 +224,29 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun AppLockedScreen(onUnlock: () -> Unit) {
     val colors = LocalPmColors.current
+    val density = LocalDensity.current
     BreathingBackground {
         Column(
             Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                Modifier.size(96.dp).border(1.5.dp, colors.gold, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
+            OrbitRing(Modifier.size(96.dp).border(1.5.dp, colors.gold.copy(alpha = 0.36f), CircleShape)) {
                 Icon(Icons.Outlined.Fingerprint, "Fingerabdruck", tint = colors.goldHi, modifier = Modifier.size(42.dp))
             }
             Text(
                 "Perfect Moment ist gesperrt",
                 color = colors.goldHi,
-                fontFamily = Newsreader,
-                fontWeight = FontWeight.Light,
-                fontSize = 28.sp,
+                style = TextStyle(
+                    fontFamily = Newsreader,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 28.sp,
+                    shadow = Shadow(
+                        colors.gold.copy(alpha = 0.10f),
+                        Offset(0f, with(density) { 4.dp.toPx() }),
+                        with(density) { 24.dp.toPx() },
+                    ),
+                ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 28.dp, bottom = 10.dp),
             )
