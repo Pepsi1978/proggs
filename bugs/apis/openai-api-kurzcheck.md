@@ -20,4 +20,5 @@
 | 6 | `usage` ist null beim Streaming | `stream_options.include_usage=true` setzen | C10 |
 | 7 | 400 nach `tool_calls` | Für jede `tool_call_id` eine `tool`-Antwort anhängen | D12, D13 |
 | 8 | 429 Rate-Limit | `retry-after-ms`/`x-ratelimit-*` lesen, Backoff mit Jitter, RPM≠TPM | F17, F18 |
+| 8a | **503 mitten im Mehrschritt-Lauf** ⭐ | Selbst erzeugte Überlast (viele parallele Streams/1 Konto). 3 Fixes zusammen: ≥6 Versuche exponentiell+Jitter · Drossel bei 429/503 auf ~2 · JEDEN teuren Teilschritt persistieren + fortsetzen statt neu | F18a |
 | 9 | `strict:true`-Schema | `additionalProperties:false` + alle Keys `required`, `refusal` prüfen | G19, G21 |

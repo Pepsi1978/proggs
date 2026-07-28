@@ -149,6 +149,26 @@
 ### 18. TPM vs. RPM verwechselt → falsche Drossel-Strategie
 - **FIX:** Limit-Typ aus Fehlermeldung/Headern bestimmen; bei TPM Batchgröße/Promptlänge senken, bei RPM Frequenz senken.
 
+### 18a. HTTP 503 mitten in einem langen Mehrschritt-Lauf ⭐ (erlebt 28.07.2026, Werft Studio)
+- **Symptom:** Ein Lauf aus vielen KI-Schritten (Rekonstruktion, Batch-Analyse, Agenten-Pipeline) bricht
+  nach z.B. 27 von 55 Schritten mit „OpenAI hat den KI-Lauf abgelehnt (HTTP 503)" ab; alle bereits
+  bezahlten Schritte sind verloren, weil nur ein „von vorn starten" angeboten wird.
+- **Ursache (dreifach, alle drei müssen behoben werden):**
+  1. **Selbst erzeugte Überlast** — 8 gleichzeitige Streams über EIN Konto (ChatGPT-/Codex-Route
+     `/backend-api/codex/responses` genauso wie die Platform-API). 503 = Kapazität weg, nicht Bug im Aufruf.
+  2. **Retry-Budget zu klein** — 3 Versuche mit linearem `attempt * 2s` sind nach ~6 s erschöpft;
+     eine 503-Welle dauert typischerweise länger. Ohne Jitter retryen alle parallelen Schritte
+     im Gleichschritt und erzeugen die nächste Welle selbst (vgl. #17).
+  3. **Kein Zwischenstand** — Teilergebnisse leben nur im Prozessspeicher; ein Abbruch wirft alles weg.
+- **FIX:** (a) exponentiell + Jitter, Deckel ~45 s, ≥6 Versuche, `retry-after` als Untergrenze;
+  (b) adaptive Drossel: bei 429/503 Nebenläufigkeit sofort auf ~2 senken, nach ruhiger Erholungsphase
+  (~60 s) zurück auf voll; (c) JEDEN teuren Teilschritt sofort persistieren (Objektspeicher/Datei) und
+  beim Neustart wiederverwenden — Schlüssel an Quellstand + Modellwahl binden, damit nie ein veralteter
+  Zwischenstand einfließt. Zwischenstände vor Aufräum-Jobs schützen (sie stehen in keinem Manifest!).
+- **Prüfen:** Erkennt der Code den Upstream-Status überhaupt? Eigene Fehlerobjekte tragen oft nur
+  `statusCode: 502` — den echten Anbieter-Status als eigenes Feld (`upstreamStatus`) mitführen, sonst
+  greift keine Überlast-Erkennung.
+
 ---
 
 ## G) Structured Outputs / JSON-Mode / `response_format`
