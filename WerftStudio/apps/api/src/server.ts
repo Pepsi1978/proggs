@@ -20,7 +20,7 @@ import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails, type OpenRouterStreamResult } from "./openrouter.js";
-import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, zenApi, zenHttpError, zenRequest, type ZenModel } from "./opencode-zen.js";
+import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, withVerifiedZenReasoning, zenApi, zenHttpError, zenRequest, type ZenModel } from "./opencode-zen.js";
 import { applyChatEdits, parseChatResponse, repairBriefing, verifyFileWrite, type ChatEdit, type FileReport, type ParsedChatResponse } from "./chat-edit.js";
 import { designMap, designScreens, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
 import { designBriefing, summariseEffect } from "./css-effect.js";
@@ -143,7 +143,7 @@ const openRouterEndpointSchema = z.object({
   maxCompletionTokens: z.number().int().nonnegative().optional(), quantization: z.string().max(100), throughputLast30m: z.number().optional(), uptimeLast5m: z.number().optional(), status: z.number().int()
 }).strict();
 const storedOpenRouterModelSchema = z.object({ provider: z.literal("openrouter"), id: openRouterModelIdSchema, name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), defaultEffort: z.string().min(1).max(20).optional(), endpoint: openRouterEndpointSchema }).strict();
-const storedZenModelSchema = z.object({ provider: z.literal("opencode-zen"), id: z.string().min(1).max(300), name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), inputTokenLimit: z.number().int().positive().optional(), maxOutputTokens: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), reasoning: z.boolean() }).strict();
+const storedZenModelSchema = z.object({ provider: z.literal("opencode-zen"), id: z.string().min(1).max(300), name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), inputTokenLimit: z.number().int().positive().optional(), maxOutputTokens: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), reasoning: z.boolean(), reasoningControl: z.enum(["toggle", "effort"]).optional() }).strict();
 const openRouterEndpointSelectionSchema = z.object({ model: openRouterModelIdSchema, endpointId: z.string().max(400).optional(), providerTag: z.string().max(400).optional(), providerSlug: z.string().max(200).optional() }).strict().refine((value) => value.endpointId || value.providerTag || value.providerSlug, { message: "Wähle einen Provider für das Modell aus." });
 const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-5.6-sol": "GPT-5.6 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-5.6-luna": "GPT-5.6 Luna" };
 const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: [...codexEfforts], defaultEffort: "medium" }));
@@ -164,7 +164,7 @@ function zenSettings(value: unknown): { model?: string; effort?: string; models:
   return {
     ...(typeof raw.model === "string" ? { model: raw.model } : {}),
     ...(typeof raw.effort === "string" ? { effort: raw.effort } : {}),
-    models: parsed.success ? parsed.data as ZenModel[] : []
+    models: parsed.success ? (parsed.data as ZenModel[]).map(withVerifiedZenReasoning) : []
   };
 }
 
@@ -496,7 +496,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.29.0-20260728.1652" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.29.1-20260728.1740" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);

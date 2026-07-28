@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, zenHttpError, zenRequest } from "./opencode-zen.js";
+import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, withVerifiedZenReasoning, zenHttpError, zenRequest } from "./opencode-zen.js";
 
 const available = { data: [
   { id: "paid-model" },
@@ -17,13 +17,40 @@ const metadata = { opencode: { npm: "@ai-sdk/openai-compatible", models: {
 describe("OpenCode Zen adapter", () => {
   it("combines the live catalog with free-model capability metadata", () => {
     expect(normalizeZenFreeModels(available, metadata)).toEqual([
-      { provider: "opencode-zen", id: "big-pickle", name: "Big Pickle", contextLength: 200_000, inputTokenLimit: 160_000, maxOutputTokens: 32_000, efforts: [], reasoning: true },
-      { provider: "opencode-zen", id: "reasoner-free", name: "Reasoner Free", contextLength: 200_000, maxOutputTokens: 32_000, efforts: ["low", "high"], reasoning: true }
+      { provider: "opencode-zen", id: "big-pickle", name: "Big Pickle", contextLength: 200_000, inputTokenLimit: 160_000, maxOutputTokens: 32_000, efforts: ["none", "high"], reasoning: true, reasoningControl: "toggle" },
+      { provider: "opencode-zen", id: "reasoner-free", name: "Reasoner Free", contextLength: 200_000, maxOutputTokens: 32_000, efforts: ["low", "high"], reasoning: true, reasoningControl: "effort" }
     ]);
   });
 
   it("does not guess capabilities or transport when metadata lags behind", () => {
     expect(normalizeZenFreeModels({ data: [{ id: "future-free" }] }, metadata)).toEqual([]);
+  });
+
+  it("adds only live-verified thinking controls missing from upstream metadata", () => {
+    const models = {
+      "mimo-v2.5-free": { ...metadata.opencode.models["big-pickle"], name: "MiMo" },
+      "laguna-s-2.1-free": { ...metadata.opencode.models["reasoner-free"], name: "Laguna", reasoning_options: [{ type: "effort", values: ["low", "medium", "high"] }] }
+    };
+    expect(normalizeZenFreeModels({ data: Object.keys(models).map((id) => ({ id })) }, { opencode: { ...metadata.opencode, models } })).toEqual([
+      expect.objectContaining({ id: "laguna-s-2.1-free", efforts: ["none", "low", "medium", "high"], reasoningControl: "effort" }),
+      expect.objectContaining({ id: "mimo-v2.5-free", efforts: ["none", "high"], reasoningControl: "toggle" })
+    ]);
+  });
+
+  it("normalizes every current model, including stored legacy catalog rows", () => {
+    const model = (id: string, efforts: string[]) => withVerifiedZenReasoning({ provider: "opencode-zen", id, name: id, efforts, reasoning: true });
+    expect([
+      model("big-pickle", []), model("mimo-v2.5-free", []), model("nemotron-3-ultra-free", []), model("north-mini-code-free", ["none", "high"]),
+      model("laguna-s-2.1-free", ["low", "medium", "high"]), model("ling-3.0-flash-free", ["low", "medium", "high"]), model("deepseek-v4-flash-free", ["high", "max"])
+    ]).toEqual([
+      expect.objectContaining({ efforts: ["none", "high"], reasoningControl: "toggle" }),
+      expect.objectContaining({ efforts: ["none", "high"], reasoningControl: "toggle" }),
+      expect.objectContaining({ efforts: ["none", "high"], reasoningControl: "toggle" }),
+      expect.objectContaining({ efforts: ["none", "high"], reasoningControl: "toggle" }),
+      expect.objectContaining({ efforts: ["none", "low", "medium", "high"], reasoningControl: "effort" }),
+      expect.objectContaining({ efforts: ["none", "low", "medium", "high"], reasoningControl: "effort" }),
+      expect.objectContaining({ efforts: ["high", "max"], reasoningControl: "effort" })
+    ]);
   });
 
   it("excludes free models that require another Zen protocol", () => {
@@ -34,6 +61,10 @@ describe("OpenCode Zen adapter", () => {
   it("sends only a selected, supported reasoning effort", () => {
     expect(zenRequest("reasoner-free", "System", "Eingabe")).not.toHaveProperty("reasoning_effort");
     expect(zenRequest("reasoner-free", "System", "Eingabe", "high", 32_000)).toMatchObject({ reasoning_effort: "high", max_tokens: 32_000, stream: true });
+    expect(zenRequest("big-pickle", "System", "Eingabe", "none")).toMatchObject({ thinking: { type: "disabled" } });
+    expect(zenRequest("big-pickle", "System", "Eingabe", "high")).toMatchObject({ thinking: { type: "enabled" } });
+    expect(zenRequest("big-pickle", "System", "Eingabe", "none")).not.toHaveProperty("reasoning_effort");
+    expect(zenRequest("big-pickle", "System", "Eingabe", "high")).not.toHaveProperty("reasoning_effort");
   });
 
   it("reassembles chat-completion streams and reports truncation", () => {

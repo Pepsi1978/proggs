@@ -14,7 +14,7 @@ type Project = { id: string; name: string; type: string; fidelity: string; platf
 type ProviderId = "openai-codex" | "openrouter" | "opencode-zen";
 type ModelSelection = { provider: ProviderId; model: string; effort?: string };
 type OpenRouterEndpoint = { providerName: string; providerSlug: string; tag: string; endpointId: string; promptPerToken: number; completionPerToken: number; cacheReadPerToken: number; contextLength: number; maxCompletionTokens?: number; quantization: string; throughputLast30m?: number; uptimeLast5m?: number; status: number };
-type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; inputTokenLimit?: number; maxOutputTokens?: number; efforts: string[]; defaultEffort?: string; reasoning?: boolean; endpoint?: OpenRouterEndpoint };
+type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; inputTokenLimit?: number; maxOutputTokens?: number; efforts: string[]; defaultEffort?: string; reasoning?: boolean; reasoningControl?: "toggle" | "effort"; endpoint?: OpenRouterEndpoint };
 type OpenRouterModelDetails = { model: ProviderModel; endpoints: OpenRouterEndpoint[] };
 type ModelCatalog = { models: ProviderModel[]; selection?: ModelSelection; openrouterError?: string; zenError?: string; selectionError?: string };
 const providerOrder: ProviderId[] = ["openai-codex", "openrouter", "opencode-zen"];
@@ -22,6 +22,7 @@ const modelKey = (model: Pick<ProviderModel, "provider" | "id">) => JSON.stringi
 const providerName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI · Codex OAuth" : provider === "openrouter" ? "OpenRouter · API" : "OpenCode Zen · Free";
 const modelOptionName = (model: ProviderModel) => model.endpoint ? `${model.name} · ${model.endpoint.providerName}` : `${model.name}${model.provider === "opencode-zen" && model.reasoning ? " · Thinking" : ""}`;
 const selectedEffortFor = (model: ProviderModel, saved?: string) => saved && model.efforts.includes(saved) ? saved : model.defaultEffort ?? (model.provider === "opencode-zen" ? "" : model.efforts[0] ?? "");
+const effortLabel = (model: ProviderModel, effort: string) => model.reasoningControl === "toggle" ? effort === "none" ? "Aus" : "An" : effort === "none" ? "none · aus" : effort;
 const endpointKey = (endpoint: OpenRouterEndpoint) => endpoint.endpointId || endpoint.tag || endpoint.providerSlug;
 const endpointPrice = (value: number) => (value * 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 const endpointStatus = (endpoint: OpenRouterEndpoint) => endpoint.status === 0 ? "ok" : endpoint.status === -2 ? "eingeschränkt" : endpoint.status === -5 ? "gestört" : `Status ${endpoint.status}`;
@@ -1006,12 +1007,12 @@ function ProviderSettings() {
         {zenModels.length ? <div className="zen-model-list">{zenModels.map((model) => <div className="zen-model" key={model.id}>
           <div><strong>{model.name}</strong><code>{model.id}</code></div>
           <span>{model.contextLength ? `${model.contextLength.toLocaleString("de-DE")} Kontext` : "Kontext nicht gemeldet"}</span>
-          <span>{model.efforts.length ? `Thinking / Effort: ${model.efforts.join(", ")}` : model.reasoning ? "Thinking: vom Modell gesteuert" : "Kein konfigurierbares Thinking"}</span>
+          <span>{model.efforts.length ? model.reasoningControl === "toggle" ? "Thinking: an / aus" : `Thinking / Effort: ${model.efforts.map((value) => effortLabel(model, value)).join(", ")}` : model.reasoning ? "Thinking: immer aktiv" : "Kein konfigurierbares Thinking"}</span>
         </div>)}</div> : !catalog.isLoading && <div className="empty router-model-empty">Zen meldet derzeit keine kostenlosen Modelle.</div>}
         <small className="zen-privacy">Free-Modelle sind zeitlich begrenzt; Eingaben können laut OpenCode während der kostenlosen Phase zur Modellverbesserung verarbeitet werden. Keine vertraulichen Designs übermitteln.</small>
       </Card>}
       {catalog.data?.models.length ? <Card title="Standardmodell" sub="Dieses Modell wird für Gespräche, Designänderungen und den Neuaufbau aus Quellen verwendet.">
-        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{providerOrder.map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Thinking / Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.provider === "opencode-zen" && <option value="">Automatisch</option>}{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Thinking<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
+        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{providerOrder.map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>{selectedModel.reasoningControl === "toggle" ? "Thinking" : "Thinking / Effort"}<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.provider === "opencode-zen" && <option value="">Automatisch</option>}{selectedModel.efforts.map((value) => <option value={value} key={value}>{effortLabel(selectedModel, value)}</option>)}</select></label> : <label>Thinking<span className="read-only-field">{selectedModel?.provider === "opencode-zen" ? selectedModel.reasoning ? "Immer aktiv" : "Nicht unterstützt" : "Vom Modell gesteuert"}</span></label>}</div>
         <div className="modal-actions">{saveSelection.isSuccess && <Status kind="success">Gespeichert</Status>}<span/><Button variant="primary" disabled={!selectedModel || saveSelection.isPending} onClick={save}>{saveSelection.isPending ? "Wird gespeichert …" : "Standardmodell speichern"}</Button></div>
       </Card> : !catalog.isLoading && <Card title="Noch kein Modell verfügbar" sub="Verbinde OpenAI oder OpenRouter oder aktiviere OpenCode Zen Free, um ein Standardmodell auszuwählen."><span /></Card>}
       {catalog.data?.openrouterError && <p className="field-error">{catalog.data.openrouterError}</p>}
@@ -1602,13 +1603,13 @@ function Studio() {
                       {providerOrder.map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}
                     </select>
                     {runModel && runModel.efforts.length > 0 && <select
-                      aria-label="Thinking und Effort für den nächsten Lauf"
+                      aria-label={runModel.reasoningControl === "toggle" ? "Thinking für den nächsten Lauf" : "Thinking und Effort für den nächsten Lauf"}
                       value={runEffort}
                       disabled={chatRun.isPending}
                       onChange={(event) => setRunEffort(event.target.value)}
                     >
                       {runModel.provider === "opencode-zen" && <option value="">Automatisch</option>}
-                      {runModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}
+                      {runModel.efforts.map((value) => <option value={value} key={value}>{effortLabel(runModel, value)}</option>)}
                     </select>}
                   </>
                 ) : (

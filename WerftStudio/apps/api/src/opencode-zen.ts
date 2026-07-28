@@ -15,11 +15,24 @@ export type ZenModel = {
   maxOutputTokens?: number;
   efforts: string[];
   reasoning: boolean;
+  reasoningControl?: "toggle" | "effort";
 };
 
 const recordValue = (value: unknown): Record<string, unknown> | undefined => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 const numberValue = (value: unknown): number | undefined => typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 const fallbackName = (id: string) => id.split("-").map((part) => part ? part[0]!.toUpperCase() + part.slice(1) : part).join(" ");
+// Zen exposes these controls even though models.dev currently omits or narrows them.
+// Keep aliases such as DeepSeek low/medium hidden because they do not add a distinct tier.
+const verifiedThinkingToggles = new Set(["big-pickle", "mimo-v2.5-free", "nemotron-3-ultra-free", "north-mini-code-free"]);
+const verifiedThinkingDisable = new Set(["laguna-s-2.1-free", "ling-3.0-flash-free"]);
+
+export function withVerifiedZenReasoning(model: ZenModel): ZenModel {
+  const { reasoningControl: _oldControl, ...base } = model;
+  const reasoningControl = verifiedThinkingToggles.has(model.id) ? "toggle" as const : "effort" as const;
+  const efforts = model.reasoning && reasoningControl === "toggle" ? ["none", "high"] : [...model.efforts];
+  if (model.reasoning && verifiedThinkingDisable.has(model.id) && !efforts.includes("none")) efforts.unshift("none");
+  return { ...base, efforts, ...(model.reasoning && efforts.length ? { reasoningControl } : {}) };
+}
 
 export function normalizeZenFreeModels(availableValue: unknown, metadataValue: unknown): ZenModel[] {
   const availableRoot = recordValue(availableValue);
@@ -50,7 +63,7 @@ export function normalizeZenFreeModels(availableValue: unknown, metadataValue: u
     const contextLength = numberValue(limit?.context);
     const inputTokenLimit = numberValue(limit?.input);
     const maxOutputTokens = numberValue(limit?.output);
-    return [{
+    return [withVerifiedZenReasoning({
       provider: "opencode-zen",
       id,
       name: typeof metadata?.name === "string" && metadata.name.trim() ? metadata.name.trim() : fallbackName(id),
@@ -59,7 +72,7 @@ export function normalizeZenFreeModels(availableValue: unknown, metadataValue: u
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
       efforts,
       reasoning: metadata?.reasoning === true
-    }];
+    })];
   }).sort((left, right) => left.name.localeCompare(right.name));
 }
 
@@ -69,7 +82,9 @@ export function zenRequest(model: string, instructions: string, input: string, e
     messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
     stream,
     ...(maxTokens && maxTokens > 0 ? { max_tokens: Math.floor(maxTokens) } : {}),
-    ...(effort ? { reasoning_effort: effort } : {})
+    ...(model === "big-pickle" && effort === "none" ? { thinking: { type: "disabled" } } : {}),
+    ...(model === "big-pickle" && effort === "high" ? { thinking: { type: "enabled" } } : {}),
+    ...(model !== "big-pickle" && effort ? { reasoning_effort: effort } : {})
   };
 }
 
