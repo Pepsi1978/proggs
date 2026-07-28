@@ -1401,11 +1401,32 @@ fun SettingsScreen(
             SettingsSection("Sicherung") {
                 SettingRow(
                     "Google Drive",
-                    if (viewModel.backupEnabled) "Automatisch" else "Aus",
+                    if (viewModel.driveConnected) "Verbunden" else "Nicht verbunden",
                     supporting = viewModel.backupState,
-                    divider = false,
-                    statusColor = if (viewModel.backupEnabled) colors.success else colors.warning,
+                    statusColor = if (viewModel.driveConnected) colors.success else null,
                 )
+                SettingRow(
+                    "Jetzt sichern",
+                    value = if (viewModel.backupBusy) "…" else null,
+                    supporting = "Aufhänger, Skills und Verlauf hochladen",
+                    onClick = viewModel::backupNow,
+                    showChevron = !viewModel.backupBusy,
+                )
+                SettingRow(
+                    "Wiederherstellen",
+                    supporting = "Sicherung aus Google Drive einspielen",
+                    onClick = viewModel::restoreNow,
+                    showChevron = !viewModel.backupBusy,
+                    divider = viewModel.driveConnected,
+                )
+                if (viewModel.driveConnected) {
+                    SettingRow(
+                        "Verbindung trennen",
+                        onClick = viewModel::disconnectDrive,
+                        valueColor = colors.warning,
+                        divider = false,
+                    )
+                }
             }
             SettingsSection("Über") {
                 Text(

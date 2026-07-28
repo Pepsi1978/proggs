@@ -13,10 +13,10 @@ android {
         applicationId = "de.frank.perfectmoment"
         minSdk = 26
         targetSdk = 36
-        versionCode = 64
-        versionName = "0.1.63"
+        versionCode = 65
+        versionName = "0.1.64"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"29.07.2026, 00:21 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"29.07.2026, 00:40 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -80,6 +80,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.okhttp)
+    implementation(libs.play.services.auth)
     implementation(libs.security.crypto)
     implementation(libs.biometric)
     implementation(libs.fragment)

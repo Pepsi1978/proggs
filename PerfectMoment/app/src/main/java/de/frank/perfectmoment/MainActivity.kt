@@ -10,6 +10,8 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
@@ -94,6 +96,18 @@ class MainActivity : FragmentActivity() {
             val lockEnabled by viewModel.appLockEnabled.collectAsStateWithLifecycle()
             PerfectMomentTheme(theme) {
                 SystemWindowState(lockEnabled, viewModel.screen == AppScreen.SESSION)
+                // Google fragt die Freigabe für Drive in einem eigenen Bildschirm ab.
+                val consentLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartIntentSenderForResult(),
+                ) { viewModel.consentHandled() }
+                LaunchedEffect(viewModel.backupConsent) {
+                    viewModel.backupConsent?.let { sender ->
+                        consentLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                    }
+                }
+                LaunchedEffect(viewModel.screen) {
+                    if (viewModel.screen == AppScreen.SETTINGS) viewModel.refreshBackupState()
+                }
                 LaunchedEffect(viewModel.screen) {
                     if (viewModel.screen == AppScreen.SESSION && Build.VERSION.SDK_INT >= 33 &&
                         ContextCompat.checkSelfPermission(

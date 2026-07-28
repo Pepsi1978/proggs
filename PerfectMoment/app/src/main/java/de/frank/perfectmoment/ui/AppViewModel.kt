@@ -11,7 +11,9 @@ import androidx.lifecycle.viewModelScope
 import de.frank.perfectmoment.BuildConfig
 import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.audio.MicRecorder
+import de.frank.perfectmoment.backup.BackupRepository
 import de.frank.perfectmoment.backup.BackupStatus
+import de.frank.perfectmoment.backup.DriveAuth
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
@@ -245,9 +247,72 @@ class AppViewModel(
     val versionStand: String get() = BuildConfig.VERSION_BUMPED_AT
     val packageName: String get() = BuildConfig.APPLICATION_ID
 
-    /** Verlauf, Aufhänger und Skills werden von Android nach Google Drive gesichert. */
-    val backupEnabled: Boolean = true
-    val backupState: String get() = BackupStatus.describe(appContext)
+    /** Zustand der Google-Drive-Sicherung für den Einstellungs-Bildschirm. */
+    var driveConnected by mutableStateOf(false)
+        private set
+    var backupBusy by mutableStateOf(false)
+        private set
+    var backupState by mutableStateOf(BackupStatus.describe(appContext))
+        private set
+
+    /** Wird gesetzt, wenn Google die Freigabe abfragen will — die Activity zeigt sie an. */
+    var backupConsent by mutableStateOf<android.content.IntentSender?>(null)
+        private set
+
+    fun refreshBackupState() {
+        viewModelScope.launch {
+            driveConnected = container.backupRepository.isConnected()
+            backupState = BackupStatus.describe(appContext)
+        }
+    }
+
+    fun backupNow() = runBackupAction { repository ->
+        val summary = repository.backupNow()
+        "Gesichert: ${summary.hooks} Aufhänger, ${summary.skills} Skills, ${summary.sessions} Sitzungen"
+    }
+
+    fun restoreNow() = runBackupAction { repository ->
+        val summary = repository.restoreNow()
+        if (summary.sessions == 0 && summary.skills == 0 && summary.hooks == 0) {
+            "Die Sicherung war leer."
+        } else {
+            "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, ${summary.sessions} neue Sitzungen"
+        }
+    }
+
+    fun disconnectDrive() {
+        viewModelScope.launch {
+            container.backupRepository.disconnect()
+            driveConnected = false
+            message = "Die Verbindung zu Google Drive wurde getrennt."
+        }
+    }
+
+    fun consentHandled() {
+        backupConsent = null
+        refreshBackupState()
+    }
+
+    private fun runBackupAction(action: suspend (BackupRepository) -> String) {
+        if (backupBusy) return
+        viewModelScope.launch {
+            backupBusy = true
+            try {
+                message = action(container.backupRepository)
+                driveConnected = true
+                backupState = BackupStatus.describe(appContext)
+            } catch (consent: DriveAuth.NeedsConsent) {
+                // Google will die Freigabe zeigen — danach probiert der Nutzer erneut.
+                backupConsent = consent.intent
+                    .getParcelableExtra<android.app.PendingIntent>(DriveAuth.EXTRA_PENDING)
+                    ?.intentSender
+            } catch (error: Exception) {
+                message = error.message ?: "Die Sicherung hat nicht geklappt."
+            } finally {
+                backupBusy = false
+            }
+        }
+    }
     val activeSkill: SkillEntity?
         get() = skills.firstOrNull { it.id == activeSkillId } ?: skills.firstOrNull()
     val selectedVoice: String
