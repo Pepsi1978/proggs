@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+: getrennte Regeln für die Cloud-Sicherung (Google Drive) und die direkte
+  Geräteübertragung. Beide sichern nur perfect_moment.db mit Verlauf, Aufhängern und Skills.
+  Die verschlüsselten Einstellungen (Tokens, Schlüssel) bleiben in beiden Fällen draußen.
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
+        <include domain="database" path="perfect_moment.db" />
+        <include domain="database" path="perfect_moment.db-wal" />
+        <include domain="database" path="perfect_moment.db-shm" />
+
         <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
         <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
     </cloud-backup>
+
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
+        <include domain="database" path="perfect_moment.db" />
+        <include domain="database" path="perfect_moment.db-wal" />
+        <include domain="database" path="perfect_moment.db-shm" />
+
         <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
         <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
     </device-transfer>
 </data-extraction-rules>

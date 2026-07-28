@@ -13,10 +13,10 @@ android {
         applicationId = "de.frank.perfectmoment"
         minSdk = 26
         targetSdk = 36
-        versionCode = 63
-        versionName = "0.1.62"
+        versionCode = 64
+        versionName = "0.1.63"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"28.07.2026, 23:57 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"29.07.2026, 00:21 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -29,7 +29,17 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Instrumented tests install and uninstall the app under test. Giving them their own
+        // application id means they can never touch the real installation and its data.
+        create("uitest") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".uitest"
+            versionNameSuffix = "-uitest"
+            matchingFallbacks += listOf("debug")
+        }
     }
+
+    testBuildType = "uitest"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

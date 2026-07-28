@@ -351,7 +351,9 @@ fun StartScreen(
                 value = viewModel.topic,
                 onValueChange = viewModel::updateTopic,
                 placeholder = "Was möchtest du hören?",
-                modifier = Modifier.fillMaxWidth().heightIn(min = 144.dp, max = 180.dp).padding(horizontal = 24.dp),
+                // Startet zweizeilig (2 × 23.25dp Zeilenhöhe + 2 × 18dp Innenabstand) und
+                // wächst mit dem Text bis 180dp.
+                modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp, max = 180.dp).padding(horizontal = 24.dp),
                 contentPadding = PaddingValues(horizontal = 22.dp, vertical = 18.dp),
                 radius = 32,
             )
@@ -393,15 +395,16 @@ fun StartScreen(
                 ).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (!unlocked) {
+            // Nur der ChatGPT-Hinweis bleibt — er führt zur Lösung. Dass ein Thema fehlt,
+            // zeigt der gesperrte Knopf bereits.
+            if (!connected) {
                 Text(
-                    if (!connected) "Bitte zuerst mit ChatGPT verbinden" else "Bitte zuerst ein Thema wählen",
+                    "Bitte zuerst mit ChatGPT verbinden",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,
-                    modifier = Modifier.padding(bottom = 10.dp).then(
-                        if (!connected) Modifier.pmClickable { viewModel.navigate(AppScreen.CHAT_GPT) } else Modifier,
-                    ),
+                    modifier = Modifier.padding(bottom = 10.dp)
+                        .pmClickable { viewModel.navigate(AppScreen.CHAT_GPT) },
                 )
             }
             PrimaryButton(
@@ -1395,24 +1398,22 @@ fun SettingsScreen(
                     Segment("Wie System", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
                 }
             }
-            SettingsSection("Über") {
+            SettingsSection("Sicherung") {
                 SettingRow(
-                    "Version",
-                    "V.${viewModel.versionName} (${viewModel.versionStand})",
-                    valueFontFamily = JetBrainsMono,
-                    valueFontSize = 12,
-                )
-                SettingRow(
-                    "Paketname",
-                    viewModel.packageName,
-                    valueFontFamily = JetBrainsMono,
-                    valueFontSize = 12,
-                )
-                SettingRow(
-                    "Rohdaten",
-                    onClick = { viewModel.navigate(AppScreen.RAW_DATA) },
+                    "Google Drive",
+                    if (viewModel.backupEnabled) "Automatisch" else "Aus",
+                    supporting = viewModel.backupState,
                     divider = false,
-                    showChevron = true,
+                    statusColor = if (viewModel.backupEnabled) colors.success else colors.warning,
+                )
+            }
+            SettingsSection("Über") {
+                Text(
+                    "V ${viewModel.versionName} (${viewModel.versionStand})",
+                    color = colors.text2,
+                    fontFamily = JetBrainsMono,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
                 )
             }
         }

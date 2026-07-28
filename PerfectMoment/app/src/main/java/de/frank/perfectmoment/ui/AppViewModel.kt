@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import de.frank.perfectmoment.BuildConfig
 import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.audio.MicRecorder
+import de.frank.perfectmoment.backup.BackupStatus
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
@@ -243,6 +244,10 @@ class AppViewModel(
     val versionName: String get() = BuildConfig.VERSION_NAME
     val versionStand: String get() = BuildConfig.VERSION_BUMPED_AT
     val packageName: String get() = BuildConfig.APPLICATION_ID
+
+    /** Verlauf, Aufhänger und Skills werden von Android nach Google Drive gesichert. */
+    val backupEnabled: Boolean = true
+    val backupState: String get() = BackupStatus.describe(appContext)
     val activeSkill: SkillEntity?
         get() = skills.firstOrNull { it.id == activeSkillId } ?: skills.firstOrNull()
     val selectedVoice: String

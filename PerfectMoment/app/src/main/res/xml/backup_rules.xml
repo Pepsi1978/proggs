@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sichert genau die Inhalte, die der Nutzer selbst angelegt hat: Verlauf, Gesprächsaufhänger
+  und Skills liegen alle in perfect_moment.db.
+
+  Alles andere bleibt bewusst draußen — vor allem die EncryptedSharedPreferences mit den
+  Codex-Tokens und dem Google-Schlüssel: deren Masterschlüssel liegt im Keystore des Geräts
+  und wird nicht mitgesichert, ein Restore würde also nur unlesbare Daten zurückspielen.
+-->
 <full-backup-content>
-    <exclude domain="root" path="." />
-    <exclude domain="file" path="." />
-    <exclude domain="database" path="." />
+    <include domain="database" path="perfect_moment.db" />
+    <include domain="database" path="perfect_moment.db-wal" />
+    <include domain="database" path="perfect_moment.db-shm" />
+
     <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
     <exclude domain="external" path="." />
+    <exclude domain="root" path="." />
 </full-backup-content>
