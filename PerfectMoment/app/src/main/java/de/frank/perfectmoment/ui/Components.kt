@@ -1,6 +1,5 @@
 package de.frank.perfectmoment.ui
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -10,13 +9,15 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.InteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -62,17 +63,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.node.DelegatableNode
-import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -94,65 +93,124 @@ import de.frank.perfectmoment.ui.theme.PmTextStyles
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlinx.coroutines.launch
 
 /**
- * Press feedback of the design:
- * `transition: 240ms cubic-bezier(0.2, 0, 0, 1)` towards `scale(0.985)` and
- * `filter: brightness(1.06) saturate(1.05)`.
+ * Touch feedback of the design. On a phone the finger takes the role the mouse pointer has in the
+ * design prototype, so pressing an element plays what the design shows on hover *and* on active:
  *
- * Implemented as an [IndicationNodeFactory] so the press animation runs entirely in the draw phase —
- * pressing a button never recomposes anything. Costs nothing while the button is idle.
+ * - cards ([lift]): `translate: 0 -2px` and `box-shadow: 0 18px 44px accent 13%` — the card rises
+ *   and glows,
+ * - buttons: `scale: 0.985`,
+ * - everything: `filter: brightness(1.08) saturate(1.06)`,
+ * - the `:active` outline in gold (or [pressBorder] amber), 3px,
+ *
+ * all over `transition: 240ms cubic-bezier(0.2, 0, 0, 1)`.
+ *
+ * Put this BEFORE the surface modifiers in a chain (`Modifier.size(…).pmClickable(…).pmGlassSurface(…)`),
+ * otherwise it only transforms the inner content instead of the whole card.
  */
-private object PmPressIndication : IndicationNodeFactory {
-    override fun create(interactionSource: InteractionSource): DelegatableNode =
-        PmPressNode(interactionSource)
-
-    override fun hashCode(): Int = "PmPressIndication".hashCode()
-
-    override fun equals(other: Any?): Boolean = other === this
+@Composable
+fun Modifier.pmClickable(
+    enabled: Boolean = true,
+    role: Role? = null,
+    shape: Shape = RectangleShape,
+    lift: Boolean = false,
+    pressBorder: Color? = null,
+    onClick: () -> Unit,
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val press = animateFloatAsState(
+        targetValue = if (pressed && enabled) 1f else 0f,
+        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "Druck",
+    )
+    return clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        enabled = enabled,
+        role = role,
+        onClick = onClick,
+    ).pmPressEffect(press, shape, lift, pressBorder)
 }
 
-private class PmPressNode(
-    private val interactionSource: InteractionSource,
-) : Modifier.Node(), DrawModifierNode {
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun Modifier.pmCombinedClickable(
+    enabled: Boolean = true,
+    shape: Shape = RectangleShape,
+    lift: Boolean = false,
+    pressBorder: Color? = null,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val press = animateFloatAsState(
+        targetValue = if (pressed && enabled) 1f else 0f,
+        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "Druck",
+    )
+    return combinedClickable(
+        interactionSource = interactionSource,
+        indication = null,
+        enabled = enabled,
+        onClick = onClick,
+        onLongClick = onLongClick,
+    ).pmPressEffect(press, shape, lift, pressBorder)
+}
 
-    private val press = Animatable(0f)
-
-    override fun onAttach() {
-        coroutineScope.launch {
-            var active = 0
-            interactionSource.interactions.collect { interaction ->
-                when (interaction) {
-                    is PressInteraction.Press -> active++
-                    is PressInteraction.Release, is PressInteraction.Cancel -> active--
-                }
-                val target = if (active > 0) 1f else 0f
-                if (press.targetValue != target) {
-                    launch {
-                        press.animateTo(
-                            targetValue = target,
-                            animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    override fun ContentDrawScope.draw() {
+@Composable
+private fun Modifier.pmPressEffect(
+    press: State<Float>,
+    shape: Shape,
+    lift: Boolean,
+    pressBorder: Color?,
+): Modifier {
+    val colors = LocalPmColors.current
+    val glow = colors.gold
+    val border = pressBorder ?: colors.goldHi
+    return graphicsLayer {
         val progress = press.value
-        if (progress <= 0f) {
-            drawContent()
-            return
+        if (progress <= 0f) return@graphicsLayer
+        if (lift) {
+            translationY = -2.dp.toPx() * progress
+            shadowElevation = 18.dp.toPx() * progress
+            ambientShadowColor = glow
+            spotShadowColor = glow
+            this.shape = shape
+            clip = false
+        } else {
+            val factor = 1f - 0.015f * progress
+            scaleX = factor
+            scaleY = factor
         }
-        val factor = 1f - 0.015f * progress
-        val paint = Paint().apply { colorFilter = pressColorFilter(progress) }
-        scale(factor, factor) {
-            this@draw.drawIntoCanvas { canvas ->
+    }.drawWithCache {
+        val outlinePath = when (val outline = shape.createOutline(size, layoutDirection, this)) {
+            is Outline.Rectangle -> null
+            is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
+            is Outline.Generic -> outline.path
+        }
+        val paint = Paint()
+        val stroke = Stroke(3.dp.toPx())
+        onDrawWithContent {
+            val progress = press.value
+            if (progress <= 0f) {
+                drawContent()
+                return@onDrawWithContent
+            }
+            paint.colorFilter = pressColorFilter(progress)
+            drawIntoCanvas { canvas ->
                 canvas.saveLayer(Rect(Offset.Zero, size), paint)
-                this@draw.drawContent()
+                drawContent()
                 canvas.restore()
+            }
+            // :active outline — 3px in gold / amber
+            val outlineColor = border.copy(alpha = border.alpha * progress)
+            if (outlinePath != null) {
+                drawPath(outlinePath, outlineColor, style = stroke)
+            } else {
+                drawRect(outlineColor, style = stroke)
             }
         }
     }
@@ -189,31 +247,6 @@ private fun pressColorFilter(progress: Float): ColorFilter {
     }
     return ColorFilter.colorMatrix(matrix)
 }
-
-fun Modifier.pmClickable(
-    enabled: Boolean = true,
-    role: Role? = null,
-    onClick: () -> Unit,
-): Modifier = clickable(
-    interactionSource = null,
-    indication = PmPressIndication,
-    enabled = enabled,
-    role = role,
-    onClick = onClick,
-)
-
-@OptIn(ExperimentalFoundationApi::class)
-fun Modifier.pmCombinedClickable(
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-): Modifier = combinedClickable(
-    interactionSource = null,
-    indication = PmPressIndication,
-    enabled = enabled,
-    onClick = onClick,
-    onLongClick = onLongClick,
-)
 
 fun Modifier.pmHeaderSurface(colors: PmColors): Modifier = drawWithCache {
     val background = Brush.verticalGradient(
@@ -389,6 +422,7 @@ fun PrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(height.dp)
+            .pmClickable(enabled = enabled, role = Role.Button, shape = shape, onClick = onClick)
             .shadow(
                 elevation = if (enabled) 12.dp else 0.dp,
                 shape = shape,
@@ -424,8 +458,7 @@ fun PrimaryButton(
                         linePx,
                     )
                 }
-            }
-            .pmClickable(enabled = enabled, role = Role.Button, onClick = onClick),
+            },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -448,8 +481,8 @@ fun OutlineButton(
 ) {
     Box(
         modifier = modifier.fillMaxWidth().height(height.dp)
-            .border(1.dp, color.copy(alpha = 0.42f), RoundedCornerShape((height / 2).dp))
-            .pmClickable(role = Role.Button, onClick = onClick),
+            .pmClickable(role = Role.Button, shape = RoundedCornerShape((height / 2).dp), onClick = onClick)
+            .border(1.dp, color.copy(alpha = 0.42f), RoundedCornerShape((height / 2).dp)),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = color, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
@@ -467,7 +500,15 @@ fun ParameterCard(
     horizontalPadding: Int = 12,
 ) {
     val colors = LocalPmColors.current
-    PmCard(modifier.pmClickable(onClick = onClick), radius = radius) {
+    // .pm-start__parameter — rises and glows on touch
+    PmCard(
+        modifier.pmClickable(
+            shape = RoundedCornerShape(radius.dp),
+            lift = true,
+            onClick = onClick,
+        ),
+        radius = radius,
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(
                 horizontal = horizontalPadding.dp,
@@ -614,6 +655,7 @@ fun Segment(
     val shape = RoundedCornerShape(22.dp)
     Box(
         modifier = modifier.height(44.dp)
+            .pmClickable(role = Role.RadioButton, shape = shape, lift = true, onClick = onClick)
             .then(
                 if (selected) {
                     Modifier.shadow(
@@ -627,8 +669,7 @@ fun Segment(
                 },
             )
             .background(if (selected) colors.gold else colors.surface2, shape)
-            .semantics { this.selected = selected }
-            .pmClickable(role = Role.RadioButton, onClick = onClick),
+            .semantics { this.selected = selected },
         contentAlignment = Alignment.Center,
     ) {
         Text(

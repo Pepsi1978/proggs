@@ -290,7 +290,9 @@ fun StartScreen(
                     val shape = RoundedCornerShape(32.dp)
                     val iconColor = hookDisplayColor(hook, colors.dark)
                     Column(
+                        // .pm-start__hook — rises and glows on touch
                         Modifier.size(168.dp)
+                            .pmClickable(shape = shape, lift = true) { viewModel.selectHook(hook) }
                             .then(
                                 if (selected) Modifier.shadow(
                                     14.dp,
@@ -301,7 +303,6 @@ fun StartScreen(
                             )
                             .pmGlassSurface(colors, 32, if (selected) colors.surface2 else colors.surface)
                             .border(3.dp, if (selected) colors.goldHi else Color.Transparent, shape)
-                            .pmClickable { viewModel.selectHook(hook) }
                             .padding(22.dp),
                     ) {
                         Box(
@@ -1159,7 +1160,10 @@ private fun DismissibleHistoryRow(
 @Composable
 private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () -> Unit) {
     val colors = LocalPmColors.current
-    PmCard(Modifier.fillMaxWidth().pmClickable(onClick = onClick)) {
+    PmCard(
+        Modifier.fillMaxWidth()
+            .pmClickable(shape = RoundedCornerShape(32.dp), lift = true, onClick = onClick),
+    ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rank != null) {
                 val rankColor = when (rank) {
@@ -1233,7 +1237,12 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)
                         ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
                     }
-                    PmCard(Modifier.fillMaxWidth().padding(top = 12.dp).pmClickable { viewModel.toggleRandomReplay() }) {
+                    PmCard(
+                        Modifier.fillMaxWidth().padding(top = 12.dp)
+                            .pmClickable(shape = RoundedCornerShape(32.dp), lift = true) {
+                                viewModel.toggleRandomReplay()
+                            },
+                    ) {
                         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Zufällige Reihenfolge", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
@@ -1576,7 +1585,10 @@ fun HooksScreen(viewModel: AppViewModel) {
                             scaleX = cardScale
                             scaleY = cardScale
                         }
-                        .pmClickable { viewModel.openHookEditor(hook) },
+                        // .pm-hooks-card
+                        .pmClickable(shape = RoundedCornerShape(32.dp), lift = true) {
+                            viewModel.openHookEditor(hook)
+                        },
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -1715,15 +1727,19 @@ fun SkillsScreen(viewModel: AppViewModel) {
                 val selected = viewModel.activeSkill?.id == skill.id
                 val shape = RoundedCornerShape(32.dp)
                 PmCard(
-                    Modifier.fillMaxWidth().then(
-                        if (selected) Modifier.shadow(
-                            12.dp,
-                            shape,
-                            ambientColor = colors.gold.copy(alpha = 0.24f),
-                            spotColor = colors.gold.copy(alpha = 0.24f),
-                        ).border(3.dp, colors.goldHi, shape) else Modifier,
-                    ).semantics { this.selected = selected }
-                        .pmClickable(role = Role.RadioButton) { viewModel.selectSkill(skill) },
+                    // .pm-skills-card
+                    Modifier.fillMaxWidth()
+                        .pmClickable(role = Role.RadioButton, shape = shape, lift = true) {
+                            viewModel.selectSkill(skill)
+                        }
+                        .then(
+                            if (selected) Modifier.shadow(
+                                12.dp,
+                                shape,
+                                ambientColor = colors.gold.copy(alpha = 0.24f),
+                                spotColor = colors.gold.copy(alpha = 0.24f),
+                            ).border(3.dp, colors.goldHi, shape) else Modifier,
+                        ).semantics { this.selected = selected },
                     color = if (selected) colors.surface2 else colors.surface,
                 ) {
                     Row(
@@ -1871,18 +1887,24 @@ fun VoiceScreen(viewModel: AppViewModel) {
                 val starred = voice.name in setOf("Seraphina", "Florian") || voice.id in viewModel.favoriteVoiceIds
                 val shape = RoundedCornerShape(20.dp)
                 PmCard(
-                    Modifier.fillMaxWidth().height(60.dp).then(
-                        if (selected) Modifier.shadow(
-                            12.dp,
-                            shape,
-                            ambientColor = colors.gold.copy(alpha = 0.24f),
-                            spotColor = colors.gold.copy(alpha = 0.24f),
-                        ).border(3.dp, colors.goldHi, shape) else Modifier,
-                    ).semantics { this.selected = selected }.pmCombinedClickable(
-                        enabled = !noKey,
-                        onClick = { viewModel.selectVoice(voice) },
-                        onLongClick = { viewModel.toggleFavoriteVoice(voice) },
-                    ),
+                    // .werft-voice-screen__voice — amber outline on touch
+                    Modifier.fillMaxWidth().height(60.dp)
+                        .pmCombinedClickable(
+                            enabled = !noKey,
+                            shape = shape,
+                            lift = true,
+                            pressBorder = colors.amber,
+                            onClick = { viewModel.selectVoice(voice) },
+                            onLongClick = { viewModel.toggleFavoriteVoice(voice) },
+                        )
+                        .then(
+                            if (selected) Modifier.shadow(
+                                12.dp,
+                                shape,
+                                ambientColor = colors.gold.copy(alpha = 0.24f),
+                                spotColor = colors.gold.copy(alpha = 0.24f),
+                            ).border(3.dp, colors.goldHi, shape) else Modifier,
+                        ).semantics { this.selected = selected },
                     radius = 20,
                     color = if (selected) colors.surface2 else colors.surface,
                 ) {
@@ -2095,7 +2117,10 @@ private fun WaitingSpinner() {
 private fun SmallPill(text: String, onClick: () -> Unit) {
     val colors = LocalPmColors.current
     Box(
-        Modifier.height(48.dp).background(colors.surface2, RoundedCornerShape(24.dp)).pmClickable(onClick = onClick).padding(horizontal = 20.dp),
+        Modifier.height(48.dp)
+            .pmClickable(role = Role.Button, shape = RoundedCornerShape(24.dp), onClick = onClick)
+            .background(colors.surface2, RoundedCornerShape(24.dp))
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp) }
 }
