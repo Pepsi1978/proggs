@@ -13,10 +13,10 @@ android {
         applicationId = "de.frank.perfectmoment"
         minSdk = 26
         targetSdk = 36
-        versionCode = 61
-        versionName = "0.1.60"
+        versionCode = 62
+        versionName = "0.1.61"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"28.07.2026, 23:44 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"28.07.2026, 23:52 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -79,4 +79,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation("org.json:json:20240303")
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
