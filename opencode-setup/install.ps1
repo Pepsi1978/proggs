@@ -18,7 +18,7 @@ param(
   [switch]$SkipLauncherBuild
 )
 
-$InstallerVersion = 'v1.2.1 – 27.07.2026 21:55'
+$InstallerVersion = 'v1.2.2 – 28.07.2026 20:40'
 $ErrorActionPreference = 'Stop'
 
 $Src = $PSScriptRoot                                  # opencode-setup\

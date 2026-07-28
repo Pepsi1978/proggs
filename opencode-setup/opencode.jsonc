@@ -12,7 +12,10 @@
   // Direktive #3 wird bewusst NICHT hier geladen (waere sonst IMMER im Kontext).
   // Stattdessen laedt der Skill "resilient-bugfixing" den Volltext on-demand —
   // nur wenn wirklich ein Bug bearbeitet wird (token-sparend, Frank-Wunsch 2026-06-18).
-  "instructions": ["~/.config/opencode/AGENTS.md"],
+  "instructions": [
+    "~/.config/opencode/AGENTS.md",
+    "~/proggs/opencode-setup/browser-policy.md"
+  ],
 
   // Punkt 2 — Kontext-Kompaktierung entschaerfen (gegen "nach Compress wieder Englisch"):
   // prune entfernt alte Tool-Ausgaben, reserved haelt mehr Puffer frei -> spaeter + seltener komprimiert.
@@ -75,9 +78,23 @@
   //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
-    // Offizieller Google-MCP fuer Browserbedienung, Console, Network und Performance.
-    // Verbindet sich nach Chromes Freigabe mit dem bereits laufenden persoenlichen Stable-Profil.
+    // Standard: eigener persistenter Chrome, der ohne Benutzerfreigabe gestartet wird.
     "chrome-devtools": {
+      "type": "local",
+      "command": [
+        "npx", "-y", "chrome-devtools-mcp@1.6.0",
+        "--channel=stable",
+        "--no-usage-statistics",
+        "--no-performance-crux",
+        "--redact-network-headers"
+      ],
+      "enabled": true,
+      "timeout": 120000
+    },
+
+    // Rueckfall fuer bereits angemeldete Seiten/Tabs im persoenlichen Chrome.
+    // Erst bei Werkzeugnutzung verbinden und nur nach Franks ausdruecklicher Bestaetigung verwenden.
+    "chrome-personal": {
       "type": "local",
       "command": [
         "npx", "-y", "chrome-devtools-mcp@1.6.0",
