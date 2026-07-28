@@ -309,7 +309,7 @@ fun BreathingBackground(
                         end = Offset(size.width * 1.4f + travel, 0f),
                     ),
                     alpha = auroraOpacity,
-                    blendMode = BlendMode.Softlight,
+                    blendMode = BlendMode.SrcOver,
                 )
                 drawRect(
                     brush = Brush.radialGradient(
@@ -323,7 +323,7 @@ fun BreathingBackground(
                         radius = size.maxDimension * 0.66f,
                     ),
                     alpha = auroraOpacity,
-                    blendMode = BlendMode.Softlight,
+                    blendMode = BlendMode.SrcOver,
                 )
         }
     }
