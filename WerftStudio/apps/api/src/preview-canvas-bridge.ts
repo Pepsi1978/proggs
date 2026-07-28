@@ -806,11 +806,17 @@ const bridgeScript = `<script ${bridgeMarker}>
     const root = document.documentElement;
     const previousTheme = root.getAttribute("data-werft-theme");
     const previousLegacy = root.getAttribute("data-theme");
+    // Gemessen wird am DESIGN, nicht am Rahmen. Die Bühne gibt dem <body> eine feste
+    // Hintergrundfarbe; an ihr sah jedes Umschalten wirkungslos aus, obwohl das Design einwandfrei
+    // umschaltet. Die Folge war doppelt schädlich: eine falsche Meldung „wirkt nicht" UND ein
+    // nachgereichter Farbblock aus den Originalquellen, der jede Änderung am Design sofort wieder
+    // überschrieben hat. Maßgeblich sind deshalb der sichtbare Bildschirm und seine ersten Elemente.
+    const screen = document.querySelector('.werft-screen[data-active="true"]') || document.querySelector(".werft-screen") || document.body || root;
+    const targets = [screen].concat([].slice.call(screen.querySelectorAll("*"), 0, 12));
     const sample = (theme) => {
       root.setAttribute("data-werft-theme", theme.id);
       root.setAttribute("data-theme", theme.kind === "dark" ? "dark" : "light");
-      const style = getComputedStyle(document.body || root);
-      return style.backgroundColor + "|" + style.color;
+      return targets.map((node) => { const style = getComputedStyle(node); return style.backgroundColor + "|" + style.color + "|" + style.borderTopColor; }).join(";");
     };
     try { return sample(themeList[0]) !== sample(themeList[1]); }
     catch (error) { return true; }
