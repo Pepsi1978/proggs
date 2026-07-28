@@ -29,6 +29,13 @@
       "when": 1785187064586,
       "tag": "0003_add-provider-default",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785243000000,
+      "tag": "0004_design_snapshots",
+      "breakpoints": true
     }
   ]
 }

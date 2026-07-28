@@ -7,7 +7,7 @@ import { api, apiEventStream, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
 import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
-import { chatStepText, designFileLabel } from "./chat-progress";
+import { chatStepText, designFileLabel, providerHealth } from "./chat-progress";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -30,7 +30,7 @@ type ImportFile = { path: string; size: number; mime: string };
 // Fuer jedes Geraeteformat kann eine eigene Fassung des Designs aufgebaut sein; ohne sie zeigt die
 // Buehne die Grundfassung, die die zusaetzliche Flaeche nicht nutzt.
 type DesignVariant = { width: number; height: number; previewPath: string };
-type ProjectImport = { imported: false } | { imported: true; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; variants: DesignVariant[]; previewPath?: string };
+type ProjectImport = { imported: false } | { imported: true; undo?: { label: string; createdAt: string }; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; variants: DesignVariant[]; previewPath?: string };
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
 type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number };
 type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null; attempts?: number; heartbeatAt?: string };
@@ -1283,6 +1283,18 @@ function Studio() {
       await client.invalidateQueries({ queryKey: ["themes", projectId] });
     }
   });
+  // Der Rückweg aus der letzten KI-Änderung. Er macht aus „du hast freie Hand" einen gefahrlosen
+  // Versuch: gefällt das Ergebnis nicht, ist der vorherige Stand einen Klick entfernt.
+  const undoRun = useMutation({
+    mutationFn: () => api<{ revision: number; label: string; restoredFiles: string[] }>(`/projects/${projectId}/design/undo`, { method: "POST", body: JSON.stringify({}) }),
+    onSuccess: async (data) => {
+      setMessages((all) => [...all, { role: "assistant", text: `↩ Zurückgenommen: „${data.label}". Der Stand davor ist wiederhergestellt (${[...new Set(data.restoredFiles.map(designFileLabel))].join(", ")}).` }]);
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+      await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+      await client.invalidateQueries({ queryKey: ["themes", projectId] });
+    },
+    onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Rücknahme nicht möglich: ${error.message}` : "Die Rücknahme ist fehlgeschlagen." }])
+  });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).matches("input,textarea,select,[contenteditable]")) return;
@@ -1499,6 +1511,10 @@ function Studio() {
               {/* Der Umfang wird serverseitig aus dem Wunsch bestimmt — hier stand vorher „Bildschirm X",
                   auch wenn der Wunsch das ganze Design meinte. Angezeigt wird deshalb, WOMIT gearbeitet
                   wird und was gerade sichtbar ist, statt eine Behauptung über den Umfang. */}
+              {!chatRun.isPending && imported.data?.imported && imported.data.undo && <div className="chat-undo">
+                <span>Letzte Änderung: „{imported.data.undo.label}"</span>
+                <button type="button" onClick={() => undoRun.mutate()} disabled={undoRun.isPending}><Undo2 /> {undoRun.isPending ? "Wird zurückgenommen …" : "Rückgängig"}</button>
+              </div>}
               {chatRun.isPending && <WorkingIndicator
                 detail={`${runModel?.name ?? "Standardmodell"}${visibleScreen ? ` · sichtbar: ${visibleScreen}` : ""}`}
                 step={chatStep}
@@ -1555,6 +1571,9 @@ function Studio() {
                 )}
                 <Button variant="primary" className="composer-send" aria-label="Senden" title="Senden" disabled={chatRun.isPending || !chat.trim()}><Send /></Button>
               </footer>
+              {/* Der Zustand des Anbieters stand bisher nur in den Daten. Sichtbar erspart er einen
+                  abgebrochenen Lauf — oder erklärt ihn wenigstens. */}
+              {providerHealth(runModel?.endpoint) && <small className="composer-health">⚠ {providerHealth(runModel?.endpoint)}</small>}
             </form>}
           </aside>
         )}

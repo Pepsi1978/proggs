@@ -9,7 +9,7 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { can, type Role } from "@werft/authz";
 import { applyOperationsSchema, createProjectSchema, designDocumentSchema, type DesignDocument } from "@werft/contracts";
-import { auditEvents, createDatabase, designOperations, drafts, jobs, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
+import { auditEvents, createDatabase, designOperations, designSnapshots, drafts, jobs, memberships, organizations, outboxEvents, projectImports, projects, providerConnections, userPreferences, users, versions } from "@werft/database";
 import { applyDesignOperations, validateDesignReferences } from "@werft/design-model";
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import Fastify, { type FastifyRequest } from "fastify";
@@ -407,7 +407,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.26.0-20260728.1445" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.27.0-20260728.1453" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -680,6 +680,7 @@ app.delete("/api/v1/projects/:projectId", async (request) => {
   if (imported) {
     await Promise.allSettled(imported.manifest.map((file) => objectStore.removeObject(env.S3_BUCKET, `${imported.objectPrefix}${file.path}`)));
     await db.delete(projectImports).where(eq(projectImports.projectId, projectId));
+    await db.delete(designSnapshots).where(eq(designSnapshots.projectId, projectId));
   }
   await db.update(projects).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(projects.id, projectId));
   await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "project.deleted", targetType: "project", targetId: projectId, result: "success", metadata: { name: project.name, importedFiles: imported?.fileCount ?? 0 }, correlationId: request.id });
@@ -706,7 +707,8 @@ app.get("/api/v1/projects/:projectId/import", async (request) => {
   const previewBase = `/api/v1/previews/${projectId}/${previewToken(projectId)}/`;
   const variants = designVariantsOf(row.imported.manifest.map((file) => file.path))
     .map(({ width, height, path }) => ({ width, height, previewPath: `${previewBase}${path}?revision=${row.revision}` }));
-  return { imported: true as const, entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, variants, ...(row.imported.entryPath ? { previewPath: `${previewBase}${row.imported.entryPath}?revision=${row.revision}` } : {}) };
+  const undo = (await db.select({ label: designSnapshots.label, createdAt: designSnapshots.createdAt }).from(designSnapshots).where(and(eq(designSnapshots.projectId, projectId), eq(designSnapshots.organizationId, actor.organizationId))).orderBy(desc(designSnapshots.createdAt)).limit(1))[0];
+  return { imported: true as const, ...(undo ? { undo: { label: undo.label, createdAt: undo.createdAt.toISOString() } } : {}), entryPath: row.imported.entryPath, reconstructed, fileCount: row.imported.fileCount, totalBytes: row.imported.totalBytes, revision: row.revision, files: row.imported.manifest, previewWidth: profile.width, previewHeight: profile.height, previewDevice: profile.device, variants, ...(row.imported.entryPath ? { previewPath: `${previewBase}${row.imported.entryPath}?revision=${row.revision}` } : {}) };
 });
 // Alle Erscheinungen eines Projekts — Hell, Dunkel und eigene Farbthemes — deterministisch aus den
 // Quellen gemessen, ohne KI. Ein Design, das vor dieser Fassung aufgebaut wurde, kennt nur EIN Theme;
@@ -969,8 +971,11 @@ type ChatRoundProbe = { round: number; provider: ProviderId; model: string; dura
 // Das Schreiben einer Runde: eine Transaktion, vorher Struktur-Pruefung je Datei, bei einem Fehler
 // wird der vorherige Objektstand zurueckgerollt. Eine Datei, die die Pruefung nicht besteht, wird
 // GAR NICHT geschrieben — ein Fix darf nie Funktionalitaet aus dem Design entfernen.
-async function applyChatWrites(actor: Actor, projectId: string, correlationId: string, parsed: ParsedChatResponse, settings: Record<string, unknown>) {
-  const previous: Array<{ key: string; mime: string; data: Buffer }> = [];
+// Höchstens fünf Rückschritte je Projekt, und nur solange der gesicherte Stand handlich bleibt:
+// ein Design von 278 KB kostet so gut 1,4 MB — ein Vielfaches davon wäre den Rückweg nicht wert.
+const maxDesignSnapshots = 5, maxSnapshotBytes = 8 * 1024 * 1024;
+async function applyChatWrites(actor: Actor, projectId: string, correlationId: string, parsed: ParsedChatResponse, settings: Record<string, unknown>, label: string) {
+  const previous: Array<{ key: string; path: string; mime: string; data: Buffer }> = [];
   const reports: FileReport[] = [];
   const applied: string[] = [];
   try {
@@ -982,7 +987,7 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
       const writeFile = async (path: string, mime: string, text: string, previousData: Buffer) => {
         const key = `${current.imported.objectPrefix}${path}`;
         const data = Buffer.from(text, "utf8");
-        previous.push({ key, mime, data: previousData });
+        previous.push({ key, path, mime, data: previousData });
         await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": mime });
         manifest = manifest.map((file) => (file.path === path ? { ...file, size: data.byteLength } : file));
         applied.push(path);
@@ -1004,6 +1009,13 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
       }
       if (!applied.length) return { revision: current.revision, reports, applied };
       const revision = current.revision + 1;
+      // Der Rückweg: der Stand VOR dieser Änderung wird gesichert, bevor die neue Fassung gilt.
+      const snapshotBytes = previous.reduce((sum, entry) => sum + entry.data.byteLength, 0);
+      if (snapshotBytes <= maxSnapshotBytes) {
+        await tx.insert(designSnapshots).values({ id: uuidv7(), organizationId: actor.organizationId, projectId, revision: current.revision, label, files: previous.map((entry) => ({ path: entry.path, mime: entry.mime, content: entry.data.toString("utf8") })) });
+        const keep = await tx.select({ id: designSnapshots.id }).from(designSnapshots).where(eq(designSnapshots.projectId, projectId)).orderBy(desc(designSnapshots.createdAt)).limit(maxDesignSnapshots);
+        await tx.delete(designSnapshots).where(and(eq(designSnapshots.projectId, projectId), sql`${designSnapshots.id} <> all(${keep.map((row) => row.id)})`));
+      }
       await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
       await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
       await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, revision, ...settings }, correlationId });
@@ -1014,6 +1026,45 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
     throw error;
   }
 }
+
+// Der Rückweg aus einer KI-Änderung. Ohne ihn ist „du hast freie Hand" ein Risiko, das man nur
+// ungern eingeht; mit ihm wird aus jedem Versuch ein gefahrloser Versuch.
+app.post("/api/v1/projects/:projectId/design/undo", async (request) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  const restored: string[] = [];
+  const written: Array<{ key: string; mime: string; data: Buffer }> = [];
+  try {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
+      const snapshot = (await tx.select().from(designSnapshots).where(and(eq(designSnapshots.projectId, projectId), eq(designSnapshots.organizationId, actor.organizationId))).orderBy(desc(designSnapshots.createdAt)).limit(1))[0];
+      if (!snapshot) fail("UNDO_NOT_AVAILABLE", 409, "Es gibt keinen gespeicherten Stand, zu dem zurückgegangen werden könnte.");
+      const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+      if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+      let manifest = current.imported.manifest;
+      for (const file of snapshot.files) {
+        const key = `${current.imported.objectPrefix}${file.path}`;
+        const data = Buffer.from(file.content, "utf8");
+        // Was gerade dort steht, wird vorher gemerkt: bricht der Vorgang ab, ist nichts halb erledigt.
+        written.push({ key, mime: file.mime, data: await readObject(key).catch(() => Buffer.alloc(0)) });
+        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": file.mime });
+        manifest = manifest.map((entry) => (entry.path === file.path ? { ...entry, size: data.byteLength } : entry));
+        restored.push(file.path);
+      }
+      const revision = current.revision + 1;
+      await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
+      await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
+      await tx.delete(designSnapshots).where(eq(designSnapshots.id, snapshot.id));
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.undo", targetType: "project", targetId: projectId, result: "success", metadata: { files: restored, label: snapshot.label, revision }, correlationId: request.id });
+      return { revision, label: snapshot.label };
+    });
+    request.log.info({ event: "design.undo", projectId, files: restored.length, revision: result.revision }, "KI-Änderung zurückgenommen");
+    return { ...result, restoredFiles: restored };
+  } catch (error) {
+    await Promise.allSettled(written.filter((entry) => entry.data.byteLength).map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
+    throw error;
+  }
+});
 
 // Wie viel Eingabe vertraegt das gewaehlte Modell wirklich? Danach richtet sich, wie viele
 // Projektdateien mitgegeben werden — statt eines festen Limits, das grosse Designs abgewiesen hat.
@@ -1133,7 +1184,7 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
       probes.push({ round: round + 1, provider: result.provider, model: result.model, durationMs: result.durationMs, outputChars: result.outputChars, truncated, salvaged: parsed.salvaged, editsApplied: 0, editsFailed: 0, filesWritten: 0 });
       break;
     }
-    const applyResult = await applyChatWrites(actor, projectId, request.id, parsed, settings);
+    const applyResult = await applyChatWrites(actor, projectId, request.id, parsed, settings, message.trim().slice(0, 160));
     revision = applyResult.revision;
     for (const path of applyResult.applied) changedFiles.add(path);
     const outcomes = applyResult.reports.flatMap((report) => report.outcomes);
