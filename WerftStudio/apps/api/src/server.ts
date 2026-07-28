@@ -22,6 +22,7 @@ import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./
 import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails, type OpenRouterStreamResult } from "./openrouter.js";
 import { applyChatEdits, parseChatResponse, repairBriefing, verifyFileWrite, type ChatEdit, type FileReport, type ParsedChatResponse } from "./chat-edit.js";
 import { designMap, designScreens, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
+import { designBriefing, summariseEffect } from "./css-effect.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
@@ -407,7 +408,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.27.1-20260728.1458" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.28.0-20260728.1541" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -876,7 +877,8 @@ function buildChatInstructions(scope: "global" | "screen" | "marked"): string {
     "Dein Auftrag ist es, den Änderungswunsch UMZUSETZEN. Du lieferst in jeder Antwort echte Änderungen.",
     "",
     "AUSGABEFORMAT — antworte AUSSCHLIESSLICH mit EINEM JSON-Objekt, ohne Markdown, ohne Codefences, ohne Vorrede:",
-    '{"reply":"kurze deutsche Zusammenfassung, was du geändert hast","changes":[{"path":"pfad/wie/geliefert","edits":[{"find":"wörtlich vorhandener Ausschnitt","replace":"neuer Ausschnitt"},{"find":"…","replace":"…","all":true}]}]}',
+    '{"reply":"kurze deutsche Zusammenfassung, was du geändert hast","naechste":["konkreter nächster Schritt","noch einer"],"changes":[{"path":"pfad/wie/geliefert","edits":[{"find":"wörtlich vorhandener Ausschnitt","replace":"neuer Ausschnitt"},{"find":"…","replace":"…","all":true}]}]}',
+    '"naechste": zwei bis drei KONKRETE nächste Design-Schritte, die du an diesem Design als Nächstes empfehlen würdest — jeweils ein kurzer, sofort ausführbarer Auftrag in der Ich-Form des Benutzers (z. B. „Die Trennlinien in den Listen dezenter machen"). Keine Rückfragen, keine Floskeln.',
     '"all": true ersetzt ALLE Vorkommen der Stelle — genau richtig für einen Wert, der überall gleich angepasst werden soll.',
     "",
     "REGELN FÜR find:",
@@ -893,7 +895,20 @@ function buildChatInstructions(scope: "global" | "screen" | "marked"): string {
         : "UMFANG: Der Wunsch bezieht sich auf den gerade sichtbaren Bildschirm. Ändere dessen <section class=\"werft-screen\">-Abschnitt und die Regeln, die nur ihn betreffen. Ist eine Regel mit anderen Bildschirmen geteilt und würde eine Änderung dort schaden, lege stattdessen eine bildschirmeigene Regel an.",
     "",
     "BEI UNKLARHEIT: Frage NICHT zurück. Triff die fachlich beste Annahme, setze sie um und schreibe in \"reply\" in einem Satz, wovon du ausgegangen bist. Nur wenn eine Umsetzung technisch unmöglich ist (die genannte Sache existiert im Design nicht), lieferst du \"changes\": [] und erklärst kurz, was fehlt.",
-    "FARBEN UND THEMES: Definiert das Design seine Farben über CSS-Variablen, ändere die Variablen. Stehen zusätzlich feste Farbwerte in einzelnen Regeln, ändere sie mit — sonst bleibt die Hälfte des Designs unverändert.",
+    "",
+    "DAMIT DEINE ÄNDERUNG WIRKLICH ANKOMMT — das ist der häufigste Grund, warum ein Lauf nichts bewirkt:",
+    "- Unter === DESIGN-ANALYSE === stehen die KASKADENFALLEN dieses Designs: Regeln, die über einen Elementnamen greifen (z. B. `.pm-start-screen button { padding: 0 }`) und damit JEDE reine Klassenregel schlagen. Eine Klassenregel dagegen zu ändern sieht richtig aus und tut NICHTS.",
+    "- Prüfe vor jedem Edit: Steht die Eigenschaft, die du änderst, für dieses Element in einer solchen Regel? Dann ändere entweder genau diese Regel — oder schreibe deine Regel spezifischer, indem du den Bildschirm-Container voranstellst.",
+    "- Farben: Definiert das Design seine Farben über CSS-Variablen, ändere die Variablen. Stehen zusätzlich feste Farbwerte in einzelnen Regeln, ändere sie mit — sonst bleibt die Hälfte des Designs unverändert.",
+    "",
+    "GESTALTERISCHES HANDWERK — du bist Designer, nicht nur Textersetzer:",
+    "- Bleib in der Formensprache des Designs (siehe DESIGN-ANALYSE): benutze die dort gelisteten Abstands-, Radien- und Schriftwerte, statt krumme Zwischenwerte einzustreuen.",
+    "- „Klebt am Rand“ heißt: der CONTAINER braucht mehr Innenabstand, nicht das Kind mehr Außenabstand. Innenabstand zuerst, Außenabstand nur für den Abstand ZWISCHEN Geschwistern.",
+    "- Abstand ist hierarchisch: zwischen Gruppen mehr als innerhalb einer Gruppe. Gleiche Bedeutung bekommt gleichen Abstand — Unregelmäßigkeit liest sich als Fehler.",
+    "- Bedienelemente bleiben mindestens 44 px hoch bzw. breit; wächst der Innenabstand, wächst die Fläche mit, nicht der Text.",
+    "- Optischer Ausgleich: Symbole und runde Formen brauchen etwas weniger Abstand als Text, um gleich weit weg zu WIRKEN.",
+    "- Rechtsbündige Werte in Listenzeilen brauchen Luft zum Rand und zum Trennzeichen; klebt ein Wert am Rand, erhöhe den Innenabstand der Zeile statt den Text zu kürzen.",
+    "- Ändere Gestaltung, nicht Inhalt: Texte, Beschriftungen und Funktionen bleiben unangetastet, solange nicht ausdrücklich danach gefragt wird.",
     "Antworte auf Deutsch."
   ].join("\n");
 }
@@ -978,6 +993,9 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
   const previous: Array<{ key: string; path: string; mime: string; data: Buffer }> = [];
   const reports: FileReport[] = [];
   const applied: string[] = [];
+  // Vorher/Nachher der Auszeichnungsdateien: nur damit laesst sich hinterher pruefen, ob eine
+  // Aenderung im Design wirklich ANKOMMT — oder ob sie die Kaskade verliert.
+  const htmlChanges: Array<{ path: string; before: string; after: string }> = [];
   try {
     return await db.transaction(async (tx) => {
       await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
@@ -1004,10 +1022,13 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
         const result = change.content !== undefined ? { content: change.content, outcomes: [] } : applyChatEdits(beforeText, change.edits);
         const issues = result.content === beforeText ? [] : verifyFileWrite(item.path, beforeText, result.content);
         const written = result.content !== beforeText && !issues.length;
-        if (written) await writeFile(item.path, item.mime, result.content, before);
+        if (written) {
+          await writeFile(item.path, item.mime, result.content, before);
+          if (/\.html?$/i.test(item.path)) htmlChanges.push({ path: item.path, before: beforeText, after: result.content });
+        }
         reports.push({ path: item.path, outcomes: result.outcomes, written, issues });
       }
-      if (!applied.length) return { revision: current.revision, reports, applied };
+      if (!applied.length) return { revision: current.revision, reports, applied, htmlChanges };
       const revision = current.revision + 1;
       // Der Rückweg: der Stand VOR dieser Änderung wird gesichert, bevor die neue Fassung gilt.
       const snapshotBytes = previous.reduce((sum, entry) => sum + entry.data.byteLength, 0);
@@ -1019,7 +1040,7 @@ async function applyChatWrites(actor: Actor, projectId: string, correlationId: s
       await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
       await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
       await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, revision, ...settings }, correlationId });
-      return { revision, reports, applied };
+      return { revision, reports, applied, htmlChanges };
     });
   } catch (error) {
     await Promise.allSettled(previous.map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
@@ -1112,12 +1133,20 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
   const settings = { provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) };
   const scope = target ? "marked" as const : globalScope(message) ? "global" as const : screen ? "screen" as const : "global" as const;
   const instructions = buildChatInstructions(scope);
-  const conversation = (history ?? []).filter((entry) => entry.text.trim()).slice(-12);
+  // Bewusst KEIN Gespraechsverlauf im Auftrag: frueher wanderten damit auch alte Fehlermeldungen und
+  // Statuszeilen in den Prompt und lenkten das Modell von der eigentlichen Aufgabe ab. Der Zustand des
+  // Designs steht in den Dateien — die Aufgabe steht fuer sich allein.
+  void history;
+  const conversation: Array<{ role: "user" | "assistant"; text: string }> = [];
   const markedRegion = target
     ? `\n\n=== MARKIERTER BEREICH (genau hier anwenden) ===\nBildschirm: ${target.screenName ?? screen ?? "unbekannt"}\nElement: ${target.label ?? target.selector}\nCSS-Pfad: ${target.selector}\nWörtlicher Ausschnitt aus der Datei:\n${target.html}`
     : "";
   const probes: ChatRoundProbe[] = [];
   const changedFiles = new Set<string>();
+  // Auf welchen Bildschirmen sich wirklich etwas TUT — das ist die Auskunft, die man sehen will.
+  const sichtbareScreens = new Set<string>();
+  const naechsteSchritte: string[] = [];
+  let letzteWirkungsmeldung = "";
   const notes: string[] = [];
   let replyText = "";
   let revision = row.revision;
@@ -1153,6 +1182,7 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
       conversation.length ? `=== BISHERIGES GESPRÄCH ===\n${conversation.map((entry) => `${entry.role === "user" ? "Benutzer" : "Du"}: ${entry.text.trim()}`).join("\n")}` : "",
       `=== AUFGABE ===\n${message}${markedRegion}`,
       entryHtml ? `=== DESIGN-LANDKARTE ===\n${designMap(entryHtml, entryPath, screen)}` : "",
+      entryHtml ? `=== DESIGN-ANALYSE (gemessen, verbindlich) ===\n${designBriefing(entryHtml)}` : "",
       excerptNote,
       briefing ? `=== RÜCKMELDUNG AUS DEINEM LETZTEN VERSUCH (bitte beheben) ===\n${briefing}` : "",
       omitted.length ? `=== NICHT MITGELIEFERT (passen nicht in dein Kontextfenster; ändere sie nicht) ===\n${omitted.map((file) => file.path).join(", ")}` : "",
@@ -1178,6 +1208,7 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
     // Die Zusammenfassung der ERSTEN Runde beschreibt die eigentliche Arbeit; eine Nacharbeitsrunde
     // würde sie sonst durch ihr eigenes, viel kleineres Fazit ersetzen.
     if (parsed.reply && !replyText) replyText = parsed.reply;
+    if (parsed.naechste.length && !naechsteSchritte.length) naechsteSchritte.push(...parsed.naechste);
     if (!parsed.changes.length && !parsed.files.length) {
       if (!replyText) replyText = result.text.trim().slice(0, 4000);
       if (truncated) notes.push("Die Antwort des Modells wurde von seiner Ausgabegrenze abgeschnitten, bevor eine verwertbare Änderung darin stand. Ein Modell mit größerem Ausgabefenster oder ein kleinerer Änderungswunsch hilft hier.");
@@ -1196,7 +1227,16 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
     });
     request.log.info({ event: "chat.round.completed", projectId, scope, ...probes.at(-1) }, "KI-Bearbeitungsrunde abgeschlossen");
     emit("runde", { ...probes.at(-1), changedFiles: applyResult.applied.length });
-    briefing = repairBriefing(applyResult.reports, truncated);
+    // Die entscheidende Frage ist nicht „wurde Text ersetzt", sondern „ist im Design etwas ANDERS".
+    // Genau hier scheiterten Laeufe, die dreissig Aenderungen meldeten und nichts bewirkten: die
+    // geaenderte Regel verlor die Kaskade gegen einen bildschirmweiten Reset.
+    const wirkungen = applyResult.htmlChanges.map((change) => summariseEffect(change.before, change.after));
+    const wirksam = wirkungen.reduce((summe, wirkung) => summe + wirkung.wirksam, 0);
+    const wirkungslos = wirkungen.reduce((summe, wirkung) => summe + wirkung.tot, 0);
+    for (const name of wirkungen.flatMap((wirkung) => wirkung.screens)) sichtbareScreens.add(name);
+    emit("wirkung", { round: round + 1, wirksam, wirkungslos, screens: [...sichtbareScreens] });
+    letzteWirkungsmeldung = wirkungen.map((wirkung) => wirkung.hinweis).filter(Boolean).join(" ");
+    briefing = [repairBriefing(applyResult.reports, truncated), ...wirkungen.map((wirkung) => wirkung.briefing).filter(Boolean)].filter(Boolean).join("\n\n") || undefined;
     if (!briefing) break;
     emit("nacharbeit", { round: round + 2, offen: applyResult.reports.flatMap((report) => report.outcomes).filter((outcome) => outcome.status === "not-found" || outcome.status === "ambiguous").length, truncated });
     // Kein Fortschritt mehr: eine weitere Runde mit derselben Rückmeldung wäre nur teurer Leerlauf.
@@ -1207,11 +1247,14 @@ async function runChatPipeline(request: FastifyRequest, actor: Actor, projectId:
     if (round + 1 === maxChatRounds) { notes.push(`Nach ${maxChatRounds} Runden blieben Restpunkte offen. Schick die Nachricht einfach nochmal ab, dann wird dort weitergearbeitet.`); continue; }
     if (Date.now() - chatStartedAt > chatRoundDeadlineMs) { notes.push("Die Nacharbeit wurde nach der vereinbarten Wartezeit beendet. Das bisher Geänderte ist gespeichert — schick die Nachricht nochmal ab, um weiterzumachen."); break; }
   }
+  if (letzteWirkungsmeldung) notes.unshift(letzteWirkungsmeldung);
   const totalApplied = probes.reduce((sum, probe) => sum + probe.editsApplied, 0);
   request.log.info({ event: "chat.completed", projectId, scope, rounds: probes.length, changedFiles: changedFiles.size, editsApplied: totalApplied, durationMs: Date.now() - chatStartedAt, ...settings }, "KI-Bearbeitung abgeschlossen");
   return {
     reply: replyText || (changedFiles.size ? `Änderungen umgesetzt (${changedFiles.size} Datei(en)).` : "Es war keine Dateiänderung nötig."),
     changedFiles: [...changedFiles],
+    screens: [...sichtbareScreens],
+    naechste: naechsteSchritte,
     skipped: notes,
     revision,
     rounds: probes.length,

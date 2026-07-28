@@ -1228,18 +1228,20 @@ function Studio() {
   // Was gerade passiert — live aus dem Ereignisstrom des Servers. Ohne diese Meldungen sieht man
   // waehrend eines ein- bis zweiminuetigen Laufs nichts und weiss nicht, ob ueberhaupt gearbeitet wird.
   const [chatStep, setChatStep] = useState<string>("");
+  // Konkrete nächste Design-Schritte, die die KI nach ihrer Arbeit vorschlägt — anklickbar, damit aus
+  // dem Gespräch ein geführter Ablauf wird statt einer Einbahnstraße.
+  const [naechsteSchritte, setNaechsteSchritte] = useState<string[]>([]);
   const chatAbort = useRef<AbortController | null>(null);
   const chatRun = useMutation({
-    // Der Verlauf geht MIT: erst dadurch weiss das Modell, was vorher besprochen und geaendert wurde,
-    // statt jede Nachricht als ersten Satz eines fremden Gespraechs zu behandeln.
+    // Es geht NUR die aktuelle Aufgabe hinaus. Frueher wanderte der ganze Gespraechsverlauf mit —
+    // samt alter Fehlermeldungen und Statuszeilen, die das Modell nur ablenken.
     mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => {
       chatAbort.current?.abort();
       const controller = new AbortController();
       chatAbort.current = controller;
       setChatStep("Auftrag wird vorbereitet …");
-      return apiEventStream<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number; durationMs?: number }>(`/projects/${projectId}/chat`, {
+      return apiEventStream<{ reply: string; changedFiles: string[]; screens?: string[]; naechste?: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number; durationMs?: number }>(`/projects/${projectId}/chat`, {
         message,
-        history: messages.slice(-12).map((entry) => ({ role: entry.role, text: entry.text.slice(0, 6000) })),
         ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
         ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
         ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
@@ -1247,6 +1249,7 @@ function Studio() {
       }, (event, data) => setChatStep(chatStepText(event, data)), controller.signal);
     },
     onSettled: () => { chatAbort.current = null; setChatStep(""); },
+    onMutate: () => setNaechsteSchritte([]),
     onSuccess: async (data) => {
       const parts = [data.reply];
       if (data.changedFiles.length) {
@@ -1257,6 +1260,10 @@ function Studio() {
         ].filter(Boolean).join(" · ");
         parts.push(`✓ Geändert: ${[...new Set(data.changedFiles.map(designFileLabel))].join(", ")}${detail ? ` (${detail})` : ""}`);
       }
+      // Wo sich wirklich etwas TUT: gemessen an der CSS-Kaskade, nicht am ersetzten Text. Genau diese
+      // Auskunft fehlte, wenn eine Änderung gemeldet wurde und im Design nichts zu sehen war.
+      if (data.screens?.length) parts.push(`👁 Sichtbar geändert auf: ${data.screens.join(", ")}`);
+      setNaechsteSchritte(data.naechste ?? []);
       if (data.skipped?.length) parts.push(`⚠ Offen geblieben:\n${data.skipped.join("\n")}`);
       setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
       // Ein laufender Kommentar bekommt sein Ergebnis: „angewendet" nur, wenn wirklich Dateien
@@ -1271,6 +1278,11 @@ function Studio() {
       // Die gemessenen Erscheinungen stammen aus dem Dokument, das die KI gerade geaendert hat.
       // Ohne diese Neuvermessung legte die Vorschau den ALTEN Farbstand wieder darueber.
       await client.invalidateQueries({ queryKey: ["themes", projectId] });
+      // Damit man die Änderung SIEHT, ohne sie suchen zu müssen: die Bühne springt auf einen
+      // Bildschirm, auf dem sich wirklich etwas geändert hat.
+      const ziel = data.screens?.find((name) => boardScreens.some((screen) => screen.name === name || screen.id === name));
+      const zielScreen = ziel ? boardScreens.find((entry) => entry.name === ziel || entry.id === ziel) : undefined;
+      if (zielScreen && zielScreen.id !== activeScreenId) setScreenRequest({ screenId: zielScreen.id, nonce: naechsterAuftrag() });
     },
     onError: async (error) => {
       // Ein Abbruch ist kein Fehler: bereits übernommene Änderungen sind gespeichert, und die Ansicht
@@ -1520,6 +1532,12 @@ function Studio() {
                 step={chatStep}
                 onCancel={() => chatAbort.current?.abort()}
               />}
+            </div>}
+            {activeTab === "chat" && naechsteSchritte.length > 0 && !chatRun.isPending && <div className="chat-next">
+              <span>Nächste Schritte</span>
+              {naechsteSchritte.map((schritt) => (
+                <button type="button" key={schritt} onClick={() => { setMessages((all) => [...all, { role: "user", text: schritt }]); setNaechsteSchritte([]); chatRun.mutate({ message: schritt }); }}>{schritt}</button>
+              ))}
             </div>}
             {activeTab === "chat" && <form
               className="composer"

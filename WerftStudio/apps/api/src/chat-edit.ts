@@ -12,6 +12,8 @@ export type ChatChange = { path: string; edits: ChatEdit[] };
 export type ChatFileWrite = { path: string; content: string };
 export type ParsedChatResponse = {
   reply: string;
+  /** Konkrete nächste Design-Schritte, die die Oberfläche als anklickbare Vorschläge anbietet. */
+  naechste: string[];
   changes: ChatChange[];
   files: ChatFileWrite[];
   /** Der Ausgabestrom endete mitten im JSON — das Modell wurde von seiner Ausgabegrenze gestoppt. */
@@ -69,7 +71,11 @@ const validEdits = (value: unknown): ChatEdit[] => (Array.isArray(value) ? value
 
 const maxFileWriteChars = 20 * 1024 * 1024;
 
-function normalizeResponse(value: Record<string, unknown>): { reply: string; changes: ChatChange[]; files: ChatFileWrite[] } {
+const validNext = (value: unknown): string[] => (Array.isArray(value) ? value : [])
+  .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 3)
+  .map((entry) => entry.trim().slice(0, 160)).slice(0, 4);
+
+function normalizeResponse(value: Record<string, unknown>): { reply: string; naechste: string[]; changes: ChatChange[]; files: ChatFileWrite[] } {
   const changes = (Array.isArray(value.changes) ? value.changes : []).flatMap((entry): ChatChange[] => {
     const change = record(entry);
     if (!change || !isText(change.path)) return [];
@@ -80,7 +86,7 @@ function normalizeResponse(value: Record<string, unknown>): { reply: string; cha
     const file = record(entry);
     return file && isText(file.path) && isText(file.content) && file.content.length <= maxFileWriteChars ? [{ path: file.path, content: file.content }] : [];
   });
-  return { reply: isText(value.reply) ? value.reply.trim() : "", changes, files };
+  return { reply: isText(value.reply) ? value.reply.trim() : "", naechste: validNext(value.naechste), changes, files };
 }
 
 const tryParse = (text: string): Record<string, unknown> | undefined => {
@@ -122,6 +128,7 @@ function salvageResponse(text: string, scan: ReturnType<typeof balancedObjects>)
   }
   return {
     reply: stringField(text, "reply")?.trim() ?? "",
+    naechste: [],
     changes: [...changes].map(([path, edits]) => ({ path, edits })),
     files,
     truncated: scan.open > 0,
