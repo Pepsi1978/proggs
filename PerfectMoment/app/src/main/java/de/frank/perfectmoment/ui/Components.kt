@@ -100,33 +100,22 @@ fun Modifier.pmClickable(
     return graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }.then(
-        if (enabled && pressed) {
-            Modifier.drawWithCache {
-                onDrawWithContent {
-                    drawContent()
-                    drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = CornerRadius(10.dp.toPx()))
-                }
+    }.drawWithCache {
+        val corner = CornerRadius(10.dp.toPx())
+        onDrawWithContent {
+            drawContent()
+            if (enabled && pressed) {
+                drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = corner)
             }
-        } else {
-            Modifier
-        },
-    ).then(
-        if (focused) {
-            Modifier.drawWithCache {
-                onDrawWithContent {
-                    drawContent()
-                    drawRoundRect(
-                        colors.goldHi.copy(alpha = 0.72f),
-                        cornerRadius = CornerRadius(10.dp.toPx()),
-                        style = Stroke(3.dp.toPx()),
-                    )
-                }
+            if (focused) {
+                drawRoundRect(
+                    colors.goldHi.copy(alpha = 0.72f),
+                    cornerRadius = corner,
+                    style = Stroke(3.dp.toPx()),
+                )
             }
-        } else {
-            Modifier
-        },
-    ).clickable(
+        }
+    }.clickable(
         interactionSource = interactionSource,
         indication = null,
         enabled = enabled,
@@ -155,33 +144,22 @@ fun Modifier.pmCombinedClickable(
     return graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }.then(
-        if (enabled && pressed) {
-            Modifier.drawWithCache {
-                onDrawWithContent {
-                    drawContent()
-                    drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = CornerRadius(10.dp.toPx()))
-                }
+    }.drawWithCache {
+        val corner = CornerRadius(10.dp.toPx())
+        onDrawWithContent {
+            drawContent()
+            if (enabled && pressed) {
+                drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = corner)
             }
-        } else {
-            Modifier
-        },
-    ).then(
-        if (focused) {
-            Modifier.drawWithCache {
-                onDrawWithContent {
-                    drawContent()
-                    drawRoundRect(
-                        colors.goldHi.copy(alpha = 0.72f),
-                        cornerRadius = CornerRadius(10.dp.toPx()),
-                        style = Stroke(3.dp.toPx()),
-                    )
-                }
+            if (focused) {
+                drawRoundRect(
+                    colors.goldHi.copy(alpha = 0.72f),
+                    cornerRadius = corner,
+                    style = Stroke(3.dp.toPx()),
+                )
             }
-        } else {
-            Modifier
-        },
-    ).combinedClickable(
+        }
+    }.combinedClickable(
         interactionSource = interactionSource,
         indication = null,
         enabled = enabled,
@@ -612,24 +590,15 @@ fun RecorderControl(
     )
     val ringPhase by transition.animateFloat(
         initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
+        targetValue = if (!reduced && state == RecordingState.RECORDING) 1f else 0f,
         animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
         label = "Aufnahmeringe",
     )
     val spinnerRotation by transition.animateFloat(
         initialValue = 0f,
-        targetValue = if (reduced) 0f else 360f,
+        targetValue = if (!reduced && state == RecordingState.PROCESSING) 360f else 0f,
         animationSpec = infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart),
         label = "Verarbeitung",
-    )
-    val recorderPulse by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(
-            tween(1_600, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Aufnahmeschatten",
     )
     val recorderBrush = when (state) {
         RecordingState.IDLE -> Brush.linearGradient(listOf(colors.gold, colors.goldHi))
@@ -656,12 +625,12 @@ fun RecorderControl(
             }
             Box(
                 Modifier.size(buttonSize).shadow(
-                    elevation = (14f + 4f * recorderPulse).dp,
+                    elevation = 14.dp,
                     shape = CircleShape,
                     ambientColor = (if (state == RecordingState.RECORDING) colors.amber else colors.gold)
-                        .copy(alpha = 0.28f + 0.14f * recorderPulse),
+                        .copy(alpha = 0.35f),
                     spotColor = (if (state == RecordingState.RECORDING) colors.amber else colors.gold)
-                        .copy(alpha = 0.28f + 0.14f * recorderPulse),
+                        .copy(alpha = 0.35f),
                 ).background(recorderBrush, CircleShape)
                     .pmClickable(enabled = state != RecordingState.PROCESSING, onClick = onClick),
                 contentAlignment = Alignment.Center,
