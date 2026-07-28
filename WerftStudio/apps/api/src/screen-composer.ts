@@ -1,4 +1,5 @@
 import type { DesignFacts, FactScreen } from "./design-facts.js";
+import { themeOverrideCss } from "./theme-override.js";
 
 // Bisher entstand die gesamte App in EINEM KI-Aufruf: bei mehreren Bildschirmen lief der in die
 // Ausgabegrenze, Screens fielen weg und Werte wurden „gerundet". Jetzt baut die KI jeden Screen
@@ -128,6 +129,89 @@ body { background: #f2f3f5; font-family: system-ui, -apple-system, "Segoe UI", R
 @media print { .werft-screen-switcher { display: none; } .werft-screen { display: block !important; } }
 `.trim();
 
+// Die Erscheinung war bisher NUR im Studio umschaltbar: die Oberflaeche spritzt ihre Farbabbildung in
+// die Vorschau. Die heruntergeladene Datei bekam davon nichts ab und blieb bei der eingebauten (meist
+// dunklen) Erscheinung stehen. Leiste und Skript gehoeren deshalb ins Dokument selbst — im Studio
+// bleiben sie weg, dort schaltet die Vorschau-Bruecke um.
+export const themeSwitcherStyles = `
+.werft-theme-switcher { position: fixed; right: 12px; top: 12px; z-index: 2147483000; display: flex; gap: 4px; padding: 5px; max-width: calc(100vw - 24px); overflow-x: auto; background: rgba(20, 22, 28, 0.86); border-radius: 999px; backdrop-filter: blur(12px); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.werft-theme-switcher button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer; padding: 5px 12px; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.72); font-size: 12px; line-height: 18px; white-space: nowrap; }
+.werft-theme-switcher button[aria-current="true"] { background: #ffffff; color: #14161c; font-weight: 600; }
+.werft-theme-switcher i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.25); }
+@media print { .werft-theme-switcher { display: none; } }
+`.trim();
+
+export const themeSwitcherScript = `
+(() => {
+  if (window.parent !== window) return;
+  const meta = document.querySelector('meta[name="werft-themes"]');
+  let themes = [];
+  try { themes = JSON.parse((meta && meta.getAttribute("content")) || "[]"); } catch (error) { themes = []; }
+  themes = Array.isArray(themes) ? themes.filter((theme) => theme && typeof theme.id === "string") : [];
+  if (themes.length < 2) return;
+  const root = document.documentElement;
+  const buttons = new Map();
+  const apply = (id) => {
+    const theme = themes.find((entry) => entry.id === id) || themes[0];
+    root.setAttribute("data-werft-theme", theme.id);
+    root.setAttribute("data-theme", theme.kind === "dark" ? "dark" : "light");
+    root.style.setProperty("color-scheme", theme.kind === "dark" ? "dark" : "light");
+    for (const [key, button] of buttons) button.setAttribute("aria-current", String(key === theme.id));
+    try { localStorage.setItem("werft-theme", theme.id); } catch (error) {}
+  };
+  const bar = document.createElement("nav");
+  bar.className = "werft-theme-switcher";
+  bar.setAttribute("aria-label", "Erscheinung");
+  for (const theme of themes) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const dot = document.createElement("i");
+    dot.style.background = theme.color || "#ffffff";
+    button.append(dot, document.createTextNode(theme.name || theme.id));
+    button.addEventListener("click", () => apply(theme.id));
+    buttons.set(theme.id, button);
+    bar.append(button);
+  }
+  document.body.append(bar);
+  let stored = null;
+  try { stored = localStorage.getItem("werft-theme"); } catch (error) {}
+  const wanted = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  apply(stored && themes.some((theme) => theme.id === stored) ? stored : (themes.find((theme) => theme.kind === wanted) || themes[0]).id);
+})();
+`.trim();
+
+const themeWordKind = (word: string): "light" | "dark" => /dark|dunkel|night|nacht|noir/i.test(word) ? "dark" : "light";
+
+// Jeder Bildschirm entsteht in einem eigenen KI-Aufruf — und jeder erfindet dabei einen anderen Namen
+// fuer seine helle Fassung: `[data-werft-theme="light"]`, `[data-theme="light"]`,
+// `[data-pm-theme="light"]`. Die echten Kennungen heissen aber `lightpmcolors`/`darkpmcolors`, also
+// traf keine dieser Regeln jemals zu und das Design blieb auf allen Bildschirmen dunkel.
+// Hier werden sie deterministisch auf die WIRKLICHEN Kennungen zurueckgefuehrt.
+export function repairThemeSelectors(css: string, variants: ThemeVariant[]): string {
+  if (!css || variants.length < 2) return css;
+  const byKind = new Map(variants.map((variant) => [variant.kind, variant] as const));
+  const known = new Set(variants.map((variant) => variant.id));
+  return css.replace(/\[\s*(data-[a-z0-9-]*theme)\s*=\s*(["']?)([a-zA-Z]+)\2\s*\]/g, (all, attribute: string, quote: string, value: string) => {
+    if (attribute === "data-theme" || known.has(value.toLowerCase())) return all;
+    const kind = themeWordKind(value);
+    if (!/^(?:light|hell|day|tag|bright|dark|dunkel|night|nacht|noir)$/i.test(value)) return all;
+    // `data-werft-theme` traegt die echte Kennung; jedes andere eigene Attribut wird auf das
+    // Standardattribut `data-theme` umgebogen, das der Umschalter ebenfalls setzt.
+    if (attribute === "data-werft-theme") {
+      const variant = byKind.get(kind);
+      return variant ? `[data-werft-theme="${variant.id}"]` : `[data-theme="${kind}"]`;
+    }
+    return `[data-theme="${kind}"]`;
+  });
+}
+
+// Die Farbabbildung (Zwillingsregeln fuer die andere Erscheinung) wird FEST ins Dokument geschrieben.
+// Bisher entstand sie nur zur Laufzeit im Studio — die heruntergeladene Datei hatte sie nie.
+export function bakedThemeCss(sharedCss: string, variants: ThemeVariant[]): string {
+  if (!sharedCss.trim() || variants.length < 2) return "";
+  return themeOverrideCss(`<style>${sharedCss}</style>`, variants);
+}
+
 // Navigation im Original: jedes Element mit data-werft-navigate wechselt den Screen. Damit ist die
 // Rekonstruktion wirklich durchklickbar statt nur ein Standbild.
 const shellScript = `
@@ -198,7 +282,13 @@ export function composeScreens(screens: ComposedScreen[], options: ComposeOption
   const preview = JSON.stringify({ platform: options.platform, width: options.width, height: options.height, device: options.device, density: options.density });
   // Die waehlbaren Erscheinungen stehen im Dokument selbst: das Studio muss sie nicht erraten und
   // kann sie fuer ALLE Bildschirme zugleich umschalten.
-  const themes = JSON.stringify(themeVariants(options.facts.themes).map(({ id, name, kind, color }) => ({ id, name, kind, color })));
+  const variants = themeVariants(options.facts.themes);
+  const themes = JSON.stringify(variants.map(({ id, name, kind, color }) => ({ id, name, kind, color })));
+  // Die Bildschirm-Stile kommen aus einzelnen KI-Laeufen und tragen ihre Farben oft fest — erst die
+  // Reparatur der erfundenen Theme-Selektoren und die eingebackene Farbabbildung machen ALLE
+  // Bildschirme in JEDER Erscheinung umschaltbar, auch ausserhalb des Studios.
+  const sharedCss = repairThemeSelectors(options.sharedCss ?? "", variants);
+  const bakedCss = bakedThemeCss(sharedCss, variants);
   const sections = orderScreensByFlow(screens).map((screen) => `<section class="werft-screen" data-screen-id="${escapeAttribute(screen.id)}" data-screen-name="${escapeAttribute(screen.name)}"${screen.isStart ? ' data-start="true"' : ""} style="width: ${options.width}px; min-height: ${options.height}px;">\n${repairNavigationTargets(screen.markup, screens)}\n</section>`).join("\n");
   return `<!doctype html>
 <html lang="de">
@@ -210,8 +300,10 @@ export function composeScreens(screens: ComposedScreen[], options: ComposeOption
 <title>${escapeHtml(options.title)}</title>
 <style>
 ${shellStyles}
+${themeSwitcherStyles}
 ${themeStyles(options.facts)}
-${options.sharedCss ?? ""}
+${sharedCss}
+${bakedCss}
 </style>
 </head>
 <body>
@@ -220,6 +312,9 @@ ${sections}
 </div>
 <script>
 ${shellScript}
+</script>
+<script data-werft="werft-theme-switcher-script">
+${themeSwitcherScript}
 </script>
 </body>
 </html>`;

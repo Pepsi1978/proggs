@@ -27,6 +27,7 @@ import { designBriefing, summariseEffect } from "./css-effect.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
+import { buildExportPackage, type PackageReport } from "./export-package.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
@@ -496,7 +497,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.29.2-20260728.1813" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.30.0-20260728.2050" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -980,17 +981,54 @@ app.put("/api/v1/projects/:projectId/import/file", { bodyLimit: 20 * 1024 * 1024
     throw error;
   }
 });
+// Der Download ist die Übergabe an den Design-Umsetzer — er muss das GANZE Design enthalten, nicht
+// nur die eine Datei, die das Studio gerade zeigt. Deshalb werden hier zusätzlich die gemessenen
+// Design-Fakten und je Bildschirm eine eigene Datei je Erscheinung erzeugt. Ohne diesen Schritt kam
+// beim Öffnen nur die eingebaute (meist dunkle) Erscheinung an, weil die Farbumschaltung des Studios
+// erst in der Vorschau entsteht und nie in der gespeicherten Datei landet.
 app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
   const actor = requireActorPermission(request, "project.export");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const row = (await db.select({ imported: projectImports, name: projects.name }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  const row = (await db.select({ imported: projectImports, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("EXPORT_NOT_AVAILABLE", 404, "Für dieses Projekt liegt kein importiertes Dateipaket vor.");
   const fileName = `${row.name.replaceAll(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 80) || "werft-projekt"}.zip`;
+  const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+  const designPaths = row.imported.manifest.map((file) => file.path).filter((path) => generatedDesignPathPattern.test(path));
+  // Die Fakten werden hier neu gemessen statt gespeichert: derselbe deterministische Weg wie in der
+  // Erscheinungs-Abfrage, damit Export und Studio nie auseinanderlaufen.
+  let designFiles: Array<{ path: string; content: string }> = [];
+  let designReport: PackageReport | undefined;
+  if (designPaths.length) {
+    try {
+      const built = await buildDesignExport(row.imported, row.name, platform, designPaths);
+      designFiles = built.files;
+      designReport = built.report;
+    } catch (error) { request.log.error({ err: error, projectId }, "Designpaket für den Export konnte nicht erzeugt werden; das Rohpaket wird trotzdem ausgeliefert"); }
+  }
+  request.log.info({ event: "export.package", projectId, files: row.imported.manifest.length, designFiles: designFiles.length, ...(designReport ?? {}) }, "Projektexport zusammengestellt");
   const archive = archiver("zip", { zlib: { level: 6 } });
   for (const file of row.imported.manifest) archive.append(await readObject(`${row.imported.objectPrefix}${file.path}`), { name: file.path });
+  for (const file of designFiles) archive.append(Buffer.from(file.content, "utf8"), { name: file.path });
   void archive.finalize();
   return reply.header("content-type", "application/zip").header("content-disposition", `attachment; filename="${encodeURIComponent(fileName)}"`).send(archive);
 });
+async function buildDesignExport(imported: { objectPrefix: string; manifest: ImportManifestFile[]; entryPath: string }, projectName: string, platform: ImportPlatform, designPaths: string[]) {
+  const factPaths = new Set(factCandidatePaths(platform, imported.manifest.map((file) => file.path)));
+  const factFiles = imported.manifest.filter((file) => factPaths.has(file.path) && file.size <= maxFactFileBytes).slice(0, maxFactFiles);
+  const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${imported.objectPrefix}${file.path}`)).toString("utf8") }));
+  const facts = extractDesignFacts(platform, factTexts);
+  const designs = await mapWithConcurrency(designPaths, factReadConcurrency, async (path) => ({
+    path,
+    label: path.slice(path.lastIndexOf("/") + 1),
+    html: (await readObject(`${imported.objectPrefix}${path}`)).toString("utf8")
+  }));
+  const built = buildExportPackage({
+    projectName, platform, facts, designs,
+    entryPath: designPaths.includes(imported.entryPath) ? imported.entryPath : designPaths[0]!,
+    sourceFiles: imported.manifest.map((file) => ({ path: file.path, size: file.size }))
+  });
+  return { files: built.files, report: built.report };
+}
 app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
@@ -1485,7 +1523,10 @@ async function updateReconstructionJob(jobId: string, runAttempt: number, status
   if (!updated[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
 }
 // Grenzen der deterministischen Messung: sie soll Sekunden dauern und darf den Speicher nicht sprengen.
-const maxFactFileBytes = 2 * 1024 * 1024, maxFactFiles = 6_000, factReadConcurrency = 12, maxReconstructedScreens = 24;
+// Der Bildschirm-Deckel schuetzt vor endlosen Laeufen — bei 24 fielen aber echte Bildschirme grosser
+// Apps still weg, und das Design war im Download nur zur Haelfte da. Jeder Bildschirm ist ein eigener,
+// nebenlaeufiger Aufruf; 60 bleiben tragbar, und was darueber liegt, benennt der Export ausdruecklich.
+const maxFactFileBytes = 2 * 1024 * 1024, maxFactFiles = 6_000, factReadConcurrency = 12, maxReconstructedScreens = 60;
 const maxScreenSourceChars = 90_000, maxPublishedProbes = 40, analysisBatchChars = 220_000;
 const reconstructionAnalysisInstructions = [
   "Du analysierst einen fortlaufenden Teil eines App-Projekts für eine pixelgenaue HTML-Rekonstruktion.",

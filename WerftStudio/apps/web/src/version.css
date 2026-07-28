@@ -1,6 +1,6 @@
 :root {
-  --werft-version: "Werft v0.29.2";
-  --werft-build-time: "28.07.2026 18:13 Uhr";
+  --werft-version: "Werft v0.30.0";
+  --werft-build-time: "28.07.2026 20:50 Uhr";
 }
 
 .settings-layout > nav::after {
