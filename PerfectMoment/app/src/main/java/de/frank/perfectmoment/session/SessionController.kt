@@ -201,7 +201,7 @@ class SessionController(
         perspectiveQuestions != null
     }
 
-    suspend fun resumeSession(sourceSessionId: Long) = operationMutex.withLock {
+    suspend fun resumeSession(sourceSessionId: Long, useChangedSettings: Boolean) = operationMutex.withLock {
         releaseEngine()
         val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
             "Die gespeicherte Sitzung wurde nicht gefunden."
@@ -209,12 +209,16 @@ class SessionController(
         val questionIndex = requireNotNull(source.session.resumeQuestionIndex) {
             "Für diese Sitzung ist kein Fortsetzungspunkt gespeichert."
         }
-        val config = SessionConfig.fromSeconds(
-            pauseRepSeconds = source.session.pauseRep,
-            pauseNextSeconds = source.session.pauseNext,
-            repsPerQuestion = source.session.reps,
-            durationMinutes = source.session.durationMin,
-        )
+        val config = if (useChangedSettings) {
+            currentConfig()
+        } else {
+            SessionConfig.fromSeconds(
+                pauseRepSeconds = source.session.pauseRep,
+                pauseNextSeconds = source.session.pauseNext,
+                repsPerQuestion = source.session.reps,
+                durationMinutes = source.session.durationMin,
+            )
+        }
         val entranceQuestion = source.session.entranceQuestion
         val requestBase = newQuestionRequest(
             topic = source.session.topic,
@@ -230,7 +234,11 @@ class SessionController(
             checkpoint = SessionCheckpoint(
                 currentIndex = questionIndex,
                 currentRep = source.session.resumeRepetition ?: 1,
-                remainingMs = source.session.resumeRemainingMs ?: config.durationMs,
+                remainingMs = if (useChangedSettings) {
+                    config.initialRemainingMs
+                } else {
+                    source.session.resumeRemainingMs ?: config.initialRemainingMs
+                },
             ),
         )
         startForegroundSessionService()

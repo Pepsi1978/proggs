@@ -213,24 +213,49 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `Endlosmodus laeuft ohne Timerende und uebersteht Pause`() = runTest {
+    fun `Endlosmodus zaehlt 30 Minuten wiederholt herunter und uebersteht Pause`() = runTest {
         val fixture = fixture(
             questions = listOf(question(1), question(2)),
             config = config(pauseNextMs = 0, reps = 1, durationMs = 0),
         )
         fixture.startSpeaking()
+        assertEquals(SessionConfig.ENDLESS_CYCLE_MS, fixture.engine.state.value.remainingMs)
 
-        advanceTimeBy(24 * 60 * 60 * 1_000L)
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(SessionConfig.ENDLESS_CYCLE_MS - 1_000, fixture.engine.state.value.remainingMs)
         fixture.engine.togglePause()
         runCurrent()
+        val pausedRemaining = fixture.engine.state.value.remainingMs
+        advanceTimeBy(1_000)
+        assertEquals(pausedRemaining, fixture.engine.state.value.remainingMs)
         fixture.engine.togglePause()
         runCurrent()
         fixture.tts.completeCurrent()
         runCurrent()
 
-        assertEquals(0L, fixture.engine.state.value.remainingMs)
         assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
         assertEquals("Frage 2", fixture.tts.spokenTexts.last())
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Endlosmodus startet nach Ablauf wieder bei 30 Minuten`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(durationMs = 0),
+            checkpoint = SessionCheckpoint(currentIndex = 0, currentRep = 1, remainingMs = 100),
+        )
+        fixture.engine.start()
+        runCurrent()
+        fixture.engine.togglePause()
+        runCurrent()
+
+        advanceTimeBy(100)
+        runCurrent()
+
+        assertEquals(SessionConfig.ENDLESS_CYCLE_MS, fixture.engine.state.value.remainingMs)
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
         fixture.engine.close()
     }
 

@@ -89,7 +89,7 @@ internal fun sortHistorySessions(
 private sealed interface SessionStart {
     data object New : SessionStart
     data class Replay(val sessionId: Long, val shuffle: Boolean) : SessionStart
-    data class Resume(val sessionId: Long) : SessionStart
+    data class Resume(val sessionId: Long, val useChangedSettings: Boolean) : SessionStart
 }
 
 class AppViewModel(
@@ -530,7 +530,7 @@ class AppViewModel(
     fun retrySession() {
         when (val start = lastSessionStart) {
             is SessionStart.Replay -> startReplay(start.sessionId, start.shuffle)
-            is SessionStart.Resume -> startResume(start.sessionId)
+            is SessionStart.Resume -> startResume(start.sessionId, start.useChangedSettings)
             SessionStart.New -> when {
                 pendingSessionTopic.isBlank() -> {
                     sessionError = null
@@ -587,6 +587,16 @@ class AppViewModel(
     fun openHistoryDetail(id: Long) {
         viewModelScope.launch {
             historyDetail = sessionRepository.getSession(id)
+            historyDetail?.session?.let { session ->
+                pauseRep = session.pauseRep
+                pauseNext = session.pauseNext
+                repetitions = session.reps
+                durationMinutes = session.durationMin
+                settings.pauseRepSeconds = pauseRep
+                settings.pauseNextSeconds = pauseNext
+                settings.repsPerQuestion = repetitions
+                settings.sessionDurationMin = durationMinutes
+            }
             randomReplay = false
             screen = AppScreen.HISTORY_DETAIL
         }
@@ -602,8 +612,12 @@ class AppViewModel(
     }
 
     fun resumeHistory() {
-        val id = historyDetail?.session?.id ?: return
-        startResume(id)
+        val session = historyDetail?.session ?: return
+        val useChangedSettings = pauseRep != session.pauseRep ||
+            pauseNext != session.pauseNext ||
+            repetitions != session.reps ||
+            durationMinutes != session.durationMin
+        startResume(session.id, useChangedSettings)
     }
 
     private fun startReplay(sessionId: Long, shuffle: Boolean) {
@@ -625,12 +639,12 @@ class AppViewModel(
         }
     }
 
-    private fun startResume(sessionId: Long) {
-        lastSessionStart = SessionStart.Resume(sessionId)
+    private fun startResume(sessionId: Long, useChangedSettings: Boolean) {
+        lastSessionStart = SessionStart.Resume(sessionId, useChangedSettings)
         val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
-                sessionController.resumeSession(sessionId)
+                sessionController.resumeSession(sessionId, useChangedSettings)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {

@@ -49,7 +49,12 @@ data class SessionConfig(
     val isEndless: Boolean
         get() = durationMs == 0L
 
+    val initialRemainingMs: Long
+        get() = if (isEndless) ENDLESS_CYCLE_MS else durationMs
+
     companion object {
+        const val ENDLESS_CYCLE_MS = 30 * 60_000L
+
         fun fromSeconds(
             pauseRepSeconds: Int,
             pauseNextSeconds: Int,

@@ -43,7 +43,10 @@ class SessionEngine(
             speakerOn = checkpoint != null && initialQuestions.isNotEmpty(),
             paused = checkpoint != null && initialQuestions.isNotEmpty(),
             remainingMs = if (config.isEndless) {
-                0L
+                checkpoint?.remainingMs
+                    ?.takeIf { it > 1L }
+                    ?.coerceAtMost(config.initialRemainingMs)
+                    ?: config.initialRemainingMs
             } else {
                 checkpoint?.remainingMs?.coerceIn(1L, config.durationMs) ?: config.durationMs
             },
@@ -75,7 +78,7 @@ class SessionEngine(
         if (!started.compareAndSet(false, true)) return
         scope.launch {
             val restored = checkpoint != null && _state.value.questions.isNotEmpty()
-            if (!config.isEndless) deadlineMs = clock.nowMillis() + _state.value.remainingMs
+            deadlineMs = clock.nowMillis() + _state.value.remainingMs
             _state.value = _state.value.copy(
                 phase = when {
                     _state.value.questions.isEmpty() -> Phase.WAITING_NETWORK
@@ -85,7 +88,7 @@ class SessionEngine(
                 speakerOn = restored,
                 paused = restored,
             )
-            if (!_state.value.paused && !config.isEndless) startTimer()
+            if (!_state.value.paused) startTimer()
             if (_state.value.questions.isEmpty() && !initialGenerationInFlight) {
                 requestRefill()
             } else if (restored) {
@@ -180,7 +183,7 @@ class SessionEngine(
         val current = _state.value
         if (current.phase == Phase.ENDED || current.paused) return
 
-        val remaining = if (config.isEndless) 0L else max(0L, deadlineMs - clock.nowMillis())
+        val remaining = max(0L, deadlineMs - clock.nowMillis())
         timerJob?.cancel()
         timerJob = null
         when (current.phase) {
@@ -220,9 +223,9 @@ class SessionEngine(
         }
 
         timerExpired = false
-        if (!config.isEndless) deadlineMs = clock.nowMillis() + current.remainingMs
+        deadlineMs = clock.nowMillis() + current.remainingMs
         _state.value = current.copy(paused = false)
-        if (!config.isEndless) startTimer()
+        startTimer()
         when (current.phase) {
             Phase.SPEAKING -> {
                 if (!current.speakerOn) {
@@ -265,6 +268,11 @@ class SessionEngine(
                 val remaining = max(0L, deadlineMs - clock.nowMillis())
                 _state.value = _state.value.copy(remainingMs = remaining)
                 if (remaining == 0L) {
+                    if (config.isEndless) {
+                        deadlineMs = clock.nowMillis() + config.initialRemainingMs
+                        _state.value = _state.value.copy(remainingMs = config.initialRemainingMs)
+                        continue
+                    }
                     timerExpired = true
                     if (_state.value.phase != Phase.SPEAKING) endSession()
                     return@launch

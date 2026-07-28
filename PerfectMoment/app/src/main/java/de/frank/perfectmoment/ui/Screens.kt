@@ -654,13 +654,18 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
             )
         }
         val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
-        Text(
-            if (runtime.config.isEndless) "Endlos" else "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
-            color = colors.text2,
-            fontFamily = JetBrainsMono,
-            fontWeight = FontWeight.Medium,
-            fontSize = 12.sp,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
+                color = colors.text2,
+                fontFamily = JetBrainsMono,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+            )
+            if (runtime.config.isEndless) {
+                Text("∞", color = colors.gold, fontFamily = Inter, fontSize = 11.sp, lineHeight = 11.sp)
+            }
+        }
     }
 }
 
