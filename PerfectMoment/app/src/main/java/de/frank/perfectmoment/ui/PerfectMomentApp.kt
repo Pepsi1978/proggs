@@ -165,7 +165,7 @@ private fun AppBottomSheet(
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (optionSheet) 0.48f else 0.55f))
-                .pmClickable(animatePress = false, onClick = viewModel::closeSheet),
+                .pmClickable(onClick = viewModel::closeSheet),
         )
         AnimatedVisibility(
             visibleState = visibility,
@@ -368,7 +368,7 @@ private fun MessageOverlay(message: String, onDismiss: () -> Unit) {
     val colors = LocalPmColors.current
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
-            .pmClickable(animatePress = false, onClick = onDismiss),
+            .pmClickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         PmCard(Modifier.fillMaxWidth().padding(horizontal = 36.dp)) {

@@ -4,7 +4,6 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -14,13 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,93 +74,18 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-@Composable
 fun Modifier.pmClickable(
     enabled: Boolean = true,
-    animatePress: Boolean = true,
     role: Role? = null,
     onClick: () -> Unit,
-): Modifier {
-    val reduced = LocalReducedMotion.current
-    val colors = LocalPmColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val focused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (enabled && animatePress && pressed && !reduced) 0.985f else 1f,
-        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-        label = "Druckskalierung",
-    )
-    return graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }.drawWithCache {
-        val corner = CornerRadius(10.dp.toPx())
-        onDrawWithContent {
-            drawContent()
-            if (enabled && pressed) {
-                drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = corner)
-            }
-            if (focused) {
-                drawRoundRect(
-                    colors.goldHi.copy(alpha = 0.72f),
-                    cornerRadius = corner,
-                    style = Stroke(3.dp.toPx()),
-                )
-            }
-        }
-    }.clickable(
-        interactionSource = interactionSource,
-        indication = null,
-        enabled = enabled,
-        role = role,
-        onClick = onClick,
-    )
-}
+): Modifier = clickable(enabled = enabled, role = role, onClick = onClick)
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable
 fun Modifier.pmCombinedClickable(
     enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-): Modifier {
-    val reduced = LocalReducedMotion.current
-    val colors = LocalPmColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val focused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (enabled && pressed && !reduced) 0.985f else 1f,
-        animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-        label = "Langdruckskalierung",
-    )
-    return graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }.drawWithCache {
-        val corner = CornerRadius(10.dp.toPx())
-        onDrawWithContent {
-            drawContent()
-            if (enabled && pressed) {
-                drawRoundRect(Color.White.copy(alpha = 0.06f), cornerRadius = corner)
-            }
-            if (focused) {
-                drawRoundRect(
-                    colors.goldHi.copy(alpha = 0.72f),
-                    cornerRadius = corner,
-                    style = Stroke(3.dp.toPx()),
-                )
-            }
-        }
-    }.combinedClickable(
-        interactionSource = interactionSource,
-        indication = null,
-        enabled = enabled,
-        onClick = onClick,
-        onLongClick = onLongClick,
-    )
-}
+): Modifier = combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick)
 
 fun Modifier.pmHeaderSurface(colors: PmColors): Modifier = drawWithCache {
     val background = Brush.verticalGradient(
@@ -316,16 +235,20 @@ fun PrimaryButton(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Goldfluss")
-    val flow by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (enabled && !reduced) 1f else 0f,
-        animationSpec = infiniteRepeatable(
-            tween(4_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Goldposition",
-    )
+    val flow = if (enabled && !reduced) {
+        val transition = rememberInfiniteTransition(label = "Goldfluss")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween(4_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                RepeatMode.Reverse,
+            ),
+            label = "Goldposition",
+        ).value
+    } else {
+        0f
+    }
     val radius = when {
         height >= 60 -> 32
         height >= 56 -> 28
@@ -572,34 +495,55 @@ fun RecorderControl(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Aufnahme")
-    val pulse by transition.animateFloat(
-        initialValue = if (reduced) 0.45f else 0.3f,
-        targetValue = if (reduced) 0.45f else 0.95f,
-        animationSpec = infiniteRepeatable(
-            tween(1_600, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Aufnahmeglühen",
-    )
-    val shimmer by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 360f,
-        animationSpec = infiniteRepeatable(tween(4_500, easing = LinearEasing), RepeatMode.Restart),
-        label = "Aufnahmeschimmer",
-    )
-    val ringPhase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (!reduced && state == RecordingState.RECORDING) 1f else 0f,
-        animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
-        label = "Aufnahmeringe",
-    )
-    val spinnerRotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (!reduced && state == RecordingState.PROCESSING) 360f else 0f,
-        animationSpec = infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "Verarbeitung",
-    )
+    val pulse: Float
+    val shimmer: Float
+    val ringPhase: Float
+    val spinnerRotation: Float
+    when {
+        reduced || state == RecordingState.IDLE -> {
+            pulse = 0.45f
+            shimmer = 0f
+            ringPhase = 0f
+            spinnerRotation = 0f
+        }
+        state == RecordingState.RECORDING -> {
+            val transition = rememberInfiniteTransition(label = "Aufnahme")
+            pulse = transition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 0.95f,
+                animationSpec = infiniteRepeatable(
+                    tween(1_600, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                    RepeatMode.Reverse,
+                ),
+                label = "Aufnahmeglühen",
+            ).value
+            shimmer = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(tween(4_500, easing = LinearEasing), RepeatMode.Restart),
+                label = "Aufnahmeschimmer",
+            ).value
+            ringPhase = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
+                label = "Aufnahmeringe",
+            ).value
+            spinnerRotation = 0f
+        }
+        else -> {
+            val transition = rememberInfiniteTransition(label = "Verarbeitung")
+            pulse = 0.45f
+            shimmer = 0f
+            ringPhase = 0f
+            spinnerRotation = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart),
+                label = "Verarbeitung",
+            ).value
+        }
+    }
     val recorderBrush = when (state) {
         RecordingState.IDLE -> Brush.linearGradient(listOf(colors.gold, colors.goldHi))
         RecordingState.RECORDING -> Brush.linearGradient(listOf(colors.amber, colors.amber))
@@ -751,27 +695,13 @@ fun OrbitRing(
 @Composable
 fun GoldWordmark(text: String, modifier: Modifier = Modifier) {
     val colors = LocalPmColors.current
-    val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Wortmarke")
-    val flow by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(
-            tween(5_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Wortmarkenfluss",
-    )
-    BoxWithConstraints(modifier) {
+    Box(modifier) {
         val density = LocalDensity.current
-        val width = with(density) { maxWidth.toPx() }.coerceAtLeast(1f)
         Text(
             text,
             style = TextStyle(
                 brush = Brush.horizontalGradient(
                     listOf(colors.gold, colors.goldHi, colors.gold),
-                    startX = -width * flow,
-                    endX = width * (2f - flow),
                 ),
                 shadow = Shadow(colors.gold.copy(alpha = 0.16f), blurRadius = with(density) { 24.dp.toPx() }),
             ),

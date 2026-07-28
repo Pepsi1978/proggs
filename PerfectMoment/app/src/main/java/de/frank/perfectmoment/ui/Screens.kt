@@ -488,7 +488,7 @@ fun SessionScreen(
             Box(
                 Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.75f))
                     .graphicsLayer { translationY = with(density) { 915.dp.toPx() } * endExit.value }
-                    .pmClickable(animatePress = false) { viewModel.finishEndedSession() },
+                    .pmClickable { viewModel.finishEndedSession() },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
@@ -520,7 +520,7 @@ fun SessionScreen(
         if (dimAlpha > 0.001f && state?.phase != Phase.ENDED) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = dimAlpha))
-                    .pmClickable(animatePress = false) {
+                    .pmClickable {
                         dimmed = false
                         interactionTick++
                     },
@@ -553,7 +553,7 @@ private fun SessionStopDialog(
         Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f))
-                    .pmClickable(animatePress = false, onClick = onDismiss),
+                    .pmClickable(onClick = onDismiss),
             )
             PmCard(
                 Modifier.fillMaxWidth().align(Alignment.Center).padding(horizontal = 24.dp).shadow(
