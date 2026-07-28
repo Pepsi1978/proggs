@@ -739,9 +739,11 @@ private fun SessionQuestions(
                 SessionProgress(state, runtime)
                 val controlShape = RoundedCornerShape(14.dp)
                 Box(
-                    Modifier.size(48.dp).background(colors.surface2, controlShape)
-                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape)
-                        .pmClickable(onClick = onTogglePause),
+                    // .pm-session-stop-button:active — amber outline
+                    Modifier.size(48.dp)
+                        .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onTogglePause)
+                        .background(colors.surface2, controlShape)
+                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -752,9 +754,10 @@ private fun SessionQuestions(
                     )
                 }
                 Box(
-                    Modifier.size(48.dp).background(colors.surface2, controlShape)
-                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape)
-                        .pmClickable(onClick = onStop),
+                    Modifier.size(48.dp)
+                        .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onStop)
+                        .background(colors.surface2, controlShape)
+                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Outlined.Stop, "Sitzung stoppen", tint = colors.text2, modifier = Modifier.size(16.dp))
