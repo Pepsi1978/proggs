@@ -40,11 +40,20 @@ public sealed partial class ModelEntry : ObservableObject
     [ObservableProperty]
     private bool _isHidden;
 
+    /// <summary>
+    /// Provider, dessen Modell-IDs den Provider-Namen selbst als Hersteller-Praefix tragen
+    /// ("nvidia/nemotron-3-nano-30b-a3b"). Dort darf die Doppel-Praefix-Abwehr unten NICHT greifen:
+    /// OpenCode erwartet "nvidia/nvidia/nemotron-3-nano-30b-a3b" (Provider + vollstaendige ID).
+    /// </summary>
+    public const string NvidiaProviderId = "nvidia";
+
     public string ProviderId { get; set; } = "openrouter";
     public string ProviderName { get; set; } = "OpenRouter";
 
     [JsonIgnore]
-    public string ModelString => Slug.StartsWith($"{ProviderId}/", StringComparison.OrdinalIgnoreCase)
-        ? Slug
-        : $"{ProviderId}/{Slug}";
+    public string ModelString =>
+        !string.Equals(ProviderId, NvidiaProviderId, StringComparison.OrdinalIgnoreCase) &&
+        Slug.StartsWith($"{ProviderId}/", StringComparison.OrdinalIgnoreCase)
+            ? Slug
+            : $"{ProviderId}/{Slug}";
 }

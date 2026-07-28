@@ -729,6 +729,7 @@ Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 {{PersistentPathRefreshScript}}
 # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
 {{InheritedAgentEnvScrubScript}}
+{{BuildNvidiaKeyScript(modelString)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 $env:OPENLAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
 $env:OPENLAUNCHER_SOURCE = 'OpenLauncher'
@@ -776,6 +777,36 @@ try {
 """;
         File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return tempScript;
+    }
+
+    /// <summary>
+    /// Stellt den NVIDIA-Schluessel fuer eine NVIDIA-Sitzung bereit. OpenCode kennt den
+    /// models.dev-Provider "nvidia" nur, wenn NVIDIA_API_KEY in der Umgebung steht — ohne ihn
+    /// taucht kein einziges nvidia/-Modell auf und der Start scheitert am unbekannten Provider.
+    /// Der Schluessel liegt ausschliesslich in $HOME/SK/NvidiaDev/.env (Poka-Yoke: Secrets nie im
+    /// Repo). Das Start-Script liest ihn ZUR LAUFZEIT selbst, statt ihn hier einzusetzen — so
+    /// steht er auch nicht im Temp-Script, das waehrend des Laufs im TEMP-Ordner liegt.
+    /// Fuer alle anderen Provider bleibt der Block leer, damit deren Sitzungen den Schluessel
+    /// nicht unnoetig in ihrer Umgebung tragen.
+    /// </summary>
+    private static string BuildNvidiaKeyScript(string modelString)
+    {
+        if (!modelString.StartsWith($"{ModelEntry.NvidiaProviderId}/", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        return """
+$nvidiaEnvFile = Join-Path $HOME 'SK\NvidiaDev\.env'
+if (Test-Path -LiteralPath $nvidiaEnvFile) {
+    foreach ($nvidiaLine in Get-Content -LiteralPath $nvidiaEnvFile) {
+        if ($nvidiaLine -match '^\s*NVIDIA_API_KEY\s*=\s*(.+)$') {
+            $env:NVIDIA_API_KEY = $Matches[1].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+if (-not $env:NVIDIA_API_KEY) {
+    Write-Host "[NVIDIA] Kein Schluessel in $nvidiaEnvFile gefunden - OpenCode kennt den Provider 'nvidia' dann nicht." -ForegroundColor Red
+}
+""";
     }
 
     private static string ResolveOpenCodeExecutable()

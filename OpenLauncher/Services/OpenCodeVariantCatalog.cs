@@ -19,6 +19,7 @@ public static class OpenCodeVariantCatalog
             "openai" => GetOpenAiLevels(slug),
             "opencode" => GetOpenCodeZenLevels(slug),
             "opencode-go" => GetOpenCodeGoLevels(slug),
+            "nvidia" => GetNvidiaLevels(slug),
             "anthropic" => GetAnthropicLevels(slug),
             "openrouter" => GetOpenRouterLevels(slug, KnownOpenRouterReasoning(slug)),
             _ => []
@@ -112,6 +113,30 @@ public static class OpenCodeVariantCatalog
         if (slug.StartsWith("qwen", StringComparison.Ordinal)) return [];
         return [];
     }
+
+    /// <summary>
+    /// Stufen der kostenlosen NVIDIA-NIM-Modelle, 1:1 aus deren reasoning_options in models.dev:
+    /// "effort" liefert die Stufenliste unveraendert, "toggle" kennt nur Denken an/aus (gleiche
+    /// Abbildung wie minimax-m3 im OpenCode-Go-Katalog), ohne reasoning_options gibt es keine Wahl.
+    /// Modelle ohne Reasoning fallen ueber den Default auf eine leere Liste.
+    /// </summary>
+    private static IReadOnlyList<string> GetNvidiaLevels(string slug) => slug switch
+    {
+        "stepfun-ai/step-3.7-flash" => ["minimal", "low", "medium", "high", "xhigh", "max"],
+        "openai/gpt-oss-120b" or "openai/gpt-oss-20b" => WidelySupported,
+        "mistralai/mistral-medium-3.5-128b" => ["none", "high"],
+        "z-ai/glm-5.2"
+            or "minimaxai/minimax-m3"
+            or "google/gemma-4-31b-it"
+            or "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+            or "nvidia/nemotron-3-nano-30b-a3b"
+            or "nvidia/llama-3.1-nemotron-ultra-253b-v1"
+            or "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+            or "nvidia/llama-3.3-nemotron-super-49b-v1"
+            or "nvidia/nvidia-nemotron-nano-9b-v2"
+            or "nvidia/llama-3.1-nemotron-nano-8b-v1" => ["none", "thinking"],
+        _ => []
+    };
 
     private static bool KnownOpenRouterReasoning(string id)
     {

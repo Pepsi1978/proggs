@@ -557,7 +557,63 @@ public sealed class ModelRegistry
             Model("qwen3.7-max", "Qwen3.7 Max", "opencode-go", "OpenCode-Go"),
             Model("qwen3.7-plus", "Qwen3.7 Plus", "opencode-go", "OpenCode-Go"),
         }),
+        CreateGroup("nvidia", "NVIDIA", NvidiaProviderId, NvidiaProviderName, NvidiaFreeModels),
     };
+
+    /// <summary>
+    /// Kostenlose NIM-Endpunkte von build.nvidia.com, die OpenCode ueber den models.dev-Provider
+    /// "nvidia" starten kann. Aufgenommen ist nur, was alle drei Bedingungen erfuellt:
+    /// live unter GET https://integrate.api.nvidia.com/v1/models gelistet, in models.dev mit
+    /// cost.input/output = 0 gefuehrt (also ohne Guthabenverbrauch) und tool_call-faehig — ohne
+    /// Werkzeugaufrufe kann OpenCode ein Modell nicht sinnvoll als Programmiermodell fahren.
+    /// Bewusst NICHT enthalten: die kostenpflichtigen Endpunkte (Nemotron 3 Ultra/Super,
+    /// DeepSeek V4 Flash/Pro), Embedding-, Rerank-, Safety- und Bildmodelle sowie alles, was
+    /// models.dev als status "deprecated"/"alpha" fuehrt (z.B. Kimi K2.6) — solche Modelle
+    /// blendet OpenCode aus seinem Picker aus und koennte sie gar nicht erst starten.
+    /// Die Slugs tragen den Hersteller-Praefix der NVIDIA-ID; zusammen mit dem Provider ergibt
+    /// das die Start-ID "nvidia/&lt;hersteller&gt;/&lt;modell&gt;" (siehe ModelEntry.ModelString).
+    /// Sortierung: leistungsstaerkste zuerst.
+    /// </summary>
+    private static ModelEntry[] NvidiaFreeModels =>
+    [
+        NvidiaModel("z-ai/glm-5.2", "GLM 5.2 (1M)"),
+        NvidiaModel("thinkingmachines/inkling", "Inkling (1M)"),
+        NvidiaModel("minimaxai/minimax-m3", "MiniMax M3 (1M)"),
+        NvidiaModel("poolside/laguna-xs-2.1", "Poolside Laguna XS 2.1"),
+        NvidiaModel("stepfun-ai/step-3.7-flash", "Step 3.7 Flash"),
+        NvidiaModel("mistralai/mistral-medium-3.5-128b", "Mistral Medium 3.5"),
+        NvidiaModel("google/gemma-4-31b-it", "Gemma 4 31B"),
+        NvidiaModel("openai/gpt-oss-120b", "GPT-OSS 120B"),
+        NvidiaModel("openai/gpt-oss-20b", "GPT-OSS 20B"),
+        NvidiaModel("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "Nemotron 3 Nano Omni Reasoning"),
+        NvidiaModel("nvidia/nemotron-3-nano-30b-a3b", "Nemotron 3 Nano 30B A3B"),
+        NvidiaModel("nvidia/llama-3.1-nemotron-ultra-253b-v1", "Llama 3.1 Nemotron Ultra 253B"),
+        NvidiaModel("nvidia/llama-3.3-nemotron-super-49b-v1.5", "Llama 3.3 Nemotron Super 49B v1.5"),
+        NvidiaModel("nvidia/llama-3.3-nemotron-super-49b-v1", "Llama 3.3 Nemotron Super 49B v1"),
+        NvidiaModel("nvidia/nvidia-nemotron-nano-9b-v2", "Nemotron Nano 9B v2"),
+        NvidiaModel("nvidia/nemotron-nano-12b-v2-vl", "Nemotron Nano 12B v2 VL"),
+        NvidiaModel("nvidia/llama-3.1-nemotron-nano-8b-v1", "Llama 3.1 Nemotron Nano 8B"),
+        NvidiaModel("nvidia/llama-3.1-nemotron-nano-vl-8b-v1", "Llama 3.1 Nemotron Nano VL 8B"),
+        NvidiaModel("nvidia/cosmos-reason2-8b", "Cosmos Reason2 8B"),
+        NvidiaModel("nvidia/llama-3.1-nemotron-70b-instruct", "Llama 3.1 Nemotron 70B"),
+        NvidiaModel("nvidia/nemotron-mini-4b-instruct", "Nemotron Mini 4B"),
+        NvidiaModel("mistralai/mistral-nemotron", "Mistral Nemotron"),
+        NvidiaModel("mistralai/mistral-7b-instruct-v0.3", "Mistral 7B Instruct v0.3"),
+        NvidiaModel("meta/llama-3.3-70b-instruct", "Llama 3.3 70B Instruct"),
+        NvidiaModel("meta/llama-3.1-70b-instruct", "Llama 3.1 70B Instruct"),
+        NvidiaModel("meta/llama-3.2-90b-vision-instruct", "Llama 3.2 90B Vision"),
+        NvidiaModel("meta/llama-3.2-11b-vision-instruct", "Llama 3.2 11B Vision"),
+        NvidiaModel("meta/llama-3.1-8b-instruct", "Llama 3.1 8B Instruct"),
+        NvidiaModel("meta/llama-3.2-1b-instruct", "Llama 3.2 1B Instruct"),
+        NvidiaModel("google/gemma-3-12b-it", "Gemma 3 12B"),
+        NvidiaModel("google/gemma-3-4b-it", "Gemma 3 4B"),
+    ];
+
+    private const string NvidiaProviderId = ModelEntry.NvidiaProviderId;
+    private const string NvidiaProviderName = "NVIDIA";
+
+    private static ModelEntry NvidiaModel(string slug, string displayName) =>
+        Model(slug, displayName, NvidiaProviderId, NvidiaProviderName);
 
     private static IEnumerable<ModelEntry> NormalizeOpenRouter(IEnumerable<ModelEntry>? source)
     {
@@ -618,6 +674,10 @@ public sealed class ModelRegistry
     private static string NormalizeSlugForGroup(string slug, string providerId)
     {
         slug = slug.Trim().ToLowerInvariant();
+        // Bei NVIDIA ist "nvidia/" Bestandteil der Modell-ID, nicht ein doppelter Provider-Praefix
+        // (siehe ModelEntry.NvidiaProviderId) — dort wuerde das Kuerzen die ID zerstoeren.
+        if (string.Equals(providerId, ModelEntry.NvidiaProviderId, StringComparison.OrdinalIgnoreCase))
+            return slug;
         if (slug.StartsWith($"{providerId}/", StringComparison.OrdinalIgnoreCase))
             slug = slug[$"{providerId}/".Length..];
         return slug;
