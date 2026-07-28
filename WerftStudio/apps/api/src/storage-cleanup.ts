@@ -9,6 +9,10 @@ export async function cleanupOrphanedObjects(options: {
   removeIncompleteUploads?: boolean;
   minimumAgeMs?: number;
   now?: number;
+  // Zwischenstaende laufender oder abgebrochener Rekonstruktionen stehen in keinem Manifest und
+  // saehen deshalb wie Muell aus. Wer sie wegraeumt, nimmt dem Benutzer genau die Arbeit weg, die
+  // das Fortsetzen retten soll.
+  protectedPrefixes?: readonly string[];
 }) {
   let removedIncompleteUploads = 0;
   let removedObjects = 0;
@@ -21,6 +25,7 @@ export async function cleanupOrphanedObjects(options: {
   }
   for await (const object of options.objects) {
     if (!object.name || options.knownObjects.has(object.name)) continue;
+    if (options.protectedPrefixes?.some((prefix) => object.name!.startsWith(prefix))) continue;
     if (options.minimumAgeMs && (!object.lastModified || (options.now ?? Date.now()) - object.lastModified.getTime() < options.minimumAgeMs)) continue;
     await options.removeObject(object.name);
     removedObjects += 1;

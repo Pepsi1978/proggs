@@ -211,6 +211,6 @@ export function openRouterHttpError(status: number, retryAfter?: string | null, 
   if (status === 401) return Object.assign(new Error("Der OpenRouter-API-Key ist ungültig oder wurde deaktiviert."), { code: "OPENROUTER_AUTH_INVALID", statusCode: 401, retryable: false, expose: true });
   if (status === 402) return Object.assign(new Error("Das OpenRouter-Konto verfügt nicht über ausreichendes Guthaben."), { code: "OPENROUTER_CREDITS_REQUIRED", statusCode: 402, retryable: false, expose: true });
   const wer = providerName ? `Der Anbieter ${providerName}` : "OpenRouter";
-  return Object.assign(new Error(`${wer} hat den KI-Lauf abgelehnt (HTTP ${status})${detail ? `: ${detail}` : "."}`), { code: "CHAT_UPSTREAM", statusCode: 502, retryable: [408, 409, 425, 429, 500, 502, 503, 504].includes(status), expose: true, ...(providerName ? { providerName } : {}), ...(retryAfterMs === undefined ? {} : { retryAfterMs }) });
+  return Object.assign(new Error(`${wer} hat den KI-Lauf abgelehnt (HTTP ${status})${detail ? `: ${detail}` : "."}`), { code: "CHAT_UPSTREAM", statusCode: 502, upstreamStatus: status, retryable: [408, 409, 425, 429, 500, 502, 503, 504].includes(status), expose: true, ...(providerName ? { providerName } : {}), ...(retryAfterMs === undefined ? {} : { retryAfterMs }) });
 }
 import { Buffer } from "node:buffer";

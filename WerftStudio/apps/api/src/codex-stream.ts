@@ -2,6 +2,9 @@ export type CodexTransportError = Error & {
   code?: string;
   retryable?: boolean;
   statusCode?: number;
+  upstreamStatus?: number;
+  expose?: boolean;
+  retryAfterMs?: number;
 };
 
 const retryableHttpStatuses = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -26,11 +29,20 @@ export function parseCodexEventStream(raw: string): CodexStreamResult {
   return { text: outputText, truncated };
 }
 
-export function codexHttpError(status: number): CodexTransportError {
+// `retry-after` sagt, WIE LANGE der Anbieter ueberlastet ist. Ohne diesen Wert wartete die
+// Wiederholung stur zwei Sekunden und lief bei einer echten Kapazitaetsdrosselung (HTTP 503) in
+// dieselbe geschlossene Tuer. `expose` sorgt dafuer, dass der Benutzer den Hinweis auf den
+// naechsten Schritt bekommt statt nur den nackten Statuscode.
+export function codexHttpError(status: number, retryAfter?: string | null): CodexTransportError {
+  const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+  const retryAfterMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0 ? retryAfterSeconds * 1_000 : undefined;
   return Object.assign(new Error(`OpenAI hat den KI-Lauf abgelehnt (HTTP ${status}).`), {
     code: "CHAT_UPSTREAM",
     statusCode: 502,
-    retryable: retryableHttpStatuses.has(status)
+    upstreamStatus: status,
+    retryable: retryableHttpStatuses.has(status),
+    expose: true,
+    ...(retryAfterMs === undefined ? {} : { retryAfterMs })
   });
 }
 

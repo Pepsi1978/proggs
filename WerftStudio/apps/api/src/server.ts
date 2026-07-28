@@ -30,6 +30,8 @@ import { effectGuidance } from "./effect-catalog.js";
 import { buildExportPackage, type PackageReport } from "./export-package.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
+import { isOverloadError, maxModelAttempts, retryDelayMs, UpstreamThrottle } from "./model-retry.js";
+import { analysisKey, checkpointIsUseful, checkpointPrefix, checkpointRoot, checkpointSummary, describeCheckpoint, emptyCheckpoint, evidenceKey, mergeCheckpointPart, parseCheckpointObject, resumableAnalyses, resumableScreens, screenKey, type CheckpointParts, type CheckpointScope, type CheckpointSummary } from "./reconstruction-checkpoint.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
 import { themeOverrideCss } from "./theme-override.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
@@ -63,6 +65,9 @@ const objectStore = new MinioClient({ endPoint: s3Endpoint.hostname, port: Numbe
 let bucketReady: Promise<void> | undefined;
 const pendingCodexAuth = new Map<string, PendingCodexAuth>();
 let activeHostCacheCleanup: Promise<Awaited<ReturnType<typeof requestHostCacheCleanup>>> | undefined;
+// Gemeinsame Drossel ALLER KI-Laeufe dieses Prozesses. Sie deckelt normalerweise auf die geplante
+// Nebenlaeufigkeit und faellt bei Ueberlastmeldungen des Anbieters selbsttaetig auf zwei zurueck.
+const modelThrottle = new UpstreamThrottle(reconstructionConcurrency);
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
 // parts (= Felder + Dateien) explizit setzen: busboy begrenzt sonst still auf 1000 Parts.
@@ -98,9 +103,49 @@ async function cleanupOrphanImportObjects(manual = false) {
     removeIncompleteUpload: (key) => objectStore.removeIncompleteUpload(env.S3_BUCKET, key),
     removeObject: (key) => objectStore.removeObject(env.S3_BUCKET, key),
     removeIncompleteUploads: !manual,
-    minimumAgeMs: manual ? 24 * 60 * 60 * 1000 : 0
+    minimumAgeMs: manual ? 24 * 60 * 60 * 1000 : 0,
+    protectedPrefixes: [checkpointRoot]
   });
 }
+// Zwischenstaende eines Rekonstruktionslaufs. Sie liegen bewusst NEBEN dem Import (eigener
+// Praefix, nicht im Manifest): der Benutzer soll sie nie als Projektdatei sehen, der Lauf aber
+// jederzeit darauf aufsetzen koennen. Ein Fehler beim Sichern darf einen laufenden Aufbau NIEMALS
+// abbrechen — der Zwischenstand ist Komfort, das Ergebnis ist Pflicht.
+const saveCheckpointPart = async (key: string, body: string) => {
+  try {
+    await ensureBucket();
+    const data = Buffer.from(body, "utf8");
+    await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": key.endsWith(".json") ? "application/json; charset=utf-8" : "text/plain; charset=utf-8" });
+    return true;
+  } catch (error) {
+    app.log.warn({ err: error, event: "reconstruction.checkpoint.save_failed", key }, "Zwischenstand der Rekonstruktion konnte nicht gesichert werden");
+    return false;
+  }
+};
+const loadCheckpointParts = async (prefix: string): Promise<CheckpointParts> => {
+  let parts = emptyCheckpoint;
+  try {
+    await ensureBucket();
+    const keys: string[] = [];
+    for await (const object of objectStore.listObjectsV2(env.S3_BUCKET, prefix, true)) if (object.name) keys.push(object.name);
+    for (const key of keys) {
+      try { parts = mergeCheckpointPart(parts, parseCheckpointObject(key, prefix, (await readObject(key)).toString("utf8"))); }
+      catch (error) { app.log.warn({ err: error, event: "reconstruction.checkpoint.part_unreadable", key }, "Ein Teil des Zwischenstands war nicht lesbar und wird neu berechnet"); }
+    }
+  } catch (error) {
+    app.log.warn({ err: error, event: "reconstruction.checkpoint.load_failed", prefix }, "Zwischenstand der Rekonstruktion konnte nicht gelesen werden");
+  }
+  return parts;
+};
+const removeCheckpoint = async (prefix: string) => {
+  try {
+    const keys: string[] = [];
+    for await (const object of objectStore.listObjectsV2(env.S3_BUCKET, prefix, true)) if (object.name) keys.push(object.name);
+    await Promise.allSettled(keys.map((key) => objectStore.removeObject(env.S3_BUCKET, key)));
+  } catch (error) {
+    app.log.warn({ err: error, event: "reconstruction.checkpoint.cleanup_failed", prefix }, "Zwischenstand der Rekonstruktion konnte nicht aufgeräumt werden");
+  }
+};
 const editableImportMime = (mime: string) => mime.startsWith("text/") || ["application/json", "image/svg+xml"].some((type) => mime.startsWith(type));
 const readObject = async (key: string) => { const chunks: Buffer[] = []; for await (const chunk of await objectStore.getObject(env.S3_BUCKET, key)) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); return Buffer.concat(chunks); };
 const codexPost = async (url: string, body: unknown, form = false) => {
@@ -497,7 +542,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.30.1-20260728.2059" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.31.0-20260728.2139" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1114,10 +1159,14 @@ async function modelRun(organizationId: string, instructions: string, input: str
   const codexEffort = selection.provider === "openai-codex" ? z.enum(codexEfforts).parse(selection.effort ?? "medium") : undefined;
   const accountId = codexConnection ? codexConnection.accountId || tokenIdentity(codexConnection.credentials.accessToken, codexConnection.credentials.idToken).accountId : undefined;
   if (codexConnection && !accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= maxModelAttempts; attempt += 1) {
     options.onAttempt?.(attempt);
     const attemptStartedAt = Date.now();
-    log.info({ event: "model.request.started", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, effort: selection.effort, attempt, maxAttempts: 3, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
+    // Der Platz in der Drossel wird VOR dem Aufruf geholt und danach sofort wieder freigegeben —
+    // gewartet wird ausserhalb, sonst blockierte eine wartende Wiederholung die uebrigen Schritte.
+    const release = await modelThrottle.acquire();
+    let waitMs = 0;
+    log.info({ event: "model.request.started", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, effort: selection.effort, attempt, maxAttempts: maxModelAttempts, concurrencyLimit: modelThrottle.state.activeLimit, inputChars: input.length, instructionChars: instructions.length }, "KI-Lauf gestartet");
     try {
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
       const response = codexConnection
@@ -1127,7 +1176,7 @@ async function modelRun(organizationId: string, instructions: string, input: str
         : routerConnection ? await openRouterFetch(openRouterApi.chatUrl, routerConnection.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens, attempt > 1)) })
           : await zenFetch(zenApi.chatUrl, zenConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(zenRequest(selection.model, instructions, input, selection.effort, zenOutputTokens)) });
       const raw = await response.text();
-      if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : selection.provider === "openrouter" ? openRouterHttpError(response.status, response.headers.get("retry-after")) : zenHttpError(response.status, response.headers.get("retry-after"), raw);
+      if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status, response.headers.get("retry-after")) : selection.provider === "openrouter" ? openRouterHttpError(response.status, response.headers.get("retry-after")) : zenHttpError(response.status, response.headers.get("retry-after"), raw);
       const stream = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : selection.provider === "openrouter" ? parseOpenRouterEventStream(raw) : parseZenEventStream(raw);
       const outputText = stream.text;
       if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${providerDisplayName(selection.provider)} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
@@ -1136,20 +1185,24 @@ async function modelRun(organizationId: string, instructions: string, input: str
       log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw), truncated: stream.truncated, ...(servedBy ? { servedBy } : {}) }, "KI-Lauf abgeschlossen");
       return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length, truncated: stream.truncated, ...(servedBy ? { servedBy } : {}) };
     } catch (error) {
-      if (!isRetryableCodexError(error) || attempt === 3) {
+      // Ueberlast des Anbieters (429/503) drosselt SOFORT die Nebenlaeufigkeit — auch dann, wenn
+      // dieser Versuch gleich noch gelingt. Acht gleichzeitige Streams auf ein Konto sind die
+      // Ursache, die Wiederholung allein kuriert nur das Symptom.
+      if (isOverloadError(error)) modelThrottle.penalize();
+      if (!isRetryableCodexError(error) || attempt === maxModelAttempts) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
         log.warn({ err: error, event: "model.request.failed", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
         // Der Benutzer soll wissen, dass es NICHT an seinem Wunsch lag und was er tun kann. Ohne diesen
         // Zusatz stand da nur die nackte Anbietermeldung ohne jeden Hinweis auf den nächsten Schritt.
-        if (details.expose === true && error instanceof Error && attempt > 1) error.message += ` Auch ${attempt} Versuche blieben erfolglos. Versuch es gleich erneut oder wähle oben ein anderes Modell.`;
+        if (details.expose === true && error instanceof Error && attempt > 1) error.message += ` Auch ${attempt} Versuche blieben erfolglos. Der bereits erarbeitete Zwischenstand bleibt erhalten und wird beim Fortsetzen wiederverwendet.`;
         if (typeof details.code === "string") throw error;
         fail("CHAT_UPSTREAM", 502, `${providerDisplayName(selection.provider)} hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.`, true);
       }
       const details = error && typeof error === "object" ? error as { retryAfterMs?: unknown } : {};
-      const delayMs = typeof details.retryAfterMs === "number" ? details.retryAfterMs : attempt * 2_000;
-      log.warn({ err: error, event: "model.request.retry", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, nextAttempt: attempt + 1, delayMs, attemptDurationMs: Date.now() - attemptStartedAt }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
+      waitMs = retryDelayMs(attempt, typeof details.retryAfterMs === "number" ? details.retryAfterMs : undefined);
+      log.warn({ err: error, event: "model.request.retry", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, nextAttempt: attempt + 1, delayMs: waitMs, concurrencyLimit: modelThrottle.state.activeLimit, attemptDurationMs: Date.now() - attemptStartedAt }, "KI-Lauf transient unterbrochen; Wiederholung wird gestartet");
+    } finally { release(); }
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
   fail("CHAT_UPSTREAM", 502, `${providerDisplayName(selection.provider)} hat den KI-Lauf nicht abgeschlossen.`, true);
 }
@@ -1517,6 +1570,9 @@ type ReconstructionState = {
   currentOperation?: string;
   entryPath?: string;
   revision?: number;
+  // Was von diesem Lauf gesichert ist. Scheitert er, entscheidet genau dieser Wert darueber, ob dem
+  // Benutzer „an der letzten Stelle weitermachen" angeboten wird statt nur „alles neu".
+  checkpoint?: CheckpointSummary;
 };
 const reconstructionState = (phase: string, message: string, completedTodos: number, processedFiles: number, totalFiles: number, processedBytes: number, totalBytes: number, extra: Partial<ReconstructionState> = {}): ReconstructionState => ({
   phase, message, processedFiles, totalFiles, processedBytes, totalBytes,
@@ -1608,12 +1664,13 @@ async function compactReconstructionEvidence(summaries: string[], run: Reconstru
   }
   return current;
 }
-async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, selection: ModelSelection, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }) {
+async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, selection: ModelSelection, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }, resume = true) {
   const jobStartedAt = Date.now();
   const startedAt = new Date(jobStartedAt).toISOString();
   const probes: ReconstructionProbe[] = previousProbes.map((probe) => ({ ...probe }));
   const timingSamples: ReconstructionTimingSample[] = [];
   let completedOperations = 0, totalOperations = 0, retryCount = 0, latestProgress = 0;
+  let savedCheckpoint: CheckpointSummary = { analyses: 0, screens: 0, hasEvidence: false };
   let latestState = reconstructionState("starting", "HTML-Rekonstruktion wird gestartet.", 0, 0, 0, 0, 0, { startedAt });
   const runtimeState = (base: ReconstructionState, phaseProgress: number | null, estimatedRemainingMs: number | null, currentOperation?: string): ReconstructionState => ({
     ...base,
@@ -1627,6 +1684,7 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     // je laufendem Schritt geschrieben — ohne Begrenzung waechst jede dieser Schreibungen mit.
     probes: probes.slice(-maxPublishedProbes).map((probe) => ({ ...probe })),
     startedAt,
+    checkpoint: { ...savedCheckpoint },
     ...(currentOperation ? { currentOperation } : {})
   });
   const publish = async (status: "queued" | "running" | "completed" | "failed", progress: number, state: ReconstructionState, errorCode?: string) => {
@@ -1736,9 +1794,30 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     const { analyzed: sources, skipped: skippedSources } = analysisBudget(uiSources, maxAnalysisBatches, analysisBatchChars);
     const totalBytes = sources.reduce((sum, file) => sum + file.size, 0);
     const estimatedAnalysisCalls = Math.min(maxAnalysisBatches, estimateAnalysisCallCount(totalBytes, analysisBatchChars));
+    // Der Zwischenstand haengt an GENAU dieser Ausgangslage. Neuer Import, anderes Modell oder ein
+    // anderes Zielformat ergeben einen anderen Schluessel — dann wird nichts wiederverwendet.
+    const checkpointScope: CheckpointScope = { projectId, revision: row.revision, selectionHash: hashJson(selection).slice(0, 16), viewportKey: targetViewport ? `${targetViewport.width}x${targetViewport.height}` : "basis" };
+    const checkpointAt = checkpointPrefix(checkpointScope);
+    // Ein ausdruecklicher Neuaufbau soll wirklich neu bauen: der alte Stand wird verworfen, nicht
+    // stillschweigend weiterverwendet.
+    if (!resume) await removeCheckpoint(checkpointAt);
+    const checkpoint = resume ? await loadCheckpointParts(checkpointAt) : emptyCheckpoint;
+    savedCheckpoint = checkpointSummary(checkpoint);
+    const resumedAnalyses = new Map(resumableAnalyses(checkpoint).map((text, index) => [index + 1, text] as const));
+    const resumedEvidence = checkpoint.evidence?.trim() ? checkpoint.evidence : undefined;
+    const rememberAnalysis = async (batchNumber: number, text: string) => { if (await saveCheckpointPart(analysisKey(checkpointAt, batchNumber), text)) savedCheckpoint = { ...savedCheckpoint, analyses: savedCheckpoint.analyses + 1 }; };
+    // Ein nachgemessener Bildschirm ueberschreibt seinen eigenen Zwischenstand — gezaehlt wird er
+    // trotzdem nur einmal, sonst meldete die Anzeige mehr fertige Bildschirme als es gibt.
+    const savedScreenIds = new Set(checkpoint.screens.map((screen) => screen.id));
+    const rememberScreen = async (screenId: string, fragment: { markup: string; css: string }) => {
+      if (!await saveCheckpointPart(screenKey(checkpointAt, screenId), JSON.stringify({ id: screenId, markup: fragment.markup, css: fragment.css }))) return;
+      savedScreenIds.add(screenId);
+      savedCheckpoint = { ...savedCheckpoint, screens: savedScreenIds.size };
+    };
+    if (checkpointIsUseful(savedCheckpoint)) app.log.info({ event: "reconstruction.checkpoint.resumed", jobId, projectId, ...savedCheckpoint }, "Zwischenstand des letzten Laufs wird wiederverwendet");
     if (skippedSources.length) app.log.warn({ event: "reconstruction.analysis_capped", jobId, projectId, analyzed: sources.length, skipped: skippedSources.length, skippedExamples: skippedSources.slice(0, 10).map((file) => file.path) }, "Analysebudget erreicht; weitere UI-Quellen gehen nur über den bildschirmweisen Aufbau ein");
     app.log.info({ event: "reconstruction.started", jobId, projectId, platform, uiSourceFiles: uiSources.length, analyzedFiles: sources.length, sourceBytes: totalBytes, estimatedAnalysisCalls, totalManifestFiles: row.imported.manifest.length }, "Design-Rekonstruktion gestartet");
-    await publishMilestone(4, reconstructionState("inventory", `${row.imported.manifest.length} Projektdateien inventarisiert; ${uiSources.length} davon beschreiben Oberfläche.`, 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 5);
+    await publishMilestone(4, reconstructionState("inventory", `${row.imported.manifest.length} Projektdateien inventarisiert; ${uiSources.length} davon beschreiben Oberfläche.${checkpointIsUseful(savedCheckpoint) ? ` ${describeCheckpoint(savedCheckpoint)}` : ""}`, 1, 0, sources.length, 0, totalBytes), estimatedAnalysisCalls + 5);
 
     // Schritt 1: exakt messen statt schaetzen. Farben, Maße, Typografie, Formen, Effekte, Icons und
     // Screens werden deterministisch aus den Quellen geparst — ohne KI und in Sekunden. Diese Werte
@@ -1768,28 +1847,43 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       const window = pendingBatches.splice(0, pendingBatches.length);
       const ratioBefore = totalBytes ? processedBytes / totalBytes : 0;
       const texts = await mapWithConcurrency(window, reconstructionConcurrency, async (batch) => {
+        // Bereits ausgewertete Pakete werden NICHT erneut bezahlt. Sie stammen aus demselben
+        // Quellstand und derselben Paketnummer, sind also Wort fuer Wort dasselbe Ergebnis.
+        const reused = resumedAnalyses.get(batch.number);
+        if (reused) return reused;
         const input = `Zielplattform: ${platform}; Referenzgerät: ${profile.device}; logischer Viewport: ${profile.width}x${profile.height}; Dichte: ${profile.density}.\nDies ist Analysepaket ${batch.number}.\n\n${factSheet}\n\n=== QUELLTEXT DIESES PAKETS ===\n${batch.text}`;
         const { text } = await runModelStep({ operation: `UI-Analysepaket ${batch.number}`, phase: "analyze", kind: "analysis", instructions: reconstructionAnalysisInstructions, input, progress: 10 + ratioBefore * 50, remainingWeight: 5, showEta: false, sourceFiles: batch.completedFiles, sourceBytes: batch.completedBytes, state: () => reconstructionState("analyze", `${window.length} UI-Analysepakete werden gleichzeitig ausgewertet; ${processedFiles} von ${sources.length} Dateien sind abgeschlossen.`, 2, processedFiles, sources.length, processedBytes, totalBytes) });
-        return text.trim();
+        const summary = text.trim();
+        await rememberAnalysis(batch.number, summary);
+        return summary;
       });
       summaries.push(...texts);
       for (const batch of window) { processedBytes += batch.completedBytes; processedFiles += batch.completedFiles; }
       const ratio = totalBytes ? processedBytes / totalBytes : 1;
       await publishMilestone(10 + ratio * 50, reconstructionState("analyze", `${processedFiles} von ${sources.length} UI-Dateien gründlich ausgewertet${skippedSources.length ? `; ${skippedSources.length} weitere gehen direkt in den bildschirmweisen Aufbau ein` : ""}.`, ratio >= 1 ? 3 : 2, processedFiles, sources.length, processedBytes, totalBytes), 5, 100, false);
     };
-    for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
-      batchNumber += 1;
-      pendingBatches.push({ ...batch, number: batchNumber });
-      if (pendingBatches.length >= reconstructionConcurrency) await flushBatches();
+    // Liegt die fertig verdichtete Evidenz schon vor, ist die gesamte Analysephase erledigt: sie
+    // entsteht erst NACH dem letzten Analysepaket und stammt damit aus genau diesen Quellen.
+    // Dann werden weder Pakete gelesen noch Modelle befragt — der Lauf steigt direkt beim Aufbau ein.
+    if (!resumedEvidence) {
+      for await (const batch of buildSourceBatches(sources, async (file) => objectStore.getObject(env.S3_BUCKET, `${row.imported.objectPrefix}${file.path}`))) {
+        batchNumber += 1;
+        pendingBatches.push({ ...batch, number: batchNumber });
+        if (pendingBatches.length >= reconstructionConcurrency) await flushBatches();
+      }
+      await flushBatches();
+      const binaryAssets = row.imported.manifest.filter((file) => !sources.some((source) => source.path === file.path));
+      for (let index = 0; index < binaryAssets.length; index += 1500) summaries.push(`ASSET-INVENTAR:\n${binaryAssets.slice(index, index + 1500).map((file) => `${file.path} | ${file.mime} | ${file.size} Bytes`).join("\n")}`);
+    } else {
+      processedFiles = sources.length;
+      processedBytes = totalBytes;
     }
-    await flushBatches();
-    const binaryAssets = row.imported.manifest.filter((file) => !sources.some((source) => source.path === file.path));
-    for (let index = 0; index < binaryAssets.length; index += 1500) summaries.push(`ASSET-INVENTAR:\n${binaryAssets.slice(index, index + 1500).map((file) => `${file.path} | ${file.mime} | ${file.size} Bytes`).join("\n")}`);
-    await publishMilestone(62, reconstructionState("resolve", "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 3, processedFiles, sources.length, processedBytes, totalBytes), 5, 0);
-    const evidence = (await compactReconstructionEvidence(summaries, async (operation, instructions, input, remainingCompactionCalls, newlyPlannedCalls) => {
+    await publishMilestone(62, reconstructionState("resolve", resumedEvidence ? "Die verdichtete UI-Evidenz des letzten Laufs wird übernommen." : "Themes, Assets und plattformspezifische Geometrie werden zusammengeführt.", 3, processedFiles, sources.length, processedBytes, totalBytes), 5, 0);
+    const evidence = resumedEvidence ?? (await compactReconstructionEvidence(summaries, async (operation, instructions, input, remainingCompactionCalls, newlyPlannedCalls) => {
       totalOperations += newlyPlannedCalls;
       return runModelStep({ operation, phase: "resolve", kind: "compaction", instructions, input, progress: 62, remainingWeight: remainingCompactionCalls * 0.8 + 5, state: () => reconstructionState("resolve", "Exakte UI-Evidenz wird verlustfrei verdichtet.", 3, processedFiles, sources.length, processedBytes, totalBytes) });
     })).join("\n\n");
+    if (!resumedEvidence && evidence.trim() && await saveCheckpointPart(evidenceKey(checkpointAt), evidence)) savedCheckpoint = { ...savedCheckpoint, hasEvidence: true };
 
     // Schritt 3: jeder Bildschirm wird EINZELN und nebenlaeufig gebaut. Vorher entstand die ganze
     // App in einem Aufruf — der lief in die Ausgabegrenze, liess Screens weg und rundete Werte.
@@ -1799,9 +1893,16 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     totalOperations = completedOperations + screenPlan.length + 1;
     const screenIndex = new Map(screenPlan.map((screen, index) => [screen.id, index] as const));
     const screenInstructions = buildScreenInstructions(platform, profile, screenPlan.map((screen) => `${screen.id} = „${screen.name}“`));
-    await publishMilestone(66, reconstructionState("build", `${screenPlan.length} Bildschirm(e) werden einzeln und originalgetreu aufgebaut.`, 4, processedFiles, sources.length, processedBytes, totalBytes), screenPlan.length + 1, 0);
-    let builtScreens = 0;
+    // Fertige Bildschirme aus dem letzten Lauf sind der groesste Einzelposten: jeder ist ein
+    // vollstaendiger, teurer KI-Aufruf, und sie haengen nicht voneinander ab.
+    const resumedScreens = resumableScreens(checkpoint, screenPlan.map((screen) => screen.id));
+    const reusableScreens = [...resumedScreens.keys()].length;
+    if (reusableScreens) app.log.info({ event: "reconstruction.checkpoint.screens_reused", jobId, projectId, reused: reusableScreens, planned: screenPlan.length }, "Bereits aufgebaute Bildschirme werden übernommen");
+    await publishMilestone(66, reconstructionState("build", reusableScreens ? `${describeCheckpoint(savedCheckpoint, screenPlan.length)} Es fehlen noch ${screenPlan.length - reusableScreens} Bildschirm(e).` : `${screenPlan.length} Bildschirm(e) werden einzeln und originalgetreu aufgebaut.`, 4, processedFiles, sources.length, processedBytes, totalBytes), screenPlan.length + 1 - reusableScreens, 0);
+    let builtScreens = reusableScreens;
     const fragments = await mapWithConcurrency(screenPlan, reconstructionConcurrency, async (screen, index) => {
+      const reused = resumedScreens.get(screen.id);
+      if (reused) return { screen, markup: reused.markup, css: reused.css };
       const screenSources = await readScreenSources(row.imported.objectPrefix, row.imported.manifest, screen.files);
       const navigation = screen.navigatesTo.filter((target) => screenIndex.has(target));
       const input = [
@@ -1821,6 +1922,8 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       });
       builtScreens += 1;
       const fragment = extractScreenFragment(result.text);
+      // Sofort sichern: bricht der Anbieter beim naechsten Bildschirm weg, ist DIESER hier gerettet.
+      await rememberScreen(screen.id, fragment);
       return { screen, markup: fragment.markup, css: fragment.css };
     });
 
@@ -1850,7 +1953,11 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         });
         correctedScreens += 1;
         const repairedFragment = extractScreenFragment(result.text);
-        return [fragment.screen.id, { screen: fragment.screen, markup: repairedFragment.markup, css: repairedFragment.css || fragment.css }] as const;
+        const corrected = { markup: repairedFragment.markup, css: repairedFragment.css || fragment.css };
+        // Auch die Nachmessung wird gesichert, sonst ginge sie bei einem Abbruch kurz vor dem
+        // Speichern verloren und muesste komplett neu bezahlt werden.
+        await rememberScreen(fragment.screen.id, corrected);
+        return [fragment.screen.id, { screen: fragment.screen, ...corrected }] as const;
       })));
       const repaired = fragments.map((fragment) => repairedByScreen.get(fragment.screen.id) ?? fragment);
       const repairedHtml = composeAll(repaired);
@@ -1906,6 +2013,10 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       if (!committed) throw error;
     }
     if (!stored) fail("RECONSTRUCT_COMMIT_UNKNOWN", 500, "Der Speicherstatus der Rekonstruktion konnte nicht bestätigt werden.", true);
+    // Erst wenn das Design nachweislich gespeichert ist, wird der Zwischenstand weggeraeumt — vorher
+    // waere er die einzige Rettung, falls das Speichern doch noch scheitert.
+    await removeCheckpoint(checkpointAt);
+    savedCheckpoint = { analyses: 0, screens: 0, hasEvidence: false };
     await Promise.allSettled(oldGeneratedPaths.map((path) => objectStore.removeObject(env.S3_BUCKET, `${row.imported.objectPrefix}${path}`)));
     latestProgress = 100;
     latestState = stored.state;
@@ -1918,7 +2029,9 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       app.log.warn({ event: "reconstruction.lease_lost", jobId, projectId, runAttempt, elapsedMs: Date.now() - jobStartedAt }, "Veralteter Rekonstruktionslauf wurde beendet");
       return;
     }
-    const failedState = runtimeState({ ...latestState, phase: "failed", message }, null, null, latestState.currentOperation);
+    // Der Benutzer soll am Fehler ablesen koennen, dass seine bisherige Arbeit NICHT verloren ist.
+    const resumeHint = checkpointIsUseful(savedCheckpoint) ? ` ${describeCheckpoint(savedCheckpoint)} Der Lauf kann an dieser Stelle fortgesetzt werden.` : "";
+    const failedState = runtimeState({ ...latestState, phase: "failed", message: `${message}${resumeHint}` }, null, null, latestState.currentOperation);
     let failurePersisted = false;
     for (let persistAttempt = 1; persistAttempt <= 3 && !failurePersisted; persistAttempt += 1) {
       try { await publish("failed", Math.min(99, latestProgress), failedState, code); failurePersisted = true; }
@@ -1965,11 +2078,15 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
   // Das Zielformat entscheidet, FUER WELCHE Flaeche gebaut wird. Ohne Angabe entsteht die
   // Grundfassung in der Groesse, die das Projekt selbst nennt.
-  const { retryFailed, force, viewport } = z.object({
+  // `resume` ist der Normalfall: ein abgebrochener Lauf setzt an seiner letzten gesicherten Stelle
+  // auf. Nur der ausdrueckliche Neuaufbau (`force`) verwirft den Zwischenstand.
+  const { retryFailed, force, resume, viewport } = z.object({
     retryFailed: z.boolean().optional().default(false),
     force: z.boolean().optional().default(false),
+    resume: z.boolean().optional().default(true),
     viewport: z.object({ width: z.number().int().min(240).max(4096), height: z.number().int().min(240).max(4096), device: z.string().min(1).max(80) }).optional()
   }).strict().parse(request.body ?? {});
+  const resumeFromCheckpoint = resume && !force;
   const imported = (await db.select({ revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!imported) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
   const selection = await resolveModelSelection(actor.organizationId);
@@ -1980,7 +2097,7 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const candidateId = uuidv7();
   const inserted = await db.insert(jobs).values({ id: candidateId, organizationId: actor.organizationId, projectId, kind: "design-reconstruction", status: "queued", progress: 0, idempotencyKey, input: { projectId, revision: imported.revision, selection, ...(viewport ? { viewport } : {}) }, result: queuedState, attempts: 1, heartbeatAt: new Date() }).onConflictDoNothing().returning({ id: jobs.id });
   if (inserted[0]) {
-    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id, selection, [], viewport).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+    setTimeout(() => { void runReconstructionJob(candidateId, 1, actor, projectId, request.id, selection, [], viewport, resumeFromCheckpoint).catch((error) => app.log.error({ err: error, jobId: candidateId, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
     return reply.status(202).send({ jobId: candidateId, status: "queued" });
   }
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
@@ -1991,7 +2108,7 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
   const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };
   const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
-  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, selection, previousProbes, viewport).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
+  if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, selection, previousProbes, viewport, resumeFromCheckpoint).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
 });
 app.get("/api/v1/jobs/:jobId", async (request) => {

@@ -35,7 +35,9 @@ type ImportFile = { path: string; size: number; mime: string };
 type DesignVariant = { width: number; height: number; previewPath: string };
 type ProjectImport = { imported: false } | { imported: true; undo?: { label: string; createdAt: string }; entryPath: string; reconstructed: boolean; fileCount: number; totalBytes: number; revision: number; files: ImportFile[]; previewWidth: number; previewHeight: number; previewDevice: string; variants: DesignVariant[]; previewPath?: string };
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
-type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number };
+// Was vom letzten Lauf gesichert ist. Ist hier etwas drin, muss der Benutzer nicht von vorn anfangen.
+type ReconstructionCheckpoint = { analyses: number; screens: number; hasEvidence: boolean };
+type ReconstructionProgress = { phase: string; message: string; processedFiles: number; totalFiles: number; processedBytes: number; totalBytes: number; todos: ReconstructionTodo[]; phaseProgress?: number | null | undefined; elapsedMs?: number | undefined; estimatedRemainingMs?: number | null | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; currentOperation?: string | undefined; entryPath?: string; revision?: number; checkpoint?: ReconstructionCheckpoint | undefined };
 type ReconstructionJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: number; result: ReconstructionProgress | null; errorCode: string | null; attempts?: number; heartbeatAt?: string };
 type ImportProgressState = { percent: number; phaseProgress: number | null; message: string; loaded: number; total: number; elapsedMs: number; estimatedRemainingMs: number | null; currentOperation?: string | undefined; completedOperations?: number | undefined; totalOperations?: number | undefined; retryCount?: number | undefined; todos: ReconstructionTodo[] };
 const labels: Record<string, string> = { prototype: "Prototyp", presentation: "Präsentation", document: "Dokument", template: "Vorlage", canvas: "Freie Fläche", web: "Web", android: "Android", ios: "iOS", ipados: "iPadOS", macos: "macOS", windows: "Windows" };
@@ -73,8 +75,8 @@ function ProgressMeters({ percent, phaseProgress, elapsedMs, estimatedRemainingM
   );
 }
 type RebuildViewport = { width: number; height: number; device: string };
-async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false, viewport?: RebuildViewport): Promise<ReconstructionJob> {
-  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force, ...(viewport ? { viewport } : {}) }) });
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false, viewport?: RebuildViewport, resume = true): Promise<ReconstructionJob> {
+  let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force, resume, ...(viewport ? { viewport } : {}) }) });
   let networkRetries = 0;
   let interruptedRestarts = 0;
   for (;;) {
@@ -1131,7 +1133,7 @@ function Studio() {
   // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
   const [rebuildProgress, setRebuildProgress] = useState<ReconstructionJob | null>(null);
   const rebuild = useMutation({
-    mutationFn: ({ retryFailed, force, viewport }: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false, viewport),
+    mutationFn: ({ retryFailed, force, viewport, resume }: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false, viewport, resume ?? true),
     onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
   });
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
@@ -2276,7 +2278,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["draw", "Zeichnen", <WandSparkles />],
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
-type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
+type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
 function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, frame, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; frame: DesignDocument["frames"][number] | undefined; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -2289,6 +2291,10 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
     : null;
   const [physicalSizeHighlight, setPhysicalSizeHighlight] = useState(false);
   const reconstructionProgress = rebuild.progress;
+  // Zwischenstand des letzten Laufs: liegt einer vor, ist „weitermachen" moeglich — sonst bleibt
+  // nur der vollstaendige Neuaufbau.
+  const checkpoint = reconstructionProgress?.result?.checkpoint;
+  const resumableCheckpoint = Boolean(checkpoint && (checkpoint.analyses > 0 || checkpoint.screens > 0 || checkpoint.hasEvidence));
   const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -2392,7 +2398,16 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             {reconstructionProgress?.result?.totalFiles ? <small>{reconstructionProgress.result.processedFiles} von {reconstructionProgress.result.totalFiles} UI-Dateien verarbeitet</small> : null}
             {(reconstructionProgress?.result?.totalOperations ?? 0) > 0 ? <small>{reconstructionProgress?.result?.completedOperations ?? 0} von {reconstructionProgress?.result?.totalOperations} KI-Schritten abgeschlossen{reconstructionProgress?.result?.retryCount ? ` · ${reconstructionProgress.result.retryCount} Verbindungswiederholung${reconstructionProgress.result.retryCount === 1 ? "" : "en"}` : ""}</small> : null}
             {reconstructionProgress?.result?.todos && <div className="import-todos">{reconstructionProgress.result.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
-            {rebuild.error && <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true })}>Rekonstruktion erneut starten</Button>}
+            {resumableCheckpoint && checkpoint && <small>Gesichert und beim Fortsetzen wiederverwendbar: {[checkpoint.analyses ? `${checkpoint.analyses} Analysepaket${checkpoint.analyses === 1 ? "" : "e"}` : "", checkpoint.hasEvidence ? "die verdichtete Evidenz" : "", checkpoint.screens ? `${checkpoint.screens} fertige${checkpoint.screens === 1 ? "r" : ""} Bildschirm${checkpoint.screens === 1 ? "" : "e"}` : ""].filter(Boolean).join(", ")}.</small>}
+            {/* Nach einem Abbruch ist das Fortsetzen die richtige erste Wahl: alle bereits fertigen
+                Analysen und Bildschirme bleiben erhalten und werden nicht erneut bezahlt. Der
+                vollstaendige Neuaufbau bleibt als zweiter, ausdruecklicher Weg daneben stehen. */}
+            {rebuild.error && (resumableCheckpoint
+              ? <div className="reconstruction-resume">
+                  <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true, resume: true })}>An der letzten Stelle weitermachen</Button>
+                  <Button onClick={() => rebuild.start({ retryFailed: true, resume: false, force: true })}>Von vorn aufbauen</Button>
+                </div>
+              : <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true })}>Rekonstruktion erneut starten</Button>)}
             {rebuild.error && <p className="field-error">{rebuild.error instanceof ApiError ? rebuild.error.message : "Die Rekonstruktion ist fehlgeschlagen. Bitte erneut versuchen."}</p>}
           </div>
         )}
@@ -2410,7 +2425,7 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           <div className="stage-progress stage-error">
             <strong>Der Neuaufbau ist fehlgeschlagen — das bisherige Design bleibt unverändert.</strong>
             <span>{rebuild.error instanceof ApiError ? rebuild.error.message : "Der Aufbau aus den Quellen konnte nicht abgeschlossen werden."}</span>
-            <Button variant="primary" onClick={() => rebuild.start({ retryFailed: true, force: imported.reconstructed })}>Erneut versuchen</Button>
+            <Button variant="primary" onClick={() => rebuild.start(resumableCheckpoint ? { retryFailed: true, resume: true } : { retryFailed: true, force: imported.reconstructed })}>{resumableCheckpoint ? "An der letzten Stelle weitermachen" : "Erneut versuchen"}</Button>
           </div>
         )}
       </div>

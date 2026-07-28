@@ -26,6 +26,27 @@ describe("storage cleanup", () => {
     expect(result).toEqual({ removedIncompleteUploads: 1, removedObjects: 1, freedBytes: 2048 });
   });
 
+  it("keeps reconstruction checkpoints although no manifest references them", async () => {
+    const removeObject = vi.fn(async () => undefined);
+    const objects = (async function* () {
+      yield { name: ".werft-checkpoints/p1/7-abc-basis/screen-home.json", size: 512 };
+      yield { name: "orphan/cache.bin", size: 2048 };
+    })();
+
+    const result = await cleanupOrphanedObjects({
+      knownObjects: new Set(),
+      incompleteUploads: (async function* () {})(),
+      objects,
+      removeIncompleteUpload: vi.fn(async () => undefined),
+      removeObject,
+      protectedPrefixes: [".werft-checkpoints/"]
+    });
+
+    expect(removeObject).toHaveBeenCalledOnce();
+    expect(removeObject).toHaveBeenCalledWith("orphan/cache.bin");
+    expect(result.removedObjects).toBe(1);
+  });
+
   it("protects recent objects and running uploads during a manual cleanup", async () => {
     const removeIncompleteUpload = vi.fn(async () => undefined);
     const removeObject = vi.fn(async () => undefined);
