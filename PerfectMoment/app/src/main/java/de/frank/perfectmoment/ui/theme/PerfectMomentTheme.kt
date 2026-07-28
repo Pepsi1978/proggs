@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -201,9 +200,10 @@ fun BreathingBackground(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
+    val staticBackground = reduced || colors.dark
     val progressState: State<Float>
     val auroraProgressState: State<Float>
-    if (reduced) {
+    if (staticBackground) {
         progressState = remember { mutableFloatStateOf(0f) }
         auroraProgressState = remember { mutableFloatStateOf(0f) }
     } else {
@@ -265,7 +265,7 @@ fun BreathingBackground(
                 radius = 360.dp.toPx(),
                 center = Offset(size.width * -0.14f, size.height * 0.82f),
             )
-            val breathOpacity = if (reduced) {
+            val breathOpacity = if (staticBackground) {
                 0.45f
             } else if (progress < 0.5f) {
                 0.15f + 0.57f * progress * 2f
@@ -273,24 +273,23 @@ fun BreathingBackground(
                 0.72f + 0.28f * (progress - 0.5f) * 2f
             }
             val breathCenter = Offset(
-                x = size.width * 0.5f - if (reduced) 0f else 6.dp.toPx() * progress,
-                y = size.height * 0.35f + if (reduced) 0f else 8.dp.toPx() * progress,
+                x = size.width * 0.5f - if (staticBackground) 0f else 6.dp.toPx() * progress,
+                y = size.height * 0.35f + if (staticBackground) 0f else 8.dp.toPx() * progress,
             )
             drawCircle(
                 brush = Brush.radialGradient(
                     0f to colors.breath.copy(alpha = colors.breath.alpha * breathOpacity),
                     1f to Color.Transparent,
                     center = breathCenter,
-                    radius = size.maxDimension * 0.72f * (1f + if (reduced) 0f else 0.02f * progress),
+                    radius = size.maxDimension * 0.72f * (1f + if (staticBackground) 0f else 0.02f * progress),
                 ),
-                radius = size.maxDimension * 0.72f * (1f + if (reduced) 0f else 0.02f * progress),
+                radius = size.maxDimension * 0.72f * (1f + if (staticBackground) 0f else 0.02f * progress),
                 center = breathCenter,
             )
         }
-        content()
         Canvas(Modifier.fillMaxSize()) {
             val auroraProgress = auroraProgressState.value
-            val auroraOpacity = if (reduced) {
+            val auroraOpacity = if (staticBackground) {
                 1f
             } else if (auroraProgress < 0.5f) {
                     0.10f + 0.12f * auroraProgress * 2f
@@ -309,7 +308,6 @@ fun BreathingBackground(
                         end = Offset(size.width * 1.4f + travel, 0f),
                     ),
                     alpha = auroraOpacity,
-                    blendMode = BlendMode.SrcOver,
                 )
                 drawRect(
                     brush = Brush.radialGradient(
@@ -323,9 +321,9 @@ fun BreathingBackground(
                         radius = size.maxDimension * 0.66f,
                     ),
                     alpha = auroraOpacity,
-                    blendMode = BlendMode.SrcOver,
                 )
         }
+        content()
     }
 }
 
