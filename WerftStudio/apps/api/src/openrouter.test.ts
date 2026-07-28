@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertOpenRouterContext, normalizeOpenRouterModels, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream } from "./openrouter.js";
+import { assertOpenRouterContext, normalizeOpenRouterModelDetails, normalizeOpenRouterModels, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream } from "./openrouter.js";
 
 describe("OpenRouter adapter", () => {
   it("normalizes text models and their supported reasoning efforts", () => {
@@ -12,6 +12,26 @@ describe("OpenRouter adapter", () => {
   it("builds a provider request without inventing unsupported reasoning settings", () => {
     expect(openRouterRequest("vendor/model", "System", "Eingabe")).not.toHaveProperty("reasoning");
     expect(openRouterRequest("vendor/model", "System", "Eingabe", "high")).toMatchObject({ model: "vendor/model", reasoning: { effort: "high" } });
+  });
+
+  it("normalizes and sorts only the providers of the requested model", () => {
+    const details = normalizeOpenRouterModelDetails({ data: {
+      id: "vendor/model", name: "Model", context_length: 128_000,
+      reasoning: { supported_efforts: ["low", "high"], default_effort: "low" },
+      endpoints: [
+        { id: "expensive", provider_name: "Provider B", tag: "provider-b/model", context_length: 64_000, status: -2, pricing: { prompt: "0.000002", completion: "0.000004" } },
+        { id: "cheap", provider_name: "Provider A", tag: "provider-a/model", context_length: 128_000, status: 0, throughput_last_30m: { p50: 84.5 }, uptime_last_5m: 99.9, pricing: { prompt: "0.000001", completion: "0.000003", input_cache_read: "0.0000001" } }
+      ]
+    } }, "vendor/model");
+    expect(details?.model).toMatchObject({ id: "vendor/model", name: "Model", efforts: ["low", "high"], defaultEffort: "low" });
+    expect(details?.endpoints.map((endpoint) => endpoint.providerName)).toEqual(["Provider A", "Provider B"]);
+    expect(details?.endpoints[0]).toMatchObject({ providerSlug: "provider-a", promptPerToken: 0.000001, cacheReadPerToken: 0.0000001, throughputLast30m: 84.5, uptimeLast5m: 99.9 });
+  });
+
+  it("pins OpenRouter requests to the saved provider without fallbacks", () => {
+    expect(openRouterRequest("vendor/model", "System", "Eingabe", "high", "provider-a")).toMatchObject({
+      provider: { order: ["provider-a"], allow_fallbacks: false, require_parameters: true }
+    });
   });
 
   it("reassembles streamed chat completions and rejects in-stream errors", () => {

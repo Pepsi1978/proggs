@@ -1,8 +1,25 @@
 export const openRouterApi = {
   keyUrl: "https://openrouter.ai/api/v1/key",
   modelsUrl: "https://openrouter.ai/api/v1/models",
-  chatUrl: "https://openrouter.ai/api/v1/chat/completions"
+  chatUrl: "https://openrouter.ai/api/v1/chat/completions",
+  frontendUrl: "https://openrouter.ai/api/frontend"
 } as const;
+
+export type OpenRouterEndpoint = {
+  providerName: string;
+  providerSlug: string;
+  tag: string;
+  endpointId: string;
+  promptPerToken: number;
+  completionPerToken: number;
+  cacheReadPerToken: number;
+  contextLength: number;
+  maxCompletionTokens?: number;
+  quantization: string;
+  throughputLast30m?: number;
+  uptimeLast5m?: number;
+  status: number;
+};
 
 export type OpenRouterModel = {
   provider: "openrouter";
@@ -11,7 +28,10 @@ export type OpenRouterModel = {
   contextLength?: number;
   efforts: string[];
   defaultEffort?: string;
+  endpoint?: OpenRouterEndpoint;
 };
+
+export type OpenRouterModelDetails = { model: OpenRouterModel; endpoints: OpenRouterEndpoint[]; permaslug: string };
 
 type RawOpenRouterModel = {
   id?: unknown;
@@ -20,6 +40,78 @@ type RawOpenRouterModel = {
   architecture?: { output_modalities?: unknown };
   reasoning?: { supported_efforts?: unknown; default_effort?: unknown; mandatory?: unknown };
 };
+
+const numberValue = (value: unknown): number | undefined => {
+  const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const recordValue = (value: unknown): Record<string, unknown> | undefined => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+
+function endpointThroughput(value: unknown): number | undefined {
+  const direct = numberValue(value);
+  if (direct !== undefined) return direct;
+  const metrics = recordValue(value);
+  return metrics ? numberValue(metrics.p50) ?? numberValue(metrics.median) ?? numberValue(metrics.value) : undefined;
+}
+
+function providerSlug(providerName: string, tag: string): string {
+  return (tag.split("/")[0] || providerName.toLowerCase().replace(/[ .]/g, "")).trim().toLowerCase();
+}
+
+export function normalizeOpenRouterModelDetails(value: unknown, requestedId: string): OpenRouterModelDetails | undefined {
+  const root = recordValue(value), data = recordValue(root?.data);
+  if (!data) return undefined;
+  const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : requestedId;
+  if (!id || id.toLowerCase() !== requestedId.toLowerCase()) return undefined;
+  const architecture = recordValue(data.architecture), outputs = Array.isArray(architecture?.output_modalities) ? architecture.output_modalities : [];
+  if (outputs.length && !outputs.includes("text")) return undefined;
+  const reasoning = recordValue(data.reasoning);
+  const efforts = Array.isArray(reasoning?.supported_efforts) ? reasoning.supported_efforts.filter((entry): entry is string => typeof entry === "string") : [];
+  const defaultEffort = typeof reasoning?.default_effort === "string" ? reasoning.default_effort : undefined;
+  const endpoints = (Array.isArray(data.endpoints) ? data.endpoints : []).flatMap((entry): OpenRouterEndpoint[] => {
+    const endpoint = recordValue(entry);
+    if (!endpoint || typeof endpoint.provider_name !== "string" || !endpoint.provider_name.trim()) return [];
+    const pricing = recordValue(endpoint.pricing), tag = typeof endpoint.tag === "string" ? endpoint.tag : "";
+    const contextLength = numberValue(endpoint.context_length) ?? 0;
+    const maxCompletionTokens = numberValue(endpoint.max_completion_tokens);
+    const throughputLast30m = endpointThroughput(endpoint.throughput_last_30m);
+    const uptimeLast5m = numberValue(endpoint.uptime_last_5m);
+    return [{
+      providerName: endpoint.provider_name,
+      providerSlug: providerSlug(endpoint.provider_name, tag),
+      tag,
+      endpointId: typeof endpoint.id === "string" ? endpoint.id : "",
+      promptPerToken: numberValue(pricing?.prompt) ?? 0,
+      completionPerToken: numberValue(pricing?.completion) ?? 0,
+      cacheReadPerToken: numberValue(pricing?.input_cache_read) ?? 0,
+      contextLength,
+      ...(maxCompletionTokens === undefined ? {} : { maxCompletionTokens }),
+      quantization: typeof endpoint.quantization === "string" ? endpoint.quantization : "",
+      ...(throughputLast30m === undefined ? {} : { throughputLast30m }),
+      ...(uptimeLast5m === undefined ? {} : { uptimeLast5m }),
+      status: numberValue(endpoint.status) ?? 0
+    }];
+  }).sort((a, b) => a.promptPerToken - b.promptPerToken || a.completionPerToken - b.completionPerToken || b.contextLength - a.contextLength);
+  if (!endpoints.length) return undefined;
+  const namedEndpoint = (Array.isArray(data.endpoints) ? data.endpoints : []).map(recordValue).find((endpoint) => typeof endpoint?.name === "string");
+  const endpointName = typeof namedEndpoint?.name === "string" ? namedEndpoint.name : undefined;
+  const separator = typeof endpointName === "string" ? endpointName.lastIndexOf("|") : -1;
+  const permaslug = separator >= 0 ? endpointName!.slice(separator + 1).trim().replace(/:free$/i, "") : requestedId.replace(/:free$/i, "");
+  const contextLength = numberValue(data.context_length) ?? Math.max(...endpoints.map((endpoint) => endpoint.contextLength));
+  return {
+    model: {
+      provider: "openrouter",
+      id,
+      name: typeof data.name === "string" && data.name.trim() ? data.name : id,
+      ...(contextLength ? { contextLength } : {}),
+      efforts: reasoning?.mandatory ? efforts.filter((effort) => effort !== "none") : efforts,
+      ...(defaultEffort ? { defaultEffort } : {})
+    },
+    endpoints,
+    permaslug
+  };
+}
 
 export function normalizeOpenRouterModels(data: unknown): OpenRouterModel[] {
   const rows = data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data) ? (data as { data: RawOpenRouterModel[] }).data : [];
@@ -40,12 +132,13 @@ export function normalizeOpenRouterModels(data: unknown): OpenRouterModel[] {
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function openRouterRequest(model: string, instructions: string, input: string, effort?: string) {
+export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string) {
   return {
     model,
     messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
     stream: true,
-    ...(effort ? { reasoning: { effort } } : {})
+    ...(effort ? { reasoning: { effort } } : {}),
+    ...(selectedProvider ? { provider: { order: [selectedProvider], allow_fallbacks: false, require_parameters: true } } : {})
   };
 }
 

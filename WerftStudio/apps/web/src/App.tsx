@@ -12,10 +12,17 @@ import { type ToolMode, useUi } from "./store";
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
 type ProviderId = "openai-codex" | "openrouter";
 type ModelSelection = { provider: ProviderId; model: string; effort?: string };
-type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; efforts: string[]; defaultEffort?: string };
+type OpenRouterEndpoint = { providerName: string; providerSlug: string; tag: string; endpointId: string; promptPerToken: number; completionPerToken: number; cacheReadPerToken: number; contextLength: number; maxCompletionTokens?: number; quantization: string; throughputLast30m?: number; uptimeLast5m?: number; status: number };
+type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; efforts: string[]; defaultEffort?: string; endpoint?: OpenRouterEndpoint };
+type OpenRouterModelDetails = { model: ProviderModel; endpoints: OpenRouterEndpoint[] };
 type ModelCatalog = { models: ProviderModel[]; selection?: ModelSelection; openrouterError?: string; selectionError?: string };
 const modelKey = (model: Pick<ProviderModel, "provider" | "id">) => JSON.stringify([model.provider, model.id]);
 const providerName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI · Codex OAuth" : "OpenRouter · API";
+const modelOptionName = (model: ProviderModel) => model.endpoint ? `${model.name} · ${model.endpoint.providerName}` : model.name;
+const endpointKey = (endpoint: OpenRouterEndpoint) => endpoint.endpointId || endpoint.tag || endpoint.providerSlug;
+const endpointPrice = (value: number) => (value * 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+const endpointStatus = (endpoint: OpenRouterEndpoint) => endpoint.status === 0 ? "ok" : endpoint.status === -2 ? "eingeschränkt" : endpoint.status === -5 ? "gestört" : `Status ${endpoint.status}`;
+const endpointStatusKind = (endpoint: OpenRouterEndpoint): "success" | "warning" | "error" => endpoint.status >= 0 && !(endpoint.uptimeLast5m !== undefined && endpoint.uptimeLast5m < 80) ? "success" : endpoint.status === -2 ? "warning" : "error";
 const previewOriginFor = () => `${window.location.protocol}//${window.location.hostname}:8444`;
 type Me = { id: string; email: string; name: string; role: string; organizationName: string };
 type ImportFile = { path: string; size: number; mime: string };
@@ -879,6 +886,9 @@ function ProviderSettings() {
   const [dialog, setDialog] = useState<"providers" | "openai" | "openrouter" | null>(null);
   const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
   const [apiKey, setApiKey] = useState("");
+  const [routerModelId, setRouterModelId] = useState("");
+  const [inspectedModel, setInspectedModel] = useState<OpenRouterModelDetails>();
+  const [selectedEndpointKey, setSelectedEndpointKey] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [effort, setEffort] = useState("");
   const client = useQueryClient();
@@ -893,6 +903,21 @@ function ProviderSettings() {
   const disconnectOpenRouter = useMutation({ mutationFn: () => api("/providers/openrouter", { method: "DELETE" }), onSuccess: refresh });
   const testOpenAi = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openai/test", { method: "POST", body: "{}" }) });
   const testOpenRouter = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openrouter/test", { method: "POST", body: "{}" }) });
+  const inspectOpenRouterModel = useMutation({
+    mutationFn: ({ model }: { model: string; preferred?: OpenRouterEndpoint }) => api<OpenRouterModelDetails>("/providers/openrouter/models/inspect", { method: "POST", body: JSON.stringify({ model }) }),
+    onMutate: () => { setInspectedModel(undefined); setSelectedEndpointKey(""); },
+    onSuccess: (data, variables) => {
+      setInspectedModel(data);
+      const previous = variables.preferred;
+      const preferred = previous && ((previous.endpointId ? data.endpoints.find((endpoint) => endpoint.endpointId === previous.endpointId) : undefined) ?? (previous.tag ? data.endpoints.find((endpoint) => endpoint.tag === previous.tag) : undefined) ?? data.endpoints.find((endpoint) => endpoint.providerSlug === previous.providerSlug));
+      setSelectedEndpointKey(endpointKey(preferred ?? data.endpoints[0]!));
+    }
+  });
+  const saveOpenRouterModel = useMutation({
+    mutationFn: ({ model, endpoint }: { model: string; endpoint: OpenRouterEndpoint }) => api("/providers/openrouter/models", { method: "PUT", body: JSON.stringify({ model, endpointId: endpoint.endpointId || undefined, providerTag: endpoint.tag || undefined, providerSlug: endpoint.providerSlug }) }),
+    onSuccess: async () => { setRouterModelId(""); setInspectedModel(undefined); setSelectedEndpointKey(""); await refresh(); }
+  });
+  const removeOpenRouterModel = useMutation({ mutationFn: (model: string) => api("/providers/openrouter/models", { method: "DELETE", body: JSON.stringify({ model }) }), onSuccess: refresh });
   const saveSelection = useMutation({ mutationFn: (selection: ModelSelection) => api("/providers/default-model", { method: "PATCH", body: JSON.stringify(selection) }), onSuccess: refresh });
   useEffect(() => { if (!device || poll.isPending) return; const timer=setTimeout(()=>poll.mutate(device.authId),device.interval*1000); return()=>clearTimeout(timer); },[device,poll.isPending,poll.mutate]);
   useEffect(() => {
@@ -912,7 +937,9 @@ function ProviderSettings() {
     if (!selectedModel) return;
     saveSelection.mutate({ provider: selectedModel.provider, model: selectedModel.id, ...(selectedModel.efforts.length && effort ? { effort } : {}) });
   };
-  const mutationError = openai.error || openrouter.error || catalog.error || connectOpenRouter.error || disconnectOpenAi.error || disconnectOpenRouter.error || testOpenAi.error || testOpenRouter.error || saveSelection.error;
+  const routerModels = catalog.data?.models.filter((model) => model.provider === "openrouter") ?? [];
+  const selectedEndpoint = inspectedModel?.endpoints.find((endpoint) => endpointKey(endpoint) === selectedEndpointKey);
+  const mutationError = openai.error || openrouter.error || catalog.error || connectOpenRouter.error || disconnectOpenAi.error || disconnectOpenRouter.error || testOpenAi.error || testOpenRouter.error || inspectOpenRouterModel.error || saveOpenRouterModel.error || removeOpenRouterModel.error || saveSelection.error;
   return (
     <>
       <div className="section-head">
@@ -934,13 +961,33 @@ function ProviderSettings() {
           <small>Modelle verschiedener Anbieter über einen OpenRouter-API-Key</small>
           <Status kind={openrouter.data?.connected ? "success" : "neutral"}>{openrouter.data?.connected ? "Verbunden" : "Nicht verbunden"}</Status>
           {openrouter.data?.connected && <small>{openrouter.data.label || "OpenRouter API-Key"}</small>}
-          <div className="caps"><span>{catalog.isLoading ? "Modelle werden geladen" : `${catalog.data?.models.filter((model) => model.provider === "openrouter").length ?? 0} Modelle`}</span><span>Reasoning</span></div>
+          <div className="caps"><span>{catalog.isLoading ? "Modelle werden geladen" : `${routerModels.length} persönliche Modelle`}</span><span>Fester Provider</span></div>
           <div className="provider-actions">{openrouter.data?.connected ? <><Button disabled={testOpenRouter.isPending} onClick={() => testOpenRouter.mutate()}>{testOpenRouter.isPending ? "Key wird geprüft …" : "Key prüfen"}</Button><Button onClick={() => setDialog("openrouter")}>Key ersetzen</Button><Button variant="danger" disabled={disconnectOpenRouter.isPending} onClick={() => window.confirm("OpenRouter-Verbindung wirklich trennen?") && disconnectOpenRouter.mutate()}>Trennen</Button></> : <Button onClick={() => setDialog("openrouter")}>Mit OpenRouter verbinden</Button>}</div>
           {testOpenRouter.data && <small className="field-success">API-Key gültig · {testOpenRouter.data.elapsedMs} ms</small>}
         </Card>
       </div>
+      {openrouter.data?.connected && <Card title="Persönliche OpenRouter-Modelle" sub="Füge nur die Modell-ID ein, die du auf OpenRouter kopiert hast. Werft lädt ausschließlich die Provider dieses Modells.">
+        <form className="router-model-add" onSubmit={(event) => { event.preventDefault(); const model = routerModelId.trim(); if (model) inspectOpenRouterModel.mutate({ model }); }}>
+          <label>OpenRouter-Modell-ID<input value={routerModelId} onChange={(event) => setRouterModelId(event.target.value)} placeholder="anthropic/claude-sonnet-4.5" autoComplete="off" /></label>
+          <Button type="submit" variant="primary" disabled={!routerModelId.trim() || inspectOpenRouterModel.isPending}>{inspectOpenRouterModel.isPending ? "Provider werden geladen …" : "Modell prüfen"}</Button>
+        </form>
+        <small className="router-model-hint">Die ID findest du über den Kopier-Button auf <a href="https://openrouter.ai/models" target="_blank" rel="noreferrer">openrouter.ai/models</a>. Es wird keine vollständige Modellliste geladen.</small>
+        {routerModels.length > 0 && <div className="personal-model-list">{routerModels.map((model) => <div className="personal-model" key={model.id}>
+          <div><strong>{model.name}</strong><code>{model.id}</code>{model.endpoint && <small>Provider: {model.endpoint.providerName} · {endpointPrice(model.endpoint.promptPerToken)} / {endpointPrice(model.endpoint.completionPerToken)} $ pro 1M Tokens</small>}</div>
+          <div><Button disabled={inspectOpenRouterModel.isPending} onClick={() => { setRouterModelId(model.id); inspectOpenRouterModel.mutate({ model: model.id, ...(model.endpoint ? { preferred: model.endpoint } : {}) }); }}>Provider ändern</Button><Button variant="danger" disabled={removeOpenRouterModel.isPending} onClick={() => window.confirm(`${model.name} aus deinen OpenRouter-Modellen entfernen?`) && removeOpenRouterModel.mutate(model.id)}>Entfernen</Button></div>
+        </div>)}</div>}
+        {!routerModels.length && !catalog.isLoading && <div className="empty router-model-empty">Noch kein persönliches OpenRouter-Modell hinzugefügt.</div>}
+        {inspectedModel && <section className="provider-picker">
+          <header><div><h3>{inspectedModel.model.name}</h3><code>{inspectedModel.model.id}</code></div><Status kind="info">{inspectedModel.endpoints.length} Provider</Status></header>
+          <div className="provider-table-wrap"><table className="provider-table"><thead><tr><th>Provider</th><th>Input $/1M</th><th>Output $/1M</th><th>Cache $/1M</th><th>Kontext</th><th>Throughput</th><th>Status</th></tr></thead><tbody>{inspectedModel.endpoints.map((endpoint) => <tr className={endpointKey(endpoint) === selectedEndpointKey ? "selected" : ""} key={endpointKey(endpoint)}>
+            <td><label><input type="radio" name="openrouter-provider" value={endpointKey(endpoint)} checked={endpointKey(endpoint) === selectedEndpointKey} onChange={() => setSelectedEndpointKey(endpointKey(endpoint))} /><span><strong>{endpoint.providerName}</strong><code>{endpoint.tag}</code></span></label></td>
+            <td>{endpointPrice(endpoint.promptPerToken)}</td><td>{endpointPrice(endpoint.completionPerToken)}</td><td>{endpoint.cacheReadPerToken > 0 ? endpointPrice(endpoint.cacheReadPerToken) : "--"}</td><td>{endpoint.contextLength.toLocaleString("de-DE")}</td><td>{endpoint.throughputLast30m === undefined ? "--" : `${endpoint.throughputLast30m.toLocaleString("de-DE", { maximumFractionDigits: 1 })} tps`}</td><td><Status kind={endpointStatusKind(endpoint)}>{endpointStatus(endpoint)}</Status></td>
+          </tr>)}</tbody></table></div>
+          <div className="modal-actions"><Button onClick={() => { setInspectedModel(undefined); setSelectedEndpointKey(""); }}>Abbrechen</Button><span/><Button variant="primary" disabled={!selectedEndpoint || saveOpenRouterModel.isPending} onClick={() => selectedEndpoint && saveOpenRouterModel.mutate({ model: inspectedModel.model.id, endpoint: selectedEndpoint })}>{saveOpenRouterModel.isPending ? "Wird verbunden …" : "Modell mit Provider verbinden"}</Button></div>
+        </section>}
+      </Card>}
       {catalog.data?.models.length ? <Card title="Standardmodell" sub="Dieses Modell wird für Gespräche, Designänderungen und den Neuaufbau aus Quellen verwendet.">
-        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{model.name}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Reasoning<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
+        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Reasoning<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
         <div className="modal-actions">{saveSelection.isSuccess && <Status kind="success">Gespeichert</Status>}<span/><Button variant="primary" disabled={!selectedModel || saveSelection.isPending} onClick={save}>{saveSelection.isPending ? "Wird gespeichert …" : "Standardmodell speichern"}</Button></div>
       </Card> : !catalog.isLoading && <Card title="Noch kein Modell verfügbar" sub="Verbinde OpenAI oder OpenRouter, um ein Standardmodell auszuwählen."><span /></Card>}
       {catalog.data?.openrouterError && <p className="field-error">{catalog.data.openrouterError}</p>}
@@ -1453,7 +1500,7 @@ function Studio() {
                       disabled={chatRun.isPending}
                       onChange={(event) => chooseRunModel(event.target.value)}
                     >
-                      {(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{model.name}</option>)}</optgroup> : null; })}
+                      {(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}
                     </select>
                     {runModel.efforts.length > 0 && <select
                       aria-label="Effort für den nächsten Lauf"

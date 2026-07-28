@@ -19,7 +19,7 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
-import { assertOpenRouterContext, normalizeOpenRouterModels, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterModel } from "./openrouter.js";
+import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails } from "./openrouter.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
@@ -130,8 +130,26 @@ type ProviderModel = OpenRouterModel | { provider: "openai-codex"; id: typeof co
 const providerIds = ["openai-codex", "openrouter"] as const;
 const openRouterCredentialsSchema = z.object({ apiKey: z.string().min(10).max(500) }).strict();
 const modelSelectionSchema = z.object({ provider: z.enum(providerIds), model: z.string().min(1).max(300), effort: z.string().min(1).max(20).optional() }).strict();
+const openRouterModelIdSchema = z.string().trim().min(3).max(300).regex(/^[^\s/]+\/[^\s/]+$/, "Füge die kopierte OpenRouter-Modell-ID im Format anbieter/modell ein.");
+const openRouterEndpointSchema = z.object({
+  providerName: z.string().min(1).max(200), providerSlug: z.string().min(1).max(200), tag: z.string().max(400), endpointId: z.string().max(400),
+  promptPerToken: z.number(), completionPerToken: z.number(), cacheReadPerToken: z.number(), contextLength: z.number().int().nonnegative(),
+  maxCompletionTokens: z.number().int().nonnegative().optional(), quantization: z.string().max(100), throughputLast30m: z.number().optional(), uptimeLast5m: z.number().optional(), status: z.number().int()
+}).strict();
+const storedOpenRouterModelSchema = z.object({ provider: z.literal("openrouter"), id: openRouterModelIdSchema, name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), defaultEffort: z.string().min(1).max(20).optional(), endpoint: openRouterEndpointSchema }).strict();
+const openRouterEndpointSelectionSchema = z.object({ model: openRouterModelIdSchema, endpointId: z.string().max(400).optional(), providerTag: z.string().max(400).optional(), providerSlug: z.string().max(200).optional() }).strict().refine((value) => value.endpointId || value.providerTag || value.providerSlug, { message: "Wähle einen Provider für das Modell aus." });
 const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-5.6-sol": "GPT-5.6 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-5.6-luna": "GPT-5.6 Luna" };
 const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: [...codexEfforts], defaultEffort: "medium" }));
+
+function openRouterSettings(value: unknown): { model?: string; effort?: string; models: OpenRouterModel[] } {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const parsed = z.array(storedOpenRouterModelSchema).safeParse(raw.models);
+  return {
+    ...(typeof raw.model === "string" ? { model: raw.model } : {}),
+    ...(typeof raw.effort === "string" ? { effort: raw.effort } : {}),
+    models: parsed.success ? parsed.data as unknown as OpenRouterModel[] : []
+  };
+}
 
 async function validOpenRouterConnection(organizationId: string) {
   const row = (await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0];
@@ -153,24 +171,55 @@ async function openRouterKeyInfo(apiKey: string) {
   if (!response.ok) throw openRouterHttpError(response.status);
   return await response.json() as { data?: { label?: string; limit_remaining?: number | null; is_free_tier?: boolean } };
 }
-async function openRouterModels(apiKey: string): Promise<OpenRouterModel[]> {
-  const all: OpenRouterModel[] = [];
-  for (let offset = 0; offset < 10_000; offset += 1_000) {
-    const response = await openRouterFetch(`${openRouterApi.modelsUrl}?limit=1000&offset=${offset}`, apiKey);
-    if (!response.ok) throw openRouterHttpError(response.status);
-    const data = await response.json() as { data?: unknown[]; total_count?: number };
-    all.push(...normalizeOpenRouterModels(data));
-    if (!Array.isArray(data.data) || data.data.length < 1_000 || (typeof data.total_count === "number" && all.length >= data.total_count)) break;
-  }
-  return all;
+async function openRouterModelDetails(apiKey: string, modelId: string): Promise<OpenRouterModelDetails> {
+  const path = modelId.split("/").map(encodeURIComponent).join("/");
+  const response = await openRouterFetch(`${openRouterApi.modelsUrl}/${path}/endpoints`, apiKey);
+  if (response.status === 404) fail("OPENROUTER_MODEL_NOT_FOUND", 404, "OpenRouter kennt diese Modell-ID nicht. Kopiere die ID erneut von der Modellseite.");
+  if (!response.ok) throw openRouterHttpError(response.status);
+  const details = normalizeOpenRouterModelDetails(await response.json(), modelId);
+  if (!details) fail("OPENROUTER_MODEL_INVALID", 400, "Dieses OpenRouter-Modell hat keine verwendbaren Text-Provider.");
+  await enrichOpenRouterThroughput(apiKey, path, details);
+  return details;
 }
-const openRouterCatalogCache = new Map<string, { updatedAt: number; expiresAt: number; models: OpenRouterModel[] }>();
-async function openRouterModelsForConnection(connection: { id: string; updatedAt: Date; credentials: { apiKey: string } }) {
-  const updatedAt = connection.updatedAt.getTime(), cached = openRouterCatalogCache.get(connection.id);
-  if (cached?.updatedAt === updatedAt && cached.expiresAt > Date.now()) return cached.models;
-  const models = await openRouterModels(connection.credentials.apiKey);
-  openRouterCatalogCache.set(connection.id, { updatedAt, expiresAt: Date.now() + 5 * 60 * 1_000, models });
-  return models;
+
+async function enrichOpenRouterThroughput(apiKey: string, modelPath: string, details: OpenRouterModelDetails): Promise<void> {
+  if (details.endpoints.every((endpoint) => endpoint.throughputLast30m !== undefined)) return;
+  try {
+    const page = await openRouterFetch(`https://openrouter.ai/${modelPath}/providers`, apiKey);
+    if (!page.ok) return;
+    const html = await page.text(), tagsByEndpoint = new Map(details.endpoints.filter((endpoint) => endpoint.endpointId).map((endpoint) => [endpoint.endpointId, endpoint.tag]));
+    const endpointPatterns = [
+      /id\\":\\"([0-9a-f-]{36})\\",\\"name\\":\\"[^\\"]+\\"[\s\S]{0,40000}?provider_slug\\":\\"([^\\"]+)\\"/gi,
+      /"id":"([0-9a-f-]{36})","name":"[^"]+"[\s\S]{0,40000}?"provider_slug":"([^"]+)"/gi
+    ];
+    for (const pattern of endpointPatterns) for (const match of html.matchAll(pattern)) tagsByEndpoint.set(match[1]!, match[2]!);
+    let chart: unknown;
+    for (const suffix of ["/v1/stats/throughput-comparison", "/stats/throughput-comparison"]) {
+      const response = await openRouterFetch(`${openRouterApi.frontendUrl}${suffix}?permaslug=${encodeURIComponent(details.permaslug)}`, apiKey);
+      if (!response.ok) continue;
+      chart = await response.json();
+      break;
+    }
+    const rows = chart && typeof chart === "object" && Array.isArray((chart as { data?: unknown }).data) ? (chart as { data: unknown[] }).data : [];
+    const latest = new Map<string, number>();
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const row = rows[index], values = row && typeof row === "object" && (row as { y?: unknown }).y && typeof (row as { y: unknown }).y === "object" ? (row as { y: Record<string, unknown> }).y : undefined;
+      if (!values) continue;
+      for (const [metric, raw] of Object.entries(values)) {
+        const endpointId = metric.split("::", 1)[0]!, value = typeof raw === "number" ? raw : Number(raw);
+        if (!latest.has(endpointId) && Number.isFinite(value)) latest.set(endpointId, value);
+      }
+    }
+    const byTag = new Map<string, number>();
+    for (const [endpointId, throughput] of latest) { const tag = tagsByEndpoint.get(endpointId); if (tag) byTag.set(tag, throughput); }
+    for (const endpoint of details.endpoints) {
+      if (endpoint.throughputLast30m !== undefined) continue;
+      const throughput = latest.get(endpoint.endpointId) ?? byTag.get(endpoint.tag);
+      if (throughput !== undefined) endpoint.throughputLast30m = throughput;
+    }
+  } catch (error) {
+    app.log.warn({ err: error, model: details.model.id }, "OpenRouter-Throughput konnte nicht ergänzt werden");
+  }
 }
 async function providerCatalog(organizationId: string) {
   const rows = await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.status, "connected")));
@@ -178,21 +227,15 @@ async function providerCatalog(organizationId: string) {
   const codex = rows.find((row) => row.provider === "openai-codex");
   const router = rows.find((row) => row.provider === "openrouter");
   if (codex) models.push(...codexProviderModels());
-  let openrouterError: string | undefined, routerModels: OpenRouterModel[] = [];
-  if (router) {
-    try {
-      routerModels = await openRouterModelsForConnection({ ...router, credentials: openRouterCredentialsSchema.parse(decryptCredentials(router.credentials, env.SESSION_SECRET)) });
-      models.push(...routerModels);
-    }
-    catch (error) { openrouterError = error instanceof Error ? error.message : "OpenRouter-Modelle konnten nicht geladen werden."; }
-  }
+  const routerModels = router ? openRouterSettings(router.settings).models : [];
+  models.push(...routerModels);
   const selected = rows.find((row) => row.isDefault) ?? codex ?? router;
   const settings = selected?.settings && typeof selected.settings === "object" ? selected.settings : {};
   const selection = selected?.provider === "openai-codex"
     ? { provider: "openai-codex" as const, model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" }
     : selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.some((model) => model.id === settings.model) ? { provider: "openrouter" as const, model: settings.model, ...(typeof settings.effort === "string" ? { effort: settings.effort } : {}) } : undefined;
   const selectionError = selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.length && !routerModels.some((model) => model.id === settings.model) ? "Das bisherige OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein neues Modell." : undefined;
-  return { models, selection, ...(openrouterError ? { openrouterError } : {}), ...(selectionError ? { selectionError } : {}) };
+  return { models, selection, ...(selectionError ? { selectionError } : {}) };
 }
 async function resolveModelSelection(organizationId: string, requested?: ModelSelection): Promise<ModelSelection> {
   if (requested) {
@@ -200,8 +243,8 @@ async function resolveModelSelection(organizationId: string, requested?: ModelSe
     if (requested.provider === "openai-codex" && requested.effort && !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Dieser Effort wird nicht unterstützt.");
     if (requested.provider === "openrouter") {
       const connection = await validOpenRouterConnection(organizationId);
-      const model = (await openRouterModelsForConnection(connection)).find((entry) => entry.id === requested.model);
-      if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+      const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);
+      if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
       if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
     } else {
       const connected = (await db.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, requested.provider), eq(providerConnections.status, "connected"))).limit(1))[0];
@@ -216,8 +259,8 @@ async function resolveModelSelection(organizationId: string, requested?: ModelSe
   if (row.provider === "openai-codex") return { provider: "openai-codex", model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" };
   if (row.provider === "openrouter" && typeof settings.model === "string") {
     const connection = await validOpenRouterConnection(organizationId);
-    const model = (await openRouterModelsForConnection(connection)).find((entry) => entry.id === settings.model);
-    if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+    const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === settings.model);
+    if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das OpenRouter-Standardmodell wurde nicht in den Einstellungen hinzugefügt.");
     const effort = typeof settings.effort === "string" && model.efforts.includes(settings.effort) ? settings.effort : model.defaultEffort ?? model.efforts[0];
     return { provider: "openrouter", model: model.id, ...(effort ? { effort } : {}) };
   }
@@ -358,7 +401,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.19-20260728.0011" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.20-20260728.1246" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -453,26 +496,67 @@ app.post("/api/v1/providers/openrouter", { config: { rateLimit: { max: 5, timeWi
   const actor = requireActorPermission(request, "provider.manage");
   const { apiKey } = openRouterCredentialsSchema.parse(request.body);
   const started = Date.now();
-  const [key, models] = await Promise.all([openRouterKeyInfo(apiKey), openRouterModels(apiKey)]);
-  if (!models.length) fail("OPENROUTER_MODELS_EMPTY", 502, "OpenRouter hat keine verwendbaren Textmodelle geliefert.");
+  const key = await openRouterKeyInfo(apiKey);
   const credentials = encryptCredentials({ apiKey }, env.SESSION_SECRET);
-  let existed = false;
+  let existed = false, modelCount = 0;
   await db.transaction(async (tx) => {
     await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
     const existing = (await tx.select({ settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0];
     existed = Boolean(existing);
     const previousSettings = existing?.settings && typeof existing.settings === "object" ? existing.settings : {};
-    const selected = models.find((model) => model.id === previousSettings.model);
-    const effort = selected && typeof previousSettings.effort === "string" && selected.efforts.includes(previousSettings.effort) ? previousSettings.effort : selected?.defaultEffort ?? selected?.efforts[0];
-    const settings = selected ? { model: selected.id, ...(effort ? { effort } : {}) } : {};
+    modelCount = openRouterSettings(previousSettings).models.length;
     const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0];
-    await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openrouter", credentials, accountId: key.data?.label, settings, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: key.data?.label, settings, status: "connected", updatedAt: new Date() } });
-    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.connected", targetType: "provider", result: "success", metadata: { provider: "openrouter", models: models.length }, correlationId: request.id });
+    await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openrouter", credentials, accountId: key.data?.label, settings: previousSettings, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: key.data?.label, settings: previousSettings, status: "connected", updatedAt: new Date() } });
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.connected", targetType: "provider", result: "success", metadata: { provider: "openrouter", models: modelCount }, correlationId: request.id });
   });
-  return reply.status(existed ? 200 : 201).send({ connected: true, label: key.data?.label, modelCount: models.length, elapsedMs: Date.now() - started });
+  return reply.status(existed ? 200 : 201).send({ connected: true, label: key.data?.label, modelCount, elapsedMs: Date.now() - started });
 });
 app.post("/api/v1/providers/openrouter/test", { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } }, async (request) => { const actor = requireActorPermission(request, "provider.use"), connection = await validOpenRouterConnection(actor.organizationId); const started = Date.now(); const key = await openRouterKeyInfo(connection.credentials.apiKey); return { ok: true, label: key.data?.label, limitRemaining: key.data?.limit_remaining, freeTier: key.data?.is_free_tier, elapsedMs: Date.now() - started }; });
-app.delete("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.manage"); let removedId: string | undefined; await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).returning({ id: providerConnections.id, isDefault: providerConnections.isDefault }))[0]; removedId = removed?.id; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); if (removedId) openRouterCatalogCache.delete(removedId); return { connected: false }; });
+app.post("/api/v1/providers/openrouter/models/inspect", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
+  const actor = requireActorPermission(request, "provider.read"), model = z.object({ model: openRouterModelIdSchema }).strict().parse(request.body).model;
+  const connection = await validOpenRouterConnection(actor.organizationId);
+  return openRouterModelDetails(connection.credentials.apiKey, model);
+});
+app.put("/api/v1/providers/openrouter/models", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
+  const actor = requireActorPermission(request, "provider.manage"), selected = openRouterEndpointSelectionSchema.parse(request.body);
+  const connection = await validOpenRouterConnection(actor.organizationId), details = await openRouterModelDetails(connection.credentials.apiKey, selected.model);
+  const endpoint = details.endpoints.find((entry) => selected.endpointId ? entry.endpointId === selected.endpointId : selected.providerTag ? entry.tag === selected.providerTag : entry.providerSlug === selected.providerSlug);
+  if (!endpoint) fail("OPENROUTER_PROVIDER_NOT_FOUND", 409, "Dieser Provider ist für das Modell nicht mehr verfügbar. Lade die Providerliste erneut.");
+  const stored: OpenRouterModel = { ...details.model, ...(endpoint.contextLength ? { contextLength: endpoint.contextLength } : {}), endpoint };
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const current = (await tx.select({ settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected"))).limit(1))[0];
+    if (!current) fail("OPENROUTER_NOT_CONNECTED", 409, "OpenRouter wurde inzwischen getrennt.");
+    const raw = current.settings && typeof current.settings === "object" ? current.settings : {}, previous = openRouterSettings(raw);
+    const models = [...previous.models.filter((model) => model.id !== stored.id), stored];
+    const active = models.find((model) => model.id === previous.model) ?? stored;
+    const effort = previous.effort && active.efforts.includes(previous.effort) ? previous.effort : active.defaultEffort ?? active.efforts[0];
+    const { effort: _oldEffort, ...withoutEffort } = raw;
+    await tx.update(providerConnections).set({ settings: { ...withoutEffort, models, model: active.id, ...(effort ? { effort } : {}) }, updatedAt: new Date() }).where(eq(providerConnections.id, connection.id));
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.model.saved", targetType: "provider", targetId: connection.id, result: "success", metadata: { model: stored.id, provider: endpoint.providerSlug }, correlationId: request.id });
+  });
+  return { model: stored };
+});
+app.delete("/api/v1/providers/openrouter/models", async (request) => {
+  const actor = requireActorPermission(request, "provider.manage"), modelId = z.object({ model: openRouterModelIdSchema }).strict().parse(request.body).model;
+  const connection = await validOpenRouterConnection(actor.organizationId);
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const current = (await tx.select({ settings: providerConnections.settings, isDefault: providerConnections.isDefault }).from(providerConnections).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected"))).limit(1))[0];
+    if (!current) fail("OPENROUTER_NOT_CONNECTED", 409, "OpenRouter wurde inzwischen getrennt.");
+    const raw = current.settings && typeof current.settings === "object" ? current.settings : {}, previous = openRouterSettings(raw), models = previous.models.filter((model) => model.id !== modelId);
+    if (models.length === previous.models.length) fail("OPENROUTER_MODEL_NOT_SAVED", 404, "Dieses Modell ist nicht in deinen OpenRouter-Modellen gespeichert.");
+    const active = previous.model === modelId ? models[0] : models.find((model) => model.id === previous.model);
+    const effort = active && previous.effort && active.efforts.includes(previous.effort) ? previous.effort : active?.defaultEffort ?? active?.efforts[0];
+    const { model: _oldModel, effort: _oldEffort, ...withoutSelection } = raw;
+    const fallback = !models.length && current.isDefault ? (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"), eq(providerConnections.status, "connected"))).limit(1))[0] : undefined;
+    await tx.update(providerConnections).set({ settings: { ...withoutSelection, models, ...(active ? { model: active.id } : {}), ...(effort ? { effort } : {}) }, ...(fallback ? { isDefault: false } : {}), updatedAt: new Date() }).where(eq(providerConnections.id, connection.id));
+    if (fallback) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(eq(providerConnections.id, fallback.id));
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.model.removed", targetType: "provider", targetId: connection.id, result: "success", metadata: { model: modelId }, correlationId: request.id });
+  });
+  return { removed: true };
+});
+app.delete("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
 app.get("/api/v1/providers/models", async (request) => { const actor = requireActorPermission(request, "provider.read"); return providerCatalog(actor.organizationId); });
 app.patch("/api/v1/providers/default-model", async (request) => {
   const actor = requireActorPermission(request, "provider.manage");
@@ -485,18 +569,21 @@ app.patch("/api/v1/providers/default-model", async (request) => {
     if (!requested.effort || !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Bitte einen gültigen Codex-Effort auswählen.");
     selection = { provider: "openai-codex", model: requested.model, effort: requested.effort };
   } else {
-    const model = (await openRouterModels(openRouterCredentialsSchema.parse(decryptCredentials(connection.credentials, env.SESSION_SECRET)).apiKey)).find((entry) => entry.id === requested.model);
-    if (!model) fail("MODEL_INVALID", 400, "Dieses OpenRouter-Modell ist für den API-Key nicht verfügbar.");
+    const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);
+    if (!model) fail("MODEL_INVALID", 400, "Dieses OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
     if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
     selection = { provider: "openrouter", model: model.id, ...(requested.effort ? { effort: requested.effort } : {}) };
   }
+  const rawSettings = connection.settings && typeof connection.settings === "object" ? connection.settings : {};
+  const { effort: _oldEffort, ...withoutEffort } = rawSettings;
+  const settings = { ...withoutEffort, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) };
   await db.transaction(async (tx) => {
     await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
     const current = (await tx.select({ updatedAt: providerConnections.updatedAt }).from(providerConnections).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected"))).limit(1))[0];
     if (!current) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider wurde inzwischen getrennt.");
     if (current.updatedAt.getTime() !== connection.updatedAt.getTime()) fail("PROVIDER_CHANGED", 409, "Die Provider-Verbindung wurde gleichzeitig geändert. Bitte speichere die Modellwahl erneut.");
     await tx.update(providerConnections).set({ isDefault: false, updatedAt: new Date() }).where(eq(providerConnections.organizationId, actor.organizationId));
-    const updated = await tx.update(providerConnections).set({ isDefault: true, settings: { model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) }, updatedAt: new Date() }).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId))).returning({ id: providerConnections.id });
+    const updated = await tx.update(providerConnections).set({ isDefault: true, settings, updatedAt: new Date() }).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.organizationId, actor.organizationId))).returning({ id: providerConnections.id });
     if (!updated[0]) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider wurde inzwischen getrennt.");
     await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.default_model.updated", targetType: "provider", targetId: connection.id, result: "success", metadata: selection, correlationId: request.id });
   });
@@ -795,8 +882,8 @@ async function modelRun(organizationId: string, instructions: string, input: str
   const selection = await resolveModelSelection(organizationId, options.selection);
   const codexConnection = selection.provider === "openai-codex" ? await validCodexConnection(organizationId) : undefined;
   const routerConnection = selection.provider === "openrouter" ? await validOpenRouterConnection(organizationId) : undefined;
-  const routerModel = routerConnection ? (await openRouterModelsForConnection(routerConnection)).find((model) => model.id === selection.model) : undefined;
-  if (routerConnection && !routerModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.");
+  const routerModel = routerConnection ? openRouterSettings(routerConnection.settings).models.find((model) => model.id === selection.model) : undefined;
+  if (routerConnection && !routerModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
   if (routerModel) assertOpenRouterContext(routerModel, instructions, input);
   const codexModel = selection.provider === "openai-codex" ? z.enum(codexModels).parse(selection.model) : undefined;
   const codexEffort = selection.provider === "openai-codex" ? z.enum(codexEfforts).parse(selection.effort ?? "medium") : undefined;
@@ -810,7 +897,7 @@ async function modelRun(organizationId: string, instructions: string, input: str
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
       const response = codexConnection
         ? await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${codexConnection.credentials.accessToken}`, "chatgpt-account-id": accountId!, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify({ ...codexRequestFields(codexModel!, codexEffort!), instructions, input: [{ role: "user", content: input }], store: false, stream: true }) })
-        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort)) });
+        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug)) });
       const raw = await response.text();
       if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : openRouterHttpError(response.status, response.headers.get("retry-after"));
       const outputText = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
