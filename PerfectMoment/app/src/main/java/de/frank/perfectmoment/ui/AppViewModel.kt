@@ -259,10 +259,77 @@ class AppViewModel(
     var backupConsent by mutableStateOf<android.content.IntentSender?>(null)
         private set
 
+    /** Gesetzt, wenn Android nach dem Sicherungsort fragen soll. */
+    var askForBackupTarget by mutableStateOf(false)
+        private set
+    var askForRestoreFile by mutableStateOf(false)
+        private set
+
+    val backupTargetChosen: Boolean get() = container.backupRepository.files.target != null
+
     fun refreshBackupState() {
         viewModelScope.launch {
             driveConnected = container.backupRepository.isConnected()
             backupState = BackupStatus.describe(appContext)
+        }
+    }
+
+    /**
+     * Beim ersten Mal fragt Android nach dem Ort — danach wird er gemerkt und ohne Rückfrage
+     * beschrieben. So genügt einmal Auswählen für alle künftigen Sicherungen.
+     */
+    fun saveToFile() {
+        val target = container.backupRepository.files.target
+        if (target == null) {
+            askForBackupTarget = true
+            return
+        }
+        writeBackupTo(target)
+    }
+
+    fun backupTargetChosen(uri: android.net.Uri?) {
+        askForBackupTarget = false
+        if (uri == null) return
+        container.backupRepository.files.rememberTarget(uri)
+        writeBackupTo(uri)
+    }
+
+    fun restoreFromFileRequested() {
+        askForRestoreFile = true
+    }
+
+    fun restoreFileChosen(uri: android.net.Uri?) {
+        askForRestoreFile = false
+        if (uri == null) return
+        runFileAction {
+            val summary = container.backupRepository.restoreFromFile(uri)
+            "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, " +
+                "${summary.sessions} neue Sitzungen"
+        }
+    }
+
+    fun forgetBackupTarget() {
+        container.backupRepository.files.forgetTarget()
+        message = "Der Sicherungsort wurde vergessen. Beim nächsten Sichern fragt die App erneut."
+    }
+
+    private fun writeBackupTo(uri: android.net.Uri) = runFileAction {
+        val summary = container.backupRepository.backupToFile(uri)
+        "Gesichert: ${summary.hooks} Aufhänger, ${summary.skills} Skills, ${summary.sessions} Sitzungen"
+    }
+
+    private fun runFileAction(action: suspend () -> String) {
+        if (backupBusy) return
+        viewModelScope.launch {
+            backupBusy = true
+            try {
+                message = action()
+                backupState = BackupStatus.describe(appContext)
+            } catch (error: Exception) {
+                message = error.message ?: "Das hat nicht geklappt."
+            } finally {
+                backupBusy = false
+            }
         }
     }
 

@@ -22,8 +22,22 @@ class BackupRepository(
 
     private val auth = DriveAuth(context)
     private val drive = DriveClient(http)
+    val files = FileBackup(context)
 
     data class Summary(val hooks: Int, val skills: Int, val sessions: Int)
+
+    /** Schreibt die Sicherung an den gewählten Ort — in der Regel im Google Drive des Nutzers. */
+    suspend fun backupToFile(uri: android.net.Uri): Summary {
+        val payload = collect()
+        files.write(uri, payload.toJson())
+        return Summary(payload.hooks.size, payload.skills.size, payload.sessions.size)
+    }
+
+    /** Liest eine Sicherungsdatei und mischt sie ein. */
+    suspend fun restoreFromFile(uri: android.net.Uri): Summary {
+        val payload = BackupPayload.fromJson(files.read(uri)) ?: throw UnreadableBackup()
+        return apply(payload)
+    }
 
     suspend fun isConnected(): Boolean = auth.isConnected()
 

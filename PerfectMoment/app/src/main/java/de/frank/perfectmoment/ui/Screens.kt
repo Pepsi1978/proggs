@@ -1400,30 +1400,28 @@ fun SettingsScreen(
             }
             SettingsSection("Sicherung") {
                 SettingRow(
-                    "Google Drive",
-                    if (viewModel.driveConnected) "Verbunden" else "Nicht verbunden",
-                    supporting = viewModel.backupState,
-                    statusColor = if (viewModel.driveConnected) colors.success else null,
-                )
-                SettingRow(
                     "Jetzt sichern",
                     value = if (viewModel.backupBusy) "…" else null,
-                    supporting = "Aufhänger, Skills und Verlauf hochladen",
-                    onClick = viewModel::backupNow,
+                    supporting = if (viewModel.backupTargetChosen) {
+                        viewModel.backupState
+                    } else {
+                        "Ort einmal wählen — z.B. Google Drive"
+                    },
+                    onClick = viewModel::saveToFile,
                     showChevron = !viewModel.backupBusy,
+                    statusColor = if (viewModel.backupTargetChosen) colors.success else null,
                 )
                 SettingRow(
                     "Wiederherstellen",
-                    supporting = "Sicherung aus Google Drive einspielen",
-                    onClick = viewModel::restoreNow,
+                    supporting = "Sicherungsdatei auswählen und einspielen",
+                    onClick = viewModel::restoreFromFileRequested,
                     showChevron = !viewModel.backupBusy,
-                    divider = viewModel.driveConnected,
+                    divider = viewModel.backupTargetChosen,
                 )
-                if (viewModel.driveConnected) {
+                if (viewModel.backupTargetChosen) {
                     SettingRow(
-                        "Verbindung trennen",
-                        onClick = viewModel::disconnectDrive,
-                        valueColor = colors.warning,
+                        "Anderen Ort wählen",
+                        onClick = viewModel::forgetBackupTarget,
                         divider = false,
                     )
                 }

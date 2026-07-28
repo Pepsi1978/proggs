@@ -108,6 +108,23 @@ class MainActivity : FragmentActivity() {
                 LaunchedEffect(viewModel.screen) {
                     if (viewModel.screen == AppScreen.SETTINGS) viewModel.refreshBackupState()
                 }
+                // Android fragt selbst nach dem Ort — Google Drive erscheint dort als Ziel.
+                val chooseTarget = rememberLauncherForActivityResult(
+                    ActivityResultContracts.CreateDocument("application/json"),
+                ) { uri -> viewModel.backupTargetChosen(uri) }
+                val chooseRestore = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument(),
+                ) { uri -> viewModel.restoreFileChosen(uri) }
+                LaunchedEffect(viewModel.askForBackupTarget) {
+                    if (viewModel.askForBackupTarget) {
+                        chooseTarget.launch(container.backupRepository.files.suggestedName())
+                    }
+                }
+                LaunchedEffect(viewModel.askForRestoreFile) {
+                    if (viewModel.askForRestoreFile) {
+                        chooseRestore.launch(arrayOf("application/json", "*/*"))
+                    }
+                }
                 LaunchedEffect(viewModel.screen) {
                     if (viewModel.screen == AppScreen.SESSION && Build.VERSION.SDK_INT >= 33 &&
                         ContextCompat.checkSelfPermission(
