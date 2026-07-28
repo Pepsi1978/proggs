@@ -29,6 +29,22 @@ export function physicalZoomForDevice(deviceWidth: number, physicalWidthMm: numb
   return Math.max(minCanvasZoom, Math.min(maxCanvasZoom, physicalWidthMm * monitorPixelsPerMillimeter / deviceWidth));
 }
 
+export function defaultDeviceZoomAndOffset(
+  viewport: { width: number; height: number },
+  content: { width: number; height: number },
+  physicalZoom: number | null,
+  padding = 64
+): { zoom: number; offset: CanvasPoint } {
+  if (!physicalZoom) return fitZoomAndOffset(viewport, content, padding);
+  return {
+    zoom: physicalZoom,
+    offset: {
+      x: (viewport.width - content.width * physicalZoom) / 2,
+      y: (viewport.height - content.height * physicalZoom) / 2
+    }
+  };
+}
+
 export function canvasZoomFromWheel(currentZoom: number, deltaY: number, snapZoom?: number | null): number {
   const nextZoom = Math.max(minCanvasZoom, Math.min(maxCanvasZoom, currentZoom * Math.exp(-deltaY * 0.0015)));
   if (snapZoom && currentZoom !== snapZoom && ((currentZoom < snapZoom && nextZoom >= snapZoom) || (currentZoom > snapZoom && nextZoom <= snapZoom))) return snapZoom;

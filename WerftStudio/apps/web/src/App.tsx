@@ -4,7 +4,7 @@ import { Archive, ArrowLeft, Box, Check, ChevronLeft, CircleUserRound, Code2, Do
 import { type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, apiEventStream, apiFormProgress, ApiError } from "./api";
-import { canvasZoomFromWheel, fitZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
+import { canvasZoomFromWheel, defaultDeviceZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
 import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
 import { hexColour, tokenTitle } from "./design-colours";
 import { chatStepText, designFileLabel, providerHealth } from "./chat-progress";
@@ -1856,13 +1856,15 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     try { frameRef.current?.contentWindow?.postMessage({ source: "werft-studio-canvas", ...message }, "*"); }
     catch (error) { console.warn("Vorschau nicht erreichbar", error); }
   };
-  // Der ganze Bildschirm muss immer hineinpassen — oben, unten, links und rechts nichts abgeschnitten.
-  const fitStage = () => {
+  // Kalibrierte Referenzgeraete starten in ihrer physischen Originalgroesse. Nur ohne Kalibrierung
+  // wird der ganze Bildschirm als sichere Rueckfalloption vollstaendig eingepasst.
+  const fitStage = (highlightPhysicalSize = false) => {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect || !rect.width || !rect.height) return;
-    const result = fitZoomAndOffset({ width: rect.width, height: rect.height }, sizeRef.current, 20);
+    const result = defaultDeviceZoomAndOffset({ width: rect.width, height: rect.height }, sizeRef.current, physicalZoom, 20);
     setZoom(result.zoom);
     setOffset(result.offset);
+    if (highlightPhysicalSize && physicalZoom) setPhysicalSizeHighlight(true);
   };
   const resetView = () => { userAdjusted.current = false; fitStage(); };
 
@@ -2072,8 +2074,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
     // gesetzt, bis die Vorschau selbst gemessen hat — sonst bliebe die zuletzt erzwungene stehen.
     if (!device) setMeasuredSize({ width: previewWidth, height: previewHeight });
     userAdjusted.current = false;
-    requestAnimationFrame(() => { if (!userAdjusted.current) fitStage(); });
-  }, [device?.id, device?.width, device?.height, screens.length]);
+    requestAnimationFrame(() => { if (!userAdjusted.current) fitStage(true); });
+  }, [device?.id, device?.width, device?.height, physicalZoom, screens.length]);
   // Farbregler wirken sofort im Design — ohne KI-Lauf und auf allen Bildschirmen zugleich.
   useEffect(() => { if (tuneRequest) tellFrame({ action: "tune", overrides: tuneRequest.overrides }); }, [tuneRequest?.nonce]);
   // Die Wahl aus dem Design Board gilt für ALLE Bildschirme: umgeschaltet wird am Dokument selbst,

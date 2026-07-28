@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canvasZoomFromWheel, fitZoomAndOffset, maxCanvasZoom, minCanvasZoom, offsetForZoomAtPoint, physicalZoomForDevice } from "./canvas-navigation";
+import { canvasZoomFromWheel, defaultDeviceZoomAndOffset, fitZoomAndOffset, maxCanvasZoom, minCanvasZoom, offsetForZoomAtPoint, physicalZoomForDevice } from "./canvas-navigation";
 
 describe("canvas navigation", () => {
   it("zooms in and out within the canvas limits", () => {
@@ -22,6 +22,21 @@ describe("canvas navigation", () => {
     expect(physicalZoomForDevice(0, 73.2, 4)).toBeNull();
     expect(physicalZoomForDevice(384, 0, 4)).toBeNull();
     expect(physicalZoomForDevice(384, 73.2, 0)).toBeNull();
+  });
+
+  it("verwendet die physische Originalgroesse als Standard und zentriert das Geraet", () => {
+    const portrait = defaultDeviceZoomAndOffset({ width: 1200, height: 800 }, { width: 384, height: 824 }, 0.7625);
+    const landscape = defaultDeviceZoomAndOffset({ width: 1200, height: 800 }, { width: 824, height: 384 }, 0.7625);
+
+    expect(portrait.zoom).toBe(0.7625);
+    expect(portrait.offset).toEqual({ x: (1200 - 384 * 0.7625) / 2, y: (800 - 824 * 0.7625) / 2 });
+    expect(landscape.zoom).toBe(0.7625);
+    expect(landscape.offset).toEqual({ x: (1200 - 824 * 0.7625) / 2, y: (800 - 384 * 0.7625) / 2 });
+  });
+
+  it("passt das Geraet ohne Monitorkalibrierung weiterhin vollstaendig ein", () => {
+    expect(defaultDeviceZoomAndOffset({ width: 1000, height: 600 }, { width: 412, height: 915 }, null, 40))
+      .toEqual(fitZoomAndOffset({ width: 1000, height: 600 }, { width: 412, height: 915 }, 40));
   });
 
   it("passt einen Bildschirm vollständig ein und stellt ihn mittig", () => {
