@@ -43,8 +43,11 @@ data class SessionConfig(
         require(pauseRepMs >= 0) { "pauseRepMs must not be negative" }
         require(pauseNextMs >= 0) { "pauseNextMs must not be negative" }
         require(repsPerQuestion > 0) { "repsPerQuestion must be positive" }
-        require(durationMs > 0) { "durationMs must be positive" }
+        require(durationMs >= 0) { "durationMs must not be negative" }
     }
+
+    val isEndless: Boolean
+        get() = durationMs == 0L
 
     companion object {
         fun fromSeconds(

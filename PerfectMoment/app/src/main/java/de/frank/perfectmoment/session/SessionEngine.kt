@@ -42,7 +42,11 @@ class SessionEngine(
             phase = if (checkpoint != null && initialQuestions.isNotEmpty()) Phase.SPEAKING else Phase.IDLE_MUTED,
             speakerOn = checkpoint != null && initialQuestions.isNotEmpty(),
             paused = checkpoint != null && initialQuestions.isNotEmpty(),
-            remainingMs = checkpoint?.remainingMs?.coerceIn(1L, config.durationMs) ?: config.durationMs,
+            remainingMs = if (config.isEndless) {
+                0L
+            } else {
+                checkpoint?.remainingMs?.coerceIn(1L, config.durationMs) ?: config.durationMs
+            },
         ),
     )
     val state: StateFlow<SessionState> = _state.asStateFlow()
@@ -71,7 +75,7 @@ class SessionEngine(
         if (!started.compareAndSet(false, true)) return
         scope.launch {
             val restored = checkpoint != null && _state.value.questions.isNotEmpty()
-            deadlineMs = clock.nowMillis() + _state.value.remainingMs
+            if (!config.isEndless) deadlineMs = clock.nowMillis() + _state.value.remainingMs
             _state.value = _state.value.copy(
                 phase = when {
                     _state.value.questions.isEmpty() -> Phase.WAITING_NETWORK
@@ -81,7 +85,7 @@ class SessionEngine(
                 speakerOn = restored,
                 paused = restored,
             )
-            if (!_state.value.paused) startTimer()
+            if (!_state.value.paused && !config.isEndless) startTimer()
             if (_state.value.questions.isEmpty() && !initialGenerationInFlight) {
                 requestRefill()
             } else if (restored) {
@@ -176,7 +180,7 @@ class SessionEngine(
         val current = _state.value
         if (current.phase == Phase.ENDED || current.paused) return
 
-        val remaining = max(0L, deadlineMs - clock.nowMillis())
+        val remaining = if (config.isEndless) 0L else max(0L, deadlineMs - clock.nowMillis())
         timerJob?.cancel()
         timerJob = null
         when (current.phase) {
@@ -210,15 +214,15 @@ class SessionEngine(
     private fun resumeSessionInternal() {
         val current = _state.value
         if (!current.paused || current.phase == Phase.ENDED) return
-        if (current.remainingMs <= 0L) {
+        if (!config.isEndless && current.remainingMs <= 0L) {
             endSession()
             return
         }
 
         timerExpired = false
-        deadlineMs = clock.nowMillis() + current.remainingMs
+        if (!config.isEndless) deadlineMs = clock.nowMillis() + current.remainingMs
         _state.value = current.copy(paused = false)
-        startTimer()
+        if (!config.isEndless) startTimer()
         when (current.phase) {
             Phase.SPEAKING -> {
                 if (!current.speakerOn) {

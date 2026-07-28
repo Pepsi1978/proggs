@@ -213,6 +213,28 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `Endlosmodus laeuft ohne Timerende und uebersteht Pause`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1), question(2)),
+            config = config(pauseNextMs = 0, reps = 1, durationMs = 0),
+        )
+        fixture.startSpeaking()
+
+        advanceTimeBy(24 * 60 * 60 * 1_000L)
+        fixture.engine.togglePause()
+        runCurrent()
+        fixture.engine.togglePause()
+        runCurrent()
+        fixture.tts.completeCurrent()
+        runCurrent()
+
+        assertEquals(0L, fixture.engine.state.value.remainingMs)
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
+        assertEquals("Frage 2", fixture.tts.spokenTexts.last())
+        fixture.engine.close()
+    }
+
+    @Test
     fun `Offline Ansage erfolgt pro Offline Periode nur einmal`() = runTest {
         val refill = FakeRefill()
         val fixture = fixture(

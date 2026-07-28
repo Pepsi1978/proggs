@@ -239,11 +239,11 @@ private fun SliderBlock(
 @Composable
 private fun DurationSheet(viewModel: AppViewModel) {
     SectionLabel("Sitzungsdauer", Modifier.padding(bottom = 16.dp))
-    listOf(10, 20, 30, 45, 60, 90, 120).chunked(4).forEach { row ->
+    listOf(10, 20, 30, 45, 60, 90, 120, 0).chunked(4).forEach { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { duration ->
                 Segment(
-                    text = duration.toString(),
+                    text = if (duration == 0) "Endlos" else duration.toString(),
                     selected = duration == viewModel.durationMinutes,
                     onClick = { viewModel.setDuration(duration) },
                     modifier = Modifier.weight(1f).height(52.dp),

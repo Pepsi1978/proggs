@@ -170,14 +170,16 @@ class SessionForegroundService : Service() {
     }
 
     private fun acquireWakeLock() {
-        val sessionDurationMs = controller.runtime.value?.config?.durationMs
-            ?.coerceAtMost(MAX_SESSION_DURATION_MS)
-            ?: MAX_SESSION_DURATION_MS
+        val sessionDurationMs = controller.runtime.value?.config?.durationMs ?: MAX_SESSION_DURATION_MS
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:session")
             .apply {
                 setReferenceCounted(false)
-                acquire(sessionDurationMs + WAKE_LOCK_RESERVE_MS)
+                if (sessionDurationMs == 0L) {
+                    acquire()
+                } else {
+                    acquire(sessionDurationMs.coerceAtMost(MAX_SESSION_DURATION_MS) + WAKE_LOCK_RESERVE_MS)
+                }
             }
     }
 

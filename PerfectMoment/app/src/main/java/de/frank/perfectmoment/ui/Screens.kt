@@ -291,7 +291,7 @@ fun StartScreen(
             ) {
                 ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f))
                 ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f))
-                ParameterCard("Dauer", "${viewModel.durationMinutes} min", { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f))
+                ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f))
             }
             Row(
                 Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 38.dp),
@@ -655,7 +655,7 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
         }
         val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
         Text(
-            "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
+            if (runtime.config.isEndless) "Endlos" else "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L),
             color = colors.text2,
             fontFamily = JetBrainsMono,
             fontWeight = FontWeight.Medium,
@@ -983,7 +983,7 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
                     lineHeight = 21.6.sp,
                 )
                 Text(
-                    "${formatSessionDate(session.startedAt)} · ${session.durationMin} min · ${session.questionCount} Fragen · ${voiceDisplayName(session.voiceName)}",
+                    "${formatSessionDate(session.startedAt)} · ${formatSessionDuration(session.durationMin)} · ${session.questionCount} Fragen · ${voiceDisplayName(session.voiceName)}",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,
@@ -1019,7 +1019,7 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), compact = true)
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)
-                        ParameterCard("Dauer", "${viewModel.durationMinutes} min", { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
+                        ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
                     }
                     PmCard(Modifier.fillMaxWidth().padding(top = 12.dp).pmClickable { viewModel.toggleRandomReplay() }) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1058,6 +1058,8 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
 private fun formatSessionDate(timestamp: Long): String =
     SimpleDateFormat("dd. MMM, HH:mm", Locale.GERMAN).format(Date(timestamp))
 
+private fun formatSessionDuration(minutes: Int): String = if (minutes == 0) "Endlos" else "$minutes min"
+
 private fun voiceDisplayName(id: String): String = id.substringAfterLast('-').removeSuffix("Neural")
 
 @Composable
@@ -1079,7 +1081,7 @@ fun SettingsScreen(
                 SettingRow("Pause zwischen Wiederholungen", "${viewModel.pauseRep} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) }, showChevron = true)
                 SettingRow("Pause bis zur nächsten Frage", "${viewModel.pauseNext} s", onClick = { viewModel.openSheet(AppSheet.PAUSES) }, showChevron = true)
                 SettingRow("Wiederholungen pro Frage", "${viewModel.repetitions}×", onClick = { viewModel.openSheet(AppSheet.REPETITIONS) }, showChevron = true)
-                SettingRow("Sitzungsdauer", "${viewModel.durationMinutes} min", onClick = { viewModel.openSheet(AppSheet.DURATION) }, divider = false, showChevron = true)
+                SettingRow("Sitzungsdauer", formatSessionDuration(viewModel.durationMinutes), onClick = { viewModel.openSheet(AppSheet.DURATION) }, divider = false, showChevron = true)
             }
             SettingsSection("Inhalt") {
                 SettingRow(
@@ -1815,7 +1817,7 @@ fun RawDataScreen(viewModel: AppViewModel) {
                         "Session #${detail.session.id}\n" +
                             "Thema: ${detail.session.topic}\n" +
                             "Start: ${formatSessionDate(detail.session.startedAt)}\n" +
-                            "Dauer: ${detail.session.durationMin} min\n" +
+                            "Dauer: ${formatSessionDuration(detail.session.durationMin)}\n" +
                             "Anbieter: ${detail.session.providerId}\n" +
                             "Stimme: ${detail.session.voiceName}\n" +
                             "Pausen: ${detail.session.pauseRep}/${detail.session.pauseNext} s\n" +

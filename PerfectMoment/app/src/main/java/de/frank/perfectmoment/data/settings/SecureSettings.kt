@@ -212,7 +212,7 @@ class SecureSettings(context: Context) : Closeable {
 
     companion object {
         const val STORE_NAME = "perfect_moment_secure_prefs"
-        val ALLOWED_DURATIONS = setOf(10, 20, 30, 45, 60, 90, 120)
+        val ALLOWED_DURATIONS = setOf(0, 10, 20, 30, 45, 60, 90, 120)
         val ALLOWED_THEMES = setOf("light", "dark", "system")
         const val MIN_TTS_SPEECH_RATE = 0.7f
         const val MAX_TTS_SPEECH_RATE = 1.3f
