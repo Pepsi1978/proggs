@@ -20,6 +20,7 @@ import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails, type OpenRouterStreamResult } from "./openrouter.js";
+import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, zenApi, zenHttpError, zenRequest, type ZenModel } from "./opencode-zen.js";
 import { applyChatEdits, parseChatResponse, repairBriefing, verifyFileWrite, type ChatEdit, type FileReport, type ParsedChatResponse } from "./chat-edit.js";
 import { designMap, designScreens, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
 import { designBriefing, summariseEffect } from "./css-effect.js";
@@ -127,11 +128,13 @@ async function validCodexConnection(organizationId: string) {
   }
   return { ...row, credentials, expiresAt };
 }
-type ProviderId = "openai-codex" | "openrouter";
+type ProviderId = "openai-codex" | "openrouter" | "opencode-zen";
 type ModelSelection = { provider: ProviderId; model: string; effort?: string };
-type ProviderModel = OpenRouterModel | { provider: "openai-codex"; id: typeof codexModels[number]; name: string; efforts: string[]; defaultEffort: string };
-const providerIds = ["openai-codex", "openrouter"] as const;
+type ProviderModel = OpenRouterModel | ZenModel | { provider: "openai-codex"; id: typeof codexModels[number]; name: string; efforts: string[]; defaultEffort: string };
+const providerIds = ["openai-codex", "openrouter", "opencode-zen"] as const;
+const providerDisplayName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI" : provider === "openrouter" ? "OpenRouter" : "OpenCode Zen";
 const openRouterCredentialsSchema = z.object({ apiKey: z.string().min(10).max(500) }).strict();
+const zenCredentialsSchema = z.object({ apiKey: z.literal("public") }).strict();
 const modelSelectionSchema = z.object({ provider: z.enum(providerIds), model: z.string().min(1).max(300), effort: z.string().min(1).max(20).optional() }).strict();
 const openRouterModelIdSchema = z.string().trim().min(3).max(300).regex(/^[^\s/]+\/[^\s/]+$/, "Füge die kopierte OpenRouter-Modell-ID im Format anbieter/modell ein.");
 const openRouterEndpointSchema = z.object({
@@ -140,6 +143,7 @@ const openRouterEndpointSchema = z.object({
   maxCompletionTokens: z.number().int().nonnegative().optional(), quantization: z.string().max(100), throughputLast30m: z.number().optional(), uptimeLast5m: z.number().optional(), status: z.number().int()
 }).strict();
 const storedOpenRouterModelSchema = z.object({ provider: z.literal("openrouter"), id: openRouterModelIdSchema, name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), defaultEffort: z.string().min(1).max(20).optional(), endpoint: openRouterEndpointSchema }).strict();
+const storedZenModelSchema = z.object({ provider: z.literal("opencode-zen"), id: z.string().min(1).max(300), name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), inputTokenLimit: z.number().int().positive().optional(), maxOutputTokens: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), reasoning: z.boolean() }).strict();
 const openRouterEndpointSelectionSchema = z.object({ model: openRouterModelIdSchema, endpointId: z.string().max(400).optional(), providerTag: z.string().max(400).optional(), providerSlug: z.string().max(200).optional() }).strict().refine((value) => value.endpointId || value.providerTag || value.providerSlug, { message: "Wähle einen Provider für das Modell aus." });
 const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-5.6-sol": "GPT-5.6 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-5.6-luna": "GPT-5.6 Luna" };
 const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: [...codexEfforts], defaultEffort: "medium" }));
@@ -154,11 +158,66 @@ function openRouterSettings(value: unknown): { model?: string; effort?: string; 
   };
 }
 
+function zenSettings(value: unknown): { model?: string; effort?: string; models: ZenModel[] } {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const parsed = z.array(storedZenModelSchema).safeParse(raw.models);
+  return {
+    ...(typeof raw.model === "string" ? { model: raw.model } : {}),
+    ...(typeof raw.effort === "string" ? { effort: raw.effort } : {}),
+    models: parsed.success ? parsed.data as ZenModel[] : []
+  };
+}
+
 async function validOpenRouterConnection(organizationId: string) {
   const row = (await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0];
   if (!row) fail("OPENROUTER_NOT_CONNECTED", 409, "Bitte zuerst OpenRouter verbinden.");
   const credentials = openRouterCredentialsSchema.parse(decryptCredentials(row.credentials, env.SESSION_SECRET));
   return { ...row, credentials };
+}
+async function validZenConnection(organizationId: string) {
+  const row = (await db.select().from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, "opencode-zen"))).limit(1))[0];
+  if (!row) fail("ZEN_NOT_CONNECTED", 409, "Bitte zuerst OpenCode Zen Free aktivieren.");
+  const credentials = zenCredentialsSchema.parse(decryptCredentials(row.credentials, env.SESSION_SECRET));
+  return { ...row, credentials };
+}
+async function zenFetch(url: string, apiKey: string | undefined, init: RequestInit = {}) {
+  try {
+    return await fetch(url, { ...init, signal: init.signal ?? AbortSignal.timeout(30_000), headers: { ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}), ...init.headers } });
+  } catch (error) {
+    if (init.signal?.aborted) throw init.signal.reason ?? error;
+    app.log.warn({ err: error, url }, "OpenCode Zen nicht erreichbar");
+    fail("ZEN_UNREACHABLE", 502, "OpenCode Zen ist vom Server aus nicht erreichbar.", true);
+  }
+}
+let zenCatalogCache: { models: ZenModel[]; expiresAt: number } | undefined;
+let zenCatalogLoading: Promise<ZenModel[]> | undefined;
+async function fetchZenFreeModels(force = false): Promise<ZenModel[]> {
+  if (!force && zenCatalogCache && zenCatalogCache.expiresAt > Date.now()) return zenCatalogCache.models;
+  if (zenCatalogLoading) return zenCatalogLoading;
+  zenCatalogLoading = (async () => {
+    const [availableResponse, metadataResponse] = await Promise.all([zenFetch(zenApi.modelsUrl, "public"), zenFetch(zenApi.metadataUrl, undefined)]);
+    const availableRaw = await availableResponse.text(), metadataRaw = await metadataResponse.text();
+    if (!availableResponse.ok) throw zenHttpError(availableResponse.status, availableResponse.headers.get("retry-after"), availableRaw);
+    if (!metadataResponse.ok) fail("ZEN_METADATA_UNAVAILABLE", 502, "Die OpenCode-Zen-Modellinformationen sind gerade nicht verfügbar.", true);
+    const models = normalizeZenFreeModels(JSON.parse(availableRaw), JSON.parse(metadataRaw));
+    zenCatalogCache = { models, expiresAt: Date.now() + 5 * 60_000 };
+    return models;
+  })();
+  try { return await zenCatalogLoading; }
+  finally { zenCatalogLoading = undefined; }
+}
+async function zenModelsForConnection(connection: { settings: unknown }, force = false): Promise<ZenModel[]> {
+  try { return await fetchZenFreeModels(force); }
+  catch (error) {
+    const stored = zenSettings(connection.settings).models;
+    const details = error && typeof error === "object" ? error as { retryable?: unknown } : {};
+    if (!force && details.retryable !== false && stored.length) return stored;
+    throw error;
+  }
+}
+function defaultFallback(rows: Array<{ id: string; provider: string; settings: unknown }>) {
+  const usable = rows.filter((row) => row.provider === "openai-codex" || row.provider === "opencode-zen" && zenSettings(row.settings).models.length > 0 || row.provider === "openrouter" && openRouterSettings(row.settings).models.length > 0);
+  return ["openai-codex", "opencode-zen", "openrouter"].map((provider) => usable.find((row) => row.provider === provider)).find(Boolean);
 }
 async function openRouterFetch(url: string, apiKey: string, init: RequestInit = {}) {
   try {
@@ -229,16 +288,33 @@ async function providerCatalog(organizationId: string) {
   const models: ProviderModel[] = [];
   const codex = rows.find((row) => row.provider === "openai-codex");
   const router = rows.find((row) => row.provider === "openrouter");
+  const zen = rows.find((row) => row.provider === "opencode-zen");
   if (codex) models.push(...codexProviderModels());
   const routerModels = router ? openRouterSettings(router.settings).models : [];
   models.push(...routerModels);
-  const selected = rows.find((row) => row.isDefault) ?? codex ?? router;
+  let zenModels: ZenModel[] = [];
+  let zenError: string | undefined;
+  if (zen) {
+    try { zenModels = await fetchZenFreeModels(); }
+    catch (error) {
+      const details = error && typeof error === "object" ? error as { retryable?: unknown } : {};
+      if (details.retryable === false) throw error;
+      zenModels = zenSettings(zen.settings).models;
+      zenError = "Die aktuelle Zen-Modellliste konnte nicht geladen werden. Angezeigt wird der zuletzt geladene Stand.";
+    }
+    models.push(...zenModels);
+  }
+  const selected = rows.find((row) => row.isDefault) ?? codex ?? zen ?? router;
   const settings = selected?.settings && typeof selected.settings === "object" ? selected.settings : {};
+  const selectedZenModel = selected?.provider === "opencode-zen" && typeof settings.model === "string" ? zenModels.find((model) => model.id === settings.model) : undefined;
   const selection = selected?.provider === "openai-codex"
     ? { provider: "openai-codex" as const, model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" }
-    : selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.some((model) => model.id === settings.model) ? { provider: "openrouter" as const, model: settings.model, ...(typeof settings.effort === "string" ? { effort: settings.effort } : {}) } : undefined;
-  const selectionError = selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.length && !routerModels.some((model) => model.id === settings.model) ? "Das bisherige OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein neues Modell." : undefined;
-  return { models, selection, ...(selectionError ? { selectionError } : {}) };
+    : selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.some((model) => model.id === settings.model) ? { provider: "openrouter" as const, model: settings.model, ...(typeof settings.effort === "string" ? { effort: settings.effort } : {}) }
+      : selectedZenModel ? { provider: "opencode-zen" as const, model: selectedZenModel.id, ...(typeof settings.effort === "string" && selectedZenModel.efforts.includes(settings.effort) ? { effort: settings.effort } : {}) } : undefined;
+  const selectionError = selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.length && !routerModels.some((model) => model.id === settings.model)
+    ? "Das bisherige OpenRouter-Standardmodell ist nicht mehr verfügbar. Bitte wähle ein neues Modell."
+    : selected?.provider === "opencode-zen" && (!zenModels.length || typeof settings.model === "string" && !selectedZenModel) ? "Das bisherige OpenCode-Zen-Standardmodell ist nicht mehr kostenlos verfügbar. Bitte wähle ein neues Modell." : undefined;
+  return { models, selection, ...(zenError ? { zenError } : {}), ...(selectionError ? { selectionError } : {}) };
 }
 async function resolveModelSelection(organizationId: string, requested?: ModelSelection): Promise<ModelSelection> {
   if (requested) {
@@ -249,6 +325,11 @@ async function resolveModelSelection(organizationId: string, requested?: ModelSe
       const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);
       if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
       if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
+    } else if (requested.provider === "opencode-zen") {
+      const connection = await validZenConnection(organizationId);
+      const model = (await zenModelsForConnection(connection)).find((entry) => entry.id === requested.model);
+      if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte Modell ist bei OpenCode Zen nicht mehr kostenlos verfügbar.");
+      if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenCode-Zen-Modell nicht unterstützt.");
     } else {
       const connected = (await db.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, organizationId), eq(providerConnections.provider, requested.provider), eq(providerConnections.status, "connected"))).limit(1))[0];
       if (!connected) fail("PROVIDER_NOT_CONNECTED", 409, "Der gewählte Modellprovider ist nicht verbunden.");
@@ -266,6 +347,13 @@ async function resolveModelSelection(organizationId: string, requested?: ModelSe
     if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das OpenRouter-Standardmodell wurde nicht in den Einstellungen hinzugefügt.");
     const effort = typeof settings.effort === "string" && model.efforts.includes(settings.effort) ? settings.effort : model.defaultEffort ?? model.efforts[0];
     return { provider: "openrouter", model: model.id, ...(effort ? { effort } : {}) };
+  }
+  if (row.provider === "opencode-zen" && typeof settings.model === "string") {
+    const connection = await validZenConnection(organizationId);
+    const model = (await zenModelsForConnection(connection)).find((entry) => entry.id === settings.model);
+    if (!model) fail("MODEL_NOT_AVAILABLE", 409, "Das OpenCode-Zen-Standardmodell ist nicht mehr kostenlos verfügbar.");
+    const effort = typeof settings.effort === "string" && model.efforts.includes(settings.effort) ? settings.effort : undefined;
+    return { provider: "opencode-zen", model: model.id, ...(effort ? { effort } : {}) };
   }
   fail("MODEL_NOT_SELECTED", 409, "Bitte zuerst ein Standardmodell auswählen.");
 }
@@ -408,7 +496,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.28.1-20260728.1551" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.29.0-20260728.1652" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -496,7 +584,7 @@ app.post("/api/v1/providers/openai/auth/poll", { config: { rateLimit: { max: 120
   pendingCodexAuth.delete(authId);
   return { status: "connected", connected: true, email: identity.email, accountId: identity.accountId };
 });
-app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
+app.delete("/api/v1/providers/openai", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) { const fallback = defaultFallback(await tx.select({ id: providerConnections.id, provider: providerConnections.provider, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected")))); if (fallback) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(eq(providerConnections.id, fallback.id)); } await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
 
 app.get("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, label: providerConnections.accountId, settings: providerConnections.settings, isDefault: providerConnections.isDefault }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).limit(1))[0]; return row ? { connected: row.status === "connected", ...row } : { connected: false, status: "disconnected", settings: {}, isDefault: false }; });
 app.post("/api/v1/providers/openrouter", { config: { rateLimit: { max: 5, timeWindow: "10 minutes" } } }, async (request, reply) => {
@@ -556,14 +644,57 @@ app.delete("/api/v1/providers/openrouter/models", async (request) => {
     const active = previous.model === modelId ? models[0] : models.find((model) => model.id === previous.model);
     const effort = active && previous.effort && active.efforts.includes(previous.effort) ? previous.effort : active?.defaultEffort ?? active?.efforts[0];
     const { model: _oldModel, effort: _oldEffort, ...withoutSelection } = raw;
-    const fallback = !models.length && current.isDefault ? (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"), eq(providerConnections.status, "connected"))).limit(1))[0] : undefined;
+    const fallback = !models.length && current.isDefault ? defaultFallback(await tx.select({ id: providerConnections.id, provider: providerConnections.provider, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected"), notInArray(providerConnections.id, [connection.id])))) : undefined;
     await tx.update(providerConnections).set({ settings: { ...withoutSelection, models, ...(active ? { model: active.id } : {}), ...(effort ? { effort } : {}) }, ...(fallback ? { isDefault: false } : {}), updatedAt: new Date() }).where(eq(providerConnections.id, connection.id));
     if (fallback) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(eq(providerConnections.id, fallback.id));
     await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.model.removed", targetType: "provider", targetId: connection.id, result: "success", metadata: { model: modelId }, correlationId: request.id });
   });
   return { removed: true };
 });
-app.delete("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
+app.delete("/api/v1/providers/openrouter", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openrouter"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) { const fallback = defaultFallback(await tx.select({ id: providerConnections.id, provider: providerConnections.provider, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected")))); if (fallback) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(eq(providerConnections.id, fallback.id)); } await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openrouter.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
+
+app.get("/api/v1/providers/zen", async (request) => { const actor = requireActorPermission(request, "provider.read"); const row = (await db.select({ status: providerConnections.status, settings: providerConnections.settings, isDefault: providerConnections.isDefault }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "opencode-zen"))).limit(1))[0]; return row ? { connected: row.status === "connected", modelCount: zenSettings(row.settings).models.length, ...row } : { connected: false, status: "disconnected", modelCount: 0, settings: {}, isDefault: false }; });
+app.post("/api/v1/providers/zen", { config: { rateLimit: { max: 5, timeWindow: "10 minutes" } } }, async (request, reply) => {
+  const actor = requireActorPermission(request, "provider.manage"), models = await fetchZenFreeModels(true);
+  if (!models.length) fail("ZEN_MODELS_UNAVAILABLE", 503, "OpenCode Zen meldet derzeit keine kostenlosen Chat-Completions-Modelle.", true);
+  const credentials = encryptCredentials({ apiKey: "public" }, env.SESSION_SECRET);
+  let existed = false;
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const existing = (await tx.select({ settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "opencode-zen"))).limit(1))[0];
+    existed = Boolean(existing);
+    const previous = zenSettings(existing?.settings), active = models.find((model) => model.id === previous.model) ?? models[0]!;
+    const effort = previous.effort && active.efforts.includes(previous.effort) ? previous.effort : undefined;
+    const settings = { models, model: active.id, ...(effort ? { effort } : {}) };
+    const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0];
+    await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "opencode-zen", credentials, settings, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, settings, status: "connected", updatedAt: new Date() } });
+    await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.zen.connected", targetType: "provider", result: "success", metadata: { provider: "opencode-zen", models: models.length }, correlationId: request.id });
+  });
+  return reply.status(existed ? 200 : 201).send({ connected: true, modelCount: models.length });
+});
+app.post("/api/v1/providers/zen/test", { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } }, async (request) => {
+  const actor = requireActorPermission(request, "provider.use"), connection = await validZenConnection(actor.organizationId), models = await zenModelsForConnection(connection, true);
+  if (!models.length) fail("ZEN_MODELS_UNAVAILABLE", 503, "OpenCode Zen meldet derzeit keine kostenlosen Chat-Completions-Modelle.", true);
+  const previous = zenSettings(connection.settings), model = models.find((entry) => entry.id === previous.model) ?? models[0]!;
+  const effort = previous.effort && model.efforts.includes(previous.effort) ? previous.effort : undefined;
+  const started = Date.now();
+  const response = await zenFetch(zenApi.chatUrl, connection.credentials.apiKey, { method: "POST", signal: AbortSignal.timeout(120_000), headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(zenRequest(model.id, "Antworte ausschließlich mit OK.", "Verbindungstest", effort, 16)) });
+  const raw = await response.text();
+  if (!response.ok) throw zenHttpError(response.status, response.headers.get("retry-after"), raw);
+  if (!parseZenEventStream(raw).text.trim()) fail("ZEN_TEST_INCOMPLETE", 502, "OpenCode Zen hat den Verbindungstest nicht vollständig abgeschlossen.", true);
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`);
+    const current = (await tx.select({ settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.id, connection.id), eq(providerConnections.status, "connected"))).limit(1))[0];
+    if (!current) return;
+    const raw = current.settings && typeof current.settings === "object" ? current.settings : {}, currentSettings = zenSettings(raw);
+    const active = models.find((entry) => entry.id === currentSettings.model) ?? model;
+    const activeEffort = currentSettings.effort && active.efforts.includes(currentSettings.effort) ? currentSettings.effort : undefined;
+    const { effort: _oldEffort, ...withoutEffort } = raw;
+    await tx.update(providerConnections).set({ settings: { ...withoutEffort, models, model: active.id, ...(activeEffort ? { effort: activeEffort } : {}) }, updatedAt: new Date() }).where(eq(providerConnections.id, connection.id));
+  });
+  return { ok: true, model: model.id, modelCount: models.length, elapsedMs: Date.now() - started };
+});
+app.delete("/api/v1/providers/zen", async (request) => { const actor = requireActorPermission(request, "provider.manage"); await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const removed = (await tx.delete(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "opencode-zen"))).returning({ isDefault: providerConnections.isDefault }))[0]; if (removed?.isDefault) { const fallback = defaultFallback(await tx.select({ id: providerConnections.id, provider: providerConnections.provider, settings: providerConnections.settings }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.status, "connected")))); if (fallback) await tx.update(providerConnections).set({ isDefault: true, updatedAt: new Date() }).where(eq(providerConnections.id, fallback.id)); } await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.zen.disconnected", targetType: "provider", result: "success", correlationId: request.id }); }); return { connected: false }; });
 app.get("/api/v1/providers/models", async (request) => { const actor = requireActorPermission(request, "provider.read"); return providerCatalog(actor.organizationId); });
 app.patch("/api/v1/providers/default-model", async (request) => {
   const actor = requireActorPermission(request, "provider.manage");
@@ -575,11 +706,16 @@ app.patch("/api/v1/providers/default-model", async (request) => {
     if (!codexModels.includes(requested.model as typeof codexModels[number])) fail("MODEL_INVALID", 400, "Dieses Codex-Modell wird nicht unterstützt.");
     if (!requested.effort || !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Bitte einen gültigen Codex-Effort auswählen.");
     selection = { provider: "openai-codex", model: requested.model, effort: requested.effort };
-  } else {
+  } else if (requested.provider === "openrouter") {
     const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);
     if (!model) fail("MODEL_INVALID", 400, "Dieses OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
     if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenRouter-Modell nicht unterstützt.");
     selection = { provider: "openrouter", model: model.id, ...(requested.effort ? { effort: requested.effort } : {}) };
+  } else {
+    const model = (await zenModelsForConnection(connection)).find((entry) => entry.id === requested.model);
+    if (!model) fail("MODEL_INVALID", 400, "Dieses Modell ist bei OpenCode Zen nicht mehr kostenlos verfügbar.");
+    if (requested.effort && !model.efforts.includes(requested.effort)) fail("EFFORT_INVALID", 400, "Der gewählte Effort wird von diesem OpenCode-Zen-Modell nicht unterstützt.");
+    selection = { provider: "opencode-zen", model: model.id, ...(requested.effort ? { effort: requested.effort } : {}) };
   }
   const rawSettings = connection.settings && typeof connection.settings === "object" ? connection.settings : {};
   const { effort: _oldEffort, ...withoutEffort } = rawSettings;
@@ -919,12 +1055,17 @@ async function modelRun(organizationId: string, instructions: string, input: str
   const selection = await resolveModelSelection(organizationId, options.selection);
   const codexConnection = selection.provider === "openai-codex" ? await validCodexConnection(organizationId) : undefined;
   const routerConnection = selection.provider === "openrouter" ? await validOpenRouterConnection(organizationId) : undefined;
+  const zenConnection = selection.provider === "opencode-zen" ? await validZenConnection(organizationId) : undefined;
   const routerModel = routerConnection ? openRouterSettings(routerConnection.settings).models.find((model) => model.id === selection.model) : undefined;
+  const zenModel = zenConnection ? (await zenModelsForConnection(zenConnection)).find((model) => model.id === selection.model) : undefined;
   if (routerConnection && !routerModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
+  if (zenConnection && !zenModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte Modell ist bei OpenCode Zen nicht mehr kostenlos verfügbar.");
   // Der Ausgaberaum wird AUSDRUECKLICH reserviert und mitgeschickt: ohne ihn deckeln viele
   // OpenRouter-Anbieter still auf ihren Standardwert und die Antwort bricht mitten im JSON ab.
   const routerOutputTokens = routerModel ? reservedOutputTokens(routerModel.contextLength, routerModel.endpoint?.maxCompletionTokens) : undefined;
+  const zenOutputTokens = zenModel ? reservedOutputTokens(zenModel.contextLength, zenModel.maxOutputTokens) : undefined;
   if (routerModel) assertOpenRouterContext(routerModel, instructions, input, routerOutputTokens);
+  if (zenModel) assertZenContext(zenModel, instructions, input, zenOutputTokens);
   const codexModel = selection.provider === "openai-codex" ? z.enum(codexModels).parse(selection.model) : undefined;
   const codexEffort = selection.provider === "openai-codex" ? z.enum(codexEfforts).parse(selection.effort ?? "medium") : undefined;
   const accountId = codexConnection ? codexConnection.accountId || tokenIdentity(codexConnection.credentials.accessToken, codexConnection.credentials.idToken).accountId : undefined;
@@ -939,12 +1080,13 @@ async function modelRun(organizationId: string, instructions: string, input: str
         ? await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${codexConnection.credentials.accessToken}`, "chatgpt-account-id": accountId!, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify({ ...codexRequestFields(codexModel!, codexEffort!), instructions, input: [{ role: "user", content: input }], store: false, stream: true }) })
         // Ab dem zweiten Versuch darf OpenRouter auf einen anderen Anbieter ausweichen: der gewählte
         // bleibt erste Wahl, aber ein Ausfall bei ihm soll nicht den ganzen Lauf kosten.
-        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens, attempt > 1)) });
+        : routerConnection ? await openRouterFetch(openRouterApi.chatUrl, routerConnection.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens, attempt > 1)) })
+          : await zenFetch(zenApi.chatUrl, zenConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(zenRequest(selection.model, instructions, input, selection.effort, zenOutputTokens)) });
       const raw = await response.text();
-      if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : openRouterHttpError(response.status, response.headers.get("retry-after"));
-      const stream = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
+      if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : selection.provider === "openrouter" ? openRouterHttpError(response.status, response.headers.get("retry-after")) : zenHttpError(response.status, response.headers.get("retry-after"), raw);
+      const stream = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : selection.provider === "openrouter" ? parseOpenRouterEventStream(raw) : parseZenEventStream(raw);
       const outputText = stream.text;
-      if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
+      if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${providerDisplayName(selection.provider)} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
       const durationMs = Date.now() - runStartedAt;
       const servedBy = selection.provider === "openrouter" ? (stream as OpenRouterStreamResult).servedBy : undefined;
       log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw), truncated: stream.truncated, ...(servedBy ? { servedBy } : {}) }, "KI-Lauf abgeschlossen");
@@ -955,9 +1097,9 @@ async function modelRun(organizationId: string, instructions: string, input: str
         log.warn({ err: error, event: "model.request.failed", jobId: options.jobId, operation: options.operation, provider: selection.provider, attempt, durationMs: Date.now() - runStartedAt }, "KI-Lauf dauerhaft fehlgeschlagen");
         // Der Benutzer soll wissen, dass es NICHT an seinem Wunsch lag und was er tun kann. Ohne diesen
         // Zusatz stand da nur die nackte Anbietermeldung ohne jeden Hinweis auf den nächsten Schritt.
-        if (details.expose === true && error instanceof Error && attempt > 1) error.message += ` Auch ${attempt} Versuche mit Ausweichen auf andere Anbieter blieben erfolglos. Versuch es gleich erneut oder wähle oben ein anderes Modell.`;
+        if (details.expose === true && error instanceof Error && attempt > 1) error.message += ` Auch ${attempt} Versuche blieben erfolglos. Versuch es gleich erneut oder wähle oben ein anderes Modell.`;
         if (typeof details.code === "string") throw error;
-        fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.`, true);
+        fail("CHAT_UPSTREAM", 502, `${providerDisplayName(selection.provider)} hat die Verbindung während des KI-Laufs beendet oder nicht rechtzeitig geantwortet. Bitte erneut versuchen.`, true);
       }
       const details = error && typeof error === "object" ? error as { retryAfterMs?: unknown } : {};
       const delayMs = typeof details.retryAfterMs === "number" ? details.retryAfterMs : attempt * 2_000;
@@ -965,7 +1107,7 @@ async function modelRun(organizationId: string, instructions: string, input: str
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat den KI-Lauf nicht abgeschlossen.`, true);
+  fail("CHAT_UPSTREAM", 502, `${providerDisplayName(selection.provider)} hat den KI-Lauf nicht abgeschlossen.`, true);
 }
 // Ein Modell schreibt den Pfad gern verkuerzt („design.html" statt
 // „.werft-generated/<id>/1/design.html"). Bisher galt das als „Datei unbekannt" und die ganze
@@ -1090,11 +1232,13 @@ app.post("/api/v1/projects/:projectId/design/undo", async (request) => {
 // Wie viel Eingabe vertraegt das gewaehlte Modell wirklich? Danach richtet sich, wie viele
 // Projektdateien mitgegeben werden — statt eines festen Limits, das grosse Designs abgewiesen hat.
 async function chatContextBudget(organizationId: string, selection: ModelSelection): Promise<{ inputChars: number; contextLength?: number }> {
-  if (selection.provider !== "openrouter") return { inputChars: 900_000 };
-  const connection = await validOpenRouterConnection(organizationId);
-  const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === selection.model);
-  const output = reservedOutputTokens(model?.contextLength, model?.endpoint?.maxCompletionTokens);
-  return { inputChars: Math.min(1_200_000, inputCharBudget(model?.contextLength, output)), ...(model?.contextLength ? { contextLength: model.contextLength } : {}) };
+  if (selection.provider === "openai-codex") return { inputChars: 900_000 };
+  const model = selection.provider === "openrouter"
+    ? openRouterSettings((await validOpenRouterConnection(organizationId)).settings).models.find((entry) => entry.id === selection.model)
+    : (await zenModelsForConnection(await validZenConnection(organizationId))).find((entry) => entry.id === selection.model);
+  const output = reservedOutputTokens(model?.contextLength, model?.provider === "openrouter" ? model.endpoint?.maxCompletionTokens : model?.maxOutputTokens);
+  const providerInputLimit = model?.provider === "opencode-zen" && model.inputTokenLimit ? model.inputTokenLimit * 3 : Number.POSITIVE_INFINITY;
+  return { inputChars: Math.min(1_200_000, inputCharBudget(model?.contextLength, output), providerInputLimit), ...(model?.contextLength ? { contextLength: model.contextLength } : {}) };
 }
 
 // Bis zu drei Runden je Anfrage: Runde 1 setzt um, jede weitere raeumt nach, was nicht gegriffen hat,

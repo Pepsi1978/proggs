@@ -75,7 +75,7 @@ services:
     user: root
     command: ["sh", "docker/api-entrypoint.sh"]
     # werft-egress zusätzlich zum internen Netz: die API braucht Außenzugang für den
-    # OpenAI-Geräte-Login, Codex-Responses und OpenRouter-API.
+    # OpenAI-Geräte-Login, Codex-Responses, OpenRouter und OpenCode Zen.
     networks: [werft-internal, werft-egress]
     depends_on:
       postgres: { condition: service_healthy }

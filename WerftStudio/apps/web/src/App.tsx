@@ -11,15 +11,17 @@ import { chatStepText, designFileLabel, providerHealth } from "./chat-progress";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
-type ProviderId = "openai-codex" | "openrouter";
+type ProviderId = "openai-codex" | "openrouter" | "opencode-zen";
 type ModelSelection = { provider: ProviderId; model: string; effort?: string };
 type OpenRouterEndpoint = { providerName: string; providerSlug: string; tag: string; endpointId: string; promptPerToken: number; completionPerToken: number; cacheReadPerToken: number; contextLength: number; maxCompletionTokens?: number; quantization: string; throughputLast30m?: number; uptimeLast5m?: number; status: number };
-type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; efforts: string[]; defaultEffort?: string; endpoint?: OpenRouterEndpoint };
+type ProviderModel = { provider: ProviderId; id: string; name: string; contextLength?: number; inputTokenLimit?: number; maxOutputTokens?: number; efforts: string[]; defaultEffort?: string; reasoning?: boolean; endpoint?: OpenRouterEndpoint };
 type OpenRouterModelDetails = { model: ProviderModel; endpoints: OpenRouterEndpoint[] };
-type ModelCatalog = { models: ProviderModel[]; selection?: ModelSelection; openrouterError?: string; selectionError?: string };
+type ModelCatalog = { models: ProviderModel[]; selection?: ModelSelection; openrouterError?: string; zenError?: string; selectionError?: string };
+const providerOrder: ProviderId[] = ["openai-codex", "openrouter", "opencode-zen"];
 const modelKey = (model: Pick<ProviderModel, "provider" | "id">) => JSON.stringify([model.provider, model.id]);
-const providerName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI · Codex OAuth" : "OpenRouter · API";
-const modelOptionName = (model: ProviderModel) => model.endpoint ? `${model.name} · ${model.endpoint.providerName}` : model.name;
+const providerName = (provider: ProviderId) => provider === "openai-codex" ? "OpenAI · Codex OAuth" : provider === "openrouter" ? "OpenRouter · API" : "OpenCode Zen · Free";
+const modelOptionName = (model: ProviderModel) => model.endpoint ? `${model.name} · ${model.endpoint.providerName}` : `${model.name}${model.provider === "opencode-zen" && model.reasoning ? " · Thinking" : ""}`;
+const selectedEffortFor = (model: ProviderModel, saved?: string) => saved && model.efforts.includes(saved) ? saved : model.defaultEffort ?? (model.provider === "opencode-zen" ? "" : model.efforts[0] ?? "");
 const endpointKey = (endpoint: OpenRouterEndpoint) => endpoint.endpointId || endpoint.tag || endpoint.providerSlug;
 const endpointPrice = (value: number) => (value * 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 const endpointStatus = (endpoint: OpenRouterEndpoint) => endpoint.status === 0 ? "ok" : endpoint.status === -2 ? "eingeschränkt" : endpoint.status === -5 ? "gestört" : `Status ${endpoint.status}`;
@@ -885,7 +887,7 @@ function StorageCleanupButton() {
   );
 }
 function ProviderSettings() {
-  const [dialog, setDialog] = useState<"providers" | "openai" | "openrouter" | null>(null);
+  const [dialog, setDialog] = useState<"providers" | "openai" | "openrouter" | "zen" | null>(null);
   const [device, setDevice] = useState<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>();
   const [apiKey, setApiKey] = useState("");
   const [routerModelId, setRouterModelId] = useState("");
@@ -896,15 +898,19 @@ function ProviderSettings() {
   const client = useQueryClient();
   const openai = useQuery({ queryKey: ["provider", "openai"], queryFn: () => api<{ connected: boolean; status: string; email?: string; accountId?: string }>("/providers/openai") });
   const openrouter = useQuery({ queryKey: ["provider", "openrouter"], queryFn: () => api<{ connected: boolean; status: string; label?: string }>("/providers/openrouter") });
+  const zen = useQuery({ queryKey: ["provider", "zen"], queryFn: () => api<{ connected: boolean; status: string; modelCount: number }>("/providers/zen") });
   const catalog = useQuery({ queryKey: ["provider-models"], queryFn: () => api<ModelCatalog>("/providers/models") });
   const refresh = async () => { await Promise.all([client.invalidateQueries({ queryKey: ["provider"] }), client.invalidateQueries({ queryKey: ["provider-models"] })]); };
   const start = useMutation({ mutationFn: () => api<{ authId: string; userCode: string; verificationUri: string; expiresAt: string; interval: number }>("/providers/openai/auth/start", { method: "POST", body: "{}" }), onSuccess: (data) => { setDevice(data); window.open(data.verificationUri, "_blank", "noopener,noreferrer"); } });
   const poll = useMutation({ mutationFn: (authId: string) => api<{ status: string; connected: boolean; interval?: number }>("/providers/openai/auth/poll", { method: "POST", body: JSON.stringify({ authId }) }), onSuccess: async (data) => { if (data.connected) { setDevice(undefined); setDialog(null); await refresh(); } else if (data.status === "expired") setDevice(undefined); else if (data.interval) setDevice((current) => (current ? { ...current, interval: Math.max(3, Math.min(30, data.interval!)) } : current)); } });
   const connectOpenRouter = useMutation({ mutationFn: () => api("/providers/openrouter", { method: "POST", body: JSON.stringify({ apiKey }) }), onSuccess: async () => { setApiKey(""); setDialog(null); await refresh(); } });
+  const connectZen = useMutation({ mutationFn: () => api("/providers/zen", { method: "POST", body: "{}" }), onSuccess: async () => { setDialog(null); await refresh(); } });
   const disconnectOpenAi = useMutation({ mutationFn: () => api("/providers/openai", { method: "DELETE" }), onSuccess: refresh });
   const disconnectOpenRouter = useMutation({ mutationFn: () => api("/providers/openrouter", { method: "DELETE" }), onSuccess: refresh });
+  const disconnectZen = useMutation({ mutationFn: () => api("/providers/zen", { method: "DELETE" }), onSuccess: refresh });
   const testOpenAi = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openai/test", { method: "POST", body: "{}" }) });
   const testOpenRouter = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number }>("/providers/openrouter/test", { method: "POST", body: "{}" }) });
+  const testZen = useMutation({ mutationFn: () => api<{ ok: boolean; elapsedMs: number; modelCount: number }>("/providers/zen/test", { method: "POST", body: "{}" }), onSuccess: refresh });
   const inspectOpenRouterModel = useMutation({
     mutationFn: ({ model }: { model: string; preferred?: OpenRouterEndpoint }) => api<OpenRouterModelDetails>("/providers/openrouter/models/inspect", { method: "POST", body: JSON.stringify({ model }) }),
     onMutate: () => { setInspectedModel(undefined); setSelectedEndpointKey(""); },
@@ -927,21 +933,22 @@ function ProviderSettings() {
     if (!models.length) return;
     const model = selection ? models.find((entry) => entry.provider === selection.provider && entry.id === selection.model) ?? models[0]! : models[0]!;
     setSelectedKey(modelKey(model));
-    setEffort(selection?.effort ?? model.defaultEffort ?? model.efforts[0] ?? "");
+    setEffort(selectedEffortFor(model, selection?.provider === model.provider && selection.model === model.id ? selection.effort : undefined));
   }, [catalog.data]);
   const selectedModel = catalog.data?.models.find((model) => modelKey(model) === selectedKey);
   const chooseModel = (value: string) => {
     setSelectedKey(value);
     const model = catalog.data?.models.find((entry) => modelKey(entry) === value);
-    setEffort(model?.defaultEffort ?? model?.efforts[0] ?? "");
+    setEffort(model ? selectedEffortFor(model) : "");
   };
   const save = () => {
     if (!selectedModel) return;
     saveSelection.mutate({ provider: selectedModel.provider, model: selectedModel.id, ...(selectedModel.efforts.length && effort ? { effort } : {}) });
   };
   const routerModels = catalog.data?.models.filter((model) => model.provider === "openrouter") ?? [];
+  const zenModels = catalog.data?.models.filter((model) => model.provider === "opencode-zen") ?? [];
   const selectedEndpoint = inspectedModel?.endpoints.find((endpoint) => endpointKey(endpoint) === selectedEndpointKey);
-  const mutationError = openai.error || openrouter.error || catalog.error || connectOpenRouter.error || disconnectOpenAi.error || disconnectOpenRouter.error || testOpenAi.error || testOpenRouter.error || inspectOpenRouterModel.error || saveOpenRouterModel.error || removeOpenRouterModel.error || saveSelection.error;
+  const mutationError = openai.error || openrouter.error || zen.error || catalog.error || connectOpenRouter.error || connectZen.error || disconnectOpenAi.error || disconnectOpenRouter.error || disconnectZen.error || testOpenAi.error || testOpenRouter.error || testZen.error || inspectOpenRouterModel.error || saveOpenRouterModel.error || removeOpenRouterModel.error || saveSelection.error;
   return (
     <>
       <div className="section-head">
@@ -967,6 +974,13 @@ function ProviderSettings() {
           <div className="provider-actions">{openrouter.data?.connected ? <><Button disabled={testOpenRouter.isPending} onClick={() => testOpenRouter.mutate()}>{testOpenRouter.isPending ? "Key wird geprüft …" : "Key prüfen"}</Button><Button onClick={() => setDialog("openrouter")}>Key ersetzen</Button><Button variant="danger" disabled={disconnectOpenRouter.isPending} onClick={() => window.confirm("OpenRouter-Verbindung wirklich trennen?") && disconnectOpenRouter.mutate()}>Trennen</Button></> : <Button onClick={() => setDialog("openrouter")}>Mit OpenRouter verbinden</Button>}</div>
           {testOpenRouter.data && <small className="field-success">API-Key gültig · {testOpenRouter.data.elapsedMs} ms</small>}
         </Card>
+        <Card title="OpenCode Zen · Free">
+          <small>Aktuelle kostenlose Coding-Modelle direkt über OpenCode Zen</small>
+          <Status kind={zen.data?.connected ? "success" : "neutral"}>{zen.data?.connected ? "Aktiviert" : "Nicht aktiviert"}</Status>
+          <div className="caps"><span>{catalog.isLoading ? "Modelle werden geladen" : `${zenModels.length || zen.data?.modelCount || 0} kostenlose Modelle`}</span><span>Thinking</span></div>
+          <div className="provider-actions">{zen.data?.connected ? <><Button disabled={testZen.isPending} onClick={() => testZen.mutate()}>{testZen.isPending ? "Zen wird geprüft …" : "Testen & aktualisieren"}</Button><Button variant="danger" disabled={disconnectZen.isPending} onClick={() => window.confirm("OpenCode Zen Free wirklich deaktivieren?") && disconnectZen.mutate()}>Deaktivieren</Button></> : <Button onClick={() => setDialog("zen")}>Zen Free aktivieren</Button>}</div>
+          {testZen.data && <small className="field-success">Live getestet · {testZen.data.modelCount} Modelle · {testZen.data.elapsedMs} ms</small>}
+        </Card>
       </div>
       {openrouter.data?.connected && <Card title="Persönliche OpenRouter-Modelle" sub="Füge nur die Modell-ID ein, die du auf OpenRouter kopiert hast. Werft lädt ausschließlich die Provider dieses Modells.">
         <form className="router-model-add" onSubmit={(event) => { event.preventDefault(); const model = routerModelId.trim(); if (model) inspectOpenRouterModel.mutate({ model }); }}>
@@ -988,14 +1002,23 @@ function ProviderSettings() {
           <div className="modal-actions"><Button onClick={() => { setInspectedModel(undefined); setSelectedEndpointKey(""); }}>Abbrechen</Button><span/><Button variant="primary" disabled={!selectedEndpoint || saveOpenRouterModel.isPending} onClick={() => selectedEndpoint && saveOpenRouterModel.mutate({ model: inspectedModel.model.id, endpoint: selectedEndpoint })}>{saveOpenRouterModel.isPending ? "Wird verbunden …" : "Modell mit Provider verbinden"}</Button></div>
         </section>}
       </Card>}
+      {zen.data?.connected && <Card title="Verfügbare OpenCode-Zen-Free-Modelle" sub="Die Liste kommt direkt von Zen. Thinking und auswählbare Effort-Stufen werden aus den aktuellen OpenCode-Modellinformationen übernommen.">
+        {zenModels.length ? <div className="zen-model-list">{zenModels.map((model) => <div className="zen-model" key={model.id}>
+          <div><strong>{model.name}</strong><code>{model.id}</code></div>
+          <span>{model.contextLength ? `${model.contextLength.toLocaleString("de-DE")} Kontext` : "Kontext nicht gemeldet"}</span>
+          <span>{model.efforts.length ? `Thinking / Effort: ${model.efforts.join(", ")}` : model.reasoning ? "Thinking: vom Modell gesteuert" : "Kein konfigurierbares Thinking"}</span>
+        </div>)}</div> : !catalog.isLoading && <div className="empty router-model-empty">Zen meldet derzeit keine kostenlosen Modelle.</div>}
+        <small className="zen-privacy">Free-Modelle sind zeitlich begrenzt; Eingaben können laut OpenCode während der kostenlosen Phase zur Modellverbesserung verarbeitet werden. Keine vertraulichen Designs übermitteln.</small>
+      </Card>}
       {catalog.data?.models.length ? <Card title="Standardmodell" sub="Dieses Modell wird für Gespräche, Designänderungen und den Neuaufbau aus Quellen verwendet.">
-        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Reasoning<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
+        <div className="form-grid model-settings"><label>Modell<select value={selectedKey} onChange={(event) => chooseModel(event.target.value)}>{providerOrder.map((provider) => { const models = catalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}</select></label>{selectedModel?.efforts.length ? <label>Thinking / Effort<select value={effort} onChange={(event) => setEffort(event.target.value)}>{selectedModel.provider === "opencode-zen" && <option value="">Automatisch</option>}{selectedModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}</select></label> : <label>Thinking<span className="read-only-field">Vom Modell gesteuert</span></label>}</div>
         <div className="modal-actions">{saveSelection.isSuccess && <Status kind="success">Gespeichert</Status>}<span/><Button variant="primary" disabled={!selectedModel || saveSelection.isPending} onClick={save}>{saveSelection.isPending ? "Wird gespeichert …" : "Standardmodell speichern"}</Button></div>
-      </Card> : !catalog.isLoading && <Card title="Noch kein Modell verfügbar" sub="Verbinde OpenAI oder OpenRouter, um ein Standardmodell auszuwählen."><span /></Card>}
+      </Card> : !catalog.isLoading && <Card title="Noch kein Modell verfügbar" sub="Verbinde OpenAI oder OpenRouter oder aktiviere OpenCode Zen Free, um ein Standardmodell auszuwählen."><span /></Card>}
       {catalog.data?.openrouterError && <p className="field-error">{catalog.data.openrouterError}</p>}
+      {catalog.data?.zenError && <p className="field-error">{catalog.data.zenError}</p>}
       {catalog.data?.selectionError && <p className="field-error">{catalog.data.selectionError}</p>}
       {mutationError && <p className="field-error">{mutationError instanceof ApiError ? mutationError.message : "Die Provider-Einstellung konnte nicht geändert werden."}</p>}
-      {dialog === "providers" && <Modal title="Neue Verbindung hinzufügen" onClose={() => setDialog(null)}><div className="provider-choice"><button onClick={() => setDialog("openai")}><strong>OpenAI · Codex OAuth</strong><span>GPT-5.6 mit deiner ChatGPT-Anmeldung</span></button><button onClick={() => setDialog("openrouter")}><strong>OpenRouter · API</strong><span>Modelle verschiedener Anbieter per API-Key</span></button></div></Modal>}
+      {dialog === "providers" && <Modal title="Neue Verbindung hinzufügen" onClose={() => setDialog(null)}><div className="provider-choice"><button onClick={() => setDialog("openai")}><strong>OpenAI · Codex OAuth</strong><span>GPT-5.6 mit deiner ChatGPT-Anmeldung</span></button><button onClick={() => setDialog("openrouter")}><strong>OpenRouter · API</strong><span>Modelle verschiedener Anbieter per API-Key</span></button><button onClick={() => setDialog("zen")}><strong>OpenCode Zen · Free</strong><span>Aktuelle kostenlose Modelle ohne eigenen API-Key</span></button></div></Modal>}
       {dialog === "openai" && (
         <Modal title="OpenAI mit Codex verbinden" onClose={() => {setDialog(null);setDevice(undefined)}}>
           <div className="modal-body oauth-dialog">
@@ -1008,6 +1031,7 @@ function ProviderSettings() {
         </Modal>
       )}
       {dialog === "openrouter" && <Modal title="OpenRouter verbinden" onClose={() => { setDialog(null); setApiKey(""); }}><form onSubmit={(event) => { event.preventDefault(); if (apiKey.trim()) connectOpenRouter.mutate(); }}><div className="modal-body"><p>Erstelle einen API-Key unter <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>. Der Key wird verschlüsselt auf dem Server gespeichert und nie an den Browser zurückgegeben.</p><label>API-Key<input autoFocus type="password" autoComplete="off" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="sk-or-v1-…" /></label>{connectOpenRouter.error && <p className="field-error">{connectOpenRouter.error instanceof ApiError ? connectOpenRouter.error.message : "OpenRouter konnte nicht verbunden werden."}</p>}</div><div className="modal-actions"><Button type="button" onClick={() => { setDialog(null); setApiKey(""); }}>Abbrechen</Button><Button type="submit" variant="primary" disabled={!apiKey.trim() || connectOpenRouter.isPending}>{connectOpenRouter.isPending ? "Wird geprüft …" : "Verbinden"}</Button></div></form></Modal>}
+      {dialog === "zen" && <Modal title="OpenCode Zen Free aktivieren" onClose={() => setDialog(null)}><div className="modal-body"><p>Werft lädt alle aktuell kostenlosen Zen-Modelle und ihre Thinking-/Effort-Fähigkeiten. Für die Free-Modelle ist kein eigener API-Key nötig.</p><p className="subtle">Die kostenlosen Angebote sind zeitlich begrenzt. Eingaben können während der Free-Phase zur Verbesserung der Modelle verarbeitet werden.</p>{connectZen.error && <p className="field-error">{connectZen.error instanceof ApiError ? connectZen.error.message : "OpenCode Zen konnte nicht aktiviert werden."}</p>}</div><div className="modal-actions"><Button onClick={() => setDialog(null)}>Abbrechen</Button><Button variant="primary" disabled={connectZen.isPending} onClick={() => connectZen.mutate()}>{connectZen.isPending ? "Modelle werden geladen …" : "Zen Free aktivieren"}</Button></div></Modal>}
     </>
   );
 }
@@ -1204,15 +1228,16 @@ function Studio() {
     const models = modelCatalog.data?.models ?? [];
     if (!models.length || models.some((model) => modelKey(model) === runModelKey)) return;
     const preferred = modelCatalog.data?.selection;
+    if (!preferred && modelCatalog.data?.selectionError) { setRunModelKey(""); setRunEffort(""); return; }
     const model = preferred ? models.find((entry) => entry.provider === preferred.provider && entry.id === preferred.model) ?? models[0]! : models[0]!;
     setRunModelKey(modelKey(model));
-    setRunEffort(preferred?.effort ?? model.defaultEffort ?? model.efforts[0] ?? "");
+    setRunEffort(selectedEffortFor(model, preferred?.provider === model.provider && preferred.model === model.id ? preferred.effort : undefined));
   }, [modelCatalog.data, runModelKey]);
   const runModel = modelCatalog.data?.models.find((model) => modelKey(model) === runModelKey);
   const chooseRunModel = (value: string) => {
     setRunModelKey(value);
     const model = modelCatalog.data?.models.find((entry) => modelKey(entry) === value);
-    setRunEffort(model?.defaultEffort ?? model?.efforts[0] ?? "");
+    setRunEffort(model ? selectedEffortFor(model) : "");
   };
   // Textänderungen laufen deterministisch ohne KI: der Endpunkt ersetzt nur, wenn der alte
   // Wortlaut genau einmal vorkommt — sonst meldet er die Mehrdeutigkeit statt zu raten.
@@ -1563,7 +1588,7 @@ function Studio() {
                 <textarea style={{ height: composerHeight }} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Beschreibe eine Änderung …" />
               </div>
               <footer>
-                {runModel ? (
+                {modelCatalog.data?.models.length ? (
                   // Modell und Effort stehen dort, wo sie benutzt werden — nicht nur in den
                   // Einstellungen. Jede Wahl schickt die andere unverändert mit.
                   <>
@@ -1573,21 +1598,23 @@ function Studio() {
                       disabled={chatRun.isPending}
                       onChange={(event) => chooseRunModel(event.target.value)}
                     >
-                      {(["openai-codex", "openrouter"] as ProviderId[]).map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}
+                      {!runModel && <option value="">Modell wählen …</option>}
+                      {providerOrder.map((provider) => { const models = modelCatalog.data!.models.filter((model) => model.provider === provider); return models.length ? <optgroup label={providerName(provider)} key={provider}>{models.map((model) => <option value={modelKey(model)} key={modelKey(model)}>{modelOptionName(model)}</option>)}</optgroup> : null; })}
                     </select>
-                    {runModel.efforts.length > 0 && <select
-                      aria-label="Effort für den nächsten Lauf"
+                    {runModel && runModel.efforts.length > 0 && <select
+                      aria-label="Thinking und Effort für den nächsten Lauf"
                       value={runEffort}
                       disabled={chatRun.isPending}
                       onChange={(event) => setRunEffort(event.target.value)}
                     >
+                      {runModel.provider === "opencode-zen" && <option value="">Automatisch</option>}
                       {runModel.efforts.map((value) => <option value={value} key={value}>{value}</option>)}
                     </select>}
                   </>
                 ) : (
                   <Link to="/app/settings/models">Kein Provider verbunden — jetzt verbinden</Link>
                 )}
-                <Button variant="primary" className="composer-send" aria-label="Senden" title="Senden" disabled={chatRun.isPending || !chat.trim()}><Send /></Button>
+                <Button variant="primary" className="composer-send" aria-label="Senden" title="Senden" disabled={chatRun.isPending || !chat.trim() || !runModel}><Send /></Button>
               </footer>
               {/* Der Zustand des Anbieters stand bisher nur in den Daten. Sichtbar erspart er einen
                   abgebrochenen Lauf — oder erklärt ihn wenigstens. */}

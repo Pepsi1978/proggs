@@ -15,6 +15,7 @@ Version: v0.8.0 - 26.07.2026 21:23 Uhr
 | Projektimport | `apps/web`, `apps/api`, `project_imports`, `jobs`, MinIO | Streaming-Ordnerimport, vollständige UI-Quellchunkung, Framework-/Pfadguard-Tests und echter Fortschrittsstatus |
 | OpenAI OAuth | `apps/web`, `apps/api`, `provider_connections` | AES-GCM-Tests und echter Gerätecode-Start gegen OpenAI |
 | GPT-5.6 Routing | `apps/web`, `apps/api`, `codex-auth` | Sol/Terra/Luna-, vollständige Effort- und Live-Verbindungstests |
+| OpenCode Zen Free | `apps/web`, `apps/api`, `opencode-zen` | Live-Verfügbarkeitsliste, Free-Filter, Thinking-/Effort-Metadaten, Kontextgrenzen, Streaming- und Fehlerklassifikationstests |
 | Leinwand-Navigation | `apps/web`, `apps/api/preview-canvas-bridge.ts` | Zoom-Anker-, Zoomgrenzen- und Bridge-Injektionstests |
 | Leinwand-Vollbild | `apps/web/src/App.tsx` | Browser-Vollbild mit fokussiertem Canvas und getrennten Panel-Schaltern |
 | Import-Fidelity | `apps/api/src/import-reconstruction.ts`, `preview-canvas-bridge.ts`, `apps/web/src/App.tsx` | Plattform-/Quellviewport, unverändertes iframe-DOM, Assetbasis-, Dateivollständigkeits- und Fidelity-Prüfrunde |
