@@ -11,5 +11,6 @@ class PerfectMomentApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
         container.appLockManager.start()
+        container.autoBackup.start()
     }
 }
