@@ -499,6 +499,23 @@ fun ParameterCard(
     }
 }
 
+/** Slider handle of the design: `box-shadow: 0 0 0 6px accent 9%, 0 6px 18px accent 30%`. */
+@Composable
+fun PmSliderThumb() {
+    val colors = LocalPmColors.current
+    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(32.dp).background(colors.gold.copy(alpha = 0.09f), CircleShape))
+        Box(
+            Modifier.size(20.dp).shadow(
+                6.dp,
+                CircleShape,
+                ambientColor = colors.gold.copy(alpha = 0.30f),
+                spotColor = colors.gold.copy(alpha = 0.30f),
+            ).background(colors.goldHi, CircleShape),
+        )
+    }
+}
+
 @Composable
 fun PmSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val colors = LocalPmColors.current

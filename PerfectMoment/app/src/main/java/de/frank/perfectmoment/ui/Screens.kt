@@ -115,6 +115,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -188,7 +189,15 @@ fun PmTextArea(
             lineHeight = if (mono) (textSize * 1.6f).sp else (textSize * 1.55f).sp,
             fontWeight = if (singleLine) FontWeight.Medium else FontWeight.Normal,
         ),
-        modifier = modifier.pmGlassSurface(colors, radius)
+        // Focus ring of the design: 0 0 0 2px accent 52% plus a soft 0 0 30px accent 14% halo.
+        modifier = modifier
+            .shadow(
+                elevation = (15f * focusAlpha).dp,
+                shape = shape,
+                ambientColor = colors.gold.copy(alpha = 0.14f),
+                spotColor = colors.gold.copy(alpha = 0.14f),
+            )
+            .pmGlassSurface(colors, radius)
             .border(2.dp, colors.gold.copy(alpha = 0.52f * focusAlpha), shape)
             .onFocusChanged { focused = it.isFocused }
             .padding(contentPadding),
@@ -217,9 +226,13 @@ fun StartScreen(
     val colors = LocalPmColors.current
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val darkThemeActive = theme == "dark" || theme == "system" && isSystemInDarkTheme()
+    val density = LocalDensity.current
+    // The bottom bar floats above the scrolling content. Reserve exactly its height, otherwise the
+    // locked-state hint ("Bitte zuerst ein Thema wählen") overlaps the recorder caption.
+    var bottomBarHeight by remember { mutableStateOf(108.dp) }
     Box(Modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 108.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = bottomBarHeight),
         ) {
             Row(
                 Modifier.fillMaxWidth().height(56.dp).pmHeaderSurface(colors).padding(horizontal = 24.dp),
@@ -370,9 +383,11 @@ fun StartScreen(
         val connected = viewModel.chatGptState == ChatGptState.CONNECTED
         val unlocked = viewModel.topic.isNotBlank() && connected
         Column(
-            Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(
-                Brush.verticalGradient(listOf(Color.Transparent, colors.background, colors.background)),
-            ).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
+            Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+                .onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } }
+                .background(
+                    Brush.verticalGradient(listOf(Color.Transparent, colors.background, colors.background)),
+                ).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (!unlocked) {
@@ -1419,6 +1434,7 @@ private fun QuestionPerspectiveSetting(viewModel: AppViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
     val colors = LocalPmColors.current
@@ -1443,6 +1459,7 @@ private fun VoiceSpeedSlider(value: Float, onValueChange: (Float) -> Unit) {
                 activeTrackColor = colors.gold,
                 inactiveTrackColor = colors.surface2,
             ),
+            thumb = { PmSliderThumb() },
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
     }

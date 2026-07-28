@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -279,6 +280,7 @@ private fun AppBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SliderBlock(
     label: String,
@@ -308,6 +310,7 @@ private fun SliderBlock(
             activeTrackColor = colors.gold,
             inactiveTrackColor = colors.surface,
         ),
+        thumb = { PmSliderThumb() },
     )
 }
 
