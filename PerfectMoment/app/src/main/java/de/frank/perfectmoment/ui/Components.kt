@@ -1,5 +1,6 @@
 package de.frank.perfectmoment.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -9,10 +10,13 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -38,21 +42,37 @@ import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -66,6 +86,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.perfectmoment.ui.theme.Inter
+import de.frank.perfectmoment.ui.theme.LocalMotionActive
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
 import de.frank.perfectmoment.ui.theme.PmColors
@@ -73,19 +94,126 @@ import de.frank.perfectmoment.ui.theme.PmTextStyles
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.launch
+
+/**
+ * Press feedback of the design:
+ * `transition: 240ms cubic-bezier(0.2, 0, 0, 1)` towards `scale(0.985)` and
+ * `filter: brightness(1.06) saturate(1.05)`.
+ *
+ * Implemented as an [IndicationNodeFactory] so the press animation runs entirely in the draw phase —
+ * pressing a button never recomposes anything. Costs nothing while the button is idle.
+ */
+private object PmPressIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        PmPressNode(interactionSource)
+
+    override fun hashCode(): Int = "PmPressIndication".hashCode()
+
+    override fun equals(other: Any?): Boolean = other === this
+}
+
+private class PmPressNode(
+    private val interactionSource: InteractionSource,
+) : Modifier.Node(), DrawModifierNode {
+
+    private val press = Animatable(0f)
+
+    override fun onAttach() {
+        coroutineScope.launch {
+            var active = 0
+            interactionSource.interactions.collect { interaction ->
+                when (interaction) {
+                    is PressInteraction.Press -> active++
+                    is PressInteraction.Release, is PressInteraction.Cancel -> active--
+                }
+                val target = if (active > 0) 1f else 0f
+                if (press.targetValue != target) {
+                    launch {
+                        press.animateTo(
+                            targetValue = target,
+                            animationSpec = tween(240, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    override fun ContentDrawScope.draw() {
+        val progress = press.value
+        if (progress <= 0f) {
+            drawContent()
+            return
+        }
+        val factor = 1f - 0.015f * progress
+        val paint = Paint().apply { colorFilter = pressColorFilter(progress) }
+        scale(factor, factor) {
+            this@draw.drawIntoCanvas { canvas ->
+                canvas.saveLayer(Rect(Offset.Zero, size), paint)
+                this@draw.drawContent()
+                canvas.restore()
+            }
+        }
+    }
+}
+
+/**
+ * The scrim backdrop of every sheet and dialog: `backdrop-filter: blur(8px) saturate(0.82)`.
+ *
+ * Combine with `LocalMotionActive provides false` for the content underneath — a still tree lets the
+ * blur layer be cached instead of being re-rendered offscreen on every animation frame.
+ */
+fun Modifier.pmScrimBackdrop(): Modifier = blur(8.dp).drawWithCache {
+    val paint = Paint().apply {
+        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.82f) })
+    }
+    val bounds = Rect(Offset.Zero, size)
+    onDrawWithContent {
+        drawIntoCanvas { canvas ->
+            canvas.saveLayer(bounds, paint)
+            drawContent()
+            canvas.restore()
+        }
+    }
+}
+
+/** `filter: brightness(1.06) saturate(1.05)` at full press, interpolated by [progress]. */
+private fun pressColorFilter(progress: Float): ColorFilter {
+    val brightness = 1f + 0.06f * progress
+    val matrix = ColorMatrix().apply { setToSaturation(1f + 0.05f * progress) }
+    for (row in 0..2) {
+        for (column in 0..4) {
+            matrix[row, column] = matrix[row, column] * brightness
+        }
+    }
+    return ColorFilter.colorMatrix(matrix)
+}
 
 fun Modifier.pmClickable(
     enabled: Boolean = true,
     role: Role? = null,
     onClick: () -> Unit,
-): Modifier = clickable(enabled = enabled, role = role, onClick = onClick)
+): Modifier = clickable(
+    interactionSource = null,
+    indication = PmPressIndication,
+    enabled = enabled,
+    role = role,
+    onClick = onClick,
+)
 
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.pmCombinedClickable(
     enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-): Modifier = combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick)
+): Modifier = combinedClickable(
+    interactionSource = null,
+    indication = PmPressIndication,
+    enabled = enabled,
+    onClick = onClick,
+    onLongClick = onLongClick,
+)
 
 fun Modifier.pmHeaderSurface(colors: PmColors): Modifier = drawWithCache {
     val background = Brush.verticalGradient(
@@ -235,7 +363,9 @@ fun PrimaryButton(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val flow = if (enabled && !reduced) {
+    val motionActive = LocalMotionActive.current
+    // pm-fx-gold-flow 8s ease-in-out infinite -> 4s each way with RepeatMode.Reverse
+    val flowState: State<Float> = if (enabled && !reduced && motionActive) {
         val transition = rememberInfiniteTransition(label = "Goldfluss")
         transition.animateFloat(
             initialValue = 0f,
@@ -245,9 +375,9 @@ fun PrimaryButton(
                 RepeatMode.Reverse,
             ),
             label = "Goldposition",
-        ).value
+        )
     } else {
-        0f
+        remember { mutableFloatStateOf(0f) }
     }
     val radius = when {
         height >= 60 -> 32
@@ -266,29 +396,38 @@ fun PrimaryButton(
                 spotColor = colors.gold.copy(alpha = 0.28f),
             )
             .clip(shape)
+            .drawWithCache {
+                // background-size: 190% 100%, position sweeps the remaining 90%
+                val gradient = Brush.linearGradient(
+                    colors = listOf(colors.gold, colors.goldHi, colors.gold),
+                    start = Offset.Zero,
+                    end = Offset(size.width * 1.9f, 0f),
+                )
+                val gradientSize = Size(size.width * 1.9f, size.height)
+                val travel = size.width * 0.9f
+                val cornerPx = radius.dp.toPx()
+                val linePx = 1.dp.toPx()
+                val highlight = Color.White.copy(alpha = 0.28f)
+                val disabled = colors.surface2
+                onDrawBehind {
+                    if (!enabled) {
+                        drawRect(disabled)
+                        return@onDrawBehind
+                    }
+                    withTransform({ translate(-travel * flowState.value, 0f) }) {
+                        drawRect(gradient, topLeft = Offset.Zero, size = gradientSize)
+                    }
+                    drawLine(
+                        highlight,
+                        Offset(cornerPx, linePx),
+                        Offset(size.width - cornerPx, linePx),
+                        linePx,
+                    )
+                }
+            }
             .pmClickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.matchParentSize()) {
-            if (enabled) {
-                val startX = -size.width * 0.9f * flow
-                drawRect(
-                    Brush.linearGradient(
-                        colors = listOf(colors.gold, colors.goldHi, colors.gold),
-                        start = Offset(startX, 0f),
-                        end = Offset(startX + size.width * 1.9f, 0f),
-                    ),
-                )
-                drawLine(
-                    Color.White.copy(alpha = 0.28f),
-                    Offset(radius.dp.toPx(), 1.dp.toPx()),
-                    Offset(size.width - radius.dp.toPx(), 1.dp.toPx()),
-                    1.dp.toPx(),
-                )
-            } else {
-                drawRect(colors.surface2)
-            }
-        }
         Text(
             text = text,
             color = if (enabled) colors.background else colors.text3,
@@ -495,20 +634,25 @@ fun RecorderControl(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val pulse: Float
-    val shimmer: Float
-    val ringPhase: Float
-    val spinnerRotation: Float
+    val motionActive = LocalMotionActive.current
+    val animate = !reduced && motionActive
+    val still = remember { mutableFloatStateOf(0f) }
+    val restingPulse = remember { mutableFloatStateOf(0.45f) }
+    val pulseState: State<Float>
+    val shimmerState: State<Float>
+    val ringState: State<Float>
+    val spinnerState: State<Float>
     when {
-        reduced -> {
-            pulse = 0.45f
-            shimmer = 0f
-            ringPhase = 0f
-            spinnerRotation = 0f
+        !animate -> {
+            pulseState = restingPulse
+            shimmerState = still
+            ringState = still
+            spinnerState = still
         }
         state != RecordingState.PROCESSING -> {
             val transition = rememberInfiniteTransition(label = "Aufnahme")
-            pulse = transition.animateFloat(
+            // pm-fx-recorder 3200ms ease-in-out infinite -> 1600ms each way
+            pulseState = transition.animateFloat(
                 initialValue = 0.3f,
                 targetValue = 0.95f,
                 animationSpec = infiniteRepeatable(
@@ -516,37 +660,40 @@ fun RecorderControl(
                     RepeatMode.Reverse,
                 ),
                 label = "Aufnahmeglühen",
-            ).value
-            shimmer = transition.animateFloat(
+            )
+            shimmerState = transition.animateFloat(
                 initialValue = 0f,
                 targetValue = 360f,
                 animationSpec = infiniteRepeatable(tween(4_500, easing = LinearEasing), RepeatMode.Restart),
                 label = "Aufnahmeschimmer",
-            ).value
-            ringPhase = if (state == RecordingState.RECORDING) {
+            )
+            ringState = if (state == RecordingState.RECORDING) {
                 transition.animateFloat(
                     initialValue = 0f,
                     targetValue = 1f,
                     animationSpec = infiniteRepeatable(tween(1_600, easing = LinearEasing), RepeatMode.Restart),
                     label = "Aufnahmeringe",
-                ).value
+                )
             } else {
-                0f
+                still
             }
-            spinnerRotation = 0f
+            spinnerState = still
         }
         else -> {
             val transition = rememberInfiniteTransition(label = "Verarbeitung")
-            pulse = 0.45f
-            shimmer = 0f
-            ringPhase = 0f
-            spinnerRotation = transition.animateFloat(
+            pulseState = restingPulse
+            shimmerState = still
+            ringState = still
+            spinnerState = transition.animateFloat(
                 initialValue = 0f,
                 targetValue = 360f,
                 animationSpec = infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart),
                 label = "Verarbeitung",
-            ).value
+            )
         }
+    }
+    val shimmerBrush = remember(colors.goldHi) {
+        Brush.sweepGradient(listOf(Color.Transparent, colors.goldHi, Color.Transparent))
     }
     val recorderBrush = when (state) {
         RecordingState.IDLE -> Brush.linearGradient(listOf(colors.gold, colors.goldHi))
@@ -557,14 +704,15 @@ fun RecorderControl(
     val buttonSize = (72f * scale).dp
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(outerSize), contentAlignment = Alignment.Center) {
-            if (!reduced && state != RecordingState.PROCESSING) {
+            if (animate && state != RecordingState.PROCESSING) {
                 Canvas(Modifier.size(outerSize)) {
-                    drawCircle(colors.gold.copy(alpha = 0.13f * pulse), radius = size.minDimension * 0.5f)
+                    drawCircle(
+                        colors.gold.copy(alpha = 0.13f * pulseState.value),
+                        radius = size.minDimension * 0.5f,
+                    )
                     drawArc(
-                        brush = Brush.sweepGradient(
-                            listOf(Color.Transparent, colors.goldHi, Color.Transparent),
-                        ),
-                        startAngle = shimmer,
+                        brush = shimmerBrush,
+                        startAngle = shimmerState.value,
                         sweepAngle = 105f,
                         useCenter = false,
                         style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round),
@@ -586,8 +734,9 @@ fun RecorderControl(
                 when (state) {
                     RecordingState.IDLE -> Icon(Icons.Outlined.Mic, "Aufnehmen", tint = colors.background, modifier = Modifier.size((28f * scale).dp))
                     RecordingState.RECORDING -> {
-                        if (!reduced) {
+                        if (animate) {
                             Canvas(Modifier.size(outerSize)) {
+                                val ringPhase = ringState.value
                                 repeat(3) { index ->
                                     val phase = (ringPhase + index / 3f) % 1f
                                     drawCircle(
@@ -603,7 +752,7 @@ fun RecorderControl(
                     RecordingState.PROCESSING -> Canvas(Modifier.size((32f * scale).dp)) {
                         drawArc(
                             colors.gold,
-                            startAngle = spinnerRotation,
+                            startAngle = spinnerState.value,
                             sweepAngle = 250f,
                             useCenter = false,
                             style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
@@ -635,34 +784,45 @@ fun RecorderControl(
     }
 }
 
+/** `pm-fx-dots` — three gold dots lighting up one after another, 700ms, alternating. */
 @Composable
 fun LoadingDots(modifier: Modifier = Modifier) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Ladepunkte")
-    val phase by transition.animateFloat(
-        0.2f,
-        if (reduced) 0.2f else 1f,
-        infiniteRepeatable(tween(700, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)), RepeatMode.Reverse),
-        label = "Punkte",
-    )
+    val motionActive = LocalMotionActive.current
+    val phaseState: State<Float> = if (reduced || !motionActive) {
+        remember { mutableFloatStateOf(0.2f) }
+    } else {
+        val transition = rememberInfiniteTransition(label = "Ladepunkte")
+        transition.animateFloat(
+            0.2f,
+            1f,
+            infiniteRepeatable(tween(700, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)), RepeatMode.Reverse),
+            label = "Punkte",
+        )
+    }
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(3) { index ->
-            val localPhase = (phase - index * 0.16f).coerceIn(0.2f, 1f)
             Box(
-                Modifier.size(8.dp).graphicsLayer { translationY = -2.dp.toPx() * localPhase }
+                Modifier.size(8.dp)
+                    .graphicsLayer {
+                        val localPhase = (phaseState.value - index * 0.16f).coerceIn(0.2f, 1f)
+                        translationY = -2.dp.toPx() * localPhase
+                        alpha = localPhase
+                    }
                     .shadow(
                         5.dp,
                         CircleShape,
                         ambientColor = colors.gold.copy(alpha = 0.40f),
                         spotColor = colors.gold.copy(alpha = 0.40f),
                     )
-                    .background(colors.gold.copy(alpha = localPhase), CircleShape),
+                    .background(colors.gold, CircleShape),
             )
         }
     }
 }
 
+/** `pm-fx-orbit 4s ease-in-out infinite` — scale 1 → 1.045, opacity 0.72 → 1. */
 @Composable
 fun OrbitRing(
     modifier: Modifier = Modifier,
@@ -670,21 +830,28 @@ fun OrbitRing(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Orbit")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(
-            tween(2_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Orbitpuls",
-    )
+    val motionActive = LocalMotionActive.current
+    val animate = !reduced && motionActive
+    val phaseState: State<Float> = if (animate) {
+        val transition = rememberInfiniteTransition(label = "Orbit")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween(2_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                RepeatMode.Reverse,
+            ),
+            label = "Orbitpuls",
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
     Box(
         modifier = modifier.graphicsLayer {
+            val phase = phaseState.value
             scaleX = 1f + phase * 0.045f
             scaleY = 1f + phase * 0.045f
-            alpha = if (reduced) 1f else 0.72f + phase * 0.28f
+            alpha = if (animate) 0.72f + phase * 0.28f else 1f
         }.shadow(
             12.dp,
             CircleShape,
@@ -696,22 +863,66 @@ fun OrbitRing(
     )
 }
 
+/**
+ * `.pm-start__title` — gold gradient clipped to the glyphs (`background-clip: text`) that flows with
+ * `pm-fx-gold-flow 10s`, plus `text-shadow: 0 0 24px gold 16%`.
+ *
+ * The gradient is painted over the rendered text with [BlendMode.SrcIn] inside an offscreen layer,
+ * so the flow only moves a draw matrix — the text is never laid out or recomposed again.
+ */
 @Composable
 fun GoldWordmark(text: String, modifier: Modifier = Modifier) {
     val colors = LocalPmColors.current
+    val reduced = LocalReducedMotion.current
+    val motionActive = LocalMotionActive.current
+    // pm-fx-gold-flow 10s -> 5s each way with RepeatMode.Reverse
+    val flowState: State<Float> = if (reduced || !motionActive) {
+        remember { mutableFloatStateOf(0f) }
+    } else {
+        val transition = rememberInfiniteTransition(label = "Wortmarke")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween(5_000, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                RepeatMode.Reverse,
+            ),
+            label = "Goldfluss Wortmarke",
+        )
+    }
     Box(modifier) {
         val density = LocalDensity.current
         Text(
             text,
             style = TextStyle(
-                brush = Brush.horizontalGradient(
-                    listOf(colors.gold, colors.goldHi, colors.gold),
-                ),
+                color = colors.gold,
                 shadow = Shadow(colors.gold.copy(alpha = 0.16f), blurRadius = with(density) { 24.dp.toPx() }),
             ),
             fontFamily = Inter,
             fontWeight = FontWeight.SemiBold,
             fontSize = 18.sp,
+            modifier = Modifier
+                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                .drawWithCache {
+                    // background-size: 200% 100%, sweeping the remaining 100%
+                    val gradient = Brush.linearGradient(
+                        colors = listOf(colors.gold, colors.goldHi, colors.gold),
+                        start = Offset.Zero,
+                        end = Offset(size.width * 2f, 0f),
+                    )
+                    val gradientSize = Size(size.width * 2f, size.height)
+                    onDrawWithContent {
+                        drawContent()
+                        withTransform({ translate(-size.width * flowState.value, 0f) }) {
+                            drawRect(
+                                gradient,
+                                topLeft = Offset.Zero,
+                                size = gradientSize,
+                                blendMode = BlendMode.SrcIn,
+                            )
+                        }
+                    }
+                },
         )
     }
 }
@@ -749,35 +960,49 @@ fun CheckMark(visible: Boolean) {
     }
 }
 
+/**
+ * The most important button of the app. While speaking, a soft amber glow pulses around the icon
+ * (opacity 0.25 → 0.5 → 0.25 over 2.4s). The transition itself only exists while speaking, so a
+ * muted speaker costs no animation frames at all.
+ */
 @Composable
 fun SpeakerButton(speaking: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Lautsprecher")
-    val pulse by transition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = if (reduced) 0.25f else 0.5f,
-        animationSpec = infiniteRepeatable(
-            tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Lautsprecherpuls",
-    )
+    val motionActive = LocalMotionActive.current
     Box(
         Modifier.size(50.dp).pmClickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (speaking) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        listOf(colors.amber.copy(alpha = pulse), Color.Transparent),
-                        center = center,
-                        radius = size.minDimension / 2f,
+            val pulseState: State<Float> = if (reduced || !motionActive) {
+                remember { mutableFloatStateOf(0.25f) }
+            } else {
+                val transition = rememberInfiniteTransition(label = "Lautsprecher")
+                transition.animateFloat(
+                    initialValue = 0.25f,
+                    targetValue = 0.5f,
+                    animationSpec = infiniteRepeatable(
+                        tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                        RepeatMode.Reverse,
                     ),
-                    radius = size.minDimension / 2f,
+                    label = "Lautsprecherpuls",
                 )
             }
+            Spacer(
+                Modifier.matchParentSize().drawWithCache {
+                    val radius = size.minDimension / 2f
+                    val middle = Offset(size.width / 2f, size.height / 2f)
+                    val glow = Brush.radialGradient(
+                        listOf(colors.amber, Color.Transparent),
+                        center = middle,
+                        radius = radius,
+                    )
+                    onDrawBehind {
+                        drawCircle(glow, radius = radius, center = middle, alpha = pulseState.value)
+                    }
+                },
+            )
         }
         Icon(
             if (speaking) Icons.Outlined.VolumeUp else Icons.Outlined.VolumeOff,

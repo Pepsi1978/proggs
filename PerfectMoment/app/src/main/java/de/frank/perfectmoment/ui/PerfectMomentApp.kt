@@ -3,10 +3,12 @@ package de.frank.perfectmoment.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,18 +32,21 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,6 +60,7 @@ import de.frank.perfectmoment.session.SessionState
 import de.frank.perfectmoment.tts.TtsProvider
 import de.frank.perfectmoment.ui.theme.BreathingBackground
 import de.frank.perfectmoment.ui.theme.Inter
+import de.frank.perfectmoment.ui.theme.LocalMotionActive
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
 
@@ -85,53 +91,77 @@ fun PerfectMomentApp(
             viewModel.screen != AppScreen.SESSION || viewModel.sheet != null -> viewModel.back()
         }
     }
+    // While a sheet or message covers the screen, the content below stops animating. The blurred
+    // layer then stays static and can be cached instead of re-rendering offscreen every frame.
+    val overlayOpen = viewModel.sheet != null || viewModel.message != null
     BreathingBackground(session = viewModel.screen == AppScreen.SESSION) {
-        AnimatedContent(
-            targetState = viewModel.screen,
-            transitionSpec = {
-                if (reduced) {
-                    EnterTransition.None togetherWith ExitTransition.None
-                } else {
-                    val enter = if (targetState == AppScreen.SESSION) {
-                        slideInVertically(tween(700, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+        CompositionLocalProvider(LocalMotionActive provides !overlayOpen) {
+            AnimatedContent(
+                targetState = viewModel.screen,
+                transitionSpec = {
+                    if (reduced) {
+                        EnterTransition.None togetherWith ExitTransition.None
                     } else {
-                        fadeIn(tween(duration)) + slideInVertically(
-                            tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-                        ) { screenOffset } + scaleIn(
-                            animationSpec = tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-                            initialScale = 0.985f,
-                        )
+                        val enter = if (targetState == AppScreen.SESSION) {
+                            slideInVertically(tween(700, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+                        } else {
+                            fadeIn(tween(duration)) + slideInVertically(
+                                tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                            ) { screenOffset } + scaleIn(
+                                animationSpec = tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                                initialScale = 0.985f,
+                            )
+                        }
+                        enter togetherWith fadeOut(tween(duration / 2))
                     }
-                    enter togetherWith fadeOut(tween(duration / 2))
+                },
+                label = "Navigation",
+                modifier = Modifier.fillMaxSize().then(
+                    if (overlayOpen) Modifier.pmScrimBackdrop() else Modifier,
+                ),
+            ) { screen ->
+                // pm-fx-screen-in also softens the arriving screen from blur(4px) to blur(0).
+                // Read inside graphicsLayer so it stays a layer property, never a recomposition.
+                val enterBlur = transition.animateFloat(
+                    transitionSpec = {
+                        tween(duration, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))
+                    },
+                    label = "Eintrittsunschärfe",
+                ) { state -> if (reduced || state == EnterExitState.Visible) 0f else 4f }
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        val radius = enterBlur.value
+                        renderEffect = if (radius > 0.05f) {
+                            BlurEffect(radius.dp.toPx(), radius.dp.toPx(), TileMode.Decal)
+                        } else {
+                            null
+                        }
+                    },
+                ) {
+                when (screen) {
+                    AppScreen.START -> StartScreen(
+                        viewModel,
+                        microphonePermissionGranted,
+                        requestMicrophonePermission,
+                    )
+                    AppScreen.SESSION -> SessionScreen(viewModel, runtime, sessionState)
+                    AppScreen.HISTORY -> HistoryScreen(viewModel)
+                    AppScreen.HISTORY_DETAIL -> HistoryDetailScreen(viewModel)
+                    AppScreen.SETTINGS -> SettingsScreen(viewModel, appLockEnabled, toggleAppLock)
+                    AppScreen.HOOKS -> HooksScreen(viewModel)
+                    AppScreen.HOOK_EDITOR -> HookEditorScreen(viewModel)
+                    AppScreen.SKILLS -> SkillsScreen(viewModel)
+                    AppScreen.SKILL_EDITOR -> SkillEditorScreen(viewModel)
+                    AppScreen.VOICE -> VoiceScreen(viewModel)
+                    AppScreen.CHAT_GPT -> ChatGptScreen(
+                        viewModel,
+                        connectChatGpt,
+                        copyDeviceCode,
+                        openDevicePage,
+                    )
+                    AppScreen.RAW_DATA -> RawDataScreen(viewModel)
                 }
-            },
-            label = "Navigation",
-            modifier = Modifier.fillMaxSize().then(
-                if (viewModel.sheet != null || viewModel.message != null) Modifier.blur(8.dp) else Modifier,
-            ),
-        ) { screen ->
-            when (screen) {
-                AppScreen.START -> StartScreen(
-                    viewModel,
-                    microphonePermissionGranted,
-                    requestMicrophonePermission,
-                )
-                AppScreen.SESSION -> SessionScreen(viewModel, runtime, sessionState)
-                AppScreen.HISTORY -> HistoryScreen(viewModel)
-                AppScreen.HISTORY_DETAIL -> HistoryDetailScreen(viewModel)
-                AppScreen.SETTINGS -> SettingsScreen(viewModel, appLockEnabled, toggleAppLock)
-                AppScreen.HOOKS -> HooksScreen(viewModel)
-                AppScreen.HOOK_EDITOR -> HookEditorScreen(viewModel)
-                AppScreen.SKILLS -> SkillsScreen(viewModel)
-                AppScreen.SKILL_EDITOR -> SkillEditorScreen(viewModel)
-                AppScreen.VOICE -> VoiceScreen(viewModel)
-                AppScreen.CHAT_GPT -> ChatGptScreen(
-                    viewModel,
-                    connectChatGpt,
-                    copyDeviceCode,
-                    openDevicePage,
-                )
-                AppScreen.RAW_DATA -> RawDataScreen(viewModel)
+                }
             }
         }
         viewModel.sheet?.let { sheet ->

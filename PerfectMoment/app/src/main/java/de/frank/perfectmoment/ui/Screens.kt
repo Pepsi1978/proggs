@@ -85,8 +85,11 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,7 +97,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.graphicsLayer
@@ -142,6 +144,7 @@ import de.frank.perfectmoment.tts.TtsCatalog
 import de.frank.perfectmoment.tts.TtsProvider
 import de.frank.perfectmoment.ui.theme.Inter
 import de.frank.perfectmoment.ui.theme.JetBrainsMono
+import de.frank.perfectmoment.ui.theme.LocalMotionActive
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
 import de.frank.perfectmoment.ui.theme.Newsreader
@@ -449,18 +452,21 @@ fun SessionScreen(
             }
         },
     ) {
-        SessionQuestions(
-            runtime = runtime,
-            state = state,
-            onToggleSpeaker = viewModel::toggleSpeaker,
-            onTogglePause = viewModel::togglePause,
-            onStop = {
-                resumeAfterStopDialog = state?.paused == false
-                if (resumeAfterStopDialog) viewModel.togglePause()
-                showStopDialog = true
-            },
-            modifier = if (showStopDialog) Modifier.blur(8.dp) else Modifier,
-        )
+        // Stop dialog open: freeze the animations behind it so the blurred layer can be cached.
+        CompositionLocalProvider(LocalMotionActive provides !showStopDialog) {
+            SessionQuestions(
+                runtime = runtime,
+                state = state,
+                onToggleSpeaker = viewModel::toggleSpeaker,
+                onTogglePause = viewModel::togglePause,
+                onStop = {
+                    resumeAfterStopDialog = state?.paused == false
+                    if (resumeAfterStopDialog) viewModel.togglePause()
+                    showStopDialog = true
+                },
+                modifier = if (showStopDialog) Modifier.pmScrimBackdrop() else Modifier,
+            )
+        }
         if (viewModel.introVisible) SessionIntroOverlay(viewModel)
         if (!viewModel.introVisible && state == null && viewModel.sessionError == null) {
             Box(Modifier.fillMaxSize()) {
@@ -620,26 +626,36 @@ private fun SessionQuestions(
                 val active = index == current
                 val past = index < current
                 val animationDuration = if (reduced) 200 else 700
-                val itemAlpha by animateFloatAsState(
-                    targetValue = if (active) 1f else if (past) 0.3f else 0.55f,
-                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
-                    label = "Frage Deckkraft",
-                )
-                val questionSize by animateFloatAsState(
-                    targetValue = if (active) 32f else 20f,
-                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
-                    label = "Frage Größe",
-                )
-                val questionColor by animateColorAsState(
-                    targetValue = if (active) colors.goldHi else if (past) colors.text3 else colors.text2,
-                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
-                    label = "Frage Farbe",
-                )
-                val emojiScale by animateFloatAsState(
-                    targetValue = if (active) 1.15f else 1f,
-                    animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
-                    label = "Emoji Größe",
-                )
+                val spec = tween<Float>(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f))
+                // Only the question that is leaving and the one arriving actually cross-fade
+                // ("die alte schrumpft und verblasst, die neue waechst und leuchtet auf").
+                // Every other row already sits at its target, so it needs no running animation.
+                val crossfading = index >= current - 1 && index <= current + 1
+                val targetAlpha = if (active) 1f else if (past) 0.3f else 0.55f
+                val targetSize = if (active) 32f else 20f
+                val targetColor = if (active) colors.goldHi else if (past) colors.text3 else colors.text2
+                val targetEmojiScale = if (active) 1.15f else 1f
+                val alphaState: State<Float>
+                val emojiScaleState: State<Float>
+                val questionSize: Float
+                val questionColor: Color
+                if (crossfading) {
+                    alphaState = animateFloatAsState(targetAlpha, spec, label = "Frage Deckkraft")
+                    emojiScaleState = animateFloatAsState(targetEmojiScale, spec, label = "Emoji Größe")
+                    // Font size and colour drive text layout, so these two do recompose the row —
+                    // but only for the up to three rows that are actually cross-fading.
+                    questionSize = animateFloatAsState(targetSize, spec, label = "Frage Größe").value
+                    questionColor = animateColorAsState(
+                        targetValue = targetColor,
+                        animationSpec = tween(animationDuration, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
+                        label = "Frage Farbe",
+                    ).value
+                } else {
+                    alphaState = remember(targetAlpha) { mutableFloatStateOf(targetAlpha) }
+                    emojiScaleState = remember(targetEmojiScale) { mutableFloatStateOf(targetEmojiScale) }
+                    questionSize = targetSize
+                    questionColor = targetColor
+                }
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -649,7 +665,12 @@ private fun SessionQuestions(
                         question.emoji,
                         fontSize = 24.sp,
                         lineHeight = 31.2.sp,
-                        modifier = Modifier.alpha(itemAlpha).scale(emojiScale),
+                        modifier = Modifier.graphicsLayer {
+                            alpha = alphaState.value
+                            val scale = emojiScaleState.value
+                            scaleX = scale
+                            scaleY = scale
+                        },
                     )
                     Text(
                         question.text,
@@ -658,7 +679,7 @@ private fun SessionQuestions(
                             fontSize = questionSize.sp,
                             lineHeight = (questionSize * 1.55f).sp,
                         ),
-                        modifier = Modifier.weight(1f).alpha(itemAlpha),
+                        modifier = Modifier.weight(1f).graphicsLayer { alpha = alphaState.value },
                     )
                 }
             }
@@ -745,17 +766,24 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
     if (state == null || runtime == null) return
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
+    val motionActive = LocalMotionActive.current
     val progress = remember { Animatable(0f) }
-    val pulseTransition = rememberInfiniteTransition(label = "Fortschrittsring")
-    val speakingPulse by pulseTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = if (reduced) 0.25f else 0.50f,
-        animationSpec = infiniteRepeatable(
-            tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
-            RepeatMode.Reverse,
-        ),
-        label = "Bernsteinpuls",
-    )
+    val speaking = state.phase == Phase.SPEAKING
+    // The amber pulse only exists while the ring stands still and speech is running.
+    val speakingPulseState: State<Float> = if (speaking && !reduced && motionActive) {
+        val pulseTransition = rememberInfiniteTransition(label = "Fortschrittsring")
+        pulseTransition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 0.50f,
+            animationSpec = infiniteRepeatable(
+                tween(1_200, easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                RepeatMode.Reverse,
+            ),
+            label = "Bernsteinpuls",
+        )
+    } else {
+        remember { mutableFloatStateOf(0.25f) }
+    }
     LaunchedEffect(state.phase, state.currentIndex, state.currentRep, state.paused) {
         if (state.paused) return@LaunchedEffect
         progress.snapTo(if (state.phase == Phase.SPEAKING) 1f else 0f)
@@ -771,16 +799,23 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
             Modifier.size(64.dp).background(colors.surface2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawCircle(colors.goldDim.copy(alpha = 0.28f), style = Stroke(2.5.dp.toPx()))
-                drawArc(
-                    color = if (state.phase == Phase.SPEAKING) colors.amber.copy(alpha = speakingPulse) else colors.gold,
-                    startAngle = -90f,
-                    sweepAngle = 360f * progress.value,
-                    useCenter = false,
-                    style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
+            Spacer(
+                Modifier.matchParentSize().drawWithCache {
+                    val stroke = Stroke(2.5.dp.toPx())
+                    val roundStroke = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round)
+                    val track = colors.goldDim.copy(alpha = 0.28f)
+                    onDrawBehind {
+                        drawCircle(track, style = stroke)
+                        drawArc(
+                            color = if (speaking) colors.amber.copy(alpha = speakingPulseState.value) else colors.gold,
+                            startAngle = -90f,
+                            sweepAngle = 360f * progress.value,
+                            useCenter = false,
+                            style = roundStroke,
+                        )
+                    }
+                },
+            )
             val totalSeconds = state.remainingMs.coerceAtLeast(0L) / 1_000L
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -2015,17 +2050,23 @@ private fun DeviceCodeState(
 private fun WaitingSpinner() {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "Anmeldung")
-    val rotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 360f,
-        animationSpec = infiniteRepeatable(tween(2_200, easing = LinearEasing), RepeatMode.Restart),
-        label = "Anmeldedrehung",
-    )
+    val motionActive = LocalMotionActive.current
+    // pm-fx-spin 2200ms linear infinite
+    val rotationState: State<Float> = if (reduced || !motionActive) {
+        remember { mutableFloatStateOf(0f) }
+    } else {
+        val transition = rememberInfiniteTransition(label = "Anmeldung")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(2_200, easing = LinearEasing), RepeatMode.Restart),
+            label = "Anmeldedrehung",
+        )
+    }
     Canvas(Modifier.size(20.dp)) {
         drawArc(
             color = colors.gold,
-            startAngle = rotation,
+            startAngle = rotationState.value,
             sweepAngle = 250f,
             useCenter = false,
             style = Stroke(2.dp.toPx(), cap = StrokeCap.Round),

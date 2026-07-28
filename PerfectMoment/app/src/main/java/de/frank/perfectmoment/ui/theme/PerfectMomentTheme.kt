@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,10 +22,13 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -91,6 +93,13 @@ val LightPmColors = PmColors(
 
 val LocalPmColors = compositionLocalOf { DarkPmColors }
 val LocalReducedMotion = compositionLocalOf { false }
+
+/**
+ * False while an overlay (sheet, dialog, message) covers the screen. Endless animations below the
+ * overlay stop, so the blurred layer stays static and can be cached instead of being re-rendered
+ * offscreen every frame. Purely a scheduling hint — no effect is removed.
+ */
+val LocalMotionActive = compositionLocalOf { true }
 
 val Inter = FontFamily(
     Font(R.font.inter, FontWeight.Normal),
@@ -192,6 +201,16 @@ fun PerfectMomentTheme(
     }
 }
 
+/**
+ * Screen backdrop of the design: static gold gradient plus two corner glows, the slowly breathing
+ * gold shimmer (`pm-fx-breathe`, 20s / 30s in a session) and the aurora sweep (`pm-fx-aurora`, 18s)
+ * that sits *above* the content with soft-light blending, exactly like the `::after` layer in the
+ * design.
+ *
+ * Every shader is built once per size/palette in [drawWithCache]; the animations only move the draw
+ * matrix and alpha, so a frame costs a matrix update instead of rebuilding full-screen gradients.
+ * Animated values are read inside the draw lambdas (draw phase), never in the composition body.
+ */
 @Composable
 fun BreathingBackground(
     modifier: Modifier = Modifier,
@@ -200,10 +219,9 @@ fun BreathingBackground(
 ) {
     val colors = LocalPmColors.current
     val reduced = LocalReducedMotion.current
-    val staticBackground = reduced || colors.dark
     val progressState: State<Float>
     val auroraProgressState: State<Float>
-    if (staticBackground) {
+    if (reduced) {
         progressState = remember { mutableFloatStateOf(0f) }
         auroraProgressState = remember { mutableFloatStateOf(0f) }
     } else {
@@ -230,100 +248,122 @@ fun BreathingBackground(
             label = "Aurora",
         )
     }
-    Box(modifier.fillMaxSize()) {
-        Canvas(Modifier.fillMaxSize()) {
-            val progress = progressState.value
+    Box(
+        modifier.fillMaxSize().drawWithCache {
             val backgroundLine = gradientLine(size, 145f)
-            drawRect(
-                Brush.linearGradient(
-                    0f to mix(colors.background, colors.gold, 0.04f),
-                    0.52f to colors.background,
-                    1f to mix(colors.background, colors.goldHi, 0.03f),
-                    start = backgroundLine.first,
-                    end = backgroundLine.second,
-                ),
+            val base = Brush.linearGradient(
+                0f to mix(colors.background, colors.gold, 0.04f),
+                0.52f to colors.background,
+                1f to mix(colors.background, colors.goldHi, 0.03f),
+                start = backgroundLine.first,
+                end = backgroundLine.second,
             )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    0f to colors.goldHi.copy(alpha = 0.16f),
-                    0.72f to Color.Transparent,
-                    1f to Color.Transparent,
-                    center = Offset(size.width * 1.08f, size.height * -0.04f),
-                    radius = 300.dp.toPx(),
-                ),
-                radius = 300.dp.toPx(),
-                center = Offset(size.width * 1.08f, size.height * -0.04f),
+            val topGlowRadius = 300.dp.toPx()
+            val topGlowCenter = Offset(size.width * 1.08f, size.height * -0.04f)
+            val topGlow = Brush.radialGradient(
+                0f to colors.goldHi.copy(alpha = 0.16f),
+                0.72f to Color.Transparent,
+                1f to Color.Transparent,
+                center = topGlowCenter,
+                radius = topGlowRadius,
             )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    0f to colors.gold.copy(alpha = 0.09f),
-                    0.74f to Color.Transparent,
-                    1f to Color.Transparent,
-                    center = Offset(size.width * -0.14f, size.height * 0.82f),
-                    radius = 360.dp.toPx(),
-                ),
-                radius = 360.dp.toPx(),
-                center = Offset(size.width * -0.14f, size.height * 0.82f),
+            val bottomGlowRadius = 360.dp.toPx()
+            val bottomGlowCenter = Offset(size.width * -0.14f, size.height * 0.82f)
+            val bottomGlow = Brush.radialGradient(
+                0f to colors.gold.copy(alpha = 0.09f),
+                0.74f to Color.Transparent,
+                1f to Color.Transparent,
+                center = bottomGlowCenter,
+                radius = bottomGlowRadius,
             )
-            val breathOpacity = if (staticBackground) {
-                0.45f
-            } else if (progress < 0.5f) {
-                0.15f + 0.57f * progress * 2f
-            } else {
-                0.72f + 0.28f * (progress - 0.5f) * 2f
-            }
-            val breathCenter = Offset(
-                x = size.width * 0.5f - if (staticBackground) 0f else 6.dp.toPx() * progress,
-                y = size.height * 0.35f + if (staticBackground) 0f else 8.dp.toPx() * progress,
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    0f to colors.breath.copy(alpha = colors.breath.alpha * breathOpacity),
-                    1f to Color.Transparent,
-                    center = breathCenter,
-                    radius = size.maxDimension * 0.72f * (1f + if (staticBackground) 0f else 0.02f * progress),
-                ),
-                radius = size.maxDimension * 0.72f * (1f + if (staticBackground) 0f else 0.02f * progress),
+            val breathCenter = Offset(size.width * 0.5f, size.height * 0.35f)
+            val breathRadius = size.maxDimension * 0.72f
+            val breath = Brush.radialGradient(
+                0f to colors.breath,
+                1f to Color.Transparent,
                 center = breathCenter,
+                radius = breathRadius,
             )
-        }
-        Canvas(Modifier.fillMaxSize()) {
-            val auroraProgress = auroraProgressState.value
-            val auroraOpacity = if (staticBackground) {
-                1f
-            } else if (auroraProgress < 0.5f) {
-                    0.10f + 0.12f * auroraProgress * 2f
-                } else {
-                    0.22f - 0.08f * (auroraProgress - 0.5f) * 2f
+            val driftX = 6.dp.toPx()
+            val driftY = 8.dp.toPx()
+            onDrawBehind {
+                val progress = progressState.value
+                drawRect(base)
+                drawCircle(topGlow, radius = topGlowRadius, center = topGlowCenter)
+                drawCircle(bottomGlow, radius = bottomGlowRadius, center = bottomGlowCenter)
+                // pm-fx-breathe: opacity 0.15 -> 0.72 (50%) -> 1.0, drift -6px/+8px, scale 1.02
+                val breathOpacity = when {
+                    reduced -> 0.45f
+                    progress < 0.5f -> 0.15f + 0.57f * progress * 2f
+                    else -> 0.72f + 0.28f * (progress - 0.5f) * 2f
                 }
-                val travel = size.width * auroraProgress
-                drawRect(
-                    brush = Brush.linearGradient(
-                        0f to Color.Transparent,
-                        0.38f to Color.Transparent,
-                        0.48f to colors.goldHi.copy(alpha = 0.08f),
-                        0.58f to Color.Transparent,
-                        1f to Color.Transparent,
-                        start = Offset(-size.width + travel, size.height),
-                        end = Offset(size.width * 1.4f + travel, 0f),
-                    ),
-                    alpha = auroraOpacity,
-                )
-                drawRect(
-                    brush = Brush.radialGradient(
-                        0f to colors.gold.copy(alpha = 0.07f),
-                        0.66f to Color.Transparent,
-                        1f to Color.Transparent,
-                        center = Offset(
-                            size.width * (0.50f + 0.02f * auroraProgress),
-                            size.height * (0.35f - 0.02f * auroraProgress),
-                        ),
-                        radius = size.maxDimension * 0.66f,
-                    ),
-                    alpha = auroraOpacity,
-                )
-        }
+                if (reduced) {
+                    drawCircle(breath, radius = breathRadius, center = breathCenter, alpha = breathOpacity)
+                } else {
+                    withTransform({
+                        translate(-driftX * progress, driftY * progress)
+                        scale(1f + 0.02f * progress, 1f + 0.02f * progress, breathCenter)
+                    }) {
+                        drawCircle(breath, radius = breathRadius, center = breathCenter, alpha = breathOpacity)
+                    }
+                }
+            }
+        },
+    ) {
         content()
+        // ::after — aurora sweep above the content, soft-light, non-interactive
+        Box(
+            Modifier.matchParentSize().drawWithCache {
+                val sweep = Brush.linearGradient(
+                    0f to Color.Transparent,
+                    0.38f to Color.Transparent,
+                    0.48f to colors.goldHi.copy(alpha = 0.08f),
+                    0.58f to Color.Transparent,
+                    1f to Color.Transparent,
+                    start = Offset(-size.width, size.height),
+                    end = Offset(size.width * 1.4f, 0f),
+                )
+                val haloCenter = Offset(size.width * 0.5f, size.height * 0.35f)
+                val haloRadius = size.maxDimension * 0.66f
+                val halo = Brush.radialGradient(
+                    0f to colors.gold.copy(alpha = 0.07f),
+                    0.66f to Color.Transparent,
+                    1f to Color.Transparent,
+                    center = haloCenter,
+                    radius = haloRadius,
+                )
+                val haloDriftX = size.width * 0.02f
+                val haloDriftY = size.height * 0.02f
+                onDrawBehind {
+                    val auroraProgress = auroraProgressState.value
+                    // pm-fx-aurora: opacity 0.10 -> 0.22 (50%) -> 0.14
+                    val auroraOpacity = when {
+                        reduced -> 0.10f
+                        auroraProgress < 0.5f -> 0.10f + 0.12f * auroraProgress * 2f
+                        else -> 0.22f - 0.08f * (auroraProgress - 0.5f) * 2f
+                    }
+                    // background-size 240% -> travels 140% of the width from 0% to 100%
+                    withTransform({ translate(size.width * 1.4f * auroraProgress, 0f) }) {
+                        drawRect(
+                            brush = sweep,
+                            topLeft = Offset(-size.width * 1.4f, 0f),
+                            size = Size(size.width * 2.8f, size.height),
+                            alpha = auroraOpacity,
+                            blendMode = BlendMode.Softlight,
+                        )
+                    }
+                    withTransform({ translate(haloDriftX * auroraProgress, -haloDriftY * auroraProgress) }) {
+                        drawCircle(
+                            brush = halo,
+                            radius = haloRadius,
+                            center = haloCenter,
+                            alpha = auroraOpacity,
+                            blendMode = BlendMode.Softlight,
+                        )
+                    }
+                }
+            },
+        )
     }
 }
 
