@@ -783,12 +783,18 @@ const bridgeScript = `<script ${bridgeMarker}>
   // Nachgereichte Theme-Bloecke: ein Design, das vor dieser Fassung aufgebaut wurde, kennt seine
   // uebrigen Erscheinungen noch nicht. Das Studio liefert sie aus den Projektquellen nach, ohne dass
   // der teure Neuaufbau laufen muss.
+  // Der nachgereichte Themenblock wird GANZ VORN eingehängt, nicht angehängt. Angehängt gewann er
+  // bei gleicher Spezifität gegen das Dokument selbst — eine im Design geänderte Farbe wurde damit
+  // sofort wieder von den ursprünglich gemessenen Quellwerten überschrieben ("ich sehe keine
+  // Änderung"). Vorn eingehängt bleibt er die Grundlage, und alles, was das Dokument oder eine
+  // gewählte Erscheinung (höhere Spezifität) setzt, sticht ihn wie vorgesehen.
   const applyThemeCss = (css) => {
+    const head = document.head || document.documentElement;
     if (!themeStyleElement) {
       themeStyleElement = document.createElement("style");
       themeStyleElement.setAttribute("data-werft-themes", "");
-      (document.head || document.documentElement).appendChild(themeStyleElement);
     }
+    if (themeStyleElement.parentNode !== head || head.firstChild !== themeStyleElement) head.insertBefore(themeStyleElement, head.firstChild);
     themeStyleElement.textContent = css || "";
   };
 

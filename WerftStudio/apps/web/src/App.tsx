@@ -1224,8 +1224,11 @@ function Studio() {
     onError: (error) => setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Text nicht geändert: ${error.message}` : "Die Textänderung ist fehlgeschlagen." }])
   });
   const chatRun = useMutation({
-    mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
+    // Der Verlauf geht MIT: erst dadurch weiss das Modell, was vorher besprochen und geaendert wurde,
+    // statt jede Nachricht als ersten Satz eines fremden Gespraechs zu behandeln.
+    mutationFn: ({ message, target }: { message: string; target?: MarkTarget }) => api<{ reply: string; changedFiles: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number }>(`/projects/${projectId}/chat`, { method: "POST", body: JSON.stringify({
       message,
+      history: messages.slice(-12).map((entry) => ({ role: entry.role, text: entry.text.slice(0, 6000) })),
       ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
       ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
       ...(target?.screenName || visibleScreen ? { screen: target?.screenName || visibleScreen } : {}),
@@ -1233,8 +1236,11 @@ function Studio() {
     }) }),
     onSuccess: async (data) => {
       const parts = [data.reply];
-      if (data.changedFiles.length) parts.push(`✓ Geänderte Dateien: ${data.changedFiles.join(", ")}`);
-      if (data.skipped?.length) parts.push(`⚠ Nicht angewendet:\n${data.skipped.join("\n")}`);
+      if (data.changedFiles.length) {
+        const detail = [data.editsApplied ? `${data.editsApplied} Änderung${data.editsApplied === 1 ? "" : "en"}` : "", (data.rounds ?? 1) > 1 ? `${data.rounds} Runden` : ""].filter(Boolean).join(", ");
+        parts.push(`✓ Geändert: ${data.changedFiles.join(", ")}${detail ? ` (${detail})` : ""}`);
+      }
+      if (data.skipped?.length) parts.push(`⚠ Offen geblieben:\n${data.skipped.join("\n")}`);
       setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
       // Ein laufender Kommentar bekommt sein Ergebnis: „angewendet" nur, wenn wirklich Dateien
       // geschrieben wurden — sonst stuende dort ein Erfolg, den es nicht gab.
@@ -1245,6 +1251,9 @@ function Studio() {
       }));
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+      // Die gemessenen Erscheinungen stammen aus dem Dokument, das die KI gerade geaendert hat.
+      // Ohne diese Neuvermessung legte die Vorschau den ALTEN Farbstand wieder darueber.
+      await client.invalidateQueries({ queryKey: ["themes", projectId] });
     },
     onError: (error) => {
       setMessages((all) => [...all, { role: "assistant", text: error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }]);
@@ -1464,7 +1473,10 @@ function Studio() {
                   {m.text}
                 </div>
               ))}
-              {chatRun.isPending && <WorkingIndicator detail={visibleScreen ? `Bildschirm „${visibleScreen}“` : "Gesamtes Design"} />}
+              {/* Der Umfang wird serverseitig aus dem Wunsch bestimmt — hier stand vorher „Bildschirm X",
+                  auch wenn der Wunsch das ganze Design meinte. Angezeigt wird deshalb, WOMIT gearbeitet
+                  wird und was gerade sichtbar ist, statt eine Behauptung über den Umfang. */}
+              {chatRun.isPending && <WorkingIndicator detail={`${runModel?.name ?? "Standardmodell"}${visibleScreen ? ` · sichtbar: ${visibleScreen}` : ""}`} />}
             </div>}
             {activeTab === "chat" && <form
               className="composer"

@@ -35,9 +35,20 @@ describe("OpenRouter adapter", () => {
   });
 
   it("reassembles streamed chat completions and rejects in-stream errors", () => {
-    const raw = 'data: {"choices":[{"delta":{"content":"Hallo "}}]}\n: keepalive\ndata: {"choices":[{"delta":{"content":"Welt"}}]}\ndata: [DONE]';
-    expect(parseOpenRouterEventStream(raw)).toBe("Hallo Welt");
+    const raw = 'data: {"choices":[{"delta":{"content":"Hallo "}}]}\n: keepalive\ndata: {"choices":[{"delta":{"content":"Welt"}},{"finish_reason":"stop"}]}\ndata: [DONE]';
+    expect(parseOpenRouterEventStream(raw)).toMatchObject({ text: "Hallo Welt", truncated: false });
     expect(() => parseOpenRouterEventStream('data: {"error":{"message":"kaputt"}}')).toThrow("OpenRouter hat den KI-Lauf abgebrochen.");
+  });
+
+  it("reports a stream that was cut off by the output limit", () => {
+    // Genau dieser Fall lief bisher unbemerkt in den JSON-Parser und endete mit „nichts geändert".
+    const raw = 'data: {"choices":[{"delta":{"content":"{\\"reply\\":\\"halb"},"finish_reason":"length"}]}\ndata: [DONE]';
+    expect(parseOpenRouterEventStream(raw)).toMatchObject({ finishReason: "length", truncated: true });
+  });
+
+  it("asks the provider for enough output room instead of accepting its default cap", () => {
+    expect(openRouterRequest("vendor/model", "System", "Eingabe", undefined, undefined, 32_000)).toMatchObject({ max_tokens: 32_000 });
+    expect(openRouterRequest("vendor/model", "System", "Eingabe")).not.toHaveProperty("max_tokens");
   });
 
   it("rejects permanent stream errors without retrying them", () => {
@@ -48,8 +59,16 @@ describe("OpenRouter adapter", () => {
 
   it("rejects oversized inputs before starting a paid model run", () => {
     const small = { provider: "openrouter" as const, id: "vendor/small", name: "Small", contextLength: 4_096, efforts: [] };
-    expect(() => assertOpenRouterContext(small, "System", "x".repeat(10_000))).toThrow(expect.objectContaining({ code: "MODEL_CONTEXT_TOO_SMALL", retryable: false }));
+    expect(() => assertOpenRouterContext(small, "System", "x".repeat(30_000))).toThrow(expect.objectContaining({ code: "MODEL_CONTEXT_TOO_SMALL", retryable: false }));
     expect(() => assertOpenRouterContext({ ...small, contextLength: 128_000 }, "System", "x".repeat(10_000))).not.toThrow();
+  });
+
+  it("measures the input in tokens, not in bytes", () => {
+    // Ein 400-KB-Design passt in ein 200k-Modell (rund 133k Token). Die alte Byte-Rechnung wies es ab
+    // („Die Eingabe ist für Z.ai: GLM 5.2 zu groß"), obwohl reichlich Platz war.
+    const model = { provider: "openrouter" as const, id: "z-ai/glm", name: "GLM", contextLength: 200_000, efforts: [] };
+    expect(() => assertOpenRouterContext(model, "System", "x".repeat(400_000), 32_000)).not.toThrow();
+    expect(() => assertOpenRouterContext(model, "System", "x".repeat(900_000), 32_000)).toThrow(expect.objectContaining({ code: "MODEL_CONTEXT_TOO_SMALL" }));
   });
 
   it("does not retry authentication or credit errors", () => {

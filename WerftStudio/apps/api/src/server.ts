@@ -20,6 +20,8 @@ import { z } from "zod";
 import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails } from "./openrouter.js";
+import { applyChatEdits, parseChatResponse, repairBriefing, verifyFileWrite, type ChatEdit, type FileReport, type ParsedChatResponse } from "./chat-edit.js";
+import { designMap, excerptDesign, globalScope, inputCharBudget, reservedOutputTokens, selectChatFiles } from "./chat-scope.js";
 import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design-extract.js";
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
@@ -401,7 +403,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.24.20-20260728.1246" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.25.0-20260728.1404" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -859,24 +861,38 @@ app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
   return { entryPath: item.path };
 });
 const chatEditableMime = (mime: string) => mime.startsWith("text/") || mime.startsWith("application/json") || mime.startsWith("image/svg+xml");
-const chatInstructions = [
-  "Du bist der Design-Editor von Werft Studio, einem selbst gehosteten Designwerkzeug.",
-  "Du erhältst die Textdateien eines importierten HTML-Design-Projekts und einen Änderungswunsch des Benutzers.",
-  "Setze den Wunsch als praezise Suchen/Ersetzen-Edits um. Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt ohne Markdown und ohne Codefences:",
-  '{"reply": "kurze deutsche Zusammenfassung", "changes": [{"path": "pfad/wie/geliefert", "edits": [{"find": "exakter vorhandener Ausschnitt", "replace": "neuer Ausschnitt"}]}]}',
-  "Regeln: find muss WOERTLICH so im aktuellen Dateiinhalt vorkommen und durch genug Kontext EINDEUTIG sein.",
-  "Nutze viele kleine Edits statt grosser Bloecke. Gib NIEMALS komplette Dateien zurueck.",
-  "Erhalte Struktur, Funktionen und alle nicht betroffenen Inhalte vollstaendig. Pfade exakt wie geliefert.",
-  "Ist der Wunsch mehrdeutig (unklar WELCHES Element, WELCHER Wert oder WELCHER Bildschirm gemeint ist), aendere NICHTS und stelle stattdessen in \"reply\" hoechstens drei kurze, nummerierte Rueckfragen. Lieber einmal nachfragen als am falschen Element arbeiten.",
-  "Bezieht sich der Wunsch erkennbar auf den gerade angezeigten Bildschirm, aendere NUR dessen Abschnitt (die passende <section class=\"werft-screen\">) und keinen anderen.",
-  "Ist ein MARKIERTER BEREICH angegeben, gilt er als eindeutig: aendere ausschliesslich dieses Element und frage NICHT nach, welches Element gemeint ist. Der mitgelieferte Ausschnitt stammt woertlich aus der Datei — nimm ihn als Grundlage fuer find und lasse alles ausserhalb unveraendert."
-].join(" ");
-function extractJsonObject(text: string): string {
-  const start = text.indexOf("{"), end = text.lastIndexOf("}");
-  return start >= 0 && end > start ? text.slice(start, end + 1) : text;
+// Der Auftrag an das Modell ist ARBEITEN, nicht fragen. Die frühere Fassung verlangte bei jeder
+// Mehrdeutigkeit nummerierte Rückfragen — das Ergebnis waren Läufe, die drei Fragen stellten und
+// keine einzige Zeile änderten. Rückfragen sind jetzt der ausdrückliche Ausnahmefall.
+function buildChatInstructions(scope: "global" | "screen" | "marked"): string {
+  return [
+    "Du bist der Design-Editor von Werft Studio und arbeitest direkt an den Dateien eines Design-Projekts.",
+    "Dein Auftrag ist es, den Änderungswunsch UMZUSETZEN. Du lieferst in jeder Antwort echte Änderungen.",
+    "",
+    "AUSGABEFORMAT — antworte AUSSCHLIESSLICH mit EINEM JSON-Objekt, ohne Markdown, ohne Codefences, ohne Vorrede:",
+    '{"reply":"kurze deutsche Zusammenfassung, was du geändert hast","changes":[{"path":"pfad/wie/geliefert","edits":[{"find":"wörtlich vorhandener Ausschnitt","replace":"neuer Ausschnitt"},{"find":"…","replace":"…","all":true}]}]}',
+    '"all": true ersetzt ALLE Vorkommen der Stelle — genau richtig für einen Wert, der überall gleich angepasst werden soll.',
+    "",
+    "REGELN FÜR find:",
+    "- find muss wörtlich im aktuellen Dateiinhalt vorkommen. Kopiere den Ausschnitt aus den gelieferten Dateien, schreibe ihn nicht aus dem Gedächtnis.",
+    "- Nimm so viel Kontext mit, dass die Stelle eindeutig ist — oder setze \"all\": true, wenn alle Vorkommen gemeint sind.",
+    "- Kleine, gezielte Edits statt großer Blöcke. Höchstens 25 Edits pro Antwort; brauchst du mehr, liefere die wichtigsten zuerst — du wirst automatisch erneut aufgerufen, um weiterzumachen.",
+    "- Ändere nichts, was der Wunsch nicht verlangt. Struktur, Texte, Funktionen und Skripte bleiben erhalten.",
+    "- Kein Bildschirm, kein <section class=\"werft-screen\">-Abschnitt und kein <script> darf verschwinden.",
+    "",
+    scope === "global"
+      ? "UMFANG: Der Wunsch gilt dem GESAMTEN Design. Ändere ihn auf ALLEN Bildschirmen und in ALLEN Unterbildschirmen. Am wirkungsvollsten sind gemeinsam genutzte CSS-Regeln und Theme-Variablen: eine geänderte gemeinsame Regel wirkt sofort überall. Gibt es zusätzlich bildschirmeigene Regeln mit demselben Zweck, ändere sie mit. Beschränke dich NICHT auf den gerade sichtbaren Bildschirm."
+      : scope === "marked"
+        ? "UMFANG: Es ist ein MARKIERTER BEREICH angegeben. Er ist eindeutig — ändere genau dieses Element und frage nicht nach, welches gemeint ist. Der mitgelieferte Ausschnitt stammt wörtlich aus der Datei und ist die Grundlage für find."
+        : "UMFANG: Der Wunsch bezieht sich auf den gerade sichtbaren Bildschirm. Ändere dessen <section class=\"werft-screen\">-Abschnitt und die Regeln, die nur ihn betreffen. Ist eine Regel mit anderen Bildschirmen geteilt und würde eine Änderung dort schaden, lege stattdessen eine bildschirmeigene Regel an.",
+    "",
+    "BEI UNKLARHEIT: Frage NICHT zurück. Triff die fachlich beste Annahme, setze sie um und schreibe in \"reply\" in einem Satz, wovon du ausgegangen bist. Nur wenn eine Umsetzung technisch unmöglich ist (die genannte Sache existiert im Design nicht), lieferst du \"changes\": [] und erklärst kurz, was fehlt.",
+    "FARBEN UND THEMES: Definiert das Design seine Farben über CSS-Variablen, ändere die Variablen. Stehen zusätzlich feste Farbwerte in einzelnen Regeln, ändere sie mit — sonst bleibt die Hälfte des Designs unverändert.",
+    "Antworte auf Deutsch."
+  ].join("\n");
 }
 type ModelRunOptions = { operation?: string; jobId?: string; signal?: AbortSignal; onAttempt?: (attempt: number) => void; selection?: ModelSelection };
-type ModelRunResult = { text: string; provider: ProviderId; model: string; effort?: string; attempts: number; durationMs: number; inputChars: number; outputChars: number };
+type ModelRunResult = { text: string; provider: ProviderId; model: string; effort?: string; attempts: number; durationMs: number; inputChars: number; outputChars: number; truncated: boolean };
 async function modelRun(organizationId: string, instructions: string, input: string, log: FastifyRequest["log"], options: ModelRunOptions = {}): Promise<ModelRunResult> {
   const runStartedAt = Date.now();
   const selection = await resolveModelSelection(organizationId, options.selection);
@@ -884,7 +900,10 @@ async function modelRun(organizationId: string, instructions: string, input: str
   const routerConnection = selection.provider === "openrouter" ? await validOpenRouterConnection(organizationId) : undefined;
   const routerModel = routerConnection ? openRouterSettings(routerConnection.settings).models.find((model) => model.id === selection.model) : undefined;
   if (routerConnection && !routerModel) fail("MODEL_NOT_AVAILABLE", 409, "Das gewählte OpenRouter-Modell wurde nicht in den Einstellungen hinzugefügt.");
-  if (routerModel) assertOpenRouterContext(routerModel, instructions, input);
+  // Der Ausgaberaum wird AUSDRUECKLICH reserviert und mitgeschickt: ohne ihn deckeln viele
+  // OpenRouter-Anbieter still auf ihren Standardwert und die Antwort bricht mitten im JSON ab.
+  const routerOutputTokens = routerModel ? reservedOutputTokens(routerModel.contextLength, routerModel.endpoint?.maxCompletionTokens) : undefined;
+  if (routerModel) assertOpenRouterContext(routerModel, instructions, input, routerOutputTokens);
   const codexModel = selection.provider === "openai-codex" ? z.enum(codexModels).parse(selection.model) : undefined;
   const codexEffort = selection.provider === "openai-codex" ? z.enum(codexEfforts).parse(selection.effort ?? "medium") : undefined;
   const accountId = codexConnection ? codexConnection.accountId || tokenIdentity(codexConnection.credentials.accessToken, codexConnection.credentials.idToken).accountId : undefined;
@@ -897,14 +916,15 @@ async function modelRun(organizationId: string, instructions: string, input: str
       const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(540_000)]) : AbortSignal.timeout(540_000);
       const response = codexConnection
         ? await fetch(codexAuth.responsesUrl, { method: "POST", signal, headers: { authorization: `Bearer ${codexConnection.credentials.accessToken}`, "chatgpt-account-id": accountId!, originator: "codex_cli_rs", "user-agent": "codex_cli_rs/0.0.0 (Werft Studio)", accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify({ ...codexRequestFields(codexModel!, codexEffort!), instructions, input: [{ role: "user", content: input }], store: false, stream: true }) })
-        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug)) });
+        : await openRouterFetch(openRouterApi.chatUrl, routerConnection!.credentials.apiKey, { method: "POST", signal, headers: { accept: "text/event-stream", "content-type": "application/json" }, body: JSON.stringify(openRouterRequest(selection.model, instructions, input, selection.effort, routerModel!.endpoint!.providerSlug, routerOutputTokens)) });
       const raw = await response.text();
       if (!response.ok) throw selection.provider === "openai-codex" ? codexHttpError(response.status) : openRouterHttpError(response.status, response.headers.get("retry-after"));
-      const outputText = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
+      const stream = selection.provider === "openai-codex" ? parseCodexEventStream(raw) : parseOpenRouterEventStream(raw);
+      const outputText = stream.text;
       if (!outputText.trim()) fail("CHAT_EMPTY", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.`, true);
       const durationMs = Date.now() - runStartedAt;
-      log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw) }, "KI-Lauf abgeschlossen");
-      return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length };
+      log.info({ event: "model.request.completed", jobId: options.jobId, operation: options.operation, provider: selection.provider, model: selection.model, attempt, attemptDurationMs: Date.now() - attemptStartedAt, durationMs, inputChars: input.length, outputChars: outputText.length, responseBytes: Buffer.byteLength(raw), truncated: stream.truncated }, "KI-Lauf abgeschlossen");
+      return { text: outputText, provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}), attempts: attempt, durationMs, inputChars: input.length, outputChars: outputText.length, truncated: stream.truncated };
     } catch (error) {
       if (!isRetryableCodexError(error) || attempt === 3) {
         const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
@@ -920,15 +940,102 @@ async function modelRun(organizationId: string, instructions: string, input: str
   }
   fail("CHAT_UPSTREAM", 502, `${selection.provider === "openai-codex" ? "OpenAI" : "OpenRouter"} hat den KI-Lauf nicht abgeschlossen.`, true);
 }
-app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, timeWindow: "5 minutes" } } }, async (request) => {
+// Ein Modell schreibt den Pfad gern verkuerzt („design.html" statt
+// „.werft-generated/<id>/1/design.html"). Bisher galt das als „Datei unbekannt" und die ganze
+// Aenderung fiel aus. Der Pfad wird deshalb aufgeloest, solange die Zuordnung EINDEUTIG bleibt.
+function resolveManifestPath(manifest: ImportManifestFile[], wanted: string): ImportManifestFile | undefined {
+  const path = wanted.replaceAll("\\", "/").replace(/^\.?\//, "");
+  const exact = manifest.find((file) => file.path === path);
+  if (exact) return exact;
+  const suffix = manifest.filter((file) => file.path.endsWith(`/${path}`));
+  if (suffix.length === 1) return suffix[0];
+  const base = path.split("/").at(-1);
+  const byName = base ? manifest.filter((file) => file.path.split("/").at(-1) === base) : [];
+  return byName.length === 1 ? byName[0] : undefined;
+}
+
+type ChatRoundProbe = { round: number; provider: ProviderId; model: string; durationMs: number; outputChars: number; truncated: boolean; salvaged: boolean; editsApplied: number; editsFailed: number; filesWritten: number };
+
+// Das Schreiben einer Runde: eine Transaktion, vorher Struktur-Pruefung je Datei, bei einem Fehler
+// wird der vorherige Objektstand zurueckgerollt. Eine Datei, die die Pruefung nicht besteht, wird
+// GAR NICHT geschrieben — ein Fix darf nie Funktionalitaet aus dem Design entfernen.
+async function applyChatWrites(actor: Actor, projectId: string, correlationId: string, parsed: ParsedChatResponse, settings: Record<string, unknown>) {
+  const previous: Array<{ key: string; mime: string; data: Buffer }> = [];
+  const reports: FileReport[] = [];
+  const applied: string[] = [];
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
+      const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+      if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+      let manifest = current.imported.manifest;
+      const writeFile = async (path: string, mime: string, text: string, previousData: Buffer) => {
+        const key = `${current.imported.objectPrefix}${path}`;
+        const data = Buffer.from(text, "utf8");
+        previous.push({ key, mime, data: previousData });
+        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": mime });
+        manifest = manifest.map((file) => (file.path === path ? { ...file, size: data.byteLength } : file));
+        applied.push(path);
+      };
+      const targets = [
+        ...parsed.changes.map((change) => ({ path: change.path, edits: change.edits, content: undefined as string | undefined })),
+        ...parsed.files.map((file) => ({ path: file.path, edits: [] as ChatEdit[], content: file.content }))
+      ];
+      for (const change of targets) {
+        const item = resolveManifestPath(manifest, change.path);
+        if (!item || !chatEditableMime(item.mime)) { reports.push({ path: change.path, outcomes: [], written: false, issues: ["Diese Datei gibt es im Projekt nicht (oder sie ist keine Textdatei). Verwende einen Pfad genau so, wie er unter === PROJEKTDATEIEN === steht."] }); continue; }
+        const before = await readObject(`${current.imported.objectPrefix}${item.path}`);
+        const beforeText = before.toString("utf8");
+        const result = change.content !== undefined ? { content: change.content, outcomes: [] } : applyChatEdits(beforeText, change.edits);
+        const issues = result.content === beforeText ? [] : verifyFileWrite(item.path, beforeText, result.content);
+        const written = result.content !== beforeText && !issues.length;
+        if (written) await writeFile(item.path, item.mime, result.content, before);
+        reports.push({ path: item.path, outcomes: result.outcomes, written, issues });
+      }
+      if (!applied.length) return { revision: current.revision, reports, applied };
+      const revision = current.revision + 1;
+      await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
+      await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
+      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, revision, ...settings }, correlationId });
+      return { revision, reports, applied };
+    });
+  } catch (error) {
+    await Promise.allSettled(previous.map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
+    throw error;
+  }
+}
+
+// Wie viel Eingabe vertraegt das gewaehlte Modell wirklich? Danach richtet sich, wie viele
+// Projektdateien mitgegeben werden — statt eines festen Limits, das grosse Designs abgewiesen hat.
+async function chatContextBudget(organizationId: string, selection: ModelSelection): Promise<{ inputChars: number; contextLength?: number }> {
+  if (selection.provider !== "openrouter") return { inputChars: 900_000 };
+  const connection = await validOpenRouterConnection(organizationId);
+  const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === selection.model);
+  const output = reservedOutputTokens(model?.contextLength, model?.endpoint?.maxCompletionTokens);
+  return { inputChars: Math.min(1_200_000, inputCharBudget(model?.contextLength, output)), ...(model?.contextLength ? { contextLength: model.contextLength } : {}) };
+}
+
+// Bis zu drei Runden je Anfrage: Runde 1 setzt um, jede weitere raeumt nach, was nicht gegriffen hat,
+// oder setzt eine von der Ausgabegrenze abgeschnittene Antwort fort. Die Schleife endet, sobald es
+// nichts mehr nachzuarbeiten gibt oder eine Runde keinen Fortschritt mehr bringt.
+const maxChatRounds = 3;
+// Eine neue Runde wird nur BEGONNEN, solange noch Zeit ist. Sonst könnten drei langsame Läufe die
+// Anfrage über jede vernünftige Wartezeit hinaus offen halten; angefangene Arbeit ist ohnehin schon
+// geschrieben, und der nächste Zuruf macht dort weiter.
+const chatRoundDeadlineMs = 300_000;
+app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 30, timeWindow: "5 minutes" } } }, async (request) => {
+  const chatStartedAt = Date.now();
   const actor = requireActorPermission(request, "design.edit");
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
-  const { message, screen, target, provider, model, effort } = z.object({
+  const { message, screen, target, provider, model, effort, history } = z.object({
     message: z.string().min(1).max(8000),
     screen: z.string().max(200).optional(),
     provider: z.enum(providerIds).optional(),
     model: z.string().min(1).max(300).optional(),
     effort: z.string().min(1).max(20).optional(),
+    // Ohne Verlauf begann jede Nachricht bei null: stellte die KI eine Rueckfrage, kannte sie die
+    // eigene Frage beim naechsten Mal nicht mehr. Der Verlauf macht aus Einzelschuessen ein Gespraech.
+    history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(6000) }).strict()).max(24).optional(),
     // Der markierte Bereich aus der Vorschau: sein woertlicher Ausschnitt macht den Aenderungswunsch
     // eindeutig, ohne dass die KI raten oder nachfragen muss.
     target: z.object({ selector: z.string().max(600), html: z.string().max(8000), label: z.string().max(300).optional(), screenName: z.string().max(200).optional() }).strict().optional()
@@ -936,75 +1043,99 @@ app.post("/api/v1/projects/:projectId/chat", { config: { rateLimit: { max: 20, t
   if (Boolean(provider) !== Boolean(model)) fail("MODEL_SELECTION_INCOMPLETE", 400, "Provider und Modell müssen gemeinsam ausgewählt werden.");
   const row = (await db.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("CHAT_NOT_SUPPORTED", 400, "Die KI-Bearbeitung ist aktuell für importierte HTML-Projekte verfügbar.");
-  const texts: Array<{ path: string; content: string }> = [];
-  let budget = 700_000;
-  const candidates = [...row.imported.manifest].filter((file) => chatEditableMime(file.mime)).sort((a, b) => (a.path === row.imported.entryPath ? -1 : b.path === row.imported.entryPath ? 1 : a.size - b.size));
-  for (const file of candidates) {
-    if (file.size > 300_000 || file.size > budget) continue;
-    texts.push({ path: file.path, content: (await readObject(`${row.imported.objectPrefix}${file.path}`)).toString("utf8") });
-    budget -= file.size;
-  }
-  if (!texts.length) fail("CHAT_NO_TEXT_FILES", 400, "Dieses Projekt enthält keine bearbeitbaren Textdateien.");
+  const selection = await resolveModelSelection(actor.organizationId, provider && model ? { provider, model, ...(effort ? { effort } : {}) } : undefined);
+  const budget = await chatContextBudget(actor.organizationId, selection);
+  const settings = { provider: selection.provider, model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) };
+  const scope = target ? "marked" as const : globalScope(message) ? "global" as const : screen ? "screen" as const : "global" as const;
+  const instructions = buildChatInstructions(scope);
+  const conversation = (history ?? []).filter((entry) => entry.text.trim()).slice(-12);
   const markedRegion = target
     ? `\n\n=== MARKIERTER BEREICH (genau hier anwenden) ===\nBildschirm: ${target.screenName ?? screen ?? "unbekannt"}\nElement: ${target.label ?? target.selector}\nCSS-Pfad: ${target.selector}\nWörtlicher Ausschnitt aus der Datei:\n${target.html}`
     : "";
-  const inputText = `Änderungswunsch:\n${message}${markedRegion}\n\n=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`;
-  const selection = provider && model ? { provider, model, ...(effort ? { effort } : {}) } : undefined;
-  const { text: outputText, provider: usedProvider, model: usedModel, effort: usedEffort } = await modelRun(actor.organizationId, chatInstructions, inputText, request.log, { ...(selection ? { selection } : {}) });
-  const settings = { provider: usedProvider, model: usedModel, ...(usedEffort ? { effort: usedEffort } : {}) };
-  const cleaned = extractJsonObject(outputText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
-  let parsed: { reply?: string; changes?: Array<{ path?: string; edits?: Array<{ find?: string; replace?: string }> }>; files?: Array<{ path?: string; content?: string }> };
-  try { parsed = JSON.parse(cleaned) as typeof parsed; }
-  catch { return { reply: outputText.trim().slice(0, 4000), changedFiles: [], skipped: ["Antwort der KI war kein gültiges JSON — es wurde nichts geändert."], revision: row.revision }; }
-  const editChanges = (parsed.changes ?? []).filter((change): change is { path: string; edits: Array<{ find: string; replace: string }> } => typeof change?.path === "string" && Array.isArray(change?.edits) && change.edits.every((edit) => typeof edit?.find === "string" && edit.find.length > 0 && typeof edit?.replace === "string"));
-  const fullChanges = (parsed.files ?? []).filter((file): file is { path: string; content: string } => typeof file?.path === "string" && typeof file?.content === "string" && file.content.length <= 20 * 1024 * 1024);
-  if (!editChanges.length && !fullChanges.length) return { reply: parsed.reply?.trim() || "Es war keine Dateiänderung nötig.", changedFiles: [], skipped: [], revision: row.revision };
-  const applied: string[] = [];
-  const skipped: string[] = [];
-  const previous: Array<{ key: string; mime: string; data: Buffer }> = [];
-  try {
-    const result = await db.transaction(async (tx) => {
-      await tx.execute(sql`select id from projects where id = ${projectId} and organization_id = ${actor.organizationId} for update`);
-      const current = (await tx.select({ imported: projectImports, revision: projects.revision }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
-      if (!current) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
-      let manifest = current.imported.manifest;
-      const writeFile = async (path: string, mime: string, data: Buffer, previousData: Buffer) => {
-        const key = `${current.imported.objectPrefix}${path}`;
-        previous.push({ key, mime, data: previousData });
-        await objectStore.putObject(env.S3_BUCKET, key, data, data.byteLength, { "content-type": mime });
-        manifest = manifest.map((file) => (file.path === path ? { ...file, size: data.byteLength } : file));
-        applied.push(path);
-      };
-      for (const change of editChanges) {
-        const item = manifest.find((file) => file.path === change.path);
-        if (!item || !chatEditableMime(item.mime)) { skipped.push(`${change.path}: Datei nicht bearbeitbar oder unbekannt.`); continue; }
-        const before = await readObject(`${current.imported.objectPrefix}${item.path}`);
-        let content = before.toString("utf8");
-        let editsApplied = 0;
-        for (const edit of change.edits) {
-          if (content.includes(edit.find)) { content = content.replace(edit.find, edit.replace); editsApplied += 1; }
-          else skipped.push(`${change.path}: Ein Edit fand seine Textstelle nicht („${edit.find.slice(0, 60)}…“).`);
-        }
-        if (editsApplied > 0) await writeFile(item.path, item.mime, Buffer.from(content, "utf8"), before);
+  const probes: ChatRoundProbe[] = [];
+  const changedFiles = new Set<string>();
+  const notes: string[] = [];
+  let replyText = "";
+  let revision = row.revision;
+  let briefing: string | undefined;
+  let round = 0;
+  for (; round < maxChatRounds; round += 1) {
+    // Jede Runde liest den FRISCHEN Stand: die Edits der vorherigen Runde stehen schon in den Dateien,
+    // und das Modell soll gegen das arbeiten, was jetzt wirklich dort steht.
+    const currentImport = (await db.select({ imported: projectImports }).from(projectImports).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+    if (!currentImport) fail("IMPORT_NOT_FOUND", 404, "Für dieses Projekt liegt kein Import vor.");
+    const { manifest, objectPrefix, entryPath } = currentImport.imported;
+    const overhead = instructions.length + message.length + markedRegion.length + (briefing?.length ?? 0) + conversation.reduce((sum, entry) => sum + entry.text.length, 0) + 8_000;
+    const { selected, omitted } = selectChatFiles(manifest.filter((file) => chatEditableMime(file.mime)), entryPath, Math.max(40_000, budget.inputChars - overhead));
+    if (!selected.length) fail("CHAT_NO_TEXT_FILES", 400, "Dieses Projekt enthält keine bearbeitbaren Textdateien.");
+    const texts = await mapWithConcurrency(selected, 8, async (file) => ({ path: file.path, content: (await readObject(`${objectPrefix}${file.path}`)).toString("utf8") }));
+    const entryText = texts.find((text) => text.path === entryPath);
+    const entryHtml = entryText?.content ?? "";
+    // Passt das Design als Ganzes nicht in das Fenster des gewählten Modells, wird nicht abgebrochen:
+    // Stile und Skripte bleiben vollständig, von den Bildschirmen bleibt der gefragte stehen. So kann
+    // auch ein kleines Modell weiterarbeiten — Textstellen-Edits treffen die echte Datei trotzdem.
+    let excerptNote = "";
+    const entryBudget = Math.max(40_000, budget.inputChars - overhead - selected.filter((file) => file.path !== entryPath).reduce((sum, file) => sum + file.size, 0));
+    if (entryText && entryHtml.length > entryBudget) {
+      const { text, omittedScreens } = excerptDesign(entryHtml, screen ? [screen, target?.screenName ?? ""] : []);
+      if (omittedScreens.length && text.length < entryHtml.length) {
+        entryText.content = text;
+        excerptNote = `=== HINWEIS ZUM AUSSCHNITT ===\nVon der Startdatei siehst du die Stile, den Kopf und die Skripte VOLLSTÄNDIG, aber nur einen Teil der Bildschirm-Abschnitte. Ausgelassen sind: ${omittedScreens.join(", ")}. Zitiere in "find" nur Text, den du hier wirklich siehst. Eine Änderung an einer gemeinsam genutzten CSS-Regel wirkt trotzdem auf allen Bildschirmen — sie ist bei einem Wunsch für das gesamte Design der richtige Weg.`;
+        request.log.info({ event: "chat.excerpt", projectId, omittedScreens: omittedScreens.length, fromChars: entryHtml.length, toChars: text.length }, "Design für das Kontextfenster gekürzt");
       }
-      for (const change of fullChanges) {
-        const item = manifest.find((file) => file.path === change.path);
-        if (!item || !chatEditableMime(item.mime)) { skipped.push(`${change.path}: Datei nicht bearbeitbar oder unbekannt.`); continue; }
-        const before = await readObject(`${current.imported.objectPrefix}${item.path}`);
-        await writeFile(item.path, item.mime, Buffer.from(change.content, "utf8"), before);
-      }
-      if (!applied.length) return { revision: current.revision };
-      const revision = current.revision + 1;
-      await tx.update(projectImports).set({ manifest, totalBytes: manifest.reduce((sum, file) => sum + file.size, 0) }).where(eq(projectImports.projectId, projectId));
-      await tx.update(projects).set({ revision, updatedAt: new Date() }).where(eq(projects.id, projectId));
-      await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.ai.applied", targetType: "project", targetId: projectId, result: "success", metadata: { files: applied, skipped: skipped.length, revision, ...settings }, correlationId: request.id });
-      return { revision };
+    }
+    const input = [
+      conversation.length ? `=== BISHERIGES GESPRÄCH ===\n${conversation.map((entry) => `${entry.role === "user" ? "Benutzer" : "Du"}: ${entry.text.trim()}`).join("\n")}` : "",
+      `=== AUFGABE ===\n${message}${markedRegion}`,
+      entryHtml ? `=== DESIGN-LANDKARTE ===\n${designMap(entryHtml, entryPath, screen)}` : "",
+      excerptNote,
+      briefing ? `=== RÜCKMELDUNG AUS DEINEM LETZTEN VERSUCH (bitte beheben) ===\n${briefing}` : "",
+      omitted.length ? `=== NICHT MITGELIEFERT (passen nicht in dein Kontextfenster; ändere sie nicht) ===\n${omitted.map((file) => file.path).join(", ")}` : "",
+      `=== PROJEKTDATEIEN ===\n${texts.map((text) => `--- ${text.path} ---\n${text.content}`).join("\n\n")}`
+    ].filter(Boolean).join("\n\n");
+    const result = await modelRun(actor.organizationId, instructions, input, request.log, { selection, operation: `chat.runde.${round + 1}` });
+    const parsed = parseChatResponse(result.text);
+    const truncated = parsed.truncated || result.truncated;
+    // Die Zusammenfassung der ERSTEN Runde beschreibt die eigentliche Arbeit; eine Nacharbeitsrunde
+    // würde sie sonst durch ihr eigenes, viel kleineres Fazit ersetzen.
+    if (parsed.reply && !replyText) replyText = parsed.reply;
+    if (!parsed.changes.length && !parsed.files.length) {
+      if (!replyText) replyText = result.text.trim().slice(0, 4000);
+      if (truncated) notes.push("Die Antwort des Modells wurde von seiner Ausgabegrenze abgeschnitten, bevor eine verwertbare Änderung darin stand. Ein Modell mit größerem Ausgabefenster oder ein kleinerer Änderungswunsch hilft hier.");
+      probes.push({ round: round + 1, provider: result.provider, model: result.model, durationMs: result.durationMs, outputChars: result.outputChars, truncated, salvaged: parsed.salvaged, editsApplied: 0, editsFailed: 0, filesWritten: 0 });
+      break;
+    }
+    const applyResult = await applyChatWrites(actor, projectId, request.id, parsed, settings);
+    revision = applyResult.revision;
+    for (const path of applyResult.applied) changedFiles.add(path);
+    const outcomes = applyResult.reports.flatMap((report) => report.outcomes);
+    probes.push({
+      round: round + 1, provider: result.provider, model: result.model, durationMs: result.durationMs, outputChars: result.outputChars, truncated, salvaged: parsed.salvaged,
+      editsApplied: outcomes.filter((outcome) => outcome.status === "applied").length,
+      editsFailed: outcomes.filter((outcome) => outcome.status === "not-found" || outcome.status === "ambiguous").length,
+      filesWritten: applyResult.applied.length
     });
-    return { reply: parsed.reply?.trim() || `Änderungen umgesetzt (${applied.length} Datei(en)).`, changedFiles: [...new Set(applied)], skipped, revision: result.revision };
-  } catch (error) {
-    await Promise.allSettled(previous.map((entry) => objectStore.putObject(env.S3_BUCKET, entry.key, entry.data, entry.data.byteLength, { "content-type": entry.mime })));
-    throw error;
+    request.log.info({ event: "chat.round.completed", projectId, scope, ...probes.at(-1) }, "KI-Bearbeitungsrunde abgeschlossen");
+    briefing = repairBriefing(applyResult.reports, truncated);
+    if (!briefing) break;
+    // Kein Fortschritt mehr: eine weitere Runde mit derselben Rückmeldung wäre nur teurer Leerlauf.
+    if (!applyResult.applied.length && round > 0) {
+      notes.push(...applyResult.reports.flatMap((report) => [...report.issues.map((issue) => `${report.path}: ${issue}`), ...report.outcomes.filter((outcome) => outcome.status === "not-found").map((outcome) => `${report.path}: Die Textstelle „${outcome.find.replace(/\s+/g, " ").slice(0, 70)}…“ war nicht auffindbar.`)]).slice(0, 8));
+      break;
+    }
+    if (round + 1 === maxChatRounds) { notes.push(`Nach ${maxChatRounds} Runden blieben Restpunkte offen. Schick die Nachricht einfach nochmal ab, dann wird dort weitergearbeitet.`); continue; }
+    if (Date.now() - chatStartedAt > chatRoundDeadlineMs) { notes.push("Die Nacharbeit wurde nach der vereinbarten Wartezeit beendet. Das bisher Geänderte ist gespeichert — schick die Nachricht nochmal ab, um weiterzumachen."); break; }
   }
+  const totalApplied = probes.reduce((sum, probe) => sum + probe.editsApplied, 0);
+  request.log.info({ event: "chat.completed", projectId, scope, rounds: probes.length, changedFiles: changedFiles.size, editsApplied: totalApplied, ...settings }, "KI-Bearbeitung abgeschlossen");
+  return {
+    reply: replyText || (changedFiles.size ? `Änderungen umgesetzt (${changedFiles.size} Datei(en)).` : "Es war keine Dateiänderung nötig."),
+    changedFiles: [...changedFiles],
+    skipped: notes,
+    revision,
+    rounds: probes.length,
+    editsApplied: totalApplied
+  };
 });
 type ReconstructionTodo = { label: string; status: "pending" | "running" | "completed" };
 type ReconstructionProbe = {

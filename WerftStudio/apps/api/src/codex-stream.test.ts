@@ -8,12 +8,20 @@ describe("Codex stream transport", () => {
       "data: keepalive",
       "data: {\"type\":\"response.output_text.delta\",\"delta\":\"Welt\"}"
     ].join("\n");
-    expect(parseCodexEventStream(raw)).toBe("Hallo Welt");
+    expect(parseCodexEventStream(raw)).toEqual({ text: "Hallo Welt", truncated: false });
   });
 
   it("uses the completed response when no delta events arrived", () => {
     const raw = 'data: {"type":"response.completed","response":{"output":[{"content":[{"text":"fertig"}]}]}}';
-    expect(parseCodexEventStream(raw)).toBe("fertig");
+    expect(parseCodexEventStream(raw)).toEqual({ text: "fertig", truncated: false });
+  });
+
+  it("reports a response that ran into its output limit", () => {
+    const raw = [
+      'data: {"type":"response.output_text.delta","delta":"{\\"reply\\":\\"halb"}',
+      'data: {"type":"response.incomplete","response":{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"}}}'
+    ].join("\n");
+    expect(parseCodexEventStream(raw)).toMatchObject({ truncated: true });
   });
 
   it("retries terminated streams and transient HTTP responses only", () => {

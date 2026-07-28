@@ -132,47 +132,66 @@ export function normalizeOpenRouterModels(data: unknown): OpenRouterModel[] {
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string) {
+// `max_tokens` wurde bisher NICHT gesetzt. Viele OpenRouter-Anbieter deckeln die Ausgabe dann auf
+// ihren eigenen, oft winzigen Standardwert — die JSON-Antwort brach mitten in einem Edit ab und der
+// gesamte Lauf galt als „kein gültiges JSON". Der Wert wird jetzt bewusst hoch angesetzt und, wo der
+// Anbieter ein Maximum meldet, daran ausgerichtet.
+export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string, maxTokens?: number) {
   return {
     model,
     messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
     stream: true,
+    ...(maxTokens && maxTokens > 0 ? { max_tokens: Math.floor(maxTokens) } : {}),
     ...(effort ? { reasoning: { effort } } : {}),
     ...(selectedProvider ? { provider: { order: [selectedProvider], allow_fallbacks: false, require_parameters: true } } : {})
   };
 }
 
-export function assertOpenRouterContext(model: OpenRouterModel, instructions: string, input: string): void {
+// Wie viele Token trägt ein Zeichen? Für Markup, CSS und Quellcode sind es drei bis vier Zeichen je
+// Token. Die frühere Annahme „ein Byte = ein Token" war um den Faktor drei zu pessimistisch und hat
+// Designs abgewiesen, die bequem in das Kontextfenster passen (gemeldet für GLM 5.2).
+export const estimatedTokens = (text: string) => Math.ceil(Buffer.byteLength(text) / 3);
+
+export function assertOpenRouterContext(model: OpenRouterModel, instructions: string, input: string, reservedOutputTokens?: number): void {
   if (!model.contextLength) return;
-  // Ein Token kann im unguenstigsten Fall nur ein UTF-8-Byte tragen. Die Bytezahl ist deshalb eine
-  // sichere Obergrenze, ohne fuer jeden der dynamischen Provider einen eigenen Tokenizer einzubauen.
-  const maximumInputTokens = Buffer.byteLength(instructions) + Buffer.byteLength(input);
-  const reservedOutputTokens = Math.max(1_024, Math.min(16_384, Math.floor(model.contextLength * 0.25)));
-  if (maximumInputTokens <= model.contextLength - reservedOutputTokens) return;
-  throw Object.assign(new Error(`Die Eingabe ist für ${model.name} zu groß. Wähle ein Modell mit größerem Kontextfenster.`), { code: "MODEL_CONTEXT_TOO_SMALL", statusCode: 400, retryable: false });
+  const inputTokens = estimatedTokens(instructions) + estimatedTokens(input);
+  const reserved = reservedOutputTokens && reservedOutputTokens > 0
+    ? Math.min(reservedOutputTokens, Math.floor(model.contextLength * 0.4))
+    : Math.max(1_024, Math.min(16_384, Math.floor(model.contextLength * 0.25)));
+  if (inputTokens <= model.contextLength - reserved) return;
+  throw Object.assign(new Error(`Die Eingabe ist für ${model.name} zu groß (rund ${Math.round(inputTokens / 1000)}k von ${Math.round(model.contextLength / 1000)}k Token). Wähle ein Modell mit größerem Kontextfenster oder markiere den Bereich, der geändert werden soll.`), { code: "MODEL_CONTEXT_TOO_SMALL", statusCode: 400, retryable: false });
 }
 
-export function parseOpenRouterEventStream(raw: string): string {
+export type OpenRouterStreamResult = { text: string; finishReason?: string; truncated: boolean };
+
+// `finish_reason: "length"` heisst: der Anbieter hat mitten im Satz abgeschaltet. Bisher wurde das
+// nicht ausgewertet — die abgeschnittene Antwort lief unbemerkt in den JSON-Parser und der ganze
+// Lauf endete mit „es wurde nichts geändert", obwohl brauchbare Edits darin standen.
+export function parseOpenRouterEventStream(raw: string): OpenRouterStreamResult {
   let output = "";
+  let finishReason: string | undefined;
   for (const line of raw.split("\n")) {
     if (!line.startsWith("data:")) continue;
     const payload = line.slice(5).trim();
     if (!payload || payload === "[DONE]") continue;
     try {
-      const event = JSON.parse(payload) as { error?: { code?: number | string; metadata?: { error_type?: string } }; choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown } }> };
+      const event = JSON.parse(payload) as { error?: { code?: number | string; metadata?: { error_type?: string } }; choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown }; finish_reason?: unknown; native_finish_reason?: unknown }> };
       if (event.error) {
         if (typeof event.error.code === "number") throw openRouterHttpError(event.error.code);
         const errorType = `${event.error.code ?? ""} ${event.error.metadata?.error_type ?? ""}`.toLowerCase();
         const retryable = ["rate_limit", "server", "provider", "timeout", "overloaded", "unavailable"].some((type) => errorType.includes(type));
         throw Object.assign(new Error("OpenRouter hat den KI-Lauf abgebrochen."), { code: "CHAT_UPSTREAM", statusCode: 502, retryable });
       }
-      const content = event.choices?.[0]?.delta?.content ?? event.choices?.[0]?.message?.content;
+      const choice = event.choices?.[0];
+      const content = choice?.delta?.content ?? choice?.message?.content;
       if (typeof content === "string") output += content;
+      const reason = choice?.finish_reason ?? choice?.native_finish_reason;
+      if (typeof reason === "string" && reason) finishReason = reason;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error) throw error;
     }
   }
-  return output;
+  return { text: output, ...(finishReason ? { finishReason } : {}), truncated: finishReason === "length" || finishReason === "MAX_TOKENS" };
 }
 
 export function openRouterHttpError(status: number, retryAfter?: string | null) {
