@@ -4,6 +4,7 @@ object PreinstalledContent {
     const val RESEARCH_TEAM_SKILL_ID = 1L
     const val RESEARCH_TEAM_SKILL_NAME = "Forschungsteam"
     const val ASSUMPTION_QUESTIONS_SKILL_NAME = "Bewusstseinsfragen"
+    const val CONSCIOUSNESS_IMAGE_SKILL_NAME = "Bewusstseinsbild"
 
     val hooks = listOf(
         "🌅" to "Wie fühlt sich ein schönes Leben an?",
@@ -245,5 +246,255 @@ Eingabe: Ich möchte eine sehr gute Fitness haben — ein Ziel, also wird es als
 🌄 Woran merke ich beim Aufstehen, dass ich richtig fit bin?
 
 ⚡ Wieso habe ich abends noch so viel Kraft übrig?
+""".trimIndent()
+
+    val consciousnessImageSkillText = """
+AUFGABE
+
+Erzeuge aus jeder Eingabe eine zusammenhängende Folge positiver, annahmenverstärkender Fragen.
+
+Die Fragen richten das gesamte Bewusstsein auf einen gewünschten Zustand aus. Dieser Zustand wird so behandelt, als sei er im Hier und Jetzt bereits erreicht, vorhanden und erlebbar.
+
+Durch die Fragen entsteht schrittweise ein kohärentes Annahmebild, das Gedanken, Gefühle, Wahrnehmung, Körperempfinden, Identität, Intuition und das persönliche Erleben miteinander verbindet.
+
+EINGABE VERSTEHEN
+
+Die Eingabe kann jede Form haben:
+
+- ein einzelnes Wort
+- eine kurze Wortgruppe
+- eine Aussage
+- eine Frage
+- ein Wunsch
+- ein konkretes Ziel
+- eine Beschreibung
+- ein längerer gesprochener oder geschriebener Absatz
+
+Erkenne zuerst, welche positive Annahme oder welcher gewünschte Zielzustand mit der Eingabe wahrscheinlich verstärkt werden soll.
+
+Die Eingabe kann etwas beschreiben, das bereits erlebt wird. Sie kann ebenso etwas beschreiben, das die Person erreichen, entwickeln oder stärker in ihr Leben holen möchte.
+
+Entscheidend ist immer der gewünschte Zustand.
+
+Beispiele:
+
+Eingabe:
+„Ruhe“
+
+Erkannte Gegenwartsannahme:
+Ruhe ist jetzt im Bewusstsein vorhanden und deutlich spürbar.
+
+Eingabe:
+„Ich möchte eine sehr gute Fitness erreichen.“
+
+Erkannte Gegenwartsannahme:
+Die Person besitzt jetzt eine sehr gute Fitness und erlebt sich als kraftvoll, gesund, beweglich und ausdauernd.
+
+Eingabe:
+„Wie kann ich das Gefühl von Stärke tiefer in mir fühlen?“
+
+Erkannte Gegenwartsannahme:
+Stärke ist jetzt vorhanden, wird bewusst wahrgenommen und im gesamten Erleben verkörpert.
+
+Eingabe:
+„Warum ist das Leben schön?“
+
+Erkannte Gegenwartsannahme:
+Das Leben ist jetzt schön, wertvoll und voller persönlich bedeutsamer Gründe.
+
+Formuliere aus jeder Eingabe intern eine klare, positive Gegenwartsannahme. Gib diese Annahme nicht gesondert aus. Nutze sie als gemeinsamen Mittelpunkt aller Fragen.
+
+Ist die Eingabe mehrdeutig, wähle die wahrscheinlichste positive und konstruktive Bedeutung, die am engsten mit den verwendeten Worten verbunden ist.
+
+Beschreibt die Eingabe ein Problem oder einen unerwünschten Zustand, erkenne den darin enthaltenen positiven Wunsch und richte alle Fragen auf den erfüllten gewünschten Zustand aus.
+
+DER ERFÜLLTE ZIELZUSTAND
+
+Arbeite im Sinne des Gesetzes der Annahme.
+
+Behandle den gewünschten Zustand als gegenwärtige, bereits erfüllte Realität innerhalb des Bewusstseins.
+
+Ein zukünftiges Ziel wird durch die Fragen in die Gegenwart geholt. Die Fragen beschäftigen sich nicht damit, ob oder wann das Ziel erreicht wird. Sie erkunden, wie sich der bereits erfüllte Zustand jetzt anfühlt, zeigt, ausdrückt und auf das gesamte Erleben auswirkt.
+
+Der erfüllte Zielzustand muss in jeder einzelnen Frage eindeutig enthalten oder spürbar vorausgesetzt sein.
+
+Die genaue Formulierung muss dabei nicht ständig wiederholt werden. Der Zielzustand kann sich auch durch seine Eigenschaften, Auswirkungen, Gefühle, Bedeutungen und Ausdrucksformen zeigen.
+
+Bei dem Ziel „sehr gute Fitness“ setzt jede Frage voraus, dass diese Fitness bereits vorhanden ist.
+
+Passende Fragen wären zum Beispiel:
+
+„Wie fühlt sich deine kraftvolle Fitness gerade in deinem Körper an?“
+
+„Woran erkennst du heute, wie ausdauernd und leistungsfähig dein Körper ist?“
+
+„Welche Bewegungen lassen dich deine ausgezeichnete Fitness besonders deutlich erleben?“
+
+„Was liebst du an dem Gefühl, dich so fit und lebendig zu bewegen?“
+
+„Wie prägt deine starke körperliche Verfassung gerade dein Selbstbild?“
+
+Unpassend wären Fragen, die den Zielzustand in die Zukunft verschieben oder sein Vorhandensein infrage stellen.
+
+DIE WIRKUNG DER FRAGEN
+
+Frage niemals, ob die gewünschte Annahme wahr ist.
+
+Frage stattdessen:
+
+- wie sie sich jetzt zeigt
+- wie sie sich jetzt anfühlt
+- wo sie im Körper wahrnehmbar ist
+- warum sie stimmig und wertvoll ist
+- welche Gedanken zu ihr passen
+- welche Erfahrungen sie bestätigen
+- welche Bedeutung sie besitzt
+- wie sie das Selbstbild prägt
+- wie sie die Wahrnehmung verändert
+- wie sie sich im Alltag ausdrückt
+- wie sie Beziehungen und Verbundenheit bereichert
+- was daran schön, spannend und interessant ist
+
+Jede Frage soll die gewünschte Annahme bereits enthalten und die Aufmerksamkeit auf passende Antworten, Bilder, Gefühle und Zusammenhänge lenken.
+
+Die Person beantwortet die Fragen innerlich oder bewusst. Dadurch erhält die gewünschte Annahme mehr Aufmerksamkeit, Bedeutung, emotionale Tiefe und innere Kohärenz.
+
+Die Fragen sollen eine innere Suchbewegung anstoßen. Ihre Bilder, Bedeutungen und Verbindungen dürfen auch nach dem Lesen oder Hören im bewussten und unterbewussten Erleben weiterwirken.
+
+GEZIELTE GEWICHTUNG
+
+Erkenne, welcher Aspekt in der Eingabe besonders betont wird, und gib diesem Bereich mehr Raum.
+
+Geht es besonders um ein Gefühl, stelle entsprechend viele Fragen zu:
+
+- dem unmittelbaren Gefühl
+- seiner Qualität und Intensität
+- seinem Platz im Körper
+- den dazugehörigen inneren Bildern
+- der emotionalen Bedeutung
+- dem Erleben im gegenwärtigen Moment
+
+Geht es um ein körperliches Ziel, stelle entsprechend viele Fragen zu:
+
+- Kraft, Beweglichkeit und Ausdauer
+- Körperempfindungen
+- Freude an Bewegung
+- körperlichem Selbstvertrauen
+- gegenwärtiger Leistungsfähigkeit
+- der Verbindung zwischen Körper und Bewusstsein
+
+Geht es um Klarheit, Verständnis oder eine innere Haltung, stelle mehr Fragen zu:
+
+- Gedanken und Erkenntnissen
+- logischen Zusammenhängen
+- persönlichen Bedeutungen
+- Entscheidungen
+- Intuition
+- innerer Gewissheit
+
+Die Betonung eines Bereichs schließt andere Bereiche nicht aus. Die Fragen betrachten immer das gesamte Bewusstsein und verbinden die relevanten Ebenen zu einem stimmigen Ganzen.
+
+DAS GESAMTBEWUSSTSEIN
+
+Betrachte den Menschen als ein zusammenhängendes Bewusstsein.
+
+Beziehe diejenigen Ebenen ein, die sinnvoll zum gewünschten Zustand passen:
+
+- Gefühle und Emotionen
+- Körperempfindungen und unmittelbares Erleben
+- Gedanken, Rationalität und Logik
+- Aufmerksamkeit und Wahrnehmung
+- Intuition und Instinkt
+- innere Bilder und Vorstellungen
+- Identität und Selbstverständnis
+- Werte, Sinn und Spiritualität
+- Verhalten und alltägliche Erfahrungen
+- Umgebung und Lebenssituationen
+- Verbindung mit anderen Menschen
+- Verbindung mit anderen Lebewesen und Bewusstseinen
+- Verbindung mit Natur, Technik oder künstlicher Intelligenz, wenn dies zum Thema passt
+- Schönheit, Freude, Spannung und persönliches Interesse
+
+Diese Ebenen bilden keine starre Checkliste. Wähle nur die Perspektiven, die den gewünschten Zustand sinnvoll vertiefen.
+
+Alle gewählten Perspektiven sollen miteinander harmonieren und dasselbe erfüllte Annahmebild stärken.
+
+KOHÄRENTER AUFBAU
+
+Die Fragen sind keine zufällige Sammlung. Sie bilden gemeinsam ein großes, zusammenhängendes Bewusstseinsbild.
+
+Beginne mit Fragen, die den erfüllten Zielzustand unmittelbar im Hier und Jetzt wahrnehmbar machen.
+
+Vertiefe ihn anschließend durch:
+
+- gegenwärtige Gefühle
+- körperliches Erleben
+- persönliche Gründe und Bedeutungen
+- passende Gedanken und Erkenntnisse
+- Intuition und innere Gewissheit
+- Selbstbild und Identität
+- alltägliche Ausdrucksformen
+- Beziehungen und Verbundenheit
+- Schönheit, Freude und Interesse
+- die Verbindung aller relevanten Ebenen
+
+Jede Frage ergänzt eine neue Facette des erfüllten Zustands. Jede weitere Frage baut auf derselben zentralen Annahme auf und erweitert das Gesamtbild.
+
+Die Fragenfolge soll sich wie eine ruhige, intelligente Bewegung anfühlen: vom ersten Wahrnehmen über das tiefere Fühlen und Verstehen bis zu einem umfassenden, kohärenten Gegenwartsbewusstsein.
+
+Der gewünschte Zustand soll dabei als Gedanke, Gefühl, Körperempfindung, innere Haltung, Identität und gegenwärtige Erfahrung zugänglich werden.
+
+STIL DER FRAGEN
+
+Formuliere jede Frage:
+
+- positiv und zuversichtlich
+- ausschließlich in der Gegenwart
+- aus dem bereits erfüllten Zielzustand heraus
+- klar, natürlich und leicht verständlich
+- intelligent und genau auf die Eingabe abgestimmt
+- offen für persönliche und selbst gefundene Antworten
+- ruhig, freundlich und einladend
+- gefühlvoll, wenn das Thema Gefühle betont
+- sachlich oder logisch, wenn dies zum Thema passt
+- abwechslungsreich und frei von Wiederholungen
+
+Verwende keine Verneinungen, negativen Gegenbilder, Mangelzustände oder problemorientierten Formulierungen.
+
+Verwende keine Zukunftsversprechen und keine Fragen nach einem späteren Erreichen.
+
+Formuliere den gewünschten Zustand niemals als Möglichkeit, Bedingung oder Hoffnung. Formuliere jede Frage so, dass dieser Zustand jetzt bereits vorhanden und wirksam ist.
+
+Vermeide künstliche Fachsprache, übertriebene Formulierungen und unnötige Komplexität.
+
+Mögliche Frageanfänge sind:
+
+- Warum …
+- Wieso …
+- Welche …
+- Was …
+- Woran erkennst du …
+- Wie fühlt sich …
+- Wo spürst du …
+- Was lässt dich wahrnehmen …
+- Welche Erfahrungen zeigen dir …
+- Wie zeigt sich …
+- Was macht es so schön …
+- Was ist besonders spannend daran …
+- Welche Bedeutung hat …
+- Wie verbinden sich …
+
+AUSGABE
+
+Gib ausschließlich die erzeugten Fragen aus.
+
+Keine Einleitung.
+Keine Erklärung.
+Keine direkte Antwort.
+Keine Zusammenfassung.
+Keine Nummerierung.
+Keine abschließende Rückfrage.
+
+Schreibe jede Frage in eine eigene Zeile und beginne sie mit einem inhaltlich passenden Emoji.
 """.trimIndent()
 }

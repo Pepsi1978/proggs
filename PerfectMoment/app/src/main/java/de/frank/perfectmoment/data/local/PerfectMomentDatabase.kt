@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -36,7 +36,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     context.applicationContext,
                     PerfectMomentDatabase::class.java,
                     DATABASE_NAME,
-                ).addMigrations(Migration1To2, Migration2To3, Migration3To4, Migration4To5)
+                ).addMigrations(Migration1To2, Migration2To3, Migration3To4, Migration4To5, Migration5To6)
                     .addCallback(SeedCallback)
                     .build()
                     .also { instance = it }
@@ -71,6 +71,12 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
             }
         }
 
+        private val Migration5To6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                insertConsciousnessImageSkill(db, System.currentTimeMillis())
+            }
+        }
+
         private fun insertAssumptionQuestionsSkill(db: SupportSQLiteDatabase, createdAt: Long) {
             db.insert(
                 "skills",
@@ -78,6 +84,18 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 ContentValues().apply {
                     put("name", PreinstalledContent.ASSUMPTION_QUESTIONS_SKILL_NAME)
                     put("text", PreinstalledContent.assumptionQuestionsSkillText)
+                    put("createdAt", createdAt)
+                },
+            )
+        }
+
+        private fun insertConsciousnessImageSkill(db: SupportSQLiteDatabase, createdAt: Long) {
+            db.insert(
+                "skills",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("name", PreinstalledContent.CONSCIOUSNESS_IMAGE_SKILL_NAME)
+                    put("text", PreinstalledContent.consciousnessImageSkillText)
                     put("createdAt", createdAt)
                 },
             )
@@ -99,6 +117,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 },
             )
             insertAssumptionQuestionsSkill(db, now + 1)
+            insertConsciousnessImageSkill(db, now + 2)
             PreinstalledContent.hooks.forEachIndexed { index, (emoji, text) ->
                 db.insert(
                     "hooks",
