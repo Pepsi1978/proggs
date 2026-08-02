@@ -153,6 +153,12 @@ class SecureSettings(context: Context) : Closeable {
             preferences?.edit()?.putBoolean(Keys.APP_LOCK_ENABLED, value)?.apply()
         }
 
+    var doNotDisturbAccessAsked: Boolean
+        get() = preferences?.getBoolean(Keys.DND_ACCESS_ASKED, false) ?: false
+        set(value) {
+            preferences?.edit()?.putBoolean(Keys.DND_ACCESS_ASKED, value)?.apply()
+        }
+
     override fun close() {
         preferences?.unregisterOnSharedPreferenceChangeListener(listener)
     }
@@ -188,6 +194,7 @@ class SecureSettings(context: Context) : Closeable {
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"
         const val APP_LOCK_ENABLED = "app_lock_enabled"
+        const val DND_ACCESS_ASKED = "dnd_access_asked"
     }
 
     object Defaults {

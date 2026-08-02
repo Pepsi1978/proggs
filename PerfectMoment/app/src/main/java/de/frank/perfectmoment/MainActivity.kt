@@ -1,6 +1,7 @@
 package de.frank.perfectmoment
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -8,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
@@ -55,6 +57,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.perfectmoment.session.SessionSilence
 import de.frank.perfectmoment.ui.AppScreen
 import de.frank.perfectmoment.ui.AppViewModel
 import de.frank.perfectmoment.ui.PerfectMomentApp
@@ -125,6 +128,9 @@ class MainActivity : FragmentActivity() {
                         chooseRestore.launch(arrayOf("application/json", "*/*"))
                     }
                 }
+                LaunchedEffect(lockEnabled, locked) {
+                    if (!(lockEnabled && locked)) requestSilenceAccessOnce()
+                }
                 LaunchedEffect(viewModel.screen) {
                     if (viewModel.screen == AppScreen.SESSION && Build.VERSION.SDK_INT >= 33 &&
                         ContextCompat.checkSelfPermission(
@@ -162,6 +168,21 @@ class MainActivity : FragmentActivity() {
     override fun onPostResume() {
         super.onPostResume()
         promptUnlock()
+    }
+
+    // Ohne diese Systemfreigabe darf keine App die Benachrichtigungstöne anderer Apps stummschalten.
+    private fun requestSilenceAccessOnce() {
+        if (SessionSilence.isAllowed(this) || container.settings.doNotDisturbAccessAsked) return
+        container.settings.doNotDisturbAccessAsked = true
+        viewModel.showMessage(
+            "Damit während einer Session nur deine Fragen zu hören sind, erlaube Perfect Moment " +
+                "hier den Zugriff auf \"Nicht stören\". Wecker klingeln weiterhin.",
+        )
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        } catch (error: ActivityNotFoundException) {
+            viewModel.showMessage("Dieses Gerät bietet keine Freigabe für \"Nicht stören\" an.")
+        }
     }
 
     private fun toggleAppLock(enabled: Boolean) {

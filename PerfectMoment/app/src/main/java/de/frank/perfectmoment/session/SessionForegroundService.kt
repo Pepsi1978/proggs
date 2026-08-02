@@ -30,10 +30,12 @@ class SessionForegroundService : Service() {
     private var stateJob: Job? = null
     private var resumeAfterFocusGain = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private var silence: SessionSilence? = null
 
     override fun onCreate() {
         super.onCreate()
         SessionNotification.createChannel(this)
+        silence = SessionSilence(this).apply { activate() }
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -86,7 +88,11 @@ class SessionForegroundService : Service() {
                 wakeLock?.takeIf { it.isHeld }?.release()
                 wakeLock = null
             } finally {
-                super.onDestroy()
+                try {
+                    silence?.restore()
+                } finally {
+                    super.onDestroy()
+                }
             }
         }
     }
