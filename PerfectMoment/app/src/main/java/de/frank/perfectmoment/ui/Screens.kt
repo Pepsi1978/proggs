@@ -1138,6 +1138,10 @@ fun HistoryScreen(viewModel: AppViewModel) {
     }
 }
 
+// The swipe background and the row on top of it share this radius. Different radii would let the
+// red background peek out of the corners of the row.
+private const val HISTORY_ROW_RADIUS = 32
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DismissibleHistoryRow(
@@ -1158,7 +1162,9 @@ private fun DismissibleHistoryRow(
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
-                Modifier.fillMaxSize().background(colors.warning, RoundedCornerShape(20.dp)).padding(end = 22.dp),
+                Modifier.fillMaxSize()
+                    .background(colors.warning, RoundedCornerShape(HISTORY_ROW_RADIUS.dp))
+                    .padding(end = 22.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) { Icon(Icons.Outlined.Delete, "Löschen", tint = colors.background) }
         },
@@ -1170,7 +1176,8 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
     val colors = LocalPmColors.current
     PmCard(
         Modifier.fillMaxWidth()
-            .pmClickable(shape = RoundedCornerShape(32.dp), lift = true, onClick = onClick),
+            .pmClickable(shape = RoundedCornerShape(HISTORY_ROW_RADIUS.dp), lift = true, onClick = onClick),
+        radius = HISTORY_ROW_RADIUS,
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rank != null) {
