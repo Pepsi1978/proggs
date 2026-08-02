@@ -45,6 +45,7 @@ class GoogleCloudTtsPlayer(context: Context) {
         apiKey: String,
         voiceName: String,
         speechRate: Float = 1f,
+        pitchSemitones: Double = 0.0,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -79,7 +80,14 @@ class GoogleCloudTtsPlayer(context: Context) {
                         "audioConfig",
                         JSONObject()
                             .put("audioEncoding", "MP3")
-                            .put("speakingRate", speechRate.coerceIn(0.7f, 1.3f).toDouble()),
+                            .put("speakingRate", speechRate.coerceIn(0.7f, 1.3f).toDouble())
+                            .apply {
+                                // Chirp 3 HD voices do not document a pitch parameter, so it is
+                                // only sent to voices that are known to honour it.
+                                if (pitchSemitones != 0.0 && !voiceName.contains("Chirp")) {
+                                    put("pitch", pitchSemitones.coerceIn(-20.0, 20.0))
+                                }
+                            },
                     )
                 }
                 val url = GOOGLE_TTS_URL.toHttpUrl().newBuilder()

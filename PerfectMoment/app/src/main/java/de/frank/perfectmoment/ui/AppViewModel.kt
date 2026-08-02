@@ -171,6 +171,12 @@ class AppViewModel(
         private set
     var ttsSpeechRate by mutableStateOf(settings.ttsSpeechRate)
         private set
+    var varyVoicePerRepetition by mutableStateOf(settings.varyVoicePerRepetition)
+        private set
+    var varySpeechRate by mutableStateOf(settings.varySpeechRate)
+        private set
+    var varyPitch by mutableStateOf(settings.varyPitch)
+        private set
     var googleApiKey by mutableStateOf(settings.googleTtsApiKey)
         private set
     var groqApiKey by mutableStateOf(settings.groqApiKey)
@@ -581,6 +587,21 @@ class AppViewModel(
     fun updateTtsSpeechRate(value: Float) {
         ttsSpeechRate = (value * 20f).roundToInt().div(20f).coerceIn(0.7f, 1.3f)
         settings.ttsSpeechRate = ttsSpeechRate
+    }
+
+    fun updateVaryVoicePerRepetition(value: Boolean) {
+        varyVoicePerRepetition = value
+        settings.varyVoicePerRepetition = value
+    }
+
+    fun updateVarySpeechRate(value: Boolean) {
+        varySpeechRate = value
+        settings.varySpeechRate = value
+    }
+
+    fun updateVaryPitch(value: Boolean) {
+        varyPitch = value
+        settings.varyPitch = value
     }
 
     fun toggleGoogleKeyVisibility() {

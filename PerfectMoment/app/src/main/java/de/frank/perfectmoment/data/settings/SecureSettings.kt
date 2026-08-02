@@ -153,6 +153,25 @@ class SecureSettings(context: Context) : Closeable {
             preferences?.edit()?.putBoolean(Keys.APP_LOCK_ENABLED, value)?.apply()
         }
 
+    var varyVoicePerRepetition: Boolean
+        get() = preferences?.getBoolean(Keys.VARY_VOICE, Defaults.VARY_VOICE) ?: Defaults.VARY_VOICE
+        set(value) {
+            preferences?.edit()?.putBoolean(Keys.VARY_VOICE, value)?.apply()
+        }
+
+    var varySpeechRate: Boolean
+        get() = preferences?.getBoolean(Keys.VARY_SPEECH_RATE, Defaults.VARY_SPEECH_RATE)
+            ?: Defaults.VARY_SPEECH_RATE
+        set(value) {
+            preferences?.edit()?.putBoolean(Keys.VARY_SPEECH_RATE, value)?.apply()
+        }
+
+    var varyPitch: Boolean
+        get() = preferences?.getBoolean(Keys.VARY_PITCH, Defaults.VARY_PITCH) ?: Defaults.VARY_PITCH
+        set(value) {
+            preferences?.edit()?.putBoolean(Keys.VARY_PITCH, value)?.apply()
+        }
+
     var doNotDisturbAccessAsked: Boolean
         get() = preferences?.getBoolean(Keys.DND_ACCESS_ASKED, false) ?: false
         set(value) {
@@ -195,6 +214,9 @@ class SecureSettings(context: Context) : Closeable {
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"
         const val APP_LOCK_ENABLED = "app_lock_enabled"
         const val DND_ACCESS_ASKED = "dnd_access_asked"
+        const val VARY_VOICE = "vary_voice_per_repetition"
+        const val VARY_SPEECH_RATE = "vary_speech_rate"
+        const val VARY_PITCH = "vary_pitch"
     }
 
     object Defaults {
@@ -215,6 +237,9 @@ class SecureSettings(context: Context) : Closeable {
         const val MODEL = "gpt-5.6-terra"
         const val REASONING = "medium"
         const val APP_LOCK_ENABLED = false
+        const val VARY_VOICE = true
+        const val VARY_SPEECH_RATE = true
+        const val VARY_PITCH = true
     }
 
     companion object {

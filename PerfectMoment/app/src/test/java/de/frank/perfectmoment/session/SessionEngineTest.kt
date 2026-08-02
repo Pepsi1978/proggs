@@ -28,6 +28,23 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `Fragen werden auch bei Wiederholungen mit Variation gesprochen`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 100, reps = 2),
+        )
+        fixture.startSpeaking()
+
+        fixture.tts.completeCurrent()
+        advanceTimeBy(100)
+        runCurrent()
+
+        assertEquals(listOf("Frage 1", "Frage 1"), fixture.tts.spokenTexts)
+        assertTrue(fixture.tts.calls.all { it.varied })
+        fixture.engine.close()
+    }
+
+    @Test
     fun `erste Stream Frage ist sofort sichtbar und vorlesbar`() = runTest {
         val refill = FakeRefill()
         val fixture = fixture(
@@ -557,7 +574,11 @@ class SessionEngineTest {
     }
 
     private class FakeTts : SessionTtsPort {
-        data class Call(val text: String, val listener: SessionTtsPort.Listener)
+        data class Call(
+            val text: String,
+            val listener: SessionTtsPort.Listener,
+            val varied: Boolean = false,
+        )
 
         val calls = mutableListOf<Call>()
         val spokenTexts: List<String> get() = calls.map(Call::text)
@@ -568,8 +589,8 @@ class SessionEngineTest {
         var resumeCount = 0
         var canPause = true
 
-        override fun speak(text: String, listener: SessionTtsPort.Listener) {
-            calls += Call(text, listener)
+        override fun speak(text: String, listener: SessionTtsPort.Listener, varied: Boolean) {
+            calls += Call(text, listener, varied)
             listener.onStart()
         }
 

@@ -7,6 +7,7 @@ import androidx.security.crypto.MasterKeys
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Logger
+import kotlin.math.ln
 
 class TtsManager(context: Context) {
     private val appContext = context.applicationContext
@@ -14,6 +15,7 @@ class TtsManager(context: Context) {
     private val googlePlayer = GoogleCloudTtsPlayer(appContext)
     private val generation = AtomicLong(0)
     private var activeProviderId: String? = null
+    private var variationStep = 0
 
     private val preferences: SharedPreferences? by lazy {
         try {
@@ -38,6 +40,7 @@ class TtsManager(context: Context) {
         onError: (Exception) -> Unit,
         providerOverride: TtsProvider? = null,
         voiceOverride: String? = null,
+        varied: Boolean = false,
     ) {
         stop()
         val requestGeneration = generation.incrementAndGet()
@@ -74,15 +77,31 @@ class TtsManager(context: Context) {
                 TtsCatalog.DEFAULT_PROVIDER.id,
             ) ?: TtsCatalog.DEFAULT_PROVIDER.id
         activeProviderId = providerId
-        val speechRate = preferences?.getFloat(PREF_SPEECH_RATE, DEFAULT_SPEECH_RATE)
+        val baseRate = preferences?.getFloat(PREF_SPEECH_RATE, DEFAULT_SPEECH_RATE)
             ?.coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE) ?: DEFAULT_SPEECH_RATE
+        // Every repetition is synthesised anew, so a little variation keeps it from sounding
+        // like a replay of the exact same recording.
+        val step = if (varied) ++variationStep else 0
+        val speechRate = if (varied && readFlag(PREF_VARY_SPEECH_RATE)) {
+            (baseRate * (1f + RATE_STEPS[step % RATE_STEPS.size] / 100f))
+                .coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE)
+        } else {
+            baseRate
+        }
+        val pitchPercent = if (varied && readFlag(PREF_VARY_PITCH)) {
+            PITCH_STEPS[step % PITCH_STEPS.size]
+        } else {
+            0
+        }
         when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
                 text = spokenText,
                 voice = voiceOverride
+                    ?: rotatedVoice(TtsCatalog.edgeVoices, step, varied)
                     ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
                 speechRate = speechRate,
+                pitchPercent = pitchPercent,
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -91,11 +110,13 @@ class TtsManager(context: Context) {
                 text = spokenText,
                 apiKey = preferences?.getString(PREF_GOOGLE_API_KEY, "").orEmpty(),
                 voiceName = voiceOverride
+                    ?: rotatedVoice(TtsCatalog.googleVoices, step, varied)
                     ?: preferences?.getString(
                         PREF_GOOGLE_VOICE,
                         TtsCatalog.DEFAULT_GOOGLE_VOICE,
                     ) ?: TtsCatalog.DEFAULT_GOOGLE_VOICE,
                 speechRate = speechRate,
+                pitchSemitones = toSemitones(pitchPercent),
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -103,6 +124,19 @@ class TtsManager(context: Context) {
             else -> guardedError(IllegalStateException("Unbekannter TTS-Anbieter."))
         }
     }
+
+    /** Picks the next of the user's favourite voices, or null when there is nothing to rotate. */
+    private fun rotatedVoice(catalog: List<TtsVoice>, step: Int, varied: Boolean): String? {
+        if (!varied || !readFlag(PREF_VARY_VOICE)) return null
+        val favourites = preferences?.getStringSet(PREF_FAVORITE_VOICES, emptySet()).orEmpty()
+        val available = catalog.map { it.id }.filter { it in favourites }
+        return if (available.size < 2) null else available[step % available.size]
+    }
+
+    private fun readFlag(key: String): Boolean = preferences?.getBoolean(key, true) ?: true
+
+    private fun toSemitones(percent: Int): Double =
+        if (percent == 0) 0.0 else 12.0 * ln(1.0 + percent / 100.0) / ln(2.0)
 
     fun stop() {
         generation.incrementAndGet()
@@ -193,9 +227,18 @@ class TtsManager(context: Context) {
         const val PREF_GOOGLE_API_KEY = "google_tts_api_key"
         const val PREF_GOOGLE_VOICE = "google_tts_voice"
         const val PREF_SPEECH_RATE = "tts_speech_rate"
+        const val PREF_FAVORITE_VOICES = "favorite_tts_voices"
+        const val PREF_VARY_VOICE = "vary_voice_per_repetition"
+        const val PREF_VARY_SPEECH_RATE = "vary_speech_rate"
+        const val PREF_VARY_PITCH = "vary_pitch"
         const val DEFAULT_SPEECH_RATE = 1f
         const val MIN_SPEECH_RATE = 0.7f
         const val MAX_SPEECH_RATE = 1.3f
+
+        // Both sequences have different lengths so that pace and pitch never pair up the same
+        // way twice in a row. Neighbouring entries always differ.
+        val RATE_STEPS = intArrayOf(0, 5, -4, 3, -6)
+        val PITCH_STEPS = intArrayOf(2, -3, 4, -2)
         val logger = Logger.getLogger(TtsManager::class.java.name)
     }
 }

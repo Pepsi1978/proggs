@@ -48,6 +48,7 @@ class EdgeTtsPlayer(context: Context) {
         text: String,
         voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
         speechRate: Float = 1f,
+        pitchPercent: Int = 0,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -115,11 +116,14 @@ class EdgeTtsPlayer(context: Context) {
                 val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 val ratePercent = ((speechRate.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
                 val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
+                val boundedPitch = pitchPercent.coerceIn(-20, 20)
+                val formattedPitch = if (boundedPitch >= 0) "+$boundedPitch%" else "$boundedPitch%"
                 val ssml = "X-RequestId:$requestId\r\n" +
                     "Content-Type:application/ssml+xml\r\n" +
                     "Path:ssml\r\n\r\n" +
                     "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
-                    "xml:lang='de-DE'><voice name='$voice'><prosody rate='$formattedRate'>" +
+                    "xml:lang='de-DE'><voice name='$voice'>" +
+                    "<prosody rate='$formattedRate' pitch='$formattedPitch'>" +
                     "$escaped</prosody></voice></speak>"
                 if (!webSocket.send(config) || !webSocket.send(ssml)) {
                     finishError(

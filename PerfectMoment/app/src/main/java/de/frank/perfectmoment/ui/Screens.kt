@@ -1359,6 +1359,23 @@ fun SettingsScreen(
                     showChevron = true,
                 )
                 VoiceSpeedSlider(viewModel.ttsSpeechRate, viewModel::updateTtsSpeechRate)
+                SettingRow(
+                    label = "Stimme pro Wiederholung wechseln",
+                    supporting = "Wechselt durch deine Favoriten, sobald du mindestens zwei gewählt hast",
+                    trailing = {
+                        PmSwitch(viewModel.varyVoicePerRepetition, viewModel::updateVaryVoicePerRepetition)
+                    },
+                )
+                SettingRow(
+                    label = "Sprechtempo leicht variieren",
+                    supporting = "Jede Wiederholung wird ein wenig anders schnell gesprochen",
+                    trailing = { PmSwitch(viewModel.varySpeechRate, viewModel::updateVarySpeechRate) },
+                )
+                SettingRow(
+                    label = "Tonhöhe leicht variieren",
+                    supporting = "Wirkt bei Microsoft Edge; Google Chirp 3 HD unterstützt es nicht",
+                    trailing = { PmSwitch(viewModel.varyPitch, viewModel::updateVaryPitch) },
+                )
                 SecureKeyRow(
                     label = "Google-API",
                     supporting = "TTS · Chirp 3 HD",

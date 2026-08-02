@@ -433,12 +433,13 @@ class SessionController(
     }
 
     private class TtsAdapter(private val manager: TtsManager) : SessionTtsPort {
-        override fun speak(text: String, listener: SessionTtsPort.Listener) {
+        override fun speak(text: String, listener: SessionTtsPort.Listener, varied: Boolean) {
             manager.speak(
                 text = text,
                 onStart = listener::onStart,
                 onComplete = listener::onComplete,
                 onError = listener::onError,
+                varied = varied,
             )
         }
 

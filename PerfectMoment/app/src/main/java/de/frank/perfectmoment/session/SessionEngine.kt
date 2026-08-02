@@ -312,6 +312,7 @@ class SessionEngine(
                         scope.launch { handleTtsError(token) }
                     }
                 },
+                varied = true,
             )
         } catch (error: Exception) {
             scope.launch { handleTtsError(token) }

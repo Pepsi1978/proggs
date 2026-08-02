@@ -70,7 +70,7 @@ data class SessionConfig(
 }
 
 interface SessionTtsPort {
-    fun speak(text: String, listener: Listener)
+    fun speak(text: String, listener: Listener, varied: Boolean = false)
     fun stop()
     fun pause(): Boolean = false
     fun resume(): Boolean = false
