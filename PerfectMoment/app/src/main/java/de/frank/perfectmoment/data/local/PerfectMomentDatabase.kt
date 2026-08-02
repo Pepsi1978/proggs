@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -36,7 +36,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     context.applicationContext,
                     PerfectMomentDatabase::class.java,
                     DATABASE_NAME,
-                ).addMigrations(Migration1To2, Migration2To3, Migration3To4)
+                ).addMigrations(Migration1To2, Migration2To3, Migration3To4, Migration4To5)
                     .addCallback(SeedCallback)
                     .build()
                     .also { instance = it }
@@ -64,6 +64,24 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 db.execSQL("UPDATE sessions SET lastPlayedAt = startedAt")
             }
         }
+
+        private val Migration4To5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                insertAssumptionQuestionsSkill(db, System.currentTimeMillis())
+            }
+        }
+
+        private fun insertAssumptionQuestionsSkill(db: SupportSQLiteDatabase, createdAt: Long) {
+            db.insert(
+                "skills",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("name", PreinstalledContent.ASSUMPTION_QUESTIONS_SKILL_NAME)
+                    put("text", PreinstalledContent.assumptionQuestionsSkillText)
+                    put("createdAt", createdAt)
+                },
+            )
+        }
     }
 
     private object SeedCallback : Callback() {
@@ -80,6 +98,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     put("createdAt", now)
                 },
             )
+            insertAssumptionQuestionsSkill(db, now + 1)
             PreinstalledContent.hooks.forEachIndexed { index, (emoji, text) ->
                 db.insert(
                     "hooks",
