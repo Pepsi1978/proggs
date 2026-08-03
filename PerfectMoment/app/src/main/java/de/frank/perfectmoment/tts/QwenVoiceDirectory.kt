@@ -79,9 +79,13 @@ class QwenVoiceDirectory {
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val logger: Logger = Logger.getLogger(QwenVoiceDirectory::class.java.name)
 
-        /** Pulls the chosen name out of ids like `qwen-tts-vc-franklang-voice-2026…-6327`. */
-        fun displayName(id: String): String =
-            Regex("^qwen-tts-vc-(.+?)-voice-").find(id)?.groupValues?.get(1) ?: id
+        /** Pulls the chosen name out of ids like `qwen-tts-vc-FrankHD-voice-2026…-4d0a`. */
+        fun displayName(id: String): String {
+            val name = Regex("^qwen-tts-vc-(.+?)-voice-").find(id)?.groupValues?.get(1) ?: return id
+            // Alibaba allows no spaces in a voice name, so a capital after a small letter is
+            // where the word break belongs: FrankHD becomes Frank HD.
+            return name.replace(Regex("(?<=[a-z0-9])(?=[A-Z])"), " ")
+        }
 
         /** Turns `2026-08-03 23:21:42` into `03.08.2026, 23:21`. */
         fun germanDate(raw: String): String {

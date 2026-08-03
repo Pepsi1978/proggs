@@ -62,8 +62,9 @@ def main() -> None:
 
     for datei in dateien:
         name = datei.stem
-        # Alibaba lehnt alles ab, was nicht alphanumerisch ist - "frank-lang" gibt HTTP 400.
-        kennung = "".join(c for c in f"{PREFERRED_NAME}{name}" if c.isalnum()).lower()
+        # Alibaba lehnt alles ab, was nicht alphanumerisch ist - "Frank-HD" gibt HTTP 400.
+        # Der Dateiname bestimmt die Kennung, denn aus ihr baut die App den Anzeigenamen.
+        kennung = "".join(c for c in name if c.isalnum()) or PREFERRED_NAME
         log(f"Registriere '{name}' aus {datei.name} …")
         started = time.perf_counter()
         voice_id = enroll_voice_from(datei, key, base, preferred_name=kennung)
