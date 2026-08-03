@@ -125,8 +125,8 @@ class TtsManager(context: Context) {
             // The cloned voice varies its own emphasis, so rate and pitch stay untouched here.
             TtsProvider.QWEN_CLONE.id -> qwenPlayer.speak(
                 text = spokenText,
-                apiKey = preferences?.getString(PREF_QWEN_API_KEY, "").orEmpty(),
-                voiceId = voiceOverride
+                rawApiKey = preferences?.getString(PREF_QWEN_API_KEY, "").orEmpty(),
+                rawVoiceId = voiceOverride
                     ?: preferences?.getString(PREF_QWEN_VOICE_ID, "").orEmpty(),
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,

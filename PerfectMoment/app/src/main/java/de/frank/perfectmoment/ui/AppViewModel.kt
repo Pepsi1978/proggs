@@ -601,14 +601,16 @@ class AppViewModel(
     }
 
     fun updateQwenApiKey(value: String) {
-        qwenApiKey = value
-        settings.qwenTtsApiKey = value
+        // Neither a key nor a voice id ever contains blanks, but soft keyboards add one after
+        // every period and pasted values carry stray line breaks. Both would fail as a 401.
+        qwenApiKey = value.filterNot(Char::isWhitespace)
+        settings.qwenTtsApiKey = qwenApiKey
         disableQwenIfIncomplete()
     }
 
     fun updateQwenVoiceId(value: String) {
-        qwenVoiceId = value
-        settings.qwenTtsVoiceId = value
+        qwenVoiceId = value.filterNot(Char::isWhitespace)
+        settings.qwenTtsVoiceId = qwenVoiceId
         disableQwenIfIncomplete()
     }
 

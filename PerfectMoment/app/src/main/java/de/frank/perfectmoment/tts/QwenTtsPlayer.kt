@@ -47,12 +47,16 @@ class QwenTtsPlayer(context: Context) {
 
     fun speak(
         text: String,
-        apiKey: String,
-        voiceId: String,
+        rawApiKey: String,
+        rawVoiceId: String,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
     ) {
+        // Second line of defence: values stored before the input was sanitised would still
+        // carry blanks and fail with 401, so they are cleaned here as well.
+        val apiKey = rawApiKey.filterNot(Char::isWhitespace)
+        val voiceId = rawVoiceId.filterNot(Char::isWhitespace)
         stop()
         val requestGeneration = generation.incrementAndGet()
         val callbacks = PlaybackCallbacks(onPlaybackStart, onComplete, onError)
@@ -61,6 +65,7 @@ class QwenTtsPlayer(context: Context) {
             return
         }
         if (apiKey.isBlank() || voiceId.isBlank()) {
+            android.util.Log.e(TAG, "abort: key or voice id missing")
             finishError(
                 requestGeneration,
                 callbacks,
@@ -148,6 +153,7 @@ class QwenTtsPlayer(context: Context) {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
+                android.util.Log.e(TAG, "failed: ${error.javaClass.simpleName}: ${error.message}", error)
                 if (requestGeneration == generation.get()) {
                     logger.warning("Qwen TTS failed: ${error.message}")
                     finishError(requestGeneration, callbacks, error)
@@ -312,6 +318,7 @@ class QwenTtsPlayer(context: Context) {
         /** Cloning and synthesis must use the same model, otherwise the voice id is rejected. */
         const val MODEL = "qwen3-tts-vc-2026-01-22"
 
+        private const val TAG = "QwenTts"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private val logger = Logger.getLogger(QwenTtsPlayer::class.java.name)
     }
