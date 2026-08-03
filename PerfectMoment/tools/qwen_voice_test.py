@@ -13,7 +13,9 @@ Die einmal erzeugte voice_id wird daneben in qwen-voice-id.txt zwischengespeiche
 nicht bei jedem Lauf eine neue Stimme registriert wird.
 """
 import base64
+import csv
 import hashlib
+import io
 import json
 import mimetypes
 import pathlib
@@ -22,9 +24,9 @@ import time
 import urllib.error
 import urllib.request
 
-REGION_BASE = "https://dashscope-intl.aliyuncs.com/api/v1"
-ENROLL_URL = f"{REGION_BASE}/services/audio/tts/customization"
-SYNTH_URL = f"{REGION_BASE}/services/aigc/multimodal-generation/generation"
+# Fallback only. Model Studio issues a workspace-bound key together with its own regional
+# host, so the CSV that the console hands out is the authoritative source for both.
+FALLBACK_BASE = "https://dashscope-intl.aliyuncs.com/api/v1"
 
 # Voice cloning and synthesis must use the exact same model, otherwise synthesis fails.
 TARGET_MODEL = "qwen3-tts-vc-2026-01-22"
@@ -33,7 +35,9 @@ LANGUAGE = "German"
 
 SK_DIR = pathlib.Path.home() / "SK" / "PerfectMoment"
 KEY_FILE = SK_DIR / "dashscope.key"
+HOST_FILE = SK_DIR / "dashscope-host.txt"
 VOICE_ID_FILE = SK_DIR / "qwen-voice-id.txt"
+DOWNLOADS = pathlib.Path.home() / "Downloads"
 
 # The reference recording Frank made in Voicebox: 20.8 s, 24 kHz, mono, 16 bit.
 REFERENCE_AUDIO = (
@@ -61,16 +65,56 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
-def read_key() -> str:
+def read_csv_credentials() -> tuple[str, str] | None:
+    """Reads key and regional host from a Model Studio apiKey CSV.
+
+    The console exports one CSV per key, containing both the workspace-bound key and the
+    matching regional host. Preferred over the plain key file because the two must match.
+    """
+    candidates = sorted(
+        [*SK_DIR.glob("*apiKey*.csv"), *DOWNLOADS.glob("*apiKey*.csv")],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for path in candidates:
+        try:
+            text = path.read_bytes().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            continue
+        fields = dict(row for row in csv.reader(io.StringIO(text)) if len(row) == 2)
+        key = (fields.get("apiKey") or "").strip()
+        base = (fields.get("dashScope") or "").strip()
+        if not base and fields.get("apiHost"):
+            base = f"https://{fields['apiHost'].strip()}/api/v1"
+        if key and base:
+            log(f"Zugangsdaten aus {path.name}")
+            return key, base.rstrip("/")
+    return None
+
+
+def read_credentials() -> tuple[str, str]:
+    """Returns (api_key, base_url), preferring the CSV so key and region always match."""
+    from_csv = read_csv_credentials()
+    if from_csv:
+        return from_csv
+
     if not KEY_FILE.exists():
-        log(f"FEHLER: Kein Schlüssel gefunden unter {KEY_FILE}")
-        log("Lege dort deinen Model-Studio-Schlüssel der Singapur-Region ab (beginnt mit sk-).")
+        log(f"FEHLER: Weder eine apiKey-CSV noch ein Schlüssel unter {KEY_FILE} gefunden.")
+        log("Erzeuge in der Model-Studio-Konsole einen Schlüssel in der Region Singapore")
+        log(f"und lege die heruntergeladene CSV in {SK_DIR} oder {DOWNLOADS} ab.")
         sys.exit(1)
+
     key = KEY_FILE.read_text(encoding="utf-8").strip()
     if not key:
         log(f"FEHLER: {KEY_FILE} ist leer.")
         sys.exit(1)
-    return key
+    base = FALLBACK_BASE
+    if HOST_FILE.exists():
+        stored = HOST_FILE.read_text(encoding="utf-8").strip()
+        if stored:
+            base = stored.rstrip("/")
+    log(f"Schlüssel aus {KEY_FILE.name}, Endpunkt {base}")
+    return key, base
 
 
 def post(url: str, payload: dict, key: str, timeout: int = 120) -> dict:
@@ -87,7 +131,37 @@ def post(url: str, payload: dict, key: str, timeout: int = 120) -> dict:
         raise RuntimeError(f"HTTP {error.code}: {body[:1200]}") from error
 
 
-def enroll_voice(key: str) -> str:
+def preflight(key: str, base: str) -> None:
+    """Confirms key, region and model before the megabyte-sized upload is attempted.
+
+    Frankfurt (eu-central-1) serves no speech models at all, and an invalid key made the
+    server drop the large upload mid-stream instead of answering 401. A tiny request first
+    turns both failures into one clear message.
+    """
+    payload = {"model": TARGET_MODEL, "input": {"text": "Test.", "voice": "Cherry"}}
+    try:
+        post(f"{base}/services/aigc/multimodal-generation/generation", payload, key, timeout=45)
+        return
+    except RuntimeError as error:
+        message = str(error)
+
+    if "InvalidApiKey" in message:
+        log("FEHLER: Der Schlüssel wird abgewiesen (InvalidApiKey).")
+        log(f"Passt er zum Endpunkt {base}? Schlüssel sind an Region und Workspace gebunden.")
+        sys.exit(1)
+    if "Model not exist" in message:
+        log(f"FEHLER: {TARGET_MODEL} gibt es in dieser Region nicht.")
+        log(f"Endpunkt: {base}")
+        log("Qwen-TTS läuft nur in Singapore und Beijing — in Frankfurt gibt es keine")
+        log("Sprachmodelle. Erzeuge in der Konsole einen Schlüssel für die Region Singapore.")
+        sys.exit(1)
+    # Anything else (quota, permissions, network) is shown verbatim rather than guessed at.
+    log("FEHLER bei der Vorabprüfung:")
+    log(message[:900])
+    sys.exit(1)
+
+
+def enroll_voice(key: str, base: str) -> str:
     """Registers the reference recording once and returns the voice id."""
     if VOICE_ID_FILE.exists():
         voice_id = VOICE_ID_FILE.read_text(encoding="utf-8").strip()
@@ -106,7 +180,7 @@ def enroll_voice(key: str) -> str:
     data_uri = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
     started = time.perf_counter()
     result = post(
-        ENROLL_URL,
+        f"{base}/services/audio/tts/customization",
         {
             "model": "qwen-voice-enrollment",
             "input": {
@@ -150,10 +224,10 @@ def extract_audio(result: dict) -> bytes:
     )
 
 
-def synthesize(text: str, voice_id: str, key: str, label: str) -> tuple[bytes, float, dict]:
+def synthesize(text: str, voice_id: str, key: str, base: str, label: str) -> tuple[bytes, float, dict]:
     started = time.perf_counter()
     result = post(
-        SYNTH_URL,
+        f"{base}/services/aigc/multimodal-generation/generation",
         {
             "model": TARGET_MODEL,
             "input": {"text": text, "voice": voice_id, "language_type": LANGUAGE},
@@ -167,16 +241,17 @@ def synthesize(text: str, voice_id: str, key: str, label: str) -> tuple[bytes, f
 
 
 def main() -> None:
-    key = read_key()
+    key, base = read_credentials()
+    preflight(key, base)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    voice_id = enroll_voice(key)
+    voice_id = enroll_voice(key, base)
 
     log("")
     log("Sprachausgabe — Antwortzeit je Satz")
     zeiten = []
     letzte_usage = {}
     for index, satz in enumerate(SAETZE, start=1):
-        audio, elapsed, usage = synthesize(satz, voice_id, key, f"Satz {index}")
+        audio, elapsed, usage = synthesize(satz, voice_id, key, base, f"Satz {index}")
         (OUT_DIR / f"satz{index}.mp3").write_bytes(audio)
         zeiten.append(elapsed)
         letzte_usage = usage or letzte_usage
@@ -185,7 +260,7 @@ def main() -> None:
     log("Variations-Test — derselbe Satz dreimal")
     hashes = []
     for lauf in range(1, 4):
-        audio, _, _ = synthesize(SAETZE[0], voice_id, key, f"Lauf {lauf}")
+        audio, _, _ = synthesize(SAETZE[0], voice_id, key, base, f"Lauf {lauf}")
         (OUT_DIR / f"variation{lauf}.mp3").write_bytes(audio)
         hashes.append(hashlib.sha256(audio).hexdigest())
 
