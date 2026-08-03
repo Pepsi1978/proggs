@@ -1,17 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "model": "opus[1m]",
   "statusLine": {
     "type": "command",
     "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh",
     "refreshInterval": 10
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
     "**/proggs/CLAUDE.md",
     "**/proggs/CLAUDE.local.md",
     "**/.claude/rules/**"
   ],
-  "theme": "dark"
+  "theme": "dark",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true
 }

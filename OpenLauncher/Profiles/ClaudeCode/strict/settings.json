@@ -470,6 +470,9 @@
   "tui": "fullscreen",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
+  "claudeMdExcludes": [
+    "**/.claude/rules/**"
+  ],
   "theme": "dark",
   "verbose": false,
   "autoCompactEnabled": false,
@@ -477,8 +480,5 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)",
-  "claudeMdExcludes": [
-    "**/.claude/rules/**"
-  ]
+  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)"
 }

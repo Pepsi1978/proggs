@@ -17,26 +17,6 @@ public sealed class InstructionProfileService
 {
     private static readonly HashSet<string> ProfileIds = new(StringComparer.Ordinal) { "minimal", "standard", "strict" };
 
-    /// <summary>Ordnername des Projekts im Repo (~/proggs/&lt;Name&gt;).</summary>
-    public const string RepoFolderName = "OpenLauncher";
-
-    /// <summary>Frueherer Ordnername; nur noch fuer die einmalige Uebernahme alter Profile relevant.</summary>
-    public const string LegacyRepoFolderName = "OpenCodeLauncher";
-
-    /// <summary>
-    /// Wurzel aller Profilordner. EINZIGE Stelle im Code, an der der Repo-Ordnername fuer Profile steht:
-    /// beim Umbenennen von OpenCodeLauncher auf OpenLauncher blieben zuvor drei getrennte Pfad-Literale
-    /// zurueck, wovon eines auf einen Ordner zeigte, den es nicht gab — die CLIs starteten dadurch mit
-    /// leerem Config-Ordner und verlangten einen neuen Login. Ueber eine gemeinsame Wurzel kann ein
-    /// kuenftiger Rename nicht mehr nur teilweise durchschlagen.
-    /// </summary>
-    public static string ProfilesRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs", RepoFolderName, "Profiles");
-
-    /// <summary>Profilwurzel unter dem frueheren Ordnernamen (Quelle der einmaligen Uebernahme).</summary>
-    public static string LegacyProfilesRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs", LegacyRepoFolderName, "Profiles");
-
     // ===================== Laden / Speichern (eine Datei je Profil) =====================
 
     public InstructionProfileDocuments LoadProfile(bool isClaudeCode, string profileId, string workDir)
@@ -70,14 +50,16 @@ public sealed class InstructionProfileService
     public static string ResolveClaudeConfigDir(string profileId)
     {
         ValidateProfileId(profileId);
-        return Path.Combine(ProfilesRoot, "ClaudeCode", profileId);
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", profileId);
     }
 
     /// <summary>Versionierte Profilquelle (Regeltext) je Claude-Profil.</summary>
     public static string ResolveClaudeProfileSourcePath(string profileId)
     {
         ValidateProfileId(profileId);
-        return Path.Combine(ProfilesRoot, "ClaudeCode", "sources", profileId + ".md");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "sources", profileId + ".md");
     }
 
     private static string EnsureClaudeProfileSource(string profileId)
@@ -201,7 +183,8 @@ public sealed class InstructionProfileService
     public static string ResolveOpenCodeProfileSourcePath(string profileId)
     {
         ValidateProfileId(profileId);
-        return Path.Combine(ProfilesRoot, "OpenCode", profileId, "AGENTS.md");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "OpenCode", profileId, "AGENTS.md");
     }
 
     private static string EnsureOpenCodeProfileSource(string profileId)

@@ -60,10 +60,22 @@ public sealed class ModelRegistry
         (Gpt56LunaFastSlug, "GPT-5.6 Luna Fast"),
     ];
 
+    /// <summary>
+    /// Die Modell-Liste liegt im Repo (~/proggs/OpenLauncher/models.json), nicht im
+    /// Anwendungsdatenordner. Sie enthaelt keine Geheimnisse — nur Modell-IDs, Anzeigenamen und
+    /// die Sortierung — und gehoert damit wie die Profiltexte unter Profiles/ (siehe
+    /// InstructionProfileService) zum versionierten Bestand: was hier gepflegt wird, ist nach
+    /// Commit und Push auf jedem Rechner identisch vorhanden. Eine Liste am frueheren Ort wird
+    /// beim ersten Start einmalig uebernommen (MigrateLegacyFile).
+    /// </summary>
     private static readonly string Dir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OpenLauncher");
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "proggs", "OpenLauncher");
     private static readonly string FilePath = Path.Combine(Dir, "models.json");
+
+    private static readonly string LegacyFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OpenLauncher", "models.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -77,6 +89,7 @@ public sealed class ModelRegistry
     public static ModelRegistry Load()
     {
         var reg = new ModelRegistry();
+        MigrateLegacyFile();
         try
         {
             if (File.Exists(FilePath))
@@ -130,6 +143,28 @@ public sealed class ModelRegistry
         reg.Groups = CreateDefaults();
         reg.Save();
         return reg;
+    }
+
+    /// <summary>
+    /// Uebernimmt eine Modell-Liste vom frueheren Ort (%AppData%/OpenLauncher/models.json)
+    /// einmalig ins Repo, damit eine ueber die Oberflaeche gepflegte Liste beim Umstieg nicht
+    /// verloren geht. Kopiert statt verschoben: die alte Datei bleibt als Sicherheitsnetz liegen.
+    /// Existiert im Repo bereits eine Liste (etwa frisch aus Git geholt), gilt diese — sonst
+    /// ueberschriebe der alte Stand eines Rechners die gepushte Fassung.
+    /// </summary>
+    private static void MigrateLegacyFile()
+    {
+        if (File.Exists(FilePath) || !File.Exists(LegacyFilePath)) return;
+        try
+        {
+            Directory.CreateDirectory(Dir);
+            File.Copy(LegacyFilePath, FilePath);
+            Logger.Instance.Info("ModelRegistry", "MigrateLegacyFile", "Modell-Liste ins Repo uebernommen", new { LegacyFilePath, FilePath });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "MigrateLegacyFile", $"Uebernahme fehlgeschlagen: {ex.Message}", new { LegacyFilePath, FilePath });
+        }
     }
 
     public void Save()

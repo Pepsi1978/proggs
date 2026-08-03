@@ -1,0 +1,727 @@
+[
+  {
+    "Id": "entropic",
+    "Title": "Anthropic",
+    "ProviderId": "anthropic",
+    "ProviderName": "Anthropic",
+    "Models": [
+      {
+        "HasCustomDisplayName": true,
+        "IsUserDefined": true,
+        "ProviderId": "anthropic",
+        "ProviderName": "Anthropic",
+        "Slug": "claude-fable-5[1m]",
+        "DisplayName": "Claude Fable 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": true,
+        "IsUserDefined": true,
+        "ProviderId": "anthropic",
+        "ProviderName": "Anthropic",
+        "Slug": "claude-opus-5[1m]",
+        "DisplayName": "Claude Opus 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": true,
+        "IsUserDefined": true,
+        "ProviderId": "anthropic",
+        "ProviderName": "Anthropic",
+        "Slug": "claude-sonnet-5[1m]",
+        "DisplayName": "Claude Sonnet 5",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [
+      "claude-opus-5",
+      "claude-opus-5[1m]",
+      "claude-fable-5[1m]",
+      "claude-sonnet-5[1m]",
+      "claude-opus-4-8[1m]"
+    ],
+    "IsExpanded": true
+  },
+  {
+    "Id": "openai",
+    "Title": "OpenAI",
+    "ProviderId": "openai",
+    "ProviderName": "OpenAI",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-sol",
+        "DisplayName": "GPT-5.6 Sol",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-terra",
+        "DisplayName": "GPT-5.6 Terra",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-luna",
+        "DisplayName": "GPT-5.6 Luna",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-sol-fast",
+        "DisplayName": "GPT-5.6 Sol Fast",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-terra-fast",
+        "DisplayName": "GPT-5.6 Terra Fast",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-luna-fast",
+        "DisplayName": "GPT-5.6 Luna Fast",
+        "IsHidden": true
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [
+      "gpt-5.6-sol",
+      "gpt-5.6-sol-fast",
+      "gpt-5.6-terra",
+      "gpt-5.6-terra-fast",
+      "gpt-5.6-luna",
+      "gpt-5.6-luna-fast"
+    ],
+    "IsExpanded": true
+  },
+  {
+    "Id": "opencode-go",
+    "Title": "OpenCode-Go",
+    "ProviderId": "opencode-go",
+    "ProviderName": "OpenCode-Go",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "minimax-m3",
+        "DisplayName": "MiniMax M3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "deepseek-v4-flash",
+        "DisplayName": "DeepSeek V4 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "deepseek-v4-pro",
+        "DisplayName": "DeepSeek V4 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "glm-5.2",
+        "DisplayName": "GLM 5.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "kimi-k2.6",
+        "DisplayName": "Kimi K2.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "kimi-k2.7-code",
+        "DisplayName": "Kimi K2.7 Code",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "mimo-v2.5",
+        "DisplayName": "MiMo V2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "mimo-v2.5-pro",
+        "DisplayName": "MiMo V2.5 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "qwen3.7-max",
+        "DisplayName": "Qwen3.7 Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "qwen3.7-plus",
+        "DisplayName": "Qwen3.7 Plus",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
+  },
+  {
+    "Id": "opencode-zen-free",
+    "Title": "OpenCode Zen Free",
+    "ProviderId": "opencode",
+    "ProviderName": "OpenCode Zen",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "deepseek-v4-flash-free",
+        "DisplayName": "DeepSeek V4 Flash Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "mimo-v2.5-free",
+        "DisplayName": "MiMo V2.5 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "nemotron-3-ultra-free",
+        "DisplayName": "Nemotron 3 Ultra Free",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
+  },
+  {
+    "Id": "openrouter-free",
+    "Title": "OpenRouterFree",
+    "ProviderId": "openrouter",
+    "ProviderName": "OpenRouter",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-xs-2.1:free",
+        "DisplayName": "Poolside Laguna XS 2.1 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "DisplayName": "NVIDIA Nemotron 3 Ultra Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-super-120b-a12b:free",
+        "DisplayName": "NVIDIA Nemotron 3 Super Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-4-31b-it:free",
+        "DisplayName": "Google Gemma 4 31B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash:free",
+        "DisplayName": "Ling-3.0-flash Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-s-2.1:free",
+        "DisplayName": "Poolside Laguna S 2.1 Free",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [
+      "cohere/north-mini-code:free",
+      "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "poolside/laguna-m.1:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "liquid/lfm-2.5-1.2b-thinking:free",
+      "liquid/lfm-2.5-1.2b-instruct:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "qwen/qwen3-next-80b-a3b-instruct:free",
+      "nvidia/nemotron-nano-9b-v2:free",
+      "openai/gpt-oss-20b:free",
+      "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "meta-llama/llama-3.2-3b-instruct:free",
+      "nousresearch/hermes-3-llama-3.1-405b:free"
+    ],
+    "KnownSyncedModelSlugs": [
+      "cohere/north-mini-code:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "google/gemma-4-31b-it:free",
+      "inclusionai/ling-3.0-flash:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "nvidia/nemotron-nano-9b-v2:free",
+      "openai/gpt-oss-20b:free",
+      "poolside/laguna-s-2.1:free",
+      "poolside/laguna-xs-2.1:free"
+    ],
+    "IsExpanded": false
+  },
+  {
+    "Id": "openrouter",
+    "Title": "OpenRouter",
+    "ProviderId": "openrouter",
+    "ProviderName": "OpenRouter",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": true,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k3",
+        "DisplayName": "Kimi K3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.2",
+        "DisplayName": "Z.ai: GLM 5.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m3",
+        "DisplayName": "MiniMax: MiniMax M3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.7-max",
+        "DisplayName": "Qwen: Qwen3.7 Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "xiaomi/mimo-v2.5-pro",
+        "DisplayName": "Xiaomi: MiMo-V2.5-Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-pro",
+        "DisplayName": "DeepSeek V4 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-flash",
+        "DisplayName": "DeepSeek V4 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "xiaomi/mimo-v2.5",
+        "DisplayName": "MiMo-V2.5",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
+  },
+  {
+    "Id": "nvidia",
+    "Title": "NVIDIA",
+    "ProviderId": "nvidia",
+    "ProviderName": "NVIDIA",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "z-ai/glm-5.2",
+        "DisplayName": "GLM 5.2 (1M)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "thinkingmachines/inkling",
+        "DisplayName": "Inkling (1M)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "minimaxai/minimax-m3",
+        "DisplayName": "MiniMax M3 (1M)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "poolside/laguna-xs-2.1",
+        "DisplayName": "Poolside Laguna XS 2.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "stepfun-ai/step-3.7-flash",
+        "DisplayName": "Step 3.7 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "mistralai/mistral-medium-3.5-128b",
+        "DisplayName": "Mistral Medium 3.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "google/gemma-4-31b-it",
+        "DisplayName": "Gemma 4 31B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "openai/gpt-oss-120b",
+        "DisplayName": "GPT-OSS 120B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "openai/gpt-oss-20b",
+        "DisplayName": "GPT-OSS 20B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+        "DisplayName": "Nemotron 3 Nano Omni Reasoning",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/nemotron-3-nano-30b-a3b",
+        "DisplayName": "Nemotron 3 Nano 30B A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+        "DisplayName": "Llama 3.1 Nemotron Ultra 253B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+        "DisplayName": "Llama 3.3 Nemotron Super 49B v1.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.3-nemotron-super-49b-v1",
+        "DisplayName": "Llama 3.3 Nemotron Super 49B v1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/nvidia-nemotron-nano-9b-v2",
+        "DisplayName": "Nemotron Nano 9B v2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/nemotron-nano-12b-v2-vl",
+        "DisplayName": "Nemotron Nano 12B v2 VL",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+        "DisplayName": "Llama 3.1 Nemotron Nano 8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+        "DisplayName": "Llama 3.1 Nemotron Nano VL 8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/cosmos-reason2-8b",
+        "DisplayName": "Cosmos Reason2 8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/llama-3.1-nemotron-70b-instruct",
+        "DisplayName": "Llama 3.1 Nemotron 70B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "nvidia/nemotron-mini-4b-instruct",
+        "DisplayName": "Nemotron Mini 4B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "mistralai/mistral-nemotron",
+        "DisplayName": "Mistral Nemotron",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "mistralai/mistral-7b-instruct-v0.3",
+        "DisplayName": "Mistral 7B Instruct v0.3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.3-70b-instruct",
+        "DisplayName": "Llama 3.3 70B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.1-70b-instruct",
+        "DisplayName": "Llama 3.1 70B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.2-90b-vision-instruct",
+        "DisplayName": "Llama 3.2 90B Vision",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.2-11b-vision-instruct",
+        "DisplayName": "Llama 3.2 11B Vision",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.1-8b-instruct",
+        "DisplayName": "Llama 3.1 8B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "meta/llama-3.2-1b-instruct",
+        "DisplayName": "Llama 3.2 1B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "google/gemma-3-12b-it",
+        "DisplayName": "Gemma 3 12B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "nvidia",
+        "ProviderName": "NVIDIA",
+        "Slug": "google/gemma-3-4b-it",
+        "DisplayName": "Gemma 3 4B",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
+  }
+]

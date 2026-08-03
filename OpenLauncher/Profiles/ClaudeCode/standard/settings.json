@@ -11,5 +11,7 @@
   "claudeMdExcludes": [
     "**/.claude/rules/**"
   ],
-  "theme": "dark"
+  "theme": "dark",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true
 }
