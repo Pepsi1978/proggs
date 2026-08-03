@@ -60,3 +60,6 @@ cowork-robustness-test.txt
 
 # Lokales, fortlaufendes OpenCode-Token-Audit; kann Prompt-Kurztexte enthalten.
 /opencode-setup/Tokenverbrauch.jsonl
+
+# Hoerproben des Qwen-Stimmtests; Audio gehoert nicht ins Repo.
+/PerfectMoment/tools/qwen-voice-test-output/
