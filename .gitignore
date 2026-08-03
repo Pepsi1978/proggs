@@ -1,5 +1,6 @@
 /tools/*
 !/tools/chrome-beenden/
+!/tools/GoogleNews/
 !/tools/check_cancellation_rethrow.py
 !/tools/rechtssicherheit.md
 .code-search/
