@@ -1,0 +1,155 @@
+<title>Referenztext zum Einlesen</title>
+
+<style>
+  :root {
+    --ground: #f7f2e9;
+    --raise: #fffbf3;
+    --ink: #2e241a;
+    --ink-soft: #6f6050;
+    --ink-faint: #a2907a;
+    --gold: #8c6f24;
+    --rule: #e2d7c2;
+    --scale: 1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #17120c;
+      --raise: #211a11;
+      --ink: #ede3d2;
+      --ink-soft: #b3a48d;
+      --ink-faint: #786a56;
+      --gold: #c9a94a;
+      --rule: #33291c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #17120c;
+    --raise: #211a11;
+    --ink: #ede3d2;
+    --ink-soft: #b3a48d;
+    --ink-faint: #786a56;
+    --gold: #c9a94a;
+    --rule: #33291c;
+  }
+  :root[data-theme="light"] {
+    --ground: #f7f2e9;
+    --raise: #fffbf3;
+    --ink: #2e241a;
+    --ink-soft: #6f6050;
+    --ink-faint: #a2907a;
+    --gold: #8c6f24;
+    --rule: #e2d7c2;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.25rem, 5vw, 2rem) 5rem;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  header { display: flex; flex-direction: column; gap: 1rem; }
+  .eyebrow {
+    font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--gold); font-weight: 600; margin: 0;
+  }
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 400; margin: 0;
+    text-wrap: balance; letter-spacing: -0.01em;
+  }
+
+  .hinweise {
+    background: var(--raise); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 1.1rem 1.3rem; display: grid; gap: 0.55rem;
+    font-size: 0.9rem; color: var(--ink-soft); margin: 0; list-style: none;
+  }
+  .hinweise li { display: flex; gap: 0.7rem; align-items: baseline; }
+  .hinweise li::before {
+    content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--gold); transform: translateY(-2px);
+  }
+
+  .regler {
+    display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+    font-size: 0.82rem; color: var(--ink-soft);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    padding: 0.9rem 0;
+  }
+  .regler label { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.72rem; }
+  input[type="range"] { flex: 1 1 12rem; accent-color: var(--gold); min-width: 9rem; }
+  .regler output { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.9rem; }
+  ol li { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.6rem; align-items: baseline; }
+  .nr {
+    font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--ink-faint);
+    font-weight: 600; padding-top: 0.55em;
+  }
+  .satz {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: calc(1.45rem * var(--scale));
+    line-height: 1.42; text-wrap: pretty; margin: 0;
+  }
+
+  footer {
+    border-top: 1px solid var(--rule); padding-top: 1.4rem;
+    color: var(--ink-soft); font-size: 0.9rem; display: grid; gap: 0.4rem;
+  }
+  footer strong { color: var(--ink); font-weight: 600; }
+  .dauer { color: var(--gold); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Stimmaufnahme für Perfect Moment</p>
+    <h1>Lies diese Fragen laut vor — ruhig und warm, so wie du sie abends hören möchtest.</h1>
+  </header>
+
+  <ul class="hinweise">
+    <li>Etwa 10 cm Abstand zum Handy — näher gibt harte P-Laute, weiter wird die Stimme dünn.</li>
+    <li>Gleichmäßiges Tempo bis zum Schluss. Am Ende schneller zu werden lässt die geklonte Stimme später stottern.</li>
+    <li>Zwischen den Fragen nur kurz absetzen, höchstens eine Sekunde.</li>
+    <li>Einmal still durchlesen, bevor du die Aufnahme startest.</li>
+  </ul>
+
+  <div class="regler">
+    <label for="groesse">Schriftgröße</label>
+    <input type="range" id="groesse" min="80" max="220" value="100" step="5" />
+    <output id="wert">100 %</output>
+  </div>
+
+  <ol>
+    <li><span class="nr">01</span><p class="satz">Warum geht es mir in jedem Moment so rundum gut?</p></li>
+    <li><span class="nr">02</span><p class="satz">Wie fühlt sich mein beständiges Wohlbefinden genau jetzt in mir an?</p></li>
+    <li><span class="nr">03</span><p class="satz">Wo spüre ich meine tiefe innere Harmonie besonders deutlich in meinem Körper?</p></li>
+    <li><span class="nr">04</span><p class="satz">Welche wohltuenden Gedanken erfüllen gerade mein Bewusstsein?</p></li>
+    <li><span class="nr">05</span><p class="satz">Wofür empfinde ich in diesem Moment besonders tiefe Dankbarkeit?</p></li>
+    <li><span class="nr">06</span><p class="satz">Welche feinen Details lassen mich die Schönheit dieses Tages besonders klar erkennen?</p></li>
+    <li><span class="nr">07</span><p class="satz">Wie vertieft jeder ruhige Atemzug mein angenehmes Lebensgefühl?</p></li>
+    <li><span class="nr">08</span><p class="satz">Welche Farben, Klänge und Berührungen machen mein Leben gerade so reich?</p></li>
+    <li><span class="nr">09</span><p class="satz">Was war heute der schönste Moment für mich?</p></li>
+    <li><span class="nr">10</span><p class="satz">Und wenn ich heute Abend in Ruhe auf diesen Tag zurückblicke, welcher einzelne Augenblick kommt mir dann als Erstes in den Sinn?</p></li>
+  </ol>
+
+  <footer>
+    <p style="margin:0"><strong>Danach zwei Sekunden still bleiben</strong>, dann die Aufnahme stoppen.</p>
+    <p style="margin:0">110 Wörter — bei ruhigem Vortrag <span class="dauer">etwa 55 Sekunden</span>. Das Maximum liegt bei 60.</p>
+  </footer>
+</div>
+
+<script>
+  const regler = document.getElementById("groesse");
+  const wert = document.getElementById("wert");
+  const anwenden = () => {
+    document.documentElement.style.setProperty("--scale", regler.value / 100);
+    wert.textContent = regler.value + " %";
+  };
+  regler.addEventListener("input", anwenden);
+  anwenden();
+</script>
