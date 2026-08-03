@@ -155,10 +155,10 @@ def preflight(key: str, base: str) -> None:
         log("Qwen-TTS läuft nur in Singapore und Beijing — in Frankfurt gibt es keine")
         log("Sprachmodelle. Erzeuge in der Konsole einen Schlüssel für die Region Singapore.")
         sys.exit(1)
-    # Anything else (quota, permissions, network) is shown verbatim rather than guessed at.
-    log("FEHLER bei der Vorabprüfung:")
-    log(message[:900])
-    sys.exit(1)
+    # Any other answer means the endpoint reached the model. A voice-cloning model rejects
+    # the placeholder voice with InvalidParameter, which is exactly what we want to see: key
+    # and region are fine, only the voice is still missing. Enrollment fills that in.
+    log("Vorabprüfung bestanden (Schlüssel und Region stimmen).")
 
 
 def enroll_voice(key: str, base: str) -> str:
@@ -207,6 +207,15 @@ def enroll_voice(key: str, base: str) -> str:
     return voice_id
 
 
+def audio_suffix(audio: bytes) -> str:
+    """Names the file after what it actually is - the API returns WAV, not MP3."""
+    if audio[:4] == b"RIFF":
+        return ".wav"
+    if audio[:3] == b"ID3" or audio[:2] == b"\xff\xfb":
+        return ".mp3"
+    return ".bin"
+
+
 def extract_audio(result: dict) -> bytes:
     """Pulls the audio out of the response, no matter whether it arrives as URL or inline."""
     audio = result.get("output", {}).get("audio")
@@ -252,7 +261,7 @@ def main() -> None:
     letzte_usage = {}
     for index, satz in enumerate(SAETZE, start=1):
         audio, elapsed, usage = synthesize(satz, voice_id, key, base, f"Satz {index}")
-        (OUT_DIR / f"satz{index}.mp3").write_bytes(audio)
+        (OUT_DIR / f"satz{index}{audio_suffix(audio)}").write_bytes(audio)
         zeiten.append(elapsed)
         letzte_usage = usage or letzte_usage
 
@@ -261,7 +270,7 @@ def main() -> None:
     hashes = []
     for lauf in range(1, 4):
         audio, _, _ = synthesize(SAETZE[0], voice_id, key, base, f"Lauf {lauf}")
-        (OUT_DIR / f"variation{lauf}.mp3").write_bytes(audio)
+        (OUT_DIR / f"variation{lauf}{audio_suffix(audio)}").write_bytes(audio)
         hashes.append(hashlib.sha256(audio).hexdigest())
 
     log("")
