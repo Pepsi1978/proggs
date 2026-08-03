@@ -1346,18 +1346,24 @@ fun SettingsScreen(
                 QuestionPerspectiveSetting(viewModel)
             }
             SettingsSection("Stimme") {
+                val activeProvider = TtsProvider.entries
+                    .firstOrNull { it.id == viewModel.ttsProvider } ?: TtsProvider.EDGE
                 SettingRow(
                     "Anbieter",
-                    if (viewModel.ttsProvider == TtsProvider.EDGE.id) "Microsoft Edge" else "Google Chirp 3 HD",
+                    activeProvider.label,
                     onClick = { viewModel.openSheet(AppSheet.PROVIDER) },
                     showChevron = true,
                 )
-                SettingRow(
-                    "Stimme",
-                    voiceDisplayName(viewModel.selectedVoice),
-                    onClick = { viewModel.navigate(AppScreen.VOICE) },
-                    showChevron = true,
-                )
+                if (activeProvider == TtsProvider.QWEN_CLONE) {
+                    SettingRow("Stimme", "Deine geklonte Stimme")
+                } else {
+                    SettingRow(
+                        "Stimme",
+                        voiceDisplayName(viewModel.selectedVoice),
+                        onClick = { viewModel.navigate(AppScreen.VOICE) },
+                        showChevron = true,
+                    )
+                }
                 VoiceSpeedSlider(viewModel.ttsSpeechRate, viewModel::updateTtsSpeechRate)
                 SettingRow(
                     label = "Stimme pro Wiederholung wechseln",
@@ -1391,6 +1397,22 @@ fun SettingsScreen(
                     visible = viewModel.showGroqKey,
                     onValueChange = viewModel::updateGroqApiKey,
                     onToggleVisibility = viewModel::toggleGroqKeyVisibility,
+                )
+                SecureKeyRow(
+                    label = "Alibaba-API",
+                    supporting = "Qwen3-TTS · deine geklonte Stimme",
+                    value = viewModel.qwenApiKey,
+                    visible = viewModel.showQwenKey,
+                    onValueChange = viewModel::updateQwenApiKey,
+                    onToggleVisibility = viewModel::toggleQwenKeyVisibility,
+                )
+                SecureKeyRow(
+                    label = "Stimm-Kennung",
+                    supporting = "Die bei Alibaba registrierte Stimme",
+                    value = viewModel.qwenVoiceId,
+                    visible = viewModel.showQwenKey,
+                    onValueChange = viewModel::updateQwenVoiceId,
+                    onToggleVisibility = viewModel::toggleQwenKeyVisibility,
                     divider = false,
                 )
             }

@@ -181,9 +181,15 @@ class AppViewModel(
         private set
     var groqApiKey by mutableStateOf(settings.groqApiKey)
         private set
+    var qwenApiKey by mutableStateOf(settings.qwenTtsApiKey)
+        private set
+    var qwenVoiceId by mutableStateOf(settings.qwenTtsVoiceId)
+        private set
     var showGoogleKey by mutableStateOf(false)
         private set
     var showGroqKey by mutableStateOf(false)
+        private set
+    var showQwenKey by mutableStateOf(false)
         private set
     var voiceTab by mutableStateOf(TtsProvider.EDGE)
         private set
@@ -426,6 +432,12 @@ class AppViewModel(
             ttsProvider = TtsProvider.EDGE.id
             settings.ttsProvider = TtsProvider.EDGE.id
         }
+        if (ttsProvider == TtsProvider.QWEN_CLONE.id &&
+            (qwenApiKey.isBlank() || qwenVoiceId.isBlank())
+        ) {
+            ttsProvider = TtsProvider.EDGE.id
+            settings.ttsProvider = TtsProvider.EDGE.id
+        }
         viewModelScope.launch {
             contentRepository.observeHooks().collect { next ->
                 hooks = next
@@ -552,6 +564,10 @@ class AppViewModel(
             message = "Bitte zuerst einen Google-API-Schlüssel hinterlegen."
             return
         }
+        if (value == TtsProvider.QWEN_CLONE && (qwenApiKey.isBlank() || qwenVoiceId.isBlank())) {
+            message = "Bitte zuerst Alibaba-Schlüssel und Stimm-Kennung hinterlegen."
+            return
+        }
         ttsProvider = value.id
         settings.ttsProvider = value.id
         sheet = null
@@ -584,6 +600,26 @@ class AppViewModel(
         settings.groqApiKey = value
     }
 
+    fun updateQwenApiKey(value: String) {
+        qwenApiKey = value
+        settings.qwenTtsApiKey = value
+        disableQwenIfIncomplete()
+    }
+
+    fun updateQwenVoiceId(value: String) {
+        qwenVoiceId = value
+        settings.qwenTtsVoiceId = value
+        disableQwenIfIncomplete()
+    }
+
+    private fun disableQwenIfIncomplete() {
+        if (ttsProvider != TtsProvider.QWEN_CLONE.id) return
+        if (qwenApiKey.isNotBlank() && qwenVoiceId.isNotBlank()) return
+        ttsProvider = TtsProvider.EDGE.id
+        settings.ttsProvider = TtsProvider.EDGE.id
+        message = "Eigene Stimme wurde deaktiviert, weil Schlüssel oder Kennung fehlen."
+    }
+
     fun updateTtsSpeechRate(value: Float) {
         ttsSpeechRate = (value * 20f).roundToInt().div(20f).coerceIn(0.7f, 1.3f)
         settings.ttsSpeechRate = ttsSpeechRate
@@ -610,6 +646,10 @@ class AppViewModel(
 
     fun toggleGroqKeyVisibility() {
         showGroqKey = !showGroqKey
+    }
+
+    fun toggleQwenKeyVisibility() {
+        showQwenKey = !showQwenKey
     }
 
     fun updateVoiceTab(provider: TtsProvider) {

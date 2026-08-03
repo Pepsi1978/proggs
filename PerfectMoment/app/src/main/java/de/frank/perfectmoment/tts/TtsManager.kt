@@ -13,6 +13,7 @@ class TtsManager(context: Context) {
     private val appContext = context.applicationContext
     private val edgePlayer = EdgeTtsPlayer(appContext)
     private val googlePlayer = GoogleCloudTtsPlayer(appContext)
+    private val qwenPlayer = QwenTtsPlayer(appContext)
     private val generation = AtomicLong(0)
     private var activeProviderId: String? = null
     private var variationStep = 0
@@ -121,6 +122,16 @@ class TtsManager(context: Context) {
                 onComplete = guardedComplete,
                 onError = guardedError,
             )
+            // The cloned voice varies its own emphasis, so rate and pitch stay untouched here.
+            TtsProvider.QWEN_CLONE.id -> qwenPlayer.speak(
+                text = spokenText,
+                apiKey = preferences?.getString(PREF_QWEN_API_KEY, "").orEmpty(),
+                voiceId = voiceOverride
+                    ?: preferences?.getString(PREF_QWEN_VOICE_ID, "").orEmpty(),
+                onPlaybackStart = guardedStart,
+                onComplete = guardedComplete,
+                onError = guardedError,
+            )
             else -> guardedError(IllegalStateException("Unbekannter TTS-Anbieter."))
         }
     }
@@ -143,17 +154,20 @@ class TtsManager(context: Context) {
         activeProviderId = null
         edgePlayer.stop()
         googlePlayer.stop()
+        qwenPlayer.stop()
     }
 
     fun pause(): Boolean = when (activeProviderId) {
         TtsProvider.EDGE.id -> edgePlayer.pause()
         TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.pause()
+        TtsProvider.QWEN_CLONE.id -> qwenPlayer.pause()
         else -> false
     }
 
     fun resume(): Boolean = when (activeProviderId) {
         TtsProvider.EDGE.id -> edgePlayer.resume()
         TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.resume()
+        TtsProvider.QWEN_CLONE.id -> qwenPlayer.resume()
         else -> false
     }
 
@@ -161,6 +175,7 @@ class TtsManager(context: Context) {
         generation.incrementAndGet()
         edgePlayer.shutdown()
         googlePlayer.shutdown()
+        qwenPlayer.shutdown()
     }
 
     private fun removeEmojis(text: String): String {
@@ -226,6 +241,8 @@ class TtsManager(context: Context) {
         const val PREF_EDGE_VOICE = "edge_tts_voice"
         const val PREF_GOOGLE_API_KEY = "google_tts_api_key"
         const val PREF_GOOGLE_VOICE = "google_tts_voice"
+        const val PREF_QWEN_API_KEY = "qwen_tts_api_key"
+        const val PREF_QWEN_VOICE_ID = "qwen_tts_voice_id"
         const val PREF_SPEECH_RATE = "tts_speech_rate"
         const val PREF_FAVORITE_VOICES = "favorite_tts_voices"
         const val PREF_VARY_VOICE = "vary_voice_per_repetition"

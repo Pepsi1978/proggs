@@ -253,8 +253,9 @@ private fun AppBottomSheet(
                     AppSheet.PROVIDER -> OptionSheet(
                         "Anbieter",
                         TtsProvider.entries.map { provider ->
-                            val label = if (provider == TtsProvider.EDGE) "Microsoft Edge" else "Google Chirp 3 HD"
-                            OptionRow(label, viewModel.ttsProvider == provider.id) { viewModel.setProvider(provider) }
+                            OptionRow(provider.label, viewModel.ttsProvider == provider.id) {
+                                viewModel.setProvider(provider)
+                            }
                         },
                     )
                     AppSheet.MODEL -> OptionSheet(

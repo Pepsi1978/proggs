@@ -65,6 +65,14 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GOOGLE_TTS_VOICE, Defaults.GOOGLE_TTS_VOICE)
         set(value) = writeString(Keys.GOOGLE_TTS_VOICE, value)
 
+    var qwenTtsApiKey: String
+        get() = readString(Keys.QWEN_TTS_API_KEY, Defaults.QWEN_TTS_API_KEY)
+        set(value) = writeString(Keys.QWEN_TTS_API_KEY, value)
+
+    var qwenTtsVoiceId: String
+        get() = readString(Keys.QWEN_TTS_VOICE_ID, Defaults.QWEN_TTS_VOICE_ID)
+        set(value) = writeString(Keys.QWEN_TTS_VOICE_ID, value)
+
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
             ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE
@@ -198,6 +206,8 @@ class SecureSettings(context: Context) : Closeable {
         const val EDGE_TTS_VOICE = "edge_tts_voice"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
+        const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
+        const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
@@ -224,6 +234,8 @@ class SecureSettings(context: Context) : Closeable {
         const val EDGE_TTS_VOICE = "de-DE-SeraphinaMultilingualNeural"
         const val GOOGLE_TTS_API_KEY = ""
         const val GOOGLE_TTS_VOICE = "de-DE-Chirp3-HD-Kore"
+        const val QWEN_TTS_API_KEY = ""
+        const val QWEN_TTS_VOICE_ID = ""
         const val TTS_SPEECH_RATE = 1f
         const val GROQ_API_KEY = ""
         const val PAUSE_REP_SECONDS = 8

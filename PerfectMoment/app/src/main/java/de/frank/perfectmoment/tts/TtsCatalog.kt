@@ -1,8 +1,9 @@
 package de.frank.perfectmoment.tts
 
-enum class TtsProvider(val id: String) {
-    EDGE("edge_tts"),
-    GOOGLE_CLOUD("google_cloud"),
+enum class TtsProvider(val id: String, val label: String) {
+    EDGE("edge_tts", "Microsoft Edge"),
+    GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD"),
+    QWEN_CLONE("qwen_clone", "Meine Stimme"),
 }
 
 enum class VoiceGender {
