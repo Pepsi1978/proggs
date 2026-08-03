@@ -31,6 +31,8 @@ import de.frank.perfectmoment.session.Phase
 import de.frank.perfectmoment.session.SessionController
 import de.frank.perfectmoment.session.SessionRuntime
 import de.frank.perfectmoment.session.SessionState
+import de.frank.perfectmoment.tts.ClonedVoice
+import de.frank.perfectmoment.tts.QwenVoiceDirectory
 import de.frank.perfectmoment.tts.TtsCatalog
 import de.frank.perfectmoment.tts.TtsManager
 import de.frank.perfectmoment.tts.TtsProvider
@@ -60,7 +62,7 @@ enum class AppScreen {
     RAW_DATA,
 }
 
-enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO }
+enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, QWEN_VOICE }
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
 enum class RecordingTarget { START, INTRO }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
@@ -108,6 +110,7 @@ class AppViewModel(
     private val sessionController: SessionController = container.sessionController
     private val micRecorder = MicRecorder(appContext)
     private val previewTts = TtsManager(appContext)
+    private val qwenVoiceDirectory = QwenVoiceDirectory()
     private var pendingRecordingTarget: RecordingTarget? = null
     private var transcriptionJob: Job? = null
     private var activeTranscriber: GroqTranscriber? = null
@@ -190,6 +193,10 @@ class AppViewModel(
     var showGroqKey by mutableStateOf(false)
         private set
     var showQwenKey by mutableStateOf(false)
+        private set
+    var qwenVoices by mutableStateOf<List<ClonedVoice>>(emptyList())
+        private set
+    var qwenVoicesLoading by mutableStateOf(false)
         private set
     var voiceTab by mutableStateOf(TtsProvider.EDGE)
         private set
@@ -652,6 +659,29 @@ class AppViewModel(
 
     fun toggleQwenKeyVisibility() {
         showQwenKey = !showQwenKey
+    }
+
+    /** Opens the voice picker and fetches the account's cloned voices for it. */
+    fun openQwenVoicePicker() {
+        if (qwenApiKey.isBlank()) {
+            message = "Bitte zuerst den Alibaba-Schlüssel hinterlegen."
+            return
+        }
+        sheet = AppSheet.QWEN_VOICE
+        qwenVoicesLoading = true
+        viewModelScope.launch {
+            qwenVoices = qwenVoiceDirectory.list(qwenApiKey)
+            qwenVoicesLoading = false
+            if (qwenVoices.isEmpty()) {
+                message = "Keine geklonten Stimmen gefunden."
+            }
+        }
+    }
+
+    fun selectQwenVoice(voice: ClonedVoice) {
+        qwenVoiceId = voice.id
+        settings.qwenTtsVoiceId = voice.id
+        sheet = null
     }
 
     fun updateVoiceTab(provider: TtsProvider) {
@@ -1244,6 +1274,7 @@ class AppViewModel(
         sessionStartJob = null
         authManager.cancelQuestionGeneration()
         previewTts.shutdown()
+        qwenVoiceDirectory.shutdown()
         super.onCleared()
     }
 

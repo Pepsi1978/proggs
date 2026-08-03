@@ -1355,7 +1355,12 @@ fun SettingsScreen(
                     showChevron = true,
                 )
                 if (activeProvider == TtsProvider.QWEN_CLONE) {
-                    SettingRow("Stimme", "Deine geklonte Stimme")
+                    SettingRow(
+                        "Stimme",
+                        qwenVoiceLabel(viewModel.qwenVoiceId),
+                        onClick = viewModel::openQwenVoicePicker,
+                        showChevron = true,
+                    )
                 } else {
                     SettingRow(
                         "Stimme",
@@ -1571,6 +1576,12 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
         SectionLabel(title, Modifier.padding(bottom = 10.dp), decorated = true)
         PmCard(Modifier.fillMaxWidth()) { Column { content() } }
     }
+}
+
+/** Shows the readable part of a cloned voice id, e.g. `franklang`, instead of the full id. */
+private fun qwenVoiceLabel(voiceId: String): String = when {
+    voiceId.isBlank() -> "Noch keine gewählt"
+    else -> Regex("^qwen-tts-vc-(.+?)-voice-").find(voiceId)?.groupValues?.get(1) ?: voiceId
 }
 
 @Composable

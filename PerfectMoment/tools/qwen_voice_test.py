@@ -161,24 +161,22 @@ def preflight(key: str, base: str) -> None:
     log("Vorabprüfung bestanden (Schlüssel und Region stimmen).")
 
 
-def enroll_voice(key: str, base: str) -> str:
-    """Registers the reference recording once and returns the voice id."""
-    if VOICE_ID_FILE.exists():
-        voice_id = VOICE_ID_FILE.read_text(encoding="utf-8").strip()
-        if voice_id:
-            log(f"Vorhandene Stimme wird benutzt: {voice_id}")
-            return voice_id
-
-    if not REFERENCE_AUDIO.exists():
-        log(f"FEHLER: Referenzaufnahme nicht gefunden: {REFERENCE_AUDIO}")
+def enroll_voice_from(
+    audio_path: pathlib.Path,
+    key: str,
+    base: str,
+    preferred_name: str = PREFERRED_NAME,
+) -> str:
+    """Registers any recording and returns its voice id. Caches nothing."""
+    if not audio_path.exists():
+        log(f"FEHLER: Referenzaufnahme nicht gefunden: {audio_path}")
         sys.exit(1)
 
-    raw = REFERENCE_AUDIO.read_bytes()
-    mime = mimetypes.guess_type(REFERENCE_AUDIO.name)[0] or "audio/wav"
-    log(f"Registriere Stimme aus {REFERENCE_AUDIO.name} ({len(raw) / 1024:.0f} KB, {mime}) …")
+    raw = audio_path.read_bytes()
+    mime = mimetypes.guess_type(audio_path.name)[0] or "audio/wav"
+    log(f"  {audio_path.name}: {len(raw) / 1024:.0f} KB, {mime}")
 
     data_uri = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
-    started = time.perf_counter()
     result = post(
         f"{base}/services/audio/tts/customization",
         {
@@ -186,23 +184,35 @@ def enroll_voice(key: str, base: str) -> str:
             "input": {
                 "action": "create",
                 "target_model": TARGET_MODEL,
-                "preferred_name": PREFERRED_NAME,
+                "preferred_name": preferred_name,
                 "audio": {"data": data_uri},
             },
         },
         key,
     )
-    elapsed = time.perf_counter() - started
 
     voice_id = result.get("output", {}).get("voice")
     if not voice_id:
         log("Unerwartete Antwort beim Registrieren:")
         log(json.dumps(result, ensure_ascii=False, indent=2)[:1500])
         sys.exit(1)
+    return voice_id
 
+
+def enroll_voice(key: str, base: str) -> str:
+    """Registers the default reference recording once and remembers the voice id."""
+    if VOICE_ID_FILE.exists():
+        voice_id = VOICE_ID_FILE.read_text(encoding="utf-8").strip()
+        if voice_id:
+            log(f"Vorhandene Stimme wird benutzt: {voice_id}")
+            return voice_id
+
+    log("Registriere Stimme …")
+    started = time.perf_counter()
+    voice_id = enroll_voice_from(REFERENCE_AUDIO, key, base)
     SK_DIR.mkdir(parents=True, exist_ok=True)
     VOICE_ID_FILE.write_text(voice_id, encoding="utf-8")
-    log(f"Stimme registriert in {elapsed:.1f} s: {voice_id}")
+    log(f"Stimme registriert in {time.perf_counter() - started:.1f} s: {voice_id}")
     log(f"(gemerkt in {VOICE_ID_FILE})")
     return voice_id
 

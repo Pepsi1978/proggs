@@ -258,6 +258,15 @@ private fun AppBottomSheet(
                             }
                         },
                     )
+                    AppSheet.QWEN_VOICE -> OptionSheet(
+                        if (viewModel.qwenVoicesLoading) "Stimmen werden geladen …" else "Meine Stimmen",
+                        viewModel.qwenVoices.map { voice ->
+                            OptionRow(
+                                "${voice.name}  ·  ${voice.createdAt}",
+                                viewModel.qwenVoiceId == voice.id,
+                            ) { viewModel.selectQwenVoice(voice) }
+                        },
+                    )
                     AppSheet.MODEL -> OptionSheet(
                         "Modell",
                         CodexModel.entries.map { value ->
