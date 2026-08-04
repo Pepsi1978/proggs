@@ -168,6 +168,16 @@ class MainActivity : FragmentActivity() {
     override fun onPostResume() {
         super.onPostResume()
         promptUnlock()
+        releaseSilenceWithoutSession()
+    }
+
+    /**
+     * Second safety net for do-not-disturb: whenever the app is in front without a session
+     * reading, nothing may be silenced. Catches the cases the service's own cleanup missed.
+     */
+    private fun releaseSilenceWithoutSession() {
+        if (container.sessionController.runtime.value != null) return
+        SessionSilence(this).restore()
     }
 
     // Ohne diese Systemfreigabe darf keine App die Benachrichtigungstöne anderer Apps stummschalten.
