@@ -1767,7 +1767,11 @@ private fun hookDisplayColor(hook: HookEntity, dark: Boolean): Color = when (hoo
 }
 
 @Composable
-fun HookEditorScreen(viewModel: AppViewModel) {
+fun HookEditorScreen(
+    viewModel: AppViewModel,
+    microphonePermissionGranted: Boolean,
+    requestMicrophonePermission: () -> Unit,
+) {
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Aufhänger bearbeiten", viewModel::back, titleSize = 24)
@@ -1789,6 +1793,18 @@ fun HookEditorScreen(viewModel: AppViewModel) {
                 modifier = Modifier.fillMaxWidth().height(140.dp),
                 textSize = 16,
                 radius = 26,
+            )
+            RecorderControl(
+                state = if (viewModel.recordingTarget == RecordingTarget.HOOK) viewModel.recordingState else RecordingState.IDLE,
+                message = viewModel.recordingMessage,
+                onClick = {
+                    viewModel.onMicTapped(
+                        RecordingTarget.HOOK,
+                        microphonePermissionGranted,
+                        requestMicrophonePermission,
+                    )
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -64,7 +64,7 @@ enum class AppScreen {
 
 enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, QWEN_VOICE }
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
-enum class RecordingTarget { START, INTRO }
+enum class RecordingTarget { START, INTRO, HOOK }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
 enum class HistorySort(val label: String) {
     MOST_USED("Am häufigsten"),
@@ -949,6 +949,8 @@ class AppViewModel(
     }
 
     fun saveHook() {
+        // Leaving the editor without the back button must not keep the microphone open.
+        cancelVoiceInput()
         if (hookEditorEmoji.isBlank() || hookEditorText.isBlank()) {
             message = "Emoji und Aufhängertext dürfen nicht leer sein."
             return
@@ -968,6 +970,7 @@ class AppViewModel(
     }
 
     fun deleteHook() {
+        cancelVoiceInput()
         val hook = hooks.firstOrNull { it.id == hookEditorId } ?: run {
             screen = AppScreen.HOOKS
             return
@@ -1165,10 +1168,10 @@ class AppViewModel(
                 if (generation != recordingGeneration) return@launch
                 if (transcript.isBlank()) {
                     recordingMessage = "Ich habe nichts verstanden."
-                } else if (target == RecordingTarget.START) {
-                    updateTopic(appendDictation(topic, transcript))
-                } else {
-                    updateIntroText(appendDictation(introText, transcript))
+                } else when (target) {
+                    RecordingTarget.START -> updateTopic(appendDictation(topic, transcript))
+                    RecordingTarget.INTRO -> updateIntroText(appendDictation(introText, transcript))
+                    RecordingTarget.HOOK -> updateHookText(appendDictation(hookEditorText, transcript))
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -1190,6 +1193,7 @@ class AppViewModel(
     private fun isRecordingTargetVisible(target: RecordingTarget): Boolean = when (target) {
         RecordingTarget.START -> screen == AppScreen.START && sheet == null
         RecordingTarget.INTRO -> screen == AppScreen.SESSION && introVisible && sheet == AppSheet.INTRO
+        RecordingTarget.HOOK -> screen == AppScreen.HOOK_EDITOR && sheet == null
     }
 
     private fun cancelVoiceInput() {

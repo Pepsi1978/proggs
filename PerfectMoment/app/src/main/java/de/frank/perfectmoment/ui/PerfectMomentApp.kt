@@ -150,7 +150,11 @@ fun PerfectMomentApp(
                     AppScreen.HISTORY_DETAIL -> HistoryDetailScreen(viewModel)
                     AppScreen.SETTINGS -> SettingsScreen(viewModel, appLockEnabled, toggleAppLock)
                     AppScreen.HOOKS -> HooksScreen(viewModel)
-                    AppScreen.HOOK_EDITOR -> HookEditorScreen(viewModel)
+                    AppScreen.HOOK_EDITOR -> HookEditorScreen(
+                        viewModel,
+                        microphonePermissionGranted,
+                        requestMicrophonePermission,
+                    )
                     AppScreen.SKILLS -> SkillsScreen(viewModel)
                     AppScreen.SKILL_EDITOR -> SkillEditorScreen(viewModel)
                     AppScreen.VOICE -> VoiceScreen(viewModel)
