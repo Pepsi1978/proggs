@@ -196,6 +196,7 @@ class SessionController(
             questions = questions,
             refillPort = newRefillPort(requestBase, entranceQuestion),
             persistencePort = newPersistencePort(sourceSessionId),
+            voice = SessionVoice.of(source.session),
         )
         startForegroundSessionService()
         perspectiveQuestions != null
@@ -240,6 +241,7 @@ class SessionController(
                     source.session.resumeRemainingMs ?: config.initialRemainingMs
                 },
             ),
+            voice = SessionVoice.of(source.session),
         )
         startForegroundSessionService()
     }
@@ -289,12 +291,13 @@ class SessionController(
         persistencePort: QuestionPersistencePort,
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
+        voice: SessionVoice? = null,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
             initialQuestions = questions,
             config = runtime.config,
-            ttsPort = TtsAdapter(ttsManager),
+            ttsPort = TtsAdapter(ttsManager, voice),
             refillPort = refillPort,
             persistencePort = persistencePort,
             coroutineScope = scope,
@@ -432,7 +435,14 @@ class SessionController(
         _runtime.value = null
     }
 
-    private class TtsAdapter(private val manager: TtsManager) : SessionTtsPort {
+    /**
+     * [voice] is the voice a single history entry was given. It is null for a fresh session,
+     * which then follows the settings as before.
+     */
+    private class TtsAdapter(
+        private val manager: TtsManager,
+        private val voice: SessionVoice? = null,
+    ) : SessionTtsPort {
         override fun speak(text: String, listener: SessionTtsPort.Listener, varied: Boolean) {
             manager.speak(
                 text = text,
@@ -440,6 +450,8 @@ class SessionController(
                 onComplete = listener::onComplete,
                 onError = listener::onError,
                 varied = varied,
+                providerOverride = voice?.provider,
+                voiceOverride = voice?.voiceId,
             )
         }
 

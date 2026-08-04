@@ -68,7 +68,17 @@ enum class AppScreen {
     RAW_DATA,
 }
 
-enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, HOOK_ICON }
+enum class AppSheet {
+    PAUSES,
+    REPETITIONS,
+    DURATION,
+    PROVIDER,
+    MODEL,
+    REASONING,
+    INTRO,
+    HOOK_ICON,
+    HISTORY_VOICE,
+}
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
 
 /** Where the recording of a voice sample stands: waiting, running, or being registered. */
@@ -1146,6 +1156,48 @@ class AppViewModel(
         randomReplay = !randomReplay
     }
 
+    /** Opens the picker for the voice this one history entry always plays with. */
+    fun openHistoryVoicePicker() {
+        sheet = AppSheet.HISTORY_VOICE
+        if (qwenApiKey.isNotBlank() && qwenVoices.isEmpty()) refreshQwenVoices()
+    }
+
+    fun selectHistoryVoice(provider: TtsProvider, voiceId: String) {
+        val sessionId = historyDetail?.session?.id ?: return
+        sheet = null
+        viewModelScope.launch {
+            sessionRepository.setVoiceOverride(sessionId, provider.id, voiceId)
+            historyDetail = sessionRepository.getSession(sessionId)
+        }
+    }
+
+    /** Lets the entry follow the global setting again. */
+    fun clearHistoryVoice() {
+        val sessionId = historyDetail?.session?.id ?: return
+        sheet = null
+        viewModelScope.launch {
+            sessionRepository.setVoiceOverride(sessionId, "", "")
+            historyDetail = sessionRepository.getSession(sessionId)
+        }
+    }
+
+    /** What the detail view shows as the assigned voice. */
+    val historyVoiceLabel: String
+        get() {
+            val session = historyDetail?.session ?: return WITH_SETTINGS_VOICE
+            val provider = TtsProvider.entries.firstOrNull { it.id == session.voiceProviderOverride }
+                ?: return WITH_SETTINGS_VOICE
+            val voiceId = session.voiceOverride.ifBlank { return WITH_SETTINGS_VOICE }
+            val name = when (provider) {
+                TtsProvider.QWEN_CLONE -> voiceNames[voiceId]
+                    ?: qwenVoices.firstOrNull { it.id == voiceId }?.name
+                    ?: voiceId
+                else -> (TtsCatalog.edgeVoices + TtsCatalog.googleVoices)
+                    .firstOrNull { it.id == voiceId }?.name ?: voiceId
+            }
+            return "$name · ${provider.label}"
+        }
+
     fun replayHistory() {
         val id = historyDetail?.session?.id ?: return
         startReplay(id, randomReplay)
@@ -1576,6 +1628,7 @@ class AppViewModel(
         /** Alibaba takes at most 60 seconds of reference audio. */
         private const val MAX_SAMPLE_SECONDS = 58
         private const val MIN_SAMPLE_SECONDS = 10
+        const val WITH_SETTINGS_VOICE = "Wie in den Einstellungen"
         private const val VOICE_SAMPLE_TOPIC =
             "Eine Sprachprobe: ruhige, warme Fragen, die ich mir selbst laut vorlese, " +
                 "damit meine Stimme aufgenommen werden kann."

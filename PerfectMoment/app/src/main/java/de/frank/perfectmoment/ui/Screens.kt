@@ -54,6 +54,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Edit
@@ -1249,6 +1250,26 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), compact = true)
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)
                         ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), compact = true)
+                    }
+                    PmCard(
+                        Modifier.fillMaxWidth().padding(top = 12.dp)
+                            .pmClickable(shape = RoundedCornerShape(32.dp), lift = true) {
+                                viewModel.openHistoryVoicePicker()
+                            },
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Stimme für diesen Verlauf", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+                                Text(
+                                    viewModel.historyVoiceLabel,
+                                    color = colors.text3,
+                                    fontFamily = Inter,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 3.dp),
+                                )
+                            }
+                            Icon(Icons.Outlined.ChevronRight, null, tint = colors.text3, modifier = Modifier.size(20.dp))
+                        }
                     }
                     PmCard(
                         Modifier.fillMaxWidth().padding(top = 12.dp)

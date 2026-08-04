@@ -64,6 +64,7 @@ import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.session.SessionRuntime
 import de.frank.perfectmoment.session.SessionState
+import de.frank.perfectmoment.tts.TtsCatalog
 import de.frank.perfectmoment.tts.TtsProvider
 import de.frank.perfectmoment.ui.theme.BreathingBackground
 import de.frank.perfectmoment.ui.theme.Inter
@@ -292,6 +293,7 @@ private fun AppBottomSheet(
                         requestMicrophonePermission,
                     )
                     AppSheet.HOOK_ICON -> HookIconSheet(viewModel)
+                    AppSheet.HISTORY_VOICE -> HistoryVoiceSheet(viewModel)
                 }
             }
         }
@@ -401,12 +403,62 @@ private fun HookIconSheet(viewModel: AppViewModel) {
     }
 }
 
+/**
+ * The voice one history entry always plays with.
+ *
+ * Every voice the app knows appears here, own clones first, so a sleep routine can be tied to a
+ * soft voice while the settings keep serving everything else.
+ */
+@Composable
+private fun HistoryVoiceSheet(viewModel: AppViewModel) {
+    val session = viewModel.historyDetail?.session
+    val chosenProvider = session?.voiceProviderOverride.orEmpty()
+    val chosenVoice = session?.voiceOverride.orEmpty()
+    val follows = chosenProvider.isBlank() || chosenVoice.isBlank()
+    val rows = buildList {
+        add(OptionRow(AppViewModel.WITH_SETTINGS_VOICE, follows) { viewModel.clearHistoryVoice() })
+        viewModel.qwenVoices.forEach { voice ->
+            add(
+                OptionRow(
+                    "${viewModel.voiceTitle(voice)}  ·  Meine Stimme",
+                    !follows && chosenProvider == TtsProvider.QWEN_CLONE.id && chosenVoice == voice.id,
+                ) { viewModel.selectHistoryVoice(TtsProvider.QWEN_CLONE, voice.id) },
+            )
+        }
+        TtsCatalog.edgeVoices.forEach { voice ->
+            add(
+                OptionRow(
+                    "${voice.name}  ·  Microsoft Edge",
+                    !follows && chosenProvider == TtsProvider.EDGE.id && chosenVoice == voice.id,
+                ) { viewModel.selectHistoryVoice(TtsProvider.EDGE, voice.id) },
+            )
+        }
+        TtsCatalog.googleVoices.forEach { voice ->
+            add(
+                OptionRow(
+                    "${voice.name}  ·  Google Chirp 3 HD",
+                    !follows && chosenProvider == TtsProvider.GOOGLE_CLOUD.id && chosenVoice == voice.id,
+                ) { viewModel.selectHistoryVoice(TtsProvider.GOOGLE_CLOUD, voice.id) },
+            )
+        }
+    }
+    SectionLabel("Stimme für diesen Verlauf", Modifier.padding(start = 8.dp, bottom = 12.dp), decorated = true)
+    Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+        OptionRows(rows)
+    }
+}
+
 private data class OptionRow(val label: String, val selected: Boolean, val onClick: () -> Unit)
 
 @Composable
 private fun OptionSheet(title: String, rows: List<OptionRow>) {
-    val colors = LocalPmColors.current
     SectionLabel(title, Modifier.padding(start = 8.dp, bottom = 12.dp), decorated = true)
+    OptionRows(rows)
+}
+
+@Composable
+private fun OptionRows(rows: List<OptionRow>) {
+    val colors = LocalPmColors.current
     rows.forEachIndexed { index, row ->
         Row(
             Modifier.fillMaxWidth().height(58.dp).drawWithCache {

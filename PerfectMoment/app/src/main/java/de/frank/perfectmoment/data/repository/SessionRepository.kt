@@ -21,7 +21,7 @@ interface SessionRepository {
     suspend fun clearProgress(sessionId: Long)
     suspend fun markPlayed(sessionId: Long)
     suspend fun setSummary(sessionId: Long, summary: String)
-    suspend fun setVoice(sessionId: Long, voiceName: String, providerId: String)
+    suspend fun setVoiceOverride(sessionId: Long, providerId: String, voiceId: String)
     suspend fun deleteSession(sessionId: Long): Boolean
 }
 
@@ -95,8 +95,8 @@ class RoomSessionRepository(
     override suspend fun setSummary(sessionId: Long, summary: String) =
         sessionDao.updateSummary(sessionId, summary)
 
-    override suspend fun setVoice(sessionId: Long, voiceName: String, providerId: String) =
-        sessionDao.updateVoice(sessionId, voiceName, providerId)
+    override suspend fun setVoiceOverride(sessionId: Long, providerId: String, voiceId: String) =
+        sessionDao.updateVoiceOverride(sessionId, providerId, voiceId)
 
     override suspend fun deleteSession(sessionId: Long): Boolean =
         sessionDao.deleteSession(sessionId) > 0

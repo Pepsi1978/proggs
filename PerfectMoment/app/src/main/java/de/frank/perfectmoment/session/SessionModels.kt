@@ -1,5 +1,8 @@
 package de.frank.perfectmoment.session
 
+import de.frank.perfectmoment.data.local.SessionEntity
+import de.frank.perfectmoment.tts.TtsProvider
+
 data class Question(
     val id: Long = 0,
     val emoji: String = EmojiParser.FALLBACK_EMOJI,
@@ -96,4 +99,21 @@ fun interface SessionClock {
 
 object MonotonicSessionClock : SessionClock {
     override fun nowMillis(): Long = System.nanoTime() / 1_000_000L
+}
+
+/**
+ * The voice a saved history entry always plays with, chosen in its detail view.
+ *
+ * Without one the session follows the global setting, exactly as before — a sleep routine can
+ * therefore keep a soft voice while everything else stays on the everyday one.
+ */
+data class SessionVoice(val provider: TtsProvider, val voiceId: String) {
+    companion object {
+        fun of(session: SessionEntity): SessionVoice? {
+            if (session.voiceProviderOverride.isBlank() || session.voiceOverride.isBlank()) return null
+            val provider = TtsProvider.entries.firstOrNull { it.id == session.voiceProviderOverride }
+                ?: return null
+            return SessionVoice(provider, session.voiceOverride)
+        }
+    }
 }

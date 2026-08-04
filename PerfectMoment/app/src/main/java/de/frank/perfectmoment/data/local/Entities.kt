@@ -32,6 +32,9 @@ data class SessionEntity(
     @ColumnInfo(defaultValue = "0") val lastPlayedAt: Long = startedAt,
     /** The short title the history list shows instead of the whole wish. Empty until written. */
     @ColumnInfo(defaultValue = "") val summary: String = "",
+    /** The voice this entry always plays with. Empty means the one from the settings. */
+    @ColumnInfo(defaultValue = "") val voiceProviderOverride: String = "",
+    @ColumnInfo(defaultValue = "") val voiceOverride: String = "",
 )
 
 @Entity(
