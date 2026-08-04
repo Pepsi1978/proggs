@@ -61,7 +61,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -578,23 +577,28 @@ fun ParameterIconCard(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
     busy: Boolean = false,
     tint: Color? = null,
     radius: Int = 28,
+    horizontalPadding: Int = 12,
 ) {
     val colors = LocalPmColors.current
+    // Deliberately never dimmed: the tile sits next to Pause, Wdh. and Dauer and has to look
+    // exactly like them. A missing wish is answered with a hint, not with a greyed-out tile.
     PmCard(
         modifier.pmClickable(
-            enabled = enabled && !busy,
+            enabled = !busy,
             shape = RoundedCornerShape(radius.dp),
             lift = true,
             onClick = onClick,
-        ).alpha(if (enabled) 1f else 0.45f),
+        ),
         radius = radius,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = horizontalPadding.dp,
+                vertical = 14.dp,
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -608,6 +612,8 @@ fun ParameterIconCard(
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Matches the height of the 18sp value the neighbouring tiles show, so all four
+            // cards in the row end up the same size.
             Box(
                 Modifier.fillMaxWidth().padding(top = 4.dp).height(22.dp),
                 contentAlignment = Alignment.Center,
@@ -618,7 +624,7 @@ fun ParameterIconCard(
                     Icon(
                         icon,
                         contentDescription,
-                        tint = tint ?: colors.gold,
+                        tint = tint ?: colors.text1,
                         modifier = Modifier.size(21.dp),
                     )
                 }

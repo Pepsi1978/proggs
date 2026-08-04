@@ -375,9 +375,9 @@ fun StartScreen(
                         if (undoable) viewModel.undoTopicImprovement() else viewModel.improveTopic()
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = viewModel.topic.isNotBlank(),
                     busy = viewModel.topicImproving,
                     radius = 32,
+                    horizontalPadding = 4,
                 )
             }
             Row(
