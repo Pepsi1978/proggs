@@ -368,8 +368,9 @@ class AppViewModel(
         if (uri == null) return
         runFileAction {
             val summary = container.backupRepository.restoreFromFile(uri)
+            val voiceHint = adoptRestoredVoiceProfiles()
             "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, " +
-                "${summary.sessions} neue Sitzungen"
+                "${summary.sessions} neue Sitzungen$voiceHint"
         }
     }
 
@@ -405,11 +406,27 @@ class AppViewModel(
 
     fun restoreNow() = runBackupAction { repository ->
         val summary = repository.restoreNow()
+        val voiceHint = adoptRestoredVoiceProfiles()
         if (summary.sessions == 0 && summary.skills == 0 && summary.hooks == 0) {
             "Die Sicherung war leer."
         } else {
-            "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, ${summary.sessions} neue Sitzungen"
+            "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, " +
+                "${summary.sessions} neue Sitzungen$voiceHint"
         }
+    }
+
+    /**
+     * Takes over what a restore just wrote, so the voices show up without a restart, and returns
+     * the hint to append when the account key is still missing on this device.
+     */
+    private fun adoptRestoredVoiceProfiles(): String {
+        voiceNames = settings.qwenVoiceNames
+        qwenVoiceId = settings.qwenTtsVoiceId
+        ttsProvider = settings.ttsProvider
+        if (voiceNames.isEmpty()) return ""
+        if (qwenApiKey.isNotBlank()) return " Deine eigenen Stimmen sind wieder da."
+        return " Deine eigenen Stimmen sind wieder da — trage in den Einstellungen noch den " +
+            "Alibaba-Schlüssel ein, damit sie sprechen können."
     }
 
     fun disconnectDrive() {

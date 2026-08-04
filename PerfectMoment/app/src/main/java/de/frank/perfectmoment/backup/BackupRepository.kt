@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import de.frank.perfectmoment.data.local.PerfectMomentDatabase
 import de.frank.perfectmoment.data.local.QuestionEntity
+import de.frank.perfectmoment.data.settings.SecureSettings
+import de.frank.perfectmoment.tts.TtsProvider
 import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 
@@ -17,6 +19,7 @@ import okhttp3.OkHttpClient
 class BackupRepository(
     private val context: Context,
     private val database: PerfectMomentDatabase,
+    private val settings: SecureSettings,
     http: OkHttpClient,
 ) {
 
@@ -81,10 +84,16 @@ class BackupRepository(
             hooks = hooks,
             skills = skills,
             sessions = sessions,
+            voiceProfiles = VoiceProfiles(
+                names = settings.qwenVoiceNames,
+                selectedVoiceId = settings.qwenTtsVoiceId,
+                providerId = settings.ttsProvider,
+            ),
         )
     }
 
     private suspend fun apply(payload: BackupPayload): Summary {
+        restoreVoiceProfiles(payload.voiceProfiles)
         payload.hooks.forEach { database.hookDao().upsertHook(it) }
         payload.skills.forEach { database.skillDao().upsertSkill(it) }
 
@@ -109,5 +118,23 @@ class BackupRepository(
             }
         }
         return Summary(payload.hooks.size, payload.skills.size, restoredSessions)
+    }
+
+    /**
+     * Brings the own voices over. Names merge, so a title given on this phone is never lost, and
+     * an existing choice stays — only a device without one adopts the backup's.
+     */
+    private fun restoreVoiceProfiles(profiles: VoiceProfiles) {
+        if (profiles.names.isNotEmpty()) {
+            settings.qwenVoiceNames = profiles.names + settings.qwenVoiceNames
+        }
+        if (settings.qwenTtsVoiceId.isBlank() && profiles.selectedVoiceId.isNotBlank()) {
+            settings.qwenTtsVoiceId = profiles.selectedVoiceId
+            // Only follow the backup into the cloned provider once the key is there as well,
+            // otherwise the app would start with a voice it cannot speak with.
+            if (profiles.providerId == TtsProvider.QWEN_CLONE.id && settings.qwenTtsApiKey.isNotBlank()) {
+                settings.ttsProvider = profiles.providerId
+            }
+        }
     }
 }

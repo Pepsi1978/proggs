@@ -17,6 +17,19 @@ import org.json.JSONObject
  * [dataVersion] counts up with every save. Before overwriting the copy in Drive the app compares
  * it, so a second device cannot silently discard newer data.
  */
+/**
+ * The own cloned voices as they travel to another phone.
+ *
+ * Only names and the choice — the recordings themselves live in the Model Studio account and are
+ * fetched from there. The account key stays on the device on purpose and is typed in once on the
+ * new phone, so no secret is ever written to Drive.
+ */
+data class VoiceProfiles(
+    val names: Map<String, String> = emptyMap(),
+    val selectedVoiceId: String = "",
+    val providerId: String = "",
+)
+
 data class BackupPayload(
     val dataVersion: Long,
     val createdAt: Long,
@@ -24,6 +37,7 @@ data class BackupPayload(
     val hooks: List<HookEntity>,
     val skills: List<SkillEntity>,
     val sessions: List<SessionWithQuestions>,
+    val voiceProfiles: VoiceProfiles = VoiceProfiles(),
 ) {
 
     fun toJson(): String = JSONObject().apply {
@@ -83,6 +97,8 @@ data class BackupPayload(
                             put("playCount", session.playCount)
                             put("lastPlayedAt", session.lastPlayedAt)
                             put("summary", session.summary)
+                            put("voiceProviderOverride", session.voiceProviderOverride)
+                            put("voiceOverride", session.voiceOverride)
                             put(
                                 "questions",
                                 JSONArray().apply {
@@ -101,6 +117,13 @@ data class BackupPayload(
                     )
                 }
             },
+        )
+        put(
+            "voiceProfiles",
+            JSONObject()
+                .put("names", JSONObject(voiceProfiles.names.toMap<String, Any>()))
+                .put("selectedVoiceId", voiceProfiles.selectedVoiceId)
+                .put("providerId", voiceProfiles.providerId),
         )
     }.toString()
 
@@ -146,6 +169,8 @@ data class BackupPayload(
                     playCount = item.optInt("playCount", 1),
                     lastPlayedAt = item.optLong("lastPlayedAt", item.optLong("startedAt")),
                     summary = item.optString("summary"),
+                    voiceProviderOverride = item.optString("voiceProviderOverride"),
+                    voiceOverride = item.optString("voiceOverride"),
                 )
                 val questions = item.optJSONArray("questions").map { entry ->
                     QuestionEntity(
@@ -157,6 +182,8 @@ data class BackupPayload(
                 }
                 SessionWithQuestions(session, questions)
             }
+            val voices = root.optJSONObject("voiceProfiles")
+            val names = voices?.optJSONObject("names")
             BackupPayload(
                 dataVersion = root.optLong("dataVersion"),
                 createdAt = root.optLong("createdAt"),
@@ -164,6 +191,14 @@ data class BackupPayload(
                 hooks = hooks,
                 skills = skills,
                 sessions = sessions,
+                voiceProfiles = VoiceProfiles(
+                    names = names?.keys()?.asSequence()
+                        ?.associateWith { names.optString(it) }
+                        ?.filterValues(String::isNotBlank)
+                        .orEmpty(),
+                    selectedVoiceId = voices?.optString("selectedVoiceId").orEmpty(),
+                    providerId = voices?.optString("providerId").orEmpty(),
+                ),
             )
         }.getOrNull()
 

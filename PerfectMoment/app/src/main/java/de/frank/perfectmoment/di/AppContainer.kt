@@ -18,7 +18,7 @@ import okhttp3.OkHttpClient
 class AppContainer(application: Application) {
     val database = PerfectMomentDatabase.getInstance(application)
     val settings = SecureSettings(application)
-    val backupRepository = BackupRepository(application, database, OkHttpClient())
+    val backupRepository = BackupRepository(application, database, settings, OkHttpClient())
 
     /** Läuft solange die App lebt — die Sicherung soll nicht an einen Bildschirm gebunden sein. */
     private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
