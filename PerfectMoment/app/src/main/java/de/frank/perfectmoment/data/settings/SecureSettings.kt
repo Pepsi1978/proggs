@@ -8,6 +8,8 @@ import java.io.Closeable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONException
+import org.json.JSONObject
 
 class SecureSettings(context: Context) : Closeable {
     private val appContext = context.applicationContext
@@ -72,6 +74,26 @@ class SecureSettings(context: Context) : Closeable {
     var qwenTtsVoiceId: String
         get() = readString(Keys.QWEN_TTS_VOICE_ID, Defaults.QWEN_TTS_VOICE_ID)
         set(value) = writeString(Keys.QWEN_TTS_VOICE_ID, value)
+
+    /**
+     * The names given to cloned voices in the app, keyed by voice id.
+     *
+     * Alibaba bakes the name into the id when a voice is created and offers no way to change it
+     * afterwards, so a renamed voice keeps its own title here instead.
+     */
+    var qwenVoiceNames: Map<String, String>
+        get() {
+            val stored = readString(Keys.QWEN_VOICE_NAMES, "")
+            if (stored.isBlank()) return emptyMap()
+            return try {
+                val json = JSONObject(stored)
+                json.keys().asSequence().associateWith { json.optString(it) }
+                    .filterValues(String::isNotBlank)
+            } catch (error: JSONException) {
+                emptyMap()
+            }
+        }
+        set(value) = writeString(Keys.QWEN_VOICE_NAMES, JSONObject(value.toMap<String, Any>()).toString())
 
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
@@ -208,6 +230,7 @@ class SecureSettings(context: Context) : Closeable {
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
         const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
+        const val QWEN_VOICE_NAMES = "qwen_voice_names"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"

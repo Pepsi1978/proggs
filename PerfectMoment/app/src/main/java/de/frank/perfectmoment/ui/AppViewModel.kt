@@ -213,6 +213,16 @@ class AppViewModel(
         private set
     var voiceRecorderName by mutableStateOf("")
         private set
+    var voiceNames by mutableStateOf(settings.qwenVoiceNames)
+        private set
+    var renamedVoiceId by mutableStateOf<String?>(null)
+        private set
+    var renameVoiceText by mutableStateOf("")
+        private set
+    var voiceToDelete by mutableStateOf<ClonedVoice?>(null)
+        private set
+    var voiceBusy by mutableStateOf(false)
+        private set
     var voiceRecorderQuestions by mutableStateOf<List<String>>(emptyList())
         private set
     var voiceRecorderQuestionsLoading by mutableStateOf(false)
@@ -710,6 +720,74 @@ class AppViewModel(
         settings.qwenTtsVoiceId = voice.id
     }
 
+    /** The title a voice carries in the app: the renamed one, else the one Alibaba baked in. */
+    fun voiceTitle(voice: ClonedVoice): String = voiceNames[voice.id] ?: voice.name
+
+    /** What the settings row shows for the chosen cloned voice. */
+    val selectedQwenVoiceTitle: String
+        get() = voiceNames[qwenVoiceId] ?: qwenVoices.firstOrNull { it.id == qwenVoiceId }?.name ?: ""
+
+    fun startRenamingVoice(voice: ClonedVoice) {
+        renamedVoiceId = voice.id
+        renameVoiceText = voiceTitle(voice)
+    }
+
+    fun updateRenameVoiceText(value: String) {
+        renameVoiceText = value
+    }
+
+    fun cancelRenamingVoice() {
+        renamedVoiceId = null
+        renameVoiceText = ""
+    }
+
+    fun confirmRenamingVoice() {
+        val voiceId = renamedVoiceId ?: return
+        val title = renameVoiceText.trim()
+        if (title.isBlank()) {
+            message = "Der Name darf nicht leer sein."
+            return
+        }
+        voiceNames = voiceNames + (voiceId to title)
+        settings.qwenVoiceNames = voiceNames
+        cancelRenamingVoice()
+    }
+
+    fun askToDeleteVoice(voice: ClonedVoice) {
+        voiceToDelete = voice
+    }
+
+    fun cancelDeletingVoice() {
+        voiceToDelete = null
+    }
+
+    /** Removes the voice at Alibaba — there is no undo, hence the confirmation before this. */
+    fun confirmDeletingVoice() {
+        val voice = voiceToDelete ?: return
+        voiceToDelete = null
+        voiceBusy = true
+        viewModelScope.launch {
+            try {
+                qwenVoiceEnrollment.delete(qwenApiKey, voice.id)
+                voiceNames = voiceNames - voice.id
+                settings.qwenVoiceNames = voiceNames
+                if (qwenVoiceId == voice.id) {
+                    qwenVoiceId = ""
+                    settings.qwenTtsVoiceId = ""
+                    disableQwenIfIncomplete()
+                }
+                message = "Die Stimme „${voiceTitle(voice)}“ wurde gelöscht."
+                refreshQwenVoices()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                message = error.message ?: "Die Stimme konnte nicht gelöscht werden."
+            } finally {
+                voiceBusy = false
+            }
+        }
+    }
+
     /** Opens the recorder that turns a fresh recording into a new cloned voice. */
     fun openVoiceRecorder() {
         if (qwenApiKey.isBlank()) {
@@ -828,6 +906,9 @@ class AppViewModel(
                 val voiceId = qwenVoiceEnrollment.create(qwenApiKey, name, wav)
                 qwenVoiceId = voiceId
                 settings.qwenTtsVoiceId = voiceId
+                // Alibaba keeps only letters and digits of the name, so the typed one is kept here.
+                voiceNames = voiceNames + (voiceId to name)
+                settings.qwenVoiceNames = voiceNames
                 screen = AppScreen.MY_VOICES
                 refreshQwenVoices()
                 message = "Die Stimme „$name“ ist fertig und ausgewählt."

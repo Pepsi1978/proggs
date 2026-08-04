@@ -1352,7 +1352,7 @@ fun SettingsScreen(
                 if (activeProvider == TtsProvider.QWEN_CLONE) {
                     SettingRow(
                         "Stimme",
-                        qwenVoiceLabel(viewModel.qwenVoiceId),
+                        viewModel.selectedQwenVoiceTitle.ifBlank { qwenVoiceLabel(viewModel.qwenVoiceId) },
                         onClick = viewModel::openQwenVoicePicker,
                         showChevron = true,
                     )

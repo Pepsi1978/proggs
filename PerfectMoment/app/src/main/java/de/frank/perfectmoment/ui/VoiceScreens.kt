@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Icon
@@ -30,7 +32,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.perfectmoment.tts.ClonedVoice
@@ -105,7 +109,7 @@ fun MyVoicesScreen(viewModel: AppViewModel) {
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                voice.name,
+                                viewModel.voiceTitle(voice),
                                 color = colors.text1,
                                 fontFamily = Inter,
                                 fontWeight = FontWeight.Medium,
@@ -119,9 +123,92 @@ fun MyVoicesScreen(viewModel: AppViewModel) {
                                 modifier = Modifier.padding(top = 2.dp),
                             )
                         }
+                        Icon(
+                            Icons.Outlined.Edit,
+                            "Namen ändern",
+                            tint = colors.text3,
+                            modifier = Modifier.size(34.dp).pmClickable(enabled = !viewModel.voiceBusy) {
+                                viewModel.startRenamingVoice(voice)
+                            }.padding(6.dp),
+                        )
+                        Icon(
+                            Icons.Outlined.DeleteOutline,
+                            "Stimme löschen",
+                            tint = colors.warning,
+                            modifier = Modifier.size(34.dp).pmClickable(enabled = !viewModel.voiceBusy) {
+                                viewModel.askToDeleteVoice(voice)
+                            }.padding(6.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
                         CheckMark(selected)
                     }
                 }
+            }
+        }
+    }
+    if (viewModel.renamedVoiceId != null) RenameVoiceDialog(viewModel)
+    viewModel.voiceToDelete?.let { voice -> DeleteVoiceDialog(viewModel, voice) }
+}
+
+@Composable
+private fun RenameVoiceDialog(viewModel: AppViewModel) {
+    val colors = LocalPmColors.current
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))
+            .pmClickable(onClick = viewModel::cancelRenamingVoice),
+        contentAlignment = Alignment.Center,
+    ) {
+        PmCard(Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
+            Column(Modifier.padding(20.dp)) {
+                SectionLabel("Name der Stimme")
+                PmTextArea(
+                    value = viewModel.renameVoiceText,
+                    onValueChange = viewModel::updateRenameVoiceText,
+                    placeholder = "Name",
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().height(60.dp).padding(top = 10.dp),
+                    textSize = 16,
+                    radius = 20,
+                )
+                Text(
+                    "Der Name gilt in dieser App. Bei Alibaba behält die Stimme ihre Kennung.",
+                    color = colors.text3,
+                    fontFamily = Inter,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 16.dp),
+                )
+                PrimaryButton("Speichern", viewModel::confirmRenamingVoice, height = 48, textSize = 14)
+                Spacer(Modifier.height(10.dp))
+                OutlineButton("Abbrechen", colors.text2, viewModel::cancelRenamingVoice)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteVoiceDialog(viewModel: AppViewModel, voice: ClonedVoice) {
+    val colors = LocalPmColors.current
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))
+            .pmClickable(onClick = viewModel::cancelDeletingVoice),
+        contentAlignment = Alignment.Center,
+    ) {
+        PmCard(Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
+            Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "„${viewModel.voiceTitle(voice)}“ endgültig löschen? Die Stimme wird bei Alibaba " +
+                        "entfernt und lässt sich nur durch eine neue Aufnahme zurückholen.",
+                    color = colors.text1,
+                    fontFamily = Inter,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(18.dp))
+                PrimaryButton("Abbrechen", viewModel::cancelDeletingVoice, height = 48, textSize = 14)
+                Spacer(Modifier.height(10.dp))
+                OutlineButton("Löschen", colors.warning, viewModel::confirmDeletingVoice)
             }
         }
     }
