@@ -57,18 +57,13 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
@@ -1745,26 +1740,9 @@ fun HooksScreen(viewModel: AppViewModel) {
     }
 }
 
-private fun hookVisualIndex(hook: HookEntity): Int =
-    ((hook.id.takeIf { it > 0L } ?: hook.sortIndex.toLong()) % 6L).toInt()
+private fun hookDisplayIcon(hook: HookEntity): ImageVector = HookIcons.iconFor(hook)
 
-private fun hookDisplayIcon(hook: HookEntity): ImageVector = when (hookVisualIndex(hook)) {
-    0 -> Icons.Outlined.SelfImprovement
-    1 -> Icons.Outlined.FavoriteBorder
-    2 -> Icons.Outlined.Psychology
-    3 -> Icons.Outlined.Explore
-    4 -> Icons.Outlined.Lightbulb
-    else -> Icons.Outlined.AutoAwesome
-}
-
-private fun hookDisplayColor(hook: HookEntity, dark: Boolean): Color = when (hookVisualIndex(hook)) {
-    0 -> if (dark) Color(0xFFFF9E80) else Color(0xFFB94B32)
-    1 -> if (dark) Color(0xFFC4A7E7) else Color(0xFF7954A1)
-    2 -> if (dark) Color(0xFF75C8B2) else Color(0xFF2A7D69)
-    3 -> if (dark) Color(0xFF8AB4F8) else Color(0xFF3F6FA8)
-    4 -> if (dark) Color(0xFFFFC66D) else Color(0xFFA66B00)
-    else -> if (dark) Color(0xFFF28BA8) else Color(0xFFA54462)
-}
+private fun hookDisplayColor(hook: HookEntity, dark: Boolean): Color = HookIcons.colorFor(hook, dark)
 
 @Composable
 fun HookEditorScreen(
@@ -1776,16 +1754,35 @@ fun HookEditorScreen(
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Aufhänger bearbeiten", viewModel::back, titleSize = 24)
         Column(Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PmTextArea(
-                value = viewModel.hookEditorEmoji,
-                onValueChange = viewModel::updateHookEmoji,
-                placeholder = "✨",
-                singleLine = true,
-                textSize = 40,
-                modifier = Modifier.size(88.dp),
-                radius = 20,
-            )
-            Text("Antippen öffnet die Emoji-Tastatur", color = colors.text3, fontFamily = Inter, fontSize = 12.sp)
+            // A hook saved before the picker existed holds an emoji, not a key. It then keeps
+            // showing the symbol the list gives it, so the tile never contradicts the list.
+            val edited = viewModel.hooks.firstOrNull { it.id == viewModel.hookEditorId }
+            val chosen = HookIcons.find(viewModel.hookEditorEmoji)
+            val chosenColor = chosen?.let { HookIcons.hueColor(it.hue, colors.dark) }
+                ?: edited?.let { HookIcons.colorFor(it, colors.dark) }
+                ?: HookIcons.hueColor(4, colors.dark)
+            Box(
+                Modifier.size(88.dp)
+                    .pmClickable(shape = RoundedCornerShape(20.dp), lift = true) {
+                        viewModel.openSheet(AppSheet.HOOK_ICON)
+                    }
+                    .background(colors.surface, RoundedCornerShape(20.dp))
+                    .border(1.dp, colors.gold.copy(alpha = 0.18f), RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier.size(52.dp).background(chosenColor.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        chosen?.icon ?: edited?.let(HookIcons::iconFor) ?: Icons.Outlined.AutoAwesome,
+                        "Symbol wählen",
+                        tint = chosenColor,
+                        modifier = Modifier.size(30.dp),
+                    )
+                }
+            }
+            Text("Antippen öffnet die Symbolauswahl", color = colors.text3, fontFamily = Inter, fontSize = 12.sp)
             PmTextArea(
                 value = viewModel.hookEditorText,
                 onValueChange = viewModel::updateHookText,

@@ -16,6 +16,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,9 +27,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -288,6 +294,7 @@ private fun AppBottomSheet(
                         microphonePermissionGranted,
                         requestMicrophonePermission,
                     )
+                    AppSheet.HOOK_ICON -> HookIconSheet(viewModel)
                 }
             }
         }
@@ -344,6 +351,56 @@ private fun DurationSheet(viewModel: AppViewModel) {
             repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
         }
         Spacer(Modifier.height(10.dp))
+    }
+}
+
+/**
+ * The symbols a conversation hook can be given, laid out as a grid.
+ *
+ * Built from rows instead of a LazyVerticalGrid on purpose: the sheet is itself a Column, and a
+ * lazy grid inside it would be asked to measure against infinite height.
+ */
+@Composable
+private fun HookIconSheet(viewModel: AppViewModel) {
+    val colors = LocalPmColors.current
+    val chosen = HookIcons.find(viewModel.hookEditorEmoji)?.key
+    SectionLabel("Symbol wählen", Modifier.padding(start = 8.dp, bottom = 14.dp), decorated = true)
+    Column(
+        Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        HookIcons.all.chunked(5).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { entry ->
+                    val tint = HookIcons.hueColor(entry.hue, colors.dark)
+                    val selected = entry.key == chosen
+                    Box(
+                        Modifier.weight(1f).height(60.dp)
+                            .pmClickable(shape = RoundedCornerShape(20.dp), lift = true) {
+                                viewModel.pickHookIcon(entry)
+                            }
+                            .background(
+                                if (selected) colors.surface2 else colors.surface,
+                                RoundedCornerShape(20.dp),
+                            )
+                            .border(
+                                if (selected) 2.dp else 1.dp,
+                                if (selected) colors.goldHi else colors.gold.copy(alpha = 0.12f),
+                                RoundedCornerShape(20.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier.size(38.dp).background(tint.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(entry.icon, entry.key, tint = tint, modifier = Modifier.size(23.dp))
+                        }
+                    }
+                }
+                repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }
 

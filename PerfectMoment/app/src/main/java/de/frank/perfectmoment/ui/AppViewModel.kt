@@ -62,7 +62,7 @@ enum class AppScreen {
     RAW_DATA,
 }
 
-enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, QWEN_VOICE }
+enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, QWEN_VOICE, HOOK_ICON }
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
 enum class RecordingTarget { START, INTRO, HOOK }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
@@ -935,13 +935,14 @@ class AppViewModel(
 
     fun openHookEditor(hook: HookEntity?) {
         hookEditorId = hook?.id
-        hookEditorEmoji = hook?.emoji.orEmpty()
+        hookEditorEmoji = hook?.emoji ?: HookIcons.valueOf(HookIcons.DEFAULT)
         hookEditorText = hook?.text.orEmpty()
         screen = AppScreen.HOOK_EDITOR
     }
 
-    fun updateHookEmoji(value: String) {
-        hookEditorEmoji = value
+    fun pickHookIcon(icon: HookIcon) {
+        hookEditorEmoji = HookIcons.valueOf(icon)
+        sheet = null
     }
 
     fun updateHookText(value: String) {
@@ -951,8 +952,8 @@ class AppViewModel(
     fun saveHook() {
         // Leaving the editor without the back button must not keep the microphone open.
         cancelVoiceInput()
-        if (hookEditorEmoji.isBlank() || hookEditorText.isBlank()) {
-            message = "Emoji und Aufhängertext dürfen nicht leer sein."
+        if (hookEditorText.isBlank()) {
+            message = "Der Aufhängertext darf nicht leer sein."
             return
         }
         viewModelScope.launch {
