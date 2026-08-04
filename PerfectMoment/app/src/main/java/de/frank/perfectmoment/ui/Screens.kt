@@ -54,6 +54,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
@@ -70,6 +71,7 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -358,8 +360,25 @@ fun StartScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), radius = 32, horizontalPadding = 4)
-                ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.4f), radius = 32, horizontalPadding = 4)
+                ParameterCard("Wdh.", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1f), radius = 32, horizontalPadding = 4)
                 ParameterCard("Dauer", formatSessionDuration(viewModel.durationMinutes), { viewModel.openSheet(AppSheet.DURATION) }, Modifier.weight(1f), radius = 32, horizontalPadding = 4)
+                val undoable = viewModel.topicBeforeImprovement != null
+                ParameterIconCard(
+                    label = if (undoable) "Zurück" else "KI",
+                    icon = if (undoable) Icons.Outlined.Undo else Icons.Outlined.AutoFixHigh,
+                    contentDescription = if (undoable) {
+                        "Ursprünglichen Text wiederherstellen"
+                    } else {
+                        "Text mit KI verbessern"
+                    },
+                    onClick = {
+                        if (undoable) viewModel.undoTopicImprovement() else viewModel.improveTopic()
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = viewModel.topic.isNotBlank(),
+                    busy = viewModel.topicImproving,
+                    radius = 32,
+                )
             }
             Row(
                 Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 38.dp),

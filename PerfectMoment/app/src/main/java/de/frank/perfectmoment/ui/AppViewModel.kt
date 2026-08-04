@@ -179,6 +179,14 @@ class AppViewModel(
     var recordingMessage by mutableStateOf<String?>(null)
         private set
 
+    /** Set while an improved wish is shown, holding the wording to go back to. */
+    var topicBeforeImprovement by mutableStateOf<String?>(null)
+        private set
+    var topicImproving by mutableStateOf(false)
+        private set
+    private var improvedTopicVersions by mutableStateOf<List<String>>(emptyList())
+    private var improveTopicJob: Job? = null
+
     var pauseRep by mutableStateOf(settings.pauseRepSeconds)
         private set
     var pauseNext by mutableStateOf(settings.pauseNextSeconds)
@@ -623,6 +631,63 @@ class AppViewModel(
         topic = value
         selectedHookId = null
         recordingMessage = null
+        // A newly written or dictated text is a new starting point: undo and the earlier
+        // suggestions belong to the old one and would only confuse from here on.
+        topicBeforeImprovement = null
+        improvedTopicVersions = emptyList()
+    }
+
+    /**
+     * Rewrites the dictated wish into a clear instruction for the AI.
+     *
+     * Every press produces a fresh wording; the previous ones are handed over so no suggestion
+     * repeats and the best of them can be picked.
+     */
+    fun improveTopic() {
+        if (topicImproving) return
+        if (topic.isBlank()) {
+            message = "Sprich oder schreibe zuerst deinen Wunsch."
+            return
+        }
+        if (chatGptState != ChatGptState.CONNECTED) {
+            message = "Bitte zuerst mit ChatGPT verbinden."
+            return
+        }
+        val source = topicBeforeImprovement ?: topic
+        topicImproving = true
+        improveTopicJob = viewModelScope.launch {
+            try {
+                val improved = authManager.improveWish(
+                    wish = source,
+                    skillText = activeSkill?.text.orEmpty(),
+                    previousVersions = improvedTopicVersions,
+                    model = model,
+                    reasoningEffort = reasoning,
+                )
+                if (improved.isBlank()) {
+                    message = "Die KI hat keine Fassung geliefert."
+                    return@launch
+                }
+                topicBeforeImprovement = source
+                improvedTopicVersions = improvedTopicVersions + improved
+                topic = improved
+                selectedHookId = null
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                message = error.message ?: "Der Text konnte nicht verbessert werden."
+            } finally {
+                topicImproving = false
+                improveTopicJob = null
+            }
+        }
+    }
+
+    /** Puts the spoken original back; the next press then brings another new version. */
+    fun undoTopicImprovement() {
+        val original = topicBeforeImprovement ?: return
+        topic = original
+        topicBeforeImprovement = null
     }
 
     fun updatePauseRep(value: Int) {

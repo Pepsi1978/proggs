@@ -60,6 +60,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -562,6 +564,65 @@ fun ParameterCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = if (compact) 3.dp else 4.dp),
             )
+        }
+    }
+}
+
+/**
+ * A parameter tile that carries a symbol instead of a value, in the same style as its neighbours.
+ */
+@Composable
+fun ParameterIconCard(
+    label: String,
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    busy: Boolean = false,
+    tint: Color? = null,
+    radius: Int = 28,
+) {
+    val colors = LocalPmColors.current
+    PmCard(
+        modifier.pmClickable(
+            enabled = enabled && !busy,
+            shape = RoundedCornerShape(radius.dp),
+            lift = true,
+            onClick = onClick,
+        ).alpha(if (enabled) 1f else 0.45f),
+        radius = radius,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                label.uppercase(),
+                color = colors.text2,
+                fontFamily = Inter,
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                letterSpacing = 0.8.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Box(
+                Modifier.fillMaxWidth().padding(top = 4.dp).height(22.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (busy) {
+                    LoadingDots()
+                } else {
+                    Icon(
+                        icon,
+                        contentDescription,
+                        tint = tint ?: colors.gold,
+                        modifier = Modifier.size(21.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -289,6 +289,81 @@ internal fun codexSummaryPayload(
 /** How many characters fit in the four lines the history row offers. */
 internal const val SUMMARY_MAX_CHARS = 150
 
+internal fun codexImproveWishPayload(
+    wish: String,
+    skillText: String,
+    previousVersions: List<String>,
+    model: CodexModel,
+    reasoningEffort: ReasoningEffort,
+): JSONObject {
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("required", JSONArray().put("fassung"))
+        .put("properties", JSONObject().put("fassung", JSONObject().put("type", "string")))
+    val instructions = buildString {
+        append(
+            "Der Nutzer hat seinen Wunsch gesprochen; der Text kommt aus einer Spracherkennung " +
+                "und ist deshalb unsauber. Schreibe ihn zu einer klaren schriftlichen Anweisung " +
+                "an eine KI um. Erhalte JEDE inhaltliche Information und die vollständige " +
+                "Absicht — nichts weglassen, nichts erfinden, nichts abschwächen. Korrigiere " +
+                "Grammatik, Satzbau und Wortwahl, löse Versprecher und Wiederholungen auf und " +
+                "bringe die Anweisung so auf den Punkt, dass die Absicht eindeutig erkennbar " +
+                "ist. Behalte die Sprache und die Anrede des Originals bei. Antworte nur mit " +
+                "der umgeschriebenen Fassung, ohne Vorrede und ohne Anführungszeichen.",
+        )
+        if (skillText.isNotBlank()) {
+            append(
+                "\n\nDie Anweisung wird anschließend von dieser Routine verarbeitet. Formuliere " +
+                    "sie so, dass die Routine sie bestmöglich umsetzen kann:\n",
+            )
+            append(skillText.trim().take(MAX_SKILL_CONTEXT_CHARS))
+        }
+        if (previousVersions.isNotEmpty()) {
+            append(
+                "\n\nDiese Fassungen wurden bereits vorgeschlagen. Liefere eine deutlich andere " +
+                    "Formulierung — anderer Aufbau, andere Wortwahl — bei gleichem Inhalt:\n",
+            )
+            append(JSONArray(previousVersions.map { it.take(SUMMARY_MAX_CHARS * 6) }).toString())
+        }
+    }
+    return JSONObject()
+        .put("model", model.apiId)
+        .put("service_tier", "priority")
+        .put("stream", true)
+        .put("store", false)
+        .put("instructions", instructions)
+        .put(
+            "input",
+            JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", "Gesprochener Wunsch:\n${wish.trim()}"),
+            ),
+        )
+        .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
+        .put(
+            "text",
+            JSONObject().put(
+                "format",
+                JSONObject()
+                    .put("type", "json_schema")
+                    .put("name", "perfect_moment_wunsch_fassung")
+                    .put("strict", true)
+                    .put("schema", schema),
+            ),
+        )
+}
+
+/** Keeps a long routine from crowding out the wish itself in the request. */
+private const val MAX_SKILL_CONTEXT_CHARS = 4_000
+
+internal fun parseImprovedWish(rawOutput: String): String {
+    val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+    val json = runCatching { JSONObject(output) }.getOrNull() ?: return ""
+    return json.optString("fassung").trim().trim('„', '“', '"')
+}
+
 internal fun parseSummary(rawOutput: String): String {
     val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
     val json = runCatching { JSONObject(output) }.getOrNull() ?: return ""
@@ -537,6 +612,33 @@ class CodexAuthManager(context: Context) {
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Der Verlaufstitel konnte nicht empfangen werden.", error)
+        }
+    }
+
+    /**
+     * Rewrites a dictated wish into a clear instruction.
+     *
+     * [previousVersions] are the ones already shown, so pressing the button again brings a fresh
+     * wording instead of the same text once more.
+     */
+    suspend fun improveWish(
+        wish: String,
+        skillText: String,
+        previousVersions: List<String>,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+    ): String = withContext(Dispatchers.IO) {
+        if (wish.isBlank()) return@withContext ""
+        try {
+            parseImprovedWish(
+                requestCodexResponse(
+                    codexImproveWishPayload(wish, skillText, previousVersions, model, reasoningEffort),
+                    false,
+                ),
+            )
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Die verbesserte Fassung konnte nicht empfangen werden.", error)
         }
     }
 
