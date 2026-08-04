@@ -11,12 +11,14 @@ import androidx.lifecycle.viewModelScope
 import de.frank.perfectmoment.BuildConfig
 import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.audio.MicRecorder
+import de.frank.perfectmoment.audio.VoiceSampleScript
 import de.frank.perfectmoment.backup.BackupRepository
 import de.frank.perfectmoment.backup.BackupStatus
 import de.frank.perfectmoment.backup.DriveAuth
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
+import de.frank.perfectmoment.auth.CodexQuestionRequest
 import de.frank.perfectmoment.auth.DeviceAuthInfo
 import de.frank.perfectmoment.auth.IntroQuestionPolicy
 import de.frank.perfectmoment.auth.QuestionPerspective
@@ -27,12 +29,14 @@ import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
 import de.frank.perfectmoment.data.local.SkillEntity
 import de.frank.perfectmoment.di.AppContainer
+import de.frank.perfectmoment.session.EmojiParser
 import de.frank.perfectmoment.session.Phase
 import de.frank.perfectmoment.session.SessionController
 import de.frank.perfectmoment.session.SessionRuntime
 import de.frank.perfectmoment.session.SessionState
 import de.frank.perfectmoment.tts.ClonedVoice
 import de.frank.perfectmoment.tts.QwenVoiceDirectory
+import de.frank.perfectmoment.tts.QwenVoiceEnrollment
 import de.frank.perfectmoment.tts.TtsCatalog
 import de.frank.perfectmoment.tts.TtsManager
 import de.frank.perfectmoment.tts.TtsProvider
@@ -58,12 +62,17 @@ enum class AppScreen {
     SKILLS,
     SKILL_EDITOR,
     VOICE,
+    MY_VOICES,
+    VOICE_RECORDER,
     CHAT_GPT,
     RAW_DATA,
 }
 
-enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, QWEN_VOICE, HOOK_ICON }
+enum class AppSheet { PAUSES, REPETITIONS, DURATION, PROVIDER, MODEL, REASONING, INTRO, HOOK_ICON }
 enum class RecordingState { IDLE, RECORDING, PROCESSING }
+
+/** Where the recording of a voice sample stands: waiting, running, or being registered. */
+enum class VoiceRecorderState { IDLE, RECORDING, SAVING }
 enum class RecordingTarget { START, INTRO, HOOK }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
 enum class HistorySort(val label: String) {
@@ -111,6 +120,10 @@ class AppViewModel(
     private val micRecorder = MicRecorder(appContext)
     private val previewTts = TtsManager(appContext)
     private val qwenVoiceDirectory = QwenVoiceDirectory()
+    private val qwenVoiceEnrollment = QwenVoiceEnrollment()
+    private var voiceRecorderTimerJob: Job? = null
+    private var voiceEnrollmentJob: Job? = null
+    private var pendingVoiceRecording = false
     private var pendingRecordingTarget: RecordingTarget? = null
     private var transcriptionJob: Job? = null
     private var activeTranscriber: GroqTranscriber? = null
@@ -197,6 +210,18 @@ class AppViewModel(
     var qwenVoices by mutableStateOf<List<ClonedVoice>>(emptyList())
         private set
     var qwenVoicesLoading by mutableStateOf(false)
+        private set
+    var voiceRecorderName by mutableStateOf("")
+        private set
+    var voiceRecorderQuestions by mutableStateOf<List<String>>(emptyList())
+        private set
+    var voiceRecorderQuestionsLoading by mutableStateOf(false)
+        private set
+    var voiceRecorderState by mutableStateOf(VoiceRecorderState.IDLE)
+        private set
+    var voiceRecorderSeconds by mutableStateOf(0)
+        private set
+    var voiceRecorderMessage by mutableStateOf<String?>(null)
         private set
     var voiceTab by mutableStateOf(TtsProvider.EDGE)
         private set
@@ -492,8 +517,9 @@ class AppViewModel(
         screen = when (screen) {
             AppScreen.HISTORY_DETAIL -> AppScreen.HISTORY
             AppScreen.HOOKS, AppScreen.SKILLS, AppScreen.VOICE, AppScreen.CHAT_GPT,
-            AppScreen.RAW_DATA,
+            AppScreen.RAW_DATA, AppScreen.MY_VOICES,
             -> AppScreen.SETTINGS
+            AppScreen.VOICE_RECORDER -> AppScreen.MY_VOICES
             AppScreen.HOOK_EDITOR -> AppScreen.HOOKS
             AppScreen.SKILL_EDITOR -> AppScreen.SKILLS
             AppScreen.HISTORY, AppScreen.SETTINGS -> AppScreen.START
@@ -661,27 +687,169 @@ class AppViewModel(
         showQwenKey = !showQwenKey
     }
 
-    /** Opens the voice picker and fetches the account's cloned voices for it. */
+    /** Opens the list of the account's own cloned voices. */
     fun openQwenVoicePicker() {
         if (qwenApiKey.isBlank()) {
             message = "Bitte zuerst den Alibaba-Schlüssel hinterlegen."
             return
         }
-        sheet = AppSheet.QWEN_VOICE
+        navigate(AppScreen.MY_VOICES)
+        refreshQwenVoices()
+    }
+
+    private fun refreshQwenVoices() {
         qwenVoicesLoading = true
         viewModelScope.launch {
             qwenVoices = qwenVoiceDirectory.list(qwenApiKey)
             qwenVoicesLoading = false
-            if (qwenVoices.isEmpty()) {
-                message = "Keine geklonten Stimmen gefunden."
-            }
         }
     }
 
     fun selectQwenVoice(voice: ClonedVoice) {
         qwenVoiceId = voice.id
         settings.qwenTtsVoiceId = voice.id
-        sheet = null
+    }
+
+    /** Opens the recorder that turns a fresh recording into a new cloned voice. */
+    fun openVoiceRecorder() {
+        if (qwenApiKey.isBlank()) {
+            message = "Bitte zuerst den Alibaba-Schlüssel hinterlegen."
+            return
+        }
+        navigate(AppScreen.VOICE_RECORDER)
+        voiceRecorderName = ""
+        voiceRecorderQuestions = emptyList()
+        voiceRecorderMessage = null
+        voiceRecorderSeconds = 0
+        loadVoiceSampleQuestions()
+    }
+
+    fun updateVoiceRecorderName(value: String) {
+        voiceRecorderName = value
+    }
+
+    /**
+     * Fetches questions in the app's own style for Frank to read aloud. Without a reachable
+     * ChatGPT the proven reference questions appear instead, so recording is never blocked.
+     */
+    private fun loadVoiceSampleQuestions() {
+        voiceRecorderQuestionsLoading = true
+        viewModelScope.launch {
+            val generated = try {
+                if (chatGptState != ChatGptState.CONNECTED) {
+                    emptyList()
+                } else {
+                    authManager.generateQuestions(
+                        CodexQuestionRequest(
+                            topic = VOICE_SAMPLE_TOPIC,
+                            skillText = activeSkill?.text.orEmpty(),
+                            operatingModeText = operatingModeText,
+                            perspective = QuestionPerspective.FIRST_PERSON,
+                            model = model,
+                            reasoningEffort = reasoning,
+                        ),
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                emptyList()
+            }
+            voiceRecorderQuestions = VoiceSampleScript.script(
+                generated.map { EmojiParser.parse(it).text },
+            )
+            voiceRecorderQuestionsLoading = false
+        }
+    }
+
+    fun onVoiceRecorderTapped(permissionGranted: Boolean, requestPermission: () -> Unit) {
+        when (voiceRecorderState) {
+            VoiceRecorderState.IDLE -> {
+                if (voiceRecorderName.isBlank()) {
+                    voiceRecorderMessage = "Bitte zuerst einen Namen für die Stimme eingeben."
+                    return
+                }
+                if (permissionGranted) {
+                    startVoiceSampleRecording()
+                } else {
+                    pendingVoiceRecording = true
+                    requestPermission()
+                }
+            }
+            VoiceRecorderState.RECORDING -> finishVoiceSampleRecording()
+            VoiceRecorderState.SAVING -> Unit
+        }
+    }
+
+    private fun startVoiceSampleRecording() {
+        if (screen != AppScreen.VOICE_RECORDER) return
+        voiceRecorderMessage = null
+        if (!micRecorder.start(viewModelScope, MicRecorder.CLONING_SAMPLE_RATE)) {
+            voiceRecorderMessage = "Die Aufnahme konnte nicht gestartet werden."
+            return
+        }
+        voiceRecorderSeconds = 0
+        voiceRecorderState = VoiceRecorderState.RECORDING
+        voiceRecorderTimerJob = viewModelScope.launch {
+            while (voiceRecorderState == VoiceRecorderState.RECORDING) {
+                delay(1_000)
+                if (voiceRecorderState != VoiceRecorderState.RECORDING) return@launch
+                voiceRecorderSeconds++
+                // Alibaba refuses anything past a minute, so the recording stops by itself.
+                if (voiceRecorderSeconds >= MAX_SAMPLE_SECONDS) {
+                    // Cleared first: this coroutine ends here, and the stop must not cancel it
+                    // mid-way while it is still starting the registration.
+                    voiceRecorderTimerJob = null
+                    finishVoiceSampleRecording()
+                    return@launch
+                }
+            }
+        }
+    }
+
+    private fun finishVoiceSampleRecording() {
+        voiceRecorderTimerJob?.cancel()
+        voiceRecorderTimerJob = null
+        val seconds = voiceRecorderSeconds
+        val name = voiceRecorderName.trim()
+        voiceRecorderState = VoiceRecorderState.SAVING
+        voiceEnrollmentJob = viewModelScope.launch {
+            try {
+                val wav = micRecorder.stop()
+                if (wav == null) {
+                    voiceRecorderMessage = "Die Aufnahme ist leer geblieben."
+                    return@launch
+                }
+                if (seconds < MIN_SAMPLE_SECONDS) {
+                    voiceRecorderMessage =
+                        "Die Aufnahme ist zu kurz. Lies bitte mindestens $MIN_SAMPLE_SECONDS Sekunden vor."
+                    return@launch
+                }
+                val voiceId = qwenVoiceEnrollment.create(qwenApiKey, name, wav)
+                qwenVoiceId = voiceId
+                settings.qwenTtsVoiceId = voiceId
+                screen = AppScreen.MY_VOICES
+                refreshQwenVoices()
+                message = "Die Stimme „$name“ ist fertig und ausgewählt."
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                voiceRecorderMessage = error.message ?: "Die Stimme konnte nicht erstellt werden."
+            } finally {
+                voiceEnrollmentJob = null
+                voiceRecorderState = VoiceRecorderState.IDLE
+            }
+        }
+    }
+
+    private fun cancelVoiceSampleRecording() {
+        pendingVoiceRecording = false
+        voiceRecorderTimerJob?.cancel()
+        voiceRecorderTimerJob = null
+        voiceEnrollmentJob?.cancel()
+        voiceEnrollmentJob = null
+        voiceRecorderState = VoiceRecorderState.IDLE
+        voiceRecorderSeconds = 0
     }
 
     fun updateVoiceTab(provider: TtsProvider) {
@@ -1129,6 +1297,15 @@ class AppViewModel(
     }
 
     fun onMicrophonePermissionResult(granted: Boolean) {
+        if (pendingVoiceRecording) {
+            pendingVoiceRecording = false
+            if (granted) {
+                startVoiceSampleRecording()
+            } else {
+                voiceRecorderMessage = "Die Mikrofonberechtigung wurde nicht erteilt."
+            }
+            return
+        }
         val target = pendingRecordingTarget ?: return
         pendingRecordingTarget = null
         if (granted && isRecordingTargetVisible(target)) {
@@ -1198,6 +1375,7 @@ class AppViewModel(
     }
 
     private fun cancelVoiceInput() {
+        cancelVoiceSampleRecording()
         recordingGeneration++
         pendingRecordingTarget = null
         transcriptionJob?.cancel()
@@ -1280,10 +1458,18 @@ class AppViewModel(
         authManager.cancelQuestionGeneration()
         previewTts.shutdown()
         qwenVoiceDirectory.shutdown()
+        qwenVoiceEnrollment.shutdown()
         super.onCleared()
     }
 
     companion object {
+        /** Alibaba takes at most 60 seconds of reference audio. */
+        private const val MAX_SAMPLE_SECONDS = 58
+        private const val MIN_SAMPLE_SECONDS = 10
+        private const val VOICE_SAMPLE_TOPIC =
+            "Eine Sprachprobe: ruhige, warme Fragen, die ich mir selbst laut vorlese, " +
+                "damit meine Stimme aufgenommen werden kann."
+
         fun factory(context: Context, container: AppContainer): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")

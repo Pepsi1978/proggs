@@ -164,6 +164,12 @@ fun PerfectMomentApp(
                     AppScreen.SKILLS -> SkillsScreen(viewModel)
                     AppScreen.SKILL_EDITOR -> SkillEditorScreen(viewModel)
                     AppScreen.VOICE -> VoiceScreen(viewModel)
+                    AppScreen.MY_VOICES -> MyVoicesScreen(viewModel)
+                    AppScreen.VOICE_RECORDER -> VoiceRecorderScreen(
+                        viewModel,
+                        microphonePermissionGranted,
+                        requestMicrophonePermission,
+                    )
                     AppScreen.CHAT_GPT -> ChatGptScreen(
                         viewModel,
                         connectChatGpt,
@@ -266,15 +272,6 @@ private fun AppBottomSheet(
                             OptionRow(provider.label, viewModel.ttsProvider == provider.id) {
                                 viewModel.setProvider(provider)
                             }
-                        },
-                    )
-                    AppSheet.QWEN_VOICE -> OptionSheet(
-                        if (viewModel.qwenVoicesLoading) "Stimmen werden geladen …" else "Meine Stimmen",
-                        viewModel.qwenVoices.map { voice ->
-                            OptionRow(
-                                "${voice.name}  ·  ${voice.createdAt}",
-                                viewModel.qwenVoiceId == voice.id,
-                            ) { viewModel.selectQwenVoice(voice) }
                         },
                     )
                     AppSheet.MODEL -> OptionSheet(

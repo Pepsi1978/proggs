@@ -32,7 +32,17 @@ class MicRecorder(context: Context) {
     private var recordingJob: Job? = null
     private var startedAtMs = 0L
 
-    fun start(scope: CoroutineScope): Boolean = synchronized(lifecycleLock) {
+    /** The rate the running capture actually got, which the WAV header has to match. */
+    private var activeSampleRate = SAMPLE_RATE
+
+    /**
+     * Starts capturing.
+     *
+     * [requestedSampleRate] lets voice cloning record in higher quality than speech recognition
+     * needs. Only 44.1 kHz is guaranteed on every device, so a rate the device refuses falls
+     * back to the 16 kHz that dictation has always used rather than failing the recording.
+     */
+    fun start(scope: CoroutineScope, requestedSampleRate: Int = SAMPLE_RATE): Boolean = synchronized(lifecycleLock) {
         if (!recording.compareAndSet(false, true)) return true
         if (!scope.isActive) {
             recording.set(false)
@@ -48,17 +58,24 @@ class MicRecorder(context: Context) {
             return false
         }
 
-        val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
-        if (minBufferSize <= 0) {
+        val sampleRate = listOf(requestedSampleRate, SAMPLE_RATE)
+            .distinct()
+            .firstOrNull { AudioRecord.getMinBufferSize(it, CHANNEL, ENCODING) > 0 }
+        val minBufferSize = sampleRate?.let { AudioRecord.getMinBufferSize(it, CHANNEL, ENCODING) } ?: 0
+        if (sampleRate == null || minBufferSize <= 0) {
             recording.set(false)
-            logger.warning("AudioRecord.getMinBufferSize failed: $minBufferSize")
+            logger.warning("AudioRecord.getMinBufferSize failed for $requestedSampleRate Hz")
             return false
         }
+        if (sampleRate != requestedSampleRate) {
+            logger.warning("$requestedSampleRate Hz unavailable, recording at $sampleRate Hz")
+        }
+        activeSampleRate = sampleRate
 
         val activeRecorder = try {
             AudioRecord(
                 MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                SAMPLE_RATE,
+                sampleRate,
                 CHANNEL,
                 ENCODING,
                 minBufferSize * 2,
@@ -196,7 +213,8 @@ class MicRecorder(context: Context) {
     }
 
     private fun pcmToWav(pcm: ByteArray): ByteArray {
-        val byteRate = SAMPLE_RATE * CHANNEL_COUNT * BITS_PER_SAMPLE / 8
+        val sampleRate = activeSampleRate
+        val byteRate = sampleRate * CHANNEL_COUNT * BITS_PER_SAMPLE / 8
         val header = ByteBuffer.allocate(WAV_HEADER_BYTES).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray(Charsets.US_ASCII))
             putInt(pcm.size + 36)
@@ -205,7 +223,7 @@ class MicRecorder(context: Context) {
             putInt(16)
             putShort(1)
             putShort(CHANNEL_COUNT.toShort())
-            putInt(SAMPLE_RATE)
+            putInt(sampleRate)
             putInt(byteRate)
             putShort((CHANNEL_COUNT * BITS_PER_SAMPLE / 8).toShort())
             putShort(BITS_PER_SAMPLE.toShort())
@@ -217,6 +235,9 @@ class MicRecorder(context: Context) {
 
     companion object {
         const val SAMPLE_RATE = 16_000
+
+        /** What the reference recording that cloned well was made at. */
+        const val CLONING_SAMPLE_RATE = 24_000
         const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
 
