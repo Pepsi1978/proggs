@@ -241,6 +241,66 @@ internal fun codexSessionPromptPayload(
         )
 }
 
+internal fun codexSummaryPayload(
+    topic: String,
+    model: CodexModel,
+    reasoningEffort: ReasoningEffort,
+): JSONObject {
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("required", JSONArray().put("titel"))
+        .put("properties", JSONObject().put("titel", JSONObject().put("type", "string")))
+    return JSONObject()
+        .put("model", model.apiId)
+        .put("service_tier", "priority")
+        .put("stream", true)
+        .put("store", false)
+        .put(
+            "instructions",
+            "Fasse den Wunsch des Nutzers als kurzen Verlaufstitel zusammen. Höchstens " +
+                "$SUMMARY_MAX_CHARS Zeichen, ein bis zwei Sätze, keine Anführungszeichen, kein " +
+                "abschließender Punkt nötig. Nenne worum es inhaltlich geht, nicht dass es ein " +
+                "Wunsch ist. Schreibe in derselben Sprache wie der Text. Keine Aufzählung, keine " +
+                "Zeilenumbrüche.",
+        )
+        .put(
+            "input",
+            JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", "Zusammenzufassender Text:\n${topic.trim()}"),
+            ),
+        )
+        .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
+        .put(
+            "text",
+            JSONObject().put(
+                "format",
+                JSONObject()
+                    .put("type", "json_schema")
+                    .put("name", "perfect_moment_verlaufstitel")
+                    .put("strict", true)
+                    .put("schema", schema),
+            ),
+        )
+}
+
+/** How many characters fit in the four lines the history row offers. */
+internal const val SUMMARY_MAX_CHARS = 150
+
+internal fun parseSummary(rawOutput: String): String {
+    val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+    val json = runCatching { JSONObject(output) }.getOrNull() ?: return ""
+    return json.optString("titel")
+        .replace('\n', ' ')
+        .replace(Regex(" +"), " ")
+        .trim()
+        .trim('„', '“', '"')
+        .take(SUMMARY_MAX_CHARS)
+        .trim()
+}
+
 /**
  * Ordnet eine HTTP-Antwort einer Fehlerart zu. Vorübergehende Störungen (Zeitüberschreitung,
  * Serverfehler 5xx) werden als wiederholbar gekennzeichnet, damit sie die Sitzung nicht beenden.
@@ -462,6 +522,21 @@ class CodexAuthManager(context: Context) {
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die OpenAI-Startentscheidung konnte nicht vollständig empfangen werden.", error)
+        }
+    }
+
+    /** Returns the short history title for a wish, or an empty text when none could be made. */
+    suspend fun summarizeTopic(
+        topic: String,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+    ): String = withContext(Dispatchers.IO) {
+        if (topic.isBlank()) return@withContext ""
+        try {
+            parseSummary(requestCodexResponse(codexSummaryPayload(topic, model, reasoningEffort), false))
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Der Verlaufstitel konnte nicht empfangen werden.", error)
         }
     }
 

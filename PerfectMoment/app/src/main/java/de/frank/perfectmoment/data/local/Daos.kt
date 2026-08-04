@@ -49,6 +49,12 @@ abstract class SessionDao {
     @Query("UPDATE sessions SET questionCount = :questionCount WHERE id = :sessionId")
     abstract suspend fun updateQuestionCount(sessionId: Long, questionCount: Int)
 
+    @Query("UPDATE sessions SET summary = :summary WHERE id = :sessionId")
+    abstract suspend fun updateSummary(sessionId: Long, summary: String)
+
+    @Query("UPDATE sessions SET voiceName = :voiceName, providerId = :providerId WHERE id = :sessionId")
+    abstract suspend fun updateVoice(sessionId: Long, voiceName: String, providerId: String)
+
     @Query("DELETE FROM questions WHERE sessionId = :sessionId")
     abstract suspend fun deleteQuestions(sessionId: Long)
 

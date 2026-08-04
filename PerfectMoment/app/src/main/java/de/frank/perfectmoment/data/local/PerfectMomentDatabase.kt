@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -36,7 +36,14 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     context.applicationContext,
                     PerfectMomentDatabase::class.java,
                     DATABASE_NAME,
-                ).addMigrations(Migration1To2, Migration2To3, Migration3To4, Migration4To5, Migration5To6)
+                ).addMigrations(
+                    Migration1To2,
+                    Migration2To3,
+                    Migration3To4,
+                    Migration4To5,
+                    Migration5To6,
+                    Migration6To7,
+                )
                     .addCallback(SeedCallback)
                     .build()
                     .also { instance = it }
@@ -74,6 +81,12 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
         private val Migration5To6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 insertConsciousnessImageSkill(db, System.currentTimeMillis())
+            }
+        }
+
+        private val Migration6To7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sessions ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
             }
         }
 

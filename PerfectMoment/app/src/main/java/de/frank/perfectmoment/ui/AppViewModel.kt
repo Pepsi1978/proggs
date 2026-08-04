@@ -128,6 +128,7 @@ class AppViewModel(
     private var transcriptionJob: Job? = null
     private var activeTranscriber: GroqTranscriber? = null
     private var recordingGeneration = 0L
+    private var summaryJob: Job? = null
     private var sessionStartJob: Job? = null
     private var sessionStartGeneration = 0L
     private var hadActiveSession = sessionController.runtime.value != null
@@ -515,6 +516,34 @@ class AppViewModel(
         sheet = null
         screen = target
         if (target == AppScreen.RAW_DATA) refreshRawData()
+        if (target == AppScreen.HISTORY) backfillSummaries()
+    }
+
+    /**
+     * Gives every history entry its short title, one after another.
+     *
+     * A wish can run over many lines; the list shows the summary instead. Written once per
+     * session and then kept, so the same entry always reads the same.
+     */
+    private fun backfillSummaries() {
+        if (summaryJob?.isActive == true) return
+        if (chatGptState != ChatGptState.CONNECTED) return
+        val missing = sessions.filter { it.summary.isBlank() && it.topic.isNotBlank() }
+        if (missing.isEmpty()) return
+        summaryJob = viewModelScope.launch {
+            for (session in missing) {
+                val summary = try {
+                    authManager.summarizeTopic(session.topic, model, reasoning)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Throwable) {
+                    // One failure usually means the connection is gone; the rest waits for the
+                    // next visit rather than running into the same error dozens of times.
+                    return@launch
+                }
+                if (summary.isNotBlank()) sessionRepository.setSummary(session.id, summary)
+            }
+        }
     }
 
     fun back() {

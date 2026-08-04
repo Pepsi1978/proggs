@@ -1200,12 +1200,15 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    session.topic,
+                    // The summary once the AI wrote it; until then the beginning of the wish.
+                    session.summary.ifBlank { session.topic },
                     color = colors.text1,
                     fontFamily = Inter,
                     fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     lineHeight = 21.6.sp,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     "${formatSessionDate(session.startedAt)} · ${formatSessionDuration(session.durationMin)} · ${session.questionCount} Fragen · ${voiceDisplayName(session.voiceName)}",

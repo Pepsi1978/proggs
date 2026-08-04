@@ -30,6 +30,8 @@ data class SessionEntity(
     val resumeRemainingMs: Long? = null,
     @ColumnInfo(defaultValue = "1") val playCount: Int = 1,
     @ColumnInfo(defaultValue = "0") val lastPlayedAt: Long = startedAt,
+    /** The short title the history list shows instead of the whole wish. Empty until written. */
+    @ColumnInfo(defaultValue = "") val summary: String = "",
 )
 
 @Entity(

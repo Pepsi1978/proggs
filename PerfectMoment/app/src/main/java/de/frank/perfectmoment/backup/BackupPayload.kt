@@ -82,6 +82,7 @@ data class BackupPayload(
                             put("entranceQuestion", session.entranceQuestion)
                             put("playCount", session.playCount)
                             put("lastPlayedAt", session.lastPlayedAt)
+                            put("summary", session.summary)
                             put(
                                 "questions",
                                 JSONArray().apply {
@@ -144,6 +145,7 @@ data class BackupPayload(
                     entranceQuestion = item.optString("entranceQuestion"),
                     playCount = item.optInt("playCount", 1),
                     lastPlayedAt = item.optLong("lastPlayedAt", item.optLong("startedAt")),
+                    summary = item.optString("summary"),
                 )
                 val questions = item.optJSONArray("questions").map { entry ->
                     QuestionEntity(
