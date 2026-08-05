@@ -8,6 +8,12 @@
     profile's prompt configuration.
 -->
 <full-backup-content>
+    <!--
+        The encrypted prefs are sealed with a hardware-bound Keystore master key that never
+        leaves the original device. Restoring the file elsewhere yields an undecryptable
+        keyset, so it is excluded rather than restored as unreadable data.
+    -->
+    <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
     <exclude domain="database" path="dashboard_db" />
     <exclude domain="database" path="dashboard_db-journal" />
     <exclude domain="database" path="dashboard_db-wal" />

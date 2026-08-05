@@ -11,6 +11,12 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <!--
+            Encrypted prefs are sealed with a hardware-bound Keystore master key that stays on
+            the original device, so a restored copy can never be decrypted. Excluded here and
+            in device-transfer; AppModule recreates the store if one slips through anyway.
+        -->
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
         <exclude domain="database" path="dashboard_db" />
         <exclude domain="database" path="dashboard_db-journal" />
         <exclude domain="database" path="dashboard_db-wal" />
@@ -21,6 +27,7 @@
         <exclude domain="database" path="retrospective_db-shm" />
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
         <exclude domain="database" path="dashboard_db" />
         <exclude domain="database" path="dashboard_db-journal" />
         <exclude domain="database" path="dashboard_db-wal" />
