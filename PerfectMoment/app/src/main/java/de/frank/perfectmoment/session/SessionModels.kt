@@ -36,6 +36,18 @@ data class SessionCheckpoint(
     val remainingMs: Long,
 )
 
+/**
+ * Shuffles only the questions a resumed session has not spoken yet.
+ *
+ * Everything before [fromIndex] was already heard and stays where it is, so the random order
+ * never drags a past question back into the future. Each remaining question keeps appearing
+ * exactly once, which is what makes a shuffled resume play through to the end without repeats.
+ */
+fun shuffleUpcoming(questions: List<Question>, fromIndex: Int): List<Question> {
+    val cut = fromIndex.coerceIn(0, questions.size)
+    return questions.take(cut) + questions.drop(cut).shuffled()
+}
+
 data class SessionConfig(
     val pauseRepMs: Long,
     val pauseNextMs: Long,

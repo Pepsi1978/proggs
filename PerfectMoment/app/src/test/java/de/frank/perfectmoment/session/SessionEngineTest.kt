@@ -484,6 +484,25 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `Fortsetzen hinter der letzten Frage wiederholt sie nicht sondern wartet auf Nachschub`() = runTest {
+        val refill = FakeRefill().apply { responses += listOf("✨ Nachschub 1") }
+        val fixture = fixture(
+            questions = List(3) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+            checkpoint = SessionCheckpoint(currentIndex = 3, currentRep = 1, remainingMs = 600_000),
+        )
+
+        fixture.engine.start()
+        runCurrent()
+        fixture.engine.togglePause()
+        runCurrent()
+
+        assertEquals(listOf("Nachschub 1"), fixture.tts.spokenTexts)
+        fixture.engine.close()
+    }
+
+    @Test
     fun `drei TTS Fehler ueberspringen die Frage`() = runTest {
         val fixture = fixture(
             questions = listOf(question(1), question(2)),

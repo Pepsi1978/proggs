@@ -114,7 +114,11 @@ internal fun sortHistorySessions(
 private sealed interface SessionStart {
     data object New : SessionStart
     data class Replay(val sessionId: Long, val shuffle: Boolean) : SessionStart
-    data class Resume(val sessionId: Long, val useChangedSettings: Boolean) : SessionStart
+    data class Resume(
+        val sessionId: Long,
+        val useChangedSettings: Boolean,
+        val shuffle: Boolean,
+    ) : SessionStart
 }
 
 class AppViewModel(
@@ -1162,7 +1166,7 @@ class AppViewModel(
     fun retrySession() {
         when (val start = lastSessionStart) {
             is SessionStart.Replay -> startReplay(start.sessionId, start.shuffle)
-            is SessionStart.Resume -> startResume(start.sessionId, start.useChangedSettings)
+            is SessionStart.Resume -> startResume(start.sessionId, start.useChangedSettings, start.shuffle)
             SessionStart.New -> when {
                 pendingSessionTopic.isBlank() -> {
                     sessionError = null
@@ -1291,7 +1295,7 @@ class AppViewModel(
             pauseNext != session.pauseNext ||
             repetitions != session.reps ||
             durationMinutes != session.durationMin
-        startResume(session.id, useChangedSettings)
+        startResume(session.id, useChangedSettings, randomReplay)
     }
 
     private fun startReplay(sessionId: Long, shuffle: Boolean) {
@@ -1313,12 +1317,12 @@ class AppViewModel(
         }
     }
 
-    private fun startResume(sessionId: Long, useChangedSettings: Boolean) {
-        lastSessionStart = SessionStart.Resume(sessionId, useChangedSettings)
+    private fun startResume(sessionId: Long, useChangedSettings: Boolean, shuffle: Boolean) {
+        lastSessionStart = SessionStart.Resume(sessionId, useChangedSettings, shuffle)
         val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
-                sessionController.resumeSession(sessionId, useChangedSettings)
+                sessionController.resumeSession(sessionId, useChangedSettings, shuffle)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {

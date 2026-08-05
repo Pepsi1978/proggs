@@ -202,7 +202,18 @@ class SessionController(
         perspectiveQuestions != null
     }
 
-    suspend fun resumeSession(sourceSessionId: Long, useChangedSettings: Boolean) = operationMutex.withLock {
+    /**
+     * Setzt eine Sitzung genau am gespeicherten Punkt fort. Bereits vorgelesene Fragen bleiben
+     * hinter dem Fortsetzungspunkt liegen und kommen nie ein zweites Mal.
+     *
+     * @param shuffle mischt ausschliesslich die noch offenen Fragen. Jede davon kommt genau
+     *        einmal an die Reihe, danach laeuft die Sitzung mit Nachschub weiter.
+     */
+    suspend fun resumeSession(
+        sourceSessionId: Long,
+        useChangedSettings: Boolean,
+        shuffle: Boolean,
+    ) = operationMutex.withLock {
         releaseEngine()
         val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
             "Die gespeicherte Sitzung wurde nicht gefunden."
@@ -226,15 +237,18 @@ class SessionController(
             introContext = source.session.introContext,
             entranceQuestion = entranceQuestion,
         )
+        val stored = source.questions.map { Question(it.id, it.emoji, it.text) }
         sessionRepository.markPlayed(sourceSessionId)
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
-            questions = source.questions.map { Question(it.id, it.emoji, it.text) },
+            questions = if (shuffle) shuffleUpcoming(stored, questionIndex) else stored,
             refillPort = newRefillPort(requestBase, entranceQuestion),
             persistencePort = newPersistencePort(sourceSessionId),
             checkpoint = SessionCheckpoint(
                 currentIndex = questionIndex,
-                currentRep = source.session.resumeRepetition ?: 1,
+                // Beim Mischen steht am Fortsetzungspunkt eine andere Frage — die faengt bei
+                // ihrer ersten Wiederholung an, nicht mitten in der der abgebrochenen Frage.
+                currentRep = if (shuffle) 1 else source.session.resumeRepetition ?: 1,
                 remainingMs = if (useChangedSettings) {
                     config.initialRemainingMs
                 } else {

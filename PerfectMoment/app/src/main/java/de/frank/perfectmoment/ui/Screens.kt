@@ -1299,7 +1299,17 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Zufällige Reihenfolge", color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                                Text("Fragen werden gemischt abgespielt", color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+                                Text(
+                                    if (resumable) {
+                                        "Beim Fortsetzen werden nur die noch offenen Fragen gemischt"
+                                    } else {
+                                        "Fragen werden gemischt abgespielt"
+                                    },
+                                    color = colors.text3,
+                                    fontFamily = Inter,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 3.dp),
+                                )
                             }
                             PmSwitch(viewModel.randomReplay) { viewModel.toggleRandomReplay() }
                         }

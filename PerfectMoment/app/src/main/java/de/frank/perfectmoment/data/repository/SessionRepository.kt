@@ -80,7 +80,9 @@ class RoomSessionRepository(
                 pauseNext = (config.pauseNextMs / 1_000L).toInt(),
                 reps = config.repsPerQuestion,
                 questionCount = state.questions.size,
-                questionIndex = state.currentIndex.coerceIn(state.questions.indices),
+                // Bis hinter die letzte Frage erlaubt: Wer den Vorrat durchhat, wartet beim
+                // Fortsetzen auf Nachschub, statt die letzte Frage ein zweites Mal zu hoeren.
+                questionIndex = state.currentIndex.coerceIn(0, state.questions.size),
                 repetition = state.currentRep.coerceIn(1, config.repsPerQuestion),
                 remainingMs = state.remainingMs.coerceAtLeast(1L),
             )

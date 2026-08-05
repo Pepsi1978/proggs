@@ -37,7 +37,9 @@ class SessionEngine(
     private val _state = MutableStateFlow(
         SessionState(
             questions = initialQuestions,
-            currentIndex = checkpoint?.currentIndex?.coerceIn(0, initialQuestions.lastIndex.coerceAtLeast(0)) ?: 0,
+            // Ein Punkt hinter der letzten Frage bleibt erhalten — dort wartet die Sitzung auf
+            // Nachschub, statt die zuletzt gehoerte Frage zu wiederholen.
+            currentIndex = checkpoint?.currentIndex?.coerceIn(0, initialQuestions.size) ?: 0,
             currentRep = checkpoint?.currentRep?.coerceIn(1, config.repsPerQuestion) ?: 1,
             phase = if (checkpoint != null && initialQuestions.isNotEmpty()) Phase.SPEAKING else Phase.IDLE_MUTED,
             speakerOn = checkpoint != null && initialQuestions.isNotEmpty(),
