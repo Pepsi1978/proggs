@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -14,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -69,6 +71,14 @@ import java.util.Locale
 
 private enum class TranscriptionTarget { ChatInput, ContextPrompt }
 
+/** Offener Editor fuer einen Eintrags-Vorschlag oder eine Regel — als Overlay ueber dem Chat. */
+private data class TextEditorTarget(
+    val message: ChatMessage,
+    val isRule: Boolean,
+    val text: String
+)
+
+
 // Saver fuers rememberSaveable: bei Rotation waehrend einer laufenden Aufnahme fiel das Ziel
 // sonst auf ChatInput zurueck und das Transkript landete im falschen Feld.
 private val transcriptionTargetSaver = androidx.compose.runtime.saveable.Saver<TranscriptionTarget, String>(
@@ -91,6 +101,9 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     var pendingMicTarget by rememberSaveable(stateSaver = transcriptionTargetSaver) {
         mutableStateOf(TranscriptionTarget.ChatInput)
     }
+    // Der Eintrags-/Regel-Editor liegt bewusst hier oben: nur im Fenster der Activity wirken die
+    // Tastatur-Insets, sodass Text und Knopfreihe garantiert ueber der Tastatur bleiben.
+    var editorTarget by remember { mutableStateOf<TextEditorTarget?>(null) }
     val listState = rememberLazyListState()
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed,
@@ -298,7 +311,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                         onSpeakClick = { vm.toggleMessageSpeech(message.id, message.text) },
                         onShareClick = { vm.prepareMessageShare(message.id) },
                         onOptionClick = vm::sendOption,
-                        onEditedStoreSave = vm::saveEditedStoreConfirmation
+                        onOpenEditor = { editorTarget = it }
                     )
                 }
 
@@ -358,6 +371,29 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     vm.updateTitleOverride("")
                 },
                 onImprove = { vm.improveText(inputText) }
+            )
+        }
+
+        editorTarget?.let { target ->
+            MemoryTextEditorOverlay(
+                title = if (target.isRule) "Regel bearbeiten" else "Eintrag bearbeiten",
+                initialValue = target.text,
+                onValueChange = { editorTarget = target.copy(text = it) },
+                confirmLabel = if (target.isRule) "Bearbeitung bestätigen" else "Speichern",
+                isDark = MaterialTheme.colorScheme.background == DarkBg,
+                maxChars = if (target.isRule) 240 else Int.MAX_VALUE,
+                onDismiss = { editorTarget = null },
+                onConfirm = {
+                    val text = target.text.trim()
+                    if (text.isNotEmpty()) {
+                        if (target.isRule) {
+                            vm.sendOption(ChatOption("Regel speichern", "regel speichern: $text"))
+                        } else {
+                            vm.saveEditedStoreConfirmation(target.message, text)
+                        }
+                        editorTarget = null
+                    }
+                }
             )
         }
 
@@ -609,18 +645,11 @@ private fun ChatBubble(
     onSpeakClick: () -> Unit,
     onShareClick: () -> Unit,
     onOptionClick: (ChatOption) -> Unit,
-    onEditedStoreSave: (ChatMessage, String) -> Unit
+    onOpenEditor: (TextEditorTarget) -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     val canEditStoreText = !message.isUser && message.memoryEditable && !message.memoryText.isNullOrBlank()
     val canEditRuleText = !message.isUser && message.action == "rule_confirm"
-    val initialEditableText = remember(message.memoryText, message.text) {
-        message.memoryText?.trim().orEmpty().ifBlank { message.text.trim() }
-    }
-    var isEditingStoreText by rememberSaveable(message.id) { mutableStateOf(false) }
-    var editedStoreText by rememberSaveable(message.id) { mutableStateOf(initialEditableText) }
-    var isEditingRuleText by rememberSaveable(message.id) { mutableStateOf(false) }
-    var editedRuleText by rememberSaveable(message.id) { mutableStateOf(message.text.trim()) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -760,8 +789,7 @@ private fun ChatBubble(
                 message.options.forEach { option ->
                     OptionChip(label = option.label, isDark = isDark) {
                         if (canEditRuleText && option.send == "regel bearbeiten") {
-                            editedRuleText = message.text.trim()
-                            isEditingRuleText = true
+                            onOpenEditor(TextEditorTarget(message, isRule = true, text = message.text.trim()))
                         } else {
                             onOptionClick(option)
                         }
@@ -770,71 +798,39 @@ private fun ChatBubble(
             }
         }
 
-        // Beide Editoren laufen ueber denselben Vollbild-Dialog. Inline in der Chatliste war der Text
-        // bei offener Tastatur nicht mehr sichtbar: unter der Liste steht die hohe Eingabeleiste,
-        // durch adjustResize + IME blieb fuer die Liste fast keine Hoehe uebrig (Frank-Bug 2026-08-05,
-        // gleiche Fehlerklasse wie bugs/android/jetpack-compose.md §8.8).
-        if (canEditRuleText && isEditingRuleText) {
-            MemoryTextEditDialog(
-                title = "Regel bearbeiten",
-                initialValue = editedRuleText,
-                onValueChange = { editedRuleText = it },
-                confirmLabel = "Bearbeitung bestätigen",
-                isDark = isDark,
-                maxChars = 240,
-                onDismiss = { isEditingRuleText = false },
-                onConfirm = {
-                    val text = editedRuleText.trim()
-                    if (text.isNotEmpty()) {
-                        onOptionClick(ChatOption("Regel speichern", "regel speichern: $text"))
-                        isEditingRuleText = false
-                    }
-                }
-            )
-        }
-
+        // Der Editor selbst liegt NICHT hier in der Chatliste, sondern als Overlay ueber dem ganzen
+        // Bildschirm (ChatScreen). Inline war er bei offener Tastatur nicht sichtbar, und ein eigener
+        // Dialog bekommt die Tastatur-Insets nicht zuverlaessig — beides Frank-Bugs 2026-08-05.
         if (canEditStoreText) {
             Row(modifier = Modifier.padding(top = 5.dp)) {
-                // Bewusst OHNE Zuruecksetzen auf den Vorschlagstext: wer den Editor schliesst (auch
-                // per Zurueckwischen) und ihn wieder oeffnet, findet seine Bearbeitung unveraendert
-                // vor, statt von vorn anfangen zu muessen.
                 OptionChip(label = "Editieren", isDark = isDark, tint = Amber) {
-                    isEditingStoreText = true
+                    onOpenEditor(
+                        TextEditorTarget(
+                            message,
+                            isRule = false,
+                            text = editableEntryText(message.memoryText, message.text)
+                        )
+                    )
                 }
             }
-        }
-
-        if (canEditStoreText && isEditingStoreText) {
-            MemoryTextEditDialog(
-                title = "Eintrag bearbeiten",
-                initialValue = editedStoreText,
-                onValueChange = { editedStoreText = it },
-                confirmLabel = "Speichern",
-                isDark = isDark,
-                onDismiss = { isEditingStoreText = false },
-                onConfirm = {
-                    onEditedStoreSave(message, editedStoreText)
-                    isEditingStoreText = false
-                }
-            )
         }
     }
 }
 
 /**
- * Vollbild-Editor fuer den vorgeschlagenen Eintrag bzw. eine Regel.
+ * Editor fuer den vorgeschlagenen Eintrag bzw. eine Regel — als Overlay im Chat-Bildschirm.
  *
- * Bewusst ein Dialog und kein Inline-Feld: Er blendet die hohe Eingabeleiste aus. Das Fenster ist
- * KEIN Vollbild, sondern eine kompakte Karte, die unmittelbar ueber der Tastatur sitzt — Text UND
- * Speichern-Knopf bleiben dadurch immer gleichzeitig sichtbar. Der Cursor sitzt beim Oeffnen am
- * Textende, die Tastatur kommt von selbst; Frank muss nicht mehr blind ins Feld tippen.
+ * Bewusst KEIN Dialog: Ein Compose-Dialog laeuft in einem eigenen Fenster und bekommt die
+ * Tastatur-Insets nicht zuverlaessig; `imePadding()` blieb dort wirkungslos und die Knopfreihe
+ * verschwand hinter der Tastatur (Frank-Bug 2026-08-05). Im Fenster der Activity (adjustResize)
+ * wirkt `imePadding()` dagegen nachweislich — dieselbe Mechanik traegt die Eingabeleiste.
  *
- * `decorFitsSystemWindows = false` ist dabei PFLICHT: Ohne dieses Flag bekommt das eigene Fenster
- * eines Compose-Dialogs die Tastatur-Insets gar nicht, `imePadding()` bleibt wirkungslos und die
- * Knopfreihe verschwindet hinter der Tastatur (genau Franks Fund 2026-08-05).
+ * Die Karte ist kompakt und sitzt unmittelbar ueber der Tastatur: Text UND Speichern-Knopf bleiben
+ * immer gleichzeitig sichtbar. Der Cursor sitzt beim Oeffnen am Textende, die Tastatur kommt von
+ * selbst; Frank muss nicht mehr blind ins Feld tippen.
  */
 @Composable
-private fun MemoryTextEditDialog(
+private fun MemoryTextEditorOverlay(
     title: String,
     initialValue: String,
     onValueChange: (String) -> Unit,
@@ -846,31 +842,28 @@ private fun MemoryTextEditDialog(
 ) {
     val focusRequester = remember { FocusRequester() }
     // Cursor deterministisch ans Textende: bei BasicTextField(String) staende er sonst am Anfang und
-    // Frank muesste wieder blind ins Feld tippen. Der Dialog haelt die Cursor-/Auswahlposition,
+    // Frank muesste wieder blind ins Feld tippen. Das Overlay haelt die Cursor-/Auswahlposition,
     // nach aussen geht weiter nur der reine Text.
     var field by remember { mutableStateOf(TextFieldValue(initialValue, TextRange(initialValue.length))) }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    BackHandler(onBack = onDismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            // Klicks auf den abgedunkelten Bereich duerfen nicht in den Chat darunter durchfallen.
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {}
+            .systemBarsPadding()
+            .imePadding(),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding()
-                .imePadding(),
-            contentAlignment = Alignment.BottomCenter
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            tonalElevation = 6.dp,
+            modifier = Modifier.fillMaxWidth().padding(10.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(10.dp)
-            ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
                         text = title,
@@ -932,7 +925,6 @@ private fun MemoryTextEditDialog(
                         )
                     }
                 }
-            }
         }
     }
 }
