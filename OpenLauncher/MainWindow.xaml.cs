@@ -176,7 +176,6 @@ public partial class MainWindow : Window
         // Prozess bis zum Neustart nicht mehr in den Vordergrund holen. Die Vordergrund-Sequenz
         // laeuft daher ausschliesslich noch bei echten externen Anforderungen (zweite Instanz,
         // SC_RESTORE aus Systemmenue/Titelleiste), nicht bei jedem gewoehnlichen Fensterwechsel.
-        ContentRendered += (_, _) => Title = $"OpenLauncher — {ViewModel.Version}";
     }
 
     private void QueueBringToTaskbarForeground(string reason)
