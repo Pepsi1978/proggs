@@ -29,8 +29,11 @@ def load_distillation_namespace() -> dict:
         "_MEMORY_RECALL_REFERENCE_RE",
         "_MEMORY_RECALL_ACTION_RE",
         "_MEMORY_TIME_TOKEN_RE",
-        "_MEMORY_NEGATION_TOKEN_RE",
-        "_MEMORY_UNCERTAINTY_TOKEN_RE",
+        "_FINITE_VERB_TAIL_RE",
+        "_SEPARABLE_PREFIX_RE",
+        "_SUBJECT_PRONOUN_RE",
+        "_PARTICIPLE_RE",
+        "_verb_second_position",
         "_has_spoken_save_command",
         "_has_verbatim_save_signal",
         "_verbatim_memory_content",
@@ -40,7 +43,6 @@ def load_distillation_namespace() -> dict:
         "_pending_confirmation_intent",
         "_looks_like_save_request",
         "_fallback_memory_statement",
-        "_memory_statement_is_safe",
         "_memory_confirmation_display",
         "_distill_memory_statement",
         "hauptagent_route",
@@ -92,7 +94,6 @@ def response(statement: object) -> str:
 def main() -> int:
     ns = load_distillation_namespace()
     distill = ns["_distill_memory_statement"]
-    safe = ns["_memory_statement_is_safe"]
     has_command = ns["_has_spoken_save_command"]
     pending_intent = ns["_pending_confirmation_intent"]
     source = "Speichere bitte, dass ich morgen um 17 Uhr zum Fußballspiel gehen möchte."
@@ -106,52 +107,68 @@ def main() -> int:
     check("Speichere" not in statement and "morgen" in statement.lower() and "17" in statement,
           "Befehlswort verschwindet, Zeitbezug und Uhrzeit bleiben")
 
-    rich_source = "Speichere bitte: Vielleicht gehe ich morgen und Montag nicht zu 2 von 2 Terminen."
-    rich_statement = "Vielleicht gehe ich morgen und Montag nicht zu 2 von 2 Terminen."
-    check(safe(rich_source, rich_statement), "Vollständige Zahlen-, Zeit-, Negations- und Unsicherheitsmenge ist sicher")
-    check(not safe(rich_source, "Vielleicht gehe ich morgen und Montag nicht zu 2 Terminen."),
-          "Mehrfach vorkommende Zahlen dürfen nicht verloren gehen")
-    check(not safe(rich_source, "Ich gehe Montag nicht zu 2 von 2 Terminen."),
-          "Relative Zeit und Unsicherheit dürfen nicht verloren gehen")
-    check(not safe(rich_source, "Vielleicht gehe ich morgen und Montag zu 2 von 2 Terminen."),
-          "Negationen dürfen nicht verloren gehen")
-    check(not safe(source, ""), "Leere Modellaussagen sind unsicher")
-    check(not safe(source, "Morgen esse ich um 17 Uhr Pizza."),
-          "Ausgetauschte Inhaltsfakten dürfen nicht als sicher gelten")
-    check(not safe(source, "Morgen gehe ich um 17 Uhr zum Fußballspiel in Berlin."),
-          "Ergänzte Inhaltsfakten dürfen nicht als sicher gelten")
-    check(not safe(source, "Morgen gehe ich nicht um 17 Uhr zum Fußballspiel."),
-          "Ergänzte Negationen dürfen nicht als sicher gelten")
-    check(not safe(source, "Morgen gehe ich um 17 und 18 Uhr zum Fußballspiel."),
-          "Ergänzte Zahlen dürfen nicht als sicher gelten")
-    check(not safe("Peter Paul liebt.", "Paul liebt Peter."),
-          "Vertauschte Rollen benannter Personen dürfen nicht als sicher gelten")
-    check(not safe("Ich treffe meine Mutter.", "Ich treffe deine Mutter."),
-          "Geänderte Besitzverhältnisse dürfen nicht als sicher gelten")
+    # FRANKS SCREENSHOT-FALL (2026-08-05): Aus dem Speicherwunsch darf NIE ein herausgeschnittener
+    # Nebensatz werden ("Ich ab sofort als mein Haupthandy das Galaxy Fold 8 benutze."). Weder das
+    # Sprachmodell noch der regelbasierte Ersatzweg dürfen so etwas ausliefern.
+    fold_source = "Speichere bitte, dass ich ab sofort als mein Haupthandy das Galaxy Fold 8 benutze."
+    fold_statement = "Ab sofort benutze ich das Galaxy Fold 8 als mein Haupthandy."
+    ns["llm_generate"] = lambda *args, **kwargs: response(fold_statement)
+    check(distill(fold_source) == fold_statement,
+          "Gut formulierte Umstellung wird übernommen und nicht mehr verworfen")
 
-    ns["llm_generate"] = lambda *args, **kwargs: response("Morgen gehe ich zum Fußballspiel.")
-    check(distill(source, candidate) == candidate,
-          "Inhaltswächter verwirft eine Umformulierung mit verlorener Uhrzeit")
-    check(any("Inhaltswaechter" in str(entry) for entry in ns["test_logs"]),
-          "Verworfene Modellaussagen werden geloggt")
+    def fail(*args, **kwargs):
+        raise RuntimeError("Provider nicht erreichbar")
+
+    ns["llm_generate"] = fail
+    fold_fallback = distill(fold_source)
+    check(fold_fallback == "Ich benutze ab sofort als mein Haupthandy das Galaxy Fold 8.",
+          f"Auch ohne Sprachmodell entsteht ein deutscher Hauptsatz: {fold_fallback!r}")
+    check(not fold_fallback.startswith("Ich ab sofort"),
+          "Der verbletzte Nebensatz-Rest aus Franks Screenshot kann nicht mehr entstehen")
+
+    reorder = ns["_verb_second_position"]
+    check(reorder("ich morgen früh das neue Gerät einrichte") == "",
+          "Trennbare Verben werden nicht falsch umgestellt, sondern unberührt gelassen")
+    check(reorder("ich mir gestern ein neues Handy gekauft") == "",
+          "Ein Partizip am Ende ist kein finites Verb und löst keine Umstellung aus")
+    check(reorder("ich seit gestern die neue Brille trage")
+          == "ich trage seit gestern die neue Brille",
+          "Verbletzte Nebensätze kommen ohne neue Wörter in die Verbzweitstellung")
+
+    fallback_only = ns["_fallback_memory_statement"]
+    check(fallback_only("Speichere bitte: Ich fahre morgen nach Berlin.") == "Ich fahre morgen nach Berlin.",
+          "Ein bereits korrekter Hauptsatz ohne „dass“ wird nicht umgestellt")
+    check(fallback_only("Speichere bitte, dass ich mir gestern ein neues Handy gekauft habe.")
+          == "Ich habe mir gestern ein neues Handy gekauft.",
+          "Perfekt-Nebensätze bleiben grammatisch korrekt")
 
     bad_outputs = ("kein JSON", json.dumps(["falsch"]), response(7), response(""))
     for raw in bad_outputs:
         ns["test_logs"].clear()
         ns["test_checkpoints"].clear()
         ns["llm_generate"] = lambda *args, output=raw, **kwargs: output
-        check(distill(source, candidate) == candidate, "Ungültige Modellantwort nutzt sicheren Fallback")
+        check(distill(source, candidate) == candidate, "Ungültige Modellantwort nutzt den Ersatzweg")
         check(ns["test_logs"] and ns["test_checkpoints"],
               "Fehlerhafte oder leere Modellantwort wird geloggt und per Checkpoint sichtbar")
 
-    def fail(*args, **kwargs):
-        raise RuntimeError("Provider nicht erreichbar")
+    attempts = 0
+
+    def fail_once(*args, **kwargs) -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("Provider kurz nicht erreichbar")
+        return response("Morgen gehe ich um 17 Uhr zum Fußballspiel.")
+
+    ns["llm_generate"] = fail_once
+    check(distill(source, candidate) == "Morgen gehe ich um 17 Uhr zum Fußballspiel." and attempts == 2,
+          "Ein einzelner Aussetzer wird durch einen zweiten Anlauf aufgefangen")
 
     ns["test_logs"].clear()
     ns["test_checkpoints"].clear()
     ns["llm_generate"] = fail
     check(distill(source, candidate) == candidate,
-          "Provider-Fehler fällt auf sichere Router-Extraktion zurück")
+          "Zwei gescheiterte Anläufe fallen auf die regelbasierte Fassung zurück")
     check(ns["test_logs"] and ns["test_checkpoints"], "Provider-Fehler wird sichtbar protokolliert")
 
     corrupted_candidate = "Morgen esse ich um 17 Uhr Pizza."
@@ -340,7 +357,8 @@ def main() -> int:
     check("_distill_memory_statement" not in store_source,
           "Der neue Destillationscode greift nicht in den direkten /api/store-Pfad ein")
 
-    print("PASS: Speicherwünsche werden destilliert; Faktenwächter, Logging, Fallback und Dokumentpfade sind abgesichert")
+    print("PASS: Speicherwünsche werden als sauberer deutscher Hauptsatz formuliert; Logging, "
+          "zweiter Anlauf, regelbasierter Ersatzweg und Dokumentpfade sind abgesichert")
     return 0
 
 
