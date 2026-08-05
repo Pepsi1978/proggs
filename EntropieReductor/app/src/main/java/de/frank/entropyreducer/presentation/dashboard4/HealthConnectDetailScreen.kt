@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Refresh
@@ -336,7 +336,12 @@ fun HealthConnectDetailScreen(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-                items(sortedItems, key = { it.first }) { (ts, value) ->
+                // Crash-Fix 2026-08-05 (Almanach jetpack-compose §4.2, gleiche Fehlerklasse wie
+                // die Sport-Chips): der Timestamp allein ist NICHT eindeutig — zwei Quellen
+                // koennen denselben Messzeitpunkt liefern. Index im Key macht ihn garantiert
+                // eindeutig, ohne einen Messwert zu verstecken.
+                itemsIndexed(sortedItems, key = { index, it -> "${index}_${it.first}" }) { _,
+                    (ts, value) ->
                     HcValueRow(
                         timestampMs = ts,
                         value = value,

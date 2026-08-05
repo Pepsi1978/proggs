@@ -64,10 +64,15 @@ class AmazfitTrainingsViewModel @Inject constructor(
             (sport == null || w.sportType == sport) &&
                 w.startMs >= cutoff
         }
+        // Crash-Fix 2026-08-05 (Almanach jetpack-compose §4.2): toSet() dedupliziert das PAAR,
+        // nicht den sportType. Derselbe Sportart-Code kann aber mehrere Namen tragen (Polar
+        // liefert den frei benennbaren Trainings-Titel, dazu die Umbenenn-Funktion im Detail-
+        // Screen). Ergebnis waren zwei Chips mit demselben LazyRow-Key -> IllegalArgumentException
+        // "Key ... was already used". distinctBy auf den Code haelt die Chips eindeutig; gefiltert
+        // wird ohnehin nur ueber sportType, daher kein Funktionsverlust.
         val sportsInData = workouts
             .mapNotNull { w -> w.sportType?.let { it to (w.sportName ?: "Sport $it") } }
-            .toSet()
-            .toList()
+            .distinctBy { it.first }
             .sortedBy { it.second }
         AmazfitTrainingsUiState(
             workouts = workouts,

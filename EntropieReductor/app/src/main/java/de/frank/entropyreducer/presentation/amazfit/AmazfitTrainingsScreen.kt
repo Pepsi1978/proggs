@@ -192,7 +192,10 @@ fun AmazfitTrainingsScreen(
                                     ),
                             )
                         }
-                        items(state.availableSports, key = { it.first }) { (type, name) ->
+                        // Zusammengesetzter Key als zweite Schicht gegen §4.2-Kollisionen —
+                        // das Paar ist auch dann eindeutig, wenn die Dedup im ViewModel faellt.
+                        items(state.availableSports, key = { "${it.first}_${it.second}" }) {
+                            (type, name) ->
                             val selected = state.sportFilter == type
                             AssistChip(
                                 onClick = { vm.setSport(type) },
