@@ -1009,7 +1009,8 @@ constructor(
         encryptedPrefs.edit().putString(Constants.PREF_QWEN_API_KEY, clean).apply()
         _uiState.value = _uiState.value.copy(qwenApiKey = clean)
         disableOwnVoiceIfIncomplete()
-        if (clean.isNotBlank()) refreshQwenVoices() else _uiState.value = _uiState.value.copy(qwenVoices = emptyList())
+        // Nicht bei jedem Zeichen nachladen — die Liste holt sich der Stimmen-Dialog beim Oeffnen.
+        if (clean.isBlank()) _uiState.value = _uiState.value.copy(qwenVoices = emptyList())
     }
 
     fun refreshQwenVoices() {
