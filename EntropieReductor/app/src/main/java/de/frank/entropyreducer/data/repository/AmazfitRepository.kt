@@ -74,6 +74,13 @@ constructor(
     private val healthConnect: HealthConnectManager,
     /** Wetter-Rueckblick pro Training (Open-Meteo): stuendliche Temperatur am GPS-Ort. */
     private val weatherRepository: WeatherRepository,
+    /**
+     * Frank-Bugfix 2026-08-05: Whoop-Trainings als Ersatzquelle fuer den Puls. Health Connect
+     * hat fuer manche Laeufe nur Distanz und Kalorien (Quelle Oura) — der Puls liegt dann aber
+     * bereits als Whoop-Training in der App. Ohne diese Quelle blieben Ø/Max-Puls und der daraus
+     * berechnete VO₂max leer, obwohl die Werte da sind.
+     */
+    private val whoopWorkoutDao: de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -374,6 +381,10 @@ constructor(
         val start = end - days.toLong() * 24L * 60L * 60L * 1000L
         val toleranceMs = 5L * 60L * 1000L // 5 Minuten +/- ist immer noch derselbe Lauf
         val existing = workoutDao.observeRange(start, end).first()
+        // Whoop-Trainings im selben Fenster — Ersatzquelle fuer fehlenden Puls (siehe unten).
+        val whoopNearby = runCatchingCancellable {
+            whoopWorkoutDao.observeRange(start, end).first()
+        }.getOrDefault(emptyList())
         // Frank-Bugfix 2026-07-04: Tombstones manuell geloeschter Trainings — diese Sessions duerfen
         // NICHT wieder importiert werden, auch wenn sie in Health Connect noch existieren.
         val deletedStarts = appSettings.getDeletedWorkoutStarts()
@@ -415,7 +426,10 @@ constructor(
                     skippedDeleted++
                     continue
                 }
-                val newEntity = healthConnectSessionToEntity(session)
+                val newEntity =
+                    healthConnectSessionToEntity(session)
+                        .withEstablishedSportName(session)
+                        .withHeartRateFromWhoop(whoopNearby)
                 // Frank-Bugfix 2026-08-05: gegen [known] pruefen statt gegen [existing] — die Liste
                 // waechst mit jedem Insert dieses Durchlaufs mit. Vorher war sie ein Schnappschuss
                 // von VOR der Schleife, deshalb sah die zweite Session desselben Laufs die gerade
@@ -482,6 +496,52 @@ constructor(
                 "(von ${sessions.size})",
         )
         return inserted + replaced
+    }
+
+    /**
+     * Behaelt den Namen, den diese Sportart in der Historie schon traegt.
+     *
+     * Health Connect liefert bei keiner Session einen Titel (Diagnose-Sonde 2026-08-05: alle
+     * Quellen — Oura, Whoop, Zepp — schreiben `title=null`). Der Name entsteht deshalb aus dem
+     * generischen Code-Mapping: Code 56 → "Laufen". Frank hat seine Laeufe aber in "Traillauf"
+     * umbenannt, und jeder Sync machte das fuer die betroffenen Trainings wieder rueckgaengig —
+     * daher standen im Juli zwei Laeufe als "Laufen" zwischen lauter "Traillauf"-Eintraegen.
+     *
+     * Liefert Health Connect doch einmal einen echten Titel, gewinnt dieser: eine benannte Quelle
+     * ist immer besser als ein abgeleiteter Name.
+     */
+    private suspend fun AmazfitWorkoutEntity.withEstablishedSportName(
+        session: HealthConnectExerciseSession,
+    ): AmazfitWorkoutEntity {
+        if (session.title != null) return this
+        val type = sportType ?: return this
+        val established = workoutDao.mostCommonSportNameForType(type) ?: return this
+        return if (established == sportName) this else copy(sportName = established)
+    }
+
+    /**
+     * Ergaenzt einen fehlenden Ø-/Max-Puls aus dem zeitgleichen Whoop-Training.
+     *
+     * Hintergrund (Franks Laeufe vom 16.07. und 18.07.2026): Fuer diese Tage hat nur Oura eine
+     * Session nach Health Connect geschrieben — mit Distanz und Kalorien, aber ohne einen
+     * einzigen Puls-Wert. Das Whoop-Armband hatte den Lauf sehr wohl aufgezeichnet, die Werte
+     * lagen als Whoop-Training bereits in der App, nur eben in einer anderen Tabelle.
+     *
+     * Fuellt ausschliesslich Luecken — ein vorhandener Puls aus Health Connect bleibt unangetastet.
+     */
+    private fun AmazfitWorkoutEntity.withHeartRateFromWhoop(
+        whoopWorkouts: List<de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity>,
+    ): AmazfitWorkoutEntity {
+        if (avgHeartRate != null && maxHeartRate != null) return this
+        val toleranceMs = 5L * 60L * 1000L
+        val match =
+            whoopWorkouts
+                .filter { kotlin.math.abs(it.startMs - startMs) <= toleranceMs }
+                .minByOrNull { kotlin.math.abs(it.startMs - startMs) } ?: return this
+        return copy(
+            avgHeartRate = avgHeartRate ?: match.averageHeartRate,
+            maxHeartRate = maxHeartRate ?: match.maxHeartRate,
+        )
     }
 
     /**

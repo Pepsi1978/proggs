@@ -183,6 +183,22 @@ interface AmazfitWorkoutDao {
     suspend fun getFingerprintRows(): List<AmazfitWorkoutFingerprintRow>
 
     /**
+     * Frank-Bugfix 2026-08-05: Der in der Historie ueblichste Name fuer eine Sportart.
+     *
+     * Hintergrund: Health Connect liefert bei KEINER Session einen Titel (verifiziert ueber die
+     * Diagnose-Sonde), der Name entsteht also aus dem generischen Code-Mapping ("Laufen" fuer
+     * Code 56). Frank hat seine Laeufe aber selbst in "Traillauf" umbenannt. Bisher machte jeder
+     * Sync diese Umbenennung fuer die betroffenen Trainings wieder rueckgaengig. Mit dieser
+     * Abfrage uebernimmt ein neu importiertes Training den Namen, den dieselbe Sportart in der
+     * Historie schon traegt.
+     */
+    @Query(
+        "SELECT sportName FROM amazfit_workouts WHERE sportType = :sportType " +
+            "AND sportName IS NOT NULL GROUP BY sportName ORDER BY COUNT(*) DESC LIMIT 1"
+    )
+    suspend fun mostCommonSportNameForType(sportType: Int): String?
+
+    /**
      * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur
      * wo der Name aktuell abweicht (idempotent).
      */
