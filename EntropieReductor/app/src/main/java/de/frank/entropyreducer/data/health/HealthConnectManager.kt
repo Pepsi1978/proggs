@@ -667,7 +667,8 @@ class HealthConnectManager @Inject constructor(
             Diag.d(
                 DiagnosticArea.HEALTH_CONNECT,
                 TAG,
-                "CHECKPOINT hc_training start=$sessionStart dur=${durationSeconds}s " +
+                "CHECKPOINT hc_training src=${session.metadata.dataOrigin.packageName} " +
+                    "title=${session.title ?: "-"} start=$sessionStart dur=${durationSeconds}s " +
                     "dist=${distanceMeters?.toInt()}m route=$routeStatus hrS=${hrSamples.size} " +
                     "spdS=${speedSamples.size} cadS=${cadenceRates.size} " +
                     "avgPace=${avgPaceSecPerKm?.let { "%.0f".format(Locale.US, it) }} " +
@@ -697,12 +698,19 @@ class HealthConnectManager @Inject constructor(
                 gpsTrackJson = gpsTrackJson,
                 heartRateSeriesJson = heartRateSeriesJson,
                 paceStreamJson = paceStreamJson,
+                sourceApp = session.metadata.dataOrigin.packageName.takeIf { it.isNotBlank() },
             )
         }
         // Frank-Bugfix 2026-07-03: Health Connect enthaelt Trainings oft DOPPELT (z.B. Polar Flow +
         // Zepp schreiben beide) — eine Version mit vollem Puls/Tempo, eine fast leer. Pro ~5-Min-
         // Zeitfenster die DATENREICHSTE Version behalten, sonst zeigt die App zufaellig die leere.
-        dedupeBestPerWindow(mapped)
+        // Frank-Bugfix 2026-08-05: Die reichste Version zu behalten reichte nicht — die Quellen
+        // haben UNTERSCHIEDLICHE Luecken. Franks Lauf vom 04.08. lag dreifach in HC: eine Version
+        // mit 1351 Puls-Punkten und Distanz, eine mit 601 Puls-Punkten, und nur EINE mit
+        // GPS-Route. Wer die reichste behielt, warf die GPS-Route oder die Distanz weg. Jetzt
+        // bleibt die reichste die Basis und fehlende Felder werden aus den anderen Versionen
+        // desselben Fensters aufgefuellt — nur wo die Basis nichts hat, nie ueberschreibend.
+        mergeBestPerWindow(mapped)
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readExerciseSessions failed", it) }.getOrDefault(emptyList())
 
     /**
@@ -710,17 +718,45 @@ class HealthConnectManager @Inject constructor(
      * (Start < 5 Min auseinander). Behaelt pro Zeitfenster die datenreichste Version (meiste
      * Puls-/Tempo-/GPS-Daten) — Health Connect enthaelt Trainings oft doppelt (Polar + Zepp).
      */
-    private fun dedupeBestPerWindow(
+    private fun mergeBestPerWindow(
         sessions: List<HealthConnectExerciseSession>,
     ): List<HealthConnectExerciseSession> {
         val toleranceMs = 5L * 60L * 1000L
         val kept = mutableListOf<HealthConnectExerciseSession>()
         for (s in sessions.sortedByDescending { it.richness() }) {
-            val dup = kept.any { kotlin.math.abs(it.startMs - s.startMs) <= toleranceMs }
-            if (!dup) kept.add(s)
+            val idx = kept.indexOfFirst { kotlin.math.abs(it.startMs - s.startMs) <= toleranceMs }
+            if (idx < 0) kept.add(s) else kept[idx] = kept[idx].fillGapsFrom(s)
         }
         return kept.sortedByDescending { it.startMs }
     }
+
+    /**
+     * Ergaenzt fehlende Felder aus einer zweiten Version desselben Trainings. Vorhandene Werte
+     * bleiben IMMER unangetastet — [other] ist per Konstruktion die datenaermere Version, sie
+     * darf nur Luecken fuellen. Startzeit, Dauer und Herkunft bleiben die der Basis, damit
+     * trackId und Diagnose stabil bleiben.
+     */
+    private fun HealthConnectExerciseSession.fillGapsFrom(
+        other: HealthConnectExerciseSession,
+    ): HealthConnectExerciseSession =
+        copy(
+            title = title ?: other.title,
+            distanceMeters = distanceMeters ?: other.distanceMeters,
+            calories = calories ?: other.calories,
+            avgHeartRate = avgHeartRate ?: other.avgHeartRate,
+            maxHeartRate = maxHeartRate ?: other.maxHeartRate,
+            avgPaceSecPerKm = avgPaceSecPerKm ?: other.avgPaceSecPerKm,
+            maxPaceSecPerKm = maxPaceSecPerKm ?: other.maxPaceSecPerKm,
+            avgSpeedKmh = avgSpeedKmh ?: other.avgSpeedKmh,
+            maxSpeedKmh = maxSpeedKmh ?: other.maxSpeedKmh,
+            cadence = cadence ?: other.cadence,
+            strideLengthCm = strideLengthCm ?: other.strideLengthCm,
+            altitudeGainMeters = altitudeGainMeters ?: other.altitudeGainMeters,
+            altitudeLossMeters = altitudeLossMeters ?: other.altitudeLossMeters,
+            gpsTrackJson = gpsTrackJson ?: other.gpsTrackJson,
+            heartRateSeriesJson = heartRateSeriesJson ?: other.heartRateSeriesJson,
+            paceStreamJson = paceStreamJson ?: other.paceStreamJson,
+        )
 
     /** Datenreichtums-Score: je mehr Detailfelder + Verlaufspunkte, desto hoeher. */
     private fun HealthConnectExerciseSession.richness(): Int {
@@ -847,4 +883,11 @@ data class HealthConnectExerciseSession(
     val gpsTrackJson: String? = null,
     val heartRateSeriesJson: String? = null,
     val paceStreamJson: String? = null,
+    /**
+     * Frank-Diagnose 2026-08-05: Paketname der App, die diese Session in Health Connect
+     * geschrieben hat (z.B. `fi.polar.beat`, `com.sec.android.app.shealth`). Nur fuer die
+     * Diagnose-Sonde — so ist ohne Raten sichtbar, welche Quelle ein Training geliefert hat,
+     * wenn Werte fehlen oder der Name nicht stimmt.
+     */
+    val sourceApp: String? = null,
 )
