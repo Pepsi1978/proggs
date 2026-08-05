@@ -27,3 +27,4 @@
 | 13 | State nach Hintergrund-Kill weg | ViewModel ueberlebt nicht Process Death → `SavedStateHandle`/Persistenz | §1.5, §1.6 |
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 | 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
+| 16 | `EncryptedSharedPreferences` — Crash in `onCreate` nach Geraetewechsel (`AEADBadTagException`, Keystore -30) | `create()` in try/catch + Prefs & Masterkey-Alias loeschen und neu anlegen; Prefs-Datei aus BEIDEN Backup-XMLs ausschliessen | §7.4 |

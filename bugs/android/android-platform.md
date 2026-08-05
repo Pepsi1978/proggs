@@ -648,6 +648,17 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **FIX:** `FileProvider.getUriForFile()` → `content://` + `addFlags(FLAG_GRANT_READ_URI_PERMISSION)`; Provider im Manifest (`exported="false"`, `grantUriPermissions="true"`) + `file_paths.xml`. (Beide Apps nutzen `FileProvider`.) Folgefehler: `SecurityException` (Flag vergessen), `FileNotFoundException` (Pfad fehlt in file_paths.xml).
 - **Quelle:** https://developer.android.com/reference/androidx/core/content/FileProvider
 
+### 7.4 `EncryptedSharedPreferences` crasht nach Geraetewechsel/Backup-Restore
+- **Symptom:** App startet gar nicht mehr, sofortiger Crash in `Activity.onCreate()` (bei Hilt: waehrend `inject`). Stacktrace: `AEADBadTagException` → `KeyStoreException: Signature/MAC verification failed (internal Keystore code: -30)` ueber `AndroidKeystoreAesGcm.decrypt` → `AndroidKeysetManager.build` → `EncryptedSharedPreferences.create`. Android zeigt nur den Systemdialog „App wurde beendet / Cache leeren".
+- **Ursache:** Der Tink-Keyset liegt in der SharedPreferences-Datei und wird von Auto-Backup/Smart-Switch aufs neue Geraet mitkopiert. Der zugehoerige Masterkey (`_androidx_security_master_key_`) ist aber **hardwaregebunden im Keystore** und wandert NICHT mit. Der neue Key kann den alten Keyset nicht entschluesseln → MAC-Fehler. Gleicher Effekt bei Keystore-Reset (Bildschirmsperre entfernt, Fingerabdruck geloescht, Werksreset-Teilzustaende).
+- **Versionen:** `androidx.security:security-crypto` alle Versionen (1.0.0 – 1.1.0-alpha), API 23+ (per Design; die Bibliothek hat keinerlei eingebautes Recovery).
+- **FIX (zwei Schichten, funktionserhaltend):**
+  1. **Reaktiv** — `EncryptedSharedPreferences.create()` in `try/catch` kapseln; im Fehlerfall `context.deleteSharedPreferences(<name>)` + `KeyStore.getInstance("AndroidKeyStore").deleteEntry("_androidx_security_master_key_")`, dann neu anlegen. Die alten Werte sind ohnehin unwiederbringlich — verschluesselt bleibt alles, es geht nur der nicht mehr lesbare Inhalt verloren. NIE den Fehler still schlucken: mit `Log.w` samt Stacktrace protokollieren.
+  2. **Praeventiv** — die Prefs-Datei aus Backup UND Geraetetransfer ausschliessen: `<exclude domain="sharedpref" path="<name>.xml" />` in `backup_rules.xml` (API ≤30) **und** in beiden Bloecken (`cloud-backup` + `device-transfer`) von `data_extraction_rules.xml` (API 31+). Nur eine der beiden Dateien zu pflegen reicht nicht.
+- **Achtung:** Nur `deleteSharedPreferences` ohne Loeschen des Keystore-Alias deckt den Fall „Key selbst beschaedigt" nicht ab. Nach dem Reset ist der Nutzer abgemeldet (Tokens lagen in den Prefs) — das ist der korrekte, ehrliche Zustand, kein Folgebug.
+- **Erlebt:** 05.08.2026, BestJournalFrank auf Galaxy Z Fold 8 nach Geraetetransfer.
+- **Quelle:** https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences · https://developer.android.com/guide/topics/data/autobackup#include-exclude-android-12
+
 ---
 
 ## 8. Plattformweite Verhaltensaenderungen Android 15/16 (durch targetSdk-Bump)
