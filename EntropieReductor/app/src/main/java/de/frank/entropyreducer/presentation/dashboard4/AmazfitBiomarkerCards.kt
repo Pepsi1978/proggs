@@ -36,6 +36,7 @@ import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.amazfit.EditTrainingValuesDialog
 import de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides
 import de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay
+import de.frank.entropyreducer.presentation.amazfit.sourceLabel
 import de.frank.entropyreducer.presentation.amazfit.isVo2MaxSport
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.LocalCardBackgroundOverride
@@ -302,8 +303,10 @@ private fun LetzterLaufHero(
                             .background(accent.copy(alpha = 0.22f))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
+                    // Frank-Entscheidung 2026-08-05: echte Quelle statt pauschal "Polar" — hier
+                    // stand vorher auch auf Trainings "Polar", die von Oura oder Whoop stammten.
                     Text(
-                        text = "Polar",
+                        text = sourceLabel(w.source),
                         color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,

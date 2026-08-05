@@ -669,7 +669,12 @@ constructor(
             strideLengthCm = s.strideLengthCm,
             swolf = null,
             poolLengthMeters = null,
-            source = "health_connect",
+            // Frank-Entscheidung 2026-08-05: Die schreibende App haengt hinten dran
+            // ("health_connect:fi.polar.polarflow"). Bisher stand hier nur "health_connect" und
+            // die Oberflaeche zeigte pauschal "Polar" — auch bei Trainings, die in Wahrheit von
+            // Oura oder Whoop kamen. Das Praefix bleibt unveraendert, damit die bestehende
+            // Quellen-Logik (Detail-Refresh, Polar-Bulk) genauso weiterlaeuft wie bisher.
+            source = s.sourceApp?.let { "health_connect:$it" } ?: "health_connect",
             city = null,
             paceStreamJson = s.paceStreamJson,
             createdAt = System.currentTimeMillis(),

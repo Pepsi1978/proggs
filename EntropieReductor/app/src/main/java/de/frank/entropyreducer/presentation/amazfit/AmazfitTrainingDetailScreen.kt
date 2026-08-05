@@ -1932,18 +1932,30 @@ private fun formatVo2(v: Double): String = "%.1f".format(v).replace(".", ",")
  * Frank seine Trainings konzeptionell als Polar-Trainings sieht (sein H10 ist ja immer dran, auch
  * wenn die Aufzeichnung historisch ueber Zepp lief).
  *
- * - source startsWith "polar" → "Polar"
- * - source == "health_connect" → "Health Connect"
- * - source enthaelt "huami" → "Polar" (frueher: "T-Rex 3", aufgehoben 2026-05-16)
+ * Frank-Entscheidung 2026-08-05: Die Beschriftung sagt jetzt die WAHRHEIT. Vorher stand ueberall
+ * "Polar", auch auf Trainings die in Wirklichkeit von Oura oder Whoop kamen — genau daran ist
+ * nicht erkennbar gewesen, dass fuer manche Laeufe gar keine Polar-Daten vorliegen. Health-Connect-
+ * Eintraege tragen die schreibende App jetzt im source-Feld ("health_connect:fi.polar.polarflow")
+ * und werden hier auf ihren Klarnamen abgebildet.
+ *
+ * - source startsWith "polar" → "Polar" (Bulk-Import aus der Polar-Export-Datei)
+ * - "health_connect:fi.polar.*" → "Polar" · ":com.ouraring.oura" → "Oura" ·
+ *   ":com.whoop.android" → "Whoop" · ":*huami*" → "Zepp" · sonst "Health Connect"
  * - source == null oder leer → "Polar"
- * - Sonstiges → "Polar"
  */
-private fun sourceLabel(source: String?): String {
+internal fun sourceLabel(source: String?): String {
     if (source.isNullOrBlank()) return "Polar"
     val lc = source.lowercase()
+    if (lc.startsWith("polar")) return "Polar"
+    if (!lc.startsWith("health_connect")) return "Polar"
+    val app = lc.substringAfter("health_connect:", missingDelimiterValue = "")
     return when {
-        lc.startsWith("polar") -> "Polar"
-        lc == "health_connect" -> "Health Connect"
-        else -> "Polar"
+        app.isBlank() -> "Health Connect"
+        app.startsWith("fi.polar") -> "Polar"
+        app.startsWith("com.ouraring") -> "Oura"
+        app.startsWith("com.whoop") -> "Whoop"
+        app.contains("huami") || app.contains("zepp") -> "Zepp"
+        app.contains("shealth") -> "Samsung Health"
+        else -> "Health Connect"
     }
 }

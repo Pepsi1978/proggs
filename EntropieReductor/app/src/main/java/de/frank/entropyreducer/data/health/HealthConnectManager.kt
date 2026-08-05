@@ -723,12 +723,25 @@ class HealthConnectManager @Inject constructor(
     ): List<HealthConnectExerciseSession> {
         val toleranceMs = 5L * 60L * 1000L
         val kept = mutableListOf<HealthConnectExerciseSession>()
-        for (s in sessions.sortedByDescending { it.richness() }) {
+        // Frank-Entscheidung 2026-08-05: Polar ist die fuehrende Quelle. Schreibt Polar Flow ein
+        // Training nach Health Connect, ist DIESE Version die Grundlage — auch wenn eine andere
+        // App (Oura, Whoop, Zepp) mehr Messpunkte liefert. Die anderen Quellen fuellen nur noch
+        // Luecken, die Polar offen laesst; erst danach entscheidet der Datenreichtum.
+        val ordered =
+            sessions.sortedWith(
+                compareByDescending<HealthConnectExerciseSession> { it.isPreferredSource() }
+                    .thenByDescending { it.richness() }
+            )
+        for (s in ordered) {
             val idx = kept.indexOfFirst { kotlin.math.abs(it.startMs - s.startMs) <= toleranceMs }
             if (idx < 0) kept.add(s) else kept[idx] = kept[idx].fillGapsFrom(s)
         }
         return kept.sortedByDescending { it.startMs }
     }
+
+    /** True fuer Sessions aus der fuehrenden Quelle (Polar Flow). */
+    private fun HealthConnectExerciseSession.isPreferredSource(): Boolean =
+        sourceApp?.startsWith(PREFERRED_WORKOUT_SOURCE) == true
 
     /**
      * Ergaenzt fehlende Felder aus einer zweiten Version desselben Trainings. Vorhandene Werte
@@ -842,6 +855,14 @@ class HealthConnectManager @Inject constructor(
 
     private companion object {
         const val TAG = "HealthConnectMgr"
+
+        /**
+         * Frank-Entscheidung 2026-08-05: Polar ist die fuehrende Trainings-Quelle — seine
+         * Trainings sollen aus Polar kommen, andere Apps nur einspringen wo Polar nichts hat.
+         * Praefix, weil Polar je nach Installation `fi.polar.polarflow` oder `fi.polar.beat`
+         * verwendet.
+         */
+        const val PREFERRED_WORKOUT_SOURCE = "fi.polar"
     }
 }
 
