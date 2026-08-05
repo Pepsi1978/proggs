@@ -389,12 +389,26 @@ constructor(
         var inserted = 0
         var replaced = 0
         var skippedDeleted = 0
+        var mergedDuplicates = 0
         // Performance (Tiefen-Debugging 2026-07-04): ALLE Schreibvorgaenge des Merges in EINER
         // Room-Transaktion — vorher invalidierte jeder einzelne upsert die amazfit_workouts-Flows
         // (N Emissionen -> N komplette Biomarker-UI-Recompositions waehrend Frank scrollt).
         // Jetzt genau EINE Invalidation am Transaktionsende. Reihenfolge/Ergebnis identisch;
         // im Block laufen NUR DAO-Aufrufe (kein Netzwerk, kein Dispatcher-Wechsel — Room-BP §4).
         appDatabase.withTransaction {
+            // Frank-Bugfix 2026-08-05: Bereits vorhandene Doppel-Eintraege desselben Laufs
+            // aufraeumen (selbstheilend). Ursache siehe unten — der Dedup verglich nur gegen den
+            // Stand VOR der Schleife, dadurch konnten zwei HC-Sessions desselben Laufs (Franks
+            // Trail-Lauf vom 04.08.2026: zwei Records 2,9 s auseinander) beide eingefuegt werden.
+            // Der aermere Eintrag stand dann als "neuester" oben in der Hero-Card, ohne Distanz
+            // und Puls. Geloescht wird strikt verlustfrei: nur wenn der behaltene Eintrag JEDES
+            // Feld belegt, das der geloeschte belegt (siehe [coversAllFieldsOf]).
+            val known = existing.toMutableList()
+            for (dropped in findRedundantDuplicates(known, toleranceMs)) {
+                workoutDao.deleteByTrackId(dropped.trackId)
+                known.remove(dropped)
+                mergedDuplicates++
+            }
             for (session in sessions) {
                 // Manuell geloeschtes Training? Nicht erneut importieren (Tombstone gewinnt).
                 if (deletedStarts.any { kotlin.math.abs(it - session.startMs) <= toleranceMs }) {
@@ -402,14 +416,27 @@ constructor(
                     continue
                 }
                 val newEntity = healthConnectSessionToEntity(session)
-                val match = existing.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
+                // Frank-Bugfix 2026-08-05: gegen [known] pruefen statt gegen [existing] — die Liste
+                // waechst mit jedem Insert dieses Durchlaufs mit. Vorher war sie ein Schnappschuss
+                // von VOR der Schleife, deshalb sah die zweite Session desselben Laufs die gerade
+                // eingefuegte erste nicht und wurde als "neu" ein zweites Mal angelegt.
+                val match = known.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
                 when {
                     match == null -> {
                         workoutDao.upsert(newEntity)
+                        known.add(newEntity)
                         inserted++
                     }
                     match.source == "strava" || match.manualOverridesMs != null -> {
                         // bewusst behalten — nicht ueberschreiben
+                    }
+                    // Frank-Bugfix 2026-08-05: Ein DATENAERMERER Treffer darf den bestehenden
+                    // Eintrag nicht ueberschreiben. Ohne diese Schranke wuerde der Dedup-Fix oben
+                    // die leere "Laufen"-Session den vollstaendigen "Traillauf" ueberschreiben
+                    // lassen — der Doppel-Eintrag waere weg, aber die Werte auch. Ersetzt wird nur
+                    // noch nach oben (Ziel des Zweigs: leere Eintraege anreichern).
+                    !newEntity.coversAllFieldsOf(match) -> {
+                        // bestehender Eintrag ist reicher — behalten
                     }
                     else -> {
                         // Frank-Bugfix: Wetter (Open-Meteo) vom bestehenden Eintrag uebernehmen — sonst
@@ -424,6 +451,8 @@ constructor(
                             )
                         if (match.trackId != preserved.trackId) workoutDao.deleteByTrackId(match.trackId)
                         workoutDao.upsert(preserved)
+                        known.remove(match)
+                        known.add(preserved)
                         replaced++
                     }
                 }
@@ -433,7 +462,9 @@ constructor(
         // bestehende (auch wenn keine neuen Sessions kamen). Ein Fehler hier darf den
         // Trainings-Sync nie kippen.
         runCatchingCancellable { backfillMissingWeather() }
-        if (inserted + replaced == 0) {
+        // mergedDuplicates zaehlt mit: eine Bereinigung muss ins Drive-Backup, sonst spielt der
+        // naechste Restore den geloeschten Doppel-Eintrag wieder ein.
+        if (inserted + replaced + mergedDuplicates == 0) {
             Diag.d(
                 DiagnosticArea.AMAZFIT,
                 TAG,
@@ -446,9 +477,54 @@ constructor(
         Diag.i(
             DiagnosticArea.AMAZFIT,
             TAG,
-            "Health-Connect-Workouts: $inserted neu, $replaced ersetzt, $skippedDeleted geloescht-uebersprungen (von ${sessions.size})",
+            "Health-Connect-Workouts: $inserted neu, $replaced ersetzt, $skippedDeleted " +
+                "geloescht-uebersprungen, $mergedDuplicates Doppel-Eintraege bereinigt " +
+                "(von ${sessions.size})",
         )
         return inserted + replaced
+    }
+
+    /**
+     * Findet Doppel-Eintraege desselben Trainings (Start innerhalb [toleranceMs]) und liefert
+     * genau die Eintraege zurueck, die gefahrlos geloescht werden koennen.
+     *
+     * Sicherheitsregeln (Direktive #3, Funktionalitaets-Erhaltung — im Zweifel bleibt beides
+     * stehen, ein doppelter Eintrag ist harmloser als ein verlorener Messwert):
+     * - geloescht wird nur, wenn der behaltene Eintrag JEDES Feld belegt, das der geloeschte
+     *   belegt ([coversAllFieldsOf]) — es kann also kein Wert verschwinden;
+     * - manuell editierte Eintraege (`manualOverridesMs`) und Strava-Trainings bleiben immer;
+     * - sind zwei Eintraege gleich reich, bleibt der aeltere (der zuerst importierte).
+     */
+    private fun findRedundantDuplicates(
+        workouts: List<AmazfitWorkoutEntity>,
+        toleranceMs: Long,
+    ): List<AmazfitWorkoutEntity> {
+        val sorted = workouts.sortedBy { it.startMs }
+        val dropped = ArrayList<AmazfitWorkoutEntity>()
+        for (i in sorted.indices) {
+            val a = sorted[i]
+            if (a in dropped) continue
+            for (j in i + 1 until sorted.size) {
+                val b = sorted[j]
+                if (b.startMs - a.startMs > toleranceMs) break
+                if (b in dropped) continue
+                val keep: AmazfitWorkoutEntity
+                val drop: AmazfitWorkoutEntity
+                if (a.coversAllFieldsOf(b)) {
+                    keep = a
+                    drop = b
+                } else if (b.coversAllFieldsOf(a)) {
+                    keep = b
+                    drop = a
+                } else {
+                    continue // jeder hat etwas Eigenes — beide behalten
+                }
+                if (drop.manualOverridesMs != null || drop.source == "strava") continue
+                dropped.add(drop)
+                if (drop == a) break // a ist weg, naechstes Paar bildet sich um keep herum
+            }
+        }
+        return dropped
     }
 
     /**
@@ -914,3 +990,52 @@ internal object AmazfitSportNames {
         return "Unbekannt"
     }
 }
+
+/**
+ * Alle Mess-/Detailfelder eines Trainings, die einen Doppel-Eintrag wertvoll machen koennen.
+ * Bewusst OHNE Identitaets- und Verwaltungsfelder (trackId, dateKey, startMs, source, Wetter,
+ * createdAt) — die sagen nichts darueber aus, welcher von zwei Eintraegen mehr Daten traegt.
+ */
+private val WORKOUT_VALUE_FIELDS: List<(AmazfitWorkoutEntity) -> Any?> =
+    listOf(
+        { it.durationSeconds },
+        { it.sportType },
+        { it.sportName },
+        { it.distanceMeters },
+        { it.avgPaceSecPerKm },
+        { it.maxPaceSecPerKm },
+        { it.avgSpeedKmh },
+        { it.maxSpeedKmh },
+        { it.calories },
+        { it.avgHeartRate },
+        { it.maxHeartRate },
+        { it.gpsTrackJson },
+        { it.heartRateSeriesJson },
+        { it.paceSeriesJson },
+        { it.paceStreamJson },
+        { it.splitsJson },
+        { it.altitudeGainMeters },
+        { it.altitudeLossMeters },
+        { it.trainingEffectAerobic },
+        { it.trainingEffectAnaerobic },
+        { it.vo2Max },
+        { it.cadence },
+        { it.strideLengthCm },
+        { it.recoveryTimeHours },
+        { it.skinTempCelsius },
+        { it.swolf },
+        { it.poolLaps },
+        { it.poolLengthMeters },
+        { it.city },
+    )
+
+/**
+ * True, wenn dieses Training jedes Feld belegt, das [other] belegt — dann steckt in [other] kein
+ * Wert, den es hier nicht auch gibt, und [other] darf als Doppel-Eintrag entfallen.
+ *
+ * Bewusst nur "belegt vs. leer", kein Wert-Vergleich: zwei Quellen desselben Laufs weichen in den
+ * Zahlen immer leicht ab (Franks Fall: 3620 s vs. 3609 s). Entschieden wird ueber Vollstaendigkeit,
+ * nicht darueber, welche Zahl "richtiger" ist.
+ */
+private fun AmazfitWorkoutEntity.coversAllFieldsOf(other: AmazfitWorkoutEntity): Boolean =
+    WORKOUT_VALUE_FIELDS.none { field -> field(other) != null && field(this) == null }
