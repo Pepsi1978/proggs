@@ -331,26 +331,6 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                         Spacer(modifier = Modifier.width(10.dp))
                         SunMoonToggle()
                     }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                GoldenHairline()
-                val lastUpdated = remember(weekly, monthly, yearly) {
-                    viewModel.getLastUpdatedText()
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (lastUpdated != null) {
-                        Text(
-                            text = lastUpdated,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
@@ -365,16 +345,29 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 doHaptic(HapticFeedbackType.LongPress)
                                 showInfoDialog = true
                             },
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(38.dp),
                         ) {
                             Icon(
                                 Icons.Rounded.Info,
                                 contentDescription = "So entstehen Rückblicke",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(17.dp),
+                                modifier = Modifier.size(19.dp),
                             )
                         }
                     }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                GoldenHairline()
+                val lastUpdated = remember(weekly, monthly, yearly) {
+                    viewModel.getLastUpdatedText()
+                }
+                if (lastUpdated != null) {
+                    Text(
+                        text = lastUpdated,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
