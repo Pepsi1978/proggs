@@ -34,6 +34,16 @@ constructor(
     companion object {
         /** Max concurrent AI API calls to avoid rate limiting */
         private const val MAX_PARALLEL = 3
+
+        /** Das gewohnte Fenster fuer den automatischen Lauf beim Oeffnen der App. */
+        private const val DEFAULT_WEEKS_BACK = 8
+        private const val DEFAULT_MONTHS_BACK = 3
+
+        /** Obergrenzen fuer den Lauf ueber die ganze Historie (Aktualisieren-Knopf). */
+        private const val MAX_HISTORY_WEEKS = 520
+        private const val MAX_HISTORY_MONTHS = 120
+        private const val MAX_HISTORY_YEARS = 10
+        private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
     }
 
     /**
@@ -134,14 +144,21 @@ constructor(
     val lastFailureCount: Int
         get() = _lastFailureCount.get()
 
-    suspend fun generateMissing(): Int {
+    /**
+     * @param fullHistory bei true reicht die Suche bis zum aeltesten Tagebucheintrag zurueck statt
+     *        nur ueber die letzten Wochen und Monate. Das braucht der Aktualisieren-Knopf im
+     *        Rueckblick: nach dem Einspielen eines Backups sind die Eintraege aelter als das
+     *        normale Fenster, und ohne diesen Weg entstuende zu ihnen nie ein Rueckblick.
+     */
+    suspend fun generateMissing(fullHistory: Boolean = false): Int {
         _lastFailureCount.set(0)
         // Cleanup: remove monthly reviews for months without actual diary entries
         cleanupOrphanedMonthlyReviews()
+        val oldest = if (fullHistory) journalDao.getOldestEntryTimestamp() else null
         var generated = 0
-        generated += generateMissingWeekly()
-        generated += generateMissingMonthly()
-        generated += generateMissingYearly()
+        generated += generateMissingWeekly(weeksBackLimit(oldest))
+        generated += generateMissingMonthly(monthsBackLimit(oldest))
+        generated += generateMissingYearly(oldestYear(oldest))
         if (generated == 0 && lastFailureCount > 0) {
             throw Exception(
                 "Alle $lastFailureCount KI-Anfragen fehlgeschlagen. Bitte Internetverbindung prüfen."
@@ -171,12 +188,12 @@ constructor(
         val entriesText: String,
     )
 
-    private suspend fun generateMissingWeekly(): Int {
+    private suspend fun generateMissingWeekly(maxWeeksBack: Int): Int {
         val now = Calendar.getInstance()
 
         // Phase 1: Collect all weeks that need generation
         val tasks = mutableListOf<WeeklyTask>()
-        for (weeksBack in 0..8) {
+        for (weeksBack in 0..maxWeeksBack) {
             val (weekStart, weekEnd) = getWeekRange(weeksBack)
             val deadline =
                 Calendar.getInstance().apply {
@@ -324,12 +341,12 @@ ${summaryText.take(500)}"""
         val year: Int,
     )
 
-    private suspend fun generateMissingMonthly(): Int {
+    private suspend fun generateMissingMonthly(maxMonthsBack: Int): Int {
         val now = Calendar.getInstance()
 
         // Phase 1: Collect all months that need generation
         val tasks = mutableListOf<MonthlyTask>()
-        for (monthsBack in 0..3) {
+        for (monthsBack in 0..maxMonthsBack) {
             val (monthStart, monthEnd) = getMonthRange(monthsBack)
             val deadline =
                 Calendar.getInstance().apply {
@@ -482,20 +499,16 @@ ${summaryText.take(500)}"""
 
     // ── Yearly ──────────────────────────────────────────────────────────────
 
-    private suspend fun generateMissingYearly(): Int {
+    /**
+     * Erzeugt alle noch fehlenden Jahresrueckblicke von [oldestYear] bis zum laufenden Jahr.
+     * Voraussetzung sind mindestens 2 fertige Monatsrueckblicke pro Jahr; ein einzelner Monat
+     * reicht nicht fuer einen aussagekraeftigen Jahresueberblick.
+     */
+    private suspend fun generateMissingYearly(oldestYear: Int): Int {
         val now = Calendar.getInstance()
         val currentYear = now.get(Calendar.YEAR)
-
-        // Pruefe sowohl das laufende Jahr (faellig ab 31.12. 15:00 dieses Jahres)
-        // als auch das letzte Jahr — falls dort noch nichts existiert. Voraussetzung
-        // sind mindestens 2 fertige Monatsrueckblicke pro Jahr; ein einzelner Monat
-        // reicht nicht fuer einen aussagekraeftigen Jahresueberblick.
-        var year = -1
-        var yearStart: Calendar = Calendar.getInstance()
-        var yearEnd: Calendar = Calendar.getInstance()
-        var monthlyReviews: List<RetrospectiveSummaryEntity> = emptyList()
-        var picked = false
-        for (candidate in listOf(currentYear, currentYear - 1)) {
+        var generated = 0
+        for (candidate in currentYear downTo minOf(oldestYear, currentYear)) {
             val cStart =
                 Calendar.getInstance().apply {
                     set(candidate, Calendar.JANUARY, 1, 0, 0, 0)
@@ -519,15 +532,17 @@ ${summaryText.take(500)}"""
                 Log.d("Retro", "Year $candidate: ${cReviews.size} monthly reviews, need >= 2, skipping")
                 continue
             }
-            year = candidate
-            yearStart = cStart
-            yearEnd = cEnd
-            monthlyReviews = cReviews
-            picked = true
-            break
+            generated += generateSingleYearly(candidate, cStart, cEnd, cReviews)
         }
-        if (!picked) return 0
+        return generated
+    }
 
+    private suspend fun generateSingleYearly(
+        year: Int,
+        yearStart: Calendar,
+        yearEnd: Calendar,
+        monthlyReviews: List<RetrospectiveSummaryEntity>,
+    ): Int {
         Log.d("Retro", "Generating yearly review from ${monthlyReviews.size} monthly reviews...")
 
         val monthsText =
@@ -858,6 +873,35 @@ Dieses Profil ist KEIN reiner Stil-Hinweis, sondern der inhaltliche Taktgeber f�
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
+
+    /**
+     * Wie viele Wochen zurueck gesucht wird. Ohne [oldest] bleibt es beim gewohnten Fenster;
+     * mit dem aeltesten Eintrag reicht die Suche bis zu dessen Woche, gedeckelt bei
+     * [MAX_HISTORY_WEEKS], damit ein einzelner sehr alter Eintrag keinen endlosen Lauf ausloest.
+     */
+    private fun weeksBackLimit(oldest: Long?): Int {
+        if (oldest == null) return DEFAULT_WEEKS_BACK
+        val elapsed = System.currentTimeMillis() - oldest
+        val weeks = (elapsed / WEEK_MS).toInt() + 1
+        return weeks.coerceIn(DEFAULT_WEEKS_BACK, MAX_HISTORY_WEEKS)
+    }
+
+    private fun monthsBackLimit(oldest: Long?): Int {
+        if (oldest == null) return DEFAULT_MONTHS_BACK
+        val now = Calendar.getInstance()
+        val then = Calendar.getInstance().apply { timeInMillis = oldest }
+        val months =
+            (now.get(Calendar.YEAR) - then.get(Calendar.YEAR)) * 12 +
+                (now.get(Calendar.MONTH) - then.get(Calendar.MONTH))
+        return months.coerceIn(DEFAULT_MONTHS_BACK, MAX_HISTORY_MONTHS)
+    }
+
+    private fun oldestYear(oldest: Long?): Int {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        if (oldest == null) return currentYear - 1
+        val year = Calendar.getInstance().apply { timeInMillis = oldest }.get(Calendar.YEAR)
+        return year.coerceAtLeast(currentYear - MAX_HISTORY_YEARS)
+    }
 
     /**
      * Returns (Monday 00:00, Sunday 23:59) for N weeks back. Forces firstDayOfWeek=MONDAY to avoid

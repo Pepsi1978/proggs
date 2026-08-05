@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -331,28 +332,60 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                         Spacer(modifier = Modifier.width(10.dp))
                         SunMoonToggle()
                     }
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                        border =
-                            BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            ),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        IconButton(
-                            onClick = {
-                                doHaptic(HapticFeedbackType.LongPress)
-                                showInfoDialog = true
-                            },
-                            modifier = Modifier.size(38.dp),
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                ),
                         ) {
-                            Icon(
-                                Icons.Rounded.Info,
-                                contentDescription = "So entstehen Rückblicke",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(19.dp),
-                            )
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showInfoDialog = true
+                                },
+                                modifier = Modifier.size(38.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Info,
+                                    contentDescription = "So entstehen Rückblicke",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                        // Holt alle Rueckblicke nach, die aus den vorhandenen Eintraegen noch
+                        // moeglich sind — auch fuer alte Wochen, Monate und Jahre aus einem Backup.
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                ),
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.refreshAllHistory()
+                                },
+                                enabled = !isGenerating && !isWaitingForRestore,
+                                modifier = Modifier.size(38.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Refresh,
+                                    contentDescription = "Aktualisieren",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
                         }
                     }
                 }

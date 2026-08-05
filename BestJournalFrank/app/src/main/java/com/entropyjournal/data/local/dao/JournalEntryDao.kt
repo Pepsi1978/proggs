@@ -52,6 +52,10 @@ interface JournalEntryDao {
 
     @Query("SELECT COUNT(*) FROM journal_entries") suspend fun getEntryCount(): Int
 
+    /** Zeitpunkt des aeltesten Eintrags — Startpunkt fuer Rueckblicke ueber die ganze Historie. */
+    @Query("SELECT MIN(timestamp) FROM journal_entries")
+    suspend fun getOldestEntryTimestamp(): Long?
+
     @Query("SELECT * FROM journal_entries WHERE isSynced = 0")
     suspend fun getUnsyncedEntries(): List<JournalEntryEntity>
 

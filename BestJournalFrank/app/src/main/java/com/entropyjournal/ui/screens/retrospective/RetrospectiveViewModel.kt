@@ -366,6 +366,40 @@ constructor(
             }
     }
 
+    /**
+     * Erzeugt alle Rueckblicke, die aus den vorhandenen Eintraegen noch moeglich sind — auch fuer
+     * laengst vergangene Wochen, Monate und Jahre.
+     *
+     * Der automatische Lauf beim Start schaut nur wenige Wochen zurueck. Nach dem Einspielen eines
+     * Backups sind die Eintraege aber aelter, sodass ohne diesen Knopf zu ihnen nie ein Rueckblick
+     * entstuende. Bestehende Rueckblicke bleiben unangetastet, es kommt nur Fehlendes dazu.
+     */
+    fun refreshAllHistory() {
+        val previous = currentJob
+        currentJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    previous?.cancelAndJoin()
+                } catch (_: kotlinx.coroutines.CancellationException) {
+                    // Expected when the previous job was already cancelling
+                }
+                try {
+                    _isGenerating.value = true
+                    _errorMessage.value = null
+                    awaitSyncComplete()
+                    val count = generateUseCase.generateMissing(fullHistory = true)
+                    Log.d("RetroVM", "Full-history refresh generated $count reviews")
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("RetroVM", "Full-history refresh failed: ${e.message}", e)
+                    _errorMessage.value = e.message
+                } finally {
+                    _isGenerating.value = false
+                }
+            }
+    }
+
     fun clearError() {
         _errorMessage.value = null
     }
