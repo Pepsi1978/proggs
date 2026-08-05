@@ -96,6 +96,8 @@ import com.entropyjournal.ui.components.JournalShareAttachment
 import com.entropyjournal.ui.components.JournalSharePayload
 import com.entropyjournal.ui.components.JournalShareSheet
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
+import com.entropyjournal.ui.theme.scaledBody
+import com.entropyjournal.ui.theme.scaledHeading
 import com.entropyjournal.util.TtsManager
 import java.util.Calendar
 
@@ -321,7 +323,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             text = "Rückblick",
                             style =
                                 MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = 27.sp,
+                                    fontSize = 27.sp.scaledHeading,
                                     fontWeight = FontWeight.Bold,
                                 ),
                             color = MaterialTheme.colorScheme.onBackground,
@@ -462,7 +464,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             text = "Dein persönlicher Rückblick",
                             style =
                                 MaterialTheme.typography.headlineSmall.copy(
-                                    fontSize = 22.sp,
+                                    fontSize = 22.sp.scaledHeading,
                                     fontWeight = FontWeight.Bold,
                                 ),
                             color = MaterialTheme.colorScheme.onSurface,
@@ -902,7 +904,7 @@ private fun CategoryButton(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp.scaledBody),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -1071,7 +1073,7 @@ private fun SummaryDetailDialog(
                             text = summary.title,
                             style =
                                 MaterialTheme.typography.headlineSmall.copy(
-                                    fontSize = 21.sp,
+                                    fontSize = 21.sp.scaledHeading,
                                     fontWeight = FontWeight.Bold,
                                 ),
                             color = MaterialTheme.colorScheme.primary,

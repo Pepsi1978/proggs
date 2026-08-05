@@ -111,6 +111,7 @@ import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.LocalJournalDesignTokens
+import com.entropyjournal.ui.theme.scaledHeading
 import com.entropyjournal.util.DateTimeFormatter as DTFormatter
 import kotlinx.coroutines.delay
 
@@ -192,7 +193,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                             text = "Tagebuch",
                             style =
                                 MaterialTheme.typography.headlineLarge.copy(
-                                    fontSize = 27.sp,
+                                    fontSize = 27.sp.scaledHeading,
                                     fontWeight = FontWeight.Bold,
                                 ),
                             color = MaterialTheme.colorScheme.onBackground,
@@ -431,7 +432,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                                     text = sectionLabel,
                                     style =
                                         MaterialTheme.typography.titleSmall.copy(
-                                            fontSize = 15.sp,
+                                            fontSize = 15.sp.scaledHeading,
                                             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                         ),
                                     color = MaterialTheme.colorScheme.primary,
@@ -1208,7 +1209,7 @@ private fun StreakDialog(
                 Text(
                     "$currentStreak Tage in Folge",
                     color = accentColor,
-                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = 26.sp),
+                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = 26.sp.scaledHeading),
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(2.dp))

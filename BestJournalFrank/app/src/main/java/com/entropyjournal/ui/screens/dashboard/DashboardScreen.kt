@@ -107,6 +107,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
+import com.entropyjournal.ui.theme.scaledHeading
 
 private val NeonRed: Color
     @Composable get() = MaterialTheme.colorScheme.error
@@ -209,7 +210,7 @@ private fun LiteraryHeadline(text: String, modifier: Modifier = Modifier) {
         modifier = modifier,
         style =
             MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 27.sp,
+                fontSize = 27.sp.scaledHeading,
                 fontWeight = FontWeight.Bold,
             ),
         color = MaterialTheme.colorScheme.onBackground,
@@ -219,7 +220,7 @@ private fun LiteraryHeadline(text: String, modifier: Modifier = Modifier) {
 private val GoldenSectionTitleStyle
     @Composable get() =
         MaterialTheme.typography.titleLarge.copy(
-            fontSize = 19.sp,
+            fontSize = 19.sp.scaledHeading,
             fontWeight = FontWeight.Bold,
         )
 

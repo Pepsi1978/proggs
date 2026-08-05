@@ -1216,7 +1216,7 @@ fun SettingsScreen(
                         FontSizeSlider(
                             label = "Überschriften",
                             scale = headingScale,
-                            onScaleChange = { ProfileTheme.setFontScales(it, bodyScale) },
+                            onScaleChange = { ProfileTheme.setHeadingScale(it) },
                             onScaleCommitted = {
                                 doHaptic(HapticFeedbackType.LongPress)
                                 ProfileTheme.persistFontScales(context)
@@ -1225,7 +1225,7 @@ fun SettingsScreen(
                         FontSizeSlider(
                             label = "Fließtext",
                             scale = bodyScale,
-                            onScaleChange = { ProfileTheme.setFontScales(headingScale, it) },
+                            onScaleChange = { ProfileTheme.setBodyScale(it) },
                             onScaleCommitted = {
                                 doHaptic(HapticFeedbackType.LongPress)
                                 ProfileTheme.persistFontScales(context)

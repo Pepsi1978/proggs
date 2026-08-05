@@ -45,8 +45,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 150
-        versionName = "0.21.4"
+        versionCode = 151
+        versionName = "0.21.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

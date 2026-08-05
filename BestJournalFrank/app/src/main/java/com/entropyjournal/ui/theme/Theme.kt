@@ -254,6 +254,8 @@ fun EntropyJournalTheme(
     CompositionLocalProvider(
         LocalIsDarkTheme provides darkTheme,
         LocalJournalDesignTokens provides designTokens,
+        LocalHeadingScale provides clampFontScale(headingScale),
+        LocalBodyScale provides clampFontScale(bodyScale),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

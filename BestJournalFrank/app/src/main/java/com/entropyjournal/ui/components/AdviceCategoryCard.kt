@@ -79,6 +79,7 @@ import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.theme.scaledBody
 
 @Composable
 fun AdviceCategoryCard(
@@ -122,8 +123,8 @@ fun AdviceCategoryCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = block.categoryName,
-                fontSize = 10.sp,
-                lineHeight = 12.sp,
+                fontSize = 10.sp.scaledBody,
+                lineHeight = 12.sp.scaledBody,
                 color =
                     if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.entropyjournal.ui.theme.LocalJournalDesignTokens
+import com.entropyjournal.ui.theme.scaledBody
 import java.io.File
 import java.io.FileOutputStream
 
@@ -215,7 +216,7 @@ fun JournalShareSheet(
             }
             Text(
                 payload.subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp.scaledBody),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )

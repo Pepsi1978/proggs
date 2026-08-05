@@ -66,11 +66,9 @@ object ProfileTheme {
                 .apply()
         }
         currentHeadingScale.floatValue =
-            prefs.getFloat(Constants.PREF_HEADING_FONT_SCALE, DEFAULT_FONT_SCALE)
-                .coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+            clampFontScale(prefs.getFloat(Constants.PREF_HEADING_FONT_SCALE, DEFAULT_FONT_SCALE))
         currentBodyScale.floatValue =
-            prefs.getFloat(Constants.PREF_BODY_FONT_SCALE, DEFAULT_FONT_SCALE)
-                .coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+            clampFontScale(prefs.getFloat(Constants.PREF_BODY_FONT_SCALE, DEFAULT_FONT_SCALE))
     }
 
     /** Vom Settings-Screen aufgerufen: Prefs + Compose-State gemeinsam aktualisieren. */
@@ -106,9 +104,12 @@ object ProfileTheme {
      * sofort mitwaechst. Das teure Schreiben in die verschluesselten Prefs macht
      * [persistFontScales] erst beim Loslassen.
      */
-    fun setFontScales(headingScale: Float, bodyScale: Float) {
-        currentHeadingScale.floatValue = headingScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
-        currentBodyScale.floatValue = bodyScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+    fun setHeadingScale(scale: Float) {
+        currentHeadingScale.floatValue = clampFontScale(scale)
+    }
+
+    fun setBodyScale(scale: Float) {
+        currentBodyScale.floatValue = clampFontScale(scale)
     }
 
     fun persistFontScales(context: Context) {

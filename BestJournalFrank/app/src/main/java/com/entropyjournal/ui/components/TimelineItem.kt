@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.ui.theme.TextMuted
+import com.entropyjournal.ui.theme.scaledBody
+import com.entropyjournal.ui.theme.scaledHeading
 import com.entropyjournal.util.DateTimeFormatter
 
 enum class TimelinePosition { FIRST, MIDDLE, LAST, ONLY }
@@ -132,7 +134,7 @@ fun TimelineItem(
                     val highlightedTitle = remember(entry.title, searchQuery, highlightColor) { highlightMatches(entry.title, searchQuery, highlightColor) }
                     Text(
                         text = highlightedTitle,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp.scaledHeading),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -159,14 +161,14 @@ fun TimelineItem(
                     val highlighted = remember(snippetText, searchQuery, highlightColor) { highlightMatches(snippetText, searchQuery, highlightColor) }
                     Text(
                         text = highlighted,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 24.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp.scaledBody, lineHeight = 24.sp.scaledBody),
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
                     Text(
                         text = entry.displayText,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 24.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp.scaledBody, lineHeight = 24.sp.scaledBody),
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )

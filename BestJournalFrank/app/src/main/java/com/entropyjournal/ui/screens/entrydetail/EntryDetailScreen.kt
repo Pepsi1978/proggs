@@ -121,6 +121,7 @@ import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.LocalJournalDesignTokens
+import com.entropyjournal.ui.theme.scaledBody
 import com.entropyjournal.ui.screens.journal.RecordingState
 import com.entropyjournal.ui.screens.journal.GoldenWaveform
 import com.entropyjournal.util.DateTimeFormatter
@@ -582,8 +583,8 @@ fun EntryDetailScreen(
                                             },
                                     textStyle =
                                         MaterialTheme.typography.bodyLarge.copy(
-                                            fontSize = 15.sp,
-                                            lineHeight = 24.sp,
+                                            fontSize = 15.sp.scaledBody,
+                                            lineHeight = 24.sp.scaledBody,
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
                                     colors = textFieldColors,
@@ -606,8 +607,8 @@ fun EntryDetailScreen(
                                             },
                                     textStyle =
                                         MaterialTheme.typography.bodyLarge.copy(
-                                            fontSize = 15.sp,
-                                            lineHeight = 24.sp,
+                                            fontSize = 15.sp.scaledBody,
+                                            lineHeight = 24.sp.scaledBody,
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
                                     colors = textFieldColors,

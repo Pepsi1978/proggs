@@ -1,11 +1,14 @@
 package com.entropyjournal.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.R
@@ -17,6 +20,24 @@ const val DEFAULT_BODY_FONT_NAME = "Source Sans 3"
 const val MIN_FONT_SCALE = 0.85f
 const val MAX_FONT_SCALE = 1.6f
 const val DEFAULT_FONT_SCALE = 1f
+
+fun clampFontScale(scale: Float): Float = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+
+/**
+ * Die beiden Regler-Werte fuer den ganzen Compose-Baum. Screens, die eine feste sp-Groesse setzen
+ * und damit die Theme-Typografie ueberschreiben, koppeln sich ueber [scaledHeading] bzw.
+ * [scaledBody] an sie an — sonst bliebe ihr Text beim Verstellen unveraendert.
+ */
+val LocalHeadingScale = compositionLocalOf { DEFAULT_FONT_SCALE }
+val LocalBodyScale = compositionLocalOf { DEFAULT_FONT_SCALE }
+
+/** Feste Ueberschriften-Groesse an den Ueberschriften-Regler koppeln. */
+val TextUnit.scaledHeading: TextUnit
+    @Composable get() = this * LocalHeadingScale.current
+
+/** Feste Fliesstext-Groesse an den Fliesstext-Regler koppeln. */
+val TextUnit.scaledBody: TextUnit
+    @Composable get() = this * LocalBodyScale.current
 
 val PlayfairDisplay = FontFamily(
     Font(R.font.playfair_display_variable, weight = FontWeight.Medium),
@@ -200,8 +221,8 @@ fun appTypography(
 ): Typography {
     val heading = headingFontFamily(headingFontName)
     val body = bodyFontFamily(bodyFontName)
-    val hs = headingScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
-    val bs = bodyScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+    val hs = clampFontScale(headingScale)
+    val bs = clampFontScale(bodyScale)
 
     return AppTypography.copy(
         displayLarge = AppTypography.displayLarge.withFont(heading, hs),
@@ -217,5 +238,8 @@ fun appTypography(
         bodyMedium = AppTypography.bodyMedium.withFont(body, bs),
         bodySmall = AppTypography.bodySmall.withFont(body, bs),
         labelLarge = AppTypography.labelLarge.withFont(body, bs),
+        // Monospace-Labels (Datumszeilen, Zaehler) behalten ihre Schrift, wachsen aber mit.
+        labelMedium = AppTypography.labelMedium.copy(fontSize = AppTypography.labelMedium.fontSize * bs),
+        labelSmall = AppTypography.labelSmall.copy(fontSize = AppTypography.labelSmall.fontSize * bs),
     )
 }
