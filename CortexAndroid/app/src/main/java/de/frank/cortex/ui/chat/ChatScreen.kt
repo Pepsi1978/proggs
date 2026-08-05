@@ -385,25 +385,35 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             MemoryTextEditorOverlay(
                 title = if (target.isRule) "Regel bearbeiten" else "Eintrag bearbeiten",
                 initialValue = target.text,
-                onValueChange = {
-                    draftEdits[target.message.id] = it
-                    editorTarget = target.copy(text = it)
-                },
+                // Getippte Zeichen landen AUSSCHLIESSLICH im Entwurfsspeicher und ruehren
+                // `editorTarget` nicht an. Vorher wurde der Zustand hier neu gesetzt — beim Tippen auf
+                // einen Knopf meldet die Tastatur beim Fokusverlust noch einmal den Text, und dieses
+                // spaete onValueChange hat den gerade geschlossenen Editor sofort wieder geoeffnet
+                // ("blitzt auf, alles wie vorher"; auch Zurueckwischen kam nicht mehr heraus).
+                onValueChange = { draftEdits[target.message.id] = it },
                 confirmLabel = if (target.isRule) "Bearbeitung bestätigen" else "Speichern",
                 isDark = MaterialTheme.colorScheme.background == DarkBg,
                 maxChars = if (target.isRule) 240 else Int.MAX_VALUE,
-                onDismiss = { editorTarget = null },
+                onDismiss = {
+                    CortexLog.info("ChatScreen", "editorClose", "Editier-Fenster abgebrochen")
+                    editorTarget = null
+                },
                 onConfirm = {
-                    val text = target.text.trim()
-                    if (text.isNotEmpty()) {
-                        if (target.isRule) {
-                            vm.sendOption(ChatOption("Regel speichern", "regel speichern: $text"))
-                        } else {
-                            vm.saveEditedStoreConfirmation(target.message, text)
-                        }
-                        draftEdits.remove(target.message.id)
-                        editorTarget = null
+                    val text = (draftEdits[target.message.id] ?: target.text).trim()
+                    CortexLog.info(
+                        "ChatScreen", "editorSave", "Bearbeiteten Text uebernommen",
+                        mapOf("laenge" to text.length, "regel" to target.isRule)
+                    )
+                    if (target.isRule) {
+                        vm.sendOption(ChatOption("Regel speichern", "regel speichern: $text"))
+                    } else {
+                        vm.saveEditedStoreConfirmation(target.message, text)
                     }
+                    draftEdits.remove(target.message.id)
+                    // Immer schliessen — auch bei leerem Text. Ein Fenster, das auf einen Tastendruck
+                    // nicht reagiert, ist fuer den Benutzer nicht von "haengt" zu unterscheiden;
+                    // leeren Text lehnt das ViewModel sichtbar mit einer Meldung ab.
+                    editorTarget = null
                 }
             )
         }
@@ -857,8 +867,18 @@ private fun MemoryTextEditorOverlay(
     // Frank muesste wieder blind ins Feld tippen. Das Overlay haelt die Cursor-/Auswahlposition,
     // nach aussen geht weiter nur der reine Text.
     var field by remember { mutableStateOf(TextFieldValue(initialValue, TextRange(initialValue.length))) }
+    // Zweite Schutzschicht gegen das Wiederaufspringen: Ab dem Moment, in dem geschlossen wird, ist
+    // dieses Fenster taub. Die Tastatur meldet beim Fokusverlust noch einmal ihren Text — dieses
+    // spaete Ereignis darf nichts mehr ausloesen.
+    var closing by remember { mutableStateOf(false) }
+    val close: (() -> Unit) -> Unit = { action ->
+        if (!closing) {
+            closing = true
+            action()
+        }
+    }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    BackHandler(onBack = onDismiss)
+    BackHandler { close(onDismiss) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -899,7 +919,7 @@ private fun MemoryTextEditorOverlay(
                         onValueChange = {
                             // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
                             // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
-                            if (it.text.length <= maxChars) {
+                            if (!closing && it.text.length <= maxChars) {
                                 field = it
                                 onValueChange(it.text)
                             }
@@ -925,7 +945,7 @@ private fun MemoryTextEditorOverlay(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onDismiss,
+                        onClick = { close(onDismiss) },
                         shape = RoundedCornerShape(999.dp),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                     ) {
@@ -938,7 +958,7 @@ private fun MemoryTextEditorOverlay(
                         )
                     }
                     Button(
-                        onClick = onConfirm,
+                        onClick = { close(onConfirm) },
                         shape = RoundedCornerShape(999.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Mint),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp)
