@@ -269,17 +269,10 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (SelectedProfile == null || ThinkingOptions.Count == 0) return;
 
-        // Opus 5 startet bewusst auf "medium" statt auf dem Profil-Standard.
-        var preferredValue = IsOpus5Model(SelectedModel)
-            ? "medium"
-            : SelectedProfile.Id == "strict" ? "xhigh" : "high";
+        var preferredValue = SelectedProfile.Id == "strict" ? "xhigh" : "high";
         SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == preferredValue)
             ?? ThinkingOptions.Last();
     }
-
-    // Deckt "claude-opus-5" und die Kontextfenster-Variante "claude-opus-5[1m]" ab.
-    private static bool IsOpus5Model(ModelEntry? model) =>
-        model?.Slug?.StartsWith("claude-opus-5", StringComparison.OrdinalIgnoreCase) == true;
 
     private void UpdateProfileAvailability()
     {
