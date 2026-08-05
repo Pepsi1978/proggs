@@ -1799,6 +1799,10 @@ fun SettingsScreen(
                                 }
                             }
                             } // end Edge Column
+
+                            // ── Meine Stimme (Alibaba Voice Cloning) ──
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OwnVoiceSection(viewModel = viewModel, uiState = uiState)
                         }
                     }
                 }
@@ -3336,90 +3340,19 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateGoogleTtsApiKey(it) },
                             requireBiometric = uiState.biometricLock,
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ApiKeyField(
+                            label = "Alibaba API-Key (eigene Stimme)",
+                            value = uiState.qwenApiKey,
+                            onValueChange = { viewModel.updateQwenApiKey(it) },
+                            requireBiometric = uiState.biometricLock,
+                        )
                     }
                 }
 
-                // Gemini-Modell
+                // KI-Modell (Gemini oder ChatGPT/Codex)
                 GlassCard {
-                    Column {
-                        Text(
-                            "Gemini-Modell",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "F\u00fcr Textverbesserung und Dashboard-Analyse",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        var expanded by remember { mutableStateOf(false) }
-                        val selectedModel =
-                            Constants.GEMINI_FLASH_MODELS.find { it.id == uiState.selectedModel }
-                                ?: Constants.GEMINI_FLASH_MODELS.first()
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = it },
-                        ) {
-                            TextField(
-                                value = "${selectedModel.displayName}   ${selectedModel.price}",
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = {
-                                    Icon(Icons.Rounded.KeyboardArrowDown, "Modell w\u00e4hlen")
-                                },
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                colors =
-                                    TextFieldDefaults.colors(
-                                        focusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        unfocusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ) {
-                                Constants.GEMINI_FLASH_MODELS.forEach { model ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Column {
-                                                Text(
-                                                    model.displayName,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    color =
-                                                        if (model.id == uiState.selectedModel)
-                                                            MaterialTheme.colorScheme.primary
-                                                        else MaterialTheme.colorScheme.onSurface,
-                                                )
-                                                Text(
-                                                    "Input ${model.price.substringBefore("/")} \u2022 Output ${model.price.substringAfter("/")}  pro 1M Token",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        },
-                                        onClick = {
-                                            viewModel.updateSelectedModel(model.id)
-                                            expanded = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    AiProviderSection(viewModel = viewModel, uiState = uiState)
                 }
 
                 // 6. Extras
@@ -3570,7 +3503,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v0.21.2 - 18.07.2026 22:48 Uhr",
+                            "Entropy Journal v${com.entropyjournal.BuildConfig.VERSION_NAME} - 05.08.2026 21:28 Uhr",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

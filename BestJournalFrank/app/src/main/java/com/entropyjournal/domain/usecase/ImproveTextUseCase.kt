@@ -1,7 +1,7 @@
 package com.entropyjournal.domain.usecase
 
 import android.content.SharedPreferences
-import com.entropyjournal.data.remote.gemini.GeminiApi
+import com.entropyjournal.data.remote.ai.AiGateway
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.stripEmDashes
@@ -11,7 +11,7 @@ import kotlinx.coroutines.coroutineScope
 
 class ImproveTextUseCase
 @Inject
-constructor(private val geminiApi: GeminiApi, private val encryptedPrefs: SharedPreferences) {
+constructor(private val geminiApi: AiGateway, private val encryptedPrefs: SharedPreferences) {
     companion object {
         private const val TEMPERATURE = 0.4f
         private const val MAX_OUTPUT_TOKENS = 8192
@@ -140,9 +140,8 @@ $userText
      */
     suspend fun optimizeCustomAnalysisPrompt(rawText: String): Result<String> {
         return try {
-            val apiKey = getApiKey()
-            if (apiKey.isBlank())
-                return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
+            if (!geminiApi.isConfigured())
+                return Result.failure(IllegalStateException(geminiApi.configurationError()))
 
             val request =
                 GeminiRequestBuilder.build(
@@ -276,9 +275,8 @@ $text
 
     suspend operator fun invoke(rawText: String): Result<String> {
         return try {
-            val apiKey = getApiKey()
-            if (apiKey.isBlank())
-                return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
+            if (!geminiApi.isConfigured())
+                return Result.failure(IllegalStateException(geminiApi.configurationError()))
 
             // First attempt: one-shot
             val oneShot = rewriteChunk(rawText)

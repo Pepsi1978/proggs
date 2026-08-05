@@ -1,7 +1,7 @@
 package com.entropyjournal.domain.usecase
 
 import android.content.SharedPreferences
-import com.entropyjournal.data.remote.gemini.GeminiApi
+import com.entropyjournal.data.remote.ai.AiGateway
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.ui.components.LucideIconPool
 import com.entropyjournal.util.Constants
@@ -23,7 +23,7 @@ import javax.inject.Inject
 class ClassifyEntryIconUseCase
 @Inject
 constructor(
-    private val geminiApi: GeminiApi,
+    private val geminiApi: AiGateway,
     private val encryptedPrefs: SharedPreferences,
 ) {
     companion object {
@@ -35,8 +35,8 @@ constructor(
     suspend fun classify(entryTitle: String?, entryBody: String): Result<String?> {
         return try {
             val apiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
-            if (apiKey.isBlank()) {
-                return Result.success(null) // kein Key → still failen, Fallback uebernimmt
+            if (!geminiApi.isConfigured()) {
+                return Result.success(null) // keine KI eingerichtet → still failen, Fallback uebernimmt
             }
 
             // Nutzt das vom User in den Einstellungen gewaehlte Gemini-Modell.

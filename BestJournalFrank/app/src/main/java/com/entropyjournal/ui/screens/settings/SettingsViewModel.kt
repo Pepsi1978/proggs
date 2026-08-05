@@ -8,7 +8,13 @@ import androidx.lifecycle.viewModelScope
 import com.entropyjournal.data.local.dao.EntryFollowUpDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
+import com.entropyjournal.data.remote.codex.CodexAuthManager
+import com.entropyjournal.data.remote.codex.CodexModel
+import com.entropyjournal.data.remote.codex.ReasoningEffort
 import com.entropyjournal.data.remote.googledrive.NeedConsentException
+import com.entropyjournal.data.remote.qwen.ClonedVoice
+import com.entropyjournal.data.remote.qwen.QwenVoiceDirectory
+import com.entropyjournal.data.remote.qwen.QwenVoiceEnrollment
 import com.entropyjournal.domain.model.UserProfile
 import com.entropyjournal.domain.usecase.ImproveTextUseCase
 import com.entropyjournal.domain.usecase.RecordAudioUseCase
@@ -18,6 +24,7 @@ import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DailyReminderManager
 import com.entropyjournal.util.PdfExporter
+import com.entropyjournal.util.VoiceCloneRecorder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +73,29 @@ data class SettingsUiState(
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
     val dailyPromptEnabled: Boolean = true,
+    // Eigene Stimme (Alibaba Voice Cloning)
+    val qwenApiKey: String = "",
+    val qwenVoiceId: String = "",
+    val qwenVoices: List<ClonedVoice> = emptyList(),
+    val qwenVoicesLoading: Boolean = false,
+    val qwenVoiceNames: Map<String, String> = emptyMap(),
+    val voiceBusy: Boolean = false,
+    val voiceMessage: String? = null,
+    val voiceRecorderState: VoiceRecorderState = VoiceRecorderState.IDLE,
+    val voiceRecorderName: String = "",
+    val voiceRecorderSeconds: Int = 0,
+    val voiceRecorderMessage: String? = null,
+    /** true, sobald eine Aufnahme erfolgreich zu einer Stimme geworden ist. */
+    val voiceRecorderDone: Boolean = false,
+    // KI-Anbieter (Gemini oder ChatGPT/Codex)
+    val aiProvider: String = Constants.AI_PROVIDER_GEMINI,
+    val codexModel: String = CodexModel.DEFAULT.apiId,
+    val codexEffort: String = ReasoningEffort.DEFAULT.apiValue,
+    val codexConnected: Boolean = false,
+    val codexEmail: String? = null,
+    val codexLoggingIn: Boolean = false,
+    val codexUserCode: String? = null,
+    val codexMessage: String? = null,
     // Voice-input state for the Custom Prompt dialog (Individuelle Analyse).
     val promptRecState: PromptRecState = PromptRecState.IDLE,
     // One-shot events consumed by the dialog (dialog owns the text field).
@@ -84,6 +114,13 @@ enum class PromptRecState {
     IMPROVING,
 }
 
+/** Zustand der Aufnahme, aus der eine neue eigene Stimme entsteht. */
+enum class VoiceRecorderState {
+    IDLE,
+    RECORDING,
+    SAVING,
+}
+
 @HiltViewModel
 class SettingsViewModel
 @Inject
@@ -97,10 +134,17 @@ constructor(
     private val recordAudioUseCase: RecordAudioUseCase,
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
+    private val codexAuthManager: CodexAuthManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
     private lateinit var reminderManager: DailyReminderManager
+
+    private val qwenVoiceDirectory = QwenVoiceDirectory()
+    private val qwenVoiceEnrollment = QwenVoiceEnrollment()
+    private val voiceCloneRecorder = VoiceCloneRecorder(context)
+    private var voiceTimerJob: kotlinx.coroutines.Job? = null
+    private var codexLoginJob: kotlinx.coroutines.Job? = null
 
     val promptAmplitude: StateFlow<Float> = recordAudioUseCase.amplitude
 
@@ -184,6 +228,9 @@ constructor(
     override fun onCleared() {
         super.onCleared()
         encryptedPrefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        voiceCloneRecorder.release()
+        qwenVoiceDirectory.shutdown()
+        qwenVoiceEnrollment.shutdown()
     }
 
     private fun loadSettings() {
@@ -241,6 +288,24 @@ constructor(
                 userTimezone = encryptedPrefs.getString(Constants.PREF_USER_TIMEZONE, "") ?: "",
                 dailyPromptEnabled =
                     encryptedPrefs.getBoolean(Constants.PREF_DAILY_PROMPT_ENABLED, true),
+                qwenApiKey = encryptedPrefs.getString(Constants.PREF_QWEN_API_KEY, "") ?: "",
+                qwenVoiceId = encryptedPrefs.getString(Constants.PREF_QWEN_VOICE_ID, "") ?: "",
+                qwenVoiceNames = readVoiceNames(),
+                aiProvider =
+                    encryptedPrefs.getString(
+                        Constants.PREF_AI_PROVIDER,
+                        Constants.AI_PROVIDER_GEMINI,
+                    ) ?: Constants.AI_PROVIDER_GEMINI,
+                codexModel =
+                    CodexModel.fromId(encryptedPrefs.getString(Constants.PREF_CODEX_MODEL, null))
+                        .apiId,
+                codexEffort =
+                    ReasoningEffort.fromValue(
+                            encryptedPrefs.getString(Constants.PREF_CODEX_EFFORT, null)
+                        )
+                        .apiValue,
+                codexConnected = codexAuthManager.isConnected,
+                codexEmail = codexAuthManager.email,
             )
     }
 
@@ -630,6 +695,14 @@ constructor(
             val bodyFontScale = encryptedPrefs.getFloat(Constants.PREF_BODY_FONT_SCALE, 1f)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
             val ttsFavorites = encryptedPrefs.getString(Constants.PREF_TTS_FAVORITES, "") ?: ""
+            val qwenKey = encryptedPrefs.getString(Constants.PREF_QWEN_API_KEY, "") ?: ""
+            val qwenVoiceId = encryptedPrefs.getString(Constants.PREF_QWEN_VOICE_ID, "") ?: ""
+            val qwenVoiceNames = encryptedPrefs.getString(Constants.PREF_QWEN_VOICE_NAMES, "") ?: ""
+            val aiProvider =
+                encryptedPrefs.getString(Constants.PREF_AI_PROVIDER, Constants.AI_PROVIDER_GEMINI)
+                    ?: Constants.AI_PROVIDER_GEMINI
+            val codexModel = encryptedPrefs.getString(Constants.PREF_CODEX_MODEL, null)
+            val codexEffort = encryptedPrefs.getString(Constants.PREF_CODEX_EFFORT, null)
 
             // Clear ALL prefs, then restore only device-specific ones — single atomic operation
             encryptedPrefs
@@ -652,6 +725,12 @@ constructor(
                 .putFloat(Constants.PREF_BODY_FONT_SCALE, bodyFontScale)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
                 .putString(Constants.PREF_TTS_FAVORITES, ttsFavorites)
+                .putString(Constants.PREF_QWEN_API_KEY, qwenKey)
+                .putString(Constants.PREF_QWEN_VOICE_ID, qwenVoiceId)
+                .putString(Constants.PREF_QWEN_VOICE_NAMES, qwenVoiceNames)
+                .putString(Constants.PREF_AI_PROVIDER, aiProvider)
+                .putString(Constants.PREF_CODEX_MODEL, codexModel)
+                .putString(Constants.PREF_CODEX_EFFORT, codexEffort)
                 .commit() // commit() is synchronous — guarantees write before restart
 
             reminderManager.cancelReminder()
@@ -919,5 +998,350 @@ constructor(
 
     fun clearPromptError() {
         _uiState.value = _uiState.value.copy(promptError = null)
+    }
+
+    // ─── Eigene Stimme (Alibaba Model Studio, Qwen3-TTS) ──────────────────────────
+
+    fun updateQwenApiKey(key: String) {
+        // Weder Schluessel noch Kennung enthalten je Leerzeichen, aber Tastaturen setzen nach
+        // jedem Punkt eines und eingefuegte Werte tragen Zeilenumbrueche — beides endet in 401.
+        val clean = key.filterNot(Char::isWhitespace)
+        encryptedPrefs.edit().putString(Constants.PREF_QWEN_API_KEY, clean).apply()
+        _uiState.value = _uiState.value.copy(qwenApiKey = clean)
+        disableOwnVoiceIfIncomplete()
+        if (clean.isNotBlank()) refreshQwenVoices() else _uiState.value = _uiState.value.copy(qwenVoices = emptyList())
+    }
+
+    fun refreshQwenVoices() {
+        val key = _uiState.value.qwenApiKey
+        if (key.isBlank()) {
+            _uiState.value = _uiState.value.copy(qwenVoices = emptyList())
+            return
+        }
+        _uiState.value = _uiState.value.copy(qwenVoicesLoading = true)
+        viewModelScope.launch {
+            val voices = qwenVoiceDirectory.list(key)
+            _uiState.value = _uiState.value.copy(qwenVoices = voices, qwenVoicesLoading = false)
+        }
+    }
+
+    /** Waehlt die Stimme aus und schaltet das Vorlesen zugleich auf die eigene Stimme um. */
+    fun selectQwenVoice(voice: ClonedVoice) {
+        encryptedPrefs
+            .edit()
+            .putString(Constants.PREF_QWEN_VOICE_ID, voice.id)
+            .putString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_QWEN)
+            .apply()
+        _uiState.value =
+            _uiState.value.copy(
+                qwenVoiceId = voice.id,
+                ttsProvider = Constants.TTS_PROVIDER_QWEN,
+            )
+    }
+
+    /** Der Titel, den eine Stimme in der App traegt: der umbenannte, sonst der von Alibaba. */
+    fun voiceTitle(voice: ClonedVoice): String =
+        _uiState.value.qwenVoiceNames[voice.id] ?: voice.name
+
+    fun renameQwenVoice(voiceId: String, title: String) {
+        val trimmed = title.trim()
+        if (trimmed.isBlank()) {
+            _uiState.value = _uiState.value.copy(voiceMessage = "Der Name darf nicht leer sein.")
+            return
+        }
+        val names = _uiState.value.qwenVoiceNames + (voiceId to trimmed)
+        writeVoiceNames(names)
+        _uiState.value = _uiState.value.copy(qwenVoiceNames = names)
+    }
+
+    /** Entfernt die Stimme bei Alibaba — es gibt kein Zurueck, deshalb fragt die UI vorher nach. */
+    fun deleteQwenVoice(voice: ClonedVoice) {
+        _uiState.value = _uiState.value.copy(voiceBusy = true)
+        viewModelScope.launch {
+            try {
+                qwenVoiceEnrollment.delete(_uiState.value.qwenApiKey, voice.id)
+                val title = voiceTitle(voice)
+                val names = _uiState.value.qwenVoiceNames - voice.id
+                writeVoiceNames(names)
+                val wasSelected = _uiState.value.qwenVoiceId == voice.id
+                if (wasSelected) {
+                    encryptedPrefs.edit().putString(Constants.PREF_QWEN_VOICE_ID, "").apply()
+                }
+                _uiState.value =
+                    _uiState.value.copy(
+                        qwenVoiceNames = names,
+                        qwenVoiceId = if (wasSelected) "" else _uiState.value.qwenVoiceId,
+                        voiceMessage = "Die Stimme „$title“ wurde gelöscht.",
+                    )
+                disableOwnVoiceIfIncomplete()
+                refreshQwenVoices()
+            } catch (e: Exception) {
+                _uiState.value =
+                    _uiState.value.copy(
+                        voiceMessage = e.message ?: "Die Stimme konnte nicht gelöscht werden."
+                    )
+            } finally {
+                _uiState.value = _uiState.value.copy(voiceBusy = false)
+            }
+        }
+    }
+
+    fun openVoiceRecorder() {
+        _uiState.value =
+            _uiState.value.copy(
+                voiceRecorderName = "",
+                voiceRecorderSeconds = 0,
+                voiceRecorderMessage = null,
+                voiceRecorderState = VoiceRecorderState.IDLE,
+                voiceRecorderDone = false,
+            )
+    }
+
+    fun updateVoiceRecorderName(value: String) {
+        _uiState.value = _uiState.value.copy(voiceRecorderName = value)
+    }
+
+    fun onVoiceRecorderTapped(permissionGranted: Boolean, requestPermission: () -> Unit) {
+        when (_uiState.value.voiceRecorderState) {
+            VoiceRecorderState.IDLE -> {
+                if (_uiState.value.voiceRecorderName.isBlank()) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            voiceRecorderMessage = "Bitte zuerst einen Namen für die Stimme eingeben."
+                        )
+                    return
+                }
+                if (permissionGranted) startVoiceSampleRecording() else requestPermission()
+            }
+            VoiceRecorderState.RECORDING -> finishVoiceSampleRecording()
+            VoiceRecorderState.SAVING -> Unit
+        }
+    }
+
+    private fun startVoiceSampleRecording() {
+        if (!voiceCloneRecorder.start(viewModelScope)) {
+            _uiState.value =
+                _uiState.value.copy(
+                    voiceRecorderMessage = "Die Aufnahme konnte nicht gestartet werden."
+                )
+            return
+        }
+        _uiState.value =
+            _uiState.value.copy(
+                voiceRecorderMessage = null,
+                voiceRecorderSeconds = 0,
+                voiceRecorderState = VoiceRecorderState.RECORDING,
+            )
+        voiceTimerJob =
+            viewModelScope.launch {
+                while (_uiState.value.voiceRecorderState == VoiceRecorderState.RECORDING) {
+                    delay(1_000)
+                    if (_uiState.value.voiceRecorderState != VoiceRecorderState.RECORDING) return@launch
+                    val seconds = _uiState.value.voiceRecorderSeconds + 1
+                    _uiState.value = _uiState.value.copy(voiceRecorderSeconds = seconds)
+                    // Alibaba lehnt alles jenseits einer Minute ab, also stoppt die Aufnahme selbst.
+                    if (seconds >= MAX_SAMPLE_SECONDS) {
+                        // Zuerst geleert: diese Coroutine endet hier, und der Stopp darf sie nicht
+                        // abbrechen, waehrend sie die Registrierung startet.
+                        voiceTimerJob = null
+                        finishVoiceSampleRecording()
+                        return@launch
+                    }
+                }
+            }
+    }
+
+    private fun finishVoiceSampleRecording() {
+        voiceTimerJob?.cancel()
+        voiceTimerJob = null
+        val seconds = _uiState.value.voiceRecorderSeconds
+        val name = _uiState.value.voiceRecorderName.trim()
+        _uiState.value = _uiState.value.copy(voiceRecorderState = VoiceRecorderState.SAVING)
+        viewModelScope.launch {
+            try {
+                val wav = voiceCloneRecorder.stop()
+                if (wav == null) {
+                    _uiState.value =
+                        _uiState.value.copy(voiceRecorderMessage = "Die Aufnahme ist leer geblieben.")
+                    return@launch
+                }
+                if (seconds < MIN_SAMPLE_SECONDS) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            voiceRecorderMessage =
+                                "Die Aufnahme ist zu kurz. Lies bitte mindestens $MIN_SAMPLE_SECONDS Sekunden vor."
+                        )
+                    return@launch
+                }
+                val voiceId = qwenVoiceEnrollment.create(_uiState.value.qwenApiKey, name, wav)
+                // Alibaba behaelt nur Buchstaben und Ziffern des Namens, deshalb merkt sich die
+                // App den eingegebenen Namen selbst.
+                val names = _uiState.value.qwenVoiceNames + (voiceId to name)
+                writeVoiceNames(names)
+                encryptedPrefs
+                    .edit()
+                    .putString(Constants.PREF_QWEN_VOICE_ID, voiceId)
+                    .putString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_QWEN)
+                    .apply()
+                _uiState.value =
+                    _uiState.value.copy(
+                        qwenVoiceId = voiceId,
+                        qwenVoiceNames = names,
+                        ttsProvider = Constants.TTS_PROVIDER_QWEN,
+                        voiceMessage = "Die Stimme „$name“ ist fertig und ausgewählt.",
+                        voiceRecorderMessage = null,
+                        voiceRecorderDone = true,
+                    )
+                refreshQwenVoices()
+            } catch (e: Exception) {
+                _uiState.value =
+                    _uiState.value.copy(
+                        voiceRecorderMessage = e.message ?: "Die Stimme konnte nicht erstellt werden."
+                    )
+            } finally {
+                _uiState.value = _uiState.value.copy(voiceRecorderState = VoiceRecorderState.IDLE)
+            }
+        }
+    }
+
+    fun cancelVoiceRecording() {
+        voiceTimerJob?.cancel()
+        voiceTimerJob = null
+        voiceCloneRecorder.release()
+        _uiState.value =
+            _uiState.value.copy(
+                voiceRecorderState = VoiceRecorderState.IDLE,
+                voiceRecorderSeconds = 0,
+            )
+    }
+
+    fun clearVoiceMessage() {
+        _uiState.value = _uiState.value.copy(voiceMessage = null)
+    }
+
+    /** Faellt auf Edge zurueck, wenn Schluessel oder Stimme fuer die eigene Stimme fehlen. */
+    private fun disableOwnVoiceIfIncomplete() {
+        if (_uiState.value.ttsProvider != Constants.TTS_PROVIDER_QWEN) return
+        if (_uiState.value.qwenApiKey.isNotBlank() && _uiState.value.qwenVoiceId.isNotBlank()) return
+        encryptedPrefs
+            .edit()
+            .putString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE)
+            .apply()
+        _uiState.value =
+            _uiState.value.copy(
+                ttsProvider = Constants.TTS_PROVIDER_EDGE,
+                voiceMessage = "Eigene Stimme wurde abgeschaltet, weil Schlüssel oder Stimme fehlen.",
+            )
+    }
+
+    private fun readVoiceNames(): Map<String, String> {
+        val stored = encryptedPrefs.getString(Constants.PREF_QWEN_VOICE_NAMES, "") ?: ""
+        if (stored.isBlank()) return emptyMap()
+        return try {
+            val json = org.json.JSONObject(stored)
+            json.keys()
+                .asSequence()
+                .associateWith { json.optString(it) }
+                .filterValues(String::isNotBlank)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun writeVoiceNames(names: Map<String, String>) {
+        val json = org.json.JSONObject()
+        names.forEach { (id, title) -> json.put(id, title) }
+        encryptedPrefs
+            .edit()
+            .putString(Constants.PREF_QWEN_VOICE_NAMES, json.toString())
+            .apply()
+    }
+
+    // ─── KI-Anbieter: Gemini oder ChatGPT/Codex ───────────────────────────────────
+
+    fun updateAiProvider(provider: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_AI_PROVIDER, provider).apply()
+        _uiState.value = _uiState.value.copy(aiProvider = provider)
+    }
+
+    fun updateCodexModel(apiId: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_CODEX_MODEL, apiId).apply()
+        _uiState.value = _uiState.value.copy(codexModel = apiId)
+    }
+
+    fun updateCodexEffort(apiValue: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_CODEX_EFFORT, apiValue).apply()
+        _uiState.value = _uiState.value.copy(codexEffort = apiValue)
+    }
+
+    /**
+     * Startet die Geraete-Anmeldung: die App holt einen achtstelligen Code, oeffnet die
+     * Bestaetigungsseite im Browser und wartet, bis der Code dort eingegeben wurde.
+     */
+    fun loginToCodex(activity: androidx.activity.ComponentActivity) {
+        if (_uiState.value.codexLoggingIn) return
+        _uiState.value =
+            _uiState.value.copy(codexLoggingIn = true, codexMessage = null, codexUserCode = null)
+        codexLoginJob =
+            viewModelScope.launch {
+                try {
+                    val result =
+                        codexAuthManager.login(activity) { info ->
+                            _uiState.value = _uiState.value.copy(codexUserCode = info.userCode)
+                        }
+                    _uiState.value =
+                        _uiState.value.copy(
+                            codexConnected = true,
+                            codexEmail = result.email ?: codexAuthManager.email,
+                            codexMessage = "Mit ChatGPT verbunden.",
+                            codexUserCode = null,
+                        )
+                    updateAiProvider(Constants.AI_PROVIDER_CODEX)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    _uiState.value = _uiState.value.copy(codexUserCode = null)
+                    throw e
+                } catch (e: Exception) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            codexMessage = e.message ?: "Die Anmeldung ist fehlgeschlagen.",
+                            codexUserCode = null,
+                        )
+                } finally {
+                    _uiState.value = _uiState.value.copy(codexLoggingIn = false)
+                }
+            }
+    }
+
+    fun cancelCodexLogin() {
+        codexAuthManager.cancelLogin()
+        codexLoginJob?.cancel()
+        codexLoginJob = null
+        _uiState.value =
+            _uiState.value.copy(codexLoggingIn = false, codexUserCode = null, codexMessage = null)
+    }
+
+    fun logoutFromCodex() {
+        codexAuthManager.logout()
+        encryptedPrefs
+            .edit()
+            .putString(Constants.PREF_AI_PROVIDER, Constants.AI_PROVIDER_GEMINI)
+            .apply()
+        _uiState.value =
+            _uiState.value.copy(
+                codexConnected = false,
+                codexEmail = null,
+                aiProvider = Constants.AI_PROVIDER_GEMINI,
+                codexMessage = "Von ChatGPT abgemeldet.",
+            )
+    }
+
+    fun clearCodexMessage() {
+        _uiState.value = _uiState.value.copy(codexMessage = null)
+    }
+
+    private companion object {
+        /** Alibaba nimmt hoechstens 60 Sekunden Referenzton an. */
+        const val MAX_SAMPLE_SECONDS = 58
+        const val MIN_SAMPLE_SECONDS = 10
     }
 }

@@ -5,7 +5,7 @@ import android.util.Log
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import com.entropyjournal.data.prefs.CustomAnalysesStore
-import com.entropyjournal.data.remote.gemini.GeminiApi
+import com.entropyjournal.data.remote.ai.AiGateway
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.data.repository.RetrospectiveRepository
 import com.entropyjournal.util.Constants
@@ -28,7 +28,7 @@ class GenerateRetrospectiveUseCase
 constructor(
     private val journalDao: JournalEntryDao,
     private val retroRepo: RetrospectiveRepository,
-    private val geminiApi: GeminiApi,
+    private val geminiApi: AiGateway,
     private val encryptedPrefs: SharedPreferences,
 ) {
     companion object {
@@ -106,8 +106,8 @@ constructor(
         maxOutputTokens: Int,
     ): Result<String> {
         val apiKey = getApiKey()
-        if (apiKey.isBlank())
-            return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
+        if (!geminiApi.isConfigured())
+            return Result.failure(IllegalStateException(geminiApi.configurationError()))
         return try {
             val request =
                 GeminiRequestBuilder.build(

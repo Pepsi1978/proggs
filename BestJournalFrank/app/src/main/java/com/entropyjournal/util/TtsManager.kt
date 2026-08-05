@@ -14,6 +14,7 @@ class TtsManager(private val context: Context) {
     private val edgeTtsPlayer = EdgeTtsPlayer(context)
     private val elevenLabsPlayer = ElevenLabsTtsPlayer(context)
     private val googleCloudTtsPlayer = GoogleCloudTtsPlayer(context)
+    private val qwenTtsPlayer = QwenTtsPlayer(context)
 
     companion object {
         private const val TAG = "TtsManager"
@@ -64,6 +65,12 @@ class TtsManager(private val context: Context) {
     private fun getGoogleTtsVoice(): String =
         prefs?.getString(Constants.PREF_GOOGLE_TTS_VOICE, Constants.DEFAULT_GOOGLE_TTS_VOICE)
             ?: Constants.DEFAULT_GOOGLE_TTS_VOICE
+
+    private fun getQwenKey(): String =
+        prefs?.getString(Constants.PREF_QWEN_API_KEY, "") ?: ""
+
+    private fun getQwenVoiceId(): String =
+        prefs?.getString(Constants.PREF_QWEN_VOICE_ID, "") ?: ""
 
     private fun isTtsEnabled(): Boolean =
         prefs?.getBoolean(Constants.PREF_TTS_ENABLED, false) ?: false
@@ -223,6 +230,27 @@ class TtsManager(private val context: Context) {
                     onComplete()
                 }
             }
+            Constants.TTS_PROVIDER_QWEN -> {
+                val key = getQwenKey()
+                val voiceId = getQwenVoiceId()
+                if (key.isNotBlank() && voiceId.isNotBlank()) {
+                    Log.d(TAG, "Using own cloned voice")
+                    qwenTtsPlayer.speak(
+                        text = text,
+                        rawApiKey = key,
+                        rawVoiceId = voiceId,
+                        onPlaybackStart = onPlaybackStart,
+                        onComplete = onComplete,
+                        onError = { e ->
+                            Log.e(TAG, "Qwen TTS error: ${e.message}")
+                            onComplete()
+                        },
+                    )
+                } else {
+                    Log.w(TAG, "Own voice selected but not configured")
+                    onComplete()
+                }
+            }
             else -> {
                 val voice = getEdgeTtsVoice()
                 Log.d(TAG, "Using Edge TTS voice: $voice")
@@ -244,11 +272,13 @@ class TtsManager(private val context: Context) {
         elevenLabsPlayer.stop()
         edgeTtsPlayer.stop()
         googleCloudTtsPlayer.stop()
+        qwenTtsPlayer.stop()
     }
 
     fun shutdown() {
         elevenLabsPlayer.shutdown()
         edgeTtsPlayer.shutdown()
         googleCloudTtsPlayer.shutdown()
+        qwenTtsPlayer.shutdown()
     }
 }

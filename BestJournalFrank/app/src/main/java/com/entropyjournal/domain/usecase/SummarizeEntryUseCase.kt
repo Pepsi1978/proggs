@@ -1,7 +1,7 @@
 package com.entropyjournal.domain.usecase
 
 import android.content.SharedPreferences
-import com.entropyjournal.data.remote.gemini.GeminiApi
+import com.entropyjournal.data.remote.ai.AiGateway
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.data.repository.EntryFollowUpRepository
 import com.entropyjournal.data.repository.JournalRepository
@@ -12,7 +12,7 @@ import javax.inject.Inject
 class SummarizeEntryUseCase
 @Inject
 constructor(
-    private val geminiApi: GeminiApi,
+    private val geminiApi: AiGateway,
     private val journalRepository: JournalRepository,
     private val entryFollowUpRepository: EntryFollowUpRepository,
     private val encryptedPrefs: SharedPreferences,
@@ -72,7 +72,7 @@ $text
 
     suspend operator fun invoke(entryId: Long, displayText: String) {
         val apiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
-        if (apiKey.isBlank()) return
+        if (!geminiApi.isConfigured()) return
 
         try {
             val combinedText = buildCombinedText(entryId, displayText)

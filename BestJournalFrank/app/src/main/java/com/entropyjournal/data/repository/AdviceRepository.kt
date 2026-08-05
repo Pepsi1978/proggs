@@ -5,7 +5,7 @@ import android.util.Log
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.entity.AdviceBlockEntity
 import com.entropyjournal.data.prefs.CustomAnalysesStore
-import com.entropyjournal.data.remote.gemini.GeminiApi
+import com.entropyjournal.data.remote.ai.AiGateway
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.domain.model.Advice
 import com.entropyjournal.domain.model.AdviceBlock
@@ -26,7 +26,7 @@ import retrofit2.HttpException
 class AdviceRepository
 @Inject
 constructor(
-    private val geminiApi: GeminiApi,
+    private val geminiApi: AiGateway,
     private val adviceDashboardDao: AdviceDashboardDao,
     private val encryptedPrefs: SharedPreferences,
 ) {
@@ -1836,10 +1836,8 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
     ): Result<Unit> {
         return try {
             val apiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
-            if (apiKey.isBlank())
-                return Result.failure(
-                    IllegalStateException("Bitte Gemini API-Key in den Einstellungen eingeben")
-                )
+            if (!geminiApi.isConfigured())
+                return Result.failure(IllegalStateException(geminiApi.configurationError()))
 
             // Save current state for undo before refreshing
             val existingBlocks = adviceDashboardDao.getAllSync()

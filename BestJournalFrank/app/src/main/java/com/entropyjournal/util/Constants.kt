@@ -81,6 +81,18 @@ object Constants {
     const val TTS_PROVIDER_EDGE = "edge_tts"
     const val TTS_PROVIDER_ELEVENLABS = "elevenlabs"
     const val TTS_PROVIDER_GOOGLE = "google_cloud"
+    const val TTS_PROVIDER_QWEN = "qwen_clone"
+
+    // Eigene Stimme (Alibaba Model Studio, Qwen3-TTS Voice Cloning)
+    const val PREF_QWEN_API_KEY = "qwen_tts_api_key"
+    const val PREF_QWEN_VOICE_ID = "qwen_tts_voice_id"
+
+    /**
+     * Die in der App vergebenen Namen der geklonten Stimmen, als JSON `{"voiceId":"Name"}`.
+     * Alibaba brennt den Namen beim Anlegen fest in die Kennung ein und bietet keine Umbenennung,
+     * deshalb fuehrt die App eigene Titel.
+     */
+    const val PREF_QWEN_VOICE_NAMES = "qwen_voice_names"
 
     // Edge TTS voices
     const val PREF_EDGE_TTS_VOICE = "edge_tts_voice"
@@ -212,6 +224,15 @@ object Constants {
         )
 
     val DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+    // KI-Anbieter: Gemini (API-Schluessel) oder Codex/ChatGPT (Geraete-Anmeldung im Browser).
+    // Der Schalter gilt fuer die gesamte Auswertung — Dashboard, Rueckblicke, Textverbesserung,
+    // Zusammenfassungen und Symbol-Erkennung.
+    const val PREF_AI_PROVIDER = "ai_provider"
+    const val AI_PROVIDER_GEMINI = "gemini"
+    const val AI_PROVIDER_CODEX = "codex"
+    const val PREF_CODEX_MODEL = "codex_model"
+    const val PREF_CODEX_EFFORT = "codex_reasoning_effort"
 
     /**
      * Pruefe ob das gespeicherte Modell noch in der aktuellen Modell-Liste ist.
