@@ -212,6 +212,8 @@ fun EntropyJournalTheme(
     appTheme: AppTheme = ProfileTheme.currentAppTheme.value,
     headingFont: String = ProfileTheme.currentHeadingFont.value,
     bodyFont: String = ProfileTheme.currentBodyFont.value,
+    headingScale: Float = ProfileTheme.currentHeadingScale.floatValue,
+    bodyScale: Float = ProfileTheme.currentBodyScale.floatValue,
     content: @Composable () -> Unit,
 ) {
     // Alle 14 Themes besitzen ein Light-/Dark-Scheme; Goldener Faden ist der Fallback.
@@ -255,7 +257,7 @@ fun EntropyJournalTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = appTypography(headingFont, bodyFont),
+            typography = appTypography(headingFont, bodyFont, headingScale, bodyScale),
             shapes = AppShapes,
             content = {
                 Box(modifier = Modifier.fillMaxSize().background(designTokens.backgroundBrush)) {

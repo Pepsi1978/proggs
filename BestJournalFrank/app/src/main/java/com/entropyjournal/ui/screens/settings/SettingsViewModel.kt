@@ -626,6 +626,8 @@ constructor(
             val appTheme = encryptedPrefs.getString(Constants.PREF_APP_THEME, null)
             val headingFont = encryptedPrefs.getString(Constants.PREF_HEADING_FONT, null)
             val bodyFont = encryptedPrefs.getString(Constants.PREF_BODY_FONT, null)
+            val headingFontScale = encryptedPrefs.getFloat(Constants.PREF_HEADING_FONT_SCALE, 1f)
+            val bodyFontScale = encryptedPrefs.getFloat(Constants.PREF_BODY_FONT_SCALE, 1f)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
             val ttsFavorites = encryptedPrefs.getString(Constants.PREF_TTS_FAVORITES, "") ?: ""
 
@@ -646,6 +648,8 @@ constructor(
                 .putString(Constants.PREF_APP_THEME, appTheme)
                 .putString(Constants.PREF_HEADING_FONT, headingFont)
                 .putString(Constants.PREF_BODY_FONT, bodyFont)
+                .putFloat(Constants.PREF_HEADING_FONT_SCALE, headingFontScale)
+                .putFloat(Constants.PREF_BODY_FONT_SCALE, bodyFontScale)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
                 .putString(Constants.PREF_TTS_FAVORITES, ttsFavorites)
                 .commit() // commit() is synchronous — guarantees write before restart

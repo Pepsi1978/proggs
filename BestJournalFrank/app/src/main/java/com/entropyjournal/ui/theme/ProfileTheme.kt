@@ -1,6 +1,7 @@
 package com.entropyjournal.ui.theme
 
 import android.content.Context
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -32,6 +33,10 @@ object ProfileTheme {
     val currentHeadingFont = mutableStateOf(DEFAULT_HEADING_FONT_NAME)
     val currentBodyFont = mutableStateOf(DEFAULT_BODY_FONT_NAME)
 
+    /** Compose-States für die getrennt einstellbaren Schriftgrößen (1f = Auslieferungsgröße). */
+    val currentHeadingScale = mutableFloatStateOf(DEFAULT_FONT_SCALE)
+    val currentBodyScale = mutableFloatStateOf(DEFAULT_FONT_SCALE)
+
     private fun openPrefs(context: Context) =
         EncryptedSharedPreferences.create(
             Constants.ENCRYPTED_PREFS_NAME,
@@ -60,6 +65,12 @@ object ProfileTheme {
                 .putString(Constants.PREF_BODY_FONT, body)
                 .apply()
         }
+        currentHeadingScale.floatValue =
+            prefs.getFloat(Constants.PREF_HEADING_FONT_SCALE, DEFAULT_FONT_SCALE)
+                .coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+        currentBodyScale.floatValue =
+            prefs.getFloat(Constants.PREF_BODY_FONT_SCALE, DEFAULT_FONT_SCALE)
+                .coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
     }
 
     /** Vom Settings-Screen aufgerufen: Prefs + Compose-State gemeinsam aktualisieren. */
@@ -88,6 +99,24 @@ object ProfileTheme {
             .apply()
         currentHeadingFont.value = headingFont
         currentBodyFont.value = bodyFont
+    }
+
+    /**
+     * Waehrend des Ziehens am Groessen-Regler: nur der Compose-State, damit die ganze App
+     * sofort mitwaechst. Das teure Schreiben in die verschluesselten Prefs macht
+     * [persistFontScales] erst beim Loslassen.
+     */
+    fun setFontScales(headingScale: Float, bodyScale: Float) {
+        currentHeadingScale.floatValue = headingScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+        currentBodyScale.floatValue = bodyScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+    }
+
+    fun persistFontScales(context: Context) {
+        openPrefs(context)
+            .edit()
+            .putFloat(Constants.PREF_HEADING_FONT_SCALE, currentHeadingScale.floatValue)
+            .putFloat(Constants.PREF_BODY_FONT_SCALE, currentBodyScale.floatValue)
+            .apply()
     }
 
     private fun legacyFonts(fontPair: String?): Pair<String, String> =

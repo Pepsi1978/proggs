@@ -95,6 +95,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Surface
@@ -139,6 +141,8 @@ import com.entropyjournal.ui.theme.AppTheme
 import com.entropyjournal.ui.theme.CustomPalette
 import com.entropyjournal.ui.theme.DEFAULT_BODY_FONT_NAME
 import com.entropyjournal.ui.theme.DEFAULT_HEADING_FONT_NAME
+import com.entropyjournal.ui.theme.MAX_FONT_SCALE
+import com.entropyjournal.ui.theme.MIN_FONT_SCALE
 import com.entropyjournal.ui.theme.GoalPalette
 import com.entropyjournal.ui.theme.InsightPalette
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
@@ -150,6 +154,7 @@ import com.entropyjournal.ui.theme.bodyFontFamily
 import com.entropyjournal.ui.theme.headingFontFamily
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private data class ThemeChoice(
@@ -342,6 +347,47 @@ private fun FontSelector(
             }
         }
     }
+}
+
+/** Rasterweite des Groessen-Reglers: 5-Prozent-Schritte zwischen [MIN_FONT_SCALE] und [MAX_FONT_SCALE]. */
+private val fontScaleSteps = ((MAX_FONT_SCALE - MIN_FONT_SCALE) / 0.05f).roundToInt() - 1
+
+@Composable
+private fun FontSizeSlider(
+    label: String,
+    scale: Float,
+    onScaleChange: (Float) -> Unit,
+    onScaleCommitted: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "${(scale * 100).roundToInt()} %",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+    Slider(
+        value = scale,
+        onValueChange = onScaleChange,
+        onValueChangeFinished = onScaleCommitted,
+        valueRange = MIN_FONT_SCALE..MAX_FONT_SCALE,
+        steps = fontScaleSteps,
+        colors =
+            SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent,
+            ),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1125,8 +1171,68 @@ fun SettingsScreen(
                                 bodyOpen = false
                             },
                         )
+                        Spacer(modifier = Modifier.height(18.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "Überschrift- und Textschrift wirken sofort auf alle Screens.",
+                            "Schriftgröße",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Vorschau: liest die Theme-Typografie, waechst also live mit den Reglern.
+                        Column(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                        RoundedCornerShape(14.dp),
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                "So sieht eine Überschrift aus",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "Und so liest sich der Fließtext in deinen Einträgen — " +
+                                    "zieh an den Reglern, bis beides angenehm groß ist.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val headingScale = ProfileTheme.currentHeadingScale.floatValue
+                        val bodyScale = ProfileTheme.currentBodyScale.floatValue
+                        FontSizeSlider(
+                            label = "Überschriften",
+                            scale = headingScale,
+                            onScaleChange = { ProfileTheme.setFontScales(it, bodyScale) },
+                            onScaleCommitted = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                ProfileTheme.persistFontScales(context)
+                            },
+                        )
+                        FontSizeSlider(
+                            label = "Fließtext",
+                            scale = bodyScale,
+                            onScaleChange = { ProfileTheme.setFontScales(headingScale, it) },
+                            onScaleCommitted = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                ProfileTheme.persistFontScales(context)
+                            },
+                        )
+                        Text(
+                            "Schriftart und Größe wirken sofort auf alle Screens.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 10.dp),

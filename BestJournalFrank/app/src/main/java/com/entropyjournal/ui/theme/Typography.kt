@@ -6,11 +6,17 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.R
 
 const val DEFAULT_HEADING_FONT_NAME = "Playfair Display"
 const val DEFAULT_BODY_FONT_NAME = "Source Sans 3"
+
+/** Schriftgroessen-Regler: 85 % bis 160 % der Grundgroesse, 100 % ist die Auslieferungsgroesse. */
+const val MIN_FONT_SCALE = 0.85f
+const val MAX_FONT_SCALE = 1.6f
+const val DEFAULT_FONT_SCALE = 1f
 
 val PlayfairDisplay = FontFamily(
     Font(R.font.playfair_display_variable, weight = FontWeight.Medium),
@@ -175,23 +181,41 @@ fun bodyFontFamily(name: String): FontFamily =
         else -> SourceSans3
     }
 
-fun appTypography(headingFontName: String, bodyFontName: String): Typography {
+/**
+ * Schrift + Groesse in einem Schritt anwenden. [scale] multipliziert `fontSize` und `lineHeight`;
+ * `lineHeight` ist bei einigen Styles `Unspecified` und darf dann nicht multipliziert werden.
+ */
+private fun TextStyle.withFont(family: FontFamily, scale: Float): TextStyle =
+    copy(
+        fontFamily = family,
+        fontSize = if (fontSize.isSpecified) fontSize * scale else fontSize,
+        lineHeight = if (lineHeight.isSpecified) lineHeight * scale else lineHeight,
+    )
+
+fun appTypography(
+    headingFontName: String,
+    bodyFontName: String,
+    headingScale: Float = DEFAULT_FONT_SCALE,
+    bodyScale: Float = DEFAULT_FONT_SCALE,
+): Typography {
     val heading = headingFontFamily(headingFontName)
     val body = bodyFontFamily(bodyFontName)
+    val hs = headingScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+    val bs = bodyScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
 
     return AppTypography.copy(
-        displayLarge = AppTypography.displayLarge.copy(fontFamily = heading),
-        displayMedium = AppTypography.displayMedium.copy(fontFamily = heading),
-        displaySmall = AppTypography.displaySmall.copy(fontFamily = heading),
-        headlineLarge = AppTypography.headlineLarge.copy(fontFamily = heading),
-        headlineMedium = AppTypography.headlineMedium.copy(fontFamily = heading),
-        headlineSmall = AppTypography.headlineSmall.copy(fontFamily = heading),
-        titleLarge = AppTypography.titleLarge.copy(fontFamily = heading),
-        titleMedium = AppTypography.titleMedium.copy(fontFamily = heading),
-        titleSmall = AppTypography.titleSmall.copy(fontFamily = heading),
-        bodyLarge = AppTypography.bodyLarge.copy(fontFamily = body),
-        bodyMedium = AppTypography.bodyMedium.copy(fontFamily = body),
-        bodySmall = AppTypography.bodySmall.copy(fontFamily = body),
-        labelLarge = AppTypography.labelLarge.copy(fontFamily = body),
+        displayLarge = AppTypography.displayLarge.withFont(heading, hs),
+        displayMedium = AppTypography.displayMedium.withFont(heading, hs),
+        displaySmall = AppTypography.displaySmall.withFont(heading, hs),
+        headlineLarge = AppTypography.headlineLarge.withFont(heading, hs),
+        headlineMedium = AppTypography.headlineMedium.withFont(heading, hs),
+        headlineSmall = AppTypography.headlineSmall.withFont(heading, hs),
+        titleLarge = AppTypography.titleLarge.withFont(heading, hs),
+        titleMedium = AppTypography.titleMedium.withFont(heading, hs),
+        titleSmall = AppTypography.titleSmall.withFont(heading, hs),
+        bodyLarge = AppTypography.bodyLarge.withFont(body, bs),
+        bodyMedium = AppTypography.bodyMedium.withFont(body, bs),
+        bodySmall = AppTypography.bodySmall.withFont(body, bs),
+        labelLarge = AppTypography.labelLarge.withFont(body, bs),
     )
 }

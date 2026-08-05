@@ -158,6 +158,8 @@ class MainActivity : FragmentActivity() {
                 appTheme = ProfileTheme.currentAppTheme.value,
                 headingFont = headingFont,
                 bodyFont = bodyFont,
+                headingScale = ProfileTheme.currentHeadingScale.floatValue,
+                bodyScale = ProfileTheme.currentBodyScale.floatValue,
             ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
