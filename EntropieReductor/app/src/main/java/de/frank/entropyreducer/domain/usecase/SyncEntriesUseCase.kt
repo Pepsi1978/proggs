@@ -18,6 +18,7 @@ import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.WorkoutsBackupPayload
 import de.frank.entropyreducer.data.remote.drive.toEntity
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
+import de.frank.entropyreducer.data.repository.coversAllFieldsOf
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import javax.inject.Inject
@@ -988,6 +989,8 @@ constructor(
         // (sonst kommt ein geloeschtes Training beim naechsten Restore zurueck).
         val deletedStarts = appSettings.getDeletedWorkoutStarts()
         val restoreToleranceMs = 5L * 60L * 1000L
+        // Frank-Bugfix 2026-08-05: Lokaler Bestand fuer den Duplikat-Schutz unten.
+        val localWorkouts = amazfitWorkoutDao.observeAll().first()
         val merged =
             workoutsPayload.workouts.map { backupWorkout ->
                 val freshFromBackup = backupWorkout.toEntity()
@@ -1029,6 +1032,24 @@ constructor(
             }
                 .filterNot { entity ->
                     deletedStarts.any { kotlin.math.abs(it - entity.startMs) <= restoreToleranceMs }
+                }
+                // Frank-Bugfix 2026-08-05: Denselben Lauf nicht ein zweites Mal anlegen.
+                //
+                // Der Abgleich oben findet den lokalen Eintrag nur ueber die trackId. Sobald der
+                // Health-Connect-Import fuer ein Training eine genauere Quelle uebernimmt (Polar
+                // startet sekundengenau, Oura auf die volle Minute gerundet), aendert sich die
+                // trackId — und der Backup-Eintrag galt als "kenne ich nicht" und wurde daneben
+                // gelegt. Ergebnis: jeder Lauf doppelt, und der frisch importierte Stand war nach
+                // dem naechsten App-Start wieder vom alten ueberdeckt.
+                //
+                // Uebersprungen wird nur, wenn der lokale Eintrag JEDES Feld belegt, das der
+                // Backup-Eintrag belegt — sonst wird eingespielt und der naechste Import raeumt auf.
+                .filterNot { entity ->
+                    localWorkouts.any { local ->
+                        local.trackId != entity.trackId &&
+                            kotlin.math.abs(local.startMs - entity.startMs) <= restoreToleranceMs &&
+                            local.coversAllFieldsOf(entity)
+                    }
                 }
         amazfitWorkoutDao.upsertAll(merged)
         Diag.i(DiagnosticArea.DRIVE_BACKUP,

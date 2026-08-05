@@ -1064,5 +1064,5 @@ private val WORKOUT_VALUE_FIELDS: List<(AmazfitWorkoutEntity) -> Any?> =
  * Zahlen immer leicht ab (Franks Fall: 3620 s vs. 3609 s). Entschieden wird ueber Vollstaendigkeit,
  * nicht darueber, welche Zahl "richtiger" ist.
  */
-private fun AmazfitWorkoutEntity.coversAllFieldsOf(other: AmazfitWorkoutEntity): Boolean =
+internal fun AmazfitWorkoutEntity.coversAllFieldsOf(other: AmazfitWorkoutEntity): Boolean =
     WORKOUT_VALUE_FIELDS.none { field -> field(other) != null && field(this) == null }
