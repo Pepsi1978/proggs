@@ -36,8 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -765,85 +770,147 @@ private fun ChatBubble(
             }
         }
 
+        // Beide Editoren laufen ueber denselben Vollbild-Dialog. Inline in der Chatliste war der Text
+        // bei offener Tastatur nicht mehr sichtbar: unter der Liste steht die hohe Eingabeleiste,
+        // durch adjustResize + IME blieb fuer die Liste fast keine Hoehe uebrig (Frank-Bug 2026-08-05,
+        // gleiche Fehlerklasse wie bugs/android/jetpack-compose.md §8.8).
         if (canEditRuleText && isEditingRuleText) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isDark) DarkField else LightField,
-                border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
-                modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    BasicTextField(
-                        value = editedRuleText,
-                        onValueChange = { editedRuleText = it.take(240) },
-                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 84.dp),
-                        textStyle = LocalTextStyle.current.copy(
-                            fontSize = 14.5.sp,
-                            lineHeight = 21.7.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        minLines = 3,
-                        maxLines = 6
-                    )
-                    Row(Modifier.padding(top = 8.dp)) {
-                        OptionChip(
-                            label = "Bearbeitung bestätigen",
-                            isDark = isDark,
-                            tint = Mint
-                        ) {
-                            val text = editedRuleText.trim()
-                            if (text.isNotEmpty()) {
-                                onOptionClick(ChatOption("Regel speichern", "regel speichern: $text"))
-                                isEditingRuleText = false
-                            }
-                        }
+            MemoryTextEditDialog(
+                title = "Regel bearbeiten",
+                initialValue = editedRuleText,
+                onValueChange = { editedRuleText = it },
+                confirmLabel = "Bearbeitung bestätigen",
+                isDark = isDark,
+                maxChars = 240,
+                onDismiss = { isEditingRuleText = false },
+                onConfirm = {
+                    val text = editedRuleText.trim()
+                    if (text.isNotEmpty()) {
+                        onOptionClick(ChatOption("Regel speichern", "regel speichern: $text"))
+                        isEditingRuleText = false
                     }
                 }
-            }
+            )
         }
 
         if (canEditStoreText) {
             Row(modifier = Modifier.padding(top = 5.dp)) {
-                OptionChip(
-                    label = if (isEditingStoreText) "Speichern" else "Editieren",
-                    isDark = isDark,
-                    tint = if (isEditingStoreText) Mint else Amber
-                ) {
-                    if (isEditingStoreText) {
-                        onEditedStoreSave(message, editedStoreText)
-                        isEditingStoreText = false
-                    } else {
-                        editedStoreText = initialEditableText
-                        isEditingStoreText = true
-                    }
+                OptionChip(label = "Editieren", isDark = isDark, tint = Amber) {
+                    editedStoreText = initialEditableText
+                    isEditingStoreText = true
                 }
             }
         }
 
         if (canEditStoreText && isEditingStoreText) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isDark) DarkField else LightField,
-                border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .fillMaxWidth()
-            ) {
-                BasicTextField(
-                    value = editedStoreText,
-                    onValueChange = { editedStoreText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 96.dp)
-                        .padding(12.dp),
-                    textStyle = LocalTextStyle.current.copy(
-                        fontSize = 14.5.sp,
-                        lineHeight = 21.7.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    minLines = 3,
-                    maxLines = 8
+            MemoryTextEditDialog(
+                title = "Eintrag bearbeiten",
+                initialValue = editedStoreText,
+                onValueChange = { editedStoreText = it },
+                confirmLabel = "Speichern",
+                isDark = isDark,
+                onDismiss = { isEditingStoreText = false },
+                onConfirm = {
+                    onEditedStoreSave(message, editedStoreText)
+                    isEditingStoreText = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Vollbild-Editor fuer den vorgeschlagenen Eintrag bzw. eine Regel.
+ *
+ * Bewusst ein Dialog und kein Inline-Feld: Er blendet die hohe Eingabeleiste aus und haelt per
+ * `imePadding()` Text UND Speichern-Knopf immer ueber der Tastatur sichtbar. Der Cursor sitzt beim
+ * Oeffnen am Textende, die Tastatur kommt von selbst — Frank muss nicht mehr blind ins Feld tippen.
+ */
+@Composable
+private fun MemoryTextEditDialog(
+    title: String,
+    initialValue: String,
+    onValueChange: (String) -> Unit,
+    confirmLabel: String,
+    isDark: Boolean,
+    maxChars: Int = Int.MAX_VALUE,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    // Cursor deterministisch ans Textende: bei BasicTextField(String) staende er sonst am Anfang und
+    // Frank muesste wieder blind ins Feld tippen. Der Dialog haelt die Cursor-/Auswahlposition,
+    // nach aussen geht weiter nur der reine Text.
+    var field by remember { mutableStateOf(TextFieldValue(initialValue, TextRange(initialValue.length))) }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Text(
+                    text = title,
+                    fontFamily = SpaceGrotesk,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isDark) DarkField else LightField,
+                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    BasicTextField(
+                        value = field,
+                        onValueChange = {
+                            // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
+                            // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
+                            if (it.text.length <= maxChars) {
+                                field = it
+                                onValueChange(it.text)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp)
+                            .focusRequester(focusRequester),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 14.5.sp,
+                            lineHeight = 21.7.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        cursorBrush = SolidColor(Amber)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OptionChip(
+                        label = "Abbrechen",
+                        isDark = isDark,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = onDismiss
+                    )
+                    Spacer(Modifier.weight(1f))
+                    OptionChip(
+                        label = confirmLabel,
+                        isDark = isDark,
+                        tint = Mint,
+                        onClick = onConfirm
+                    )
+                }
             }
         }
     }
