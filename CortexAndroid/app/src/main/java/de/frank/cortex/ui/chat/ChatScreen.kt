@@ -101,9 +101,12 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     var pendingMicTarget by rememberSaveable(stateSaver = transcriptionTargetSaver) {
         mutableStateOf(TranscriptionTarget.ChatInput)
     }
-    // Der Eintrags-/Regel-Editor liegt bewusst hier oben: nur im Fenster der Activity wirken die
-    // Tastatur-Insets, sodass Text und Knopfreihe garantiert ueber der Tastatur bleiben.
+    // Der Eintrags-/Regel-Editor liegt bewusst hier oben und nicht in der Chatliste: nur so kann er
+    // ueber dem gesamten Bildschirm liegen, statt in einer Liste zu verschwinden.
     var editorTarget by remember { mutableStateOf<TextEditorTarget?>(null) }
+    // Angefangene Bearbeitungen je Nachricht. Wer den Editor schliesst (Abbrechen, Zurueckwischen)
+    // und ihn wieder oeffnet, findet seinen Stand unveraendert vor.
+    val draftEdits = remember { mutableStateMapOf<String, String>() }
     val listState = rememberLazyListState()
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed,
@@ -311,7 +314,11 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                         onSpeakClick = { vm.toggleMessageSpeech(message.id, message.text) },
                         onShareClick = { vm.prepareMessageShare(message.id) },
                         onOptionClick = vm::sendOption,
-                        onOpenEditor = { editorTarget = it }
+                        onOpenEditor = { target ->
+                            editorTarget = target.copy(
+                                text = draftEdits[target.message.id] ?: target.text
+                            )
+                        }
                     )
                 }
 
@@ -378,7 +385,10 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             MemoryTextEditorOverlay(
                 title = if (target.isRule) "Regel bearbeiten" else "Eintrag bearbeiten",
                 initialValue = target.text,
-                onValueChange = { editorTarget = target.copy(text = it) },
+                onValueChange = {
+                    draftEdits[target.message.id] = it
+                    editorTarget = target.copy(text = it)
+                },
                 confirmLabel = if (target.isRule) "Bearbeitung bestätigen" else "Speichern",
                 isDark = MaterialTheme.colorScheme.background == DarkBg,
                 maxChars = if (target.isRule) 240 else Int.MAX_VALUE,
@@ -391,6 +401,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                         } else {
                             vm.saveEditedStoreConfirmation(target.message, text)
                         }
+                        draftEdits.remove(target.message.id)
                         editorTarget = null
                     }
                 }
@@ -820,14 +831,15 @@ private fun ChatBubble(
 /**
  * Editor fuer den vorgeschlagenen Eintrag bzw. eine Regel — als Overlay im Chat-Bildschirm.
  *
- * Bewusst KEIN Dialog: Ein Compose-Dialog laeuft in einem eigenen Fenster und bekommt die
- * Tastatur-Insets nicht zuverlaessig; `imePadding()` blieb dort wirkungslos und die Knopfreihe
- * verschwand hinter der Tastatur (Frank-Bug 2026-08-05). Im Fenster der Activity (adjustResize)
- * wirkt `imePadding()` dagegen nachweislich — dieselbe Mechanik traegt die Eingabeleiste.
+ * Drei bewusste Entscheidungen, jede die Antwort auf einen erlebten Fehlschlag (Frank 2026-08-05):
  *
- * Die Karte ist kompakt und sitzt unmittelbar ueber der Tastatur: Text UND Speichern-Knopf bleiben
- * immer gleichzeitig sichtbar. Der Cursor sitzt beim Oeffnen am Textende, die Tastatur kommt von
- * selbst; Frank muss nicht mehr blind ins Feld tippen.
+ * 1. KEIN Dialog. Ein Compose-Dialog laeuft in einem eigenen Fenster und bekommt die Tastatur-Insets
+ *    nicht zuverlaessig; die Knopfreihe verschwand dort hinter der Tastatur.
+ * 2. Die Karte haengt OBEN am Bildschirm statt ueber der Tastatur. Eine Tastatur waechst immer von
+ *    unten — was oben steht, kann sie nicht verdecken. Damit haengt nichts mehr an `imePadding()`,
+ *    an `enableEdgeToEdge` oder daran, ob die Tastatur gerade eine Vorschlagszeile einblendet.
+ * 3. Echte Knoepfe mit `weight(1f)` und Mindesthoehe statt schmaler Chips: Sie koennen nicht mehr
+ *    zusammengequetscht werden und ihre Beschriftung bleibt lesbar.
  */
 @Composable
 private fun MemoryTextEditorOverlay(
@@ -850,81 +862,97 @@ private fun MemoryTextEditorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            // Klicks auf den abgedunkelten Bereich duerfen nicht in den Chat darunter durchfallen.
-            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {}
-            .systemBarsPadding()
-            .imePadding(),
-        contentAlignment = Alignment.BottomCenter
+            .background(Color.Black.copy(alpha = 0.5f))
+            // Klicks auf den abgedunkelten Bereich duerfen weder den Chat darunter treffen noch den
+            // Editor schliessen — sonst waere eine begonnene Bearbeitung mit einem Fehltipp weg.
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
+        contentAlignment = Alignment.TopCenter
     ) {
         Surface(
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             tonalElevation = 6.dp,
-            modifier = Modifier.fillMaxWidth().padding(10.dp)
+            modifier = Modifier
+                .statusBarsPadding()
+                .fillMaxWidth()
+                .padding(10.dp)
         ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(
-                        text = title,
-                        fontFamily = SpaceGrotesk,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isDark) DarkField else LightField,
-                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = title,
+                    fontFamily = SpaceGrotesk,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isDark) DarkField else LightField,
+                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .fillMaxWidth()
+                ) {
+                    BasicTextField(
+                        value = field,
+                        onValueChange = {
+                            // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
+                            // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
+                            if (it.text.length <= maxChars) {
+                                field = it
+                                onValueChange(it.text)
+                            }
+                        },
                         modifier = Modifier
-                            .padding(top = 10.dp)
                             .fillMaxWidth()
+                            // Feste Ober-/Untergrenze: das Feld waechst mit dem Text, draengt die
+                            // Knopfreihe aber NIE aus dem sichtbaren Bereich; darueber hinaus
+                            // scrollt es in sich selbst.
+                            .heightIn(min = 110.dp, max = 240.dp)
+                            .padding(12.dp)
+                            .focusRequester(focusRequester),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 14.5.sp,
+                            lineHeight = 21.7.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        cursorBrush = SolidColor(Amber)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                     ) {
-                        BasicTextField(
-                            value = field,
-                            onValueChange = {
-                                // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
-                                // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
-                                if (it.text.length <= maxChars) {
-                                    field = it
-                                    onValueChange(it.text)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                // Feste Ober-/Untergrenze: das Feld waechst mit dem Text, draengt die
-                                // Knopfreihe aber NIE aus dem sichtbaren Bereich; darueber hinaus
-                                // scrollt es in sich selbst.
-                                .heightIn(min = 96.dp, max = 220.dp)
-                                .padding(12.dp)
-                                .focusRequester(focusRequester),
-                            textStyle = LocalTextStyle.current.copy(
-                                fontSize = 14.5.sp,
-                                lineHeight = 21.7.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            cursorBrush = SolidColor(Amber)
+                        Text(
+                            text = "Abbrechen",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Button(
+                        onClick = onConfirm,
+                        shape = RoundedCornerShape(999.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mint),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                     ) {
-                        OptionChip(
-                            label = "Abbrechen",
-                            isDark = isDark,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            onClick = onDismiss
-                        )
-                        Spacer(Modifier.weight(1f))
-                        OptionChip(
-                            label = confirmLabel,
-                            isDark = isDark,
-                            tint = Mint,
-                            onClick = onConfirm
+                        Text(
+                            text = confirmLabel,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            color = Color.Black
                         )
                     }
                 }
+            }
         }
     }
 }
