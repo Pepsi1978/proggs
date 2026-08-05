@@ -795,8 +795,10 @@ private fun ChatBubble(
 
         if (canEditStoreText) {
             Row(modifier = Modifier.padding(top = 5.dp)) {
+                // Bewusst OHNE Zuruecksetzen auf den Vorschlagstext: wer den Editor schliesst (auch
+                // per Zurueckwischen) und ihn wieder oeffnet, findet seine Bearbeitung unveraendert
+                // vor, statt von vorn anfangen zu muessen.
                 OptionChip(label = "Editieren", isDark = isDark, tint = Amber) {
-                    editedStoreText = initialEditableText
                     isEditingStoreText = true
                 }
             }
@@ -822,9 +824,14 @@ private fun ChatBubble(
 /**
  * Vollbild-Editor fuer den vorgeschlagenen Eintrag bzw. eine Regel.
  *
- * Bewusst ein Dialog und kein Inline-Feld: Er blendet die hohe Eingabeleiste aus und haelt per
- * `imePadding()` Text UND Speichern-Knopf immer ueber der Tastatur sichtbar. Der Cursor sitzt beim
- * Oeffnen am Textende, die Tastatur kommt von selbst — Frank muss nicht mehr blind ins Feld tippen.
+ * Bewusst ein Dialog und kein Inline-Feld: Er blendet die hohe Eingabeleiste aus. Das Fenster ist
+ * KEIN Vollbild, sondern eine kompakte Karte, die unmittelbar ueber der Tastatur sitzt — Text UND
+ * Speichern-Knopf bleiben dadurch immer gleichzeitig sichtbar. Der Cursor sitzt beim Oeffnen am
+ * Textende, die Tastatur kommt von selbst; Frank muss nicht mehr blind ins Feld tippen.
+ *
+ * `decorFitsSystemWindows = false` ist dabei PFLICHT: Ohne dieses Flag bekommt das eigene Fenster
+ * eines Compose-Dialogs die Tastatur-Insets gar nicht, `imePadding()` bleibt wirkungslos und die
+ * Knopfreihe verschwindet hinter der Tastatur (genau Franks Fund 2026-08-05).
  */
 @Composable
 private fun MemoryTextEditDialog(
@@ -845,71 +852,85 @@ private fun MemoryTextEditDialog(
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
                 .imePadding(),
-            color = MaterialTheme.colorScheme.background
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                Text(
-                    text = title,
-                    fontFamily = SpaceGrotesk,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (isDark) DarkField else LightField,
-                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    BasicTextField(
-                        value = field,
-                        onValueChange = {
-                            // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
-                            // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
-                            if (it.text.length <= maxChars) {
-                                field = it
-                                onValueChange(it.text)
-                            }
-                        },
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth().padding(10.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = title,
+                        fontFamily = SpaceGrotesk,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isDark) DarkField else LightField,
+                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp)
-                            .focusRequester(focusRequester),
-                        textStyle = LocalTextStyle.current.copy(
-                            fontSize = 14.5.sp,
-                            lineHeight = 21.7.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        cursorBrush = SolidColor(Amber)
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OptionChip(
-                        label = "Abbrechen",
-                        isDark = isDark,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = onDismiss
-                    )
-                    Spacer(Modifier.weight(1f))
-                    OptionChip(
-                        label = confirmLabel,
-                        isDark = isDark,
-                        tint = Mint,
-                        onClick = onConfirm
-                    )
+                            .padding(top = 10.dp)
+                            .fillMaxWidth()
+                    ) {
+                        BasicTextField(
+                            value = field,
+                            onValueChange = {
+                                // Ueberlange Eingaben werden nicht uebernommen, statt den Text zu kappen —
+                                // so bleiben Feldinhalt und aeusserer Zustand immer identisch.
+                                if (it.text.length <= maxChars) {
+                                    field = it
+                                    onValueChange(it.text)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                // Feste Ober-/Untergrenze: das Feld waechst mit dem Text, draengt die
+                                // Knopfreihe aber NIE aus dem sichtbaren Bereich; darueber hinaus
+                                // scrollt es in sich selbst.
+                                .heightIn(min = 96.dp, max = 220.dp)
+                                .padding(12.dp)
+                                .focusRequester(focusRequester),
+                            textStyle = LocalTextStyle.current.copy(
+                                fontSize = 14.5.sp,
+                                lineHeight = 21.7.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            cursorBrush = SolidColor(Amber)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OptionChip(
+                            label = "Abbrechen",
+                            isDark = isDark,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            onClick = onDismiss
+                        )
+                        Spacer(Modifier.weight(1f))
+                        OptionChip(
+                            label = confirmLabel,
+                            isDark = isDark,
+                            tint = Mint,
+                            onClick = onConfirm
+                        )
+                    }
                 }
             }
         }
