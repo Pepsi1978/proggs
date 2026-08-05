@@ -27,3 +27,4 @@
 | 13 | Windows: Umlaute werden Muell | `options.encoding = "UTF-8"` pro JavaCompile-Task | §11.5 |
 | 14 | Windows: "Unable to delete" bei clean | `gradlew --stop` + Defender-Ausnahme `build/`+`.gradle/` | §11.2 |
 | 15 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (Debug) | Keystore-Mismatch zwischen Rechnern — Fingerprints vergleichen, NIE reflexhaft deinstallieren | §13 |
+| 16 | Samsung-Geraet fehlt komplett in `adb devices`, USB-Debugging ausgegraut | Auto Blocker („Automatische Sperre") aus — kein Treiber-/Kabelproblem | §13.2 |

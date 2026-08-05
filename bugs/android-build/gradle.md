@@ -881,6 +881,18 @@ Fingerprints vergleichen — dann ist klar, WELCHER Rechner die installierte App
 **Poka-Yoke:** Nach jedem Keystore-Setup auf einer neuen Maschine: `keytool -list`-Fingerprint mit dem der anderen Maschine vergleichen (muss identisch sein). Vorfall: EntropieReductor 0.13.0, 2026-06-12 (Mac vs. Windows, Handy-App war Windows-signiert).
 **Versionen:** plattformuebergreifend, zeitlos (Android-Signatur-Modell).
 
+### 13.2 Samsung Auto Blocker sperrt USB-Debugging — `adb devices` bleibt LEER  ⭐ SELBST ERLEBT
+**Symptom:** Ein frisch angeschlossenes Samsung-Geraet taucht in `adb devices` ueberhaupt nicht auf (auch nicht als `unauthorized`). In den Entwickleroptionen ist der Schalter **USB-Debugging** ausgegraut mit dem Hinweis "durch automatische Sperre gesperrt". Windows zeigt das Geraet im Geraete-Manager nur als "SAMSUNG Mobile USB Composite Device" + Modem — es fehlt jedes ADB-Interface.
+**Ursache:** Samsungs **Auto Blocker** (deutsch "Automatische Sperre", One UI 6.1+, ab One UI 8 / Android 17 ab Werk AKTIV) blockiert Befehle ueber das USB-Kabel und sperrt USB-Debugging hart aus — unabhaengig von Treibern, Kabel oder Entwickleroptionen.
+**Diagnose (10 Sekunden, bevor Treiber/Kabel verdaechtigt werden):**
+```powershell
+Get-PnpDevice -PresentOnly | Where-Object { $_.FriendlyName -match 'SAMSUNG|Android|ADB' }
+```
+Nur Composite/Modem, kein ADB-Interface → Auto Blocker, kein Treiberproblem.
+**FIX:** Am Geraet: Einstellungen → Sicherheit und Datenschutz → **Automatische Sperre** ausschalten (oder, falls vorhanden, nur den Einzelschalter "USB-Kabel blockieren"). Danach USB-Debugging aktivieren, Kabel neu stecken, "Diesem Computer immer vertrauen" bestaetigen.
+**Poka-Yoke:** Bei "adb sieht kein Geraet" auf einem Samsung ZUERST den Auto Blocker pruefen — nicht Treiber neu installieren, nicht Kabel tauschen. Vorfall: Galaxy Z Fold 8 (SM-F971B, Android 17), EntropieReductor 0.28.28, 2026-08-05.
+**Versionen:** Samsung One UI 6.1+ (Auto Blocker eingefuehrt), ab One UI 8 standardmaessig an.
+
 ---
 
 ## ✅ Pflicht-Checkliste (vor & beim Build-Edit)
