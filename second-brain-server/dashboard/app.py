@@ -82,6 +82,7 @@ VERSION = "0.86.1 (19.07.2026, 13:06 Uhr)"  # 0.86.1: Kategorie-Navigation zeigt
 VERSION = "0.86.2 (19.07.2026, 13:17 Uhr)"  # 0.86.2: Sichtbarer Gesamtzaehler fuer brain-api 1.38.2; Listenvorschauen sind auf 320 Zeichen begrenzt, statt unnoetig mehrere Tausend Zeichen je Karte zu uebertragen. Alt: 0.86.1.
 VERSION = "0.86.3 (19.07.2026, 13:40 Uhr)"  # 0.86.3: Browser-Zurueck/Vor stellt im Gehirn jede Kategorieebene einzeln wieder her, statt aus einer tiefen Unterkategorie direkt zur Uebersicht zu springen. Alt: 0.86.2.
 VERSION = "0.87.0 (19.07.2026, 14:47 Uhr)"  # 0.87.0: Sichtbarer Gesamtzaehler fuer agent 0.84.0 und Cortex Android 0.9.0; jede neue Agentenantwort zeigt Gedächtnis, Internet, Gedächtnis + Internet oder Ohne Suche vor ihrer Antwortzeit. Alt: 0.86.3.
+VERSION = "0.88.0 (05.08.2026, 14:02 Uhr)"  # 0.88.0: Sichtbarer Gesamtzaehler fuer agent 0.32.0 (Speichermodus). Cortex zitiert beim Speichern keinen Satzausschnitt mehr, sondern erkennt die Absicht und schlaegt sie als vollstaendigen deutschen Satz vor; der automatische Faktenwaechter, der gute Formulierungen still verwarf, ist entfernt — freigegeben wird per Ja/Nein im Dialog. Alt: 0.87.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
