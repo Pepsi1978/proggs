@@ -225,7 +225,6 @@ class CodexAuthManager @Inject constructor(
     private val refreshMutex = Mutex()
     private val loginMutex = Mutex()
     private val activeLoginJob = AtomicReference<Job?>()
-    private val activeCall = ActiveCallTracker()
     private val store by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         val masterKey = MasterKey.Builder(appContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -448,15 +447,15 @@ class CodexAuthManager @Inject constructor(
             HttpResult(response.code, response.body?.string().orEmpty())
         }
 
+    /**
+     * Jeder Aufruf steht fuer sich. Die App stellt mehrere Anfragen gleichzeitig (etwa beim
+     * Nachholen alter Rueckblicke); wuerde ein neuer Aufruf den laufenden abbrechen, kaeme nur
+     * die letzte Antwort an. Abgebrochen wird ausschliesslich ueber die Coroutine, die den
+     * Aufruf gestartet hat.
+     */
     private suspend fun executeTextRequest(request: Request): TrackedResponse = withDnsRetry {
         val call = RESPONSES_HTTP_CLIENT.newCall(request)
-        activeCall.track(call)
-        try {
-            TrackedResponse(call, call.awaitResponse())
-        } catch (error: Throwable) {
-            activeCall.clear(call)
-            throw error
-        }
+        TrackedResponse(call, call.awaitResponse())
     }
 
     /**
@@ -523,8 +522,6 @@ class CodexAuthManager @Inject constructor(
                 throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
             }
             throw error
-        } finally {
-            activeCall.clear(trackedResponse.call)
         }
         return accumulator.result()
     }

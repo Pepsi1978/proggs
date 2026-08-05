@@ -3503,7 +3503,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v${com.entropyjournal.BuildConfig.VERSION_NAME} - 05.08.2026 21:53 Uhr",
+                            "Entropy Journal v${com.entropyjournal.BuildConfig.VERSION_NAME} - 05.08.2026 21:57 Uhr",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
