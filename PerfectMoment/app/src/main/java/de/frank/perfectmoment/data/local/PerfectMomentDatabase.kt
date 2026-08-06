@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -44,6 +44,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     Migration5To6,
                     Migration6To7,
                     Migration7To8,
+                    Migration8To9,
                 )
                     .addCallback(SeedCallback)
                     .build()
@@ -98,6 +99,12 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
             }
         }
 
+        private val Migration8To9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                insertAssumptionBoostSkill(db, System.currentTimeMillis())
+            }
+        }
+
         private fun insertAssumptionQuestionsSkill(db: SupportSQLiteDatabase, createdAt: Long) {
             db.insert(
                 "skills",
@@ -121,6 +128,18 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 },
             )
         }
+
+        private fun insertAssumptionBoostSkill(db: SupportSQLiteDatabase, createdAt: Long) {
+            db.insert(
+                "skills",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("name", PreinstalledContent.ASSUMPTION_BOOST_SKILL_NAME)
+                    put("text", PreinstalledContent.assumptionBoostSkillText)
+                    put("createdAt", createdAt)
+                },
+            )
+        }
     }
 
     private object SeedCallback : Callback() {
@@ -139,6 +158,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
             )
             insertAssumptionQuestionsSkill(db, now + 1)
             insertConsciousnessImageSkill(db, now + 2)
+            insertAssumptionBoostSkill(db, now + 3)
             PreinstalledContent.hooks.forEachIndexed { index, (emoji, text) ->
                 db.insert(
                     "hooks",

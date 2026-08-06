@@ -56,4 +56,37 @@ class PreinstalledContentTest {
         assertTrue(text.contains("Keine Einleitung. Keine Ausleitung."))
         assertTrue(text.contains("Ich-Form als Standard."))
     }
+
+    @Test
+    fun assumptionBoostIsAFourthSkillOfItsOwn() {
+        val names = listOf(
+            PreinstalledContent.RESEARCH_TEAM_SKILL_NAME,
+            PreinstalledContent.ASSUMPTION_QUESTIONS_SKILL_NAME,
+            PreinstalledContent.CONSCIOUSNESS_IMAGE_SKILL_NAME,
+            PreinstalledContent.ASSUMPTION_BOOST_SKILL_NAME,
+        )
+
+        assertEquals(names.size, names.distinct().size)
+        assertNotEquals(
+            PreinstalledContent.consciousnessImageSkillText,
+            PreinstalledContent.assumptionBoostSkillText,
+        )
+    }
+
+    @Test
+    fun assumptionBoostCarriesItsOwnRules() {
+        val text = PreinstalledContent.assumptionBoostSkillText
+
+        assertTrue(text.startsWith("AUFGABE"))
+        assertTrue(text.contains("GRUNDGESETZ DER ANNAHMENVERSTÄRKUNG"))
+        assertTrue(text.contains("FRAGEFORMEN UND IHRE RANGFOLGE"))
+        assertTrue(text.contains("KLANGREGEL: NACH „UND“ NIEMALS EIN WORT MIT „UN“-GEGENTEIL"))
+        assertTrue(text.contains("PRÜFUNG VOR DER AUSGABE"))
+        assertTrue(
+            text.endsWith(
+                "Schreibe jede Frage in eine eigene Zeile und beginne sie mit einem " +
+                    "inhaltlich passenden Emoji.",
+            ),
+        )
+    }
 }
