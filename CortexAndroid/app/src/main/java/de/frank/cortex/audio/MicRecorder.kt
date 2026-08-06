@@ -22,9 +22,13 @@ class MicRecorder {
     // gleichzeitig genutzt; compareAndSet macht Doppel-stop() eindeutig (nur EINER liefert Daten).
     private val recording = java.util.concurrent.atomic.AtomicBoolean(false)
     private var startedAtMs = 0L
+    /** Die Rate, die die laufende Aufnahme tatsaechlich bekommen hat — der WAV-Kopf muss dazu passen. */
+    private var activeSampleRate = SAMPLE_RATE
 
     companion object {
         const val SAMPLE_RATE = 16000
+        /** Mit dieser Rate wurde die Referenz-Aufnahme gemacht, die sauber geklont hat. */
+        const val CLONING_SAMPLE_RATE = 24000
         const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
         // Sicherheitsdeckel ~10 Minuten (16 kHz * 2 Byte, mono): ohne Limit wuchs der Puffer bei
@@ -32,7 +36,14 @@ class MicRecorder {
         private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
     }
 
-    fun start(scope: CoroutineScope): Boolean {
+    /**
+     * Startet die Aufnahme.
+     *
+     * [requestedSampleRate] laesst das Stimm-Klonen in hoeherer Qualitaet aufnehmen, als die
+     * Spracherkennung braucht. Lehnt das Geraet die Rate ab, faellt die Aufnahme auf die
+     * 16 kHz der Diktierfunktion zurueck, statt ganz zu scheitern.
+     */
+    fun start(scope: CoroutineScope, requestedSampleRate: Int = SAMPLE_RATE): Boolean {
         if (recording.get()) return true
         if (ContextCompat.checkSelfPermission(CortexApp.appContext, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
@@ -41,16 +52,23 @@ class MicRecorder {
             return false
         }
 
-        val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
-        if (bufferSize <= 0) {
-            CortexLog.error("MicRecorder", "start", "getMinBufferSize fehlgeschlagen: $bufferSize")
+        val sampleRate = listOf(requestedSampleRate, SAMPLE_RATE)
+            .distinct()
+            .firstOrNull { AudioRecord.getMinBufferSize(it, CHANNEL, ENCODING) > 0 }
+        val bufferSize = sampleRate?.let { AudioRecord.getMinBufferSize(it, CHANNEL, ENCODING) } ?: 0
+        if (sampleRate == null || bufferSize <= 0) {
+            CortexLog.error("MicRecorder", "start", "getMinBufferSize fehlgeschlagen für $requestedSampleRate Hz")
             return false
         }
+        if (sampleRate != requestedSampleRate) {
+            CortexLog.warn("MicRecorder", "start", "$requestedSampleRate Hz nicht verfügbar — Aufnahme mit $sampleRate Hz")
+        }
+        activeSampleRate = sampleRate
 
         recorder = try {
             AudioRecord(
                 MediaRecorder.AudioSource.VOICE_RECOGNITION, // Samsung-kompatibel (statt MIC)
-                SAMPLE_RATE, CHANNEL, ENCODING, bufferSize * 2
+                sampleRate, CHANNEL, ENCODING, bufferSize * 2
             )
         } catch (e: SecurityException) {
             CortexLog.error("MicRecorder", "start", "AudioRecord ohne Mikrofonberechtigung blockiert: ${e.message}")
@@ -162,8 +180,9 @@ class MicRecorder {
     }
 
     private fun pcmDataToWav(pcmData: ByteArray): ByteArray {
+        val sampleRate = activeSampleRate
         val totalDataLen = pcmData.size + 36
-        val byteRate = SAMPLE_RATE * 1 * 16 / 8 // mono, 16-bit
+        val byteRate = sampleRate * 1 * 16 / 8 // mono, 16-bit
 
         val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray())
@@ -173,7 +192,7 @@ class MicRecorder {
             putInt(16) // PCM
             putShort(1) // PCM
             putShort(1) // mono
-            putInt(SAMPLE_RATE)
+            putInt(sampleRate)
             putInt(byteRate)
             putShort((1 * 16 / 8).toShort()) // block align
             putShort(16) // bits per sample

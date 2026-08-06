@@ -139,6 +139,7 @@ class ChatViewModel : ViewModel() {
     private val pcmPlayer = PcmPlayer()
     private val mp3Player = de.frank.cortex.audio.Mp3Player(de.frank.cortex.CortexApp.appContext)
     private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
+    private val qwenSynth = de.frank.cortex.tts.QwenTtsSynthesizer()
     // speechGeneration/speakJob werden von Main (stopSpeaking/toggleTts) UND vom IO-Thread
     // (handleDelta -> startStreamingSpeech) mutiert: AtomicInteger + Lock statt plain Int,
     // sonst konnte ein verlorenes Inkrement den Abbruch-Vergleich aushebeln (gestopptes
@@ -165,6 +166,11 @@ class ChatViewModel : ViewModel() {
     // Wird gesetzt, wenn Cloud-TTS Zugriff verweigert (403/401 - z.B. API nicht freigeschaltet).
     // Dann keine sinnlosen Retries, sondern klare Meldung an den Nutzer.
     @Volatile private var ttsAccessDenied = false
+
+    // Wortlaut des letzten Fehlers der eigenen Stimme (fehlender Schluessel, abgelehnte Kennung).
+    // Alibaba-Fehler betreffen IMMER die ganze Session, nicht nur einen Absatz — deshalb bricht
+    // die Pipeline damit ab und zeigt die Meldung, statt jeden Absatz still zu ueberspringen.
+    @Volatile private var qwenErrorMessage: String? = null
 
     // Begrenzt die GLEICHZEITIGEN Gemini-TTS-Anfragen (siehe TTS_MAX_CONCURRENT_SYNTH).
     private val ttsSemaphore = Semaphore(TTS_MAX_CONCURRENT_SYNTH)
@@ -1619,30 +1625,43 @@ class ChatViewModel : ViewModel() {
             ttsRateLimitedUntil = 0L
             ttsRateLimitExhausted = false
             ttsAccessDenied = false
-            // Vorlese-Motor waehlen: Edge (Microsoft, MP3) oder Chirp 3: HD (Google, PCM).
-            val isEdge = SettingsStore.ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
+            qwenErrorMessage = null
+            // Vorlese-Motor waehlen: Edge (Microsoft, MP3), die eigene geklonte Stimme (Alibaba,
+            // WAV) oder Chirp 3: HD (Google, PCM). Nur Chirp liefert rohes PCM fuer den
+            // durchgehenden AudioTrack — Edge und die eigene Stimme kommen als fertige Datei.
+            val provider = SettingsStore.ttsProvider
+            val isEdge = provider == SettingsStore.TTS_PROVIDER_EDGE
+            val isQwen = provider == SettingsStore.TTS_PROVIDER_QWEN
+            val isFileAudio = isEdge || isQwen
             try {
-                val voice = if (isEdge) SettingsStore.edgeTtsVoice else SettingsStore.ttsVoice
+                val voice = when {
+                    isQwen -> SettingsStore.qwenTtsVoiceId
+                    isEdge -> SettingsStore.edgeTtsVoice
+                    else -> SettingsStore.ttsVoice
+                }
                 val rate = SettingsStore.ttsRate
                 val chunks = chunkText(spokenText)
                 if (chunks.isEmpty()) return@launch
                 val ttsStartedAt = System.currentTimeMillis()
                 CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
-                    mapOf("len" to spokenText.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
+                    mapOf("len" to spokenText.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to ttsEngineName(isEdge, isQwen)))
 
                 coroutineScope {
                     val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
 
                     // Chirp: durchgehenden AudioTrack PARALLEL zur ersten Netzanfrage aufbauen.
-                    // Edge: kein Vorab-Player noetig (MediaPlayer baut pro Haeppchen auf).
-                    val playerReady = if (isEdge) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
+                    // Edge/eigene Stimme: kein Vorab-Player noetig (MediaPlayer baut pro Haeppchen auf).
+                    val playerReady = if (isFileAudio) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
 
                     fun enqueue(index: Int) {
                         if (index in chunks.indices && pending[index] == null) {
                             pending[index] = async(Dispatchers.IO) {
                                 val started = System.currentTimeMillis()
-                                val audio = if (isEdge) synthesizeEdgeChunk(chunks[index], voice, index)
-                                else synthesizeTtsChunk(chunks[index], voice, index)
+                                val audio = when {
+                                    isQwen -> synthesizeQwenChunk(chunks[index], voice, index)
+                                    isEdge -> synthesizeEdgeChunk(chunks[index], voice, index)
+                                    else -> synthesizeTtsChunk(chunks[index], voice, index)
+                                }
                                 CortexLog.info("ChatVM", "ttsSynth", "TTS-Chunk synthetisiert",
                                     mapOf("index" to index, "chunk_len" to chunks[index].length,
                                         "audio_bytes" to (audio?.size ?: 0),
@@ -1672,6 +1691,16 @@ class ChatViewModel : ViewModel() {
                         }
 
                         if (audio == null || audio.isEmpty()) {
+                            val qwenReason = qwenErrorMessage
+                            if (qwenReason != null) {
+                                // Alibaba-Fehler gelten fuer die ganze Session (Schluessel/Stimme),
+                                // nicht nur fuer diesen Absatz -> klar melden und abbrechen.
+                                CortexLog.warn("ChatVM", "speakResponse", "Eigene Stimme gestoppt: $qwenReason",
+                                    mapOf("index" to index))
+                                _uiState.update { it.copy(error = "Vorlesen mit deiner Stimme nicht möglich: $qwenReason") }
+                                cancelPending()
+                                return@coroutineScope
+                            }
                             if (ttsAccessDenied) {
                                 // Cloud-TTS-API nicht freigeschaltet o.ae. -> klar melden statt still.
                                 CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Zugriffsfehler gestoppt",
@@ -1706,7 +1735,7 @@ class ChatViewModel : ViewModel() {
                             firstAudioLogged = true
                         }
                         val playStarted = System.currentTimeMillis()
-                        if (isEdge) {
+                        if (isFileAudio) {
                             mp3Player.playAndAwait(audio, rate)
                         } else {
                             playerReady?.await() // no-op sobald der Track laengst steht
@@ -1754,14 +1783,22 @@ class ChatViewModel : ViewModel() {
             ttsRateLimitedUntil = 0L
             ttsRateLimitExhausted = false
             ttsAccessDenied = false
-            val isEdge = SettingsStore.ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
+            qwenErrorMessage = null
+            val provider = SettingsStore.ttsProvider
+            val isEdge = provider == SettingsStore.TTS_PROVIDER_EDGE
+            val isQwen = provider == SettingsStore.TTS_PROVIDER_QWEN
+            val isFileAudio = isEdge || isQwen
             try {
-                val voice = if (isEdge) SettingsStore.edgeTtsVoice else SettingsStore.ttsVoice
+                val voice = when {
+                    isQwen -> SettingsStore.qwenTtsVoiceId
+                    isEdge -> SettingsStore.edgeTtsVoice
+                    else -> SettingsStore.ttsVoice
+                }
                 val rate = SettingsStore.ttsRate
                 CortexLog.info("ChatVM", "streamSpeech", "Streaming-TTS-Pipeline startet",
-                    mapOf("voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
+                    mapOf("voice" to voice, "rate" to rate, "engine" to ttsEngineName(isEdge, isQwen)))
                 coroutineScope {
-                    val playerReady = if (isEdge) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
+                    val playerReady = if (isFileAudio) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
                     val audioChannel = Channel<ByteArray?>(TTS_PREFETCH_AHEAD)
                     val synthJob = launch(Dispatchers.IO) {
                         var index = 0
@@ -1769,8 +1806,11 @@ class ChatViewModel : ViewModel() {
                             for (para in textChannel) {
                                 for (chunk in chunkText(para)) {
                                     val synthStarted = System.currentTimeMillis()
-                                    val audio = if (isEdge) synthesizeEdgeChunk(chunk, voice, index)
-                                    else synthesizeTtsChunk(chunk, voice, index)
+                                    val audio = when {
+                                        isQwen -> synthesizeQwenChunk(chunk, voice, index)
+                                        isEdge -> synthesizeEdgeChunk(chunk, voice, index)
+                                        else -> synthesizeTtsChunk(chunk, voice, index)
+                                    }
                                     CortexLog.info("ChatVM", "streamTtsSynth", "Streaming-TTS-Chunk synthetisiert",
                                         mapOf("index" to index, "chunk_len" to chunk.length,
                                             "audio_bytes" to (audio?.size ?: 0),
@@ -1790,6 +1830,12 @@ class ChatViewModel : ViewModel() {
                         val currentIndex = playIndex++
                         if (speechGeneration.get() != generation) break
                         if (audio == null || audio.isEmpty()) {
+                            // Als plain if statt ?.let: 'break' darf keine Lambda-Grenze ueberspringen.
+                            val qwenReason = qwenErrorMessage
+                            if (qwenReason != null) {
+                                _uiState.update { it.copy(error = "Vorlesen mit deiner Stimme nicht möglich: $qwenReason") }
+                                break
+                            }
                             if (ttsAccessDenied) {
                                 _uiState.update { it.copy(error = "Vorlesen nicht möglich: Cloud Text-to-Speech API ist für deinen Schlüssel nicht freigeschaltet.") }
                                 break
@@ -1805,7 +1851,7 @@ class ChatViewModel : ViewModel() {
                             firstAudioLogged = true
                         }
                         val playStarted = System.currentTimeMillis()
-                        if (isEdge) mp3Player.playAndAwait(audio, rate)
+                        if (isFileAudio) mp3Player.playAndAwait(audio, rate)
                         else { playerReady?.await(); pcmPlayer.writeAndAwait(audio) }
                         CortexLog.info("ChatVM", "streamTtsPlay", "Streaming-TTS-Chunk abgespielt",
                             mapOf("index" to currentIndex, "audio_bytes" to audio.size,
@@ -1955,6 +2001,38 @@ class ChatViewModel : ViewModel() {
             if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
         }
         return null
+    }
+
+    /**
+     * Synthetisiert einen Absatz mit der eigenen, bei Alibaba geklonten Stimme.
+     *
+     * KEIN Wiederholungsversuch bei Konfigurationsfehlern: ein fehlender Schluessel oder eine
+     * abgewiesene Stimm-Kennung wird durch Wiederholen nicht besser — der Grund wird gemerkt,
+     * damit die Pipeline die Session sauber beendet und ihn anzeigt.
+     */
+    private suspend fun synthesizeQwenChunk(chunk: String, voice: String, index: Int): ByteArray? {
+        try {
+            val wav = qwenSynth.synthesize(chunk, voice, SettingsStore.qwenTtsApiKey)
+            if (wav.isNotEmpty()) return wav
+            qwenErrorMessage = "Alibaba hat keinen Ton geliefert."
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: de.frank.cortex.tts.QwenTtsException) {
+            CortexLog.warn("ChatVM", "synthesizeQwenChunk", "Eigene Stimme fehlgeschlagen: ${e.message}",
+                mapOf("index" to index, "chunk_len" to chunk.length))
+            qwenErrorMessage = e.message ?: "Unbekannter Fehler."
+        } catch (e: Exception) {
+            CortexLog.warn("ChatVM", "synthesizeQwenChunk", "Eigene Stimme fehlgeschlagen: ${e.message}",
+                mapOf("index" to index, "chunk_len" to chunk.length))
+            qwenErrorMessage = "Die Verbindung zu Alibaba ist fehlgeschlagen."
+        }
+        return null
+    }
+
+    private fun ttsEngineName(isEdge: Boolean, isQwen: Boolean): String = when {
+        isQwen -> "qwen"
+        isEdge -> "edge"
+        else -> "chirp"
     }
 
     private val whitespaceRunRegex = Regex("[ \t]+")

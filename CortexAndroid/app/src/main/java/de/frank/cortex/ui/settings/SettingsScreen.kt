@@ -49,6 +49,7 @@ import de.frank.cortex.data.model.*
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.network.CODEX_GPT56_MODELS
 import de.frank.cortex.observability.CortexLog
+import de.frank.cortex.tts.QwenVoiceDirectory
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.WireGuardManager
 import kotlinx.coroutines.CancellationException
@@ -73,9 +74,12 @@ fun SettingsScreen(
     var groqApiKey by remember { mutableStateOf(SettingsStore.groqApiKey) }
     var geminiApiKey by remember { mutableStateOf(SettingsStore.geminiApiKey) }
     var googleTtsApiKey by remember { mutableStateOf(SettingsStore.googleTtsApiKey) }
+    var qwenTtsApiKey by remember { mutableStateOf(SettingsStore.qwenTtsApiKey) }
     var ttsProvider by remember { mutableStateOf(SettingsStore.ttsProvider) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
     var edgeTtsVoice by remember { mutableStateOf(SettingsStore.edgeTtsVoice) }
+    var qwenVoiceId by remember { mutableStateOf(SettingsStore.qwenTtsVoiceId) }
+    var qwenVoiceNames by remember { mutableStateOf(SettingsStore.qwenVoiceNames) }
     val ttsUsage by TtsUsageStore.usage.collectAsState()
     LaunchedEffect(Unit) { TtsUsageStore.refreshMonth() }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
@@ -526,6 +530,23 @@ fun SettingsScreen(
                     { googleTtsApiKey = it; SettingsStore.googleTtsApiKey = it }, isDark,
                     divider = true,
                     onRevealRequest = ::requestSecretReveal)
+                // Leerzeichen fliegen sofort raus: eingefuegte Schluessel bringen sie oft mit,
+                // und Alibaba antwortet darauf mit 401 statt mit einer Stimme.
+                SecretRow("Alibaba-Schlüssel (Qwen3-TTS · meine Stimme)", qwenTtsApiKey,
+                    {
+                        val cleaned = it.filterNot(Char::isWhitespace)
+                        qwenTtsApiKey = cleaned
+                        SettingsStore.qwenTtsApiKey = cleaned
+                        // Ohne Schluessel kann die eigene Stimme nichts sprechen — dann zurueck
+                        // auf Edge, statt bei jeder Antwort eine Fehlermeldung zu zeigen.
+                        if (cleaned.isBlank() && ttsProvider == SettingsStore.TTS_PROVIDER_QWEN) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                            Toast.makeText(context, "Eigene Stimme deaktiviert — es fehlt der Alibaba-Schlüssel.", Toast.LENGTH_SHORT).show()
+                        }
+                    }, isDark,
+                    divider = true,
+                    onRevealRequest = ::requestSecretReveal)
                 Column(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -678,20 +699,27 @@ fun SettingsScreen(
                 // 2026-07-02): Das Vorlesen wird ausschliesslich ueber den Lautsprecher-Knopf im
                 // Gespraech gesteuert (an = immer vorlesen, aus = nie) — EIN Schalter statt zwei.
 
-                // Vorlese-Motor (TTS-Provider) — Chirp 3: HD (Google) vs. Edge (Microsoft)
+                // Vorlese-Motor (TTS-Provider) — Chirp 3: HD (Google), Edge (Microsoft)
+                // oder die eigene, bei Alibaba geklonte Stimme.
                 val isEdgeSel = ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
+                val isQwenSel = ttsProvider == SettingsStore.TTS_PROVIDER_QWEN
                 Column(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("Vorlese-Motor", fontSize = 14.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // IntrinsicSize.Max + fillMaxHeight: sonst waeren die drei Kacheln
+                    // unterschiedlich hoch, weil ihre Untertitel verschieden oft umbrechen.
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(IntrinsicSize.Max)
+                    ) {
                         TtsEngineChip(
                             title = "Chirp 3: HD",
                             subtitle = "Google · viel gratis",
-                            selected = !isEdgeSel,
+                            selected = !isEdgeSel && !isQwenSel,
                             isDark = isDark,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).fillMaxHeight()
                         ) {
                             ttsProvider = SettingsStore.TTS_PROVIDER_CHIRP
                             SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_CHIRP
@@ -701,15 +729,32 @@ fun SettingsScreen(
                             subtitle = "Microsoft · kostenlos",
                             selected = isEdgeSel,
                             isDark = isDark,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).fillMaxHeight()
                         ) {
                             ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
                             SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
                         }
+                        TtsEngineChip(
+                            title = "Meine Stimme",
+                            subtitle = "Alibaba · geklont",
+                            selected = isQwenSel,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            if (qwenTtsApiKey.isBlank()) {
+                                Toast.makeText(context, "Bitte zuerst den Alibaba-Schlüssel hinterlegen.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                ttsProvider = SettingsStore.TTS_PROVIDER_QWEN
+                                SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_QWEN
+                            }
+                        }
                     }
                     Text(
-                        if (isEdgeSel) "Edge-TTS von Microsoft — kostenlos, natürliche Stimmen (Seraphina, Florian …)."
-                        else "Chirp 3: HD von Google Cloud — beste Qualität, gratis bis 1 Mio. Zeichen/Monat.",
+                        when {
+                            isQwenSel -> "Qwen3-TTS von Alibaba — liest mit deiner eigenen geklonten Stimme vor."
+                            isEdgeSel -> "Edge-TTS von Microsoft — kostenlos, natürliche Stimmen (Seraphina, Florian …)."
+                            else -> "Chirp 3: HD von Google Cloud — beste Qualität, gratis bis 1 Mio. Zeichen/Monat."
+                        },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -727,9 +772,17 @@ fun SettingsScreen(
                     Icon(Icons.Default.RecordVoiceOver, null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp))
-                    Text(if (isEdgeSel) "Edge-Stimme" else "Chirp-Stimme", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(
+                        when {
+                            isQwenSel -> "Meine Stimme"
+                            isEdgeSel -> "Edge-Stimme"
+                            else -> "Chirp-Stimme"
+                        },
+                        fontSize = 14.sp, modifier = Modifier.weight(1f)
+                    )
                     var showVoiceDialog by remember { mutableStateOf(false) }
                     var showEdgeVoiceDialog by remember { mutableStateOf(false) }
+                    var showMyVoicesDialog by remember { mutableStateOf(false) }
                     val pcmPlayer = remember { PcmPlayer() }
                     val edgeSynth = remember { de.frank.cortex.audio.EdgeTtsSynthesizer() }
                     val edgeMp3Player = remember { de.frank.cortex.audio.Mp3Player(context) }
@@ -743,13 +796,50 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(9.dp),
                         color = if (isDark) DarkField else LightField,
                         border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder),
-                        modifier = Modifier.clickable { if (isEdgeSel) showEdgeVoiceDialog = true else showVoiceDialog = true }
+                        modifier = Modifier.clickable {
+                            when {
+                                isQwenSel -> if (qwenTtsApiKey.isBlank()) {
+                                    Toast.makeText(context, "Bitte zuerst den Alibaba-Schlüssel hinterlegen.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    showMyVoicesDialog = true
+                                }
+                                isEdgeSel -> showEdgeVoiceDialog = true
+                                else -> showVoiceDialog = true
+                            }
+                        }
                     ) {
                         Text(
-                            if (isEdgeSel) edgeVoiceLabelFor(edgeTtsVoice) else voiceLabelFor(ttsVoice),
+                            when {
+                                isQwenSel -> qwenVoiceLabelFor(qwenVoiceId, qwenVoiceNames)
+                                isEdgeSel -> edgeVoiceLabelFor(edgeTtsVoice)
+                                else -> voiceLabelFor(ttsVoice)
+                            },
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                             fontSize = 12.5.sp,
                             color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (showMyVoicesDialog) {
+                        MyVoicesDialog(
+                            apiKey = qwenTtsApiKey,
+                            currentVoiceId = qwenVoiceId,
+                            onVoiceSelected = { voiceId ->
+                                qwenVoiceId = voiceId
+                                SettingsStore.qwenTtsVoiceId = voiceId
+                                qwenVoiceNames = SettingsStore.qwenVoiceNames
+                                // Wurde die gewaehlte Stimme geloescht, bleibt keine uebrig:
+                                // dann zurueck auf Edge statt stumm zu bleiben.
+                                if (voiceId.isBlank() && ttsProvider == SettingsStore.TTS_PROVIDER_QWEN) {
+                                    ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                                    SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                                    Toast.makeText(context, "Eigene Stimme deaktiviert — es ist keine Stimme gewählt.", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onDismiss = {
+                                showMyVoicesDialog = false
+                                // Namen koennen im Dialog umbenannt worden sein.
+                                qwenVoiceNames = SettingsStore.qwenVoiceNames
+                            }
                         )
                     }
                     if (showVoiceDialog) {
@@ -2199,6 +2289,12 @@ private val edgeVoices = listOf(
 )
 
 private fun edgeVoiceLabelFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: id
+
+/** Was die Einstellungen-Zeile fuer die gewaehlte geklonte Stimme anzeigt. */
+private fun qwenVoiceLabelFor(voiceId: String, names: Map<String, String>): String = when {
+    voiceId.isBlank() -> "Keine gewählt"
+    else -> names[voiceId] ?: QwenVoiceDirectory.displayName(voiceId)
+}
 private fun edgeVoiceShortFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: "die Stimme"
 
 @Composable

@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
@@ -59,6 +60,7 @@ object SettingsStore {
 
     private val SECRET_KEYS = listOf(
         "sb_api_key", "groq_api_key", "gemini_api_key", "google_tts_api_key",
+        "qwen_tts_api_key",
         "wg_config", "codex_access_token", "codex_refresh_token"
     )
 
@@ -75,9 +77,11 @@ object SettingsStore {
     const val RESPONSE_SIZE_MEDIUM = "m"
     const val RESPONSE_SIZE_XL = "xl"
 
-    // Vorlese-Motor (TTS-Provider): Google Chirp 3: HD (Standard) oder Microsoft Edge TTS.
+    // Vorlese-Motor (TTS-Provider): Google Chirp 3: HD (Standard), Microsoft Edge TTS oder
+    // die eigene, bei Alibaba Model Studio geklonte Stimme (Qwen3-TTS).
     const val TTS_PROVIDER_CHIRP = "chirp"
     const val TTS_PROVIDER_EDGE = "edge"
+    const val TTS_PROVIDER_QWEN = "qwen"
     const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
 
     fun defaultContextPrompt(mode: String): String = when (mode) {
@@ -325,6 +329,11 @@ object SettingsStore {
     val ttsApiKey: String
         get() = googleTtsApiKey.ifBlank { geminiApiKey }
 
+    // Alibaba Model Studio (DashScope): klont die eigene Stimme und spricht mit ihr.
+    var qwenTtsApiKey: String
+        get() = getSecret("qwen_tts_api_key")
+        set(value) = setSecret("qwen_tts_api_key", value)
+
     var wgConfig: String
         get() = getSecret("wg_config")
         set(value) = setSecret("wg_config", value)
@@ -404,6 +413,34 @@ object SettingsStore {
     var edgeTtsVoice: String
         get() = plain.getString("edge_tts_voice", DEFAULT_EDGE_VOICE) ?: DEFAULT_EDGE_VOICE
         set(value) = plain.edit().putString("edge_tts_voice", value).apply()
+
+    // Die bei Alibaba registrierte geklonte Stimme (Kennung, kein Geheimnis).
+    var qwenTtsVoiceId: String
+        get() = plain.getString("qwen_tts_voice_id", "") ?: ""
+        set(value) = plain.edit().putString("qwen_tts_voice_id", value).apply()
+
+    /**
+     * Die Namen, die geklonte Stimmen IN DER APP tragen, je Stimm-Kennung.
+     *
+     * Alibaba baeckt den Namen beim Anlegen in die Kennung ein und kennt kein Umbenennen —
+     * eine umbenannte Stimme traegt ihren Titel deshalb hier.
+     */
+    var qwenVoiceNames: Map<String, String>
+        get() {
+            val stored = plain.getString("qwen_voice_names", "").orEmpty()
+            if (stored.isBlank()) return emptyMap()
+            return try {
+                val json = JSONObject(stored)
+                json.keys().asSequence().associateWith { json.optString(it) }
+                    .filterValues(String::isNotBlank)
+            } catch (e: JSONException) {
+                CortexLog.warn("SettingsStore", "qwenVoiceNames", "Stimmen-Namen unlesbar: ${e.message}")
+                emptyMap()
+            }
+        }
+        set(value) = plain.edit()
+            .putString("qwen_voice_names", JSONObject(value.toMap<String, Any>()).toString())
+            .apply()
 
     // Sprechtempo (Design: 0.7–1.4, Schritt 0.05, Standard 1.0). Wird auf die Wiedergabe angewandt.
     var ttsRate: Float
