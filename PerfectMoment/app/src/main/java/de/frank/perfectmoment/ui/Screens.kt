@@ -1881,7 +1881,8 @@ fun SkillsScreen(viewModel: AppViewModel) {
             },
         )
         LazyColumn(
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(viewModel.skills, key = SkillEntity::id) { skill ->
@@ -1931,6 +1932,13 @@ fun SkillsScreen(viewModel: AppViewModel) {
                 }
             }
         }
+        // Alle Skill-Texte 1:1 als Datei — zum Weiterbearbeiten am Rechner.
+        OutlineButton(
+            "Skills als Datei exportieren",
+            colors.gold,
+            viewModel::exportSkillsRequested,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 28.dp),
+        )
     }
 }
 

@@ -57,6 +57,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.perfectmoment.backup.SkillTextExport
 import de.frank.perfectmoment.session.SessionSilence
 import de.frank.perfectmoment.ui.AppScreen
 import de.frank.perfectmoment.ui.AppViewModel
@@ -126,6 +127,15 @@ class MainActivity : FragmentActivity() {
                 LaunchedEffect(viewModel.askForRestoreFile) {
                     if (viewModel.askForRestoreFile) {
                         chooseRestore.launch(arrayOf("application/json", "*/*"))
+                    }
+                }
+                // Die Skill-Texte gehen als lesbare Textdatei an einen selbst gewählten Ort.
+                val chooseSkillExport = rememberLauncherForActivityResult(
+                    ActivityResultContracts.CreateDocument("text/plain"),
+                ) { uri -> viewModel.skillExportFileChosen(uri) }
+                LaunchedEffect(viewModel.askForSkillExport) {
+                    if (viewModel.askForSkillExport) {
+                        chooseSkillExport.launch(SkillTextExport.suggestedName())
                     }
                 }
                 LaunchedEffect(lockEnabled, locked) {

@@ -15,6 +15,7 @@ import de.frank.perfectmoment.audio.VoiceSampleScript
 import de.frank.perfectmoment.backup.BackupRepository
 import de.frank.perfectmoment.backup.BackupStatus
 import de.frank.perfectmoment.backup.DriveAuth
+import de.frank.perfectmoment.backup.SkillTextExport
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
@@ -342,6 +343,10 @@ class AppViewModel(
     var askForRestoreFile by mutableStateOf(false)
         private set
 
+    /** Gesetzt, wenn Android nach dem Ort für die Skill-Textdatei fragen soll. */
+    var askForSkillExport by mutableStateOf(false)
+        private set
+
     val backupTargetChosen: Boolean get() = container.backupRepository.files.target != null
 
     fun refreshBackupState() {
@@ -383,6 +388,26 @@ class AppViewModel(
             val voiceHint = adoptRestoredVoiceProfiles()
             "Zurückgeholt: ${summary.hooks} Aufhänger, ${summary.skills} Skills, " +
                 "${summary.sessions} neue Sitzungen$voiceHint"
+        }
+    }
+
+    /** Alle Skill-Texte 1:1 in eine selbst gewählte Textdatei schreiben. */
+    fun exportSkillsRequested() {
+        if (skills.isEmpty()) {
+            message = "Es gibt noch keine Skills zum Exportieren."
+            return
+        }
+        askForSkillExport = true
+    }
+
+    fun skillExportFileChosen(uri: android.net.Uri?) {
+        askForSkillExport = false
+        if (uri == null) return
+        val text = SkillTextExport.buildText(skills)
+        val count = skills.size
+        runFileAction {
+            SkillTextExport.write(appContext, uri, text)
+            "Exportiert: $count Skills als Textdatei"
         }
     }
 
