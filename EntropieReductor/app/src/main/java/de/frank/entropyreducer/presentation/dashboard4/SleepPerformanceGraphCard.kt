@@ -32,15 +32,17 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * Schlaf-Performance-Verlaufs-Pattern (Frank-Wunsch 2026-06-21).
+ * Schlaf-Performance-Verlaufs-Pattern (Frank-Wunsch 2026-06-21, gross gezogen 2026-08-07).
  *
- * Zeigt die Schlaf-Performance (%) der letzten ~30 Tage als Balken-Graph.
- * Tap auf die Karte oeffnet den bestehenden Performance-Detail-Screen.
+ * Zeigt die Schlaf-Performance (%) der letzten ~30 Tage als Balken-Graph. Aufbau 1:1 wie der
+ * Erholungsverlauf ([RecoveryGraphCard]): Kopfzeile mit aktuellem Wert, Balken-Graph ueber die
+ * volle Breite, darunter 30-Tage-Schnitt + Abweichungs-Badge. Tap auf die Karte oeffnet den
+ * bestehenden Performance-Detail-Screen.
  *
- * Farb-Logik (relativ zum persoenlichen Durchschnitt):
- * - ueber dem Durchschnitt             -> Gruen (besser als Schnitt)
- * - bis 10% unter dem Durchschnitt     -> Gelb (grenzwertig)
- * - mehr als 10% unter dem Durchschnitt -> Rot (schlecht)
+ * Ampel-Schwellen (Frank-Vorgabe 2026-08-07, absolut statt relativ zum Schnitt):
+ * - 80-100 %      -> Gruen
+ * - 65 bis 80 %   -> Gelb
+ * - unter 65 %    -> Rot
  */
 @Composable
 internal fun SleepPerformanceGraphCard(
@@ -51,9 +53,12 @@ internal fun SleepPerformanceGraphCard(
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.accent
 
+    // Performance-Fix wie in RecoveryGraphCard (#47449): Schwerarbeit haengt nur an history —
+    // beim Chart-Scrubbing (selectedSnapshot pro Move-Event) sonst jede Frame neu.
+    val heavy = remember(history) { sleepPerformanceHeavy(history) }
     val derived =
-        remember(selectedSnapshot, history) {
-            sleepPerformanceDerived(selectedSnapshot = selectedSnapshot, history = history)
+        remember(selectedSnapshot, heavy) {
+            sleepPerformanceDerived(selectedSnapshot = selectedSnapshot, heavy = heavy)
         }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -73,11 +78,9 @@ internal fun SleepPerformanceGraphCard(
                     )
                 }
                 val headerColor =
-                    derived.currentPercent?.let {
-                        sleepPerfBarColor(it, derived.avgAllPercent)
-                    } ?: accent
+                    derived.currentPercent?.let { sleepPerfBarColor(it) } ?: accent
                 Text(
-                    text = derived.currentPercent?.let { "%.1f %%".format(it) } ?: "—",
+                    text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -85,17 +88,14 @@ internal fun SleepPerformanceGraphCard(
             }
             Spacer(Modifier.height(12.dp))
 
-            SleepPerfBars(
-                values = derived.last30Percent,
-                avg = derived.avgAllPercent,
-            )
+            SleepPerfBars(values = derived.last30Percent)
 
             Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "Durchschnitt: ${derived.avgAllPercent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—"}",
+                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.0f %%".format(it) } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
@@ -117,15 +117,19 @@ internal fun SleepPerformanceGraphCard(
 
 private data class SleepPerfDerived(
     val currentPercent: Double?,
-    val avgAllPercent: Double?,
+    val avg30Percent: Double?,
     val deltaVsAvg: Double?,
     val last30Percent: List<Double>,
 )
 
-private fun sleepPerformanceDerived(
-    selectedSnapshot: BiomarkerSnapshotEntity?,
-    history: List<BiomarkerSnapshotEntity>,
-): SleepPerfDerived {
+/** History-abhaengige Schwerarbeit — aendert sich beim Scrubbing NICHT, daher separat memoiziert. */
+private data class SleepPerfHeavy(
+    val lastPercent: Double?,
+    val last30: List<Double>,
+    val avg30: Double?,
+)
+
+private fun sleepPerformanceHeavy(history: List<BiomarkerSnapshotEntity>): SleepPerfHeavy {
     val zone = ZoneId.systemDefault()
     val all =
         history
@@ -138,49 +142,58 @@ private fun sleepPerformanceDerived(
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
             .map { (_, pct) -> pct }
-
-    val current = selectedSnapshot?.sleepPerformance?.toDouble() ?: all.lastOrNull()
     val last30 = all.takeLast(30)
-    val avgAll = all.takeIf { it.isNotEmpty() }?.average()
-    val delta = if (current != null && avgAll != null) current - avgAll else null
+    return SleepPerfHeavy(
+        lastPercent = all.lastOrNull(),
+        last30 = last30,
+        // Schwelle >= 3 Werte 1:1 vom Erholungsverlauf uebernommen — darunter ist ein
+        // "30-Tage-Schnitt" nicht aussagekraeftig.
+        avg30 = if (last30.size >= 3) last30.average() else null,
+    )
+}
+
+private fun sleepPerformanceDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    heavy: SleepPerfHeavy,
+): SleepPerfDerived {
+    val current = selectedSnapshot?.sleepPerformance?.toDouble() ?: heavy.lastPercent
+    val delta = if (current != null && heavy.avg30 != null) current - heavy.avg30 else null
 
     return SleepPerfDerived(
         currentPercent = current,
-        avgAllPercent = avgAll,
+        avg30Percent = heavy.avg30,
         deltaVsAvg = delta,
-        last30Percent = last30,
+        last30Percent = heavy.last30,
     )
 }
 
 /* ------------------------- UI-Bausteine ------------------------- */
 
 @Composable
-private fun SleepPerfBars(values: List<Double>, avg: Double?) {
-    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 3.0 }
-    val yMax = remember(values) { values.maxOrNull() ?: 100.0 }
+private fun SleepPerfBars(values: List<Double>) {
+    // Feste 0-100-Skala wie im Erholungsverlauf — dadurch sind Balkenhoehe und Ampel
+    // ueber alle Tage hinweg direkt vergleichbar.
     MiniBarsCanvas(
         values = values,
-        barColor = { sleepPerfBarColor(it, avg) },
-        yMin = yMin,
-        yMax = yMax,
+        barColor = { sleepPerfBarColor(it) },
+        yMin = 0.0,
+        yMax = 100.0,
         emptyText = "Noch keine Performance-Daten",
     )
 }
 
 /**
- * Farbe pro Balken relativ zum persoenlichen Durchschnitt:
- * - ueber Durchschnitt              -> Gruen
- * - bis 10% unter Durchschnitt      -> Gelb
- * - mehr als 10% unter Durchschnitt -> Rot
+ * Frank-Vorgabe 2026-08-07 — feste Schwellen, gleiche Farbtoene wie der Erholungsverlauf:
+ * - 80-100 %    -> Gruen
+ * - 65 bis 80 % -> Gelb
+ * - unter 65 %  -> Rot
  */
-private fun sleepPerfBarColor(pct: Double, avg: Double?): Color {
-    val avgSafe = avg ?: return CosmosColors.WhoopRecoveryYellow
-    return when {
-        pct >= avgSafe -> CosmosColors.WhoopRecoveryGreen
-        pct >= avgSafe - 10.0 -> CosmosColors.WhoopRecoveryYellow
+private fun sleepPerfBarColor(pct: Double): Color =
+    when {
+        pct >= 80.0 -> CosmosColors.WhoopRecoveryGreen
+        pct >= 65.0 -> CosmosColors.WhoopRecoveryYellow
         else -> CosmosColors.WhoopRecoveryRed
     }
-}
 
 /**
  * Trend-Badge: Plus (ueber Durchschnitt) = Gruen, Minus (unter Durchschnitt) = Rot.

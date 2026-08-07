@@ -121,8 +121,9 @@ object BiomarkerCardId {
     val MINI_CARD_IDS: Set<String> =
         setOf(
             MINI_RHR,
+            // Frank-Wunsch 2026-08-07: MINI_SLEEP_PERFORMANCE ist jetzt eine volle
+            // Breite-Karte im Erholungsverlauf-Pattern — daher NICHT mehr hier gelistet.
             MINI_SLEEP_TOTAL,
-            MINI_SLEEP_PERFORMANCE,
             MINI_VO2MAX,
             SLEEP_RESTORATIVE,
             SKIN_TEMP_DELTA,

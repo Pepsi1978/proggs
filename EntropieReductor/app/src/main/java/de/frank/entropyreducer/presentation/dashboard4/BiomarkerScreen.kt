@@ -1431,8 +1431,15 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_VO2MAX -> MiniVo2MaxCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
+            // Frank-Wunsch 2026-08-07: Performance ist jetzt eine volle Breite-Karte im
+            // Erholungsverlauf-Pattern (Balken-Graph, 30-Tage-Schnitt, Ampel) statt der
+            // halben Mini-Karte. Tap oeffnet unveraendert den Performance-Detail-Screen.
             BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
-                MiniSleepPerformanceCard(state, onOpenMetricDetail)
+                SleepPerformanceGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
+                )
 
             BiomarkerCardId.HRV ->
                 MetricHistoryCard(
@@ -1856,27 +1863,6 @@ private fun MiniVo2MaxCard(state: BiomarkerUiState, onOpenDetail: (String) -> Un
         deltaPositive = (latest ?: 0.0) >= (avg90 ?: 0.0),
         footnote = "vs. 90-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.VO2MAX) },
-    )
-}
-
-@Composable
-private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
-    val latest = state.selectedSnapshot ?: state.latest
-    val avgSleepPerf =
-        remember(state.history30Days) {
-            state.history30Days
-                .mapNotNull { it.sleepPerformance }
-                .takeIf { it.isNotEmpty() }
-                ?.average()
-        }
-    MetricMiniCard(
-        modifier = Modifier.fillMaxWidth(),
-        label = "Performance",
-        value = latest?.sleepPerformance?.let { "$it %" } ?: "—",
-        delta = formatDelta(latest?.sleepPerformance?.toDouble(), avgSleepPerf, "%"),
-        deltaPositive = (latest?.sleepPerformance?.toDouble() ?: 0.0) > (avgSleepPerf ?: 0.0),
-        footnote = "vs. 30-Tage-Mittel",
-        onClick = { onOpenDetail(MetricKey.SLEEP_PERF) },
     )
 }
 
