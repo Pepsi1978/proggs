@@ -1430,7 +1430,15 @@ private fun BiomarkerCardForId(
                 )
             BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_VO2MAX -> MiniVo2MaxCard(state, onOpenMetricDetail)
-            BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
+            // Frank-Wunsch 2026-08-07: Schlaf ist jetzt eine volle Breite-Karte im
+            // Erholungsverlauf-Pattern (Balken-Graph, 30-Tage-Schnitt, Ampel) statt der
+            // halben Mini-Karte. Tap oeffnet unveraendert den Schlafdauer-Detail-Screen.
+            BiomarkerCardId.MINI_SLEEP_TOTAL ->
+                SleepTotalGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                )
             // Frank-Wunsch 2026-08-07: Performance ist jetzt eine volle Breite-Karte im
             // Erholungsverlauf-Pattern (Balken-Graph, 30-Tage-Schnitt, Ampel) statt der
             // halben Mini-Karte. Tap oeffnet unveraendert den Performance-Detail-Screen.
@@ -1766,47 +1774,6 @@ private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
         deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
         footnote = "vs. 30-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.RHR) },
-    )
-}
-
-@Composable
-private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
-    val latest = state.selectedSnapshot ?: state.latest
-    // Frank-Wunsch 2026-05-16: reine Schlafzeit OHNE Wachzeit anzeigen
-    // (= Tief + REM + Leicht). Wert und Vergleichs-Schnitt beide ohne Wachzeit,
-    // damit Delta korrekt bleibt.
-    val avgSleep =
-        remember(state.history30Days) {
-            state.history30Days
-                .mapNotNull { snap ->
-                    val total = snap.sleepTotalMinutes ?: return@mapNotNull null
-                    val awake = snap.sleepAwakeMinutes ?: 0
-                    (total - awake).coerceAtLeast(0).takeIf { it > 0 }
-                }
-                .takeIf { it.isNotEmpty() }
-                ?.average()
-        }
-    val effectiveSleepMin = effectiveSleepMinutes(latest)
-    val sleepLabel =
-        if (effectiveSleepMin <= 0) {
-            "—"
-        } else {
-            "${effectiveSleepMin / 60} h ${(effectiveSleepMin % 60).toString().padStart(2, '0')} min"
-        }
-    MetricMiniCard(
-        modifier = Modifier.fillMaxWidth(),
-        label = "Schlaf",
-        value = sleepLabel,
-        delta =
-            formatDelta(
-                effectiveSleepMin.toDouble().takeIf { it > 0.0 },
-                avgSleep,
-                "min",
-                asMinutes = true,
-            ),
-        deltaPositive = (effectiveSleepMin.toDouble()) > (avgSleep ?: 0.0),
-        footnote = "vs. 30-Tage-Mittel",
-        onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
     )
 }
 

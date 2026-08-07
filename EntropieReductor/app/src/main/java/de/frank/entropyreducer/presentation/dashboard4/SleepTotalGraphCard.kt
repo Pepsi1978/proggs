@@ -32,15 +32,17 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * Schlafzeit-Verlaufs-Pattern (Frank-Wunsch 2026-06-21).
+ * Schlafzeit-Verlaufs-Pattern (Frank-Wunsch 2026-06-21, gross gezogen 2026-08-07).
  *
- * Zeigt die effektive Schlafzeit (ohne Wachzeit) der letzten ~30 Tage als Balken-Graph.
- * Tap auf die Karte oeffnet den bestehenden Schlafzeit-Detail-Screen.
+ * Zeigt die effektive Schlafzeit (ohne Wachzeit) der letzten ~30 Tage als Balken-Graph. Aufbau
+ * 1:1 wie der Erholungsverlauf ([RecoveryGraphCard]): Kopfzeile mit aktuellem Wert, Balken-Graph
+ * ueber die volle Breite, darunter 30-Tage-Schnitt + Abweichungs-Badge. Tap auf die Karte oeffnet
+ * den bestehenden Schlafzeit-Detail-Screen.
  *
- * Farb-Logik (relativ zu festen Schwellen):
- * - ab 8,5 Stunden (510 min)     -> Gruen (guter Schlaf)
- * - 7 bis 8,5 Stunden (420-510)  -> Gelb (grenzwertig)
- * - unter 7 Stunden (420 min)    -> Rot (zu wenig Schlaf)
+ * Ampel-Schwellen (Frank-Vorgabe 2026-08-07):
+ * - ab 8 Stunden (480 min)          -> Gruen
+ * - 6,5 bis 8 Stunden (390-480 min) -> Gelb
+ * - unter 6,5 Stunden (390 min)     -> Rot
  */
 @Composable
 internal fun SleepTotalGraphCard(
@@ -51,9 +53,12 @@ internal fun SleepTotalGraphCard(
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.accent
 
+    // Performance-Fix wie in RecoveryGraphCard (#47449): Schwerarbeit haengt nur an history —
+    // beim Chart-Scrubbing (selectedSnapshot pro Move-Event) sonst jede Frame neu.
+    val heavy = remember(history) { sleepTotalHeavy(history) }
     val derived =
-        remember(selectedSnapshot, history) {
-            sleepTotalDerived(selectedSnapshot = selectedSnapshot, history = history)
+        remember(selectedSnapshot, heavy) {
+            sleepTotalDerived(selectedSnapshot = selectedSnapshot, heavy = heavy)
         }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -90,7 +95,7 @@ internal fun SleepTotalGraphCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "Durchschnitt: ${derived.avgAllMinutes?.let { formatSleepTime(it) } ?: "—"}",
+                        "30-Tage-Schnitt: ${derived.avg30Minutes?.let { formatSleepTime(it) } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
@@ -112,15 +117,19 @@ internal fun SleepTotalGraphCard(
 
 private data class SleepTotalDerived(
     val currentMinutes: Int?,
-    val avgAllMinutes: Double?,
+    val avg30Minutes: Double?,
     val deltaVsAvg: Double?,
     val last30Minutes: List<Double>,
 )
 
-private fun sleepTotalDerived(
-    selectedSnapshot: BiomarkerSnapshotEntity?,
-    history: List<BiomarkerSnapshotEntity>,
-): SleepTotalDerived {
+/** History-abhaengige Schwerarbeit — aendert sich beim Scrubbing NICHT, daher separat memoiziert. */
+private data class SleepTotalHeavy(
+    val lastMinutes: Double?,
+    val last30: List<Double>,
+    val avg30: Double?,
+)
+
+private fun sleepTotalHeavy(history: List<BiomarkerSnapshotEntity>): SleepTotalHeavy {
     val zone = ZoneId.systemDefault()
     val all =
         history
@@ -136,21 +145,32 @@ private fun sleepTotalDerived(
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
             .map { (_, minutes) -> minutes }
+    val last30 = all.takeLast(30)
+    return SleepTotalHeavy(
+        lastMinutes = all.lastOrNull(),
+        last30 = last30,
+        // Schwelle >= 3 Werte 1:1 vom Erholungsverlauf uebernommen — darunter ist ein
+        // "30-Tage-Schnitt" nicht aussagekraeftig.
+        avg30 = if (last30.size >= 3) last30.average() else null,
+    )
+}
 
+private fun sleepTotalDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    heavy: SleepTotalHeavy,
+): SleepTotalDerived {
     val current = selectedSnapshot?.let { snap ->
         val total = snap.sleepTotalMinutes ?: return@let null
         val awake = snap.sleepAwakeMinutes ?: 0
         (total - awake).coerceAtLeast(0).takeIf { it > 0 }
-    } ?: all.lastOrNull()?.toInt()
-    val last30 = all.takeLast(30)
-    val avgAll = all.takeIf { it.isNotEmpty() }?.average()
-    val delta = if (current != null && avgAll != null) current.toDouble() - avgAll else null
+    } ?: heavy.lastMinutes?.toInt()
+    val delta = if (current != null && heavy.avg30 != null) current.toDouble() - heavy.avg30 else null
 
     return SleepTotalDerived(
         currentMinutes = current,
-        avgAllMinutes = avgAll,
+        avg30Minutes = heavy.avg30,
         deltaVsAvg = delta,
-        last30Minutes = last30,
+        last30Minutes = heavy.last30,
     )
 }
 
@@ -168,27 +188,29 @@ private fun formatSleepTime(minutes: Double): String {
 
 @Composable
 private fun SleepTotalBars(values: List<Double>) {
-    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 60.0 }
-    val yMax = remember(values) { values.maxOrNull() ?: 510.0 }
+    // Feste Skala ab 0 wie im Erholungsverlauf (dort 0-100 %), hier 0-10 h. Dadurch sind
+    // Balkenhoehe und Ampel ueber alle Tage vergleichbar; laengere Naechte heben die
+    // Obergrenze mit an, damit kein Balken visuell gedeckelt wird.
+    val yMax = remember(values) { maxOf(600.0, values.maxOrNull() ?: 0.0) }
     MiniBarsCanvas(
         values = values,
         barColor = { sleepTotalBarColor(it.toInt()) },
-        yMin = yMin,
+        yMin = 0.0,
         yMax = yMax,
         emptyText = "Noch keine Schlafzeit-Daten",
     )
 }
 
 /**
- * Farbe pro Balken:
- * - ueber 8h (480 min)   -> Gruen
- * - 7h-8h (420-480)      -> Gelb
- * - unter 7h (420)       -> Rot
+ * Frank-Vorgabe 2026-08-07 — gleiche Farbtoene wie der Erholungsverlauf:
+ * - ab 8 h (480 min)          -> Gruen
+ * - 6,5 bis 8 h (390-480 min) -> Gelb
+ * - unter 6,5 h (390 min)     -> Rot
  */
 private fun sleepTotalBarColor(minutes: Int): Color =
     when {
         minutes >= 480 -> CosmosColors.WhoopRecoveryGreen
-        minutes >= 420 -> CosmosColors.WhoopRecoveryYellow
+        minutes >= 390 -> CosmosColors.WhoopRecoveryYellow
         else -> CosmosColors.WhoopRecoveryRed
     }
 
