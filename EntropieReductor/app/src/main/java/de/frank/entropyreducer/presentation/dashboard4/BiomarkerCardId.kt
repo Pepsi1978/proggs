@@ -80,6 +80,7 @@ object BiomarkerCardId {
     // aber mit invertierter Ampel (wenig Wachzeit = gruen). Direkt unter
     // dem Tiefschlaf-Verlauf platziert.
     const val SLEEP_WAKE_GRAPH = "sleep_wake_graph"
+    // Stillgelegte ID bleibt zum Entfernen aus bereits gespeicherten Reihenfolgen erhalten.
     const val SLEEP_RESTORATIVE = "sleep_restorative"
     const val SLEEP_RESTORATIVE_GRAPH = "sleep_restorative_graph"
     const val SLEEP_EFFICIENCY = "sleep_efficiency"
@@ -114,16 +115,13 @@ object BiomarkerCardId {
     /**
      * Set aller IDs die als kleine Mini-Karten im 2-Spalten-Grid gerendert werden (span = 1). Alle
      * anderen IDs nehmen die volle Breite ein (span = 2). Frank- Wunsch 2026-05-10:
-     * VO2max und die Koerperwerte koennen sich auch untereinander tauschen — und seit dem
-     * Mini-Karten-Umbau gehoeren auch Erholsamer Schlaf und Hauttemperatur-Delta hier rein, damit
-     * sie als halbe Spalte (nicht volle Breite) gerendert werden.
+     * VO2max und die Koerperwerte koennen sich auch untereinander tauschen.
      */
     val MINI_CARD_IDS: Set<String> =
         setOf(
             // Frank-Wunsch 2026-08-07: MINI_RHR, MINI_SLEEP_TOTAL und MINI_SLEEP_PERFORMANCE sind
             // jetzt volle Breite-Karten im Erholungsverlauf-Pattern — daher NICHT mehr hier gelistet.
             MINI_VO2MAX,
-            SLEEP_RESTORATIVE,
             SKIN_TEMP_DELTA,
             MINI_WEIGHT,
             MINI_BODY_FAT,
@@ -163,7 +161,6 @@ object BiomarkerCardId {
             SLEEP_REM_GRAPH,
             SLEEP_WAKE_GRAPH,
             SLEEP_RESTORATIVE_GRAPH,
-            SLEEP_RESTORATIVE,
             SLEEP_EFFICIENCY,
             SLEEP_CONSISTENCY,
             SLEEP_DEBT,
@@ -203,5 +200,6 @@ object BiomarkerCardId {
             MINI_BONE_MASS,
             WORKOUTS_FOR_DAY,
             CORRELATION,
+            SLEEP_RESTORATIVE,
         )
 }

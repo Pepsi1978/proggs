@@ -467,19 +467,6 @@ fun BiomarkerHostScreen(
                         }
                     }
                 }
-                // Eigenberechnung — Erholsamer Schlaf % aus REM + Tiefschlaf.
-                item {
-                    RestorativeSleepCard(
-                        percent = state.restorativeSleepPercent,
-                        avgPercent = state.history30Days.mapNotNull { snap ->
-                            val total = snap.sleepTotalMinutes ?: return@mapNotNull null
-                            val rem = snap.sleepRemMinutes ?: return@mapNotNull null
-                            val deep = snap.sleepDeepMinutes ?: return@mapNotNull null
-                            if (total > 0) (rem + deep).toDouble() / total * 100.0 else null
-                        }.takeIf { it.isNotEmpty() }?.average(),
-                        onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
-                    )
-                }
                 item {
                     MetricHistoryCard(
                         title = "Schlafeffizienz",
@@ -1232,31 +1219,6 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
  * oder Datum, je nachdem ob heute oder frueher.
  */
 /**
- * Erholsamer-Schlaf-Karte — Eigenberechnung aus REM + Tiefschlaf in % vom Gesamtschlaf. Whoop's
- * Restorative-Sleep-Feature ist nicht ueber die API abrufbar, aber die Formel liefert sehr nahe
- * Werte (Frank-Recherche 2026-05-09).
- *
- * Optisch: grosser Prozent-Wert, Sub-Zeile mit den beiden Komponenten REM/Tief, Begruendungstext
- * darunter. Tap fuehrt zum Detail-Screen mit Verlauf.
- */
-@Composable
-private fun RestorativeSleepCard(percent: Double?, avgPercent: Double?, onClick: () -> Unit) {
-    // Frank-Wunsch 2026-05-10: 1:1 wie die anderen Mini-Karten (HRV, Schlaf,
-    // Performance, Herzfrequenz) — gleiche MetricMiniCard mit Label + Wert +
-    // Delta vs. 30-Tage-Mittel + Footnote. Hoeherer Restorative-Anteil ist
-    // besser, daher deltaPositive bei percent > avgPercent.
-    MetricMiniCard(
-        modifier = Modifier.fillMaxWidth(),
-        label = "Erholsamer Schlaf",
-        value = percent?.let { "${"%.0f".format(it)} %" } ?: "—",
-        delta = formatDelta(percent, avgPercent, "%"),
-        deltaPositive = (percent ?: 0.0) > (avgPercent ?: 0.0),
-        footnote = "vs. 30-Tage-Mittel",
-        onClick = onClick,
-    )
-}
-
-/**
  * Hauttemperatur-Delta-Karte — zeigt die Abweichung des aktuellen Wertes vom 30-Tage-Schnitt.
  * Grosse Werte oder rote Faerbung deuten auf Erkrankung, Stress, Zyklus-Effekt oder Aufenthalt in
  * warmer/kalter Umgebung hin.
@@ -1340,7 +1302,7 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
  * Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten. Diese Composable ist die Bruecke
  * zwischen der Card-ID (String aus [BiomarkerCardId]) und der konkreten UI. Nutzt die bereits
  * vorhandenen privaten Composables (MetricHistoryCard, GesamterholungCard, KeyValueGrid,
- * SkinTempDeltaCard, RestorativeSleepCard, CorrelationCard, AmazfitLastTrainingHeroCard,
+ * SkinTempDeltaCard, CorrelationCard, AmazfitLastTrainingHeroCard,
  * AmazfitTrainingsCard, WorkoutsForDayCard) und entscheidet anhand der ID welche Card gerendert
  * wird.
  *
@@ -1619,14 +1581,6 @@ private fun BiomarkerCardForId(
                 RestorativeSleepGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
-                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
-                )
-
-            BiomarkerCardId.SLEEP_RESTORATIVE ->
-                RestorativeSleepCard(
-                    // Performance-Audit E1 (2026-05-10): 30d-Avg jetzt im VM vorberechnet.
-                    percent = state.restorativeSleepPercent,
-                    avgPercent = state.chartData.restorativeSleepAvg30dPercent,
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
                 )
 

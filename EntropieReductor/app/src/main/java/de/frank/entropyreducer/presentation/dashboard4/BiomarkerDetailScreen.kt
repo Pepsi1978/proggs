@@ -575,7 +575,7 @@ internal fun cardIdsForMetricKey(metricKey: String): List<String> = when (metric
     MetricKey.SLEEP_REM -> listOf(BiomarkerCardId.SLEEP_REM_GRAPH)
     MetricKey.SLEEP_AWAKE -> listOf(BiomarkerCardId.SLEEP_WAKE_GRAPH)
     MetricKey.RECOVERY -> listOf(BiomarkerCardId.GESAMTERHOLUNG, BiomarkerCardId.RECOVERY_GRAPH)
-    MetricKey.SLEEP_RESTORATIVE -> listOf(BiomarkerCardId.SLEEP_RESTORATIVE)
+    MetricKey.SLEEP_RESTORATIVE -> listOf(BiomarkerCardId.SLEEP_RESTORATIVE_GRAPH)
     // Skin-Temp und Skin-Temp-Delta teilen den Detail-Screen — beide Karten
     // werden gemeinsam eingefaerbt.
     MetricKey.SKIN_TEMP ->
