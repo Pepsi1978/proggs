@@ -22,6 +22,8 @@ import {
   DEFAULT_WORK_MODE,
   initialWorkMode,
   readWorkMode,
+  readWorkModePrompt,
+  resolveWorkModeInstruction,
   WORK_MODES,
   workModeInstruction,
   writeWorkMode,
@@ -652,9 +654,41 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../../work-mode.js", import.meta.url)).text()
     expect(source).toContain('"experimental.chat.system.transform"')
     expect(source).toContain("readWorkMode(input.sessionID)")
-    expect(source).toContain("const instruction = workModeInstruction(mode)")
+    expect(source).toContain("instruction = await resolveWorkModeInstruction(mode)")
     expect(source).toContain("if (instruction) output.system.push(instruction)")
     expect(source).not.toContain("console.")
+  })
+
+  test("uses the launcher-edited mode prompt verbatim", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "opencode-work-mode-prompt-"))
+    try {
+      // Fehlende Datei -> eingebauter Notnagel, damit ein Modus nie wirkungslos wird.
+      expect(await readWorkModePrompt("schnell", directory)).toBeUndefined()
+      expect(await resolveWorkModeInstruction("schnell", directory)).toBe(workModeInstruction("schnell"))
+
+      // Vorhandene Datei gewinnt immer und wird 1:1 uebernommen -- auch fuer den Freimodus.
+      await Bun.write(join(directory, "schnell.md"), "Nur das hier zaehlt.\n")
+      await Bun.write(join(directory, "frei.md"), "Freimodus mit eigenem Text.")
+      expect(await resolveWorkModeInstruction("schnell", directory)).toBe("Nur das hier zaehlt.")
+      expect(await resolveWorkModeInstruction("frei", directory)).toBe("Freimodus mit eigenem Text.")
+
+      // Leere Datei heisst bewusst "ergaenzt nichts" -- nicht "nimm den eingebauten Text".
+      await Bun.write(join(directory, "gruendlich.md"), "   \n")
+      expect(await resolveWorkModeInstruction("gruendlich", directory)).toBeUndefined()
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("ships one editable prompt file per work mode", async () => {
+    // Inhalt bewusst NICHT geprueft: er gehoert dem Nutzer (Button "Modus bearbeiten").
+    // Geprueft wird nur, dass es fuer jeden Modus eine Datei gibt -- sonst fiele der Modus
+    // stillschweigend auf den eingebauten Text zurueck.
+    const home = process.env.USERPROFILE ?? process.env.HOME ?? ""
+    const directory = join(home, "proggs", "OpenLauncher", "Profiles", "WorkModes")
+    for (const mode of WORK_MODES) {
+      expect(await readWorkModePrompt(mode.id, directory)).toBeDefined()
+    }
   })
 
   test("shows every live model variant through the validated TUI variant API", async () => {

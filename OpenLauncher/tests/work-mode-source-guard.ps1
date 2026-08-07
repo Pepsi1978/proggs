@@ -3,8 +3,14 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $viewModel = Get-Content -LiteralPath (Join-Path $root 'ViewModels\MainViewModel.cs') -Raw
 $launcher = Get-Content -LiteralPath (Join-Path $root 'Services\OpenLauncherService.cs') -Raw
+$profiles = Get-Content -LiteralPath (Join-Path $root 'Services\InstructionProfileService.cs') -Raw
+$editor = Get-Content -LiteralPath (Join-Path $root 'ProfileEditorWindow.xaml.cs') -Raw
+$plugin = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $root) 'opencode-setup\plugins\work-mode.js') -Raw
+$workMode = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $root) 'opencode-setup\plugins\token-cost-sidebar\dist\work-mode.ts') -Raw
 $xaml = Get-Content -LiteralPath (Join-Path $root 'MainWindow.xaml') -Raw
 [void][xml]$xaml
+$modeFiles = @('frei', 'schnell', 'normal', 'gruendlich') |
+    ForEach-Object { Join-Path $root "Profiles\WorkModes\$_.md" }
 
 $checks = @(
     @{ Name = 'vier Modi in richtiger Reihenfolge'; Pass = $viewModel -match '(?s)Id = "frei".*?Id = "schnell".*?Id = "normal".*?Id = "gruendlich"' }
@@ -19,6 +25,13 @@ $checks = @(
     @{ Name = 'Modus-Auswahl steht unter Profil'; Pass = $xaml -match 'Text="MODUS"' -and $xaml -match 'ItemsSource="\{Binding WorkModes\}"' }
     @{ Name = 'vier Modus-Kästchen'; Pass = $xaml -match '<UniformGrid Rows="1" Columns="4"/>' }
     @{ Name = 'Vorauswahl bleibt unabhängig vom ersten Listeneintrag'; Pass = ([regex]::Matches($xaml, 'IsSynchronizedWithCurrentItem="False"')).Count -ge 2 }
+    @{ Name = 'je Modus eine bearbeitbare Prompt-Datei'; Pass = @($modeFiles | Where-Object { Test-Path -LiteralPath $_ }).Count -eq 4 }
+    @{ Name = 'Profil-Button und Modus-Button nebeneinander'; Pass = $xaml -match '(?s)Content="Profil bearbeiten".*?Content="Modus bearbeiten"' }
+    @{ Name = 'Modus-Button ruft den Modus-Editor'; Pass = $xaml -match 'Command="\{Binding EditWorkModeCommand\}"' -and $viewModel -match 'private void EditWorkMode\(\)' }
+    @{ Name = 'Modus-Editor speichert in die Modus-Datei'; Pass = $viewModel -match '_profiles\.SaveWorkMode\(SelectedWorkMode\.Id, editor\.GlobalText\)' -and $profiles -match 'public void SaveWorkMode' }
+    @{ Name = 'Editor kennt die Modus-Betriebsart'; Pass = $editor -match 'public ProfileEditorWindow\(string workModeName, string sourcePath, string promptText\)' }
+    @{ Name = 'Claude bekommt den Modus hinter das Profil'; Pass = $viewModel -match 'EnsureClaudeConfigDir\(SelectedProfile\.Id, SelectedWorkMode\.Id\)' -and $profiles -match 'private string ComposeClaudeContext' }
+    @{ Name = 'OpenCode liest denselben Modus-Prompt aus dem Launcher-Ordner'; Pass = $workMode -match "join\(homedir\(\), ""proggs"", ""OpenLauncher"", ""Profiles"", ""WorkModes""\)" -and $plugin -match 'await resolveWorkModeInstruction\(mode\)' }
 )
 
 $failed = @($checks | Where-Object { -not $_.Pass })

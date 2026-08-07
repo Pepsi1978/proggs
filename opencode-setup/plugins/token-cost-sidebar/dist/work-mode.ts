@@ -16,6 +16,14 @@ export const DEFAULT_WORK_MODE: WorkModeId = "schnell"
 export const WORK_MODE_DIRECTORY = join(homedir(), ".local", "state", "opencode", "work-modes")
 export const WORK_MODE_ENVIRONMENT_VARIABLE = "OPENLAUNCHER_WORK_MODE"
 
+/**
+ * Die im OpenLauncher bearbeitbaren Modus-Prompts ("Modus bearbeiten"). Jede Datei ist der
+ * vollstaendige Systemprompt des Modus -- genau ihr Inhalt geht in den Modellaufruf, es wird nichts
+ * ergaenzt oder umformuliert. Dieselbe Datei haengt der Launcher beim Claude-Code-Start hinter das
+ * Profil, damit beide Werkzeuge denselben Modus-Text benutzen.
+ */
+export const WORK_MODE_PROMPT_DIRECTORY = join(homedir(), "proggs", "OpenLauncher", "Profiles", "WorkModes")
+
 function isWorkMode(value: string): value is WorkModeId {
   return WORK_MODES.some((mode) => mode.id === value)
 }
@@ -57,6 +65,43 @@ export function writeWorkMode(
   }
 }
 
+/**
+ * Liest den im Launcher bearbeiteten Modus-Prompt. Rueckgabe `undefined` heisst ausschliesslich
+ * "Datei nicht vorhanden"; eine vorhandene, leere Datei ergibt "" -- dann ergaenzt der Modus bewusst
+ * nichts (Standard beim Freimodus).
+ */
+export async function readWorkModePrompt(
+  mode: WorkModeId,
+  directory = WORK_MODE_PROMPT_DIRECTORY,
+): Promise<string | undefined> {
+  try {
+    return (await readFile(join(directory, `${mode}.md`), "utf8")).trim()
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined
+    if (code === "ENOENT") return undefined
+    throw error
+  }
+}
+
+/**
+ * Der Modus-Prompt fuer den naechsten Modellaufruf. Die Launcher-Datei ist die Wahrheit und wird
+ * 1:1 uebernommen; der eingebaute Text unten greift nur, wenn sie fehlt (z. B. Rechner ohne
+ * ~/proggs-Checkout), damit der Modus nie stillschweigend wirkungslos wird.
+ */
+export async function resolveWorkModeInstruction(
+  mode: WorkModeId,
+  directory = WORK_MODE_PROMPT_DIRECTORY,
+): Promise<string | undefined> {
+  const prompt = await readWorkModePrompt(mode, directory)
+  if (prompt === undefined) return workModeInstruction(mode)
+  return prompt.length > 0 ? prompt : undefined
+}
+
+/**
+ * Eingebauter Notnagel-Text -- wortgleich mit dem Startinhalt, den der OpenLauncher in
+ * Profiles/WorkModes/<id>.md anlegt (InstructionProfileService.DefaultWorkModePrompt).
+ * Im Normalbetrieb gewinnt immer die Datei (siehe resolveWorkModeInstruction).
+ */
 export function workModeInstruction(mode: WorkModeId): string | undefined {
   if (mode === "frei") return undefined
 

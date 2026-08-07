@@ -58,7 +58,8 @@ aus `~/.claude/settings.json` ist bewusst NICHT in den Repo-Profilen.
 
 Weitere Details:
 - **Aktive `CLAUDE.md`:** wird pro Start aus `Profiles/ClaudeCode/sources/<id>.md` in den Profil-Ordner
-  geschrieben (untracked Laufzeitdatei; versioniert ist nur die `sources/`-Quelle).
+  geschrieben, dahinter der Prompt des gewählten Arbeitsmodus (siehe „Arbeitsmodi") — untracked
+  Laufzeitdatei; versioniert sind nur die `sources/`- und `WorkModes/`-Quellen.
 - **`settings.json` je Profil** ist versioniert und enthält `claudeMdExcludes: ["**/.claude/rules/**"]`
   (verhindert doppeltes Laden der Rules aus Repo **und** `~/.claude`). Strikt zusätzlich die
   bereinigte Hook-Konfiguration (ohne Token, ohne Plugin-Sektionen).
@@ -74,6 +75,18 @@ Weitere Details:
   OpenCode liest die `AGENTS.md` dort immer.
 - Die Launcher-Auswahl Freimodus/Schnellmodus/Normalmodus/Gründlichkeitsmodus wird als
   `OPENLAUNCHER_WORK_MODE` an den neuen Prozess übergeben und gilt dadurch schon für den ersten Prompt.
+
+### Arbeitsmodi (Modus-Prompts)
+
+- Quelle je Modus: **`OpenLauncher/Profiles/WorkModes/<id>.md`** (`frei`, `schnell`, `normal`,
+  `gruendlich`) — bearbeitbar über den Button **„Modus bearbeiten"** neben „Profil bearbeiten".
+- Der Dateiinhalt ist der **komplette** Modus-Prompt und wird 1:1 verwendet; es wird nichts ergänzt
+  oder umformuliert. **Leere Datei = dieser Modus ergänzt nichts** (Standard beim Freimodus).
+- **OpenCode:** das Plugin `work-mode.js` liest die Datei bei **jedem** Modellaufruf frisch und hängt
+  sie an den Systemprompt — auch nach dem Umschalten des Modus in der TUI. Der eingebaute Text in
+  `token-cost-sidebar/dist/work-mode.ts` greift nur noch, wenn die Datei fehlt.
+- **Claude Code:** der Launcher schreibt den Modus-Prompt beim Start **hinter das Profil** in die
+  aktive `CLAUDE.md` des Profil-Config-Ordners → gilt für die ganze Session.
 - Der Launcher setzt `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` pro Session → keine `CLAUDE.md` als
   Prompt-Fallback. **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** (bewusst NICHT der volle
   `OPENCODE_DISABLE_CLAUDE_CODE`). Die globale `~/.config/opencode/AGENTS.md` wird leer gehalten.

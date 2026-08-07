@@ -16,6 +16,7 @@ namespace OpenLauncher.Services;
 public sealed class InstructionProfileService
 {
     private static readonly HashSet<string> ProfileIds = new(StringComparer.Ordinal) { "minimal", "standard", "strict" };
+    private static readonly HashSet<string> WorkModeIds = new(StringComparer.Ordinal) { "frei", "schnell", "normal", "gruendlich" };
 
     // ===================== Laden / Speichern (eine Datei je Profil) =====================
 
@@ -77,12 +78,12 @@ public sealed class InstructionProfileService
     /// bearbeitbaren skills/rules/agents/commands im Repo; Minimal bleibt regelfrei und blendet die
     /// Skills nur per Junction ein. Der Login-Token wird bei Bedarf lokal aus ~/.claude uebernommen.
     /// </summary>
-    public string? EnsureClaudeConfigDir(string profileId)
+    public string? EnsureClaudeConfigDir(string profileId, string workModeId)
     {
         ValidateProfileId(profileId);
         var dir = ResolveClaudeConfigDir(profileId);
         Directory.CreateDirectory(dir);
-        WriteText(Path.Combine(dir, "CLAUDE.md"), ReadText(EnsureClaudeProfileSource(profileId)));
+        WriteText(Path.Combine(dir, "CLAUDE.md"), ComposeClaudeContext(profileId, workModeId));
         EnsureLoginToken(dir);
 
         // Minimal bleibt bewusst regelfrei: es traegt KEINE versionierten Skills, sondern blendet
@@ -92,6 +93,67 @@ public sealed class InstructionProfileService
             EnsureSkillsJunction(dir);
 
         return dir;
+    }
+
+    /// <summary>
+    /// Inhalt der aktiven CLAUDE.md: erst der Profiltext, dahinter der Prompt des gewaehlten
+    /// Arbeitsmodus (Profiles/WorkModes/&lt;id&gt;.md) -- genau so, wie er im Launcher bearbeitet wurde.
+    /// Leerer Modus-Prompt (Standard beim Freimodus) haengt nichts an.
+    /// </summary>
+    private string ComposeClaudeContext(string profileId, string workModeId)
+    {
+        var profileText = ReadText(EnsureClaudeProfileSource(profileId));
+        var modeText = LoadWorkMode(workModeId).Trim();
+        if (modeText.Length == 0) return profileText;
+        if (profileText.Trim().Length == 0) return modeText + "\n";
+        return profileText.TrimEnd('\n') + "\n\n" + modeText + "\n";
+    }
+
+    // ===================== Arbeitsmodi (Modus-Prompts) =====================
+
+    /// <summary>
+    /// Versionierte, frei bearbeitbare Prompt-Datei je Arbeitsmodus:
+    /// Profiles/WorkModes/&lt;id&gt;.md. Ihr Inhalt ist die EINZIGE Quelle des Modus-Prompts --
+    /// OpenCode liest dieselbe Datei ueber das work-mode-Plugin (auch beim Umschalten in der TUI),
+    /// Claude Code bekommt sie beim Start hinter das Profil in die aktive CLAUDE.md geschrieben.
+    /// </summary>
+    public static string ResolveWorkModeSourcePath(string workModeId)
+    {
+        ValidateWorkModeId(workModeId);
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "WorkModes", workModeId + ".md");
+    }
+
+    /// <summary>Prompt des Modus lesen (legt die Datei beim ersten Mal mit dem Standardtext an).</summary>
+    public string LoadWorkMode(string workModeId)
+    {
+        var path = ResolveWorkModeSourcePath(workModeId);
+        CreateIfMissing(path, DefaultWorkModePrompt(workModeId));
+        return ReadText(path);
+    }
+
+    /// <summary>Prompt des Modus speichern (auch leer -- dann ergaenzt der Modus nichts).</summary>
+    public void SaveWorkMode(string workModeId, string text) =>
+        WriteText(ResolveWorkModeSourcePath(workModeId), text);
+
+    /// <summary>
+    /// Startinhalt, falls die Datei fehlt. Wortgleich mit dem eingebauten Notnagel des
+    /// OpenCode-Plugins (opencode-setup/plugins/token-cost-sidebar/dist/work-mode.ts) -- beide
+    /// Seiten sollen ohne Datei denselben Text ergeben. Der Freimodus bleibt bewusst leer.
+    /// </summary>
+    private static string DefaultWorkModePrompt(string workModeId) => workModeId switch
+    {
+        "schnell" => "AKTIVER ARBEITSMODUS: Schnellmodus. Das aktive AGENTS.md-Profil gilt vollständig und unverändert. Diese Laufzeitwahl ergänzt es für diesen Modellaufruf nur um die Arbeitstiefe; bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang. Bearbeite nur die ausdrücklich verlangte Änderung und wähle dafür den kleinsten korrekten Eingriff. Prüfe die direkt betroffenen Aufrufer und führe fokussierte Tests für das geänderte Verhalten aus. Vermeide allgemeine Refactorings, zusätzliche Härtung und themenfremde Verbesserungen. Starte kein zusätzliches Quality Gate, außer der Auftrag oder das aktive AGENTS.md-Profil verlangt es.\n",
+        "normal" => "AKTIVER ARBEITSMODUS: Normalmodus. Das aktive AGENTS.md-Profil gilt vollständig und unverändert. Diese Laufzeitwahl ergänzt es für diesen Modellaufruf nur um die Arbeitstiefe; bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang. Löse den Auftrag vollständig mit einem zum Risiko und Umfang passenden Eingriff. Prüfe betroffene Aufrufer, naheliegende Regressionen und relevante Randfälle und führe die passenden Tests oder Builds aus. Kleine, direkt auftragsbezogene Härtungen sind erlaubt; vermeide themenfremde Refactorings. Für durch diesen Modus zusätzlich veranlasste Quality Gates gelten höchstens zwei Durchläufe, sofern der Auftrag oder das aktive AGENTS.md-Profil nicht mehr verlangt.\n",
+        "gruendlich" => "AKTIVER ARBEITSMODUS: Gründlichkeitsmodus. Das aktive AGENTS.md-Profil gilt vollständig und unverändert. Diese Laufzeitwahl ergänzt es für diesen Modellaufruf nur um die Arbeitstiefe; bei einem Widerspruch haben die Regeln aus AGENTS.md Vorrang. Untersuche neben der konkreten Änderung auch betroffene Aufrufer, Abhängigkeiten, relevante Randfälle und verwandte Fehlerklassen. Nimm sinnvolle, auftragsnahe Härtungen vor und verifiziere das Ergebnis mit den vollständigen relevanten Tests oder Builds. Wiederhole erforderliche Quality Gates ohne feste Obergrenze, bis alle Befunde behoben und alle Prüfungen grün sind. Melde verbleibende Unsicherheiten ausdrücklich.\n",
+        _ => string.Empty,
+    };
+
+    private static string ValidateWorkModeId(string workModeId)
+    {
+        if (!WorkModeIds.Contains(workModeId))
+            throw new ArgumentException($"Unbekannter Modus: {workModeId}", nameof(workModeId));
+        return workModeId;
     }
 
     /// <summary>

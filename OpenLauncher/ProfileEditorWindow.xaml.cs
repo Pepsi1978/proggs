@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -34,6 +35,32 @@ public partial class ProfileEditorWindow : Window
         // Kein zweites Dokument mehr: Projekt-Tab entfaellt, der Tab traegt den Dateinamen.
         ProjectTab.Visibility = Visibility.Collapsed;
         GlobalTab.Content = fileName;
+        AttachChromeHooks();
+    }
+
+    /// <summary>
+    /// Zweite Betriebsart desselben Editors: der Prompt eines Arbeitsmodus
+    /// (Profiles/WorkModes/&lt;id&gt;.md). Dieser Text wird 1:1 verwendet -- in OpenCode als
+    /// Systemprompt, in Claude Code hinter dem Profil in der aktiven CLAUDE.md.
+    /// </summary>
+    public ProfileEditorWindow(string workModeName, string sourcePath, string promptText)
+    {
+        InitializeComponent();
+        TitleText.Text = $"Modus {workModeName} bearbeiten";
+        CliText.Text = "Claude Code + OpenCode · Modus-Prompt";
+        IntroText.Text = "Dieser Text ist der komplette Modus-Prompt und wird genau so verwendet: OpenCode setzt ihn "
+                       + "bei jedem Modellaufruf als Systemprompt (auch beim Umschalten in der TUI), Claude Code hängt "
+                       + "ihn beim Start hinter das gewählte Profil. Leer lassen heißt: dieser Modus ergänzt nichts.";
+        GlobalPathText.Text = sourcePath;
+        GlobalEditor.Text = promptText;
+        ProjectTab.Visibility = Visibility.Collapsed;
+        GlobalTab.Content = Path.GetFileName(sourcePath);
+        SaveButton.Content = "Modus speichern";
+        AttachChromeHooks();
+    }
+
+    private void AttachChromeHooks()
+    {
         StateChanged += (_, _) => UpdateMaximizeButton();
         SourceInitialized += (_, _) =>
         {

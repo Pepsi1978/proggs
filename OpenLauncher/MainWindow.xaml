@@ -648,9 +648,13 @@
                                 <TextBlock Text="PROFIL" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="{Binding ProfileContextText}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
                             </StackPanel>
-                            <Button Style="{StaticResource GhostBtn}" Content="Bearbeiten" DockPanel.Dock="Right" Padding="11,6" FontSize="12"
-                                    IsEnabled="{Binding CanEditSelectedProfile}"
-                                    Command="{Binding EditProfileCommand}"/>
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Top">
+                                <Button Style="{StaticResource GhostBtn}" Content="Profil bearbeiten" Padding="11,6" FontSize="12"
+                                        IsEnabled="{Binding CanEditSelectedProfile}"
+                                        Command="{Binding EditProfileCommand}"/>
+                                <Button Style="{StaticResource GhostBtn}" Content="Modus bearbeiten" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                                        Command="{Binding EditWorkModeCommand}"/>
+                            </StackPanel>
                         </DockPanel>
 
                         <ListBox Grid.Row="1"

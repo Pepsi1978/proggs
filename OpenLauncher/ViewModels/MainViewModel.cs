@@ -597,11 +597,13 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 // Jedes Profil hat seinen eigenen Repo-Config-Ordner (CLAUDE_CONFIG_DIR): Standard/Strikt mit
                 // versionierten skills/rules/agents/commands, Minimal regelfrei (Skills per Junction).
-                var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id);
+                // Der Modus-Prompt haengt hinter dem Profil in der aktiven CLAUDE.md -> er gilt fuer
+                // die ganze Session, genau wie bei OpenCode.
+                var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id, SelectedWorkMode.Id);
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                    ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName}"
-                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName}";
+                    ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
+                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
                 return;
             }
 
@@ -717,6 +719,36 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"Profil konnte nicht gespeichert werden: {ex.Message}";
             Logger.Instance.Error("MainViewModel", "EditProfile", ex, new { WorkDir, model = SelectedModel.ModelString });
+        }
+    }
+
+    /// <summary>
+    /// Bearbeitet den Prompt des gewaehlten Arbeitsmodus. Der gespeicherte Text ist die einzige
+    /// Quelle: OpenCode liest dieselbe Datei bei jedem Modellaufruf (auch nach dem Umschalten in der
+    /// TUI), Claude Code bekommt sie beim Start hinter das Profil geschrieben.
+    /// </summary>
+    [RelayCommand]
+    private void EditWorkMode()
+    {
+        if (SelectedWorkMode == null) return;
+
+        try
+        {
+            var path = InstructionProfileService.ResolveWorkModeSourcePath(SelectedWorkMode.Id);
+            var editor = new ProfileEditorWindow(SelectedWorkMode.DisplayName, path, _profiles.LoadWorkMode(SelectedWorkMode.Id))
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (editor.ShowDialog() != true) return;
+
+            _profiles.SaveWorkMode(SelectedWorkMode.Id, editor.GlobalText);
+            StatusText = $"Modus {SelectedWorkMode.DisplayName} gespeichert.";
+            Logger.Instance.Info("MainViewModel", "EditWorkMode", "Modus-Prompt gespeichert", new { mode = SelectedWorkMode.Id, path });
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Modus konnte nicht gespeichert werden: {ex.Message}";
+            Logger.Instance.Error("MainViewModel", "EditWorkMode", ex, new { mode = SelectedWorkMode?.Id });
         }
     }
 
