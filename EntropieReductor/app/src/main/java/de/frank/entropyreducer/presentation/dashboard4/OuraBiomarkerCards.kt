@@ -302,13 +302,8 @@ internal fun OuraResilienceCard(
     // Performance-Audit (Frank-Wunsch 2026-05-18): rank-Listen aus history nur
     // bei history-Aenderung berechnen, nicht pro Recomposition. Verhindert
     // O(N) bei jedem Scroll-Frame.
-    val rankAggregates =
-        remember(history) {
-            val last30 = history.takeLast(30).mapNotNull { levelToRank(it.level) }
-            val last7 = history.takeLast(7).mapNotNull { levelToRank(it.level) }
-            last30 to last7
-        }
-    val last30Ranks = rankAggregates.first
+    val last30Ranks =
+        remember(history) { history.takeLast(30).mapNotNull { levelToRank(it.level) } }
     val currentRank = levelToRank(level)
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -329,28 +324,15 @@ internal fun OuraResilienceCard(
                     TrendBadge(delta = delta, formatter = { "%+.1f".format(it) })
                 }
             }
-            // Mini-Balken auf Rang-Basis (0 bis 4) mit gekuerzten Level-Labels
-            // unter den Balken — pro Balken steht ein Buchstabe (E/A/S/T/X)
-            // damit man den Verlauf sieht ohne dass es ueberladen wirkt.
-            val rankValues = rankAggregates.second
-            if (rankValues.isNotEmpty()) {
+            // Mini-Balken auf Rang-Basis (0 bis 4) ueber 30 Tage (Frank-Wunsch
+            // 2026-08-07). Bei 30 Balken passen keine Level-Buchstaben mehr
+            // darunter, deshalb der gleiche Canvas-Balkenstil wie bei den
+            // anderen Verlaufs-Karten — die Farbe pro Balken bleibt rangbasiert.
+            if (last30Ranks.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                HistoryMiniChartWithLabels(
-                    values = rankValues,
-                    maxValue = 4.0,
-                    formatLabel = { v ->
-                        when (v.toInt()) {
-                            0 -> "E"
-                            1 -> "A"
-                            2 -> "S"
-                            3 -> "St"
-                            4 -> "X"
-                            else -> "—"
-                        }
-                    },
-                    // Rang-basierte Farbgebung pro Balken: 0=rot, 1=gelb,
-                    // 2=blau, 3-4=gruen — wie die levelToColor-Skala.
-                    colorFor = { rank ->
+                MiniBarsCanvas(
+                    values = last30Ranks,
+                    barColor = { rank ->
                         when (rank.toInt()) {
                             0 -> CosmosColors.Critical
                             1 -> CosmosColors.Warning
@@ -360,6 +342,9 @@ internal fun OuraResilienceCard(
                             else -> color
                         }
                     },
+                    yMin = 0.0,
+                    yMax = 4.0,
+                    emptyText = "Noch keine Daten",
                 )
             }
         }
@@ -645,12 +630,13 @@ private data class OuraScoreDerived(
 )
 
 private fun ouraScoreDerived(allScores: List<Double>): OuraScoreDerived {
-    val last7 = allScores.takeLast(7)
+    // Frank-Wunsch 2026-08-07: Verlauf zeigt 30 Tage statt 7.
+    val last30 = allScores.takeLast(30)
     val avgAll = allScores.takeIf { it.isNotEmpty() }?.average()
     val current = allScores.lastOrNull()
     val delta = if (current != null && avgAll != null) current - avgAll else null
     return OuraScoreDerived(
-        last30 = last7,
+        last30 = last30,
         avgAll = avgAll,
         deltaVsAvg = delta,
     )
