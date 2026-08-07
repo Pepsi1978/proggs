@@ -1375,6 +1375,9 @@ private fun BiomarkerCardForId(
                 RecoveryGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history30Days,
+                    // Frank-Wunsch 2026-08-07: Tap oeffnet den Detail-Screen — 1:1 wie beim
+                    // HRV-Verlauf. Vorher fehlte der onClick, dadurch passierte beim Tippen nichts.
+                    onClick = { onOpenMetricDetail(MetricKey.RECOVERY) },
                 )
             BiomarkerCardId.MINI_WEIGHT ->
                 MiniWeightCard(
@@ -1558,11 +1561,15 @@ private fun BiomarkerCardForId(
                 }
             }
 
+            // Frank-Wunsch 2026-08-07: Tap auf die Verlaufs-Pattern oeffnet den jeweiligen
+            // Detail-Screen — 1:1 wie beim HRV-Verlauf. Vorher fehlte ueberall der onClick,
+            // dadurch passierte beim Tippen nichts.
             BiomarkerCardId.SLEEP_DEEP_GRAPH ->
                 DeepSleepGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
                     precomputed = state.deepSleepDerived,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEEP) },
                 )
 
             BiomarkerCardId.SLEEP_REM_GRAPH ->
@@ -1570,6 +1577,7 @@ private fun BiomarkerCardForId(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
                     precomputed = state.remSleepDerived,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_REM) },
                 )
 
             BiomarkerCardId.SLEEP_WAKE_GRAPH ->
@@ -1577,12 +1585,14 @@ private fun BiomarkerCardForId(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
                     precomputed = state.wakeTimeDerived,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) },
                 )
 
             BiomarkerCardId.SLEEP_RESTORATIVE_GRAPH ->
                 RestorativeSleepGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
                 )
 
             BiomarkerCardId.SLEEP_RESTORATIVE ->

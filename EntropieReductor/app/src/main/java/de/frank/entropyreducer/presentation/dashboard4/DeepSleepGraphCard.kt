@@ -65,7 +65,10 @@ internal fun DeepSleepGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
     precomputed: DeepSleepDerived? = null,
-    onClick: () -> Unit = {},
+    // Poka-Yoke 2026-08-07: KEIN Default — sonst kompiliert ein Aufrufer, der den Tap
+    // vergisst, klaglos durch und die Karte reagiert stumm nicht (genau der Fehler,
+    // den Frank an Erholungs-/Tiefschlaf-/REM-/Wachzeit-/Erholsamer-Schlaf-Verlauf sah).
+    onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Deep
