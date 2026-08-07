@@ -1433,7 +1433,14 @@ private fun BiomarkerCardForId(
                     history = state.history,
                     onClick = { onOpenMetricDetail(MetricKey.HRV) },
                 )
-            BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
+            // Frank-Wunsch 2026-08-07: Ruhepuls ist jetzt eine volle Breite-Karte mit
+            // 30-Tage-Balkenansicht, analog zu HRV und Schlaf-Performance.
+            BiomarkerCardId.MINI_RHR ->
+                RhrGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                    onClick = { onOpenMetricDetail(MetricKey.RHR) },
+                )
             BiomarkerCardId.MINI_VO2MAX -> MiniVo2MaxCard(state, onOpenMetricDetail)
             // Frank-Wunsch 2026-08-07: Schlaf ist jetzt eine volle Breite-Karte im
             // Erholungsverlauf-Pattern (Balken-Graph, 30-Tage-Schnitt, Ampel) statt der

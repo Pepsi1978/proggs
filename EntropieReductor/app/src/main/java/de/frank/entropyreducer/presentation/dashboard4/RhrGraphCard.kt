@@ -38,10 +38,10 @@ import java.time.ZoneId
  * bestehenden RHR-Detail-Screen (1:1 wie bisher). Unter dem Graphen wird der Durchschnitt
  * ueber ALLE jemals gespeicherten Ruhepuls-Werte angezeigt — nicht nur der letzten 30 Tage.
  *
- * Farb-Logik (relativ zum persoenlichen Durchschnitt):
- * - mindestens 2 bpm UNTER dem Durchschnitt  -> Gruen (niedriger ist besser)
- * - innerhalb von +/- 2 bpm um den Schnitt   -> Gelb
- * - mehr als 2 bpm UEBER dem Durchschnitt    -> Rot (hoeher ist schlechter)
+ * Farb-Logik (absolute Schwellen):
+ * - bis einschliesslich 58 bpm -> Gruen
+ * - ueber 58 bis 62 bpm        -> Gelb
+ * - ueber 62 bpm               -> Rot
  *
  * Farbtoene 1:1 identisch zum HRV-Pattern:
  * [CosmosColors.WhoopRecoveryGreen] / [CosmosColors.WhoopRecoveryYellow] /
@@ -79,7 +79,7 @@ internal fun RhrGraphCard(
                 }
                 val headerColor =
                     derived.currentBpm?.let { current ->
-                        rhrBarColor(value = current.toDouble(), avg = derived.avgAllBpm, accentColor = accent)
+                        rhrBarColor(value = current.toDouble())
                     } ?: accent
                 Text(
                     text = derived.currentBpm?.let { "$it bpm" } ?: "—",
@@ -90,7 +90,7 @@ internal fun RhrGraphCard(
             }
             Spacer(Modifier.height(12.dp))
 
-            RhrBars(values = derived.last30Bpm, avg = derived.avgAllBpm)
+            RhrBars(values = derived.last30Bpm)
 
             Spacer(Modifier.height(10.dp))
 
@@ -157,31 +157,23 @@ private fun rhrDerived(
 /* ------------------------- UI-Bausteine ------------------------- */
 
 @Composable
-private fun RhrBars(values: List<Double>, avg: Double?) {
-    val accent = LocalCosmos.current.accent
+private fun RhrBars(values: List<Double>) {
     val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 5.0 }
     val yMax = remember(values) { values.maxOrNull() ?: 1.0 }
     MiniBarsCanvas(
         values = values,
-        barColor = { rhrBarColor(it, avg, accent) },
+        barColor = { rhrBarColor(it) },
         yMin = yMin,
         yMax = yMax,
         emptyText = "Noch keine Ruhepuls-Daten",
     )
 }
 
-private fun rhrBarColor(
-    value: Double,
-    avg: Double?,
-    accentColor: Color,
-): Color {
-    val avgSafe = avg ?: return accentColor
-    // Frank-Wunsch 2026-06-21: Farb-Bereiche relativ zum persoenlichen Durchschnitt.
-    // Bei Ruhepuls ist NIEDRIGER besser — invertierte Logik zu HRV.
+private fun rhrBarColor(value: Double): Color {
     return when {
-        value <= avgSafe - 2.0 -> CosmosColors.WhoopRecoveryGreen   // Gruen (niedriger = besser)
-        value >= avgSafe + 2.0 -> CosmosColors.WhoopRecoveryRed     // Rot (hoeher = schlechter)
-        else -> CosmosColors.WhoopRecoveryYellow                     // Gelb (neutral)
+        value > 62.0 -> CosmosColors.WhoopRecoveryRed
+        value > 58.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryGreen
     }
 }
 

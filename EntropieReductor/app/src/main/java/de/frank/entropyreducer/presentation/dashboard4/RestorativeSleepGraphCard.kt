@@ -56,10 +56,10 @@ import java.util.Locale
  *
  * Prozent = (REM + Tiefschlaf) / (REM + Tief + Leicht + Wach) * 100
  *
- * Ampel-Logik (Frank-Vorgabe 2026-06-18):
- *   - unter 40 % → Rot   (kritisch wenig Erholung)
- *   - 40 – 50 %  → Gelb  (grenzwertig)
- *   - ueber 55 % → Gruen (gute Erholung)
+ * Ampel-Logik (Frank-Vorgabe 2026-08-07):
+ *   - unter 45 %  -> Rot
+ *   - 45 bis 52 % -> Gelb
+ *   - ueber 52 %  -> Gruen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -245,10 +245,10 @@ private fun RestorativeSleepBars(values: List<Double>) {
 }
 
 /**
- * Farbe pro Balken im Erholsamer-Schlaf-Graph (Frank-Vorgabe 2026-06-18):
- *   unter 40 % → Rot   (kritisch wenig Erholung)
- *   40 – 50 %  → Gelb  (grenzwertig)
- *   ueber 55 % → Gruen (gute Erholung)
+ * Farbe pro Balken im Erholsamer-Schlaf-Graph (Frank-Vorgabe 2026-08-07):
+ *   unter 45 %  -> Rot
+ *   45 bis 52 % -> Gelb
+ *   ueber 52 %  -> Gruen
  *
  * Frank-Wunsch 2026-06-21: Gleiche WHOOP-Farbpalette wie im Erholungsverlauf
  * (RecoveryGraphCard) — vorher dezente CosmosColors.Success/Warning/Critical,
@@ -256,9 +256,9 @@ private fun RestorativeSleepBars(values: List<Double>) {
  */
 private fun restorativeSleepBarColor(pct: Double): Color =
     when {
-        pct < 40.0 -> CosmosColors.WhoopRecoveryRed
-        pct < 50.0 -> CosmosColors.WhoopRecoveryYellow
-        else -> CosmosColors.WhoopRecoveryGreen
+        pct > 52.0 -> CosmosColors.WhoopRecoveryGreen
+        pct >= 45.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryRed
     }
 
 @Composable
