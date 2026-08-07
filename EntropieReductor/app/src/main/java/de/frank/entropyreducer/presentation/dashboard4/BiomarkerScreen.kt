@@ -1374,7 +1374,12 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.RECOVERY_GRAPH ->
                 RecoveryGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
-                    history = state.history30Days,
+                    // Frank-Wunsch 2026-08-07: volle Historie statt 30-Tage-Zeitfenster.
+                    // Mit history30Days blieben Tage OHNE Recovery-Wert leer, dadurch nur ~21
+                    // Balken — breiter als bei allen anderen Verlaufs-Karten und nicht
+                    // uebereinander zuordenbar. Die Karte nimmt intern takeLast(30), also
+                    // exakt 30 Balken wie Tiefschlaf-/REM-/Wachzeit-Verlauf.
+                    history = state.history,
                     // Frank-Wunsch 2026-08-07: Tap oeffnet den Detail-Screen — 1:1 wie beim
                     // HRV-Verlauf. Vorher fehlte der onClick, dadurch passierte beim Tippen nichts.
                     onClick = { onOpenMetricDetail(MetricKey.RECOVERY) },
