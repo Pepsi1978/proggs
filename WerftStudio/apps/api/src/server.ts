@@ -1100,7 +1100,8 @@ async function buildDesignExport(imported: { objectPrefix: string; manifest: Imp
 }
 const vorlagenDateien = {
   projekt: /(^|\/)00-PROJEKT\.md$/i, funktion: /(^|\/)01-FUNKTIONS-SPEC\.md$/i,
-  ui: /(^|\/)02-UI-SPEC\.md$/i, motion: /(^|\/)03-MOTION-SPEC\.md$/i
+  ui: /(^|\/)02-UI-SPEC\.md$/i, motion: /(^|\/)03-MOTION-SPEC\.md$/i,
+  onboarding: /(^|\/)04-ONBOARDING-SPEC\.md$/i, recht: /(^|\/)05-RECHT-SPEC\.md$/i
 } as const;
 async function leseVorlage(imported: { objectPrefix: string; manifest: ImportManifestFile[] }): Promise<Vorlage | undefined> {
   const vorlage: Vorlage = {};

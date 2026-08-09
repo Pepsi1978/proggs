@@ -398,6 +398,8 @@ Erst jetzt wird geschrieben — im Aufbau **exakt nach `Specs/FORMAT.md`**.
 | `01-FUNKTIONS-SPEC.md` | Block C (+ Datenmodell, Hintergrundverhalten) |
 | `02-UI-SPEC.md` | Block E + Bildschirme aus Block D |
 | `03-MOTION-SPEC.md` | Block F |
+| `04-ONBOARDING-SPEC.md` | **Nur wenn die Onboarding-Brille an war** — Erststart, was erklaert wird, Berechtigungen mit Zeitpunkt |
+| `05-RECHT-SPEC.md` | **Nur wenn die Recht-Brille an war** — Pflichttexte, Einwilligungen, Datenverarbeitung, Loeschung |
 
 **Dann das Uebergabe-ZIP** nach `~/proggs/Designs/Inbox/<App>-SPEC-v1.zip`. Der Designer
 liest ausschliesslich ZIP-Dateien ein — in Werft Studio ueber *Importieren → ZIP- oder
@@ -408,7 +410,8 @@ Inhalt des ZIP (flach, ohne Unterordner):
 | Eintrag | Inhalt |
 |---------|--------|
 | `SPEC.md` | Die **Zusammenstellung aller drei Specs** in einem Dokument — Teil A (Funktion), Teil B (UI), Teil C (Motion), Teil D (Rahmen und Abnahme). Das ist die Datei, die der Designer liest |
-| `00-PROJEKT.md` … `03-MOTION-SPEC.md` | Dieselben vier Einzeldateien wie in `Specs/<App>/v1/`, unveraendert — damit der Designer maschinell einzelne Teile lesen kann |
+| `00-PROJEKT.md` … `03-MOTION-SPEC.md` | Dieselben Einzeldateien wie in `Specs/<App>/v1/`, unveraendert — damit der Designer maschinell einzelne Teile lesen kann |
+| `04-ONBOARDING-SPEC.md`, `05-RECHT-SPEC.md` | Nur wenn die App sie braucht |
 | `LIESMICH.md` | Der Auftrag an den Designer und die Regeln fuer den Ruecklauf (siehe unten) |
 
 Das ZIP traegt den App-Namen im Dateinamen, weil im Inbox-Ordner mehrere Projekte

@@ -230,6 +230,7 @@ Nach `~/proggs/Specs/<App>/v2/`, im Aufbau **exakt nach `Specs/FORMAT.md`**.
 | `01-FUNKTIONS-SPEC.md` | v1 **minus** was im Design fehlt, **plus** die in Phase 3 geklaerten neuen Funktionen |
 | `02-UI-SPEC.md` | die **gemessenen** Werte aus dem Design — alle Erscheinungen, alle Bildschirme, alle Texte |
 | `03-MOTION-SPEC.md` | die **gemessenen** Bewegungen, je mit `@keyframes`-Namen bzw. Fundstelle als Quelle |
+| `04-ONBOARDING-SPEC.md`, `05-RECHT-SPEC.md` | aus dem Ruecklauf uebernommen, falls vorhanden — Werft misst sie nicht, es reicht sie durch |
 | `AENDERUNGEN.md` | das Ergebnis von Phase 2 und 3, vollstaendig |
 | `BAU-AUFTRAG.md` | die Einstiegsdatei fuer Stufe 3, kurz und verweisend |
 

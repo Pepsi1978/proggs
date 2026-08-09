@@ -8,7 +8,7 @@ import type { SourceText } from "./extract-common.js";
 // sonst aus Quellcode entstehen; ab da laeuft der vorhandene Weg (Bildschirmplan, KI-Aufbau,
 // Zusammensetzen) unveraendert weiter. Format der gelesenen Dateien: ~/proggs/Specs/FORMAT.md.
 
-const einzelSpec = /(^|\/)(?:00-PROJEKT|01-FUNKTIONS-SPEC|02-UI-SPEC|03-MOTION-SPEC)\.md$/i;
+const einzelSpec = /(^|\/)(?:00-PROJEKT|01-FUNKTIONS-SPEC|02-UI-SPEC|03-MOTION-SPEC|04-ONBOARDING-SPEC|05-RECHT-SPEC)\.md$/i;
 const sammelSpec = /(^|\/)SPEC\.md$/i;
 
 export function specFactCandidates(paths: string[]): string[] {

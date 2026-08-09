@@ -246,6 +246,8 @@ Alle vier Dateien aus `~/proggs/Specs/<App>/v2/` **vollstaendig** lesen, keine u
 | `01-FUNKTIONS-SPEC.md` | Jedes Verhalten: Ausloeser, Ablauf, Daten, Ergebnis, Fehlerfall, Regeln, Datenmodell |
 | `02-UI-SPEC.md` | Jede Farbe, jedes Mass, jede Schrift, jeder Bildschirm `B-`, jeder Zustand |
 | `03-MOTION-SPEC.md` | Jede Bewegung `M-` mit Dauer, Kurve, Verzoegerung, Wiederholung |
+| `04-ONBOARDING-SPEC.md` | Falls vorhanden: der Erststart-Ablauf, Berechtigungen und ihr Zeitpunkt |
+| `05-RECHT-SPEC.md` | Falls vorhanden: Pflichttexte, Einwilligungen, Datenverarbeitung, Loeschung |
 | `AENDERUNGEN.md` | Nur zur Einordnung — was der Designer gegenueber v1 geaendert hat |
 
 Die Werte darin sind bereits gemessen und freigegeben. Du **extrahierst hier nichts mehr

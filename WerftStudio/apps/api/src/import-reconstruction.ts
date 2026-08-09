@@ -76,7 +76,7 @@ const embeddedDocument = /(^|\/)assets\/(?:legal|help|docs?|faq|terms|privacy|im
 // Ein Spec-Paket aus `Designs/Inbox/` enthaelt keinen Code, sondern die Beschreibung der Software,
 // die gebaut werden soll. Dann SIND die Spec-Dateien die Quelle — die Erweiterungsfilter unten
 // kennen nur Markup, Stile und UI-Code und wuerden sie samt und sonders verwerfen.
-export const specSourceFile = /(^|\/)(?:00-PROJEKT|01-FUNKTIONS-SPEC|02-UI-SPEC|03-MOTION-SPEC|SPEC)\.md$/i;
+export const specSourceFile = /(^|\/)(?:00-PROJEKT|01-FUNKTIONS-SPEC|02-UI-SPEC|03-MOTION-SPEC|04-ONBOARDING-SPEC|05-RECHT-SPEC|SPEC)\.md$/i;
 
 export function reconstructionSourceFiles(files: ImportManifestFile[]): ImportManifestFile[] {
   const spec = files.filter((file) => specSourceFile.test(file.path));

@@ -165,6 +165,26 @@ Stand: … · Stufe: … · Plattform(en): …
 
 ---
 
+## Zusatzteile — nur wenn die App sie braucht
+
+Nicht jede App braucht dieselben Teile. Geht sie in den Store oder benutzen andere Menschen sie,
+kommen zwei weitere Dateien dazu; eine App nur für den eigenen Rechner hat beides nicht.
+Der Schalter dafür ist die Frage „Für wen ist die App?" in Stufe 1 — dieselbe, die dort die
+Prüf-Brillen zuschaltet.
+
+| Datei | Wann | Inhalt |
+|-------|------|--------|
+| `04-ONBOARDING-SPEC.md` | Andere Menschen starten die App | Erststart-Ablauf, was erklärt wird, was übersprungen werden darf, Berechtigungs-Abfragen mit ihrem Zeitpunkt |
+| `05-RECHT-SPEC.md` | Veröffentlichung, personenbezogene Daten oder externe Dienste | Pflichttexte, Einwilligungen, Datenverarbeitung, Löschung, Store-Vorgaben |
+
+**Ihre Bildschirme stehen trotzdem im UI-Spec.** Ein Onboarding-Bildschirm ist ein Bildschirm wie
+jeder andere und gehört mit `B-`Kennung in `02-UI-SPEC.md` §6 — sonst baut der Designer ihn nicht.
+Die Zusatzdatei beschreibt den *Ablauf* und die *Pflichten*, nicht das Aussehen.
+
+Werft misst diese Teile nicht — es reicht sie unverändert durch, damit sie beim Umsetzer ankommen.
+
+---
+
 ## Das Übergabe-ZIP: `Designs/Inbox/<App>-SPEC-v1.zip`
 
 Das Paket, das den Rechner verlässt und in Werft Studio über *Importieren → ZIP- oder
@@ -178,6 +198,7 @@ Inhalt, flach ohne Unterordner:
 |---------|--------|
 | `SPEC.md` | Die **Zusammenstellung aller drei Specs** in einem Dokument (Aufbau unten). Die Datei, die der Designer liest |
 | `00-PROJEKT.md`, `01-FUNKTIONS-SPEC.md`, `02-UI-SPEC.md`, `03-MOTION-SPEC.md` | Dieselben Einzeldateien wie in `Specs/<App>/v1/`, unverändert |
+| `04-ONBOARDING-SPEC.md`, `05-RECHT-SPEC.md` | Nur wenn die App sie braucht (siehe oben) |
 | `LIESMICH.md` | Zielplattform, Auftrag an den Designer, Regeln für den Rücklauf (Kennungen erhalten, `NEU`/`ENTFALLEN` kennzeichnen, jedes neue Bedienelement bekommt eine Aufgabe) |
 
 `SPEC.md` muss **allein verständlich** sein: der Designer sieht sonst keine Datei.

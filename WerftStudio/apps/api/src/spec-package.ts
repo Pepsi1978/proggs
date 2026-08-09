@@ -339,7 +339,11 @@ const zielText = (element: Bedienelement): string => {
 
 // ---------------------------------------------------------------- Vorlage aus dem Erst-Spec
 
-export type Vorlage = { projekt?: string; funktion?: string; ui?: string; motion?: string };
+// Nicht jede App braucht dieselben Teile. Geht sie in den Store oder benutzen andere Menschen sie,
+// kommen Onboarding und Recht dazu; eine App nur fuer den eigenen Rechner hat beides nicht. Diese
+// Zusatzteile werden im Studio nicht GEMESSEN — sie werden unveraendert durchgereicht, damit sie
+// beim Umsetzer ankommen. Ihre Bildschirme stehen wie alle anderen im UI-Spec.
+export type Vorlage = { projekt?: string; funktion?: string; ui?: string; motion?: string; onboarding?: string; recht?: string };
 
 export type VorhandeneFunktion = { id: string; name: string };
 
@@ -567,14 +571,18 @@ export function buildSpecPackage(input: SpecInput, stand: string): SpecFile[] {
     "Diese Datei ist die Zusammenstellung der drei Specs. Die Einzeldateien daneben sind wortgleich.", "",
     "## Teil A — Funktions-Spec", "", funktion, "",
     "## Teil B — UI-Spec", "", ui, "",
-    "## Teil C — Motion-Spec", "", motion, ""
+    "## Teil C — Motion-Spec", "", motion, "",
+    ...(input.vorlage?.onboarding ? ["## Teil E — Onboarding-Spec", "", input.vorlage.onboarding, ""] : []),
+    ...(input.vorlage?.recht ? ["## Teil F — Recht und Datenschutz", "", input.vorlage.recht, ""] : [])
   ].join("\n");
   return [
     { path: "01-FUNKTIONS-SPEC.md", content: funktion },
     { path: "02-UI-SPEC.md", content: ui },
     { path: "03-MOTION-SPEC.md", content: motion },
     { path: "SPEC.md", content: gesamt },
-    { path: "00-PROJEKT.md", content: projektSpec(input, bauweg, stand) }
+    { path: "00-PROJEKT.md", content: projektSpec(input, bauweg, stand) },
+    ...(input.vorlage?.onboarding ? [{ path: "04-ONBOARDING-SPEC.md", content: input.vorlage.onboarding }] : []),
+    ...(input.vorlage?.recht ? [{ path: "05-RECHT-SPEC.md", content: input.vorlage.recht }] : [])
   ];
 }
 
