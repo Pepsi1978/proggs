@@ -14,7 +14,7 @@ im Designer bauen.
       Specs/<App>/v1/                              Specs/<App>/v2/         <App>/ (Quellcode)
             │                      │                      ▲
             └─▶ Designs/Inbox/ ────┘   Designs/Outbox/ ───┘
-                <App>-SPEC-v1.md        <App>-SPEC-v2.md + <App>/WERFT-DESIGN/
+                <App>-SPEC-v1.zip        <App>-SPEC-v2.zip + <App>/WERFT-DESIGN/
 ```
 
 ## Die beiden Briefkästen
@@ -24,11 +24,18 @@ Rechner und Designer:
 
 | Ordner | Richtung | Inhalt |
 |--------|----------|--------|
-| `Designs/Inbox/` | **hin** zum Designer | `<App>-SPEC-v1.zip` — alle drei Specs, allein verständlich. In Werft Studio über *Importieren → ZIP- oder Designdatei auswählen* |
+| `Designs/Inbox/` | **hin** zum Designer | `<App>-SPEC-v1.zip` — alle drei Specs, allein verständlich. Werft **erzeugt daraus von selbst das vollständige Design** |
 | `Designs/Outbox/` | **zurück** vom Designer | `<App>-SPEC-v2.zip` — von Werft über *Projekt als ZIP herunterladen* abgelegt |
 
 **Es wird immer als ZIP übergeben — in beide Richtungen.** Alles, was aus dem Designer
 zurückkommt, landet in `Outbox/`; nichts liegt mehr direkt in `Designs/`.
+
+Werft Studio läuft auf dem Server, die beiden Ordner liegen auf dem Rechner. Damit der
+Import-Dialog nicht im Downloads-Ordner landet, wird der `Designs`-Ordner in Chrome/Edge
+**einmalig freigegeben** (Werft fragt beim ersten Import danach). Danach stehen die
+Inbox-Pakete direkt zum Anklicken, und „In die Outbox legen" schreibt das fertige ZIP ohne
+Umweg dorthin. Zusätzlich lohnt es sich, den Chrome-Download-Ordner auf `Designs\Outbox`
+zu stellen — dann landet auch ein gewöhnlicher Download an der richtigen Stelle.
 
 ## Der eine Einstieg
 
@@ -41,7 +48,7 @@ jedem Schritt. Die drei Stufen lassen sich aber auch einzeln aufrufen.
 
 | Stufe | Skill | Eingang | Ausgang |
 |-------|-------|---------|---------|
-| 1 | `spec-schmiede` | Ein Gespräch (Grilling) | `Specs/<App>/v1/` **und** `Designs/Inbox/<App>-SPEC-v1.md` |
+| 1 | `spec-schmiede` | Ein Gespräch (Grilling) | `Specs/<App>/v1/` **und** `Designs/Inbox/<App>-SPEC-v1.zip` |
 | — | *(Hand)* | Die Inbox-Datei in Werft Studio | Rücklauf nach `Designs/Outbox/` |
 | 2 | `spec-rueckimport` | `Designs/Outbox/…` + `Specs/<App>/v1/` | `Specs/<App>/v2/` inkl. `BAU-AUFTRAG.md` |
 | 3 | `design-umsetzer` | `Specs/<App>/v2/BAU-AUFTRAG.md` | Lauffähiges Programm |
@@ -87,7 +94,7 @@ allererstes festgelegt.
 
 `v1` wird von Stufe 2 **nie überschrieben**. Nur so lässt sich nachweisen, was der Designer
 verändert hat — genau das ist der Inhalt von `AENDERUNGEN.md`. Ein zweiter Designer-Durchlauf
-erzeugt `v3` und `Designs/Inbox/<App>-SPEC-v3.md`, nicht ein zweites `v2`.
+erzeugt `v3` und `Designs/Inbox/<App>-SPEC-v3.zip`, nicht ein zweites `v2`.
 
 ## Welche Spec gewinnt bei Widerspruch
 
@@ -96,11 +103,12 @@ erzeugt `v3` und `Designs/Inbox/<App>-SPEC-v3.md`, nicht ein zweites `v2`.
 | Farben, Maße, Schrift, Formen, Bildschirm-Aufbau | `02-UI-SPEC.md` (aus dem Design gemessen) |
 | Dauer, Kurve, Wiederholung jeder Bewegung | `03-MOTION-SPEC.md` (aus dem Design gemessen) |
 | Was beim Antippen tatsächlich passiert, Daten, Regeln | `01-FUNKTIONS-SPEC.md` |
+| Ob es etwas überhaupt noch gibt | **Das Design.** Was der Designer löscht, fällt aus v2 heraus — samt Funktion. v1 bleibt in der Inbox als Rückfallebene |
 | App-Name, Zielplattform, Sprache, Abnahmekriterien | `00-PROJEKT.md` |
 
 Das Design gewinnt beim **Aussehen und Bewegen**. Das Funktions-Spec gewinnt beim **Verhalten**.
 Widersprechen sie sich im selben Punkt, wird gefragt — nicht geraten.
 
-Liegt im Rücklauf sowohl `<App>-SPEC-v2.md` als auch ein `WERFT-DESIGN/`-Paket, gilt für
+Liegt im Rücklauf sowohl `<App>-SPEC-v2.zip` als auch ein `WERFT-DESIGN/`-Paket, gilt für
 **Zahlenwerte** das Paket (dort sind sie maschinell gemessen) und für **Absicht und neue
 Funktionen** die Spec-Datei.

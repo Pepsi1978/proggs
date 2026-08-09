@@ -2,10 +2,10 @@
 name: spec-rueckimport
 description: >-
   Stufe 2 der Programm-Pipeline. Liest den Ruecklauf des Designers aus
-  ~/proggs/Designs/Outbox/ — die vom Designer fortgeschriebene Spec-Datei
-  <App>-SPEC-v2.md und/oder das ausgepackte Werft-Studio-Paket <App>/WERFT-DESIGN/ —,
-  gleicht ihn Punkt fuer Punkt gegen Specs/<App>/v1/ ab, fragt fuer jedes neu
-  hinzugekommene Bedienelement nach, was es tun soll, und schreibt daraus das
+  ~/proggs/Designs/Outbox/ — das ZIP <App>-SPEC-v2.zip mit den fortgeschriebenen Specs
+  und dem Werft-Design-Paket —, gleicht ihn gegen Specs/<App>/v1/ ab, fragt fuer jedes neu
+  hinzugekommene Bedienelement nach, was es tun soll (Gestrichenes wird NICHT gefragt: das
+  Design gewinnt), und schreibt daraus das
   Bau-Spec-Paket Specs/<App>/v2/ mit 01-FUNKTIONS-SPEC.md (v1 plus die neuen Funktionen
   aus dem Design), 02-UI-SPEC.md und 03-MOTION-SPEC.md (beide mit den gemessenen Werten
   aus dem Design), AENDERUNGEN.md und BAU-AUFTRAG.md fuer Stufe 3. Nutze diesen Skill
@@ -35,9 +35,15 @@ Datei in **`~/proggs/Specs/FORMAT.md`**. Beide liest du zu Beginn. Weicht dieser
 uebernommen — nicht gerundet, nicht vereinheitlicht, nicht "verbessert". Die Absicht aus v1
 zaehlt nur dort, wo das Design schweigt.
 
-**Nichts verschwindet unbemerkt.** Jeder Bildschirm, jede Funktion und jede Bewegung aus v1
-wird im Ruecklauf wiedergefunden — oder ihr Fehlen wird ausdruecklich festgestellt und
-entschieden. Stillschweigendes Wegfallen gibt es nicht.
+**Das Design gewinnt.** Was im Ruecklauf nicht mehr vorkommt, ist gestrichen — samt seiner
+Funktion. Loescht der Designer einen Knopf, weil er ihm nicht gefaellt, verschwindet mit ihm,
+was dahinter haengt. Das Erst-Spec liegt unveraendert in `Designs/Inbox/` als Rueckfallebene;
+deshalb wird ueber Streichungen **nicht** gefragt, sondern nur in `AENDERUNGEN.md` berichtet.
+
+**Eine Ausnahme, und nur diese:** meldet das Werft-Paket `vollstaendigkeit.nichtAufgebaut`,
+dann wurde ein Bildschirm gemessen, aber nicht gebaut. Das ist keine Entscheidung des
+Designers, sondern eine misslungene Erzeugung. Sie wird dem Benutzer **gemeldet** — gefragt
+wird auch hier nicht.
 
 **Neues wird erfragt, nicht erfunden.** Hat der Designer ein Bedienelement ergaenzt, dessen
 Aufgabe nirgends steht, fragst du. Du erfindest keine Funktion dazu.
@@ -109,7 +115,7 @@ weiter. Nie die neueste Datei einfach annehmen.
 
 ### 1a. Die Spec-Datei des Designers
 
-`Designs/Outbox/<App>-SPEC-v2.md` **vollstaendig** lesen — auch wenn sie lang ist,
+Die Spec-Dateien aus dem ausgepackten ZIP **vollstaendig** lesen — auch wenn sie lang sind,
 notfalls in mehreren Baecken mit `offset`/`limit`. Achte auf:
 
 - **Kennungen** (`B-`, `F-`, `M-`) — sie sollen dieselben sein wie in v1.
@@ -200,9 +206,9 @@ Zu fragen ist:
    Aus der Antwort wird eine neue Funktion mit der naechsten freien `F-`-Kennung.
 2. Fuer **jeden neuen Bildschirm**: Was ist sein Zweck, welche Funktionen liegen darauf,
    wie kommt man hin und wieder zurueck?
-3. Fuer **jedes Entfallene**: "In v1 stand `F-07` (Export). Im Design kommt sie nicht mehr
-   vor. Faellt sie weg oder fehlt sie nur im Design?" Faellt sie weg, wird sie in v2
-   **nicht** stillschweigend geloescht, sondern als gestrichen vermerkt.
+3. **Ueber Entfallenes wird nicht gefragt.** Was im Design fehlt, faellt aus v2 heraus —
+   auch die zugehoerige Funktion. Es wird in `AENDERUNGEN.md` festgehalten, damit
+   nachvollziehbar bleibt, was der Designer weggelassen hat, aber es haelt den Lauf nicht auf.
 4. Bei **echten Widerspruechen** zwischen Design und Funktions-Spec (das Design zeigt einen
    Ablauf, den `01-FUNKTIONS-SPEC.md` anders beschreibt): vorlegen und entscheiden lassen.
    Hier gilt **nicht** automatisch "Design gewinnt" — beim Verhalten gewinnt das
@@ -221,7 +227,7 @@ Nach `~/proggs/Specs/<App>/v2/`, im Aufbau **exakt nach `Specs/FORMAT.md`**.
 | Datei | Woraus |
 |-------|--------|
 | `00-PROJEKT.md` | aus v1 uebernommen; nur geaendert, wo der Ruecklauf etwas umwirft (z. B. Plattform, Zielgeraet) |
-| `01-FUNKTIONS-SPEC.md` | v1 **plus** die in Phase 3 geklaerten neuen Funktionen; Gestrichenes als gestrichen vermerkt |
+| `01-FUNKTIONS-SPEC.md` | v1 **minus** was im Design fehlt, **plus** die in Phase 3 geklaerten neuen Funktionen |
 | `02-UI-SPEC.md` | die **gemessenen** Werte aus dem Design — alle Erscheinungen, alle Bildschirme, alle Texte |
 | `03-MOTION-SPEC.md` | die **gemessenen** Bewegungen, je mit `@keyframes`-Namen bzw. Fundstelle als Quelle |
 | `AENDERUNGEN.md` | das Ergebnis von Phase 2 und 3, vollstaendig |
@@ -252,7 +258,8 @@ Bevor du fertig meldest, jeden Punkt pruefen:
 - Ist **jede** `@keyframes`/`animation`/`transition` aus `design.css` in
   `03-MOTION-SPEC.md` gelandet, oder ausdruecklich als unbenutzt vermerkt?
 - Hat **jedes** antippbare Element eine `F-` oder `B-`-Kennung als Ziel?
-- Ist **jede** `F-`-Kennung aus v1 in v2 entweder vorhanden oder als gestrichen vermerkt?
+- Ist **jede** `F-`-Kennung, die im Design noch ein Bedienelement hat, auch in v2 vorhanden?
+- Ist **jede** in v2 fehlende `F-`-Kennung aus v1 in `AENDERUNGEN.md` als gestrichen aufgefuehrt?
 - Steht **jede** Erscheinung mit vollstaendiger Farbtabelle im UI-Spec?
 - Ist `vollstaendigkeit.nichtAufgebaut` leer — und wenn nicht, ist es gemeldet?
 
@@ -279,7 +286,8 @@ Dann berichten:
   `bildschirme/design.css` wird **immer** mitgelesen, dort stehen die meisten Bewegungen.
 - ❌ Eine Erscheinung weglassen, weil sie "nur die helle Variante" ist.
 - ❌ Fuer ein neu hinzugekommenes Bedienelement eine Funktion **erfinden**, statt zu fragen.
-- ❌ Eine Funktion aus v1 stillschweigend fallenlassen, weil sie im Design nicht auftaucht.
+- ❌ Eine im Design gestrichene Funktion gegen den Willen des Designs nach v2 retten — oder
+  ihr Wegfallen unerwaehnt lassen: sie gehoert in `AENDERUNGEN.md`.
 - ❌ Kennungen neu vergeben oder umnummerieren.
 - ❌ Bei Widerspruch zwischen Design und Funktions-Spec eigenmaechtig entscheiden.
 - ❌ Ein Bedienelement ohne Ziel im UI-Spec stehen lassen.

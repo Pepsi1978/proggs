@@ -670,9 +670,17 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
 
 - **Build:** Projekt kompilieren (Gradle) — bei Fehlern beheben, bis es sauber baut.
   Der `resilient-bugfixing`-Skill gilt fuer jeden dabei auftretenden Fehler.
-- **Visueller Abgleich:** Wenn ein Geraet/Emulator per ADB verbunden ist, App starten
-  und Screenshots gegen `.thumbnail` bzw. den Entwurf halten. Abweichungen (Farbe,
-  Abstand, Anordnung) korrigieren, bis es zum Entwurf passt.
+- **Visueller Abgleich (Pflicht, nicht optional):** Die gebaute Software starten und
+  **je Bildschirm und je Erscheinung** einen Screenshot machen. Jeden Screenshot gegen die
+  zugehoerige Design-Datei halten:
+  `WERFT-DESIGN/bildschirme/<erscheinung>/<nr>-<name>.html` (bei einem Claude-Design gegen
+  die `.dc.html` bzw. `.thumbnail`). Abweichungen bei Farbe, Abstand, Groesse, Schrift und
+  Anordnung werden korrigiert und **erneut** verglichen, bis es passt.
+  Fuer den Ablauf gilt der `screenshot-loop`-Skill.
+  - Android: ueber ADB auf dem angeschlossenen Geraet bzw. Emulator.
+  - Windows/macOS: das gestartete Fenster aufnehmen.
+  - Ist kein Geraet erreichbar, wird das **ausdruecklich gemeldet** — dann gilt die
+    Umsetzung als optisch **ungeprueft**, nicht als fertig.
 - **Selbstpruefung gegen die Token-Liste:** Jede Farbe/Groesse/Schrift/Animation aus
   Phase 1 einmal gegen den geschriebenen Code gegenpruefen — nichts vergessen?
 - **Asset-Abgleich:** Jeden Eintrag des Asset-/Daten-Inventars gegen Zielpfad und Aufrufer
@@ -757,6 +765,9 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 - ❌ Aus einer losen `*-SPEC-v*`-Datei in `Outbox/` direkt bauen, ohne dass
   `spec-rueckimport` daraus `Specs/<App>/v2/` gemacht hat.
 - ❌ Einen Bau-Auftrag losbauen, in dem noch offene Fragen (§5) stehen.
+- ❌ "Fertig" melden, ohne jeden Bildschirm in jeder Erscheinung per Screenshot gegen das
+  Design gehalten zu haben — "sieht aus wie das Design" ist sonst nur eine Behauptung.
+- ❌ In einem Lauf fuer mehrere Zielsysteme zugleich bauen: ein Spec, ein System, ein Lauf.
 
 ---
 

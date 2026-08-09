@@ -210,8 +210,9 @@ bleiben dabei erhalten; sie sind der Faden durch die ganze Pipeline.
 
 ## Das Rücklauf-ZIP: `Designs/Outbox/<App>-SPEC-v2.zip`
 
-Was Werft Studio bei *Projekt als ZIP herunterladen* zurückschreibt. Es enthält das
-gemessene Design (`WERFT-DESIGN/`) **und** die fortgeschriebenen Specs — `SPEC.md` im
+Was Werft Studio bei *Projekt als ZIP herunterladen* zurückschreibt — nachdem beim
+Herunterladen ausdrücklich das **Zielsystem** gewählt wurde (Android, Windows oder macOS).
+Es enthält das gemessene Design (`WERFT-DESIGN/`) **und** die fortgeschriebenen Specs — `SPEC.md` im
 gleichen Aufbau wie die Übergabedatei (Teil A, B, C, D), damit sich beide Fassungen
 Abschnitt für Abschnitt vergleichen lassen, sowie die drei Einzeldateien, bereits für die
 im Spec genannte Zielplattform übersetzt (Bewegungen als Compose / WPF / SwiftUI statt als
@@ -226,8 +227,12 @@ CSS). Zusätzlich erwartet `spec-rueckimport` darin:
   Begründung da, statt einfach zu fehlen.
 
 Fehlen diese Markierungen, ist das **kein Abbruch**: `spec-rueckimport` ermittelt die
-Unterschiede dann durch Vergleich gegen `Specs/<App>/v1/` und fragt für jeden Fund nach.
-Die Markierungen sparen nur Rückfragen.
+Unterschiede dann durch Vergleich gegen `Specs/<App>/v1/`.
+
+**Gefragt wird nur zu Neuem.** Ein Bedienelement, das im Design dazugekommen ist und noch
+keine Aufgabe hat, wird vorgelegt — sonst entstünde beim Bauen ein toter Knopf. Über
+**Streichungen wird nicht gefragt**: was der Designer weggelassen hat, fällt aus v2 heraus
+und wird nur in `AENDERUNGEN.md` festgehalten.
 
 Liegt neben der Rücklaufdatei ein ausgepacktes Werft-Paket
 (`Designs/Outbox/<App>/WERFT-DESIGN/`), ist dieses für alle **gemessenen Zahlenwerte** die

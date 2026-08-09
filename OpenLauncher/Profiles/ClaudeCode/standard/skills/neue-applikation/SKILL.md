@@ -32,7 +32,7 @@ Der Gesamtablauf steht in `~/proggs/Specs/README.md`, das Dateiformat in
 | 2 | **Frank** (Handgriff) | In Werft Studio importieren, Design bauen, ZIP nach `Designs/Outbox/` |
 | 3 | dieser Skill | Warten mit **einer** Bestaetigung |
 | 4 | `spec-rueckimport` | `Specs/<App>/v2/` inkl. `BAU-AUFTRAG.md` |
-| 5 | `design-umsetzer` | Der Quellcode, vollstaendig gebaut |
+| 5 | `design-umsetzer` | Der Quellcode, gebaut und per Screenshot gegen das Design geprueft |
 | 6 | dieser Skill | Build, Installation, Deployment auf der Zielplattform |
 
 Melde zu Beginn: "Neue Applikation gestartet. Ich fuehre dich durch die ganze Kette —
@@ -56,9 +56,11 @@ Danach: **committen und pushen** (siehe *Sichern nach jedem Schritt*).
 
 Nach dem Schreiben des Uebergabe-ZIP sagst du den Handgriff woertlich:
 
-> In Werft Studio oben auf **Importieren → ZIP- oder Designdatei auswaehlen** und
-> `Designs/Inbox/<App>-SPEC-v1.zip` waehlen. Design bauen. Danach **Projekt als ZIP
-> herunterladen** — das legt den Ruecklauf als `Designs/Outbox/<App>-SPEC-v2.zip` ab.
+> In Werft Studio oben auf **Importieren**. Ist der Designs-Ordner freigegeben, steht
+> `<App>-SPEC-v1.zip` direkt unter „Aus der Inbox" — sonst ueber **ZIP- oder Designdatei
+> auswaehlen**. Werft **erzeugt daraus von selbst das vollstaendige Design**; du gestaltest
+> es um, loeschst und ergaenzt. Danach **Projekt als ZIP herunterladen**, dort **das
+> Zielsystem waehlen** (Android, Windows oder macOS) und **In die Outbox legen**.
 
 Dann legst du **eine** Bestaetigung vor (`AskUserQuestion`, erste Option vorausgewaehlt):
 
@@ -141,6 +143,9 @@ Bei einem Git-Fehler **sofort anhalten und melden** — nicht selbst reparieren.
   es wird **einmal** gefragt und auf die Antwort gewartet.
 - ❌ Bei unklarem Dateinamen in der Outbox raten oder die neueste Datei nehmen.
 - ❌ Die Zielplattform wechseln, weil eine andere gerade naeher liegt.
+- ❌ Mehrere Zielsysteme in einem Lauf bauen. Soll dieselbe App auf Android UND Windows
+  laufen, wird das Design **zweimal** heruntergeladen — je einmal je System — und die Kette
+  laeuft je System einmal durch, in einen eigenen Quellcode-Ordner.
 - ❌ Installieren, bevor der Bau sauber durchlaeuft.
 - ❌ Eine Installation als geglueckt melden, die nicht stattgefunden hat.
 - ❌ Das Sichern auf das Ende verschieben — nach jedem Schritt wird committet und gepusht.

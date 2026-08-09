@@ -8,9 +8,9 @@ description: >-
   das Erst-Spec-Paket nach Specs/<App>/v1/ (00-PROJEKT.md, 01-FUNKTIONS-SPEC.md,
   02-UI-SPEC.md, 03-MOTION-SPEC.md) sowie das Uebergabe-ZIP
   Designs/Inbox/<App>-SPEC-v1.zip, das alle drei Specs enthaelt und anschliessend in Werft
-  Studio ueber Importieren eingelesen wird. Wartet danach mit einer einzelnen Bestaetigung,
-  bis der Designer den Ruecklauf nach Designs/Outbox/ gelegt hat, und startet dann von
-  selbst Stufe 2 und Stufe 3. Nutze diesen Skill IMMER wenn der Benutzer sagt
+  Studio ueber Importieren eingelesen wird — Werft erzeugt daraus von selbst das vollstaendige
+  Design. Endet mit dem Handgriff an den Designer; das Warten auf den Ruecklauf uebernimmt die
+  Klammer neue-applikation. Nutze diesen Skill IMMER wenn der Benutzer sagt
   "neues Programm", "neue App planen", "Spec bauen", "Spec-Schmiede", "spec-schmiede",
   "/spec-schmiede", "Erst-Spec erstellen", "Pipeline starten", "grill mich zu meinem Programm",
   "ich moechte ein Programm beschreiben", "Programm spezifizieren", "frag mich zu meiner App aus",
@@ -61,6 +61,7 @@ Skill von `FORMAT.md` ab, gilt `FORMAT.md`.
 6. Block F — Bewegung und Animation
 7. Block G — Abnahme
 8. Spec-Paket schreiben und vorstellen
+9. Uebergabe an den Designer (ohne Warten)
 
 Melde zu Beginn: "Spec-Schmiede gestartet. Ich frage dich jetzt in sieben Bloecken durch —
 eine Frage nach der anderen, jede mit meiner Empfehlung. Am Ende liegt dein Spec-Paket
@@ -91,7 +92,7 @@ Fragen, eine nach der anderen:
    - Hast du aus dem Aufruf schon eine Idee, schlage sie vor — lass sie aber ausdruecklich
      bestaetigen oder ersetzen.
    - Der Name wird zum **Ordnernamen** (`Specs/<App>/`, spaeter der Quellcode-Ordner) und
-     zum **Dateinamen** (`Designs/Inbox/<App>-SPEC-v1.md`). Taugt der Wunschname dafuer
+     zum **Dateinamen** (`Designs/Inbox/<App>-SPEC-v1.zip`). Taugt der Wunschname dafuer
      nicht (Sonderzeichen, Schraegstriche), schlage eine bereinigte Kurzform als
      Ordner-/Dateinamen vor und halte beide fest: den Anzeigenamen und den Kurznamen.
    - Danach **sofort pruefen**: `ls ~/proggs/Specs/<App>/` und
@@ -319,32 +320,23 @@ dass alle sechs Eintraege wirklich drin sind.
 
 ---
 
-## Phase 9 — Warten auf den Ruecklauf
+## Phase 9 — Uebergabe
 
-Der Skill endet **nicht** nach dem Schreiben. Er wartet, bis der Designer fertig ist, und
-uebergibt dann von selbst an die naechsten Stufen. Der Benutzer soll nichts eintippen
-muessen ausser einer Bestaetigung.
+Der Skill endet hier. Er wartet **nicht** selbst auf den Ruecklauf — das tut die Klammer
+`neue-applikation`, wenn die Kette ueber sie laeuft. Wuerden beide warten, kaeme dieselbe
+Frage zweimal.
 
-1. Lege dem Benutzer **eine** Bestaetigung vor (`AskUserQuestion`, eine Frage, erste
-   Option vorausgewaehlt), sinngemaess:
+Nenne den Handgriff woertlich und hoere auf:
 
-   > **Ist das fertige Spec vom Designer in der Outbox?**
-   > `Designs/Outbox/<App>-SPEC-v2.zip`
-   > - **Ja, weiter** — der Design-Umsetzer legt sofort los
-   > - Noch nicht — nochmal nachsehen
-   > - Abbrechen — ich mache spaeter weiter
+> Dein Handgriff: In Werft Studio oben auf **Importieren**. Ist der Designs-Ordner dort
+> freigegeben, steht `<App>-SPEC-v1.zip` direkt in der Liste „Aus der Inbox" — sonst ueber
+> **ZIP- oder Designdatei waehlen**. Werft baut daraus von selbst das vollstaendige Design;
+> du gestaltest es um. Danach **Projekt als ZIP herunterladen**, dort **das Zielsystem
+> waehlen** (Android, Windows oder macOS) und **In die Outbox legen**.
+>
+> Danach sagst du mir `Rueckimport <App>` — dann macht Stufe 2 weiter.
 
-2. Bei **"Noch nicht"**: `ls ~/proggs/Designs/Outbox/` und dasselbe nochmal vorlegen.
-   Nicht in einer Schleife von selbst pollen und nicht warten, ohne zu fragen.
-3. Bei **"Ja, weiter"**: `ls ~/proggs/Designs/Outbox/` und pruefen, dass die Datei
-   wirklich da ist.
-   - Ist sie da: **sofort** `spec-rueckimport` fuer `<App>` aufrufen. Der laeuft in Fall
-     eines vollstaendigen Werft-Ruecklaufs kurz (auspacken und pruefen) und uebergibt
-     danach an `design-umsetzer`.
-   - Ist sie **nicht** da, obwohl bestaetigt wurde: den Ordnerinhalt zeigen und fragen,
-     welche Datei gemeint war. Nicht raten.
-4. Bei **"Abbrechen"**: den genauen Wiedereinstieg nennen —
-   "Sag spaeter einfach `Rueckimport <App>`, dann geht es an dieser Stelle weiter."
+Laeufst du innerhalb von `neue-applikation`, uebernimmt diese ab hier von selbst.
 
 ---
 
