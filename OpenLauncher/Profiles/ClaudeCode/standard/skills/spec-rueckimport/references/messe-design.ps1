@@ -106,14 +106,44 @@ $messJs = @'
   };
   gehe(wurzel, wurzel.tagName.toLowerCase());
 
-  const keyframes = [];
+  // Die Messung oben sieht nur den Ausgangszustand. Alles, was erst beim Druecken,
+  // Aufnehmen oder Auswaehlen entsteht — und damit der groesste Teil der Bewegung —
+  // steht in Regeln mit Zustands-Selektoren. Die werden hier mitgenommen.
+  const keyframes = [], zustaende = [], reduziert = [];
+  const ZUSTAND = /:hover|:active|:focus|:checked|:disabled|\[data-[a-z-]+=|\.is-[a-z-]+|\[aria-(pressed|selected|current|expanded)=|\[hidden\]/i;
+
+  const sammle = (regeln, inMedia) => {
+    for (const regel of regeln) {
+      if (regel.type === CSSRule.KEYFRAMES_RULE) {
+        keyframes.push({ name: regel.name, text: regel.cssText });
+      } else if (regel.type === CSSRule.MEDIA_RULE) {
+        const istReduziert = /prefers-reduced-motion/.test(regel.conditionText || "");
+        if (istReduziert) {
+          for (const r of regel.cssRules) reduziert.push(r.cssText);
+        }
+        sammle(regel.cssRules, inMedia || istReduziert);
+      } else if (regel.type === CSSRule.STYLE_RULE && !inMedia) {
+        const sel = regel.selectorText || "";
+        if (!ZUSTAND.test(sel)) continue;
+        // Nur Regeln behalten, die Elemente DIESES Bildschirms betreffen.
+        let trifft = false;
+        try { trifft = !!wurzel.querySelector(sel.replace(/::?(before|after)/g, "")) ; } catch (e) { trifft = false; }
+        if (!trifft) {
+          try { trifft = wurzel.matches(sel.split(",")[0].trim()); } catch (e) { /* ignorieren */ }
+        }
+        if (trifft) zustaende.push({ selektor: sel, text: regel.cssText });
+      }
+    }
+  };
   for (const blatt of document.styleSheets) {
     let regeln; try { regeln = blatt.cssRules; } catch (e) { continue; }
-    for (const regel of regeln) {
-      if (regel.type === CSSRule.KEYFRAMES_RULE) keyframes.push({ name: regel.name, text: regel.cssText });
-    }
+    sammle(regeln, false);
   }
-  return JSON.stringify({ bildschirm: wurzel.getAttribute("data-screen-id") || null, elemente, keyframes });
+
+  return JSON.stringify({
+    bildschirm: wurzel.getAttribute("data-screen-id") || null,
+    elemente, keyframes, zustaende, reduzierteBewegung: reduziert
+  });
 })()
 '@
 

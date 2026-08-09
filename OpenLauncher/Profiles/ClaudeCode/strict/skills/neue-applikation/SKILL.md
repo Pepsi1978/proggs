@@ -124,6 +124,56 @@ Danach: **committen und pushen**.
 
 ---
 
+## Ein Handgriff, dann laeuft es durch
+
+Die Kette hat **genau einen** Punkt, an dem ein Mensch arbeitet: das Bearbeiten des Entwurfs
+in Werft Studio. Davor wird gefragt (Grilling), danach wird **nicht mehr gefragt**.
+
+Sobald der Ruecklauf in `Designs/Outbox/` liegt und der Benutzer das bestaetigt hat, laeuft
+ohne weitere Rueckfrage durch:
+
+```
+Ruecklauf da
+  → messe-design.ps1            (jeder Bildschirm, jede Erscheinung, vollstaendig)
+  → Specs/<App>/v2/ schreiben   (Messung + lesbares Spec + Bau-Auftrag)
+  → bauen                       (Bildschirm fuer Bildschirm aus der Messung)
+  → Abnahme je Bildschirm       (Bild gegen Bild, beide Erscheinungen)
+  → Build, Version, Installation
+  → Bericht
+```
+
+**Angehalten wird nur bei echten Hindernissen**, und dann mit klarer Ansage:
+ein neu hinzugekommenes Bedienelement, dessen Zweck das Funktions-Spec nicht hergibt ·
+ein Widerspruch, den die Messung nicht aufloest · fehlender Zugang · Git-Fehler.
+Gestaltungsfragen sind **kein** Hindernis: die Antwort steht in der Messung.
+
+---
+
+## Das Abnahme-Tor — wann die Kette fertig ist
+
+Die Kette gilt **erst** als durchlaufen, wenn alle vier Punkte stehen. Kein Punkt ist
+verhandelbar, und keiner darf durch einen anderen ersetzt werden:
+
+1. **Die Messung liegt vor.** `Specs/<App>/v2/messung/<erscheinung>/<bildschirm>.json` fuer
+   **jeden** Bildschirm in **jeder** Erscheinung. Fehlt einer, ist Stufe 2 unvollstaendig
+   gelaufen — nachholen, nicht weiterbauen.
+2. **Jeder Bildschirm ist einzeln abgenommen.** Screenshot der gebauten App neben dem Bild
+   aus `Specs/<App>/v2/bilder/…`, in beiden Erscheinungen. Die Abnahme geschieht **je
+   Bildschirm, bevor der naechste gebaut wird** — nicht gesammelt am Ende.
+3. **Die Bewegungen laufen.** Jede Kennung aus dem Motion-Spec ist im Code wiederzufinden,
+   mit der gemessenen Dauer und der gemessenen `cubic-bezier`. Auch die Zustaende, die erst
+   beim Druecken oder Aufnehmen entstehen (`zustaende` in der Messung), und das Verhalten
+   bei reduzierter Bewegung.
+4. **Die App laeuft auf dem Geraet.** Gebaut, installiert, gestartet, bedient.
+
+**Ein gruener Build ist kein Punkt dieser Liste.** Er beweist, dass der Code uebersetzt —
+ueber das Aussehen sagt er nichts.
+
+Solange ein Punkt offen ist, wird das **nicht** als „fertig" gemeldet, sondern als
+„Punkt N offen, weil …". Eine geschoente Meldung kostet den naechsten Durchlauf.
+
+---
+
 ## Sichern nach jedem Schritt
 
 Nach **jedem** der Schritte 1, 4, 5 und 6 wird gesichert — nicht erst am Ende:

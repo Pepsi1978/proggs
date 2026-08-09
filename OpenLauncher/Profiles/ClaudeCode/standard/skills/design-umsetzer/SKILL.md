@@ -228,6 +228,24 @@ Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 
 ### Betriebsart P — das Spec-Paket lesen
 
+> **Die Messung ist die Bauvorlage, nicht die Prosa.**
+>
+> Unter `Specs/<App>/v2/messung/<erscheinung>/<bildschirm>.json` liegt der Entwurf
+> vollstaendig vermessen: jedes Element mit Kasten (x/y/Breite/Hoehe in dp), Farben,
+> Raendern, Radien, Schatten, Verlaeufen, Schrift, Abstaenden, `::before`/`::after`, dazu
+> alle `@keyframes`, alle Zustandsregeln (`:active`, `[data-recording]`, `.is-active` …)
+> und die Regeln fuer reduzierte Bewegung. Daraus wird gebaut — **Element fuer Element**.
+>
+> Die `.md`-Dateien beschreiben dasselbe lesbar und geben Absicht, Funktion und Kennungen.
+> Sie **ersetzen die Messung nicht**. Widersprechen sich Text und Messung, gilt die Messung.
+>
+> Die Uebersetzungsvorschrift steht in `references/messung-nach-compose.md`. Sie ist
+> verbindlich; wo sie eine Luecke hat, wird sie ergaenzt statt das Fehlende zu erfinden.
+>
+> Fehlt der Ordner `messung/`, ist Stufe 2 unvollstaendig gelaufen. Dann **nicht** aus der
+> Prosa bauen, sondern die Messung nachholen:
+> `spec-rueckimport/references/messe-design.ps1 -Design … -Ziel …`
+
 Alle vier Dateien aus `~/proggs/Specs/<App>/v2/` **vollstaendig** lesen, keine ueberfliegen:
 
 | Datei | Wofuer sie verbindlich ist |

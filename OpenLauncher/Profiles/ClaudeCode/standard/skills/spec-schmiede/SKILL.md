@@ -162,6 +162,25 @@ der anderen, jede mit meiner Empfehlung."
 
 4. Erst nach der Bestaetigung geht es weiter zu Block A.
 
+> **Alles Gestalterische in v1 ist Absicht, nicht Bauanweisung.**
+>
+> v1 entsteht **vor** dem Design. Jeder Satz darin ueber Aussehen, Tiefe, Form oder Bewegung
+> ist ein Wunsch an den Designer — und wird von dessen Entwurf entweder bestaetigt oder
+> ueberholt. Er darf spaeter **niemals** als Bauvorgabe gelesen werden.
+>
+> Darum tragen `02-UI-SPEC.md` und `03-MOTION-SPEC.md` in v1 im Kopf diesen Satz:
+>
+> ```markdown
+> > **Stand: Absicht vor dem Design.** Alle gestalterischen Aussagen dieses Dokuments sind
+> > Vorgaben AN den Designer, nicht Bauanweisungen. Sobald der Entwurf zurueck ist, gilt
+> > ausschliesslich die Messung in `Specs/<App>/v2/messung/`. Widerspricht ein Satz von
+> > hier der Messung, ist der Satz ueberholt — nicht die Messung falsch.
+> ```
+>
+> In Lauf 01 fehlte dieser Satz. Der v1-Satz „Keine Schatten. Keine Verlaeufe." wurde beim
+> Bau als Vorgabe gelesen und hat die komplette Tiefen-Schicht des fertigen Entwurfs
+> verdraengt — Verlaeufe, Schatten, Auren, schwebende Leisten. Ein Satz, ein ganzer Durchlauf.
+
 ## Block A — Name, Plattform und Rahmen
 
 **Das kommt zuerst, weil es alles Weitere faerbt.** Der Name bestimmt jeden Dateinamen und
