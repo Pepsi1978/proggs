@@ -1,75 +1,64 @@
 # Session Handoff — 10.08.2026, ca. 00:00 Uhr
 
 ## Ziel
-Die Pipeline `neue-applikation` so reparieren, dass ein in Werft Studio bearbeitetes Design
-zu 100 % in der fertigen App landet — Aussehen, Spezialeffekte und Bewegungen —, und zwar
-reproduzierbar fuer jede neue Anwendung und fuer Android, Windows und macOS.
-Frank erwartet ausdruecklich Perfektion; 99,9 % gelten als nicht erreicht.
+Pipeline `neue-applikation` so reparieren, dass ein in Werft bearbeitetes Design zu 100 % in
+der fertigen App landet — Aussehen, Effekte, Bewegungen —, reproduzierbar fuer jede neue
+Anwendung und fuer Android, Windows und macOS. Frank erwartet Perfektion; 99,9 % gelten nicht.
 
-## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt
-- **Die Pipeline-Reparatur ist inhaltlich fertig und gepusht** (Commit `b5016330a` und die
-  drei davor). Offen ist nur noch der **Beweis am lebenden Objekt**: Frank legt das Design
-  erneut in `Designs/Outbox/` und startet `neue-applikation` → `design-umsetzer`. Die App
-  muss dann ohne Nachbesserung wie der Entwurf aussehen.
-- **Die App "Experimente" ist auf dem Handy DEINSTALLIERT** (Frank hat sie entfernt, das
-  Ergebnis war unbrauchbar). Der Code im Repo ist der alte, flache Stand plus ein
-  angefangener `ui/theme/Effekte.kt`. **Beim naechsten Lauf wird die Oberflaeche aus der
-  Messung neu gebaut, nicht nachgebessert.**
+## SOFORT ZUERST
+Das Handy ist **gesperrt** (Sperrbildschirm, beide Fold-Displays). Frank muss es entsperren.
+Ohne sichtbaren Bildschirm ist keine Abnahme moeglich.
+Danach: `adb shell am start -n de.frank.experimente/.MainActivity`, Screenshot mit
+`adb exec-out screencap -p -d 4630947123231501204 > datei.png` (das `-d` ist Pflicht, sonst
+landet eine Warnzeile im PNG).
 
-## Was die Pipeline jetzt tut (alles gepusht, alle vier Profile identisch)
-- **Stufe 2 vermisst den Entwurf, statt ihn zusammenzufassen.**
-  `spec-rueckimport/references/messe-design.ps1` oeffnet jeden Bildschirm in jeder
-  Erscheinung im Browser (Chrome DevTools-Protokoll ueber WebSocket) und schreibt je Element
-  Kasten (x/y/Breite/Hoehe in dp), Farben, Raender, Radien, Schatten, Verlaeufe, Schrift,
-  Abstaende, Uebergaenge, `::before`/`::after`, dazu alle `@keyframes`, alle Zustandsregeln
-  (`:active`, `[data-recording]`, `.is-active` …), die Regeln fuer reduzierte Bewegung und
-  die SVG-Pfade aller Symbole. Ergebnis: `Specs/<App>/v2/messung/` + `/bilder/`.
-  Belegt an Experimente: 18 Bildschirme, B-01 mit 133 Elementen, 13 Keyframes,
-  30 Zustandsregeln, 32 Regeln fuer reduzierte Bewegung, 19 Symbolen.
-- **Stufe 3 baut aus der Messung**, nicht aus Prosa. Vorschrift:
-  `design-umsetzer/references/messung-umsetzen.md` — je Eigenschaft die Entsprechung in
-  Compose, WPF und SwiftUI. Abnahme Element fuer Element gegen die Messung.
-- **Stufe 1** kennzeichnet alles Gestalterische in v1 als „Absicht VOR dem Design".
-- **Klammer** hat einen One-Shot-Ablauf (nach dem Ruecklauf keine Rueckfragen mehr) und ein
-  Abnahme-Tor mit vier Punkten; ein gruener Build ist keiner davon.
+## Stand — was FERTIG und gepusht ist
+- **Pipeline komplett repariert**, alle vier Profile identisch (minimal/standard/strict/
+  opencode-setup), Commits `665a08436` bis `b4adb90d3`.
+  - Stufe 1: v1-Gestaltung ist ausdruecklich „Absicht VOR dem Design", nie Bauanweisung.
+  - Stufe 2: `messe-design.ps1` vermisst den Entwurf verlustfrei (Chrome DevTools-Protokoll).
+    Je Element: Kasten in dp, Farben, Raender, Radien, Schatten, Verlaeufe, Schrift,
+    Abstaende, Uebergaenge, ::before/::after, dazu alle @keyframes, alle Zustandsregeln,
+    die Regeln fuer reduzierte Bewegung und die SVG-Pfade aller Symbole. Funktioniert auch
+    ohne Werft-Ordneraufbau (jede HTML-Datei = ein Bildschirm).
+  - Stufe 3: baut aus `Specs/<App>/v2/messung/`, Abnahme Element fuer Element gegen die
+    Messung. Vorschrift: `design-umsetzer/references/messung-umsetzen.md` (Compose, WPF, SwiftUI).
+  - Klammer: One-Shot-Ablauf nach dem Ruecklauf, Abnahme-Tor mit vier Punkten.
+- **Messung fuer Experimente liegt vor:** `Specs/Experimente/v2/messung/` + `/bilder/`,
+  18 Bildschirme, B-01 mit 133 Elementen, 13 Keyframes, 30 Zustandsregeln, 19 Symbolen.
+- **B-01 aus der Messung gebaut:** Auren, Karte auf volle Breite, Sprechknopf mit Verlauf
+  (gemessen bestaetigt: rgb(201,112,77) -> rgb(196,98,60) 58% -> rgb(165,82,50)), Schein,
+  innerer Ring, „Lieber tippen" als Flaeche mit Rand, schwebende Leiste mit Pille,
+  Symbolknoepfe in Kreisen, Datum in Grossbuchstaben mit Jahr.
+- **Schriften eingebettet:** Fraunces, Inter, JetBrains Mono als variable TTF in `res/font`,
+  Gewicht ueber die Achse `wght` (`FontVariation`), Datei-Opt-in `ExperimentalTextApi`.
+- App gebaut und installiert, v0.4.0 (versionCode 8), startet (PID bestaetigt).
 
-## Der Kernbefund von Lauf 01 (nicht neu herleiten)
-Das Design kam vollstaendig an (ZIP == Werft-Canvas, per `diff -rq` belegt). Verloren ging es
-zwischen Stufe 2 und 3: Das Spec fuehrte die Effekte nur als namenlosen Anhang
-(`design.html:gradient(5) = …`) ohne Bauteil-Zuordnung, und gebaut wurde nach dem v1-Satz
-„Keine Schatten. Keine Verlaeufe." (steht in `Specs/Experimente/v1/02-UI-SPEC.md:113`, NICHT
-in v2). Die `design.css` hat zwei Schichten; die verbindliche obere ist auf
-`.werft-screen[data-screen-id="B-xx"]` eingeschraenkt und traegt Verlaeufe, Schatten
-(`--werft-schatten-*` ab Zeile 32), radiale Auren, die schwebende untere Leiste
-(12 dp Abstand, 64 dp hoch, Radius 24) und die Pille hinter dem aktiven Feld.
+## OFFEN
+1. **Bildnachweis fuer B-01** — Geraet war gesperrt.
+2. **B-02 bis B-09 aus der Messung bauen.** Je Bildschirm die Messdatei lesen, Elemente nach
+   `kasten.y`/`kasten.x` sortieren, Vorschrift anwenden, gegen die Messung abhaken, dann der
+   naechste. Bekannte grosse Abweichung: **B-08 Einstellungen** ist heute strukturell falsch —
+   Beschriftungen stehen neben statt ueber den Feldern, Abschnitte sind keine Karten, die
+   Erscheinung braucht einen Segment-Schalter, Erinnerungen Schalter und Zeitfeld.
+3. **Symbole aus der Messung bauen** (`symbol[].d` + `sichtfeld`) statt `Icons.*` — noch nicht
+   gemacht, die App nutzt weiter Material-Symbole.
 
 ## Fehlgeschlagene Ansaetze — NICHT wiederholen
-- Aus den Zahlen des UI-Specs bauen. Genau so ging die Tiefen-Schicht verloren.
-- `--dump-dom` bei Chrome: im neuen Headless entfernt. Weg ist das DevTools-Protokoll.
-- Ohne `--allow-file-access-from-files` bleiben die `@keyframes` leer (CSSOM gesperrt).
-- Screenshot-Vergleich als Methode: naehert sich an, bleibt bei 99 %. Gegen die Messung pruefen.
-- Symbole aus `Icons.Outlined.*` nehmen: andere Proportionen und Strichstaerken.
-- Zwei `fillMaxSize`-Kinder in einer `Column`: das zweite bekommt Hoehe 0, kompiliert gruen.
-- `adb exec-out screencap -p` ohne `-d <display-id>` auf dem Fold: Warnzeile vor den PNG-Bytes.
-
-## Naechste Schritte
-1. Frank legt das Design in `Designs/Outbox/` und startet `neue-applikation`.
-2. Stufe 2 laufen lassen (Messung entsteht automatisch), dann Stufe 3 **aus der Messung**
-   bauen — Bildschirm fuer Bildschirm, jeder gegen seine Messdatei abgehakt.
-3. Version bumpen, bauen, installieren.
-4. Lauf-Logbuch `Specs/_Pipeline-Logbuch/2026-08-09-lauf-01.md` fortschreiben.
-
-## Offene Punkte
-- `OpenLauncher/Profiles/ClaudeCode/minimal/skills` ist per `.gitignore` NICHT versioniert —
-  ausgerechnet das laufende Profil. Versioniert sind `standard`, `strict`, `opencode-setup`.
-- Die Uebersetzungsvorschrift ist geschrieben, aber noch nie an einem vollstaendigen Bau
-  erprobt. Der naechste Lauf ist ihr erster Test.
+- Aus den Zahlen des UI-Specs bauen statt aus der Messung.
+- Schriften ueber die Google-Fonts-CSS (`/l/font?kit=`) laden: liefert Dateien mit Kopf
+  `b88a0000`, die Android nicht laden kann -> Absturz beim Start. Gueltige TTF liegen unter
+  `https://raw.githubusercontent.com/google/fonts/main/ofl/<familie>/<Familie>[<achsen>].ttf`.
+- `--dump-dom` bei Chrome (im neuen Headless entfernt).
+- Ohne `--allow-file-access-from-files` bleiben die @keyframes leer.
+- Screenshot-Vergleich als Methode statt Abnahme gegen die Messung.
+- Zwei `fillMaxSize`-Kinder in einer `Column` (das zweite bekommt Hoehe 0, kompiliert gruen).
 
 ## Anker
 - Branch: main
 - Letzte Commits:
+b4adb90d3 Experimente: Schriften des Entwurfs eingebettet
+61979aa06 Experimente: B-01 aus der Messung, App laeuft wieder
+bf713a3e4 Messung: drei Logikfehler behoben (Direktive 3)
 b5016330a Pipeline: Symbole, beliebige HTML-Quellen, alle drei Zielsysteme
 270f7b65d Pipeline: One-Shot-Ablauf, Uebersetzungsvorschrift und Abnahme-Tor
-7f89e9065 Stufe 2: den Entwurf vermessen statt ihn zusammenzufassen
-665a08436 Pipeline: Design-Treue erzwingen (Stufe 2 und 3) + Tiefen-Schicht
-bae4397e6 Experimente: Oberflaeche, Navigation und Build
