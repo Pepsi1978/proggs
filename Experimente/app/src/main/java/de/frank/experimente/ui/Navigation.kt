@@ -5,13 +5,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CalendarToday
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import de.frank.experimente.ui.screens.SelbstbildBildschirm
 import de.frank.experimente.ui.screens.ZieleBildschirm
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalAppColors
+import de.frank.experimente.ui.theme.aurenHintergrund
 
 /**
  * Die fünf Hauptbildschirme in der Reihenfolge der unteren Leiste (F-27).
@@ -69,8 +72,14 @@ fun ExperimenteNavigation(vm: AppViewModel, modifier: Modifier = Modifier) {
     val eintrag by nav.currentBackStackEntryAsState()
     val aktiv = eintrag?.destination?.route
 
-    Column(modifier = modifier.fillMaxSize().background(farben.grund)) {
-        Box(Modifier.weight(1f)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .aurenHintergrund(farben)
+            // Ohne das läuft der Inhalt unter Statusleiste und Gestenbalken.
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
+        Box(Modifier.fillMaxSize()) {
             NavHost(
                 navController = nav,
                 startDestination = "heute",
@@ -159,11 +168,13 @@ fun ExperimenteNavigation(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        // Die Leiste schwebt über dem Inhalt, sie verdrängt ihn nicht.
         if (aktiv in HAUPTZIELE.map { it.kennung }) {
             UntereLeiste(
                 ziele = HAUPTZIELE,
                 aktiv = aktiv.orEmpty(),
                 onWechsel = { kennung -> zuHauptbildschirm(nav, kennung) },
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

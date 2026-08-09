@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -50,6 +51,7 @@ import de.frank.experimente.ui.theme.LocalAppColors
 import de.frank.experimente.ui.theme.LocalReduzierteBewegung
 import de.frank.experimente.ui.theme.Mass
 import de.frank.experimente.ui.theme.dauer
+import de.frank.experimente.ui.theme.schattenLeiste
 
 /** Zwischenüberschrift — Inter 13 sp, Großbuchstaben, Laufweite 0,6 sp (02-UI-SPEC §3). */
 @Composable
@@ -485,12 +487,17 @@ fun UntereLeiste(
     modifier: Modifier = Modifier,
 ) {
     val farben = LocalAppColors.current
+    // Die Leiste schwebt: 12 dp Abstand zu allen Kanten, 64 dp hoch, Radius 24 dp,
+    // durchscheinende Fläche und Schatten (`--werft-schatten-leiste`).
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(Mass.untereLeiste)
-            .background(farben.flaeche)
-            .border(BorderStroke(Mass.randstaerke, farben.randWeich)),
+            .padding(12.dp)
+            .height(64.dp)
+            .schattenLeiste(farben, AppForm.dialog)
+            .clip(AppForm.dialog)
+            .background(farben.flaeche.copy(alpha = 0.88f))
+            .border(BorderStroke(Mass.randstaerke, farben.rand.copy(alpha = 0.84f)), AppForm.dialog),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -499,7 +506,11 @@ fun UntereLeiste(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .defaultMinSize(minHeight = Mass.tippflaeche)
+                    .padding(4.dp)
+                    .fillMaxHeight()
+                    .clip(AppForm.karte)
+                    // Das aktive Feld trägt eine Pille in *Aktion gedeckt*.
+                    .background(if (istAktiv) farben.aktionGedeckt else Color.Transparent)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

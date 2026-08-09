@@ -12,8 +12,7 @@ description: >-
   Setzt einen mit Claude Designs erstellten und im Repo unter Designs/Outbox/ gespeicherten
   Design-Entwurf 1:1 exakt in Jetpack Compose um — Farben, Abstaende, Schriftgroessen,
   Schriftarten, Eckenradien, Schatten, Anordnung und Animationen exakt aus den
-  Design-Dateien und analysiert den gesamten Projektordner rekursiv inklusive aller
-  Begleitdateien wie Audio, Bilder, Fonts, Animationen und Daten. Uebernimmt ALLE
+  Design-Dateien (.dc.html, android-frame.jsx, support.js, .thumbnail). Uebernimmt ALLE
   im Design enthaltenen Theme-Varianten (Light/Dark und Zusatz-Themes) als umschaltbare
   Themes. Setzt sowohl bestehende Apps neu um (Redesign vorhandener Screens) als auch
   komplett neue Apps aus dem Design. Programmiert Funktionen, die NEU im Design dazugekommen
@@ -32,8 +31,6 @@ description: >-
 ---
 
 # Design-Umsetzer: Claude-Design 1:1 in Jetpack Compose umsetzen
-
-**Version:** v1.2.0 - 28.07.2026 20:50 Uhr
 
 Du bist der weltbeste Android-Umsetzer fuer fertige Design-Entwuerfe. Deine einzige
 Aufgabe: Ein mit **Claude Designs** ("Cloud Designs") erstellter und im Repo abgelegter
@@ -62,9 +59,6 @@ Das **komplette** Design wird umgesetzt, nicht nur ein Teil. Ausdruecklich zu **
 - **JEDES visuelle Detail** — jede Farbe, jede Fettschrift (font-weight), jede Schriftart,
   jeder Abstand, jeder Eckenradius, jeder Schatten, jeder Gradient, jeder Glow/Blur,
   jede Animation. Alle Themes (Light/Dark + Zusatz).
-- **JEDE Begleitdatei** im Designprojekt — insbesondere Audio, Bilder, Icons, Fonts,
-  Videos, Animationen und strukturierte Daten. Relevante Dateien werden nicht nur
-  inventarisiert, sondern unveraendert uebernommen und funktional passend eingebunden.
 
 Ein zu 90% umgesetztes Design ist **nicht** erledigt. Bevor der Skill fertig meldet,
 muss **jeder** Eintrag des Screen-/Navigations-/Token-Inventars aus Phase 1 im Code
@@ -132,7 +126,7 @@ ersetzt.
 
 0. **Quelle finden** — Betriebsart P: Spec-Paket; Betriebsart D: Design-Ordner
    (raten + bestaetigen lassen; sonst Pfad erfragen)
-1. **Design und alle Begleitdateien vollstaendig einlesen** und exakt inventarisieren
+1. **Design vollstaendig einlesen** und alle Design-Tokens exakt extrahieren
 2. **App-Ordner zuordnen** (bestehende App redesignen ODER neue App anlegen)
 3. **IST-Analyse** der bestehenden App + **Umsetzungs-Fall** bestimmen (A/B/C)
 4. **SPEC schreiben** (bedingt — bei neuer App und bei neuen Bereichen; siehe Fall-Logik)
@@ -170,14 +164,16 @@ Danach direkt weiter zu Phase 1. Findest du kein `v2`, laeufst du in Betriebsart
 
 **Feste Ordner-Struktur (wichtig):** Der Standard-Container fuer ALLE Design-Entwuerfe
 ist der Ordner **`~/proggs/Designs/Outbox/`** — dort liegt alles, was aus dem Designer
-zurueckkommt. Er ist kein Design-Ordner, sondern
-nur die Sammlung. **Jedes einzelne Designprojekt liegt als eigener Unterordner darin**
-— z.B.
+zurueckkommt. Er ist kein Design-Ordner, sondern nur die Sammlung. **Jedes einzelne
+Designprojekt liegt als eigener Unterordner darin** — z.B.
 `~/proggs/Designs/Outbox/Fisetin-Begleiter-Design-Update/`. Der Unterordner ist das,
 was 1:1 umgesetzt wird. Ordnernamen koennen Bindestriche ODER Leerzeichen enthalten.
 
 `~/proggs/Designs/Inbox/` enthaelt **keine Designs**, sondern die Spec-Dateien, die an den
-Designer gehen. Sie ist nie eine Umsetzungsquelle.
+Designer gehen. Sie ist nie eine Umsetzungsquelle. Ebenso sind lose `*-SPEC-v*.md`-Dateien
+direkt in `Outbox/` keine Design-Ordner, sondern der Ruecklauf fuer Stufe 2 — liegt eine
+solche Datei vor, aber noch kein `Specs/<App>/v2/`, weise den Benutzer darauf hin, dass
+zuerst `spec-rueckimport` laufen sollte.
 
 Im `Outbox/`-Ordner liegt ausserdem eine **`README.md`** (Index, listet die Projekte auf).
 Diese README ist **kein** Designprojekt — sie NIE als Design-Ordner behandeln, aber ihren
@@ -191,12 +187,6 @@ Ein Projekt-Unterordner enthaelt typischerweise:
 | `android-frame.jsx` | Material-3-Geraeterahmen (Statusbar, AppBar, NavBar) | Referenz fuer M3-Kontext, NICHT selbst nachbauen |
 | `support.js` | Generierte React-Runtime | **Ignorieren** (nur Rendering-Maschinerie, kein Design) |
 | `.thumbnail` | Vorschaubild des Designs (**optional**, nicht immer vorhanden) | Falls da: visueller Gesamteindruck / Abgleich |
-| Weitere Dateien/Unterordner | Audio, Bilder, Icons, Fonts, Videos, Animationen, JSON/CSV/Texte usw. | **Vollstaendig analysieren und bei Relevanz 1:1 umsetzen** |
-
-Diese Tabelle ist nur eine Orientierung, keine Positivliste. Nach Auswahl des
-Projekt-Unterordners immer dessen **gesamten Verzeichnisbaum rekursiv** erfassen. Auch
-ungewoehnliche Dateiendungen, versteckte Dateien und tief verschachtelte Assets gehoeren
-zum Designprojekt und duerfen nicht uebersehen werden.
 
 **Zweite Herkunft: Werft Studio.** Neben den Claude-Designs (`*.dc.html`) gibt es Entwuerfe,
 die mit **Werft Studio** gebaut und dort ueber "Projekt als ZIP herunterladen" ausgepackt
@@ -217,8 +207,9 @@ die Token-Extraktion aus dem HTML. Fehlt der Ordner, ist es ein Claude-Design (T
 
 **Ablauf:**
 
-1. `Glob("Designs/Outbox/*")` bzw. `ls ~/proggs/Designs/Outbox/` — alle **Unterordner** auflisten
-   (Dateien im Root wie `README.md` sind KEINE Projekte). Optional die `README.md` lesen.
+1. `Glob("Designs/Outbox/*")` bzw. `ls ~/proggs/Designs/Outbox/` — alle **Unterordner**
+   auflisten (Dateien wie `README.md` oder `*-SPEC-v*.md` sind KEINE Projekte).
+   Optional die `README.md` lesen.
 2. **Automatisch raten + bestaetigen:**
    - Bei genau EINEM Projekt-Unterordner: diesen vorschlagen.
    - Bei mehreren: den plausibelsten anhand des Aufruf-Parameters / App-Namens
@@ -229,8 +220,7 @@ die Token-Extraktion aus dem HTML. Fehlt der Ordner, ist es ein Claude-Design (T
    "Ich konnte den Design-Ordner nicht eindeutig finden. Bitte kopiere mir den Pfad
    des Design-Ordners hier rein." Danach mit dem genannten Pfad weiterarbeiten.
 
-Erst weitermachen, wenn der Projekt-Unterordner feststeht. Danach mit einem rekursiven
-Glob (`Designs/<Name>/**/*`) das vollstaendige Datei- und Unterordner-Inventar erstellen.
+Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 
 ---
 
@@ -261,14 +251,11 @@ Inventar aus E2 und ist die Grundlage des Vollstaendigkeits-Abgleichs in Phase 8
 
 ### Betriebsart D — Design vollstaendig einlesen und Tokens extrahieren
 
-**Grundsatz:** Wer den Entwurf und seine Begleitdateien nicht komplett analysiert hat,
-kann ihn nicht 1:1 umsetzen.
+**Grundsatz:** Wer den Entwurf nicht komplett gelesen hat, kann ihn nicht 1:1 umsetzen.
 Lies die `*.dc.html` **vollstaendig** (sie kann gross sein, 50-100 KB — trotzdem ganz lesen,
 notfalls in mehreren Read-Baecken mit `offset`/`limit`). Lies zusaetzlich `android-frame.jsx`
 und sieh dir `.thumbnail` visuell an, **falls vorhanden** (Read-Tool ist multimodal;
-die Datei fehlt in manchen Projekten — dann ohne sie weiterarbeiten). `support.js` nur als
-Runtime klassifizieren und nicht als Design-Quelle lesen; Referenzen daraus auf externe
-Assets duerfen bei der Vollstaendigkeitspruefung jedoch nicht verloren gehen.
+die Datei fehlt in manchen Projekten — dann ohne sie weiterarbeiten). `support.js` NICHT lesen.
 
 ### Pflicht-Inventar aller Begleitdateien
 
@@ -294,6 +281,7 @@ Verwendungsstelle/Trigger**. Binaerdateien inhaltlich bytegenau uebernehmen, nic
 kodieren, komprimieren, ersetzen oder durch aehnliche Stock-Assets austauschen. Nur wenn
 Androids Ressourcenregeln es erzwingen, Dateinamen legal normalisieren und die Umbenennung
 im Quelle-Ziel-Mapping dokumentieren.
+
 
 ### Werft-Studio-Paket: Werte LESEN statt extrahieren
 
@@ -376,17 +364,8 @@ aus der Datei uebernehmen):
 - Welche Screens/Funktionen zeigt der Entwurf (z.B. Dashboard, Detail, Einstellungen,
   Onboarding, Timer, Statistik …)? Liste sie auf — Basis fuer Phase 7 (neue Funktionen).
 
-**H) Asset- und Daten-Inventar**
-- Alle Begleitdateien mit Quelle, Zielpfad und Verwendung auflisten.
-- Audio-Trigger, Wiedergabeverhalten (einmalig/Loop), Lautstaerke und ggf. Stopp-Regeln
-  exakt aus dem Design bzw. seinen Daten uebernehmen. Fehlen diese Angaben, nachfragen.
-- Wenn Audio vorhanden ist, den `android-audio`-Skill fuer die konkrete Android-
-  Integration laden. Kurze UI-Sounds typischerweise mit `SoundPool`, laengere Musik/
-  Sprache mit Media3 umsetzen; die tatsaechliche Wahl am Nutzungsszenario ausrichten.
-
-Am Ende von Phase 1 hast du eine vollstaendige, exakte Token-, Screen- und Asset-Liste.
-Kurz an den Benutzer melden, was gefunden wurde (Themes, Screens, Schriftart,
-Begleitdateien und insbesondere vorhandene Audio-Dateien).
+Am Ende von Phase 1 hast du eine vollstaendige, exakte Token- und Screen-Liste.
+Kurz an den Benutzer melden, was gefunden wurde (Themes, Screens, Schriftart).
 
 ---
 
@@ -423,9 +402,6 @@ Damit die 1:1-Umsetzung sauber ins bestehende Projekt greift, zuerst den IST-Zus
 - Alle Screen-Composables: `Glob("**/ui/**/*.kt")`, `Grep("@Composable")`.
 - Navigation: NavHost/BottomBar/Routen.
 - Schriftarten in `res/font/`, `build.gradle*` (Compose-/M3-Version).
-- Bestehende App-Assets in `res/drawable*`, `res/raw`, `res/font`, `assets/` sowie ihre
-  Aufrufer pruefen, damit gleichnamige Dateien und vorhandene Audio-Infrastruktur korrekt
-  integriert statt doppelt angelegt werden.
 - Feststellen: **Welche Screens/Funktionen aus dem Entwurf existieren schon**,
   welche fehlen (→ Phase 7). Welche Datei ist fuer welchen Design-Screen zustaendig.
 
@@ -485,8 +461,6 @@ erneutem Lauf ergaenzen/aktualisieren.
 7. **Navigation** — Navigationsgraph / Routen (bei Fall B: Einhaengepunkt in die App).
 8. **Offene Fragen** — alles, was aus dem Design nicht eindeutig ableitbar ist
    (statt zu raten, hier sammeln und den Benutzer fragen).
-9. **Begleitdateien** — vollstaendiges Asset-/Daten-Mapping mit Quelle, Android-Zielpfad,
-   Verwendungsstelle und bei Audio Trigger/Wiedergabeverhalten.
 
 **Nach dem Schreiben:** Das SPEC dem Benutzer kurz vorstellen und **bestaetigen lassen**
 (oder Korrekturen einarbeiten), bevor Phase 5/6 den Code baut. So wird design-treu
@@ -504,7 +478,6 @@ nur die Bausteine unterscheiden sich.
 
 ### Android — Kotlin / Jetpack Compose
 
-
 **Theme-Schicht:**
 - `Color.kt`: jede CSS-Variable → benannte `Color(0xFF……)`-Konstante. Alpha aus rgba
   in den Hex-Alpha-Kanal uebernehmen (z.B. `rgba(106,92,255,.13)` → `Color(0x216A5CFF)`;
@@ -518,9 +491,30 @@ nur die Bausteine unterscheiden sich.
   M3-Rollen bzw. eigene Theme-Extension-Farben abbilden — lieber eine eigene
   `LocalAppColors`-CompositionLocal-Palette als die Design-Semantik in M3 zu verbiegen,
   wenn der Entwurf mehr Rollen hat als M3 (Gradient-Hintergrund, Glow, card-Transparenz).
-- `Type.kt`: Schriftfamilie als `FontFamily` (Google-Font via `res/font` oder
-  `androidx.compose.ui.text.googlefonts`), Typo-Skala mit den EXAKTEN sp-Werten
+- `Type.kt`: Schriftfamilie als `FontFamily`, Typo-Skala mit den EXAKTEN sp-Werten
   (px des Entwurfs 1:1 als sp uebernehmen, sofern kein anderer Massstab vorgegeben ist).
+  **Schriften als Datei einbetten (`res/font/*.ttf`), nicht ueber `googlefonts` laden.**
+  Heruntergeladene Schriften kommen verzoegert an; bis dahin zeigt die App die
+  System-Schrift, und genau in diesem Zustand entstehen Screenshots, die "irgendwie anders"
+  aussehen, ohne dass man den Grund sieht. Eingebettete Dateien sind ausserdem dieselben
+  Umrisse, die der Browser im Design zeichnet — das ist die Voraussetzung fuer einen
+  ehrlichen Bildvergleich.
+
+**Tiefen-Schicht (Schatten, Verlaeufe, Schein) — die am haeufigsten verlorene Schicht:**
+- Ein Werft-Paket beschreibt Bauteile oft **zweimal**: eine flache Grundschicht und darueber
+  eine auf `.werft-screen[data-screen-id="B-xx"]` eingeschraenkte Schicht mit Verlaeufen,
+  Schatten, Auren und schwebenden Leisten. **Was im Design-Programm zu sehen ist, ist die
+  obere Schicht — sie ist verbindlich.** Baue nie die flache Grundschicht, nur weil sie
+  weiter oben in der CSS steht.
+- `box-shadow` mit mehreren Lagen → mehrere gestapelte `Modifier.shadow(...)` bzw. eigenes
+  Zeichnen; `ambientColor`/`spotColor` tragen den farbigen Schein (ab API 28).
+- `inset 0 1px 0 …` (heller Lichtsaum oben) hat in Compose kein Gegenstueck — als 1 dp
+  Linie innen oben nachzeichnen. Weglassen ist keine Option, es traegt die ganze Plastizitaet.
+- `backdrop-filter: blur(Npx)` → `Modifier.graphicsLayer { renderEffect = … }` bzw.
+  `RenderEffect.createBlurEffect` (ab API 31). Unterhalb API 31: durchscheinende Flaeche
+  ohne Unschaerfe und den Verzicht ausdruecklich melden.
+- `color-mix(in srgb, A, B p%)` → lineare Mischung beider Farben; `color-mix(in srgb, A p%,
+  transparent)` ist schlicht `A.copy(alpha = p)`.
 - `Shape.kt`: Eckenradien exakt (px → dp).
 - Ein `Spacing`/`Dimens`-Objekt fuer die realen Abstaende.
 
@@ -529,12 +523,6 @@ nur die Bausteine unterscheiden sich.
   (gleiche Reihenfolge, gleiche Abstaende, gleiche Radien, gleiche Karten/Chips).
 - Hintergrund-Gradient, Glow-Kreise (blur), Karten mit Transparenz/Border,
   Bottom-Navigation, Animationen — alles wie im Entwurf.
-
-**Asset-Schicht:**
-- Jede relevante Begleitdatei einem Android-Ziel (`res/raw`, `res/drawable`, `res/font`,
-  `assets/` usw.) und ihrem konkreten Aufrufer zuordnen.
-- Audio-Dateien unveraendert integrieren und Lifecycle, parallele Wiedergabe sowie
-  Ressourcenfreigabe passend zur vorhandenen App-Architektur umsetzen.
 
 ### Windows — C# / .NET / WPF
 
@@ -593,18 +581,17 @@ Kurz den Umsetzungsplan (welche Dateien neu/geaendert) auflisten, dann umsetzen.
 ## Phase 6 — 1:1-Umsetzung (Code schreiben)
 
 Jetzt wird **tatsaechlich Code geschrieben** — dies ist kein Vorschlags-Skill, sondern
-setzt direkt um. Schreibe/aendere die Kotlin-Dateien so, dass die App am Ende exakt
-wie der Entwurf aussieht. In Fall A/B **gemaess dem bestaetigten SPEC** (Phase 4).
+setzt direkt um. Schreibe/aendere die Quelldateien der Zielplattform so, dass das Programm
+am Ende exakt wie der Entwurf aussieht. In Fall A/B **gemaess dem bestaetigten SPEC**
+(Phase 4), in Fall P **gemaess dem Spec-Paket** aus `Specs/<App>/v2/`.
 
 **Reihenfolge:**
-1. Relevante Begleitdateien unveraendert in die geplanten Android-Ressourcen uebernehmen.
-2. Theme-Dateien (`Color.kt`, `Type.kt`, `Shape.kt`, `Theme.kt`, ggf. `AppColors.kt`
+1. Theme-Dateien (`Color.kt`, `Type.kt`, `Shape.kt`, `Theme.kt`, ggf. `AppColors.kt`
    Extension + Theme-Umschalter) — das Fundament zuerst.
-3. Wiederverwendbare Komponenten (Karte, Chip, Nav-Item, Button, Statistik-Kachel …)
+2. Wiederverwendbare Komponenten (Karte, Chip, Nav-Item, Button, Statistik-Kachel …)
    exakt nach Entwurf.
-4. Screen fuer Screen umsetzen/ersetzen — jeweils gegen die Token-Liste pruefen.
-5. Navigation/Struktur sowie alle Asset-Aufrufer verdrahten (inkl. neuer Screens aus
-   Phase 7 und vorhandener Audio-Trigger).
+3. Screen fuer Screen umsetzen/ersetzen — jeweils gegen die Token-Liste pruefen.
+4. Navigation/Struktur verdrahten (inkl. neuer Screens aus Phase 7).
 
 **Treue-Regeln (was "1 zu 1" bedeutet):**
 - Farben: exakte Hex/Alpha-Werte, keine "aehnliche" Farbe.
@@ -672,22 +659,37 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
 
 - **Build:** Projekt kompilieren (Gradle) — bei Fehlern beheben, bis es sauber baut.
   Der `resilient-bugfixing`-Skill gilt fuer jeden dabei auftretenden Fehler.
-- **Visueller Abgleich (Pflicht, nicht optional):** Die gebaute Software starten und
-  **je Bildschirm und je Erscheinung** einen Screenshot machen. Jeden Screenshot gegen die
-  zugehoerige Design-Datei halten:
-  `WERFT-DESIGN/bildschirme/<erscheinung>/<nr>-<name>.html` (bei einem Claude-Design gegen
-  die `.dc.html` bzw. `.thumbnail`). Abweichungen bei Farbe, Abstand, Groesse, Schrift und
-  Anordnung werden korrigiert und **erneut** verglichen, bis es passt.
-  Fuer den Ablauf gilt der `screenshot-loop`-Skill.
-  - Android: ueber ADB auf dem angeschlossenen Geraet bzw. Emulator.
+- **Visueller Abgleich — BILD gegen BILD, und zwar je Bildschirm SOFORT.**
+
+  > **Ein gruener Build ist keine Abnahme.** Er beweist nur, dass der Code uebersetzt.
+  > Ueber das Aussehen sagt er nichts. „Build gruen" darf nie als „fertig" gemeldet werden.
+
+  Zwei Regeln, die in Lauf 01 gefehlt haben und ohne die die ganze Tiefen-Schicht des
+  Designs verlorenging:
+
+  1. **Gegen das BILD vergleichen, nicht gegen die HTML.** Eine HTML-Datei liest man —
+     und liest dabei genau das nicht, was man nicht erwartet. Nimm das gerenderte PNG aus
+     `Specs/<App>/v2/bilder/<erscheinung>/<nr>-<name>.png` (Stufe 2 legt es an; fehlt es,
+     rendere es selbst mit headless Chrome, siehe `spec-rueckimport` Phase 1b) und **sieh
+     dir beide Bilder nebeneinander an**.
+  2. **Je Bildschirm abnehmen, BEVOR der naechste gebaut wird.** Nicht alles bauen und am
+     Ende vergleichen — dann steckt derselbe Fehler in jedem Bildschirm. Der Ablauf je
+     Bildschirm ist: bauen → installieren → Screenshot → gegen das Design-Bild halten →
+     Abweichungen beheben → erneut vergleichen → **erst dann** der naechste Bildschirm.
+
+  Worauf beim Vergleich zu achten ist (in dieser Reihenfolge, weil grobe Fehler feine
+  verdecken): **Anordnung** (steht die Beschriftung ueber oder neben dem Feld? sind
+  Abschnitte Karten?) → **Tiefe** (Schatten, Schein, Verlauf, durchscheinende Flaechen) →
+  **Schrift** (Familie, Grossbuchstaben, Laufweite) → **Farbe** → **Abstaende**.
+
+  - Android: ueber ADB auf dem angeschlossenen Geraet.
+  - **Kein Geraet angeschlossen? Dann Emulator** (`emulator -avd <name>` bzw. einen ueber
+    `avdmanager` anlegen). Der Abgleich entfaellt **nie** — er wird nur verlagert.
   - Windows/macOS: das gestartete Fenster aufnehmen.
-  - Ist kein Geraet erreichbar, wird das **ausdruecklich gemeldet** — dann gilt die
-    Umsetzung als optisch **ungeprueft**, nicht als fertig.
+  - Ist auch der Emulator nicht herstellbar, wird **angehalten und gefragt**. Die Umsetzung
+    gilt dann als optisch **ungeprueft** und ausdruecklich **nicht** als fertig.
 - **Selbstpruefung gegen die Token-Liste:** Jede Farbe/Groesse/Schrift/Animation aus
   Phase 1 einmal gegen den geschriebenen Code gegenpruefen — nichts vergessen?
-- **Asset-Abgleich:** Jeden Eintrag des Asset-/Daten-Inventars gegen Zielpfad und Aufrufer
-  pruefen. Audio auf dem Zielgeraet tatsaechlich ausloesen und Wiedergabe, Lautstaerke,
-  Loop-/Stopp-Verhalten sowie Lifecycle pruefen.
 - **Vollstaendigkeits-Abgleich (100% — Pflicht):** Das komplette Screen-/Navigations-/
   Untermenue-Inventar aus Phase 1 (E2) Punkt fuer Punkt gegen den Code abhaken:
   - Ist **jeder** Bildschirm und Unterbildschirm umgesetzt? (keiner fehlt)
@@ -699,7 +701,6 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
   - Bei einem Werft-Paket: ist **jeder** Bildschirm aus `design-tokens.json` in **jeder**
     Erscheinung nachgebaut? Die Tabelle in `DESIGN-SPEC.md` ist die Abhakliste — jede Zeile
     mal jede Erscheinung.
-  - Sind **alle** relevanten Begleitdateien vorhanden und funktional verdrahtet?
   Fehlt auch nur EIN Punkt, ist die Umsetzung **nicht fertig** — nachziehen, bis das
   Inventar zu 100% abgehakt ist. Am Ende die abgehakte Inventarliste kurz berichten.
 
@@ -724,7 +725,6 @@ Die drei Ergebnisse, an denen der Bau gemessen wird, ausdruecklich berichten:
 2. Es **bewegt sich** wie `03-MOTION-SPEC.md`.
 3. Es **funktioniert** wie `01-FUNKTIONS-SPEC.md` — das Design ist voll funktionstuechtig.
 
-
 **Projekt-Konventionen beachten (aus der globalen CLAUDE.md):** Nach der Umsetzung
 die sichtbare App-Version mit Zeitstempel bumpen. Committen/Pushen und der finale
 App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
@@ -748,11 +748,6 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 - ❌ Bei reiner Design-Anpassung (Fall C) unnoetig ein SPEC schreiben — dort einfach 1:1 uebernehmen.
 - ❌ `support.js` als Design-Quelle lesen (ist nur Runtime) — Quelle ist die `.dc.html`.
 - ❌ Die `.dc.html` nur teilweise lesen — sie wird vollstaendig gelesen.
-- ❌ Nur die bekannten Standarddateien pruefen — der gesamte Projekt-Unterordner wird
-  rekursiv inventarisiert, inklusive unbekannter oder tief verschachtelter Dateien.
-- ❌ Audio/Bilder/Fonts/Daten nur erwaehnen oder durch Ersatzdateien austauschen — die
-  mitgelieferten Originaldateien werden unveraendert und funktional passend integriert.
-- ❌ Fuer eine unklare Audio- oder Asset-Verwendung eigenmaechtig einen Trigger erfinden.
 - ❌ Bei unklarem Design-Ordner einfach irgendeinen nehmen — bestaetigen lassen bzw. fragen.
 - ❌ Ein Design-Detail still vereinfachen — technische Grenzen offen benennen.
 - ❌ Ins falsche App-Projekt schreiben — App-Zuordnung immer bestaetigen lassen.
@@ -769,6 +764,18 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 - ❌ Einen Bau-Auftrag losbauen, in dem noch offene Fragen (§5) stehen.
 - ❌ "Fertig" melden, ohne jeden Bildschirm in jeder Erscheinung per Screenshot gegen das
   Design gehalten zu haben — "sieht aus wie das Design" ist sonst nur eine Behauptung.
+- ❌ Einen gruenen Build als Abnahme ausgeben. Er beweist nur, dass der Code uebersetzt.
+- ❌ Gegen die Design-**HTML** vergleichen statt gegen das gerenderte **Bild**. Beim Lesen
+  von Code sieht man genau das nicht, was man nicht erwartet.
+- ❌ Erst alle Bildschirme bauen und dann vergleichen — dann steckt derselbe Fehler in
+  jedem. Je Bildschirm abnehmen, bevor der naechste beginnt.
+- ❌ Die Anordnung erfinden, wenn das UI-Spec nur eine Liste der Bedienelemente enthaelt.
+  Ob eine Beschriftung ueber oder neben ihrem Feld steht, ob Abschnitte Karten sind, wie
+  breit ein Feld ist — das steht im **Bild**. Ist es dort nicht erkennbar: fragen.
+- ❌ Einen Satz aus dem v1-Spec ueber eine Messung aus dem Design stellen. Widersprechen
+  sich Prosa und Messwert, gilt der Messwert — der Satz stammt aus der Zeit **vor** dem
+  Design. (In Lauf 01 hat der v1-Satz "Keine Schatten, keine Verlaeufe" die komplette
+  Tiefen-Schicht des fertigen Designs verdraengt.)
 - ❌ In einem Lauf fuer mehrere Zielsysteme zugleich bauen: ein Spec, ein System, ein Lauf.
 
 ---

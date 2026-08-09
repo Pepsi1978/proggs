@@ -13,12 +13,12 @@ android {
         applicationId = "de.frank.experimente"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 4
+        versionName = "0.3.0"
 
         // Handarbeit: bei jeder Installation hochsetzen, sonst wirkt eine geglückte
         // Installation wie eine fehlgeschlagene.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"09.08.2026, 23:59 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.08.2026, 00:05 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -63,11 +63,13 @@ import de.frank.experimente.ui.theme.LocalAppColors
 import de.frank.experimente.ui.theme.LocalReduzierteBewegung
 import de.frank.experimente.ui.theme.Mass
 import de.frank.experimente.ui.theme.dauer
+import de.frank.experimente.ui.theme.karteFlaeche
+import de.frank.experimente.ui.theme.schattenKontrolle
 import de.frank.experimente.ui.theme.staffel
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val DATUM = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERMAN)
+private val DATUM = DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMAN)
 
 /**
  * **B-01 — Heute.** Der Startbildschirm und das Rückgrat der App.
@@ -95,7 +97,7 @@ fun HeuteBildschirm(
     val aufgabenGruppen by vm.tagesaufgaben.collectAsState()
     val lageText by vm.lageText.collectAsState()
 
-    Column(modifier = modifier.fillMaxSize().background(farben.grund)) {
+    Column(modifier = modifier.fillMaxSize()) {
         ObereLeiste(
             titel = "Heute",
             rechts = {
@@ -122,12 +124,12 @@ fun HeuteBildschirm(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = Mass.seitenrand, end = Mass.seitenrand, bottom = 32.dp,
+                start = Mass.seitenrand, end = Mass.seitenrand, bottom = 100.dp,
             ),
         ) {
             item {
                 Text(
-                    text = heute.format(DATUM),
+                    text = heute.format(DATUM).uppercase(),
                     style = AppTypo.daten,
                     color = farben.gedaempft,
                     modifier = Modifier.padding(bottom = 24.dp),
@@ -259,20 +261,26 @@ private fun LageEinsprechen(vm: AppViewModel, nimmtAuf: Boolean) {
     var tippen by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = "Wie ist deine Lage heute?",
-            style = AppTypo.abschnittstitel,
-            color = farben.text,
-        )
-        Text(
-            text = "Was für ein Tag ist das? Was liegt vor dir?",
-            style = AppTypo.fliesstextKlein,
-            color = farben.gedaempft,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp),
-        )
+        // Die Frage steht im Entwurf in einer Karte, nicht frei auf dem Grund.
+        Box(Modifier.karteFlaeche(farben).padding(Mass.karteInnen)) {
+            Column {
+                Text(
+                    text = "Wie ist deine Lage heute?",
+                    style = AppTypo.abschnittstitel,
+                    color = farben.text,
+                )
+                Text(
+                    text = "Was für ein Tag ist das? Was liegt vor dir?",
+                    style = AppTypo.fliesstext,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+        Box(Modifier.padding(top = 32.dp))
 
         if (tippen) {
             Textfeld(
@@ -287,11 +295,18 @@ private fun LageEinsprechen(vm: AppViewModel, nimmtAuf: Boolean) {
             )
         } else {
             Sprechknopf(laeuftAufnahme = nimmtAuf, onKlick = vm::lageSprechen)
-            TextKnopf(
-                text = "Lieber tippen",
-                onClick = { tippen = true },
-                modifier = Modifier.padding(top = 16.dp),
-            )
+            // Im Entwurf ist das kein nackter Textknopf, sondern eine Fläche mit Rand
+            // (`werft-b01__type-action`): Rand Aktion/24 %, Fläche Aktion-gedeckt/72 %.
+            Box(
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .schattenKontrolle(farben, AppForm.knopf)
+                    .clip(AppForm.knopf)
+                    .background(farben.aktionGedeckt.copy(alpha = 0.72f))
+                    .border(Mass.randstaerke, farben.aktion.copy(alpha = 0.24f), AppForm.knopf),
+            ) {
+                TextKnopf(text = "Lieber tippen", onClick = { tippen = true })
+            }
         }
     }
 }

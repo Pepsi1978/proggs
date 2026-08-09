@@ -156,6 +156,47 @@ Liegt `Designs/Outbox/<App>/WERFT-DESIGN/` vor, ist es die Wertequelle. Reihenfo
    Navigation, `data-screen-id` / `data-screen-name` die Bildschirm-Kennung.
 5. **`DESIGN-SPEC.md`** ist die lesbare Fassung derselben Werte und enthaelt die
    Bildschirm-Tabelle — sie ist die Abhakliste fuer Phase 5.
+6. **Das Design als BILD rendern — Pflicht, nicht Kuer.** Prosa ist eine verlustbehaftete
+   Kodierung eines Bildes. Ohne Bild kann Stufe 3 nicht abnehmen und niemand merkt, dass
+   etwas fehlt. Rendere jeden Bildschirm in JEDER Erscheinung nach
+   `Specs/<App>/v2/bilder/<erscheinung>/<nr>-<name>.png` (headless Chrome/Edge ist auf
+   Windows und macOS vorhanden):
+
+   ```powershell
+   # Die Einzeldatei traegt eine Rahmenbreite von 1440 px — auf Geraetebreite zwingen,
+   # sonst ist der Screenshot rechts abgeschnitten.
+   $fix = '<style>.werft-screens{width:412px!important}' +
+          '.werft-screen{width:412px!important;height:915px!important;overflow:hidden!important}</style></head>'
+   # je HTML: </head> ersetzen, relativen CSS-Pfad absolut machen, dann:
+   & chrome.exe --headless=new --disable-gpu --hide-scrollbars `
+       --force-device-scale-factor=2 --window-size=412,915 `
+       --screenshot="<ziel>.png" "file:///<kopie>.html"
+   ```
+
+   **Sieh dir jedes gerenderte Bild danach selbst an.** Was du im Bild siehst und im Spec
+   nicht wiederfindest, fehlt im Spec — nicht im Design.
+7. **Aufbau je Bildschirm aus dem Bild beschreiben.** Eine Liste der Bedienelemente ist
+   KEIN Aufbau. Aus dem gerenderten Bild je Bildschirm festhalten:
+   - Steht die Beschriftung **ueber** oder **neben** ihrem Feld?
+   - Sind Abschnitte **Karten** (Flaeche, Rand, Schatten) oder nur Text mit Abstand?
+   - Wie breit ist ein Bedienelement — volle Breite oder nur so breit wie sein Inhalt?
+   - Schwebt die untere Leiste (Abstand zu den Kanten, eigener Radius) oder sitzt sie bündig?
+   - Traegt das aktive Feld eine Pille, eine Linie oder nur Farbe?
+
+   In Lauf 01 fehlte genau das: das UI-Spec listete fuer B-08 nur die Bedienelemente, und
+   Stufe 3 hat die Anordnung erfunden — Beschriftungen kamen neben statt ueber die Felder,
+   Abschnitte wurden nicht zu Karten. Ergebnis war ein anderer Bildschirm.
+8. **Effekte den Bauteilen ZUORDNEN.** Eine Tabelle `gradient(5) = linear-gradient(…)` ohne
+   Angabe, wozu sie gehoert, ist ein Anhang und keine Bauanweisung — sie wird beim Bauen
+   uebersprungen. Jeder Verlauf, Schatten und Schein bekommt sein Bauteil:
+
+   | Bauteil | Effekt | Wert |
+   |---------|--------|------|
+   | Sprechknopf | Verlauf | `linear-gradient(145deg, mix(Aktion,Text 10%), Aktion 58%, mix(Aktion,#000 16%))` |
+   | Sprechknopf | Schein | `0 16px 32px Aktion/30%`, `inset 0 2px 0 Text/28%` |
+   | Karte | Schatten | `0 16px 32px #000/18%`, `0 0 24px Aktion/7%`, `inset 0 1px 0 Text/12%` |
+
+   Finde die Zuordnung ueber den Selektor in der CSS, nicht ueber Vermutung.
 
 ### 1c. Ein Claude-Design statt eines Werft-Pakets
 
@@ -185,8 +226,31 @@ Jetzt wird verglichen — mechanisch, Kennung fuer Kennung. Lies dazu alle vier 
 Entsprechung hat — entweder eine Funktion (`F-`) oder ein Navigationsziel (`B-`). Elemente
 ohne beides sind **Kandidaten fuer neue Funktionen** und gehen in Phase 3.
 
-**Gestaltung:** Wo weicht das Gemessene von der v1-Absicht ab (Farbe, Schrift, Mass, Form)?
-Das ist kein Fehler — der Designer darf das. Es wird nur festgehalten.
+**Gestaltung — hier gewinnt IMMER die Messung.** Wo das Gemessene von der v1-Absicht
+abweicht (Farbe, Schrift, Mass, Form, Tiefe, Bewegung), ist das kein Fehler — der Designer
+darf das. Aber es reicht **nicht**, es nur festzuhalten:
+
+> **Die widersprechende v1-Aussage wird in v2 GESTRICHEN, nicht danebengestellt.**
+
+Stehen in v2 die gemessenen Werte **und** ein v1-Satz, der ihnen widerspricht, dann baut
+Stufe 3 nach dem lesbaren Satz und ignoriert die Tabelle — und kann sich dabei auf das Spec
+berufen. Genau so ging in Lauf 01 die gesamte Tiefen-Schicht verloren: v2 enthielt die
+gemessenen Verlaeufe und Schatten **und** den v1-Satz „Keine Schatten. Keine Verlaeufe."
+Gebaut wurde nach dem Satz.
+
+Darum: Jede v1-Gestaltungsaussage gegen die Messung pruefen. Wird sie widerlegt, kommt sie
+**nicht** nach v2 — stattdessen ein Eintrag in `AENDERUNGEN.md`:
+
+| v1 sagte | Das Design misst | In v2 gilt |
+|----------|------------------|------------|
+| „Keine Schatten, keine Verlaeufe" | 40 `box-shadow`, 10 Verlaeufe | die Messung; v1-Satz gestrichen |
+
+**Achte besonders auf gestaffelte CSS:** Ein Werft-Paket kann dieselben Bauteile zweimal
+beschreiben — eine flache Grundschicht und darueber eine Schicht, die auf
+`.werft-screen[data-screen-id="B-xx"]` eingeschraenkt ist und Verlaeufe, Schatten, Auren und
+schwebende Leisten ergaenzt. **Die obere Schicht ist das, was der Benutzer im Design-Programm
+sieht — sie ist verbindlich.** Pruefe im Zweifel gegen `DESIGN-SPEC.md`: was der Designer
+dort als Effekt auffuehrt, gehoert zum Entwurf.
 
 **Bewegung:** Welche `M-`-Kennungen aus v1 finden sich im Design wieder, welche Bewegungen
 sind neu dazugekommen, welche fehlen?

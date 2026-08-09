@@ -31,6 +31,8 @@ import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalAppColors
 import de.frank.experimente.ui.theme.LocalReduzierteBewegung
 import de.frank.experimente.ui.theme.Mass
+import de.frank.experimente.ui.theme.aktionsVerlauf
+import de.frank.experimente.ui.theme.schattenAktion
 
 /**
  * Der Sprechknopf — das am häufigsten benutzte Bauteil der App.
@@ -90,8 +92,16 @@ fun Sprechknopf(
         Box(
             modifier = Modifier
                 .size(durchmesser)
+                .then(if (aktiv) Modifier.schattenAktion(farben, CircleShape) else Modifier)
                 .clip(CircleShape)
-                .background(if (aktiv) farben.aktion else farben.erhoeht)
+                .then(
+                    if (aktiv) {
+                        Modifier.background(aktionsVerlauf(farben))
+                    } else {
+                        Modifier.background(farben.erhoeht)
+                    }
+                )
+                .border(1.dp, farben.text.copy(alpha = 0.28f), CircleShape)
                 .clickable(
                     enabled = aktiv,
                     interactionSource = remember { MutableInteractionSource() },
@@ -103,15 +113,17 @@ fun Sprechknopf(
                 },
             contentAlignment = Alignment.Center,
         ) {
+            // Der innere Ring, 6 dp eingerückt (`::before` im Design), Deckkraft 48 %.
+            Box(
+                Modifier
+                    .size(durchmesser - 12.dp)
+                    .border(1.dp, farben.grund.copy(alpha = 0.36f * 0.48f), CircleShape),
+            )
             Icon(
                 imageVector = if (laeuftAufnahme) Icons.Filled.Stop else Icons.Outlined.Mic,
                 contentDescription = if (laeuftAufnahme) "Aufnahme beenden" else "Sprechen",
-                tint = if (aktiv) {
-                    if (farben.istDunkel) farben.text else farben.flaeche
-                } else {
-                    farben.blass
-                },
-                modifier = Modifier.size(if (gross) 34.dp else 24.dp),
+                tint = if (aktiv) farben.grund else farben.blass,
+                modifier = Modifier.size(if (gross) 28.dp else 24.dp),
             )
         }
     }
