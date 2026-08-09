@@ -408,6 +408,56 @@ function ProjectThumbnail({ name, previewPath }: { name: string; previewPath: st
   );
 }
 
+// Vor dem Herunterladen wird gefragt, FUER welches System das Spec geschrieben werden soll. Ohne
+// diese Angabe uebersetzt der Spec-Schreiber die Bewegungen in die Richtung, aus der importiert
+// wurde — bei einem Android-Design, das nach Windows soll, waere das genau verkehrt.
+const zielSysteme = [
+  { id: "android", label: "Android", technik: "Kotlin · Jetpack Compose" },
+  { id: "windows", label: "Windows", technik: "C# / .NET · WPF" },
+  { id: "macos", label: "macOS", technik: "Swift · SwiftUI" },
+  { id: "web", label: "Web", technik: "HTML · CSS" }
+] as const;
+
+function ZielModal({ projectId, onClose }: { projectId: string; onClose(): void }) {
+  const [ziel, setZiel] = useState<string>("android");
+  const [meldung, setMeldung] = useState<string>();
+  const briefkasten = useQuery({ queryKey: ["briefkasten"], queryFn: () => api<{ inbox: boolean; outbox: boolean }>("/briefkasten") });
+  const inOutbox = useMutation({
+    mutationFn: () => api<{ abgelegt: string }>(`/projects/${projectId}/outbox`, { method: "POST", body: JSON.stringify({ ziel }) }),
+    onSuccess: (data) => setMeldung(`In die Outbox gelegt: ${data.abgelegt}`)
+  });
+  return (
+    <Modal title="Für welches System soll das Spec sein?" onClose={onClose}>
+      <div className="modal-body">
+        <p className="subtle">
+          Die Zielplattform entscheidet, in welche Sprache die Bewegungen übersetzt werden — Compose, WPF oder SwiftUI.
+          Sie muss nicht die sein, aus der importiert wurde.
+        </p>
+        <div className="chips">
+          {zielSysteme.map((system) => (
+            <button type="button" key={system.id} className={ziel === system.id ? "active" : ""} onClick={() => setZiel(system.id)}>
+              {system.label} · {system.technik}
+            </button>
+          ))}
+        </div>
+        {meldung && <p className="subtle">{meldung}</p>}
+        {inOutbox.error && <p className="field-error">Das Spec konnte nicht in die Outbox gelegt werden.</p>}
+      </div>
+      <div className="modal-actions">
+        <Button onClick={onClose}>Abbrechen</Button>
+        {briefkasten.data?.outbox && (
+          <Button disabled={inOutbox.isPending} onClick={() => inOutbox.mutate()}>
+            {inOutbox.isPending ? "Wird abgelegt …" : "In die Outbox legen"}
+          </Button>
+        )}
+        <Button variant="primary" onClick={() => { window.open(`/api/v1/projects/${projectId}/export.zip?ziel=${ziel}`, "_blank"); onClose(); }}>
+          Herunterladen
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
 function ImportProject({ onClose }: { onClose(): void }) {
   const nav = useNavigate();
   const client = useQueryClient();
@@ -417,6 +467,19 @@ function ImportProject({ onClose }: { onClose(): void }) {
   const [frontendOnly, setFrontendOnly] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState<ImportProgressState | null>(null);
+  // Der Dateidialog eines Browsers laesst sich nicht auf einen Ordner vorbelegen. Die Inbox wird
+  // deshalb vom Server gelesen und hier direkt angeboten — ein Klick statt Durchklicken.
+  const briefkasten = useQuery({ queryKey: ["briefkasten"], queryFn: () => api<{ inbox: boolean; outbox: boolean; dateien: Array<{ datei: string; bytes: number; geaendert: string }> }>("/briefkasten") });
+  const [inboxFehler, setInboxFehler] = useState<string>();
+  const ausInbox = async (datei: string) => {
+    setInboxFehler(undefined);
+    try {
+      const antwort = await fetch(`/api/v1/briefkasten/inbox/${encodeURIComponent(datei)}`, { credentials: "include" });
+      if (!antwort.ok) throw new Error("nicht lesbar");
+      setFiles([new File([await antwort.blob()], datei, { type: "application/zip" })]);
+      setName(datei.replace(/-SPEC-v\d+\.zip$/i, "").replace(/\.zip$/i, "").slice(0, 120) || "Importiertes Design");
+    } catch { setInboxFehler("Die Datei konnte nicht aus der Inbox gelesen werden."); }
+  };
   const selectFiles = (selected: FileList | null) => {
     const next = Array.from(selected ?? []);
     setFiles(next);
@@ -516,6 +579,21 @@ function ImportProject({ onClose }: { onClose(): void }) {
             ))}
           </div>
         </label>
+        {briefkasten.data?.inbox && (
+          <section className="import-inbox">
+            <strong>Aus der Inbox</strong>
+            {briefkasten.data.dateien.length === 0
+              ? <p className="subtle">In <code>Designs/Inbox</code> liegt gerade kein Spec-ZIP.</p>
+              : <div className="chips">
+                  {briefkasten.data.dateien.map((eintrag) => (
+                    <button type="button" key={eintrag.datei} className={files[0]?.name === eintrag.datei ? "active" : ""} onClick={() => void ausInbox(eintrag.datei)}>
+                      {eintrag.datei}
+                    </button>
+                  ))}
+                </div>}
+            {inboxFehler && <p className="field-error">{inboxFehler}</p>}
+          </section>
+        )}
         <div className="import-choices">
           <label className="import-choice">
             <FolderOpen />
@@ -1095,6 +1173,7 @@ function Studio() {
   const client = useQueryClient();
   const tab = location.pathname.split("/").at(-1) ?? "canvas";
   const { theme, leftOpen, rightOpen, toggleLeft, toggleRight, setLeftOpen, setRightOpen, mode, setMode, zoom, setZoom, setTheme, setModal, modal } = useUi();
+  const [zielOffen, setZielOffen] = useState(false);
   const project = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => api<Project>(`/projects/${projectId}`),
@@ -1461,7 +1540,7 @@ function Studio() {
         <IconButton label="Theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun /> : <Moon />}
         </IconButton>
-        <IconButton label="Projekt als ZIP herunterladen" onClick={() => { if (imported.data?.imported) window.open(`/api/v1/projects/${projectId}/export.zip`, "_blank"); else setModal("export"); }}>
+        <IconButton label="Projekt als ZIP herunterladen" onClick={() => { if (imported.data?.imported) setZielOffen(true); else setModal("export"); }}>
           <Download />
         </IconButton>
       </header>
@@ -1730,6 +1809,7 @@ function Studio() {
           </aside>
         )}
       </div>
+      {zielOffen && <ZielModal projectId={projectId} onClose={() => setZielOffen(false)} />}
       {modal === "keys" && <KeyboardModal onClose={() => setModal(null)} />} {modal === "share" && <ShareModal onClose={() => setModal(null)} />} {modal === "export" && <ExportModal onClose={() => setModal(null)} />} {modal === "present" && <Present accent={accent} onClose={() => setModal(null)} />}
     </div>
   );

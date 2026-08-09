@@ -1,5 +1,6 @@
 import { orderedScreens } from "./design-extract.js";
 import { renderFactSheet, type DesignFacts } from "./design-facts.js";
+import { buildSpecPackage, type Vorlage } from "./spec-package.js";
 import { bakedThemeCss, repairThemeSelectors, screenSlug, themeStyles, themeSwitcherScript, themeSwitcherStyles, themeVariants, type ThemeVariant } from "./screen-composer.js";
 
 // Der Download war bisher das rohe Importpaket plus EINE Design-Datei. Was das Studio deterministisch
@@ -147,6 +148,14 @@ export type PackageInput = {
   designs: Array<{ path: string; html: string; label: string }>;
   entryPath: string;
   sourceFiles: Array<{ path: string; size: number }>;
+  // Das Erst-Spec aus `Designs/Inbox/<App>-SPEC-v1.zip`, sofern das Projekt daraus entstanden ist.
+  // Ohne diese Vorlage kann der Export nicht wissen, welche Bedienelemente NEU sind.
+  vorlage?: Vorlage;
+  stand?: string;
+  // Die Plattform, FUER die gebaut werden soll. Sie ist nicht zwingend die, aus der gemessen wurde:
+  // ein aus Android-Quellen aufgebautes Design kann als Windows-Spec heruntergeladen werden. Ohne
+  // diese Trennung uebersetzt der Spec-Schreiber in die falsche Richtung.
+  zielPlattform?: string;
 };
 
 export type PackageReport = { bildschirmeImDesign: number; bildschirmeExportiert: number; erscheinungen: number; dateienJeBildschirm: number; nichtAufgebaut: string[] };
@@ -174,6 +183,12 @@ export function buildExportPackage(input: PackageInput): { files: ExportFile[]; 
   files.push({ path: `${exportRoot}design-tokens.json`, content: designTokens(input, variants, document, report) });
   files.push({ path: `${exportRoot}DESIGN-SPEC.md`, content: designSpec(input, variants, document, report) });
   files.push({ path: `${exportRoot}LIESMICH.md`, content: readme(input, variants, document, report) });
+  // Die drei Specs liegen bewusst im ZIP-WURZELVERZEICHNIS, nicht unter WERFT-DESIGN/: der
+  // Rueckimport erwartet sie dort, und sie beschreiben das Programm, nicht nur das Design.
+  files.push(...buildSpecPackage({
+    projectName: input.projectName, platform: input.zielPlattform ?? input.platform, facts: input.facts,
+    variants, document, report, ...(input.vorlage ? { vorlage: input.vorlage } : {})
+  }, input.stand ?? new Date().toISOString().slice(0, 10)));
   return { files, report, documents: prepared.map((design) => ({ path: design.path, html: design.html })) };
 }
 

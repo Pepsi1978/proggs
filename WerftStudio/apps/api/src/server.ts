@@ -28,6 +28,8 @@ import { extractDesignFacts, factCandidatePaths, orderedScreens } from "./design
 import { factCount, renderAssetLibrary, renderFactSheet } from "./design-facts.js";
 import { effectGuidance } from "./effect-catalog.js";
 import { buildExportPackage, type PackageReport } from "./export-package.js";
+import { briefkastenOrdner, inboxDatei, inboxListe, outboxStrom, outboxZiel } from "./briefkasten.js";
+import type { Vorlage } from "./spec-package.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
 import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { isOverloadError, maxModelAttempts, retryDelayMs, UpstreamThrottle } from "./model-retry.js";
@@ -1043,9 +1045,10 @@ app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
   // Erscheinungs-Abfrage, damit Export und Studio nie auseinanderlaufen.
   let designFiles: Array<{ path: string; content: string }> = [];
   let designReport: PackageReport | undefined;
+  const { ziel } = zielSchema.parse(request.query ?? {});
   if (designPaths.length) {
     try {
-      const built = await buildDesignExport(row.imported, row.name, platform, designPaths);
+      const built = await buildDesignExport(row.imported, row.name, platform, designPaths, ziel);
       designFiles = built.files;
       designReport = built.report;
     } catch (error) { request.log.error({ err: error, projectId }, "Designpaket für den Export konnte nicht erzeugt werden; das Rohpaket wird trotzdem ausgeliefert"); }
@@ -1063,7 +1066,53 @@ app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
   void archive.finalize();
   return reply.header("content-type", "application/zip").header("content-disposition", `attachment; filename="${encodeURIComponent(fileName)}"`).send(archive);
 });
-async function buildDesignExport(imported: { objectPrefix: string; manifest: ImportManifestFile[]; entryPath: string }, projectName: string, platform: ImportPlatform, designPaths: string[]) {
+// Briefkasten: derselbe Weg wie der Download, nur landet das ZIP direkt in `Designs/Outbox/`.
+// Das ist der Punkt, an dem die Pipeline ohne Handgriff weiterlaufen kann.
+app.get("/api/v1/briefkasten", async (request) => {
+  requireActorPermission(request, "project.read");
+  return { inbox: Boolean(briefkastenOrdner.inbox), outbox: Boolean(briefkastenOrdner.outbox), dateien: await inboxListe() };
+});
+app.get("/api/v1/briefkasten/inbox/:datei", async (request, reply) => {
+  requireActorPermission(request, "project.update");
+  const { datei } = z.object({ datei: z.string().min(1).max(200) }).parse(request.params);
+  let daten: Buffer;
+  try { daten = await inboxDatei(datei); }
+  catch { return fail("BRIEFKASTEN_NICHT_LESBAR", 404, "Diese Datei liegt nicht in der Inbox."); }
+  return reply.header("content-type", "application/zip").send(daten);
+});
+app.post("/api/v1/projects/:projectId/outbox", async (request) => {
+  const actor = requireActorPermission(request, "project.export");
+  const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
+  if (!briefkastenOrdner.outbox) fail("BRIEFKASTEN_AUS", 409, "Es ist kein Outbox-Ordner eingerichtet (WERFT_OUTBOX_DIR).");
+  const row = (await db.select({ imported: projectImports, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("EXPORT_NOT_AVAILABLE", 404, "Für dieses Projekt liegt kein importiertes Dateipaket vor.");
+  const basis = row.name.replaceAll(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 80) || "werft-projekt";
+  const zielPfad = await outboxZiel(`${basis}-SPEC-v2.zip`);
+  const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
+  const designPaths = row.imported.manifest.map((file) => file.path).filter((path) => generatedDesignPathPattern.test(path));
+  const { ziel } = zielSchema.parse(request.body ?? {});
+  const designFiles = designPaths.length ? (await buildDesignExport(row.imported, row.name, platform, designPaths, ziel)).files : [];
+  const archive = archiver("zip", { zlib: { level: 6 } });
+  const strom = outboxStrom(zielPfad);
+  const fertig = new Promise<void>((loese, brich) => { strom.on("close", () => loese()); strom.on("error", brich); archive.on("error", brich); });
+  archive.pipe(strom);
+  const ersetzt = new Set(designFiles.map((file) => file.path));
+  for (const file of row.imported.manifest) {
+    if (ersetzt.has(file.path)) continue;
+    archive.append(await readObject(`${row.imported.objectPrefix}${file.path}`), { name: file.path });
+  }
+  for (const file of designFiles) archive.append(Buffer.from(file.content, "utf8"), { name: file.path });
+  await archive.finalize();
+  await fertig;
+  request.log.info({ event: "export.outbox", projectId, ziel: zielPfad }, "Spec-Paket in die Outbox gelegt");
+  return { abgelegt: zielPfad, dateien: row.imported.manifest.length + designFiles.length };
+});
+// Beim Herunterladen wird ausdruecklich gefragt, FUER welches System das Spec geschrieben werden
+// soll. Ohne diese Angabe uebersetzt der Spec-Schreiber in die Richtung, aus der importiert wurde —
+// das ist bei einem aus Android-Quellen aufgebauten Design, das nach Windows soll, genau verkehrt.
+const zielPlattformen = ["android", "windows", "macos", "ios", "ipados", "web"] as const;
+const zielSchema = z.object({ ziel: z.enum(zielPlattformen).optional() });
+async function buildDesignExport(imported: { objectPrefix: string; manifest: ImportManifestFile[]; entryPath: string }, projectName: string, platform: ImportPlatform, designPaths: string[], ziel?: string) {
   const factPaths = new Set(factCandidatePaths(platform, imported.manifest.map((file) => file.path)));
   const factFiles = imported.manifest.filter((file) => factPaths.has(file.path) && file.size <= maxFactFileBytes).slice(0, maxFactFiles);
   const factTexts = await mapWithConcurrency(factFiles, factReadConcurrency, async (file) => ({ path: file.path, text: (await readObject(`${imported.objectPrefix}${file.path}`)).toString("utf8") }));
@@ -1073,12 +1122,28 @@ async function buildDesignExport(imported: { objectPrefix: string; manifest: Imp
     label: path.slice(path.lastIndexOf("/") + 1),
     html: (await readObject(`${imported.objectPrefix}${path}`)).toString("utf8")
   }));
+  // Kam das Projekt aus einem Spec-ZIP der Inbox, liegen die Erst-Specs als gewoehnliche Dateien im
+  // Import. Sie sind die Vorlage, gegen die der Export „neu gezeichnet" von „war schon da" trennt.
+  const vorlage = await leseVorlage(imported);
   const built = buildExportPackage({
     projectName, platform, facts, designs,
     entryPath: designPaths.includes(imported.entryPath) ? imported.entryPath : designPaths[0]!,
-    sourceFiles: imported.manifest.map((file) => ({ path: file.path, size: file.size }))
+    sourceFiles: imported.manifest.map((file) => ({ path: file.path, size: file.size })),
+    ...(vorlage ? { vorlage } : {}), ...(ziel ? { zielPlattform: ziel } : {})
   });
   return { files: built.files, report: built.report };
+}
+const vorlagenDateien = {
+  projekt: /(^|\/)00-PROJEKT\.md$/i, funktion: /(^|\/)01-FUNKTIONS-SPEC\.md$/i,
+  ui: /(^|\/)02-UI-SPEC\.md$/i, motion: /(^|\/)03-MOTION-SPEC\.md$/i
+} as const;
+async function leseVorlage(imported: { objectPrefix: string; manifest: ImportManifestFile[] }): Promise<Vorlage | undefined> {
+  const vorlage: Vorlage = {};
+  for (const [schluessel, muster] of Object.entries(vorlagenDateien) as Array<[keyof Vorlage, RegExp]>) {
+    const treffer = imported.manifest.find((file) => muster.test(file.path) && file.size <= maxFactFileBytes);
+    if (treffer) vorlage[schluessel] = (await readObject(`${imported.objectPrefix}${treffer.path}`)).toString("utf8");
+  }
+  return Object.keys(vorlage).length ? vorlage : undefined;
 }
 app.patch("/api/v1/projects/:projectId/import/entry", async (request) => {
   const actor = requireActorPermission(request, "design.edit");
