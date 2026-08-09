@@ -88,6 +88,22 @@ export function splitWerte(value: string): string[] {
   return teile;
 }
 
+// `transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1)` enthaelt Kommas INNERHALB der Kurve.
+// Ein blosses split(",") zerlegt sie in vier Bruchstuecke und erzeugt drei Phantom-Bewegungen mit
+// Dauer 0 — die Kurve, auf die es ankommt, geht dabei verloren.
+export function splitKommas(value: string): string[] {
+  const teile: string[] = [];
+  let tiefe = 0, aktuell = "";
+  for (const zeichen of value) {
+    if (zeichen === "(") tiefe += 1;
+    if (zeichen === ")") tiefe -= 1;
+    if (zeichen === "," && tiefe === 0) { if (aktuell.trim()) teile.push(aktuell.trim()); aktuell = ""; continue; }
+    aktuell += zeichen;
+  }
+  if (aktuell.trim()) teile.push(aktuell.trim());
+  return teile;
+}
+
 type Kurzform = { name?: string; dauerMs: number; verzoegerungMs: number; kurve: Kurve; wiederholung: string; richtung: string };
 
 export function parseAnimationKurzform(value: string): Kurzform {
@@ -159,7 +175,7 @@ export function bewegungenAusCss(css: string, quelle = "bildschirme/design.css")
     }
     const transition = deklaration(rumpf, "transition");
     if (transition && !/^none$/i.test(transition.trim())) {
-      for (const einzeln of transition.split(",").map((teil) => teil.trim()).filter(Boolean)) {
+      for (const einzeln of splitKommas(transition)) {
         const teile = splitWerte(einzeln);
         const eigenschaft = teile.find((teil) => !zeitToken.test(teil) && !kurvenToken.test(teil) && !/^(cubic-bezier|steps)\(/i.test(teil)) ?? "all";
         const zeiten = teile.filter((teil) => zeitToken.test(teil)).map((teil) => parseDauerMs(teil) ?? 0);
@@ -175,7 +191,19 @@ export function bewegungenAusCss(css: string, quelle = "bildschirme/design.css")
       }
     }
   }
-  return gefunden.map((bewegung, index) => ({ ...bewegung, id: `M-${String(index + 1).padStart(2, "0")}` }));
+  // Die Kennung kommt aus dem @keyframes-Namen, wenn sie dort eingebrannt ist (`m-04-atmen`) —
+  // eine blosse Zaehlnummer wuerde sich verschieben, sobald der Designer eine Bewegung einfuegt,
+  // und damit genau die Zuordnung zerstoeren, auf der der Abgleich gegen v1 beruht.
+  let naechste = gefunden.reduce((hoechste, bewegung) => Math.max(hoechste, eingebrannteKennung(bewegung.name) ?? 0), 0);
+  return gefunden.map((bewegung) => {
+    const nummer = eingebrannteKennung(bewegung.name) ?? (naechste += 1);
+    return { ...bewegung, id: `M-${String(nummer).padStart(2, "0")}` };
+  });
+}
+
+const eingebrannteKennung = (name: string): number | undefined => {
+  const treffer = /^m-?(\d+)\b/i.exec(name);
+  return treffer ? Number(treffer[1]) : undefined;
 }
 
 function eigenschaftenAusKeyframes(css: string, name: string): string[] {
@@ -193,7 +221,7 @@ function eigenschaftenAusKeyframes(css: string, name: string): string[] {
 
 // ---------------------------------------------------------------- Uebersetzung in die Zielsprache
 
-const f = (value: number) => (Number.isInteger(value) ? `${value}f` : `${value}f`);
+const f = (value: number) => `${value}f`;
 const sekunden = (ms: number) => Number((ms / 1000).toFixed(3));
 
 export function motionCode(bauweg: Bauweg, bewegung: Bewegung): string {
@@ -300,7 +328,11 @@ export type SpecInput = {
 const kopf = (titel: string, projekt: string, bauweg: Bauweg, stand: string) =>
   `# ${titel} — ${projekt}\nStand: ${stand} · Stufe: v2 · Plattform: ${bauweg.plattform} (${bauweg.sprache} / ${bauweg.rahmenwerk})\n`;
 
-const bildschirmId = (index: number) => `B-${String(index + 1).padStart(2, "0")}`;
+// Der Erzeuger schreibt die Spec-Kennung als `data-screen-id` ins Markup (siehe composeScreens).
+// Steht sie dort, wird sie gelesen — verschiebt der Designer einen Bildschirm, wandert seine
+// Kennung mit. Nur wo keine steht, wird gezaehlt.
+const bildschirmId = (section: ExportSection, index: number) =>
+  /^B-\d+$/i.test(section.id) ? section.id.toUpperCase() : `B-${String(index + 1).padStart(2, "0")}`;
 
 export function funktionsSpec(input: SpecInput, bauweg: Bauweg, stand: string): string {
   const vorlage = input.vorlage?.funktion?.trim();
@@ -372,7 +404,7 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string): string 
   for (const [index, section] of document.sections.entries()) {
     const ziele = screensById.get(section.id)?.navigatesTo ?? [];
     const dateien = variants.length ? variants.map((variant) => `\`bildschirme/${variant.id}/…-${section.slug}.html\``).join("<br>") : "`design.html`";
-    zeilen.push(`| ${bildschirmId(index)} | ${section.name} (\`${section.id}\`) | ${section.isStart ? "ja" : "—"} | ${ziele.join(", ") || "—"} | ${dateien} |`);
+    zeilen.push(`| ${bildschirmId(section, index)} | ${section.name} (\`${section.id}\`) | ${section.isStart ? "ja" : "—"} | ${ziele.join(", ") || "—"} | ${dateien} |`);
   }
   zeilen.push("");
   if (report.nichtAufgebaut.length) {
@@ -444,6 +476,23 @@ export function buildSpecPackage(input: SpecInput, stand: string): SpecFile[] {
     { path: "02-UI-SPEC.md", content: ui },
     { path: "03-MOTION-SPEC.md", content: motion },
     { path: "SPEC.md", content: gesamt },
-    ...(input.vorlage?.projekt ? [{ path: "00-PROJEKT.md", content: input.vorlage.projekt }] : [])
+    { path: "00-PROJEKT.md", content: projektSpec(input, bauweg, stand) }
   ];
+}
+
+// Das Erst-Projektblatt nennt die Plattform, fuer die geplant wurde. Beim Herunterladen waehlt der
+// Benutzer aber ausdruecklich, WOFUER gebaut werden soll — und `spec-rueckimport` liest die
+// Plattform genau aus dieser Datei. Ohne den Stempel stuende dort weiter Android, waehrend das
+// uebrige Paket Windows beschreibt, und Stufe 3 nimmt den falschen Bau-Weg.
+function projektSpec(input: SpecInput, bauweg: Bauweg, stand: string): string {
+  const stempel = [
+    `> **Zielplattform für diesen Bau: ${bauweg.plattform} (${bauweg.sprache} / ${bauweg.rahmenwerk}).**`,
+    `> Beim Herunterladen aus Werft Studio am ${stand} gewählt. Sie gilt vor jeder abweichenden`,
+    "> Angabe weiter unten in dieser Datei.", ""
+  ].join("\n");
+  const vorlage = input.vorlage?.projekt?.trim();
+  if (!vorlage) return `# Projekt — ${input.projectName}\nStand: ${stand} · Stufe: v2 · Plattform: ${bauweg.plattform}\n\n${stempel}`;
+  // Der Stempel kommt direkt hinter die Kopfzeile, damit er vor dem ersten Abschnitt steht.
+  const bruch = vorlage.indexOf("\n\n");
+  return bruch < 0 ? `${vorlage}\n\n${stempel}` : `${vorlage.slice(0, bruch + 2)}${stempel}\n${vorlage.slice(bruch + 2)}`;
 }

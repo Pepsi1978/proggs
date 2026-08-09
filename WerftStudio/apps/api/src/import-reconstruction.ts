@@ -73,7 +73,14 @@ const androidResourceFile = /(^|\/)res\/(?!layout|navigation)[^/]+\//i;
 const foreignBundle = /(^|\/)(?:plugins?|marketplaces?|skills?|agents?|prompts?|templates?|examples?|samples?|fixtures?|docs?|documentation|\.claude|\.codex|\.opencode)(\/|$)/i;
 const embeddedDocument = /(^|\/)assets\/(?:legal|help|docs?|faq|terms|privacy|imprint)(\/|$)/i;
 
+// Ein Spec-Paket aus `Designs/Inbox/` enthaelt keinen Code, sondern die Beschreibung der Software,
+// die gebaut werden soll. Dann SIND die Spec-Dateien die Quelle — die Erweiterungsfilter unten
+// kennen nur Markup, Stile und UI-Code und wuerden sie samt und sonders verwerfen.
+export const specSourceFile = /(^|\/)(?:00-PROJEKT|01-FUNKTIONS-SPEC|02-UI-SPEC|03-MOTION-SPEC|SPEC)\.md$/i;
+
 export function reconstructionSourceFiles(files: ImportManifestFile[]): ImportManifestFile[] {
+  const spec = files.filter((file) => specSourceFile.test(file.path));
+  if (spec.length) return spec;
   return files
     .filter((file) => !generatedOrThirdParty.test(file.path) && !lowValueName.test(file.path) && !nonDesignName.test(file.path) && !localizedResource.test(file.path) && !localizedApple.test(file.path))
     .filter((file) => !neverAnalyzed.test(file.path) && !androidResourceFile.test(file.path) && !foreignBundle.test(file.path) && !embeddedDocument.test(file.path) && !hiddenDirectory.test(file.path))

@@ -3,6 +3,7 @@ import { androidFactCandidates, extractAndroidFacts } from "./extract-android.js
 import { appleFactCandidates, extractAppleFacts } from "./extract-apple.js";
 import { extractWebFacts, webFactCandidates, webStyleCandidates } from "./extract-web.js";
 import { extractWindowsFacts, windowsFactCandidates } from "./extract-windows.js";
+import { extractSpecFacts, specFactCandidates } from "./extract-spec.js";
 import type { SourceText } from "./extract-common.js";
 
 export type FactPlatform = "web" | "android" | "ios" | "ipados" | "macos" | "windows";
@@ -13,13 +14,18 @@ export type FactPlatform = "web" | "android" | "ios" | "ipados" | "macos" | "win
 // HTML-Seiten (Rechtstexte in 40 Sprachen, Hilfeseiten). Die sind KEINE App-Bildschirme und
 // wuerden die echten Screens aus der Aufbauliste verdraengen.
 type PlatformExtractor = { candidates: (paths: string[]) => string[]; extract: (files: SourceText[]) => Partial<DesignFacts>; screens?: boolean };
+// Der Spec-Extraktor laeuft auf JEDER Plattform und steht ueberall VORNE: liegt ein Spec-Paket bei,
+// beschreibt es die Software, die gebaut werden soll — es gewinnt gegen alles, was nebenbei aus
+// mitgeliefertem Fremdcode gemessen wuerde. Fehlt es, liefert `specFactCandidates` nichts und der
+// Extraktor wird uebersprungen; fuer bestehende Projekte aendert sich dadurch nichts.
+const specExtractor: PlatformExtractor = { candidates: specFactCandidates, extract: extractSpecFacts };
 const extractorsByPlatform: Record<FactPlatform, PlatformExtractor[]> = {
-  android: [{ candidates: androidFactCandidates, extract: extractAndroidFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
-  ios: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
-  ipados: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
-  macos: [{ candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
-  windows: [{ candidates: windowsFactCandidates, extract: extractWindowsFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
-  web: [{ candidates: webFactCandidates, extract: extractWebFacts }, { candidates: androidFactCandidates, extract: extractAndroidFacts, screens: false }]
+  android: [specExtractor, { candidates: androidFactCandidates, extract: extractAndroidFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  ios: [specExtractor, { candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  ipados: [specExtractor, { candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  macos: [specExtractor, { candidates: appleFactCandidates, extract: extractAppleFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  windows: [specExtractor, { candidates: windowsFactCandidates, extract: extractWindowsFacts }, { candidates: webStyleCandidates, extract: extractWebFacts, screens: false }],
+  web: [specExtractor, { candidates: webFactCandidates, extract: extractWebFacts }, { candidates: androidFactCandidates, extract: extractAndroidFacts, screens: false }]
 };
 
 export function factCandidatePaths(platform: FactPlatform, paths: string[]): string[] {

@@ -31,7 +31,7 @@ import { buildExportPackage, type PackageReport } from "./export-package.js";
 import { briefkastenOrdner, inboxDatei, inboxListe, outboxStrom, outboxZiel } from "./briefkasten.js";
 import type { Vorlage } from "./spec-package.js";
 import { checkFidelity, fidelityAcceptable, hasIssuesForSources, renderFidelityInstructions } from "./fidelity-check.js";
-import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
+import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estimateAnalysisCallCount, mapWithConcurrency, maxAnalysisBatches, previewProfileFromHtml, previewProfiles, reconstructionConcurrency, reconstructionSourceFiles, reconstructionTiming, specSourceFile, reconstructionTodos, type ImportManifestFile, type ImportPlatform, type PreviewProfile, type ReconstructionOperationKind, type ReconstructionTimingSample } from "./import-reconstruction.js";
 import { isOverloadError, maxModelAttempts, retryDelayMs, UpstreamThrottle } from "./model-retry.js";
 import { analysisKey, checkpointIsUseful, checkpointPrefix, checkpointRoot, checkpointSummary, describeCheckpoint, emptyCheckpoint, evidenceKey, mergeCheckpointPart, parseCheckpointObject, resumableAnalyses, resumableScreens, screenKey, type CheckpointParts, type CheckpointScope, type CheckpointSummary } from "./reconstruction-checkpoint.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
@@ -834,7 +834,11 @@ app.post("/api/v1/imports", { bodyLimit: Number.MAX_SAFE_INTEGER }, async (reque
     // Eine native App mit eigenen UI-Quellen wird IMMER rekonstruiert. Ein zufaellig gefundenes
     // HTML (Werkzeugbericht, Doku, eingebettete Hilfeseite) darf dann nicht als Startseite gelten —
     // sonst zeigt die Leinwand eine Fremdseite und meldet sie faelschlich als fertiges Design.
-    const needsReconstruction = storeAsFiles && (platform !== "web" && hasNativeUiSources);
+    // Ein Spec-Paket beschreibt eine Software, die es noch nicht gibt. Es gibt darin nichts zu
+    // finden, was man als Startseite anzeigen koennte — das Design muss daraus erst GEBAUT werden.
+    // Deshalb loest es den Aufbau immer aus, unabhaengig von der Zielplattform.
+    const hasSpecSources = files.some((file) => specSourceFile.test(file.path));
+    const needsReconstruction = storeAsFiles && (hasSpecSources || (platform !== "web" && hasNativeUiSources));
     const detectedEntry = storeAsFiles && !needsReconstruction ? chooseEntryPath(files, platform) ?? "" : undefined;
     const entryPath = storeAsFiles ? detectedEntry ?? "" : undefined;
     const document = nativeDocument ?? importedDesignDocument(projectId, name, platform, projectType);
@@ -1038,7 +1042,7 @@ app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
   const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);
   const row = (await db.select({ imported: projectImports, name: projects.name, platforms: projects.platforms }).from(projectImports).innerJoin(projects, eq(projects.id, projectImports.projectId)).where(and(eq(projectImports.projectId, projectId), eq(projectImports.organizationId, actor.organizationId))).limit(1))[0];
   if (!row) fail("EXPORT_NOT_AVAILABLE", 404, "Für dieses Projekt liegt kein importiertes Dateipaket vor.");
-  const fileName = `${row.name.replaceAll(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 80) || "werft-projekt"}.zip`;
+  const dateiBasis = row.name.replaceAll(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 80) || "werft-projekt";
   const platform = (Array.isArray(row.platforms) ? row.platforms[0] : "web") as ImportPlatform;
   const designPaths = row.imported.manifest.map((file) => file.path).filter((path) => generatedDesignPathPattern.test(path));
   // Die Fakten werden hier neu gemessen statt gespeichert: derselbe deterministische Weg wie in der
@@ -1053,6 +1057,9 @@ app.get("/api/v1/projects/:projectId/export.zip", async (request, reply) => {
       designReport = built.report;
     } catch (error) { request.log.error({ err: error, projectId }, "Designpaket für den Export konnte nicht erzeugt werden; das Rohpaket wird trotzdem ausgeliefert"); }
   }
+  // Stufe 2 sucht in der Outbox nach `<App>-SPEC-v2.zip`. Enthaelt das Paket die Specs, traegt der
+  // Download denselben Namen — sonst muesste die Datei nach jedem Herunterladen umbenannt werden.
+  const fileName = `${dateiBasis}${designFiles.some((file) => file.path === "SPEC.md") ? "-SPEC-v2" : ""}.zip`;
   request.log.info({ event: "export.package", projectId, files: row.imported.manifest.length, designFiles: designFiles.length, ...(designReport ?? {}) }, "Projektexport zusammengestellt");
   const archive = archiver("zip", { zlib: { level: 6 } });
   // Wurde ein frueherer Export wieder importiert, liegt sein Designpaket als Quelldatei im Projekt.
