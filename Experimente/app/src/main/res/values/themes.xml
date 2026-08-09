@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Farben werden zur Laufzeit von ExperimenteTheme gesetzt; hier nur der Rahmen. -->
+    <style name="Theme.Experimente" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#151210</item>
+    </style>
+</resources>

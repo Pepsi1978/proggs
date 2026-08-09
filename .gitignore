@@ -63,3 +63,9 @@ cowork-robustness-test.txt
 
 # Hoerproben des Qwen-Stimmtests; Audio gehoert nicht ins Repo.
 /PerfectMoment/tools/qwen-voice-test-output/
+
+# Experimente (Android)
+Experimente/.gradle/
+Experimente/build/
+Experimente/app/build/
+Experimente/local.properties
