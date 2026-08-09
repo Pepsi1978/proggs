@@ -249,7 +249,14 @@ export function motionCode(bauweg: Bauweg, bewegung: Bewegung): string {
 
 // ---------------------------------------------------------------- Bedienelemente im Design
 
-export type Bedienelement = { bildschirm: string; label: string; art: string; ziel?: string };
+export type Bedienelement = { bildschirm: string; label: string; art: string; ziel?: string; funktion?: string };
+
+// `data-werft-funktion` traegt entweder die Kennung einer bekannten Funktion (`F-07`) oder — bei
+// einem im Studio neu gezeichneten Bedienelement — den Satz, den der Benutzer dem Designer gesagt
+// hat ("pausiert die laufende Sitzung"). Beides ist Gold wert: das erste trennt bekannt von neu
+// ohne Beschriftungs-Raterei, das zweite rettet die Absicht in das Funktions-Spec, statt sie beim
+// Rueckimport noch einmal erfragen zu muessen.
+const kennungsMuster = /^F-\d+$/i;
 
 const beschriftung = (html: string): string => {
   const aria = /\saria-label="([^"]+)"/i.exec(html)?.[1];
@@ -269,10 +276,11 @@ export function bedienelemente(section: ExportSection): Bedienelement[] {
     const tag = (match[1] ?? match[3] ?? "").toLowerCase();
     const attribute = match[2] ?? match[4] ?? "";
     const ziel = /data-werft-navigate="([^"]*)"/i.exec(attribute)?.[1];
+    const funktion = /data-werft-funktion="([^"]*)"/i.exec(attribute)?.[1]?.trim();
     const ende = section.html.indexOf(`</${tag}`, muster.lastIndex);
     const inhalt = ende > 0 ? section.html.slice(muster.lastIndex, ende) : "";
     const label = beschriftung(attribute.includes("aria-label") ? attribute : inhalt) || tag;
-    gefunden.push({ bildschirm: section.name, label, art: tag, ...(ziel ? { ziel } : {}) });
+    gefunden.push({ bildschirm: section.name, label, art: tag, ...(ziel ? { ziel } : {}), ...(funktion ? { funktion } : {}) });
   }
   // Gleiche Beschriftung auf demselben Bildschirm ist dasselbe Element in einem anderen Zustand.
   const gesehen = new Set<string>();
@@ -302,6 +310,8 @@ const naechsteNummer = (funktionen: VorhandeneFunktion[]): number =>
 // beim Rueckimport mit Scheinfunden zu ueberschuetten. Was hier durchrutscht, faengt der Abgleich
 // gegen v1 im Skill `spec-rueckimport` ohnehin noch einmal ab.
 const istBekannt = (element: Bedienelement, funktionsText: string): boolean => {
+  // Traegt das Element eine Kennung, ist die Frage entschieden — ohne Raten ueber Beschriftungen.
+  if (element.funktion) return kennungsMuster.test(element.funktion);
   const label = element.label.trim().toLowerCase();
   return label.length >= 3 && funktionsText.toLowerCase().includes(label);
 };
@@ -310,6 +320,8 @@ export function neueBedienelemente(sections: ExportSection[], vorlage: Vorlage):
   const funktionsText = vorlage.funktion ?? "";
   return sections
     .flatMap((section) => bedienelemente(section))
+    // Ein Element mit Navigationsziel ist nie tot. Ein Element mit beschriebener Aufgabe schon gar
+    // nicht — es ist neu, aber es weiss, was es soll, und kommt MIT dieser Beschreibung ins Spec.
     .filter((element) => !element.ziel && !istBekannt(element, funktionsText));
 }
 
@@ -351,14 +363,28 @@ export function funktionsSpec(input: SpecInput, bauweg: Bauweg, stand: string): 
   if (!neu.length) {
     zeilen.push("Der Designer hat kein Bedienelement ergänzt, das in diesem Spec fehlt. **Kein toter Knopf.**", "");
   } else {
+    const beschrieben = neu.filter((element) => element.funktion);
+    const offen = neu.filter((element) => !element.funktion);
     zeilen.push(
-      `Der Designer hat ${neu.length} Bedienelement(e) gezeichnet, die hier noch keine Aufgabe haben.`,
-      "Jedes bekommt eine Kennung, damit der Umsetzer es nicht als Attrappe baut. **Die Aufgabe ist",
-      "offen und muss beim Rückimport geklärt werden — sie wird nicht erfunden.**", "",
+      `Beim Gestalten sind ${neu.length} Bedienelement(e) dazugekommen, die es im Erst-Spec noch nicht gab.`,
+      `Davon ${beschrieben.length} mit beschriebener Aufgabe, ${offen.length} ohne.`,
+      "Jedes bekommt eine Kennung, damit der Umsetzer es nicht als Attrappe baut.", "",
       "| Kennung | Bildschirm | Element | Art | Aufgabe |",
-      "|---------|------------|---------|-----|---------|",
-      ...neu.map((element) => `| F-${String(nummer++).padStart(2, "0")} | ${element.bildschirm} | ${element.label || "—"} | ${element.art} | **OFFEN — beim Rückimport klären** |`),
-      "");
+      "|---------|------------|---------|-----|---------|");
+    // Erst die beschriebenen: das ist der Normalfall, wenn im Studio gesagt wurde, was der Knopf tun
+    // soll. Diese Beschreibung IST die Funktion — sie wird woertlich uebernommen, nicht ausgelegt.
+    for (const element of beschrieben) {
+      zeilen.push(`| F-${String(nummer++).padStart(2, "0")} | ${element.bildschirm} | ${element.label || "—"} | ${element.art} | ${element.funktion} |`);
+    }
+    for (const element of offen) {
+      zeilen.push(`| F-${String(nummer++).padStart(2, "0")} | ${element.bildschirm} | ${element.label || "—"} | ${element.art} | **OFFEN — beim Rückimport klären** |`);
+    }
+    zeilen.push("");
+    if (offen.length) {
+      zeilen.push(
+        "> Zu den offenen Punkten wurde im Studio nicht gesagt, was sie tun sollen. Sie werden beim",
+        "> Rückimport erfragt und **nicht erfunden** — sonst entstünde beim Bauen ein toter Knopf.", "");
+    }
   }
   const mitZiel = input.document.sections.flatMap((section) => bedienelemente(section)).filter((element) => element.ziel);
   if (mitZiel.length) {

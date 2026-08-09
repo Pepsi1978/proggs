@@ -1143,6 +1143,16 @@ function buildChatInstructions(scope: "global" | "screen" | "marked"): string {
     "- Ändere nichts, was der Wunsch nicht verlangt. Struktur, Texte, Funktionen und Skripte bleiben erhalten.",
     "- Kein Bildschirm, kein <section class=\"werft-screen\">-Abschnitt und kein <script> darf verschwinden.",
     "",
+    // Aus diesem Design wird spaeter ein Spec und daraus eine echte Software. Ein Bedienelement, zu
+    // dem niemand aufgeschrieben hat, was es tun soll, wird dort zu einem toten Knopf — der Benutzer
+    // muesste es beim Rueckimport noch einmal erklaeren. Genau das verhindert diese Regel: was er dir
+    // hier sagt, bleibt am Element haengen.
+    "BEDIENELEMENTE BRAUCHEN EINE AUFGABE — sonst entsteht daraus später ein toter Knopf:",
+    "- Fügst du ein anfassbares Element ein (Knopf, Schalter, Link, Eingabefeld, Listeneintrag), gib ihm ein Attribut `data-werft-funktion=\"…\"` mit EINEM Satz, was es tun soll — in den Worten des Wunsches. Beispiel: <button data-werft-funktion=\"pausiert die laufende Sitzung und merkt sich die Stelle\">Pause</button>.",
+    "- Führt das Element nur zu einem anderen Bildschirm, reicht `data-werft-navigate=\"<ziel-id>\"`; dann braucht es kein data-werft-funktion.",
+    "- Ein vorhandenes `data-werft-funktion` NIE entfernen und nicht überschreiben, wenn darin eine Kennung wie `F-07` steht — das ist die Verbindung zur bereits beschriebenen Funktion.",
+    "- Sagt der Wunsch nicht, was das neue Element tun soll, schreibe deine beste Annahme hinein statt das Attribut wegzulassen, und erwähne die Annahme in \"reply\".",
+    "",
     scope === "global"
       ? "UMFANG: Der Wunsch gilt dem GESAMTEN Design. Ändere ihn auf ALLEN Bildschirmen und in ALLEN Unterbildschirmen. Am wirkungsvollsten sind gemeinsam genutzte CSS-Regeln und Theme-Variablen: eine geänderte gemeinsame Regel wirkt sofort überall. Gibt es zusätzlich bildschirmeigene Regeln mit demselben Zweck, ändere sie mit. Beschränke dich NICHT auf den gerade sichtbaren Bildschirm."
       : scope === "marked"
@@ -1643,6 +1653,10 @@ function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfi
     effectGuidance,
     `Verlinke Navigationsziele über data-werft-navigate="ZIEL-ID"; gültige IDs sind: ${screenIds.join("; ") || "keine"}.`,
     "JEDES Bedienelement, das im Original einen anderen Bildschirm öffnet, MUSS data-werft-navigate tragen — auch Zurück-Pfeile, Listeneinträge, Karten, Kacheln, Symbole und Leisten-Einträge. Ohne diese Verknüpfungen ist die Rekonstruktion nicht durchklickbar.",
+    // Aus diesem Aufbau wird spaeter wieder ein Spec und daraus echte Software. Ein Bedienelement,
+    // das weder Ziel noch beschriebene Aufgabe traegt, laesst sich dort nicht zuordnen und wird zum
+    // toten Knopf. Steht die Aufgabe im Funktions-Spec, gehoert ihre Kennung ans Element.
+    "Bedienelemente, die keinen Bildschirm öffnen, sondern etwas TUN, tragen `data-werft-funktion`: steht die Aufgabe als `F-<Nummer>` in den gelieferten Fakten oder im Spec, trage genau diese Kennung ein (data-werft-funktion=\"F-07\"); sonst einen kurzen Satz, was das Element tun soll.",
     "Farben IMMER über die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Feste Farbwerte statt Variablen machen das Design unumschaltbar.",
     "Bringt das Original einen Umschalter für Hell/Dunkel oder die Darstellung mit (Mond-/Sonnensymbol, Eintrag „Darstellung“/„Erscheinungsbild“), baue ihn nach UND gib ihm data-werft-theme-toggle. Erfinde KEINEN zusätzlichen Umschalter, keine Werkzeugleisten und keine Hinweistexte.",
     "Antworte AUSSCHLIESSLICH mit dem HTML-Fragment dieses einen Bildschirms (optional ein <style>-Block davor, dessen Selektoren eindeutig zu diesem Bildschirm gehören). Kein <!doctype>, kein <html>, kein <body>, kein Markdown, keine Erklärung."

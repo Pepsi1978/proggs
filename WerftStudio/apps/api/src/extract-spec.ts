@@ -237,6 +237,25 @@ function bewegungen(motionSpec: string, quelle: string): FactEffect[] {
   });
 }
 
+// Die Funktionen selbst gehoeren nicht zu den Design-Fakten — aber ihre Kennungen schon: der Aufbau
+// soll `data-werft-funktion="F-07"` an das Bedienelement schreiben, das eine bekannte Funktion
+// ausloest. Ohne diese Liste kann er das nicht, und beim Ruecklauf faellt jedes Element wieder in
+// die Beschriftungs-Raterei zurueck.
+export function funktionsListe(funktionsSpec: string): Array<{ id: string; name: string }> {
+  const ausUeberschriften = [...funktionsSpec.matchAll(/^#{2,4}\s*(F-\d+)\s*[—–-]\s*(.+?)\s*$/gm)]
+    .map((treffer) => ({ id: treffer[1]!, name: rein(treffer[2]!) }));
+  if (ausUeberschriften.length) return ausUeberschriften;
+  // Kurze Specs fuehren die Funktionen nur in der Uebersichtstabelle, ohne eigenen Abschnitt.
+  const tabelle = ersteTabelle(findeAbschnitt(funktionsSpec, "Ueberblick", "Überblick", "Funktionen"), "kennung");
+  return tabelle
+    ? tabelle.zeilen.flatMap((zeile) => {
+        const id = wert(zeile, "kennung", "id");
+        const name = wert(zeile, "funktion", "name");
+        return /^F-\d+$/i.test(id) && name ? [{ id: id.toUpperCase(), name }] : [];
+      })
+    : [];
+}
+
 // ---------------------------------------------------------------- Zusammenfuehren
 
 export function extractSpecFacts(files: SourceText[]): Partial<DesignFacts> {
@@ -253,6 +272,11 @@ export function extractSpecFacts(files: SourceText[]): Partial<DesignFacts> {
   const motion = motionDatei ? bewegungen(motionDatei.text, motionDatei.path) : [];
   const notes = [`Design-Fakten stammen aus dem Spec-Paket (${files.map((file) => file.path).join(", ")}), nicht aus Quellcode: die Software existiert noch nicht.`];
   if (!screens.length) notes.push("Im UI-Spec war keine Bildschirm-Tabelle lesbar — der Aufbau faellt auf einen einzelnen Bildschirm zurueck.");
+  const funktionsDatei = lies(/01-FUNKTIONS-SPEC\.md$/i) ?? sammel;
+  const funktionen = funktionsDatei ? funktionsListe(funktionsDatei.text) : [];
+  if (funktionen.length) {
+    notes.push(`Funktionen aus dem Spec — das ausloesende Bedienelement traegt data-werft-funktion mit dieser Kennung: ${funktionen.map((funktion) => `${funktion.id} = ${funktion.name}`).join("; ")}`);
+  }
   return {
     themes, colors, shapes, screens,
     typography: typografie(uiText, uiQuelle),
