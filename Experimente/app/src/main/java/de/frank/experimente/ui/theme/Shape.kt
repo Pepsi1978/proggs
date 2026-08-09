@@ -17,9 +17,9 @@ data class AppShapes(
     val knopf: RoundedCornerShape = RoundedCornerShape(14.dp),
     val dialog: RoundedCornerShape = RoundedCornerShape(24.dp),
     val vollrund: RoundedCornerShape = RoundedCornerShape(percent = 50),
-    /** Gesprächsblase „Ich" — abgeflachte Ecke unten rechts, gemessen `20px 20px 6px 20px`. */
+    /** Gesprächsblase „Ich“ — abgeflachte Ecke unten rechts, gemessen `20px 20px 6px 20px`. */
     val blaseIch: RoundedCornerShape = RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp),
-    /** Gesprächsblase „KI" — abgeflachte Ecke unten links, gemessen `20px 20px 20px 6px`. */
+    /** Gesprächsblase „KI“ — abgeflachte Ecke unten links, gemessen `20px 20px 20px 6px`. */
     val blaseKi: RoundedCornerShape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp),
 )
 

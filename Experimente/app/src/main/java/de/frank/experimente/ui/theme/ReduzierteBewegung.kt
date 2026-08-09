@@ -5,7 +5,7 @@ import android.provider.Settings
 import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
- * Motion-Spec §8 — Pflichtabschnitt „Reduzierte Bewegung".
+ * Motion-Spec §8 — Pflichtabschnitt „Reduzierte Bewegung“.
  *
  * Meldet das System, dass Bewegung reduziert werden soll, gilt in der ganzen App:
  * Dauerbewegung aus, nur noch Überblenden, alle Dauern halbiert, keine Staffelung.
