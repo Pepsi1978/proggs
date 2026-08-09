@@ -32,9 +32,18 @@ $browser = @(
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $browser) { throw "Weder Chrome noch Edge gefunden — ohne Browser keine Messung." }
 
+# Die Quelle finden — ohne Annahme darueber, wer das HTML erzeugt hat.
+# Bevorzugt der Werft-Aufbau (Bildschirme je Erscheinung in eigenen Ordnern); sonst jede
+# gefundene HTML-Datei als ein Bildschirm, alle unter der Erscheinung "standard".
 $bildschirme = Join-Path $Design "WERFT-DESIGN\bildschirme"
-if (-not (Test-Path $bildschirme)) { throw "Nicht gefunden: $bildschirme" }
-$cssPfad = (Join-Path $bildschirme "design.css") -replace '\\', '/'
+$werftAufbau = Test-Path $bildschirme
+if (-not $werftAufbau) {
+    $treffer = Get-ChildItem $Design -Recurse -Filter *.html -File |
+        Where-Object { $_.FullName -notmatch '\\\.werft-generated\\' }
+    if (-not $treffer) { throw "Keine HTML-Datei unter $Design gefunden." }
+    Write-Host "Kein Werft-Aufbau — $($treffer.Count) HTML-Datei(en) gefunden, jede gilt als ein Bildschirm."
+}
+$cssPfad = if ($werftAufbau) { (Join-Path $bildschirme "design.css") -replace '\\', '/' } else { $null }
 
 # --- Der Messfuehler ------------------------------------------------------------------
 # Laeuft IM Browser und liefert die Messung als JSON-Zeichenkette zurueck.
@@ -99,6 +108,40 @@ $messJs = @'
     if (el.hasAttribute("hidden")) e.versteckt = true;
     if (Object.keys(vorher).length) e.vorher = vorher;
     if (Object.keys(nachher).length) e.nachher = nachher;
+
+    // Symbole. Ohne die Pfade baut die Umsetzung aehnliche Symbole aus einer
+    // Standardsammlung — und die sehen anders aus. Also die echten Umrisse mitnehmen.
+    if (el.tagName.toLowerCase() === "svg") {
+      const pfade = [];
+      el.querySelectorAll("path,rect,circle,line,polygon,polyline,ellipse").forEach(f => {
+        const t = f.tagName.toLowerCase();
+        const eintrag = { form: t };
+        if (t === "path") eintrag.d = f.getAttribute("d");
+        else for (const a of f.attributes) eintrag[a.name] = a.value;
+        const fuellung = getComputedStyle(f).fill;
+        if (fuellung && fuellung !== "rgb(0, 0, 0)") eintrag.fuellung = fuellung;
+        pfade.push(eintrag);
+      });
+      // <use href="#id"> zeigt auf ein <symbol> weiter oben im Dokument.
+      el.querySelectorAll("use").forEach(u => {
+        const ref = (u.getAttribute("href") || u.getAttribute("xlink:href") || "").replace("#", "");
+        const quelle = ref && document.getElementById(ref);
+        if (quelle) {
+          quelle.querySelectorAll("path,rect,circle,polygon").forEach(f => {
+            const t = f.tagName.toLowerCase();
+            const eintrag = { form: t, ausSymbol: ref };
+            if (t === "path") eintrag.d = f.getAttribute("d");
+            else for (const a of f.attributes) eintrag[a.name] = a.value;
+            pfade.push(eintrag);
+          });
+          if (!el.getAttribute("viewBox") && quelle.getAttribute("viewBox")) {
+            e.sichtfeld = quelle.getAttribute("viewBox");
+          }
+        }
+      });
+      if (pfade.length) e.symbol = pfade;
+      const vb = el.getAttribute("viewBox"); if (vb) e.sichtfeld = vb;
+    }
     elemente.push(e);
 
     Array.from(el.children).forEach((k, i) =>
@@ -184,19 +227,33 @@ $chrome = Start-Process $browser -PassThru -ArgumentList `
     "--user-data-dir=$arbeit\profil", "--no-first-run", "--window-size=$Breite,$Hoehe", "about:blank"
 Start-Sleep -Seconds 3
 
+# Die Arbeitsliste: je Eintrag eine Erscheinung und eine HTML-Datei.
+$aufgaben = if ($werftAufbau) {
+    Get-ChildItem $bildschirme -Directory | ForEach-Object {
+        $e = $_.Name
+        Get-ChildItem $_.FullName -Filter *.html | ForEach-Object {
+            [pscustomobject]@{ Erscheinung = $e; Datei = $_ }
+        }
+    }
+} else {
+    Get-ChildItem $Design -Recurse -Filter *.html -File |
+        Where-Object { $_.FullName -notmatch '\\\.werft-generated\\' } |
+        ForEach-Object { [pscustomobject]@{ Erscheinung = "standard"; Datei = $_ } }
+}
+
 $gemessen = 0
 try {
-    Get-ChildItem $bildschirme -Directory | ForEach-Object {
-        $erscheinung = $_.Name
+    $aufgaben | ForEach-Object {
+        $erscheinung = $_.Erscheinung
         $zielMessung = Join-Path $Ziel "messung\$erscheinung"
         $zielBild = Join-Path $Ziel "bilder\$erscheinung"
         New-Item -ItemType Directory -Force -Path $zielMessung, $zielBild | Out-Null
 
-        Get-ChildItem $_.FullName -Filter *.html | ForEach-Object {
+        $_.Datei | ForEach-Object {
             $name = $_.BaseName
-            $html = (Get-Content $_.FullName -Raw -Encoding UTF8) `
-                -replace 'href="\.\./design\.css"', "href=""file:///$cssPfad""" `
-                -replace '</head>', "$rahmen</head>"
+            $html = Get-Content $_.FullName -Raw -Encoding UTF8
+            if ($cssPfad) { $html = $html -replace 'href="\.\./design\.css"', "href=""file:///$cssPfad""" }
+            $html = $html -replace '</head>', "$rahmen</head>"
             $datei = Join-Path $arbeit "$name.html"
             [IO.File]::WriteAllText($datei, $html, [Text.UTF8Encoding]::new($false))
             $url = "file:///$($datei -replace '\\','/')"

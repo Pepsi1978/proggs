@@ -239,7 +239,7 @@ Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 > Die `.md`-Dateien beschreiben dasselbe lesbar und geben Absicht, Funktion und Kennungen.
 > Sie **ersetzen die Messung nicht**. Widersprechen sich Text und Messung, gilt die Messung.
 >
-> Die Uebersetzungsvorschrift steht in `references/messung-nach-compose.md`. Sie ist
+> Die Uebersetzungsvorschrift steht in `references/messung-umsetzen.md`. Sie ist
 > verbindlich; wo sie eine Luecke hat, wird sie ergaenzt statt das Fehlende zu erfinden.
 >
 > Fehlt der Ordner `messung/`, ist Stufe 2 unvollstaendig gelaufen. Dann **nicht** aus der
@@ -677,35 +677,34 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
 
 - **Build:** Projekt kompilieren (Gradle) — bei Fehlern beheben, bis es sauber baut.
   Der `resilient-bugfixing`-Skill gilt fuer jeden dabei auftretenden Fehler.
-- **Visueller Abgleich — BILD gegen BILD, und zwar je Bildschirm SOFORT.**
+- **Abnahme gegen die MESSUNG, Element fuer Element.**
 
   > **Ein gruener Build ist keine Abnahme.** Er beweist nur, dass der Code uebersetzt.
   > Ueber das Aussehen sagt er nichts. „Build gruen" darf nie als „fertig" gemeldet werden.
 
-  Zwei Regeln, die in Lauf 01 gefehlt haben und ohne die die ganze Tiefen-Schicht des
-  Designs verlorenging:
+  Ein Screenshot-Vergleich ist ein Sicherheitsnetz, keine Methode: Wer aus einem Bild
+  zurueckrechnet, naehert sich an — und bleibt bei 99 %. Die Abnahme laeuft deshalb gegen
+  die **Messung**, denn die enthaelt die Werte selbst.
 
-  1. **Gegen das BILD vergleichen, nicht gegen die HTML.** Eine HTML-Datei liest man —
-     und liest dabei genau das nicht, was man nicht erwartet. Nimm das gerenderte PNG aus
-     `Specs/<App>/v2/bilder/<erscheinung>/<nr>-<name>.png` (Stufe 2 legt es an; fehlt es,
-     rendere es selbst mit headless Chrome, siehe `spec-rueckimport` Phase 1b) und **sieh
-     dir beide Bilder nebeneinander an**.
-  2. **Je Bildschirm abnehmen, BEVOR der naechste gebaut wird.** Nicht alles bauen und am
-     Ende vergleichen — dann steckt derselbe Fehler in jedem Bildschirm. Der Ablauf je
-     Bildschirm ist: bauen → installieren → Screenshot → gegen das Design-Bild halten →
-     Abweichungen beheben → erneut vergleichen → **erst dann** der naechste Bildschirm.
+  Je Bildschirm, **bevor der naechste beginnt**, eine Tabelle ueber ALLE Elemente der
+  Messdatei:
 
-  Worauf beim Vergleich zu achten ist (in dieser Reihenfolge, weil grobe Fehler feine
-  verdecken): **Anordnung** (steht die Beschriftung ueber oder neben dem Feld? sind
-  Abschnitte Karten?) → **Tiefe** (Schatten, Schein, Verlauf, durchscheinende Flaechen) →
-  **Schrift** (Familie, Grossbuchstaben, Laufweite) → **Farbe** → **Abstaende**.
+  | Element (`pfad`/`klassen`) | Messung | im Code | ✓ |
+  |---|---|---|---|
+  | `.werft-b01__mic` | 88×88 · Verlauf 145° · 3-lagiger Schatten · Ring 6 dp · Symbol `M12 14q…` | ebenso | ✓ |
 
-  - Android: ueber ADB auf dem angeschlossenen Geraet.
-  - **Kein Geraet angeschlossen? Dann Emulator** (`emulator -avd <name>` bzw. einen ueber
-    `avdmanager` anlegen). Der Abgleich entfaellt **nie** — er wird nur verlagert.
-  - Windows/macOS: das gestartete Fenster aufnehmen.
-  - Ist auch der Emulator nicht herstellbar, wird **angehalten und gefragt**. Die Umsetzung
-    gilt dann als optisch **ungeprueft** und ausdruecklich **nicht** als fertig.
+  Geprueft wird jede Zeile auf: Kasten (x/y/Breite/Hoehe), Flaeche, Rand, Radien, Schatten
+  und Verlaeufe, Schrift (Familie, Groesse, Zeilenhoehe, Laufweite, Grossschreibung), Farbe,
+  Abstaende, Symbolpfade, Uebergaenge und Zustaende. **Bleibt eine Zeile ohne Haken, ist der
+  Bildschirm nicht fertig.** Auch `versteckt: true`-Elemente zaehlen — sie sind Zustaende.
+
+  Die Bilder in `Specs/<App>/v2/bilder/` sind dazu da, sie **anzusehen**, bevor man baut:
+  sie zeigen die Gesamtwirkung, die aus einer Zahlenliste nicht hervorgeht. Sie sind nicht
+  der Massstab; das ist die Messung.
+
+  Ein Lauf auf dem Geraet gehoert zum Abschluss (Punkt 4 des Abnahme-Tors in
+  `neue-applikation`) — er weist nach, dass die App laeuft, nicht dass sie richtig aussieht.
+  Ist kein Geraet da, wird gebaut, das ausdruecklich gemeldet und der fehlende Befehl genannt.
 - **Selbstpruefung gegen die Token-Liste:** Jede Farbe/Groesse/Schrift/Animation aus
   Phase 1 einmal gegen den geschriebenen Code gegenpruefen — nichts vergessen?
 - **Vollstaendigkeits-Abgleich (100% — Pflicht):** Das komplette Screen-/Navigations-/

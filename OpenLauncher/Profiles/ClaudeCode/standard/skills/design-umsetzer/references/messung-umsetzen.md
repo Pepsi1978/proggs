@@ -135,6 +135,40 @@ Aus `kasten` ableiten, nicht aus `margin`/`padding` raten:
 - **Schwebend?** `position: absolute` mit Abständen zu mehreren Kanten → im `Box` mit
   `align(...)` und `padding`, **nicht** als letztes Kind einer `Column` (das verdrängt).
 
+### Symbole
+
+Die Messung enthaelt zu jedem `<svg>` das `sichtfeld` (viewBox) und unter `symbol` die
+echten Umrisse:
+
+```jsonc
+"sichtfeld": "0 0 24 24",
+"symbol": [ { "form": "path", "d": "M11 1h2v3h-2V1Z…" } ]
+```
+
+**Diese Pfade werden gebaut — nicht ein aehnliches Symbol aus `Icons.Outlined.*` gesucht.**
+Ein Material-Symbol mit demselben Namen hat andere Proportionen, andere Strichstaerke und
+andere Ecken; damit ist der Bildschirm sichtbar ein anderer.
+
+```kotlin
+val Sonne: ImageVector = ImageVector.Builder(
+    name = "sonne", defaultWidth = 24.dp, defaultHeight = 24.dp,
+    viewportWidth = 24f, viewportHeight = 24f,   // aus "sichtfeld"
+).apply {
+    addPath(
+        pathData = androidx.compose.ui.graphics.vector.PathParser()
+            .parsePathString("M11 1h2v3h-2V1Z…")   // aus "d", unveraendert
+            .toNodes(),
+        fill = SolidColor(farbe),                  // currentColor → die Textfarbe der Stelle
+    )
+}.build()
+```
+
+Mehrere Eintraege in `symbol` → mehrere `addPath`-Aufrufe in derselben Reihenfolge.
+Formen wie `rect`/`circle` tragen ihre Attribute direkt (`x`, `y`, `width`, `rx` …) und
+werden als entsprechende Pfade gezeichnet.
+
+Praktisch: alle Symbole eines Projekts einmal in `ui/theme/Symbole.kt` sammeln.
+
 ### Bewegung
 
 `transitionProperty` / `transitionDuration` / `transitionTimingFunction` je Element →
@@ -142,6 +176,53 @@ Aus `kasten` ableiten, nicht aus `margin`/`padding` raten:
 `animationName` verweist auf einen Eintrag in `keyframes` → dessen `text` enthält die Stützstellen.
 
 **Nie** eine gemessene `cubic-bezier` durch `FastOutSlowIn` o. ä. ersetzen.
+
+---
+
+---
+
+## 2b. Dieselbe Messung auf Windows und macOS
+
+Die Messung ist plattformfrei — sie beschreibt den Entwurf, nicht das Zielsystem. Nur die
+Uebersetzungsspalte wechselt.
+
+### Windows — C# / .NET / WPF
+
+| Messung | WPF |
+|---------|-----|
+| `kasten` (x/y/Breite/Hoehe in dp) | 1 dp = 1 WPF-Einheit (beide 1/96 Zoll) — Werte **unveraendert** uebernehmen |
+| `backgroundColor` | `Background="#FF201B17"` bzw. `SolidColorBrush` |
+| `linear-gradient(145deg, …)` | `LinearGradientBrush` mit `StartPoint`/`EndPoint` aus dem Winkel, `GradientStop.Offset` aus den Prozentwerten |
+| `radial-gradient(circle at 92% 8%, …)` | `RadialGradientBrush` mit `Center="0.92,0.08"`, `GradientOrigin` gleich |
+| `boxShadow` Schlagschatten | `DropShadowEffect` (`BlurRadius`, `ShadowDepth`, `Direction`, `Color`, `Opacity`) — je Lage ein Effekt, gestapelt ueber verschachtelte `Border` |
+| `inset 0 1px 0 …` | 1 px `Border` innen oben, **nicht** weglassen |
+| `borderRadius` | `Border.CornerRadius="20,20,6,20"` (oben-links, oben-rechts, unten-rechts, unten-links) |
+| `backdropFilter: blur()` | kein WPF-Bordmittel — `Border` mit halbtransparentem Hintergrund; Verzicht melden |
+| Schrift | `FontFamily` aus eingebetteter `.ttf` (`pack://application:,,,/Fonts/#Fraunces`), `FontSize` = px-Wert |
+| `textTransform: uppercase` | Text im Code hochstellen |
+| Symbolpfade (`symbol[].d`) | `<Path Data="M11 1h2v3…" Fill="{...}" />` — `d` **unveraendert** |
+| Uebergaenge | `Storyboard` mit `KeyTime` aus der Dauer, `KeySpline` aus der `cubic-bezier` |
+
+### macOS — Swift / SwiftUI
+
+| Messung | SwiftUI |
+|---------|---------|
+| `kasten` | Punkte 1:1 (`.frame(width:height:)`, Position ueber Stacks/`.offset`) |
+| `backgroundColor` | `.background(Color(red:green:blue:opacity:))` |
+| `linear-gradient` | `LinearGradient(stops:startPoint:endPoint:)` |
+| `radial-gradient` | `RadialGradient(colors:center:startRadius:endRadius:)` |
+| `boxShadow` (je Lage) | `.shadow(color:radius:x:y:)` — mehrfach hintereinander |
+| `inset 0 1px 0 …` | `.overlay(alignment: .top) { Rectangle().frame(height: 1).foregroundStyle(…) }` |
+| `borderRadius` (ungleich) | `.clipShape(.rect(topLeadingRadius:…, bottomLeadingRadius:…))` |
+| `backdropFilter: blur()` | `.background(.ultraThinMaterial)` bzw. `VisualEffectView` |
+| Schrift | `Font.custom("Fraunces", size:)` mit eingebetteter Datei; `.tracking()` = `letterSpacing`, `.lineSpacing()` aus `lineHeight` minus `fontSize` |
+| Symbolpfade | `Path` aus den `d`-Daten (SVG-Pfad-Parser), **nicht** SF Symbols ersetzen |
+| Uebergaenge | `.animation(.timingCurve(x1,y1,x2,y2, duration:), value:)` aus der gemessenen `cubic-bezier` |
+
+**Auf allen drei Systemen gilt gleich:** kein gemessener Wert wird gerundet, keine Kurve
+durch eine eingebaute ersetzt, kein Symbol durch ein aehnliches aus einer Standardsammlung,
+kein `inset`-Lichtsaum weggelassen. Was das Zielsystem wirklich nicht kann, wird **gemeldet**
+— nicht stillschweigend vereinfacht.
 
 ---
 
