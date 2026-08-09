@@ -13,8 +13,8 @@ android {
         applicationId = "de.frank.experimente"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.3.1"
+        versionCode = 7
+        versionName = "0.3.3"
 
         // Handarbeit: bei jeder Installation hochsetzen, sonst wirkt eine geglückte
         // Installation wie eine fehlgeschlagene.

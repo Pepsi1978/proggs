@@ -9,6 +9,12 @@ import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import de.frank.experimente.R
 
+// OFFEN: Die Schriften sollen laut Bau-Regel als Datei in `res/font` liegen, nicht
+// heruntergeladen werden — heruntergeladene kommen verzögert an, und bis dahin zeigt die
+// App die System-Schrift. Der Versuch, sie über die Google-Fonts-CSS zu beziehen, lieferte
+// unbrauchbare Dateien (Kopf `b88a0000` statt `00010000`), die Android nicht laden kann.
+// Bis gültige TTF vorliegen, bleibt der Anbieter-Weg — er stürzt wenigstens nicht ab.
+
 private val provider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
     providerPackage = "com.google.android.gms",

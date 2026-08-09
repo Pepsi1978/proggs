@@ -265,7 +265,7 @@ private fun LageEinsprechen(vm: AppViewModel, nimmtAuf: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Die Frage steht im Entwurf in einer Karte, nicht frei auf dem Grund.
-        Box(Modifier.karteFlaeche(farben).padding(Mass.karteInnen)) {
+        Box(Modifier.fillMaxWidth().karteFlaeche(farben).padding(Mass.karteInnen)) {
             Column {
                 Text(
                     text = "Wie ist deine Lage heute?",
