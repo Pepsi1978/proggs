@@ -1,64 +1,64 @@
-# Session Handoff — 10.08.2026, ca. 00:00 Uhr
+# Session Handoff — 10.08.2026, ca. 00:30 Uhr
 
 ## Ziel
 Pipeline `neue-applikation` so reparieren, dass ein in Werft bearbeitetes Design zu 100 % in
-der fertigen App landet — Aussehen, Effekte, Bewegungen —, reproduzierbar fuer jede neue
-Anwendung und fuer Android, Windows und macOS. Frank erwartet Perfektion; 99,9 % gelten nicht.
+der fertigen App landet — reproduzierbar fuer jede neue Anwendung, Android/Windows/macOS.
+Frank erwartet Perfektion; 99,9 % gelten als nicht erreicht.
 
-## SOFORT ZUERST
-Das Handy ist **gesperrt** (Sperrbildschirm, beide Fold-Displays). Frank muss es entsperren.
-Ohne sichtbaren Bildschirm ist keine Abnahme moeglich.
-Danach: `adb shell am start -n de.frank.experimente/.MainActivity`, Screenshot mit
-`adb exec-out screencap -p -d 4630947123231501204 > datei.png` (das `-d` ist Pflicht, sonst
-landet eine Warnzeile im PNG).
+## ERSTER SCHRITT DER NEUEN SITZUNG
+**Werft-Abruf mit Aktualitaetsnachweis bauen.** Ohne ihn kann ein perfekter Erzeuger den
+FALSCHEN Entwurf bauen — das Archiv in der Outbox traegt intern den 09.08.2026 19:29 Uhr,
+und niemand merkt, wenn seither in Werft weitergearbeitet wurde. Frank hat das gefunden.
+Zugang liegt in `~/SK/werft-studio/` (Adresse 10.8.0.1:8443, `login.txt`, `caddy-root.crt`).
+Projekt-URL: `/app/projects/019fe79c-9d11-734a-8b8b-79c4ea20f81b/studio/canvas`.
+Als Zwischenloesung ist die Nachfrage bereits im Skill verankert (Phase 0).
 
-## Stand — was FERTIG und gepusht ist
-- **Pipeline komplett repariert**, alle vier Profile identisch (minimal/standard/strict/
-  opencode-setup), Commits `665a08436` bis `b4adb90d3`.
-  - Stufe 1: v1-Gestaltung ist ausdruecklich „Absicht VOR dem Design", nie Bauanweisung.
-  - Stufe 2: `messe-design.ps1` vermisst den Entwurf verlustfrei (Chrome DevTools-Protokoll).
-    Je Element: Kasten in dp, Farben, Raender, Radien, Schatten, Verlaeufe, Schrift,
-    Abstaende, Uebergaenge, ::before/::after, dazu alle @keyframes, alle Zustandsregeln,
-    die Regeln fuer reduzierte Bewegung und die SVG-Pfade aller Symbole. Funktioniert auch
-    ohne Werft-Ordneraufbau (jede HTML-Datei = ein Bildschirm).
-  - Stufe 3: baut aus `Specs/<App>/v2/messung/`, Abnahme Element fuer Element gegen die
-    Messung. Vorschrift: `design-umsetzer/references/messung-umsetzen.md` (Compose, WPF, SwiftUI).
-  - Klammer: One-Shot-Ablauf nach dem Ruecklauf, Abnahme-Tor mit vier Punkten.
-- **Messung fuer Experimente liegt vor:** `Specs/Experimente/v2/messung/` + `/bilder/`,
-  18 Bildschirme, B-01 mit 133 Elementen, 13 Keyframes, 30 Zustandsregeln, 19 Symbolen.
-- **B-01 aus der Messung gebaut:** Auren, Karte auf volle Breite, Sprechknopf mit Verlauf
-  (gemessen bestaetigt: rgb(201,112,77) -> rgb(196,98,60) 58% -> rgb(165,82,50)), Schein,
-  innerer Ring, „Lieber tippen" als Flaeche mit Rand, schwebende Leiste mit Pille,
-  Symbolknoepfe in Kreisen, Datum in Grossbuchstaben mit Jahr.
-- **Schriften eingebettet:** Fraunces, Inter, JetBrains Mono als variable TTF in `res/font`,
-  Gewicht ueber die Achse `wght` (`FontVariation`), Datei-Opt-in `ExperimentalTextApi`.
-- App gebaut und installiert, v0.4.0 (versionCode 8), startet (PID bestaetigt).
+**Danach: der End-to-End-Lauf.** Frank hat die App dafuer geloescht. Design in
+`Designs/Outbox/`, `neue-applikation` starten, nichts von Hand nachbessern.
 
-## OFFEN
-1. **Bildnachweis fuer B-01** — Geraet war gesperrt.
-2. **B-02 bis B-09 aus der Messung bauen.** Je Bildschirm die Messdatei lesen, Elemente nach
-   `kasten.y`/`kasten.x` sortieren, Vorschrift anwenden, gegen die Messung abhaken, dann der
-   naechste. Bekannte grosse Abweichung: **B-08 Einstellungen** ist heute strukturell falsch —
-   Beschriftungen stehen neben statt ueber den Feldern, Abschnitte sind keine Karten, die
-   Erscheinung braucht einen Segment-Schalter, Erinnerungen Schalter und Zeitfeld.
-3. **Symbole aus der Messung bauen** (`symbol[].d` + `sichtfeld`) statt `Icons.*` — noch nicht
-   gemacht, die App nutzt weiter Material-Symbole.
+## Was FERTIG und gepusht ist (Commits 665a08436 … 2fb65e8f3)
+Die Ursache war gefunden: Das Design ging nie beim Designer verloren, sondern zwischen
+Erfassung und Bau — dort las ein Modell Prosa und schrieb Code. Beide Enden laufen jetzt
+maschinell:
+
+- **`spec-rueckimport/references/messe-design.ps1`** — vermisst jeden Bildschirm in jeder
+  Erscheinung ueber das Chrome-DevTools-Protokoll: Kasten in dp, Farben, Raender, Radien,
+  Schatten, Verlaeufe, Schrift, Abstaende, Uebergaenge, ::before/::after, alle @keyframes,
+  alle Zustandsregeln, reduzierte Bewegung, alle SVG-Pfade. Funktioniert fuer beliebige
+  HTML-Quellen. **Bezugsgroesse 475 x 751 dp** (Franks Geraet; per `-Breite`/`-Hoehe`).
+- **`design-umsetzer/references/bildschirm-erzeugen.ps1`** — Messung → Compose, mechanisch:
+  Positionen, Flaechen, Raender, Radien, Schrift, Farben, mehrlagige Schatten, Verlaeufe,
+  inset-Lichtsaum als 1 dp Linie, echte Symbolpfade, Scroll-Bereich aus der gemessenen
+  Gesamthoehe. B-01 → 81 Elemente (19 Symbole, 16 Schatten, 2 Verlaeufe), B-08 → 74.
+  Klammernbilanz geprueft.
+- **`design-umsetzer/references/symbole-erzeugen.ps1`** — gemessene Pfade → ImageVectors.
+- **Regeln**: Messung schlaegt Prosa · v1-Gestaltung ist nur Absicht · nicht nachbessern,
+  sondern aus der Messung neu schreiben · gruener Build ist keine Abnahme · Abnahme gegen
+  die Messung statt gegen ein Foto · Aktualitaet des Ruecklaufs nachweisen.
+- Alle vier Profile identisch (minimal/standard/strict/opencode-setup).
+- `Specs/Experimente/v2/messung/` + `/bilder/` liegen vor (18 Bildschirme, 475 dp).
 
 ## Fehlgeschlagene Ansaetze — NICHT wiederholen
+- Bestehende Bildschirme nachbessern und mit Handy-Screenshots vergleichen. Naehert sich an,
+  bleibt bei "fast". Aus der Messung neu erzeugen.
 - Aus den Zahlen des UI-Specs bauen statt aus der Messung.
-- Schriften ueber die Google-Fonts-CSS (`/l/font?kit=`) laden: liefert Dateien mit Kopf
-  `b88a0000`, die Android nicht laden kann -> Absturz beim Start. Gueltige TTF liegen unter
-  `https://raw.githubusercontent.com/google/fonts/main/ofl/<familie>/<Familie>[<achsen>].ttf`.
-- `--dump-dom` bei Chrome (im neuen Headless entfernt).
-- Ohne `--allow-file-access-from-files` bleiben die @keyframes leer.
-- Screenshot-Vergleich als Methode statt Abnahme gegen die Messung.
+- Schriften ueber die Google-Fonts-CSS (`/l/font?kit=`): liefert Dateien mit Kopf `b88a0000`,
+  Android stuerzt ab. Gueltige TTF unter
+  `raw.githubusercontent.com/google/fonts/main/ofl/<familie>/<Familie>[<achsen>].ttf`.
+- `--dump-dom` (im neuen Chrome-Headless entfernt); ohne `--allow-file-access-from-files`
+  bleiben die @keyframes leer.
 - Zwei `fillMaxSize`-Kinder in einer `Column` (das zweite bekommt Hoehe 0, kompiliert gruen).
+- `adb exec-out screencap -p` ohne `-d <display-id>` auf dem Fold.
+
+## Stand der App (nur Versuchskaninchen, nicht das Ziel)
+Deinstalliert. Der Code im Repo ist der alte, von Hand nachgebesserte Stand — er wird beim
+End-to-End-Lauf durch erzeugten Code ersetzt, nicht weiterbenutzt.
 
 ## Anker
 - Branch: main
 - Letzte Commits:
-b4adb90d3 Experimente: Schriften des Entwurfs eingebettet
-61979aa06 Experimente: B-01 aus der Messung, App laeuft wieder
-bf713a3e4 Messung: drei Logikfehler behoben (Direktive 3)
-b5016330a Pipeline: Symbole, beliebige HTML-Quellen, alle drei Zielsysteme
-270f7b65d Pipeline: One-Shot-Ablauf, Uebersetzungsvorschrift und Abnahme-Tor
+2fb65e8f3 Stufe 2: Aktualitaet des Ruecklaufs nachweisen
+52e4559b7 Erzeuger: Scroll-Bereich aus der gemessenen Gesamthoehe
+b7b370f5a Erzeuger: Symbole im erzeugten Bildschirmcode
+c1ec2ac12 Erzeuger: Schatten, Verlaeufe und Lichtsaum
+baf79e74d Stufe 3: Bildschirme maschinell aus der Messung erzeugen
