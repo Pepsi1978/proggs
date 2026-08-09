@@ -156,25 +156,32 @@ Liegt `Designs/Outbox/<App>/WERFT-DESIGN/` vor, ist es die Wertequelle. Reihenfo
    Navigation, `data-screen-id` / `data-screen-name` die Bildschirm-Kennung.
 5. **`DESIGN-SPEC.md`** ist die lesbare Fassung derselben Werte und enthaelt die
    Bildschirm-Tabelle — sie ist die Abhakliste fuer Phase 5.
-6. **Das Design als BILD rendern — Pflicht, nicht Kuer.** Prosa ist eine verlustbehaftete
-   Kodierung eines Bildes. Ohne Bild kann Stufe 3 nicht abnehmen und niemand merkt, dass
-   etwas fehlt. Rendere jeden Bildschirm in JEDER Erscheinung nach
-   `Specs/<App>/v2/bilder/<erscheinung>/<nr>-<name>.png` (headless Chrome/Edge ist auf
-   Windows und macOS vorhanden):
+6. **Den Entwurf VERMESSEN — der wichtigste Schritt der ganzen Stufe.**
+
+   > Jede Zusammenfassung verliert etwas, und was das Spec nicht sagt, erfindet die
+   > Umsetzung. Deshalb wird hier nichts zusammengefasst: Ein Skript oeffnet jeden
+   > Bildschirm im Browser und liest fuer **jedes** Element die **berechneten** Werte aus.
+   > Vererbung, `var()`, `color-mix()` und die gestaffelten Regelschichten sind darin
+   > bereits aufgeloest. Das Ergebnis ist vollstaendig **durch Konstruktion**.
 
    ```powershell
-   # Die Einzeldatei traegt eine Rahmenbreite von 1440 px — auf Geraetebreite zwingen,
-   # sonst ist der Screenshot rechts abgeschnitten.
-   $fix = '<style>.werft-screens{width:412px!important}' +
-          '.werft-screen{width:412px!important;height:915px!important;overflow:hidden!important}</style></head>'
-   # je HTML: </head> ersetzen, relativen CSS-Pfad absolut machen, dann:
-   & chrome.exe --headless=new --disable-gpu --hide-scrollbars `
-       --force-device-scale-factor=2 --window-size=412,915 `
-       --screenshot="<ziel>.png" "file:///<kopie>.html"
+   .\references\messe-design.ps1 `
+       -Design ~/proggs/Designs/Outbox/<App> `
+       -Ziel   ~/proggs/Specs/<App>/v2
    ```
 
-   **Sieh dir jedes gerenderte Bild danach selbst an.** Was du im Bild siehst und im Spec
-   nicht wiederfindest, fehlt im Spec — nicht im Design.
+   Erzeugt je Erscheinung und Bildschirm:
+   - `Specs/<App>/v2/messung/<erscheinung>/<name>.json` — Kasten (x/y/Breite/Hoehe),
+     alle formgebenden Eigenschaften, `::before`/`::after`, Texte, Beschriftungen,
+     `data-werft-funktion`, Navigationsziele und die `@keyframes`.
+   - `Specs/<App>/v2/bilder/<erscheinung>/<name>.png` — dasselbe als Bild.
+
+   **Diese Messung ist ab hier die verbindliche Bauvorlage.** Das UI-Spec beschreibt sie
+   lesbar, ersetzt sie aber nicht. Steht etwas in der Messung und nicht im Spec, gilt die
+   Messung — und das Spec ist zu ergaenzen.
+
+   **Sieh dir jedes gerenderte Bild danach selbst an.** Was du im Bild siehst und in der
+   Messung nicht wiederfindest, ist ein Fehler des Messfuehlers — melden, nicht uebergehen.
 7. **Aufbau je Bildschirm aus dem Bild beschreiben.** Eine Liste der Bedienelemente ist
    KEIN Aufbau. Aus dem gerenderten Bild je Bildschirm festhalten:
    - Steht die Beschriftung **ueber** oder **neben** ihrem Feld?
