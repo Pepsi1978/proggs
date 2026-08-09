@@ -6,6 +6,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, usePa
 import { api, apiEventStream, apiFormProgress, ApiError } from "./api";
 import { canvasZoomFromWheel, defaultDeviceZoomAndOffset, offsetForZoomAtPoint, physicalZoomForDevice, type CanvasPoint } from "./canvas-navigation";
 import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, referenceDevices, stageDeviceFor, stageDeviceForDesign } from "./reference-devices";
+import { briefkastenMoeglich, designsOrdner, inboxDatei, inboxListe, inOutboxSchreiben, ordnerWaehlen, type InboxEintrag } from "./briefkasten";
 import { hexColour, tokenTitle } from "./design-colours";
 import { chatStepText, designFileLabel, providerHealth } from "./chat-progress";
 import { type ToolMode, useUi } from "./store";
@@ -421,10 +422,20 @@ const zielSysteme = [
 function ZielModal({ projectId, onClose }: { projectId: string; onClose(): void }) {
   const [ziel, setZiel] = useState<string>("android");
   const [meldung, setMeldung] = useState<string>();
-  const briefkasten = useQuery({ queryKey: ["briefkasten"], queryFn: () => api<{ inbox: boolean; outbox: boolean }>("/briefkasten") });
+  const [ordner, setOrdner] = useState<Awaited<ReturnType<typeof designsOrdner>>>();
+  useEffect(() => { void (async () => setOrdner(await designsOrdner(false)))(); }, []);
+  // Ein Download landet dort, wo der Browser hin will. Ist der Designs-Ordner freigegeben, wird das
+  // fertige Paket stattdessen direkt in Outbox/ geschrieben — genau dort sucht Stufe 2 danach.
   const inOutbox = useMutation({
-    mutationFn: () => api<{ abgelegt: string }>(`/projects/${projectId}/outbox`, { method: "POST", body: JSON.stringify({ ziel }) }),
-    onSuccess: (data) => setMeldung(`In die Outbox gelegt: ${data.abgelegt}`)
+    mutationFn: async () => {
+      if (!ordner) throw new Error("kein Ordner");
+      const antwort = await fetch(`/api/v1/projects/${projectId}/export.zip?ziel=${ziel}`, { credentials: "include" });
+      if (!antwort.ok) throw new Error("Export fehlgeschlagen");
+      const kopf = antwort.headers.get("content-disposition") ?? "";
+      const name = decodeURIComponent(/filename="([^"]+)"/.exec(kopf)?.[1] ?? "") || `werft-projekt-SPEC-v2.zip`;
+      return inOutboxSchreiben(ordner, name, await antwort.blob());
+    },
+    onSuccess: (pfad) => setMeldung(`In die Outbox gelegt: ${pfad}`)
   });
   return (
     <Modal title="Für welches System soll das Spec sein?" onClose={onClose}>
@@ -445,7 +456,7 @@ function ZielModal({ projectId, onClose }: { projectId: string; onClose(): void 
       </div>
       <div className="modal-actions">
         <Button onClick={onClose}>Abbrechen</Button>
-        {briefkasten.data?.outbox && (
+        {ordner && (
           <Button disabled={inOutbox.isPending} onClick={() => inOutbox.mutate()}>
             {inOutbox.isPending ? "Wird abgelegt …" : "In die Outbox legen"}
           </Button>
@@ -467,16 +478,34 @@ function ImportProject({ onClose }: { onClose(): void }) {
   const [frontendOnly, setFrontendOnly] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState<ImportProgressState | null>(null);
-  // Der Dateidialog eines Browsers laesst sich nicht auf einen Ordner vorbelegen. Die Inbox wird
-  // deshalb vom Server gelesen und hier direkt angeboten — ein Klick statt Durchklicken.
-  const briefkasten = useQuery({ queryKey: ["briefkasten"], queryFn: () => api<{ inbox: boolean; outbox: boolean; dateien: Array<{ datei: string; bytes: number; geaendert: string }> }>("/briefkasten") });
+  // Der Dateidialog eines Browsers laesst sich nicht auf einen Ordner vorbelegen — das verbietet
+  // der Browser. Ist der Designs-Ordner einmal freigegeben, entfaellt der Dialog ganz: die
+  // Spec-Pakete aus Inbox/ stehen direkt zum Anklicken da.
+  const [ordner, setOrdner] = useState<Awaited<ReturnType<typeof designsOrdner>>>();
+  const [inbox, setInbox] = useState<InboxEintrag[]>([]);
   const [inboxFehler, setInboxFehler] = useState<string>();
+  const inboxLesen = async (griff: NonNullable<Awaited<ReturnType<typeof designsOrdner>>>) => {
+    setOrdner(griff);
+    setInbox(await inboxListe(griff).catch(() => []));
+  };
+  useEffect(() => {
+    // Beim Laden wird NICHT nachgefragt: ein ungefragter Berechtigungsdialog beim Öffnen des
+    // Fensters waere Zufall. Fehlt die Freigabe, erscheint der Knopf zum Freigeben.
+    void (async () => { const griff = await designsOrdner(false); if (griff) await inboxLesen(griff); })();
+  }, []);
+  const freigeben = async () => {
+    setInboxFehler(undefined);
+    try {
+      const griff = await ordnerWaehlen();
+      if (griff) await inboxLesen(griff);
+    } catch { setInboxFehler("Der Ordner wurde nicht freigegeben."); }
+  };
   const ausInbox = async (datei: string) => {
     setInboxFehler(undefined);
     try {
-      const antwort = await fetch(`/api/v1/briefkasten/inbox/${encodeURIComponent(datei)}`, { credentials: "include" });
-      if (!antwort.ok) throw new Error("nicht lesbar");
-      setFiles([new File([await antwort.blob()], datei, { type: "application/zip" })]);
+      if (!ordner) throw new Error("kein Ordner");
+      const inhalt = await inboxDatei(ordner, datei);
+      setFiles([new File([inhalt], datei, { type: "application/zip" })]);
       setName(datei.replace(/-SPEC-v\d+\.zip$/i, "").replace(/\.zip$/i, "").slice(0, 120) || "Importiertes Design");
     } catch { setInboxFehler("Die Datei konnte nicht aus der Inbox gelesen werden."); }
   };
@@ -579,18 +608,23 @@ function ImportProject({ onClose }: { onClose(): void }) {
             ))}
           </div>
         </label>
-        {briefkasten.data?.inbox && (
+        {briefkastenMoeglich() && (
           <section className="import-inbox">
             <strong>Aus der Inbox</strong>
-            {briefkasten.data.dateien.length === 0
-              ? <p className="subtle">In <code>Designs/Inbox</code> liegt gerade kein Spec-ZIP.</p>
-              : <div className="chips">
-                  {briefkasten.data.dateien.map((eintrag) => (
-                    <button type="button" key={eintrag.datei} className={files[0]?.name === eintrag.datei ? "active" : ""} onClick={() => void ausInbox(eintrag.datei)}>
-                      {eintrag.datei}
-                    </button>
-                  ))}
-                </div>}
+            {!ordner
+              ? <p className="subtle">
+                  <Button onClick={() => void freigeben()}>Designs-Ordner freigeben</Button>
+                  {" "}Einmalig — danach stehen die Spec-Pakete aus <code>Designs/Inbox</code> hier direkt zum Anklicken.
+                </p>
+              : inbox.length === 0
+                ? <p className="subtle">In <code>{ordner.name}/Inbox</code> liegt gerade kein Spec-ZIP.</p>
+                : <div className="chips">
+                    {inbox.map((eintrag) => (
+                      <button type="button" key={eintrag.datei} className={files[0]?.name === eintrag.datei ? "active" : ""} onClick={() => void ausInbox(eintrag.datei)}>
+                        {eintrag.datei}
+                      </button>
+                    ))}
+                  </div>}
             {inboxFehler && <p className="field-error">{inboxFehler}</p>}
           </section>
         )}
