@@ -73,8 +73,8 @@ public sealed partial class MainViewModel : ObservableObject
             DisplayName = "Gründlichkeitsmodus",
             Description = "Randfälle und Härtung mitprüfen"
         });
-        SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
-        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
+        SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -122,7 +122,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
-        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "standard");
+        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
@@ -254,13 +254,7 @@ public sealed partial class MainViewModel : ObservableObject
         UpdateProfileAvailability();
         if (value == null) return;
 
-        var workModeId = value.Id switch
-        {
-            "minimal" or "standard" => "frei",
-            "strict" => "normal",
-            _ => "frei"
-        };
-        SelectedWorkMode = WorkModes.Single(mode => mode.Id == workModeId);
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
         SelectProfileThinkingOption();
         StatusText = $"Profil {value.DisplayName} ausgewählt.";
     }

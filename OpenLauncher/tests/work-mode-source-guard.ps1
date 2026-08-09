@@ -14,9 +14,10 @@ $modeFiles = @('frei', 'schnell', 'normal', 'gruendlich') |
 
 $checks = @(
     @{ Name = 'vier Modi in richtiger Reihenfolge'; Pass = $viewModel -match '(?s)Id = "frei".*?Id = "schnell".*?Id = "normal".*?Id = "gruendlich"' }
-    @{ Name = 'Freimodus ist Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "frei"\)' }
-    @{ Name = 'Profile wählen ihren Startmodus vor'; Pass = $viewModel -match '(?s)"minimal" or "standard" => "frei".*?"strict" => "normal"' }
-    @{ Name = 'Profilwechsel setzt nur die normale Modusauswahl'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == workModeId\)' }
+    @{ Name = 'Minimalprofil ist Launcher-Standard'; Pass = $viewModel -match 'SelectedProfile = Profiles\.Single\(profile => profile\.Id == "minimal"\)' }
+    @{ Name = 'Schnellmodus ist Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "schnell"\)' }
+    @{ Name = 'Modellwechsel setzt das Minimalprofil'; Pass = $viewModel -match 'SelectedProfile = Profiles\.FirstOrDefault\(profile => profile\.Id == "minimal"\)' }
+    @{ Name = 'Profilwechsel setzt immer den Schnellmodus'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "schnell"\)' }
     @{ Name = 'Standard und Minimal wählen High vor'; Pass = $viewModel -match 'SelectedProfile\.Id == "strict" \? "xhigh" : "high"' }
     @{ Name = 'Nicht unterstützte Stufe fällt auf höchste verfügbare zurück'; Pass = $viewModel -match '\?\? ThinkingOptions\.Last\(\)' }
     @{ Name = 'Thinking-Vorauswahl folgt Profilwechsel und Optionsladen'; Pass = ([regex]::Matches($viewModel, 'SelectProfileThinkingOption\(\);')).Count -eq 2 }
