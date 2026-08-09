@@ -38,6 +38,13 @@ object Bewegung {
     val haken: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
     /**
+     * Eine KI-Antwort erscheint (M-08) — auf B-02 die Gesprächsblase, auf B-03 die Auswertung.
+     * Im Design gemessen als `ease-out` → `cubic-bezier(0, 0, 0.58, 1)`, 400 ms.
+     */
+    const val ANTWORT_MS = 400
+    val antwort: Easing = CubicBezierEasing(0f, 0f, 0.58f, 1f)
+
+    /**
      * Laufende Aufnahme — die einzige Dauerbewegung der App.
      * Im Design gemessen als `ease-in-out` → `cubic-bezier(0.42, 0, 0.58, 1)`,
      * 3200 ms, endlos, `alternate`.
