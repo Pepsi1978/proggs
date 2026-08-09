@@ -3,7 +3,11 @@ package de.frank.experimente.ui.erzeugt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import de.frank.experimente.ui.theme.Fraunces
+import de.frank.experimente.ui.theme.Inter
+import de.frank.experimente.ui.theme.JetBrainsMono
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -48,7 +55,12 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
 fun Heute1Erzeugt(modifier: Modifier = Modifier) {
     // Der Entwurf ist 2146 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
-    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Box(Modifier.fillMaxWidth().height(2146f.dp)) {
         // werft-b01
         Box(Modifier.offset(x = 0f.dp, y = 0f.dp).size(width = 475f.dp, height = 751f.dp).background(Brush.radialGradient(listOf(Color(0xFFC4623C).copy(alpha = 0.18f), Color(0xFF000000).copy(alpha = 0f), Color(0xFF6F8F6A).copy(alpha = 0.12f), Color(0xFF000000).copy(alpha = 0f)))))
@@ -59,12 +71,13 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
         // werft-b01__icon-action
         Box(Modifier.offset(x = 407f.dp, y = 7.5f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // werft-b01__title
-        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).size(width = 71.53f.dp, height = 34f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).size(width = 71.53f.dp, height = 34f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Heute",
                 style = TextStyle(
                     fontSize = 28f.sp, lineHeight = 34f.sp,
                     fontWeight = FontWeight(600), color = Color(0xFFF4EEE7),
+                    fontFamily = Fraunces,
                 ),
             )
         }
@@ -109,34 +122,37 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b01__date
-        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "SONNTAG, 9. AUGUST 2026",
                 style = TextStyle(
                     fontSize = 13f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = JetBrainsMono,
                 ),
             )
         }
         // werft-b01__intro
         Box(Modifier.offset(x = 20f.dp, y = 134f.dp).size(width = 435f.dp, height = 99f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 12f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF201B17).copy(alpha = 0.82f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(20f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b01__section-title
-        Box(Modifier.offset(x = 41f.dp, y = 155f.dp).size(width = 393f.dp, height = 28f.dp)) {
+        Box(Modifier.offset(x = 41f.dp, y = 155f.dp).size(width = 393f.dp, height = 28f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Wie ist deine Lage heute?",
                 style = TextStyle(
                     fontSize = 22f.sp, lineHeight = 28f.sp,
                     fontWeight = FontWeight(600), color = Color(0xFFF4EEE7),
+                    fontFamily = Fraunces,
                 ),
             )
         }
         // werft-b01__subtitle
-        Box(Modifier.offset(x = 41f.dp, y = 191f.dp).size(width = 393f.dp, height = 21f.dp)) {
+        Box(Modifier.offset(x = 41f.dp, y = 191f.dp).size(width = 393f.dp, height = 21f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Was für ein Tag ist das? Was liegt vor dir?",
                 style = TextStyle(
                     fontSize = 14f.sp, lineHeight = 21f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }
@@ -155,12 +171,13 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b01__text-action
-        Box(Modifier.offset(x = 172.94f.dp, y = 391f.dp).size(width = 129.13f.dp, height = 48f.dp).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF3A231A).copy(alpha = 0.72f)).border(1f.dp, Color(0xFFC4623C).copy(alpha = 0.24f), RoundedCornerShape(14f.dp))) {
+        Box(Modifier.offset(x = 172.94f.dp, y = 391f.dp).size(width = 129.13f.dp, height = 48f.dp).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF3A231A).copy(alpha = 0.72f)).border(1f.dp, Color(0xFFC4623C).copy(alpha = 0.24f), RoundedCornerShape(14f.dp)), contentAlignment = Alignment.Center) {
             Text(
                 text = "Lieber tippen",
                 style = TextStyle(
                     fontSize = 16f.sp, lineHeight = 24f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFC4623C),
+                    fontFamily = Inter,
                 ),
             )
         }
@@ -219,52 +236,57 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).size(width = 32.03f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).size(width = 32.03f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Heute",
                 style = TextStyle(
                     fontSize = 12f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFC4623C),
+                    fontFamily = Inter,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).size(width = 26.02f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).size(width = 26.02f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Ziele",
                 style = TextStyle(
                     fontSize = 12f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).size(width = 48.02f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).size(width = 48.02f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Merkliste",
                 style = TextStyle(
                     fontSize = 12f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).size(width = 69.38f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).size(width = 69.38f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Erkenntnisse",
                 style = TextStyle(
                     fontSize = 12f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).size(width = 46.05f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).size(width = 46.05f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Logbuch",
                 style = TextStyle(
                     fontSize = 12f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }

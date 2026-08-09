@@ -3,7 +3,11 @@ package de.frank.experimente.ui.erzeugt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import de.frank.experimente.ui.theme.Fraunces
+import de.frank.experimente.ui.theme.Inter
+import de.frank.experimente.ui.theme.JetBrainsMono
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -48,7 +55,12 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
 fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
     // Der Entwurf ist 751 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
-    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Box(Modifier.fillMaxWidth().height(751f.dp)) {
         // b02-topbar
         Box(Modifier.offset(x = 0f.dp, y = 0f.dp).size(width = 475f.dp, height = 64f.dp).shadow(elevation = 10f.dp, clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).background(Color(0xFF151210).copy(alpha = 0.82f))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.08f))) }
@@ -67,32 +79,35 @@ fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b02-experiment-title
-        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 28f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 28f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "⟨Experimenttitel⟩",
                 style = TextStyle(
                     fontSize = 22f.sp, lineHeight = 28f.sp,
                     fontWeight = FontWeight(600), color = Color(0xFFF4EEE7),
+                    fontFamily = Fraunces,
                 ),
             )
         }
         // b02-experiment-day
-        Box(Modifier.offset(x = 20f.dp, y = 116f.dp).size(width = 435f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 116f.dp).size(width = 435f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Tag 2 von 3",
                 style = TextStyle(
                     fontSize = 13f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = JetBrainsMono,
                 ),
             )
         }
         // b02-empty
-        Box(Modifier.offset(x = 20f.dp, y = 166f.dp).size(width = 435f.dp, height = 67f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 12f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF201B17).copy(alpha = 0.82f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(20f.dp))) {
+        Box(Modifier.offset(x = 20f.dp, y = 166f.dp).size(width = 435f.dp, height = 67f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 12f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF201B17).copy(alpha = 0.82f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(20f.dp)), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Frag mich, wie du das angehen könntest.",
                 style = TextStyle(
                     fontSize = 16f.sp, lineHeight = 25f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = Inter,
                 ),
             )
         }

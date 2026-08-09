@@ -46,6 +46,15 @@ function AlsCompose([string]$css) {
 }
 function Px([string]$v) { if ($v -match '^([\d.]+)px$') { [double]$Matches[1] } else { $null } }
 
+# Die erste Familie aus `font-family` auf die Schriften der App abbilden. Ohne das zeichnet
+# die App System-Sans, obwohl die richtigen Schriften eingebettet sind.
+function Schriftfamilie([string]$css) {
+    if (-not $css) { return $null }
+    $erste = (($css -split ',')[0]).Trim().Trim('"').Trim("'")
+    if (-not $erste) { return $null }
+    return ($erste -replace '[^A-Za-z0-9]', '')
+}
+
 # `box-shadow` kann mehrere Lagen tragen. Compose kennt nur eine je Modifier und keine
 # inset-Schatten — also: aeussere Lagen als gestapelte `.shadow(...)`, der inset-Lichtsaum
 # oben als 1 dp Linie. Weglassen ist nicht zulaessig, er traegt die Plastizitaet.
@@ -117,7 +126,11 @@ $sb = [Text.StringBuilder]::new()
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -138,6 +151,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import de.frank.experimente.ui.theme.Fraunces
+import de.frank.experimente.ui.theme.Inter
+import de.frank.experimente.ui.theme.JetBrainsMono
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -162,7 +178,12 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
 fun $name`Erzeugt(modifier: Modifier = Modifier) {
     // Der Entwurf ist $gesamthoehe dp hoch, das Sichtfenster nur $sichtfenster dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
-    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Box(Modifier.fillMaxWidth().height(${gesamthoehe}f.dp)) {
 "@)
 
@@ -236,12 +257,15 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
         $gew = if ($s.fontWeight) { $s.fontWeight } else { "400" }
         $farbe = (AlsCompose $s.color) ?? "Color.Unspecified"
         $gross = if ($s.textTransform -eq "uppercase") { ".uppercase()" } else { "" }
-        [void]$sb.AppendLine("        Box($mod) {")
+        $familie = Schriftfamilie $s.fontFamily
+        $ausrichtung = if ($s.textAlign -eq "center") { "Alignment.Center" } else { "Alignment.CenterStart" }
+        [void]$sb.AppendLine("        Box($mod, contentAlignment = $ausrichtung) {")
         [void]$sb.AppendLine("            Text(")
         [void]$sb.AppendLine("                text = `"$txt`"$gross,")
         [void]$sb.AppendLine("                style = TextStyle(")
         [void]$sb.AppendLine("                    fontSize = ${gr}f.sp, lineHeight = ${zh}f.sp,")
         [void]$sb.AppendLine("                    fontWeight = FontWeight($gew), color = $farbe,")
+        if ($familie) { [void]$sb.AppendLine("                    fontFamily = $familie,") }
         [void]$sb.AppendLine("                ),")
         [void]$sb.AppendLine("            )")
         [void]$sb.AppendLine("        }")

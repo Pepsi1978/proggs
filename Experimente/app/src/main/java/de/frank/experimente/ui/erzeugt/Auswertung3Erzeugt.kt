@@ -3,7 +3,11 @@ package de.frank.experimente.ui.erzeugt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import de.frank.experimente.ui.theme.Fraunces
+import de.frank.experimente.ui.theme.Inter
+import de.frank.experimente.ui.theme.JetBrainsMono
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -48,7 +55,12 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
 fun Auswertung3Erzeugt(modifier: Modifier = Modifier) {
     // Der Entwurf ist 865 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
-    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Box(Modifier.fillMaxWidth().height(865f.dp)) {
         // werft-b03
         Box(Modifier.offset(x = 0f.dp, y = 0f.dp).size(width = 475f.dp, height = 751f.dp).background(Brush.radialGradient(listOf(Color(0xFFC4623C).copy(alpha = 0.18f), Color(0xFF000000).copy(alpha = 0f), Color(0xFF6F8F6A).copy(alpha = 0.12f), Color(0xFF000000).copy(alpha = 0f)))))
@@ -57,12 +69,13 @@ fun Auswertung3Erzeugt(modifier: Modifier = Modifier) {
         // werft-b03__back
         Box(Modifier.offset(x = 20f.dp, y = 7.5f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // werft-b03__title
-        Box(Modifier.offset(x = 80f.dp, y = 14.5f.dp).size(width = 235.14f.dp, height = 34f.dp)) {
+        Box(Modifier.offset(x = 80f.dp, y = 14.5f.dp).size(width = 235.14f.dp, height = 34f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Wie ist es gelaufen?",
                 style = TextStyle(
                     fontSize = 28f.sp, lineHeight = 34f.sp,
                     fontWeight = FontWeight(600), color = Color(0xFFF4EEE7),
+                    fontFamily = Fraunces,
                 ),
             )
         }
@@ -77,32 +90,35 @@ fun Auswertung3Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b03__experiment-title
-        Box(Modifier.offset(x = 20f.dp, y = 96f.dp).size(width = 435f.dp, height = 25f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 96f.dp).size(width = 435f.dp, height = 25f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "⟨Experimenttitel⟩",
                 style = TextStyle(
                     fontSize = 19f.sp, lineHeight = 25f.sp,
                     fontWeight = FontWeight(600), color = Color(0xFFF4EEE7),
+                    fontFamily = Fraunces,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 20f.dp, y = 125f.dp).size(width = 78.63f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 20f.dp, y = 125f.dp).size(width = 78.63f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Tag 2 von 3",
                 style = TextStyle(
                     fontSize = 13f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = JetBrainsMono,
                 ),
             )
         }
         // span
-        Box(Modifier.offset(x = 118.63f.dp, y = 125f.dp).size(width = 114.36f.dp, height = 18f.dp)) {
+        Box(Modifier.offset(x = 118.63f.dp, y = 125f.dp).size(width = 114.36f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "3 von 5 erledigt",
                 style = TextStyle(
                     fontSize = 13f.sp, lineHeight = 18f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFA99C8F),
+                    fontFamily = JetBrainsMono,
                 ),
             )
         }
@@ -119,12 +135,13 @@ fun Auswertung3Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b03__button
-        Box(Modifier.offset(x = 188.27f.dp, y = 769f.dp).size(width = 98.47f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp))) {
+        Box(Modifier.offset(x = 188.27f.dp, y = 769f.dp).size(width = 98.47f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp)), contentAlignment = Alignment.Center) {
             Text(
                 text = "Überspringen",
                 style = TextStyle(
                     fontSize = 16f.sp, lineHeight = 24f.sp,
                     fontWeight = FontWeight(400), color = Color(0xFFF4EEE7),
+                    fontFamily = Inter,
                 ),
             )
         }
