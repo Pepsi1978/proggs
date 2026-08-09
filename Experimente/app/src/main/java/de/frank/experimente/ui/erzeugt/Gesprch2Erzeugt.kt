@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.erzeugt
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,7 +54,11 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
     }.build()
 
 @Composable
-fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
+fun Gesprch2Erzeugt(
+    modifier: Modifier = Modifier,
+    beiFunktion: (String) -> Unit = {},
+    beiNavigation: (String) -> Unit = {},
+) {
     // Der Entwurf ist 751 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
     Box(
@@ -68,7 +73,7 @@ fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
         // b02-screen
         Box(Modifier.offset(x = 0f.dp, y = 0f.dp).size(width = 475f.dp, height = 751f.dp).background(Brush.radialGradient(listOf(Color(0xFFC4623C).copy(alpha = 0.18f), Color(0xFF000000).copy(alpha = 0f), Color(0xFF6F8F6A).copy(alpha = 0.12f), Color(0xFF000000).copy(alpha = 0f)))))
         // b02-back
-        Box(Modifier.offset(x = 20f.dp, y = 8f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
+        Box(Modifier.offset(x = 20f.dp, y = 8f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50)).clickable { beiNavigation("B-01") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // svg
         Box(Modifier.offset(x = 32f.dp, y = 20f.dp).size(width = 24f.dp, height = 24f.dp)) {
             Icon(
@@ -113,11 +118,11 @@ fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b02-composer
-        Box(Modifier.offset(x = 0f.dp, y = 655f.dp).size(width = 475f.dp, height = 96f.dp).shadow(elevation = 16f.dp, clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).background(Color(0xFF151210).copy(alpha = 0.84f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.72f))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.08f))) }
+        Box(Modifier.offset(x = 0f.dp, y = 655f.dp).size(width = 475f.dp, height = 96f.dp).shadow(elevation = 16f.dp, clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).background(Color(0xFF151210).copy(alpha = 0.84f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.72f)).clickable { beiFunktion("F-09") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.08f))) }
         // b02-input-shell
         Box(Modifier.offset(x = 20f.dp, y = 675.5f.dp).size(width = 367f.dp, height = 56f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 10f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.9f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // b02-mic-button
-        Box(Modifier.offset(x = 399f.dp, y = 675.5f.dp).size(width = 56f.dp, height = 56f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.3f), spotColor = Color(0xFFC4623C).copy(alpha = 0.3f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.26f), spotColor = Color(0xFF000000).copy(alpha = 0.26f)).clip(RoundedCornerShape(percent = 50)).background(Brush.linearGradient(0f to Color(0xFFC9704D), 0.58f to Color(0xFFC4623C), 1f to Color(0xFFA55232)))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.28f))) }
+        Box(Modifier.offset(x = 399f.dp, y = 675.5f.dp).size(width = 56f.dp, height = 56f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.3f), spotColor = Color(0xFFC4623C).copy(alpha = 0.3f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.26f), spotColor = Color(0xFF000000).copy(alpha = 0.26f)).clip(RoundedCornerShape(percent = 50)).background(Brush.linearGradient(0f to Color(0xFFC9704D), 0.58f to Color(0xFFC4623C), 1f to Color(0xFFA55232))).clickable { beiFunktion("F-09") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.28f))) }
         // svg
         Box(Modifier.offset(x = 415f.dp, y = 691.5f.dp).size(width = 24f.dp, height = 24f.dp)) {
             Icon(

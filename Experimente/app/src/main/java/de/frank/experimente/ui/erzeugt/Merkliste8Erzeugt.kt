@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.erzeugt
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,7 +54,11 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
     }.build()
 
 @Composable
-fun Merkliste8Erzeugt(modifier: Modifier = Modifier) {
+fun Merkliste8Erzeugt(
+    modifier: Modifier = Modifier,
+    beiFunktion: (String) -> Unit = {},
+    beiNavigation: (String) -> Unit = {},
+) {
     // Der Entwurf ist 751 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
     Box(
@@ -90,7 +95,7 @@ fun Merkliste8Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b05-fab
-        Box(Modifier.offset(x = 407f.dp, y = 611f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.3f), spotColor = Color(0xFFC4623C).copy(alpha = 0.3f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.26f), spotColor = Color(0xFF000000).copy(alpha = 0.26f)).clip(RoundedCornerShape(percent = 50)).background(Brush.linearGradient(0f to Color(0xFFC9704D), 0.58f to Color(0xFFC4623C), 1f to Color(0xFFA55232)))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.28f))) }
+        Box(Modifier.offset(x = 407f.dp, y = 611f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.3f), spotColor = Color(0xFFC4623C).copy(alpha = 0.3f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.26f), spotColor = Color(0xFF000000).copy(alpha = 0.26f)).clip(RoundedCornerShape(percent = 50)).background(Brush.linearGradient(0f to Color(0xFFC9704D), 0.58f to Color(0xFFC4623C), 1f to Color(0xFFA55232))).clickable { beiFunktion("F-18") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.28f))) }
         // svg
         Box(Modifier.offset(x = 419f.dp, y = 623f.dp).size(width = 24f.dp, height = 24f.dp)) {
             Icon(
@@ -104,7 +109,7 @@ fun Merkliste8Erzeugt(modifier: Modifier = Modifier) {
         // b05-bottomnav
         Box(Modifier.offset(x = 12f.dp, y = 675f.dp).size(width = 451f.dp, height = 64f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(24f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.18f), spotColor = Color(0xFF000000).copy(alpha = 0.18f)).shadow(elevation = 12f.dp, shape = RoundedCornerShape(24f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(24f.dp)).background(Color(0xFF201B17).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(24f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // b05-nav-item
-        Box(Modifier.offset(x = 196.59f.dp, y = 680f.dp).size(width = 81.8f.dp, height = 54f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.18f), spotColor = Color(0xFFC4623C).copy(alpha = 0.18f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF3A231A))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFC4623C).copy(alpha = 0.18f))) }
+        Box(Modifier.offset(x = 196.59f.dp, y = 680f.dp).size(width = 81.8f.dp, height = 54f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.18f), spotColor = Color(0xFFC4623C).copy(alpha = 0.18f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF3A231A)).clickable { beiNavigation("B-05") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFC4623C).copy(alpha = 0.18f))) }
         // span
         Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).defaultMinSize(minWidth = 32.03f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(

@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.erzeugt
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,7 +54,11 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
     }.build()
 
 @Composable
-fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
+fun Einstellungen4Erzeugt(
+    modifier: Modifier = Modifier,
+    beiFunktion: (String) -> Unit = {},
+    beiNavigation: (String) -> Unit = {},
+) {
     // Der Entwurf ist 1822 dp hoch, das Sichtfenster nur 751 dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
     Box(
@@ -83,7 +88,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 101f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 102f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 102f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-22") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "GPT 5.6 Terra",
                 style = TextStyle(
@@ -107,7 +112,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 161f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 162f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 162f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-22") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Hoch",
                 style = TextStyle(
@@ -142,7 +147,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 262f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 263f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 263f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-22") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "GPT 5.6 Luna",
                 style = TextStyle(
@@ -166,7 +171,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 322f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 323f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 323f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-22") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Mittel",
                 style = TextStyle(
@@ -214,7 +219,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 527f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 528f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 528f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-23") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Google Chirp 3 HD",
                 style = TextStyle(
@@ -238,7 +243,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 587f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__select
-        Box(Modifier.offset(x = 206f.dp, y = 588f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 588f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-23") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "de-DE-Chirp3-HD-Kore",
                 style = TextStyle(
@@ -260,7 +265,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b08__range
-        Box(Modifier.offset(x = 205f.dp, y = 767f.dp).size(width = 177f.dp, height = 48f.dp).background(Color(0xFF3B3B3B)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 205f.dp, y = 767f.dp).size(width = 177f.dp, height = 48f.dp).background(Color(0xFF3B3B3B)).clickable { beiFunktion("F-23") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "1",
                 style = TextStyle(
@@ -293,7 +298,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b08__action
-        Box(Modifier.offset(x = 37f.dp, y = 827f.dp).size(width = 124.27f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
+        Box(Modifier.offset(x = 37f.dp, y = 827f.dp).size(width = 124.27f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(14f.dp)).clickable { beiFunktion("F-23") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // span
         Box(Modifier.offset(x = 54f.dp, y = 842f.dp).defaultMinSize(minWidth = 90.27f.dp, minHeight = 17f.dp), contentAlignment = Alignment.Center) {
             Text(
@@ -319,7 +324,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b08__action
-        Box(Modifier.offset(x = 330.34f.dp, y = 978f.dp).size(width = 107.66f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
+        Box(Modifier.offset(x = 330.34f.dp, y = 978f.dp).size(width = 107.66f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(14f.dp)).clickable { beiFunktion("F-24") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // werft-b08__access-name
         Box(Modifier.offset(x = 37f.dp, y = 989.5f.dp).defaultMinSize(minWidth = 96f.dp, minHeight = 25f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
@@ -356,7 +361,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 1038f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__password
-        Box(Modifier.offset(x = 206f.dp, y = 1039f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 1039f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-24") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "••••••••••••",
                 style = TextStyle(
@@ -380,7 +385,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 1098f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__password
-        Box(Modifier.offset(x = 206f.dp, y = 1099f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 1099f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-24") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "••••••••••••",
                 style = TextStyle(
@@ -404,7 +409,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__control-shell
         Box(Modifier.offset(x = 205f.dp, y = 1158f.dp).size(width = 233f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__password
-        Box(Modifier.offset(x = 206f.dp, y = 1159f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 206f.dp, y = 1159f.dp).size(width = 231f.dp, height = 46f.dp).background(Color(0xFF2A231D)).clickable { beiFunktion("F-24") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "••••••••••••",
                 style = TextStyle(
@@ -441,7 +446,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__reminder-row
         Box(Modifier.offset(x = 37f.dp, y = 1309f.dp).size(width = 401f.dp, height = 50f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__time
-        Box(Modifier.offset(x = 261f.dp, y = 1310f.dp).size(width = 104f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D)).border(1f.dp, Color(0xFF38302A), RoundedCornerShape(14f.dp)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 261f.dp, y = 1310f.dp).size(width = 104f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D)).border(1f.dp, Color(0xFF38302A), RoundedCornerShape(14f.dp)).clickable { beiFunktion("F-25") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "08:00",
                 style = TextStyle(
@@ -452,7 +457,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // input
-        Box(Modifier.offset(x = 377f.dp, y = 1310f.dp).size(width = 48f.dp, height = 48f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 377f.dp, y = 1310f.dp).size(width = 48f.dp, height = 48f.dp).clickable { beiFunktion("F-25") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "on",
                 style = TextStyle(
@@ -478,7 +483,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__reminder-row
         Box(Modifier.offset(x = 37f.dp, y = 1371f.dp).size(width = 401f.dp, height = 50f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b08__time
-        Box(Modifier.offset(x = 261f.dp, y = 1372f.dp).size(width = 104f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D)).border(1f.dp, Color(0xFF38302A), RoundedCornerShape(14f.dp)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 261f.dp, y = 1372f.dp).size(width = 104f.dp, height = 48f.dp).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D)).border(1f.dp, Color(0xFF38302A), RoundedCornerShape(14f.dp)).clickable { beiFunktion("F-25") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "20:30",
                 style = TextStyle(
@@ -489,7 +494,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // input
-        Box(Modifier.offset(x = 377f.dp, y = 1372f.dp).size(width = 48f.dp, height = 48f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 377f.dp, y = 1372f.dp).size(width = 48f.dp, height = 48f.dp).clickable { beiFunktion("F-25") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "on",
                 style = TextStyle(
@@ -528,7 +533,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
         // werft-b08__appearance
         Box(Modifier.offset(x = 37f.dp, y = 1524f.dp).size(width = 401f.dp, height = 56f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // input
-        Box(Modifier.offset(x = 43f.dp, y = 1529f.dp).size(width = 129.66f.dp, height = 44f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 43f.dp, y = 1529f.dp).size(width = 129.66f.dp, height = 44f.dp).clickable { beiFunktion("F-26") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "light",
                 style = TextStyle(
@@ -561,7 +566,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // input
-        Box(Modifier.offset(x = 172.66f.dp, y = 1529f.dp).size(width = 129.67f.dp, height = 44f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 172.66f.dp, y = 1529f.dp).size(width = 129.67f.dp, height = 44f.dp).clickable { beiFunktion("F-26") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "dark",
                 style = TextStyle(
@@ -572,7 +577,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // input
-        Box(Modifier.offset(x = 302.33f.dp, y = 1529f.dp).size(width = 129.67f.dp, height = 44f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 302.33f.dp, y = 1529f.dp).size(width = 129.67f.dp, height = 44f.dp).clickable { beiFunktion("F-26") }, contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "system",
                 style = TextStyle(
@@ -607,7 +612,7 @@ fun Einstellungen4Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b08__nav-row
-        Box(Modifier.offset(x = 37f.dp, y = 1683f.dp).size(width = 401f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
+        Box(Modifier.offset(x = 37f.dp, y = 1683f.dp).size(width = 401f.dp, height = 48f.dp).shadow(elevation = 12f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.14f), spotColor = Color(0xFF000000).copy(alpha = 0.14f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(14f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.05f), spotColor = Color(0xFFC4623C).copy(alpha = 0.05f)).clip(RoundedCornerShape(14f.dp)).background(Color(0xFF2A231D).copy(alpha = 0.88f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.88f), RoundedCornerShape(14f.dp)).clickable { beiNavigation("B-09") }) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // svg
         Box(Modifier.offset(x = 401f.dp, y = 1695f.dp).size(width = 24f.dp, height = 24f.dp)) {
             Icon(
