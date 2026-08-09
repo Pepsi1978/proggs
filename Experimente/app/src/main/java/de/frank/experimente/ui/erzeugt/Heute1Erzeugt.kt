@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -71,7 +72,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
         // werft-b01__icon-action
         Box(Modifier.offset(x = 407f.dp, y = 7.5f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // werft-b01__title
-        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).size(width = 71.53f.dp, height = 34f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).defaultMinSize(minWidth = 71.53f.dp, minHeight = 34f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Heute",
                 style = TextStyle(
@@ -122,7 +123,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b01__date
-        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).defaultMinSize(minWidth = 435f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "SONNTAG, 9. AUGUST 2026",
                 style = TextStyle(
@@ -135,7 +136,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
         // werft-b01__intro
         Box(Modifier.offset(x = 20f.dp, y = 134f.dp).size(width = 435f.dp, height = 99f.dp).shadow(elevation = 16f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 12f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF201B17).copy(alpha = 0.82f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(20f.dp))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.1f))) }
         // werft-b01__section-title
-        Box(Modifier.offset(x = 41f.dp, y = 155f.dp).size(width = 393f.dp, height = 28f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 41f.dp, y = 155f.dp).defaultMinSize(minWidth = 393f.dp, minHeight = 28f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Wie ist deine Lage heute?",
                 style = TextStyle(
@@ -146,7 +147,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // werft-b01__subtitle
-        Box(Modifier.offset(x = 41f.dp, y = 191f.dp).size(width = 393f.dp, height = 21f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 41f.dp, y = 191f.dp).defaultMinSize(minWidth = 393f.dp, minHeight = 21f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Was für ein Tag ist das? Was liegt vor dir?",
                 style = TextStyle(
@@ -236,7 +237,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).size(width = 32.03f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).defaultMinSize(minWidth = 32.03f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Heute",
                 style = TextStyle(
@@ -247,7 +248,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).size(width = 26.02f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).defaultMinSize(minWidth = 26.02f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Ziele",
                 style = TextStyle(
@@ -258,7 +259,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).size(width = 48.02f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).defaultMinSize(minWidth = 48.02f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Merkliste",
                 style = TextStyle(
@@ -269,7 +270,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).size(width = 69.38f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).defaultMinSize(minWidth = 69.38f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Erkenntnisse",
                 style = TextStyle(
@@ -280,7 +281,7 @@ fun Heute1Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // span
-        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).size(width = 46.05f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).defaultMinSize(minWidth = 46.05f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Logbuch",
                 style = TextStyle(

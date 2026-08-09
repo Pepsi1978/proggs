@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -69,7 +70,7 @@ fun Selbstbild5Erzeugt(modifier: Modifier = Modifier) {
         // b09-back
         Box(Modifier.offset(x = 20f.dp, y = 7.5f.dp).size(width = 48f.dp, height = 48f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).shadow(elevation = 8f.dp, shape = RoundedCornerShape(percent = 50), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.06f), spotColor = Color(0xFFC4623C).copy(alpha = 0.06f)).clip(RoundedCornerShape(percent = 50)).background(Color(0xFF201B17).copy(alpha = 0.78f)).border(1f.dp, Color(0xFF38302A).copy(alpha = 0.84f), RoundedCornerShape(percent = 50))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.12f))) }
         // b09-title
-        Box(Modifier.offset(x = 80f.dp, y = 14.5f.dp).size(width = 118.28f.dp, height = 34f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 80f.dp, y = 14.5f.dp).defaultMinSize(minWidth = 118.28f.dp, minHeight = 34f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Selbstbild",
                 style = TextStyle(
@@ -117,7 +118,7 @@ fun Selbstbild5Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b09-improve-label
-        Box(Modifier.offset(x = -2.19f.dp, y = 678f.dp).size(width = 162.69f.dp, height = 17f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = -2.19f.dp, y = 678f.dp).defaultMinSize(minWidth = 162.69f.dp, minHeight = 17f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Text mit KI verbessern",
                 style = TextStyle(

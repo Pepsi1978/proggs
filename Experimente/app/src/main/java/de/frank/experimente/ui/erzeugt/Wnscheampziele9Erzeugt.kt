@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -67,7 +68,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
         // b04-topbar
         Box(Modifier.offset(x = 0f.dp, y = 0f.dp).size(width = 475f.dp, height = 64f.dp).shadow(elevation = 10f.dp, clip = false, ambientColor = Color(0xFF000000).copy(alpha = 0.16f), spotColor = Color(0xFF000000).copy(alpha = 0.16f)).background(Color(0xFF151210).copy(alpha = 0.82f))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFF4EEE7).copy(alpha = 0.08f))) }
         // b04-title
-        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).size(width = 206.89f.dp, height = 34f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 20f.dp, y = 14.5f.dp).defaultMinSize(minWidth = 206.89f.dp, minHeight = 34f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Wünsche & Ziele",
                 style = TextStyle(
@@ -116,7 +117,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
         // b04-nav-item
         Box(Modifier.offset(x = 106.8f.dp, y = 680f.dp).size(width = 81.8f.dp, height = 54f.dp).shadow(elevation = 10f.dp, shape = RoundedCornerShape(20f.dp), clip = false, ambientColor = Color(0xFFC4623C).copy(alpha = 0.18f), spotColor = Color(0xFFC4623C).copy(alpha = 0.18f)).clip(RoundedCornerShape(20f.dp)).background(Color(0xFF3A231A))) { Box(Modifier.fillMaxWidth().height(1f.dp).background(Color(0xFFC4623C).copy(alpha = 0.18f))) }
         // b04-nav-label
-        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).size(width = 32.03f.dp, height = 18f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = 41.88f.dp, y = 711f.dp).defaultMinSize(minWidth = 32.03f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Heute",
                 style = TextStyle(
@@ -127,7 +128,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b04-nav-label
-        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).size(width = 26.02f.dp, height = 18f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = 134.69f.dp, y = 711f.dp).defaultMinSize(minWidth = 26.02f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Ziele",
                 style = TextStyle(
@@ -138,7 +139,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b04-nav-label
-        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).size(width = 48.02f.dp, height = 18f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = 213.48f.dp, y = 711f.dp).defaultMinSize(minWidth = 48.02f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Merkliste",
                 style = TextStyle(
@@ -149,7 +150,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b04-nav-label
-        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).size(width = 69.38f.dp, height = 18f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = 292.59f.dp, y = 711f.dp).defaultMinSize(minWidth = 69.38f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Erkenntnisse",
                 style = TextStyle(
@@ -160,7 +161,7 @@ fun Wnscheampziele9Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b04-nav-label
-        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).size(width = 46.05f.dp, height = 18f.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset(x = 394.06f.dp, y = 711f.dp).defaultMinSize(minWidth = 46.05f.dp, minHeight = 18f.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Logbuch",
                 style = TextStyle(

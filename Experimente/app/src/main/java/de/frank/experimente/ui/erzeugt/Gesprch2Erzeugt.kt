@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -79,7 +80,7 @@ fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b02-experiment-title
-        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).size(width = 435f.dp, height = 28f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 20f.dp, y = 84f.dp).defaultMinSize(minWidth = 435f.dp, minHeight = 28f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "⟨Experimenttitel⟩",
                 style = TextStyle(
@@ -90,7 +91,7 @@ fun Gesprch2Erzeugt(modifier: Modifier = Modifier) {
             )
         }
         // b02-experiment-day
-        Box(Modifier.offset(x = 20f.dp, y = 116f.dp).size(width = 435f.dp, height = 18f.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.offset(x = 20f.dp, y = 116f.dp).defaultMinSize(minWidth = 435f.dp, minHeight = 18f.dp), contentAlignment = Alignment.CenterStart) {
             Text(
                 text = "Tag 2 von 3",
                 style = TextStyle(
