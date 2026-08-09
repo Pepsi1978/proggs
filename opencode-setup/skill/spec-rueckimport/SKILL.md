@@ -97,8 +97,11 @@ weiter. Nie die neueste Datei einfach annehmen.
 
 5. Fund zeigen und bestaetigen lassen:
    "Ich habe fuer `<App>` gefunden: … Ist das der Ruecklauf, den ich einlesen soll?"
-6. **Zielplattform feststellen.** Sie steht in `00-PROJEKT.md` §2 (bzw. im Ruecklauf-
-   `SPEC.md`, Teil D) und entscheidet, welchen Bau-Weg Stufe 3 nimmt — Android/Compose,
+6. **Zielplattform feststellen.** Sie steht **ganz oben in `00-PROJEKT.md`** als Stempel
+   („Zielplattform fuer diesen Bau: …, beim Herunterladen gewaehlt“). Dieser Stempel gilt vor
+   jeder aelteren Angabe weiter unten in derselben Datei — er haelt fest, wofuer der Benutzer
+   das Paket tatsaechlich heruntergeladen hat. Fehlt er, gilt §2 bzw. Teil D der `SPEC.md`.
+   Sie entscheidet, welchen Bau-Weg Stufe 3 nimmt — Android/Compose,
    Windows/WPF oder macOS/SwiftUI. Sie wird in `00-PROJEKT.md` von v2 und in
    `BAU-AUFTRAG.md` §2 unmissverstaendlich festgehalten. Fehlt sie oder widerspricht sie
    v1, **fragen**.

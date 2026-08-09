@@ -543,7 +543,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.32.1-20260809.1540" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.32.2-20260809.1545" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1658,6 +1658,10 @@ function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfi
     // das weder Ziel noch beschriebene Aufgabe traegt, laesst sich dort nicht zuordnen und wird zum
     // toten Knopf. Steht die Aufgabe im Funktions-Spec, gehoert ihre Kennung ans Element.
     "Bedienelemente, die keinen Bildschirm öffnen, sondern etwas TUN, tragen `data-werft-funktion`: steht die Aufgabe als `F-<Nummer>` in den gelieferten Fakten oder im Spec, trage genau diese Kennung ein (data-werft-funktion=\"F-07\"); sonst einen kurzen Satz, was das Element tun soll.",
+    // Die Bewegungs-Kennung steckt im Namen der Animation (`m-04-atmen`). Erfindet der Aufbau eigene
+    // Namen, geht sie verloren, und der Ruecklauf kann eine Bewegung nicht mehr derselben M-Kennung
+    // zuordnen wie im Erst-Spec — die Kette der Kennungen reisst genau hier.
+    "Bewegungen: Steht unter den Effekten eine `animation: <name> …`, verwende GENAU diesen Namen und lege dazu einen passenden `@keyframes <name>`-Block an. Erfinde keine eigenen Animationsnamen — der Name trägt die Kennung der Bewegung (z. B. `m-04-atmen`) und muss erhalten bleiben. Dauer, Kurve und Wiederholung werden exakt übernommen.",
     "Farben IMMER über die bereitgestellten CSS-Variablen der Themes, wo die Quelle ein Theme-Token benutzt — sonst den exakten Farbwert. Feste Farbwerte statt Variablen machen das Design unumschaltbar.",
     "Bringt das Original einen Umschalter für Hell/Dunkel oder die Darstellung mit (Mond-/Sonnensymbol, Eintrag „Darstellung“/„Erscheinungsbild“), baue ihn nach UND gib ihm data-werft-theme-toggle. Erfinde KEINEN zusätzlichen Umschalter, keine Werkzeugleisten und keine Hinweistexte.",
     "Antworte AUSSCHLIESSLICH mit dem HTML-Fragment dieses einen Bildschirms (optional ein <style>-Block davor, dessen Selektoren eindeutig zu diesem Bildschirm gehören). Kein <!doctype>, kein <html>, kein <body>, kein Markdown, keine Erklärung."

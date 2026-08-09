@@ -421,8 +421,9 @@ dass alle sechs Eintraege wirklich drin sind.
 
 `LIESMICH.md` enthaelt woertlich:
 
-- Die **Zielplattform** (Windows / macOS / Android) — sie entscheidet, in welche Sprache
-  Werft Studio die Specs beim Herunterladen uebersetzt.
+- Die **vorgesehene Zielplattform** (Windows / macOS / Android). Sie ist die Absicht aus Stufe 1;
+  beim Herunterladen fragt Werft Studio sie noch einmal ausdruecklich ab und uebersetzt die Specs
+  in die Sprache des dort gewaehlten Systems. Weichen beide ab, gilt die Wahl beim Herunterladen.
 - Den Auftrag: jeden Bildschirm in jeder Erscheinung aufbauen.
 - Die Regel fuer Ergaenzungen: **Jedes neue Bedienelement braucht eine Aufgabe.** Wer einen
   Knopf hinzufuegt, beschreibt in einem Satz, was er tun soll — sonst entsteht beim Bauen
