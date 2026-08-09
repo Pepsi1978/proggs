@@ -55,6 +55,7 @@ import de.frank.experimente.ui.theme.AppTypo
 import de.frank.experimente.ui.theme.Erscheinung
 import de.frank.experimente.ui.theme.LocalAppColors
 import de.frank.experimente.ui.theme.Mass
+import de.frank.experimente.ui.theme.schattenKarte
 
 /** Der Satz, den „Probe hören“ vorliest (F-23, Schritt 6). */
 private const val PROBE = "So klinge ich, wenn ich dir etwas vorlese."
@@ -401,8 +402,20 @@ fun SelbstbildBildschirm(
 
 @Composable
 private fun Abschnitt(titel: String, inhalt: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Mass.kartenAbstand)) {
-        Text(titel, style = AppTypo.abschnittstitel, color = LocalAppColors.current.text)
+    val farben = LocalAppColors.current
+    // Gemessen: jeder Abschnitt ist eine Karte — Fläche/82 %, 1 dp Rand/84 %, Radius 20,
+    // Kartenschatten, 20 dp innen. Der Titel darin in Großbuchstaben, 13 sp, halbfett.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .schattenKarte(farben, AppForm.karte)
+            .clip(AppForm.karte)
+            .background(farben.flaeche.copy(alpha = 0.82f))
+            .border(Mass.randstaerke, farben.rand.copy(alpha = 0.84f), AppForm.karte)
+            .padding(Mass.karteInnen),
+        verticalArrangement = Arrangement.spacedBy(Mass.kartenAbstand),
+    ) {
+        Zwischenueberschrift(titel)
         inhalt()
     }
 }
