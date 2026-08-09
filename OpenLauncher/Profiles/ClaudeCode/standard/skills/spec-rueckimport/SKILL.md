@@ -114,6 +114,35 @@ weiter. Nie die neueste Datei einfach annehmen.
 
 ---
 
+### Aktualitaet des Ruecklaufs nachweisen — bevor irgendetwas gelesen wird
+
+> Ein veralteter Export sieht aus wie ein aktueller. Die ganze Kette laeuft dann sauber
+> durch und baut den **falschen Entwurf** — ohne dass irgendwo ein Fehler auftaucht.
+
+Darum zuerst den Stand des Ruecklaufs zeigen und bestaetigen lassen:
+
+```bash
+# Wann wurde exportiert? Der Zeitstempel IM Archiv zaehlt, nicht der der Datei —
+# die Datei traegt den Zeitpunkt des Herunterladens.
+unzip -l "Designs/Outbox/<App>*.zip" | head -5
+```
+
+Dem Benutzer beides nennen und **ausdruecklich** fragen:
+
+> „Der Export im Archiv ist vom ⟨Datum, Uhrzeit⟩. Hast du seither im Design-Programm noch
+> etwas geaendert? Wenn ja, lade den Entwurf bitte neu herunter — sonst baue ich den alten."
+
+Erst nach einer klaren Antwort weiterarbeiten. Kommt keine, wird **nicht** angenommen, der
+Stand sei aktuell — es wird nachgefragt.
+
+**Besser als jede Nachfrage waere, den Entwurf selbst zu holen.** Solange der Download ein
+Handgriff des Benutzers ist, kann er schiefgehen: falsches Archiv, alter Stand, vergessener
+Export. Liegt ein Zugang zum Design-Server vor (bei Werft Studio unter `~/SK/werft-studio/`:
+Adresse, Anmeldung, Zertifikat), holt Stufe 2 den aktuellen Stand selbst und weist ihn nach.
+Der Briefkasten in `Designs/Outbox/` bleibt dann nur der Rueckfallweg.
+
+---
+
 ## Phase 1 — Ruecklauf vollstaendig lesen
 
 ### 1a. Die Spec-Datei des Designers
