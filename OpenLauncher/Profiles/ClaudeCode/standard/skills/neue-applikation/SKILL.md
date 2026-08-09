@@ -43,10 +43,13 @@ installiere es. Committet und gepusht wird nach jedem Schritt."
 
 ## Schritt 1 — Grilling
 
-`spec-schmiede` aufrufen. Der Skill klaert als Erstes den App-Namen und die Zielplattform
-und fuehrt danach durch alle sieben Bloecke.
+`spec-schmiede` aufrufen. Der Skill nimmt auf, was der Benutzer erzaehlt hat, spiegelt sein
+Verstaendnis zurueck und hinterfragt es danach Durchgang fuer Durchgang — mit Pruef-Agenten
+je Bereich und einem Operator, der die Querverbindungen im Blick behaelt. Nach jedem
+Durchgang fragt er, ob noch einer folgen soll.
 
-**Du greifst hier nicht ein.** Keine Frage abkuerzen, keine Antwort vorwegnehmen.
+**Du greifst hier nicht ein.** Keine Frage abkuerzen, keine Antwort vorwegnehmen, keinen
+Durchgang ueberspringen. Der Skill endet erst, wenn nichts mehr unentschieden ist.
 
 Danach: **committen und pushen** (siehe *Sichern nach jedem Schritt*).
 

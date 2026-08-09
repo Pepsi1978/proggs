@@ -1,10 +1,15 @@
 ---
 name: spec-schmiede
 description: >-
-  Stufe 1 der Programm-Pipeline. Befragt den Benutzer im Grilling-Verfahren (eine Frage nach
-  der anderen, jede mit Empfehlung) vollstaendig zu einem neuen Programm — zuerst der Name
-  der App, dann die Zielplattform (Windows / macOS / Android), dann saemtliche Funktionen bis
-  nichts mehr offen ist, dann das Design, dann Bewegung und Animation — und schreibt daraus
+  Stufe 1 der Programm-Pipeline. Nimmt die Beschreibung auf, die der Benutzer vorher (oder
+  direkt danach) frei erzaehlt hat, spiegelt sein Verstaendnis zurueck und HINTERFRAGT sie
+  dann Durchgang fuer Durchgang — statt abzufragen, was laengst gesagt wurde. Je Durchgang
+  laufen parallele Pruef-Agenten mit je einer Brille (Funktion, Aussehen, Bewegung,
+  Widersprueche; je nach App zusaetzlich Erstbenutzung, Recht/Datenschutz, Barrierefreiheit,
+  Mehrbenutzer), danach ein Operator, der die Querverbindungen zwischen Funktion, Aussehen
+  und Bewegung prueft. Fragt eine Frage nach der anderen, jede mit Empfehlung, schlaegt
+  Verbesserungen vor (nie ungefragt uebernommen) und fragt nach jedem Durchgang, ob ein
+  weiterer folgen soll. Endet erst, wenn nichts mehr unentschieden ist, und schreibt daraus
   das Erst-Spec-Paket nach Specs/<App>/v1/ (00-PROJEKT.md, 01-FUNKTIONS-SPEC.md,
   02-UI-SPEC.md, 03-MOTION-SPEC.md) sowie das Uebergabe-ZIP
   Designs/Inbox/<App>-SPEC-v1.zip, das alle drei Specs enthaelt und anschliessend in Werft
@@ -32,53 +37,130 @@ Der Gesamtablauf steht in **`~/proggs/Specs/README.md`**, der verbindliche Aufba
 erzeugten Datei in **`~/proggs/Specs/FORMAT.md`**. Beide liest du zu Beginn. Weicht dieser
 Skill von `FORMAT.md` ab, gilt `FORMAT.md`.
 
-## Das Verfahren: Grilling
+## Das Verfahren: hinterfragen, nicht abfragen
 
-- **Eine Frage nach der anderen.** Mehrere Fragen auf einmal sind verwirrend und werden
-  halb beantwortet. Warte jede Antwort ab, bevor die naechste Frage kommt.
-- **Zu jeder Frage deine Empfehlung.** Nicht nur fragen, sondern sagen, was du fuer richtig
-  haeltst und warum. Der Benutzer soll nicken oder widersprechen koennen, nicht dichten muessen.
-- **Fakten schlaegst du selbst nach.** Alles, was im Repo, im Dateisystem oder im Netz steht,
-  wird nicht gefragt: vorhandene Apps, uebliche Gradle-/Compose-Versionen, wie andere Projekte
-  im Repo aufgebaut sind, welche Bildschirmgroesse ein genanntes Geraet hat. Gefragt werden
-  nur **Entscheidungen**, die dem Benutzer gehoeren.
-- **Nachhaken statt Luecken lassen.** Eine vage Antwort ist keine Antwort. "Irgendwie eine
-  Liste" wird zu "Was steht in einer Zeile? Was passiert beim Antippen? Was beim langen
-  Druecken? Was, wenn die Liste leer ist?"
-- **Nichts stillschweigend annehmen.** Was am Ende nicht geklaert ist, kommt woertlich unter
-  *Offene Fragen* in die jeweilige Datei — nicht in eine erfundene Festlegung.
+**Du faengst nicht bei null an.** Der Benutzer hat vorher erzaehlt, was er sich vorstellt —
+in einer langen Nachricht, ueber mehrere hinweg, mal vor dem Aufruf, mal danach. Diese
+Beschreibung ist deine Vorgabe. Deine Aufgabe ist **nicht**, sie noch einmal abzufragen,
+sondern sie zu **durchleuchten**: Wo ist sie unklar? Wo widerspricht sie sich? Was fehlt,
+ohne dass es dem Benutzer aufgefallen waere?
+
+Denk dich dabei selbst in die Software hinein. Was ist das fuer eine App? Was kann sie?
+Was **sollte** sie koennen, damit sie im Alltag taugt? Was passiert im Fall, an den beim
+Erzaehlen niemand denkt?
+
+- **Eine Frage nach der anderen.** Mehrere auf einmal sind verwirrend und werden halb
+  beantwortet. Warte jede Antwort ab.
+- **Zu jeder Frage deine Empfehlung.** Der Benutzer soll nicken oder widersprechen koennen,
+  nicht dichten muessen.
+- **Fakten schlaegst du selbst nach.** Vorhandene Apps im Repo, uebliche Versionen,
+  Bildschirmgroesse eines genannten Geraets. Gefragt werden nur **Entscheidungen**.
+- **Nachhaken statt Luecken lassen.** "Irgendwie eine Liste" wird zu "Was steht in einer
+  Zeile? Was beim Antippen? Was beim langen Druecken? Was, wenn sie leer ist?"
+- **Verbesserungen vorschlagen — aber nie stillschweigend einbauen.** Faellt dir auf, dass
+  der App etwas fehlt, machst du daraus eine eigene Frage mit Begruendung:
+  "Eine Sitzung ohne Verlauf verliert alles. Verlauf aufnehmen? Mein Vorschlag: ja, mit
+  Loeschen je Eintrag." Sagt der Benutzer nein, ist der Vorschlag weg und kommt nicht wieder.
+- **Nichts landet ungefragt im Spec.**
 
 ---
+
+## Die Pruef-Agenten und der Operator
+
+Zu Beginn **jedes** Durchgangs schickst du Pruef-Agenten parallel ueber den aktuellen Stand
+(Vorgabe + alles bisher Geklaerte). Jeder bekommt **eine** Brille und meldet zurueck:
+Luecken, Widersprueche, Verbesserungsvorschlaege. Sie fragen den Benutzer nichts — das tust
+du, nachdem du ihre Funde verdichtet hast.
+
+**Immer an — der Dreiklang plus Widersprueche:**
+
+| Brille | Sucht nach |
+|--------|-----------|
+| **Funktion** | Was passiert beim Antippen wirklich? Ablauf, Daten, Ergebnis, Fehlerfall, Grenzen |
+| **Aussehen** | Welcher Bildschirm, welches Bedienelement, welcher Zustand (leer/laedt/Fehler) fehlt? |
+| **Bewegung** | Welche Bewegung fehlt zu einem Bedienelement, einem Wechsel, einem Wartezustand? |
+| **Widersprueche** | Was sagt der Benutzer an zwei Stellen unterschiedlich? Was schliesst sich aus? |
+
+**Zugeschaltet — nur wenn die Antworten es verlangen** (siehe Block A, Frage 3):
+
+| Brille | Wird aufgesetzt, wenn |
+|--------|----------------------|
+| **Erstbenutzung** | Andere Menschen als der Benutzer selbst die App starten (Store, Weitergabe) |
+| **Recht und Datenschutz** | Die App veroeffentlicht wird, personenbezogene Daten verarbeitet oder externe Dienste nutzt |
+| **Barrierefreiheit** | Die App veroeffentlicht wird oder der Benutzer es ausdruecklich verlangt |
+| **Mehrbenutzer** | Mehr als eine Person dieselbe Installation oder dasselbe Konto nutzt |
+
+Eine App, die nur der Benutzer selbst auf seinem eigenen Geraet benutzt, braucht **kein**
+Onboarding und **keine** Datenschutzerklaerung. Fragen danach sind dann verlorene Zeit —
+diese Brillen bleiben aus.
+
+### Der Operator — er sieht das Ganze
+
+Die Brillen arbeiten unabhaengig, aber die Sache ist es nicht: **Funktion, Aussehen und
+Bewegung haengen zusammen.** Eine neue Funktion braucht ein Bedienelement, und das
+Bedienelement braucht eine Bewegung. Ein neu gezeichneter Knopf braucht umgekehrt eine
+Aufgabe und eine Bewegung. Wuerde jede Brille nur ihren Bereich melden, entstuenden genau
+die Loecher, die spaeter als toter Knopf oder als unsichtbare Funktion auffallen.
+
+Deshalb laeuft **nach** den Brillen der Operator ueber die gesammelten Funde und den
+Gesamtstand. Er prueft die Querverbindungen:
+
+1. Hat **jede** Funktion (`F-`) mindestens ein Bedienelement auf einem Bildschirm (`B-`)?
+2. Hat **jedes** Bedienelement entweder eine Funktion (`F-`) oder ein Navigationsziel (`B-`)?
+3. Hat **jedes** Bedienelement und **jeder** Bildschirmwechsel eine Bewegung (`M-`)?
+4. Gehoert **jede** Bewegung zu etwas, das es gibt?
+5. Zieht eine der Antworten aus diesem Durchgang eine Aenderung in einem **anderen** Bereich
+   nach sich, die noch niemand genannt hat?
+6. Passt das Ganze noch zusammen — oder ist die App unterwegs eine andere geworden?
+
+Was der Operator findet, hat **Vorrang** vor den Einzelfunden: eine fehlende Querverbindung
+wiegt schwerer als ein weiteres Detail in einem Bereich, der schon steht.
 
 ## Ablauf
 
-0. Vorbereitung
-1. Block A — Plattform und Rahmen
-2. Block B — Zweck
-3. Block C — Funktionen (der laengste Block)
-4. Block D — Bildschirme und Navigation
-5. Block E — Design
-6. Block F — Bewegung und Animation
-7. Block G — Abnahme
-8. Spec-Paket schreiben und vorstellen
-9. Uebergabe an den Designer (ohne Warten)
+0. Vorgabe aufnehmen und Verstaendnis zurueckspiegeln
+1. Block A — Name, Plattform, fuer wen (schaltet die Brillen)
+2. Durchgang 1 — breit ueber alle Bereiche
+3. "Noch ein Durchgang?" — bei ja: tiefer, ggf. in einen genannten Bereich
+4. … so viele Durchgaenge, wie der Benutzer will
+5. Schlussdurchgang — reicht es fuer Funktions-, UI- und Motion-Spec?
+6. Spec-Paket schreiben
+7. Uebergabe an den Designer
 
-Melde zu Beginn: "Spec-Schmiede gestartet. Ich frage dich jetzt in sieben Bloecken durch —
-eine Frage nach der anderen, jede mit meiner Empfehlung. Am Ende liegt dein Spec-Paket
-unter `Specs/<App>/v1/` und die Uebergabedatei fuer den Designer in `Designs/Inbox/`."
+Die **Bloecke A bis G** weiter unten sind ab jetzt **keine Fragenliste, die du abarbeitest**,
+sondern die **Abhakliste der Bereiche**, die am Ende abgedeckt sein muessen. Was die Vorgabe
+schon beantwortet, wird nicht noch einmal gefragt — es wird geprueft.
 
----
+Wie ein einzelner Durchgang ablaeuft, was nach jedem Durchgang gefragt wird und was der
+Schlussdurchgang prueft, steht unter **[Die Durchgaenge](#die-durchgaenge)** hinter Block G.
 
-## Phase 0 — Vorbereitung
+Melde zu Beginn: "Spec-Schmiede gestartet. Ich nehme erst auf, was du mir erzaehlt hast,
+spiegle es dir zurueck und hinterfrage es dann Durchgang fuer Durchgang — eine Frage nach
+der anderen, jede mit meiner Empfehlung."
 
-1. `Specs/README.md` und `Specs/FORMAT.md` lesen.
-2. Aktuelles Datum ermitteln (nicht schaetzen) — es kommt in jede Kopfzeile.
-3. Pruefen, dass `~/proggs/Designs/Inbox/` existiert. Fehlt der Ordner, anlegen.
+## Phase 0 — Vorgabe aufnehmen und zurueckspiegeln
 
-Der App-Name ist die **allererste Frage** im Grilling (Block A, Frage 1) — nicht etwas,
-das du im Stillen aus dem Aufruf ableitest.
+1. `Specs/README.md` und `Specs/FORMAT.md` lesen. Aktuelles Datum ermitteln (nicht schaetzen).
+   Pruefen, dass `~/proggs/Designs/Inbox/` existiert; fehlt der Ordner, anlegen.
 
----
+2. **Die Vorgabe einsammeln.** Sie steht im Gespraech — und zwar mal **vor**, mal **nach**
+   dem Aufruf:
+   - Hat der Benutzer vor dem Aufruf ausfuehrlich erzaehlt: das ist die Vorgabe.
+   - Hat er nur "starte den Skill" gesagt und faengt erst danach an zu erzaehlen:
+     **lass ihn ausreden.** Stelle keine Frage, unterbrich nicht, arbeite nicht vor.
+     Frage genau einmal: "Erzaehl ruhig alles. Sag Bescheid, wenn du fertig bist —
+     dann fange ich an zu hinterfragen."
+
+3. **Verstaendnis zurueckspiegeln — bevor die erste Frage kommt.** Fasse in maximal
+   fuenfzehn Zeilen zusammen, was du verstanden hast: Zweck, Nutzungslage, genannte
+   Funktionen, genannte Gestaltung, genannte Bewegung. Dann:
+   "Habe ich das richtig verstanden? Was fehlt oder stimmt so nicht?"
+
+   Das ist kein Hoeflichkeitsschritt. Ein Missverstaendnis, das hier durchrutscht, wandert
+   ueber das Spec in das Design und von dort in den fertigen Quellcode. Hier kostet es
+   einen Satz, dort einen ganzen Durchlauf.
+
+4. Erst nach der Bestaetigung geht es weiter zu Block A.
 
 ## Block A — Name, Plattform und Rahmen
 
@@ -100,16 +182,20 @@ Fragen, eine nach der anderen:
      oder neu begonnen wird. **Niemals** ein vorhandenes `v1` stillschweigend ueberschreiben.
 2. **Fuer welche Plattform?** Windows, macOS, Android — auch mehrere. Bei mehreren:
    welche ist die fuehrende, an der sich die andere ausrichtet?
-3. **Zielgeraet und Groesse.** Telefon (welches Modell / welche Aufloesung), Tablet,
+3. **Fuer wen ist die App?** Nur fuer dich selbst auf deinem eigenen Geraet — oder fuer
+   den Store beziehungsweise andere Menschen? **Diese Frage kommt frueh, weil sie die
+   zugeschalteten Pruef-Brillen bestimmt.** Bei "nur fuer mich" bleiben Erstbenutzung,
+   Recht/Datenschutz, Barrierefreiheit und Mehrbenutzer aus — danach wird dann auch nicht
+   gefragt. Bei "Store" oder "andere Nutzer" werden sie aufgesetzt.
+4. **Zielgeraet und Groesse.** Telefon (welches Modell / welche Aufloesung), Tablet,
    Fenster auf dem Rechner (Standardgroesse, aenderbar?), Vollbild.
    Die Aufloesung schlaegst du selbst nach, wenn ein Modell genannt wird.
-4. **Sprache der Oberflaeche.** Eine oder mehrere. Bei mehreren: welche ist die Quelle.
-5. **Ohne Netz benutzbar?** Vollstaendig, teilweise, gar nicht.
-6. **Anmeldung/Konto noetig?** Wenn ja: wofuer genau.
-7. **Externe Dienste.** KI-Modelle, Karten, Zahlungen, Cloud-Ablage — und wo die
+5. **Sprache der Oberflaeche.** Eine oder mehrere. Bei mehreren: welche ist die Quelle.
+6. **Ohne Netz benutzbar?** Vollstaendig, teilweise, gar nicht.
+7. **Anmeldung/Konto noetig?** Wenn ja: wofuer genau.
+8. **Externe Dienste.** KI-Modelle, Karten, Zahlungen, Cloud-Ablage — und wo die
    Zugangsschluessel herkommen.
-8. **Wo liegen die Daten?** Nur auf dem Geraet, in der Cloud, beides.
-9. **Wie kommt es zum Benutzer?** Store, Installer, privat aufs eigene Geraet.
+9. **Wo liegen die Daten?** Nur auf dem Geraet, in der Cloud, beides.
 
 Sobald die Plattform feststeht, sieh **selbst** im Repo nach, welche Projekte es dafuer
 schon gibt — das spart alle Fragen zu Technik, Versionen und Projektaufbau
@@ -249,6 +335,57 @@ Jede festgelegte Bewegung bekommt eine Kennung `M-01`, `M-02`, …
 
 ---
 
+## Die Durchgaenge
+
+### Ein Durchgang
+
+1. **Brillen aufsetzen.** Schicke die immer aktiven Pruef-Agenten und die zugeschalteten
+   parallel ueber den Gesamtstand (Vorgabe + alles bisher Geklaerte). Jeder meldet Luecken,
+   Widersprueche und Verbesserungsvorschlaege in seinem Bereich.
+2. **Operator laufen lassen.** Er prueft die Querverbindungen zwischen Funktion, Aussehen
+   und Bewegung und ob die App als Ganzes noch zusammenpasst. Seine Funde stehen vorn.
+3. **Verdichten.** Doppeltes zusammenfassen, Belangloses weglassen, nach Gewicht ordnen:
+   erst was den Dreiklang zerreisst, dann Luecken, dann Vorschlaege.
+4. **Fragen — eine nach der anderen**, jede mit deiner Empfehlung. Antworten sofort in den
+   Stand einarbeiten; eine Antwort kann die naechste Frage ueberfluessig machen oder eine
+   neue ausloesen.
+5. **Zwischenstand sichern.** Am Ende jedes Durchgangs den bisherigen Stand als Entwurf
+   nach `Specs/<App>/v1/` schreiben. Ein langes Grilling darf nicht alles verlieren, wenn
+   die Sitzung abbricht.
+
+### Nach jedem Durchgang fragen
+
+> "Durchgang N ist durch. Soll ich noch einen machen — und wenn ja, in welchen Bereich
+> soll ich tiefer einsteigen? (Funktionen, Aussehen, Bewegung, oder etwas Bestimmtes)"
+
+Nennt der Benutzer einen Bereich, gehen die Brillen **dort** in die Tiefe: nicht noch einmal
+dieselbe Ebene, sondern eine darunter. Der Operator laeuft trotzdem ueber das Ganze — sonst
+entsteht genau die Einseitigkeit, die er verhindern soll.
+
+### Der Schlussdurchgang
+
+Sagt der Benutzer "nein, reicht", kommt **ein letzter Durchgang** — und der fragt nicht
+nach Bereichen, sondern gegen die drei Specs:
+
+| Pruefung | Woran |
+|----------|-------|
+| Funktions-Spec | Hat **jede** `F-`Kennung Ausloeser, Ablauf, Daten, Ergebnis, Fehlerfall und Grenzen? Steht das Datenmodell? Ist das Verhalten im Hintergrund geklaert? |
+| UI-Spec | Ist **jeder** Bildschirm da, mit Aufbau, Zustaenden und Bedienelementen? Sind alle Erscheinungen vollstaendig beschrieben — Farben, Schrift, Masse, Formen? |
+| Motion-Spec | Hat **jedes** Bedienelement eine Rueckmeldung, **jeder** Wechsel einen Uebergang, **jeder** Wartezustand eine Darstellung? Ist "reduzierte Bewegung" festgelegt? |
+| Querverbindungen | Der Operator ein letztes Mal ueber alles: kein toter Knopf, keine unsichtbare Funktion, keine Bewegung ohne Gegenstand |
+| Abnahme | Ist **jedes** Kriterium aus Block G beobachtbar formuliert? |
+
+**Alles muss entschieden sein.** Der Skill schreibt das Spec-Paket erst, wenn keine Frage
+mehr offen ist — auch keine technische. Das ist die ausdrueckliche Vorgabe des Benutzers.
+
+**Die einzige Ausnahme, und sie geht nicht still durch:** Ist etwas wirklich noch nicht
+entscheidbar, benennst du das ausdruecklich und holst dir ein bewusstes "das legen wir
+spaeter fest". Diese Vertagung ist selbst eine Entscheidung und wird als solche unter
+*Offene Fragen* vermerkt — mit dem Grund, warum sie noch nicht faellt. Was du nicht gefragt
+hast, darf dort nicht stehen.
+
+---
+
 ## Phase 8 — Spec-Paket schreiben
 
 Erst jetzt wird geschrieben — im Aufbau **exakt nach `Specs/FORMAT.md`**.
@@ -343,6 +480,15 @@ Laeufst du innerhalb von `neue-applikation`, uebernimmt diese ab hier von selbst
 ## Was NIEMALS passieren darf
 
 - ❌ Mehrere Fragen auf einmal stellen.
+- ❌ Abfragen, was der Benutzer laengst erzaehlt hat, statt es zu hinterfragen.
+- ❌ Mit dem Fragen anfangen, bevor das Verstaendnis zurueckgespiegelt und bestaetigt wurde.
+- ❌ Den Benutzer unterbrechen, waehrend er seine Vorstellung erzaehlt.
+- ❌ Die Bereiche einzeln abhandeln, ohne dass der Operator die Querverbindungen prueft —
+  so entstehen tote Knoepfe und unsichtbare Funktionen.
+- ❌ Nach Erstbenutzung, Datenschutz oder Barrierefreiheit fragen, obwohl die App nur fuer
+  den Benutzer selbst ist. Die Brillen dafuer bleiben aus.
+- ❌ Einen Verbesserungsvorschlag ins Spec schreiben, den der Benutzer nicht bejaht hat.
+- ❌ Das Spec-Paket schreiben, solange noch etwas unentschieden ist.
 - ❌ Eine Frage ohne eigene Empfehlung stellen.
 - ❌ Etwas fragen, das im Repo oder im Netz nachschlagbar ist.
 - ❌ Block C beenden, solange der Saettigungs-Test noch Neues zutage foerdert.
