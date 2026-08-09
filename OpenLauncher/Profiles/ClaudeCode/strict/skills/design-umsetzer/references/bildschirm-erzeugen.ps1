@@ -46,6 +46,54 @@ function AlsCompose([string]$css) {
 }
 function Px([string]$v) { if ($v -match '^([\d.]+)px$') { [double]$Matches[1] } else { $null } }
 
+# `box-shadow` kann mehrere Lagen tragen. Compose kennt nur eine je Modifier und keine
+# inset-Schatten — also: aeussere Lagen als gestapelte `.shadow(...)`, der inset-Lichtsaum
+# oben als 1 dp Linie. Weglassen ist nicht zulaessig, er traegt die Plastizitaet.
+function Schatten([string]$css, [string]$form) {
+    if (-not $css) { return @() }
+    $lagen = [regex]::Split($css, ',(?![^()]*\))')
+    $raus = @()
+    foreach ($lage in $lagen) {
+        $l = $lage.Trim()
+        if (-not $l) { continue }
+        $farbe = AlsCompose $l
+        if (-not $farbe) { continue }
+        $zahlen = [regex]::Matches($l, '(-?[\d.]+)px') | ForEach-Object { [double]$_.Groups[1].Value }
+        if ($zahlen.Count -lt 3) { continue }
+        if ($l -match 'inset') {
+            # nur der helle Saum oben interessiert; seitliche insets traegt der Rand
+            if ($zahlen[1] -gt 0) { $raus += "KANTE:$farbe" }
+            continue
+        }
+        $unschaerfe = $zahlen[2]
+        $hoehe = [Math]::Max(1, [Math]::Round($unschaerfe / 2))
+        $formArg = if ($form) { ", shape = $form" } else { "" }
+        $raus += ".shadow(elevation = ${hoehe}f.dp$formArg, clip = false, ambientColor = $farbe, spotColor = $farbe)"
+    }
+    return $raus
+}
+
+# `linear-gradient(145deg, A, B 58%, C)` und `radial-gradient(...)`
+function Verlauf([string]$css) {
+    if (-not $css -or $css -notmatch 'gradient') { return $null }
+    $farben = [regex]::Matches($css, '(rgba?\([^)]*\)|color\(srgb[^)]*\))') |
+        ForEach-Object { AlsCompose $_.Value } | Where-Object { $_ }
+    if ($farben.Count -lt 2) { return $null }
+    $stellen = [regex]::Matches($css, '\)\s+([\d.]+)%') | ForEach-Object { [double]$_.Groups[1].Value / 100 }
+    $teile = @()
+    for ($i = 0; $i -lt $farben.Count; $i++) {
+        $anteil = if ($i -eq 0) { 0.0 }
+                  elseif ($i -eq $farben.Count - 1) { 1.0 }
+                  elseif ($i - 1 -lt $stellen.Count) { $stellen[$i - 1] }
+                  else { [Math]::Round($i / ($farben.Count - 1), 2) }
+        $teile += "${anteil}f to $($farben[$i])"
+    }
+    if ($css -match 'radial-gradient') {
+        return "Brush.radialGradient(listOf(" + (($farben) -join ', ') + "))"
+    }
+    return "Brush.linearGradient(" + ($teile -join ', ') + ")"
+}
+
 # --- Kopf -------------------------------------------------------------------------------
 $name = ([IO.Path]::GetFileNameWithoutExtension($Messdatei) -replace '[^A-Za-z0-9]', '')
 $name = $name.Substring(0,1).ToUpper() + $name.Substring(1)
@@ -58,6 +106,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,18 +145,29 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     $randF   = AlsCompose $s.borderTopColor
     $randB   = Px $s.borderTopWidth
     $radius  = Px $s.borderTopLeftRadius
-    $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0)
+    $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0) -or $s.backgroundImage -or $s.boxShadow
     if (-not $hatFlaeche -and -not $e.text) { continue }
 
     $kennung = if ($e.klassen) { ($e.klassen -split ' ')[0] } else { $e.tag }
     [void]$sb.AppendLine("        // $kennung")
     $mod = "Modifier.offset(x = $($e.kasten.x)f.dp, y = $($e.kasten.y)f.dp)" +
            ".size(width = $($e.kasten.breite)f.dp, height = $($e.kasten.hoehe)f.dp)"
-    if ($radius -and $radius -gt 0) {
-        $r = if ($radius -gt 999) { "RoundedCornerShape(percent = 50)" } else { "RoundedCornerShape(${radius}f.dp)" }
-        $mod += ".clip($r)"
+
+    $form = if ($radius -and $radius -gt 0) {
+        if ($radius -gt 999) { "RoundedCornerShape(percent = 50)" } else { "RoundedCornerShape(${radius}f.dp)" }
+    } else { $null }
+
+    # Schatten stehen VOR clip/background — sonst zeichnen sie ueber die Flaeche.
+    $kante = $null
+    foreach ($teil in (Schatten $s.boxShadow $form)) {
+        if ($teil -like "KANTE:*") { $kante = $teil.Substring(6) } else { $mod += $teil }
     }
-    if ($flaeche) { $mod += ".background($flaeche)" }
+    if ($form) { $mod += ".clip($form)" }
+
+    # Verlauf schlaegt Volltonflaeche — im Entwurf traegt er die Plastizitaet.
+    $verlauf = Verlauf $s.backgroundImage
+    if ($verlauf) { $mod += ".background($verlauf)" }
+    elseif ($flaeche) { $mod += ".background($flaeche)" }
     if ($randB -and $randB -gt 0 -and $randF) {
         $formArg = if ($radius -and $radius -gt 0) {
             if ($radius -gt 999) { ", RoundedCornerShape(percent = 50)" } else { ", RoundedCornerShape(${radius}f.dp)" }
@@ -129,7 +192,11 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
         [void]$sb.AppendLine("            )")
         [void]$sb.AppendLine("        }")
     } else {
-        [void]$sb.AppendLine("        Box($mod)")
+        if ($kante) {
+            [void]$sb.AppendLine("        Box($mod) { Box(Modifier.fillMaxWidth().height(1f.dp).background($kante)) }")
+        } else {
+            [void]$sb.AppendLine("        Box($mod)")
+        }
     }
     $gezeichnet++
 }
