@@ -6,9 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
-import de.frank.experimente.ui.AppViewModel
-import de.frank.experimente.ui.ExperimenteNavigation
+import de.frank.experimente.ui.erzeugt.ErzeugteSchau
 import de.frank.experimente.ui.theme.Erscheinung
 import de.frank.experimente.ui.theme.ExperimenteTheme
 
@@ -23,8 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val erscheinungId by einstellungen.erscheinungFlow.collectAsState()
             ExperimenteTheme(erscheinung = Erscheinung.ausId(erscheinungId)) {
-                val vm: AppViewModel = viewModel()
-                ExperimenteNavigation(vm)
+                ErzeugteSchau()
             }
         }
     }

@@ -96,6 +96,10 @@ function Verlauf([string]$css) {
 
 # --- Kopf -------------------------------------------------------------------------------
 $name = ([IO.Path]::GetFileNameWithoutExtension($Messdatei) -replace '[^A-Za-z0-9]', '')
+# Bildschirmdateien heissen oft "1-heute" — ein Bezeichner darf aber nicht mit einer Ziffer
+# beginnen. Die Nummer bleibt erhalten, sie wandert nur nach hinten.
+if ($name -match '^(\d+)(.*)$') { $name = $Matches[2] + $Matches[1] }
+if (-not $name) { $name = "Bildschirm" }
 $name = $name.Substring(0,1).ToUpper() + $name.Substring(1)
 
 # Wie hoch ist der Entwurf wirklich? Das unterste Element bestimmt den Scroll-Bereich —
@@ -163,6 +167,9 @@ fun $name`Erzeugt(modifier: Modifier = Modifier) {
 "@)
 
 $gezeichnet = 0
+$zustaende = 0
+# Ein verstecktes Element versteckt auch alles darunter.
+$versteckteAeste = @($m.elemente | Where-Object { $_.versteckt } | ForEach-Object { $_.pfad + "/" })
 foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     if ($e.kasten.breite -le 0 -or $e.kasten.hoehe -le 0) { continue }
     $s = $e.stil
@@ -172,6 +179,12 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     $radius  = Px $s.borderTopLeftRadius
     $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0) -or $s.backgroundImage -or $s.boxShadow -or $e.symbol
     if (-not $hatFlaeche -and -not $e.text) { continue }
+
+    # Versteckte Elemente sind ZUSTAENDE (Ladezustand, Fehlerkarte, Antwort, Transkript).
+    # Sie wurden fuer die Messung aufgedeckt, damit ihre Anordnung bekannt ist — gebaut
+    # werden sie hinter einer Bedingung, sonst steht der ganze Bildschirm gleichzeitig da.
+    $inZustand = $e.versteckt -or ($versteckteAeste | Where-Object { $e.pfad.StartsWith($_) })
+    if ($inZustand) { $zustaende++; continue }
 
     $kennung = if ($e.klassen) { ($e.klassen -split ' ')[0] } else { $e.tag }
     [void]$sb.AppendLine("        // $kennung")
@@ -248,4 +261,4 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
 
 New-Item -ItemType Directory -Force -Path (Split-Path $Ziel) | Out-Null
 [IO.File]::WriteAllText($Ziel, $sb.ToString(), [Text.UTF8Encoding]::new($false))
-Write-Host "$gezeichnet Elemente nach $Ziel geschrieben (von $($m.elemente.Count) gemessenen)."
+Write-Host "$gezeichnet Elemente nach $Ziel geschrieben (von $($m.elemente.Count) gemessenen; $zustaende Zustands-Elemente ausgelassen)."
