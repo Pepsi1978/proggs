@@ -123,6 +123,12 @@ $messJs = @'
     const n = el.getAttribute("data-werft-navigate"); if (n) e.fuehrtZu = n;
     const a = el.getAttribute("aria-label"); if (a) e.beschriftung = a;
     const ph = el.getAttribute("placeholder"); if (ph) e.platzhalter = ph;
+    // Der WERT eines Bedienelements steht nicht im Text, sondern im Feld. Ohne ihn bleibt
+    // im gebauten Bildschirm "08:00" leer, obwohl der Entwurf es zeigt.
+    if (typeof el.value === "string" && el.value) e.wert = el.value;
+    if (el.tagName === "SELECT" && el.selectedOptions && el.selectedOptions[0]) {
+      e.wert = el.selectedOptions[0].textContent.trim();
+    }
     if (warVersteckt.has(el)) e.versteckt = true;
     if (Object.keys(vorher).length) e.vorher = vorher;
     if (Object.keys(nachher).length) e.nachher = nachher;

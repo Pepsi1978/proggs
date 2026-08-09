@@ -124,6 +124,7 @@ $sb = [Text.StringBuilder]::new()
 [void]$sb.AppendLine(@"
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -138,6 +139,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -175,7 +177,11 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
     }.build()
 
 @Composable
-fun $name`Erzeugt(modifier: Modifier = Modifier) {
+fun $name`Erzeugt(
+    modifier: Modifier = Modifier,
+    beiFunktion: (String) -> Unit = {},
+    beiNavigation: (String) -> Unit = {},
+) {
     // Der Entwurf ist $gesamthoehe dp hoch, das Sichtfenster nur $sichtfenster dp.
     // Ohne Scroll-Bereich waere alles darunter unerreichbar.
     Box(
@@ -199,7 +205,7 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     $randB   = Px $s.borderTopWidth
     $radius  = Px $s.borderTopLeftRadius
     $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0) -or $s.backgroundImage -or $s.boxShadow -or $e.symbol
-    if (-not $hatFlaeche -and -not $e.text) { continue }
+    if (-not $hatFlaeche -and -not $e.text -and -not $e.wert) { continue }
 
     # Versteckte Elemente sind ZUSTAENDE (Ladezustand, Fehlerkarte, Antwort, Transkript).
     # Sie wurden fuer die Messung aufgedeckt, damit ihre Anordnung bekannt ist — gebaut
@@ -209,8 +215,17 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
 
     $kennung = if ($e.klassen) { ($e.klassen -split ' ')[0] } else { $e.tag }
     [void]$sb.AppendLine("        // $kennung")
-    $mod = "Modifier.offset(x = $($e.kasten.x)f.dp, y = $($e.kasten.y)f.dp)" +
-           ".size(width = $($e.kasten.breite)f.dp, height = $($e.kasten.hoehe)f.dp)"
+    # Ein Textkasten wurde im Browser AUS dem Text berechnet. Zwingt man ihn dem Text auf,
+    # klemmt er, sobald dieselbe Schrift auf Android minimal breiter zeichnet — aus "Heute"
+    # wird "Heut". Bei reinem Text also nur die Stelle festhalten, nicht die Breite.
+    $nurText = $e.text -and -not $flaeche -and -not $s.backgroundImage -and -not $s.boxShadow -and
+               -not ($randB -and $randB -gt 0) -and -not $e.symbol
+    $mod = "Modifier.offset(x = $($e.kasten.x)f.dp, y = $($e.kasten.y)f.dp)"
+    if (-not $nurText) {
+        $mod += ".size(width = $($e.kasten.breite)f.dp, height = $($e.kasten.hoehe)f.dp)"
+    } else {
+        $mod += ".defaultMinSize(minWidth = $($e.kasten.breite)f.dp, minHeight = $($e.kasten.hoehe)f.dp)"
+    }
 
     $form = if ($radius -and $radius -gt 0) {
         if ($radius -gt 999) { "RoundedCornerShape(percent = 50)" } else { "RoundedCornerShape(${radius}f.dp)" }
@@ -223,6 +238,14 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     }
     if ($form) { $mod += ".clip($form)" }
 
+    # Die Messung weiss, was ein Bedienelement ausloest (`funktion`, F-Kennung) und wohin es
+    # fuehrt (`fuehrtZu`, B-Kennung). Ohne diese Verdrahtung liefert der Erzeuger schoene,
+    # aber tote Bildschirme — dann muesste ein Modell das Verhalten anflanschen und koennte
+    # dabei dieselben Fehler machen wie beim Aussehen.
+    $klick = $null
+    if ($e.fuehrtZu) { $klick = "beiNavigation(`"$($e.fuehrtZu)`")" }
+    elseif ($e.funktion -and $e.funktion -match '^[A-Z]-\d+$') { $klick = "beiFunktion(`"$($e.funktion)`")" }
+
     # Verlauf schlaegt Volltonflaeche — im Entwurf traegt er die Plastizitaet.
     $verlauf = Verlauf $s.backgroundImage
     if ($verlauf) { $mod += ".background($verlauf)" }
@@ -233,6 +256,11 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
         } else { "" }
         $mod += ".border(${randB}f.dp, $randF$formArg)"
     }
+
+    # Der gemessene Feldwert zaehlt wie Text — sonst bleibt "08:00" leer.
+    if (-not $e.text -and $e.wert) { $e | Add-Member -NotePropertyName text -NotePropertyValue $e.wert -Force }
+
+    if ($klick) { $mod += ".clickable { $klick }" }
 
     if ($e.symbol) {
         # Das gezeichnete Symbol, nicht ein aehnliches aus einer Standardsammlung.
