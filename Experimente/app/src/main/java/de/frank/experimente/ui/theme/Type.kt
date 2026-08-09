@@ -1,42 +1,43 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package de.frank.experimente.ui.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import de.frank.experimente.R
 
-// OFFEN: Die Schriften sollen laut Bau-Regel als Datei in `res/font` liegen, nicht
-// heruntergeladen werden — heruntergeladene kommen verzögert an, und bis dahin zeigt die
-// App die System-Schrift. Der Versuch, sie über die Google-Fonts-CSS zu beziehen, lieferte
-// unbrauchbare Dateien (Kopf `b88a0000` statt `00010000`), die Android nicht laden kann.
-// Bis gültige TTF vorliegen, bleibt der Anbieter-Weg — er stürzt wenigstens nicht ab.
+// Die Schriften des Entwurfs liegen als Datei in `res/font` — eingebettet, nicht
+// heruntergeladen. Heruntergeladene kommen verzögert an; bis dahin zeigt die App die
+// System-Schrift, und genau in diesem Zustand sieht ein Bildschirm „irgendwie anders" aus,
+// ohne dass man den Grund erkennt. Eingebettet sind es zudem dieselben Umrisse, die der
+// Browser im Entwurf zeichnet.
+//
+// Es sind variable Schriften (eine Datei, alle Gewichte). Das Gewicht kommt deshalb über
+// die Achse `wght`, nicht über verschiedene Dateien.
 
-private val provider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs,
-)
+private fun gewicht(w: FontWeight) = FontVariation.Settings(FontVariation.weight(w.weight))
 
 /** Überschriften — weiche Serife, warm und ruhig. */
 val Fraunces = FontFamily(
-    Font(googleFont = GoogleFont("Fraunces"), fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = GoogleFont("Fraunces"), fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(R.font.fraunces_variable, FontWeight.Normal, variationSettings = gewicht(FontWeight.Normal)),
+    Font(R.font.fraunces_variable, FontWeight.SemiBold, variationSettings = gewicht(FontWeight.SemiBold)),
 )
 
 /** Fließtext — alles Gesprochene und alles, was die KI schreibt. */
 val Inter = FontFamily(
-    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(R.font.inter_variable, FontWeight.Normal, variationSettings = gewicht(FontWeight.Normal)),
+    Font(R.font.inter_variable, FontWeight.Medium, variationSettings = gewicht(FontWeight.Medium)),
+    Font(R.font.inter_variable, FontWeight.SemiBold, variationSettings = gewicht(FontWeight.SemiBold)),
 )
 
 /** Daten und Zahlen — der Laborbuch-Anteil. */
 val JetBrainsMono = FontFamily(
-    Font(googleFont = GoogleFont("JetBrains Mono"), fontProvider = provider, weight = FontWeight.Normal),
+    Font(R.font.jetbrains_mono_variable, FontWeight.Normal, variationSettings = gewicht(FontWeight.Normal)),
 )
 
 /**
