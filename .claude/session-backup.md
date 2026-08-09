@@ -1,112 +1,75 @@
-# Session Handoff — 09.08.2026, ca. 23:15 Uhr
+# Session Handoff — 10.08.2026, ca. 00:00 Uhr
 
 ## Ziel
-Die Programm-Pipeline (`neue-applikation`) so umbauen, dass ein Werft-Design zu **100 %**
-in die Specs und von dort zu **100 %** in die gebaute App gelangt — inklusive aller
-Spezialeffekte. Danach die App "Experimente" damit neu bauen. Frank hat ausdrücklich
-gesagt: 99,9 % sind inakzeptabel.
+Die Pipeline `neue-applikation` so reparieren, dass ein in Werft Studio bearbeitetes Design
+zu 100 % in der fertigen App landet — Aussehen, Spezialeffekte und Bewegungen —, und zwar
+reproduzierbar fuer jede neue Anwendung und fuer Android, Windows und macOS.
+Frank erwartet ausdruecklich Perfektion; 99,9 % gelten als nicht erreicht.
 
 ## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt
+- **Die Pipeline-Reparatur ist inhaltlich fertig und gepusht** (Commit `b5016330a` und die
+  drei davor). Offen ist nur noch der **Beweis am lebenden Objekt**: Frank legt das Design
+  erneut in `Designs/Outbox/` und startet `neue-applikation` → `design-umsetzer`. Die App
+  muss dann ohne Nachbesserung wie der Entwurf aussehen.
+- **Die App "Experimente" ist auf dem Handy DEINSTALLIERT** (Frank hat sie entfernt, das
+  Ergebnis war unbrauchbar). Der Code im Repo ist der alte, flache Stand plus ein
+  angefangener `ui/theme/Effekte.kt`. **Beim naechsten Lauf wird die Oberflaeche aus der
+  Messung neu gebaut, nicht nachgebessert.**
 
-- **Welche Aufgabe lief gerade:** Pipeline-Umbau, Block A/B teilweise fertig.
-  Als Nächstes: **Block A "Vollständigkeits-Tor"** in `spec-rueckimport` und
-  **Block B "Rezeptbuch CSS→Compose"** in `design-umsetzer/references/`.
+## Was die Pipeline jetzt tut (alles gepusht, alle vier Profile identisch)
+- **Stufe 2 vermisst den Entwurf, statt ihn zusammenzufassen.**
+  `spec-rueckimport/references/messe-design.ps1` oeffnet jeden Bildschirm in jeder
+  Erscheinung im Browser (Chrome DevTools-Protokoll ueber WebSocket) und schreibt je Element
+  Kasten (x/y/Breite/Hoehe in dp), Farben, Raender, Radien, Schatten, Verlaeufe, Schrift,
+  Abstaende, Uebergaenge, `::before`/`::after`, dazu alle `@keyframes`, alle Zustandsregeln
+  (`:active`, `[data-recording]`, `.is-active` …), die Regeln fuer reduzierte Bewegung und
+  die SVG-Pfade aller Symbole. Ergebnis: `Specs/<App>/v2/messung/` + `/bilder/`.
+  Belegt an Experimente: 18 Bildschirme, B-01 mit 133 Elementen, 13 Keyframes,
+  30 Zustandsregeln, 32 Regeln fuer reduzierte Bewegung, 19 Symbolen.
+- **Stufe 3 baut aus der Messung**, nicht aus Prosa. Vorschrift:
+  `design-umsetzer/references/messung-umsetzen.md` — je Eigenschaft die Entsprechung in
+  Compose, WPF und SwiftUI. Abnahme Element fuer Element gegen die Messung.
+- **Stufe 1** kennzeichnet alles Gestalterische in v1 als „Absicht VOR dem Design".
+- **Klammer** hat einen One-Shot-Ablauf (nach dem Ruecklauf keine Rueckfragen mehr) und ein
+  Abnahme-Tor mit vier Punkten; ein gruener Build ist keiner davon.
 
-- **Was BEREITS erledigt und gespiegelt ist (alle vier Profile identisch, md5 geprüft):**
-  - `spec-rueckimport/SKILL.md`: Phase 2 "Gestaltung" umgeschrieben — **Messung schlägt
-    Prosa**, widersprechende v1-Sätze werden GESTRICHEN statt danebengestellt; Warnung vor
-    gestaffelter CSS (`.werft-screen[data-screen-id=…]`-Schicht ist verbindlich).
-    Phase 1b Schritte 6-8 neu: Design als PNG rendern (headless Chrome, Rezept steht drin),
-    Aufbau je Bildschirm aus dem Bild beschreiben (über/neben, Karte ja/nein, Breite,
-    schwebende Leiste, Pille), Effekte den Bauteilen ZUORDNEN.
-  - `design-umsetzer/SKILL.md`: Phase 8 Bildabgleich umgeschrieben — **Bild gegen Bild**
-    (nicht gegen HTML), **je Bildschirm sofort** vor dem nächsten, Emulator wenn kein Gerät,
-    "grüner Build ist keine Abnahme". Android-Mapping ergänzt: Schriften als `res/font/*.ttf`
-    EINBETTEN (nicht googlefonts), Tiefen-Schicht (mehrlagige box-shadow, inset-Lichtsaum als
-    1 dp Linie, backdrop-filter → RenderEffect ab API 31, color-mix → lineare Mischung).
-    6 neue ❌-Regeln. Fehlender Abschnitt "Pflicht-Inventar aller Begleitdateien" aus
-    standard nach minimal übernommen; danach alle vier Kopien identisch.
+## Der Kernbefund von Lauf 01 (nicht neu herleiten)
+Das Design kam vollstaendig an (ZIP == Werft-Canvas, per `diff -rq` belegt). Verloren ging es
+zwischen Stufe 2 und 3: Das Spec fuehrte die Effekte nur als namenlosen Anhang
+(`design.html:gradient(5) = …`) ohne Bauteil-Zuordnung, und gebaut wurde nach dem v1-Satz
+„Keine Schatten. Keine Verlaeufe." (steht in `Specs/Experimente/v1/02-UI-SPEC.md:113`, NICHT
+in v2). Die `design.css` hat zwei Schichten; die verbindliche obere ist auf
+`.werft-screen[data-screen-id="B-xx"]` eingeschraenkt und traegt Verlaeufe, Schatten
+(`--werft-schatten-*` ab Zeile 32), radiale Auren, die schwebende untere Leiste
+(12 dp Abstand, 64 dp hoch, Radius 24) und die Pille hinter dem aktiven Feld.
 
-- **Noch offen:** Block A-Tor, Block B-Rezeptbuch, Block C (`spec-schmiede`: v1-Sätze als
-  "Absicht vor dem Design" kennzeichnen), Block D (`neue-applikation`: Abnahme-Tor +
-  Logbuch-Pflicht), Block E (v2-Spec neu erzeugen + App neu bauen).
+## Fehlgeschlagene Ansaetze — NICHT wiederholen
+- Aus den Zahlen des UI-Specs bauen. Genau so ging die Tiefen-Schicht verloren.
+- `--dump-dom` bei Chrome: im neuen Headless entfernt. Weg ist das DevTools-Protokoll.
+- Ohne `--allow-file-access-from-files` bleiben die `@keyframes` leer (CSSOM gesperrt).
+- Screenshot-Vergleich als Methode: naehert sich an, bleibt bei 99 %. Gegen die Messung pruefen.
+- Symbole aus `Icons.Outlined.*` nehmen: andere Proportionen und Strichstaerken.
+- Zwei `fillMaxSize`-Kinder in einer `Column`: das zweite bekommt Hoehe 0, kompiliert gruen.
+- `adb exec-out screencap -p` ohne `-d <display-id>` auf dem Fold: Warnzeile vor den PNG-Bytes.
 
-## Der Kernbefund (nicht noch einmal herleiten)
-Die App sieht dem Design nicht ähnlich, weil beim Bau die **Tiefen-Schicht** fehlte.
-`WERFT-DESIGN/bildschirme/design.css` hat ZWEI Schichten:
-1. Zeilen ~880-4200: flache Grundschicht.
-2. Zeilen ~4200-5600: auf `.werft-screen[data-screen-id="B-xx"]` eingeschränkte Schicht mit
-   Verläufen, Schatten (`--werft-schatten-*` ab Zeile 32), radialen Auren, schwebender
-   unterer Leiste (right/bottom/left 12px, Höhe 64px, Radius 24px) und Pille hinter dem
-   aktiven Feld (margin 4px, radius 20px, background Aktion-gedeckt).
-**Schicht 2 ist verbindlich** — sie ist das, was Werft zeigt, und `DESIGN-SPEC.md` des
-Designers führt diese Effekte als gemessene Design-Werte.
+## Naechste Schritte
+1. Frank legt das Design in `Designs/Outbox/` und startet `neue-applikation`.
+2. Stufe 2 laufen lassen (Messung entsteht automatisch), dann Stufe 3 **aus der Messung**
+   bauen — Bildschirm fuer Bildschirm, jeder gegen seine Messdatei abgehakt.
+3. Version bumpen, bauen, installieren.
+4. Lauf-Logbuch `Specs/_Pipeline-Logbuch/2026-08-09-lauf-01.md` fortschreiben.
 
-Wichtige Korrektur an einer früheren Fehlaussage von mir: Der v1-Satz „Keine Schatten,
-keine Verläufe" steht **NICHT** in v2 (nur in `Specs/Experimente/v1/02-UI-SPEC.md:113`).
-Der echte v2-Defekt ist: Effekte stehen in §5 als namenloser Anhang
-(`design.html:gradient(5) = …`) OHNE Bauteil-Zuordnung und OHNE Bild → werden übersprungen.
-
-## Belegte Fakten (nicht neu prüfen)
-- `Designs/Outbox/Experimente-SPEC-v1-SPEC-v2.zip` == `Designs/Outbox/Experimente/`
-  (`diff -rq`, 30 Dateien, kein Unterschied). Werft hat sauber geliefert.
-- Der Werft-Server-Zugang (`~/SK/werft-studio/login.txt`, Caddy-Cert) ist NICHT der Engpass —
-  das ZIP enthält das Design bereits vollständig.
-- Gerät: Samsung SM-F971B (Z Fold), `adb devices` → R3GL7073MLM. Display-ID für Screenshots:
-  `adb exec-out screencap -p -d 4630947123231501204` (das Gerät hat zwei Displays; ohne `-d`
-  landet eine Warnzeile im PNG und macht es unlesbar).
-- Schriften laden doch (FontLog zeigt erfolgreichen Fetch) — aber verzögert. Deshalb
-  einbetten statt herunterladen.
-- Design-Bilder aller neun Bildschirme (dunkel) bereits gerendert nach
-  `<scratchpad>/design/D-*.png`. Rezept: HTML kopieren, `</head>` ersetzen durch
-  `<style>.werft-screens{width:412px!important}.werft-screen{width:412px!important;
-  height:915px!important;overflow:hidden!important}</style></head>`, CSS-Pfad absolut machen,
-  dann `chrome.exe --headless=new --force-device-scale-factor=2 --window-size=412,915
-  --screenshot=…`.
-
-## Fehlgeschlagene Ansätze — NICHT wiederholen
-- **Aus den Zahlen des UI-Specs bauen statt aus dem Bild.** Genau so ging die Tiefen-Schicht
-  verloren. Immer das gerenderte Design ansehen.
-- **`adb exec-out screencap -p` ohne `-d <display-id>`** auf dem Fold: die Warnzeile
-  "Multiple displays were found" landet vor den PNG-Bytes.
-- **Pfade wie `/data/local/tmp/x.png` im Bash-Tool** werden von Git Bash in Windows-Pfade
-  umgeschrieben (`C:/Program Files/Git/data/...`). `adb exec-out … > datei` benutzen.
-- **`sed` auf `VERSION_BUMPED_AT`** mit dem Muster `"09.08.2026, …"`: die Datei enthält
-  escapte Anführungszeichen (`\"…\"`), nur auf den Datumsteil matchen.
-- **Zwei `fillMaxSize`-Kinder in einer `Column`** (Inhalt + FAB): das zweite bekommt Höhe 0.
-  Kompiliert grün, ist zur Laufzeit unsichtbar.
-
-## Stand der App "Experimente"
-- Gebaut, installiert (v0.2.1, versionCode 3), läuft, alle 9 Bildschirme + Navigation da,
-  Funktionen dahinter gebaut. **Aber: Optik entspricht dem Design NICHT** (flach statt
-  Tiefen-Schicht; B-08 hat zusätzlich die falsche Anordnung — Beschriftung neben statt über
-  dem Feld, Abschnitte sind keine Karten).
-- `ui/theme/Effekte.kt` ist ein ANGEFANGENER, noch nicht kompilierter Entwurf der
-  Tiefen-Schicht (Schatten-Token, Verlauf, Auren). Er ist NICHT committet und muss beim
-  Neubau gegen das Bild geprüft werden.
-- Insets waren komplett vergessen (Inhalt lief unter Statusleiste/Gestenbalken) — behoben in
-  `ui/Navigation.kt` per `windowInsetsPadding(WindowInsets.safeDrawing)`.
-
-## Nächste Schritte (priorisiert)
-1. Block A: Vollständigkeits-Tor in `spec-rueckimport` (jeder CSS-Effekt braucht Besitzer).
-2. Block B: `design-umsetzer/references/css-nach-compose.md` — Rezeptbuch für box-shadow
-   (mehrlagig), inset-Lichtsaum, Verläufe, color-mix, backdrop-filter, schwebende Leisten.
-3. Block C: `spec-schmiede` — v1-Gestaltungssätze als Absicht kennzeichnen.
-4. Block D: `neue-applikation` — Abnahme-Tor und Logbuch-Pflicht.
-5. Alle Änderungen in ALLE VIER Profile spiegeln (minimal/standard/strict/opencode-setup)
-   und md5 gegenprüfen. Es sind echte Kopien, keine Junctions.
-6. Block E: `Specs/Experimente/v2` neu erzeugen, dann App Bildschirm für Bildschirm neu
-   bauen — jeder Bildschirm gegen sein Design-Bild abgenommen, BEVOR der nächste beginnt.
-
-## Offene Fragen
-- Keine offene Rückfrage an Frank. Er hat entschieden: erst Skills reparieren, dann Stufe 3
-  neu. Und: 100 % Deckung mit dem Design, keine Abstriche.
+## Offene Punkte
+- `OpenLauncher/Profiles/ClaudeCode/minimal/skills` ist per `.gitignore` NICHT versioniert —
+  ausgerechnet das laufende Profil. Versioniert sind `standard`, `strict`, `opencode-setup`.
+- Die Uebersetzungsvorschrift ist geschrieben, aber noch nie an einem vollstaendigen Bau
+  erprobt. Der naechste Lauf ist ihr erster Test.
 
 ## Anker
 - Branch: main
 - Letzte Commits:
+b5016330a Pipeline: Symbole, beliebige HTML-Quellen, alle drei Zielsysteme
+270f7b65d Pipeline: One-Shot-Ablauf, Uebersetzungsvorschrift und Abnahme-Tor
+7f89e9065 Stufe 2: den Entwurf vermessen statt ihn zusammenzufassen
+665a08436 Pipeline: Design-Treue erzwingen (Stufe 2 und 3) + Tiefen-Schicht
 bae4397e6 Experimente: Oberflaeche, Navigation und Build
-03981fd69 session restore: clear handoff backup
-4c23fc69b session backup: handoff snapshot (Experimente, Stufe 3 Block 5)
-1f4746b7a Experimente: KI-Aufgaben und Ablage-Schicht
-2436508bc Experimente: Fundament, Datenschicht und Dienste
