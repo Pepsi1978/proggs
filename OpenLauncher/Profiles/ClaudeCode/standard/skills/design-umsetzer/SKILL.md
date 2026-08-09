@@ -246,6 +246,23 @@ Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 > Prosa bauen, sondern die Messung nachholen:
 > `spec-rueckimport/references/messe-design.ps1 -Design … -Ziel …`
 
+> **Einen Bildschirm baut man aus der Messung — man bessert ihn nicht nach.**
+>
+> Existiert der Bildschirm schon (aus einem frueheren Lauf oder aus dem Funktionsbau), wird
+> seine **Oberflaeche verworfen und aus der Messdatei neu geschrieben**. Nicht: bauen,
+> ansehen, Abstand korrigieren, wieder ansehen, Farbe korrigieren. Dieses Annaehern endet
+> immer bei „fast" — es kann gar nicht anders, weil es vom Ergebnis rueckwaerts rechnet
+> statt von der Vorlage vorwaerts.
+>
+> Der Ablauf ist: Messdatei oeffnen → Elemente nach `kasten.y`, dann `kasten.x` sortieren →
+> jedes Element mit seinen gemessenen Werten schreiben → fertig. Was in der Messung steht,
+> wird gebaut; was nicht darin steht, wird nicht gebaut. Ein Bedienelement, das in der
+> Messung fehlt, gehoert **nicht** auf den Bildschirm, auch wenn es sinnvoll erschiene.
+>
+> In Lauf 01 ist genau das schiefgegangen: B-08 wurde aus der Bedienelement-Liste gebaut,
+> danach mehrfach gegen Screenshots nachgebessert — und blieb trotzdem ein anderer
+> Bildschirm. Ein erfundener Zurueck-Knopf sass darin, den der Entwurf nie hatte.
+
 Alle vier Dateien aus `~/proggs/Specs/<App>/v2/` **vollstaendig** lesen, keine ueberfliegen:
 
 | Datei | Wofuer sie verbindlich ist |
