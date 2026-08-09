@@ -113,11 +113,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -132,6 +136,14 @@ import androidx.compose.ui.unit.sp
  * Jedes Element steht an seiner gemessenen Stelle, mit seinen gemessenen Werten. Wer hier
  * etwas verschiebt, verschiebt es gegen die Vorlage — dann stimmt die Vorlage nicht mehr.
  */
+private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageVector =
+    ImageVector.Builder(
+        name = "symbol", defaultWidth = breite.dp, defaultHeight = hoehe.dp,
+        viewportWidth = breite, viewportHeight = hoehe,
+    ).apply {
+        pfade.forEach { addPath(PathParser().parsePathString(it).toNodes(), fill = SolidColor(Color.Black)) }
+    }.build()
+
 @Composable
 fun $name`Erzeugt(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
@@ -145,7 +157,7 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     $randF   = AlsCompose $s.borderTopColor
     $randB   = Px $s.borderTopWidth
     $radius  = Px $s.borderTopLeftRadius
-    $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0) -or $s.backgroundImage -or $s.boxShadow
+    $hatFlaeche = $flaeche -or ($randB -and $randB -gt 0) -or $s.backgroundImage -or $s.boxShadow -or $e.symbol
     if (-not $hatFlaeche -and -not $e.text) { continue }
 
     $kennung = if ($e.klassen) { ($e.klassen -split ' ')[0] } else { $e.tag }
@@ -175,7 +187,23 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
         $mod += ".border(${randB}f.dp, $randF$formArg)"
     }
 
-    if ($e.text) {
+    if ($e.symbol) {
+        # Das gezeichnete Symbol, nicht ein aehnliches aus einer Standardsammlung.
+        $farbe = (AlsCompose $s.color) ?? "Color.Unspecified"
+        $sicht = if ($e.sichtfeld) { $e.sichtfeld -split ' +' } else { @(0,0,24,24) }
+        [void]$sb.AppendLine("        Box($mod) {")
+        [void]$sb.AppendLine("            Icon(")
+        [void]$sb.AppendLine("                imageVector = ausPfaden($($sicht[2])f, $($sicht[3])f,")
+        foreach ($p in ($e.symbol | Where-Object { $_.d })) {
+            $d = $p.d -replace '\\', '\\' -replace '"', '\"'
+            [void]$sb.AppendLine("                    `"$d`",")
+        }
+        [void]$sb.AppendLine("                ),")
+        [void]$sb.AppendLine("                contentDescription = null, tint = $farbe,")
+        [void]$sb.AppendLine("                modifier = Modifier.fillMaxSize(),")
+        [void]$sb.AppendLine("            )")
+        [void]$sb.AppendLine("        }")
+    } elseif ($e.text) {
         $txt = $e.text -replace '"', '\"'
         $gr = (Px $s.fontSize) ?? 16
         $zh = (Px $s.lineHeight) ?? ($gr * 1.5)
