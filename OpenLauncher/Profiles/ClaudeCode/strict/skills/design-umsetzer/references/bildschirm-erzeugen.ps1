@@ -98,6 +98,14 @@ function Verlauf([string]$css) {
 $name = ([IO.Path]::GetFileNameWithoutExtension($Messdatei) -replace '[^A-Za-z0-9]', '')
 $name = $name.Substring(0,1).ToUpper() + $name.Substring(1)
 
+# Wie hoch ist der Entwurf wirklich? Das unterste Element bestimmt den Scroll-Bereich —
+# ohne ihn waere bei einem 1742 dp hohen Bildschirm alles unterhalb des Sichtfensters
+# unerreichbar.
+$gesamthoehe = [Math]::Ceiling(
+    (($m.elemente | ForEach-Object { $_.kasten.y + $_.kasten.hoehe }) | Measure-Object -Maximum).Maximum
+)
+$sichtfenster = [Math]::Ceiling(($m.elemente | Select-Object -First 1).kasten.hoehe)
+
 $sb = [Text.StringBuilder]::new()
 [void]$sb.AppendLine("package $Paket")
 [void]$sb.AppendLine(@"
@@ -108,6 +116,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.offset
@@ -146,7 +156,10 @@ private fun ausPfaden(breite: Float, hoehe: Float, vararg pfade: String): ImageV
 
 @Composable
 fun $name`Erzeugt(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize()) {
+    // Der Entwurf ist $gesamthoehe dp hoch, das Sichtfenster nur $sichtfenster dp.
+    // Ohne Scroll-Bereich waere alles darunter unerreichbar.
+    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Box(Modifier.fillMaxWidth().height(${gesamthoehe}f.dp)) {
 "@)
 
 $gezeichnet = 0
@@ -229,6 +242,7 @@ foreach ($e in ($m.elemente | Sort-Object { $_.kasten.y }, { $_.kasten.x })) {
     $gezeichnet++
 }
 
+[void]$sb.AppendLine("        }")
 [void]$sb.AppendLine("    }")
 [void]$sb.AppendLine("}")
 
