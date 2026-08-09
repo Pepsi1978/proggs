@@ -277,9 +277,17 @@ export function bedienelemente(section: ExportSection): Bedienelement[] {
     const attribute = match[2] ?? match[4] ?? "";
     const ziel = /data-werft-navigate="([^"]*)"/i.exec(attribute)?.[1];
     const funktion = /data-werft-funktion="([^"]*)"/i.exec(attribute)?.[1]?.trim();
+    // Ein `<a>` ohne href, ohne Ziel und ohne Aufgabe ist Zierrat, kein Bedienelement. Wuerde es
+    // mitgezaehlt, meldete der Export bei jedem Design Dutzende angeblich toter Knoepfe.
+    if (tag === "a" && !ziel && !funktion && !/\shref="(?!#?")/i.test(attribute)) continue;
     const ende = section.html.indexOf(`</${tag}`, muster.lastIndex);
     const inhalt = ende > 0 ? section.html.slice(muster.lastIndex, ende) : "";
-    const label = beschriftung(attribute.includes("aria-label") ? attribute : inhalt) || tag;
+    // Ein `<input>` hat kein schliessendes Tag und damit keinen Innentext. Seine Beschriftung steht
+    // im Platzhalter, im Namen oder wenigstens in der Art des Feldes.
+    const ausAttribut = /\s(?:aria-label|placeholder|name|value)="([^"]+)"/i.exec(attribute)?.[1]?.trim();
+    const label = (tag === "input" || tag === "select" || tag === "textarea")
+      ? (ausAttribut ?? `${tag}${/\stype="([^"]+)"/i.exec(attribute)?.[1] ? ` (${/\stype="([^"]+)"/i.exec(attribute)![1]})` : ""}`)
+      : (beschriftung(attribute.includes("aria-label") ? attribute : inhalt) || tag);
     gefunden.push({ bildschirm: section.name, label, art: tag, ...(ziel ? { ziel } : {}), ...(funktion ? { funktion } : {}) });
   }
   // Gleiche Beschriftung auf demselben Bildschirm ist dasselbe Element in einem anderen Zustand.
@@ -392,6 +400,20 @@ const kopf = (titel: string, projekt: string, bauweg: Bauweg, stand: string) =>
 // Der Erzeuger schreibt die Spec-Kennung als `data-screen-id` ins Markup (siehe composeScreens).
 // Steht sie dort, wird sie gelesen — verschiebt der Designer einen Bildschirm, wandert seine
 // Kennung mit. Nur wo keine steht, wird gezaehlt.
+// Holt einen ganzen `## N. Titel`-Abschnitt aus einem Spec-Text — fuer die Teile, die sich nicht
+// messen lassen und deshalb aus dem Erst-Spec uebernommen werden muessen.
+export function abschnittAus(text: string | undefined, ...worte: string[]): string | undefined {
+  if (!text) return undefined;
+  const koepfe = [...text.matchAll(/^##\s+(?!#)(.+)$/gm)];
+  for (const [index, kopf] of koepfe.entries()) {
+    const titel = kopf[1]!.toLowerCase();
+    if (!worte.some((wort) => titel.includes(wort.toLowerCase()))) continue;
+    const ende = index + 1 < koepfe.length ? koepfe[index + 1]!.index! : text.length;
+    return text.slice(kopf.index!, ende).trimEnd();
+  }
+  return undefined;
+}
+
 const bildschirmId = (section: ExportSection, index: number) =>
   /^B-\d+$/i.test(section.id) ? section.id.toUpperCase() : `B-${String(index + 1).padStart(2, "0")}`;
 
@@ -449,6 +471,12 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string, bewegung
   const { facts, variants, document, report } = input;
   const zeilen = [kopf("UI-Spec", input.projectName, bauweg, stand), "",
     "Alle Werte sind **deterministisch aus dem Design gemessen**, nicht geschätzt. Sie sind verbindlich.", ""];
+
+  // Grundhaltung und Barrierefreiheit lassen sich an einem Design nicht MESSEN — sie sind
+  // Festlegungen aus Stufe 1. FORMAT.md verlangt beide Abschnitte; ohne sie fehlte dem Umsetzer
+  // der Massstab, an dem er seine Entscheidungen ausrichtet. Sie werden deshalb aus v1 uebernommen.
+  const grundhaltung = abschnittAus(input.vorlage?.ui, "Grundhaltung");
+  zeilen.push(grundhaltung ?? "## 1. Gestalterische Grundhaltung\n\n_Im Erst-Spec nicht festgelegt._", "");
 
   zeilen.push("## 2. Erscheinungen (Themes)", "");
   if (!variants.length) zeilen.push("Dieses Design bringt nur eine Erscheinung mit.", "");
@@ -517,6 +545,8 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string, bewegung
     zeilen.push("## 8. Texte", "", "| Name | Text |", "|------|------|",
       ...facts.strings.map((entry) => `| ${entry.name} | ${JSON.stringify(entry.value)} |`), "");
   }
+  const barrierefreiheit = abschnittAus(input.vorlage?.ui, "Barrierefrei", "Zugänglich");
+  if (barrierefreiheit) zeilen.push(barrierefreiheit, "");
   zeilen.push("## 10. Offene Fragen", "", facts.notes.length ? facts.notes.map((note) => `- ${note}`).join("\n") : "- keine", "");
   return zeilen.join("\n");
 }

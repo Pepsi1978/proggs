@@ -419,8 +419,10 @@ const zielSysteme = [
   { id: "web", label: "Web", technik: "HTML · CSS" }
 ] as const;
 
-function ZielModal({ projectId, onClose }: { projectId: string; onClose(): void }) {
-  const [ziel, setZiel] = useState<string>("android");
+function ZielModal({ projectId, plattform, onClose }: { projectId: string; plattform?: string; onClose(): void }) {
+  // Vorbelegt wird die Plattform des Projekts — sie ist der wahrscheinlichste Wunsch. Frueher stand
+  // hier fest "android", was bei einem Windows-Projekt jedes Mal eine Korrektur verlangte.
+  const [ziel, setZiel] = useState<string>(zielSysteme.some((system) => system.id === plattform) ? plattform! : "android");
   const [meldung, setMeldung] = useState<string>();
   const [ordner, setOrdner] = useState<Awaited<ReturnType<typeof designsOrdner>>>();
   useEffect(() => { void (async () => setOrdner(await designsOrdner(false)))(); }, []);
@@ -1843,7 +1845,7 @@ function Studio() {
           </aside>
         )}
       </div>
-      {zielOffen && <ZielModal projectId={projectId} onClose={() => setZielOffen(false)} />}
+      {zielOffen && <ZielModal projectId={projectId} {...(project.data?.platforms?.[0] ? { plattform: project.data.platforms[0] } : {})} onClose={() => setZielOffen(false)} />}
       {modal === "keys" && <KeyboardModal onClose={() => setModal(null)} />} {modal === "share" && <ShareModal onClose={() => setModal(null)} />} {modal === "export" && <ExportModal onClose={() => setModal(null)} />} {modal === "present" && <Present accent={accent} onClose={() => setModal(null)} />}
     </div>
   );
