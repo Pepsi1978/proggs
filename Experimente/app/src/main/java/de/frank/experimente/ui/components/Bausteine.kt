@@ -51,6 +51,8 @@ import de.frank.experimente.ui.theme.LocalAppColors
 import de.frank.experimente.ui.theme.LocalReduzierteBewegung
 import de.frank.experimente.ui.theme.Mass
 import de.frank.experimente.ui.theme.dauer
+import de.frank.experimente.ui.theme.schattenKontrolle
+import de.frank.experimente.ui.theme.schattenTopbar
 import de.frank.experimente.ui.theme.schattenLeiste
 
 /** Zwischenüberschrift — Inter 13 sp, Großbuchstaben, Laufweite 0,6 sp (02-UI-SPEC §3). */
@@ -307,11 +309,15 @@ fun SymbolKnopf(
     val farben = LocalAppColors.current
     val quelle = remember { MutableInteractionSource() }
     val gedrueckt by quelle.collectIsPressedAsState()
+    // Gemessen: 48×48, Fläche *Flaeche* mit 78 % Deckkraft, 1 dp Rand in *Rand*/84 %,
+    // vollrund, dazu `0 8px 16px #000/16%`, `0 0 16px Aktion/6%`, `inset 0 1px 0 Text/12%`.
     Box(
         modifier = modifier
             .size(Mass.tippflaeche)
+            .schattenKontrolle(farben, AppForm.vollrund)
             .clip(AppForm.vollrund)
-            .background(if (gedrueckt) farben.aktionGedeckt else Color.Transparent)
+            .background(if (gedrueckt) farben.aktionGedeckt else farben.flaeche.copy(alpha = 0.78f))
+            .border(Mass.randstaerke, farben.rand.copy(alpha = 0.84f), AppForm.vollrund)
             .clickable(interactionSource = quelle, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -449,12 +455,15 @@ fun ObereLeiste(
     rechts: @Composable (() -> Unit)? = null,
 ) {
     val farben = LocalAppColors.current
+    // Gemessen: 412×64, Fläche *Grund* mit 82 % Deckkraft, Schatten `0 8px 20px #000/16%`
+    // und ein Lichtsaum `inset 0 1px 0 Text/8%`. Titel bei x = 20.
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(Mass.obereLeiste)
-            .background(farben.grund)
-            .padding(horizontal = 8.dp),
+            .schattenTopbar(farben)
+            .background(farben.grund.copy(alpha = 0.82f))
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         links?.invoke()

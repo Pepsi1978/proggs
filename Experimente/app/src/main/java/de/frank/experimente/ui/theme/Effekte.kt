@@ -157,3 +157,12 @@ fun Modifier.karteFlaeche(farben: AppColors, form: Shape = AppForm.karte): Modif
 
 @Suppress("unused")
 private val unbenutzt = Size.Zero
+
+/** `--werft-schatten-topbar` — gemessen `0 8px 20px #000/16%`, `inset 0 1px 0 Text/8%`. */
+fun Modifier.schattenTopbar(farben: AppColors): Modifier = this
+    .shadow(
+        elevation = 8.dp,
+        clip = false,
+        ambientColor = Color.Black.copy(alpha = 0.16f),
+        spotColor = Color.Black.copy(alpha = 0.40f),
+    )
