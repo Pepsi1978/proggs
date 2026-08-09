@@ -67,9 +67,27 @@ $messJs = @'
     "animationName","animationDuration","animationTimingFunction","animationIterationCount",
     "animationDirection","animationFillMode"
   ];
-  const LEER = new Set(["none","normal","auto","0px","rgba(0, 0, 0, 0)","static","visible","0s","1","start"]);
+  // "1" darf hier NICHT stehen: es wuerde `flexGrow: 1` mitloeschen — also die Aussage
+  // "dieses Element fuellt den Raum". `opacity: 1` wird stattdessen gezielt gefiltert.
+  const LEER = new Set(["none","normal","auto","0px","rgba(0, 0, 0, 0)","static","visible","0s"]);
+  const istLeer = (p, v) => LEER.has(v) || (p === "opacity" && v === "1") ||
+                            (p === "textAlign" && v === "start") || (p === "flexGrow" && v === "0");
 
   const wurzel = document.querySelector("[data-werft-screen],[data-screen-id]") || document.body;
+
+  // Versteckte Elemente zeigen einen Nullkasten — dann fehlt genau den Zustaenden
+  // (Antwortkarte, Fehlerkarte, Ladezustand) ihre Anordnung. Deshalb werden sie fuer die
+  // Messung sichtbar gemacht und danach wieder zurueckgesetzt.
+  const versteckte = Array.from(wurzel.querySelectorAll("[hidden]"));
+  const warVersteckt = new Set(versteckte);   // vor dem Aufdecken merken
+  const alteAnzeige = new Map();
+  for (const v of versteckte) {
+    alteAnzeige.set(v, v.style.display);
+    v.removeAttribute("hidden");
+    v.style.display = "";
+  }
+  void wurzel.offsetHeight;   // Neuberechnung des Layouts erzwingen
+
   const null0 = wurzel.getBoundingClientRect();
   const elemente = [];
 
@@ -77,12 +95,12 @@ $messJs = @'
     if (el.tagName === "SCRIPT" || el.tagName === "STYLE") return;
     const s = getComputedStyle(el), r = el.getBoundingClientRect();
     const stil = {};
-    for (const p of WICHTIG) { const v = s[p]; if (v && !LEER.has(v)) stil[p] = v; }
+    for (const p of WICHTIG) { const v = s[p]; if (v && !istLeer(p, v)) stil[p] = v; }
     const vorher = {}, nachher = {};
     for (const [pseudo, ziel] of [["::before", vorher], ["::after", nachher]]) {
       const ps = getComputedStyle(el, pseudo);
       if (ps.content && ps.content !== "none") {
-        for (const p of WICHTIG) { const v = ps[p]; if (v && !LEER.has(v)) ziel[p] = v; }
+        for (const p of WICHTIG) { const v = ps[p]; if (v && !istLeer(p, v)) ziel[p] = v; }
       }
     }
     const text = Array.from(el.childNodes).filter(n => n.nodeType === 3)
@@ -105,7 +123,7 @@ $messJs = @'
     const n = el.getAttribute("data-werft-navigate"); if (n) e.fuehrtZu = n;
     const a = el.getAttribute("aria-label"); if (a) e.beschriftung = a;
     const ph = el.getAttribute("placeholder"); if (ph) e.platzhalter = ph;
-    if (el.hasAttribute("hidden")) e.versteckt = true;
+    if (warVersteckt.has(el)) e.versteckt = true;
     if (Object.keys(vorher).length) e.vorher = vorher;
     if (Object.keys(nachher).length) e.nachher = nachher;
 
@@ -148,6 +166,8 @@ $messJs = @'
       gehe(k, pfad + "/" + k.tagName.toLowerCase() + "[" + i + "]"));
   };
   gehe(wurzel, wurzel.tagName.toLowerCase());
+
+  for (const v of versteckte) { v.setAttribute("hidden", ""); v.style.display = alteAnzeige.get(v) || ""; }
 
   // Die Messung oben sieht nur den Ausgangszustand. Alles, was erst beim Druecken,
   // Aufnehmen oder Auswaehlen entsteht — und damit der groesste Teil der Bewegung —
