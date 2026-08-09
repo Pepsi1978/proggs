@@ -1,7 +1,15 @@
 ---
 name: design-umsetzer
 description: >-
-  Setzt einen mit Claude Designs erstellten und im Repo unter Designs/ gespeicherten
+  Stufe 3 der Programm-Pipeline und zugleich der eigenstaendige Design-Umsetzer.
+  Baut aus einem Bau-Spec-Paket (Specs/<App>/v2/BAU-AUFTRAG.md mit Funktions-, UI- und
+  Motion-Spec) ODER aus einem blossen Design-Entwurf ein fertiges Programm — auf Android
+  (Kotlin/Jetpack Compose), Windows (C#/.NET WPF) oder macOS (Swift/SwiftUI). Liegt ein
+  Funktions-Spec vor, wird nicht nur die Oberflaeche gebaut, sondern auch das dahinter
+  liegende Verhalten (Daten, Regeln, Persistenz). Zusaetzliche Trigger fuer den
+  Pipeline-Fall: "Bau-Auftrag umsetzen", "Spec umsetzen", "Spec-Paket bauen",
+  "Programm aus dem Spec bauen", "Stufe 3", "bau die App aus dem Spec", "v2 umsetzen".
+  Setzt einen mit Claude Designs erstellten und im Repo unter Designs/Outbox/ gespeicherten
   Design-Entwurf 1:1 exakt in Jetpack Compose um — Farben, Abstaende, Schriftgroessen,
   Schriftarten, Eckenradien, Schatten, Anordnung und Animationen exakt aus den
   Design-Dateien und analysiert den gesamten Projektordner rekursiv inklusive aller
@@ -77,9 +85,53 @@ Fehlt er, ermittelst du den Design-Ordner in Phase 0 selbst.
 
 ---
 
+## Zwei Betriebsarten — zuerst feststellen, welche vorliegt
+
+| Betriebsart | Erkennungsmerkmal | Was verbindlich ist |
+|-------------|-------------------|---------------------|
+| **P — Pipeline (Stufe 3)** | Es gibt `~/proggs/Specs/<App>/v2/BAU-AUFTRAG.md` | Das **Spec-Paket**: `01-FUNKTIONS-SPEC.md` fuers Verhalten, `02-UI-SPEC.md` fuers Aussehen, `03-MOTION-SPEC.md` fuer jede Bewegung. Der Design-Ordner ist ergaenzender Augenschein |
+| **D — Nur Design** | Es gibt nur einen Design-Ordner unter `Designs/Outbox/<Name>/` | Der **Design-Entwurf** ist die einzige Wahrheit (der klassische Lauf dieses Skills) |
+
+Pruefe das **als Allererstes**: `ls ~/proggs/Specs/<App>/v2/`. Existiert der Ordner,
+laeufst du in Betriebsart **P** — dann ist das Spec-Paket der Einstieg und nicht der
+Design-Ordner. In Betriebsart P entfaellt Phase 4 (SPEC schreiben) vollstaendig: das
+Spec-Paket **ist** das SPEC, es wurde in Stufe 2 geschrieben und vom Benutzer freigegeben.
+Der Gesamtablauf der Pipeline steht in `~/proggs/Specs/README.md`.
+
+**Achtung Pfad:** Design-Entwuerfe liegen seit der Umstellung auf die Pipeline **nicht mehr**
+direkt in `Designs/`, sondern in `~/proggs/Designs/Outbox/<Name>/`. `Designs/` enthaelt nur
+noch die beiden Briefkaesten `Inbox/` (raus zum Designer) und `Outbox/` (zurueck).
+
+---
+
+## Zielplattform und Technik-Weg
+
+Der Skill baut auf drei Plattformen. Die Zielplattform steht in Betriebsart P in
+`Specs/<App>/v2/00-PROJEKT.md` §2; in Betriebsart D leitest du sie aus dem Design ab
+(`design-tokens.json` → `plattform`) und laesst sie bestaetigen.
+
+| Plattform | Technik-Weg | Theme-Schicht | Bewegung |
+|-----------|-------------|---------------|----------|
+| **Android** | Kotlin + Jetpack Compose, Material 3 | `Color.kt` / `Type.kt` / `Shape.kt` / `Theme.kt`, eigene `LocalAppColors`-Palette | `animate*AsState`, `AnimatedVisibility`, `updateTransition`, `infiniteRepeatable` |
+| **Windows** | C# / .NET + WPF | `ResourceDictionary` je Erscheinung (`Colors.xaml`, `Typography.xaml`, `Shapes.xaml`), Umschaltung ueber `MergedDictionaries` | `Storyboard` + `DoubleAnimation`/`ColorAnimation`, `KeyTime`, `EasingFunction` (`CubicBezier` ueber `KeySpline`) |
+| **macOS** | Swift + SwiftUI | `Color`-Extension je Erscheinung, `Environment`-basierte Theme-Auswahl | `withAnimation`, `.animation(_:value:)`, `Animation.timingCurve(...)`, `.repeatForever()` |
+
+Steht im Repo bereits ein Projekt derselben Plattform, richtest du dich nach dessen Aufbau
+und Versionen (Windows: `*.csproj`; macOS: `Package.swift`/`*.xcodeproj`). Bei mehreren
+Zielplattformen im Spec baust du die **fuehrende** zuerst vollstaendig und danach die
+weiteren mit demselben Verhalten — dafuer gilt zusaetzlich der `cross-platform`-Skill.
+
+Eine `cubic-bezier(x1,y1,x2,y2)`-Kurve aus dem Design wird auf jeder Plattform als genau
+diese Kurve umgesetzt (Compose: `CubicBezierEasing(x1,y1,x2,y2)`; WPF: `KeySpline="x1,y1 x2,y2"`;
+SwiftUI: `.timingCurve(x1,y1,x2,y2)`). Sie wird **nie** durch eine eingebaute Standardkurve
+ersetzt.
+
+---
+
 ## Ueberblick der Phasen (in dieser Reihenfolge)
 
-0. **Design-Ordner finden** (raten + bestaetigen lassen; sonst Pfad erfragen)
+0. **Quelle finden** — Betriebsart P: Spec-Paket; Betriebsart D: Design-Ordner
+   (raten + bestaetigen lassen; sonst Pfad erfragen)
 1. **Design und alle Begleitdateien vollstaendig einlesen** und exakt inventarisieren
 2. **App-Ordner zuordnen** (bestehende App redesignen ODER neue App anlegen)
 3. **IST-Analyse** der bestehenden App + **Umsetzungs-Fall** bestimmen (A/B/C)
@@ -98,15 +150,36 @@ Referenz; alles (Farben, Abstaende, Effekte) orientiert sich exakt daran.
 
 ---
 
-## Phase 0 — Design-Ordner finden
+## Phase 0 — Quelle finden
+
+### Betriebsart P zuerst pruefen
+
+`ls ~/proggs/Specs/` und, wenn ein App-Name bekannt ist, `ls ~/proggs/Specs/<App>/v2/`.
+Findest du dort ein `BAU-AUFTRAG.md`, ist **das** deine Quelle:
+
+1. `BAU-AUFTRAG.md` lesen — es nennt die Zielplattform(en), die verbindlichen Quellen und
+   in §4 die vollstaendige Abhakliste aller Kennungen (`B-`, `F-`, `M-`, `A-`).
+2. Den Design-Ordner, auf den es verweist, zusaetzlich heranziehen (Augenschein).
+3. Stehen in `BAU-AUFTRAG.md` §5 noch **offene Fragen**, diese dem Benutzer vorlegen und
+   klaeren, **bevor** gebaut wird. Ein Bau-Auftrag mit offenen Fragen wird nicht losgebaut.
+4. Bestaetigen lassen: "Ich baue `<App>` aus `Specs/<App>/v2/` fuer `<Plattform>`. Richtig?"
+
+Danach direkt weiter zu Phase 1. Findest du kein `v2`, laeufst du in Betriebsart D:
+
+### Betriebsart D — Design-Ordner finden
 
 **Feste Ordner-Struktur (wichtig):** Der Standard-Container fuer ALLE Design-Entwuerfe
-ist immer der Ordner **`~/proggs/Designs/`** selbst. Er ist kein Design-Ordner, sondern
+ist der Ordner **`~/proggs/Designs/Outbox/`** — dort liegt alles, was aus dem Designer
+zurueckkommt. Er ist kein Design-Ordner, sondern
 nur die Sammlung. **Jedes einzelne Designprojekt liegt als eigener Unterordner darin**
-— z.B. `~/proggs/Designs/Fisetin-Begleiter-Design-Update/`. Der Unterordner ist das,
+— z.B.
+`~/proggs/Designs/Outbox/Fisetin-Begleiter-Design-Update/`. Der Unterordner ist das,
 was 1:1 umgesetzt wird. Ordnernamen koennen Bindestriche ODER Leerzeichen enthalten.
 
-Im `Designs/`-Root liegt ausserdem eine **`README.md`** (Index, listet die Projekte auf).
+`~/proggs/Designs/Inbox/` enthaelt **keine Designs**, sondern die Spec-Dateien, die an den
+Designer gehen. Sie ist nie eine Umsetzungsquelle.
+
+Im `Outbox/`-Ordner liegt ausserdem eine **`README.md`** (Index, listet die Projekte auf).
 Diese README ist **kein** Designprojekt — sie NIE als Design-Ordner behandeln, aber ihren
 Inhalt gerne lesen, um die vorhandenen Projekte/Namen zu erkennen.
 
@@ -144,7 +217,7 @@ die Token-Extraktion aus dem HTML. Fehlt der Ordner, ist es ein Claude-Design (T
 
 **Ablauf:**
 
-1. `Glob("Designs/*")` bzw. `ls ~/proggs/Designs/` — alle **Unterordner** auflisten
+1. `Glob("Designs/Outbox/*")` bzw. `ls ~/proggs/Designs/Outbox/` — alle **Unterordner** auflisten
    (Dateien im Root wie `README.md` sind KEINE Projekte). Optional die `README.md` lesen.
 2. **Automatisch raten + bestaetigen:**
    - Bei genau EINEM Projekt-Unterordner: diesen vorschlagen.
@@ -161,7 +234,30 @@ Glob (`Designs/<Name>/**/*`) das vollstaendige Datei- und Unterordner-Inventar e
 
 ---
 
-## Phase 1 — Design vollstaendig einlesen und Tokens extrahieren
+## Phase 1 — Quelle vollstaendig einlesen
+
+### Betriebsart P — das Spec-Paket lesen
+
+Alle vier Dateien aus `~/proggs/Specs/<App>/v2/` **vollstaendig** lesen, keine ueberfliegen:
+
+| Datei | Wofuer sie verbindlich ist |
+|-------|----------------------------|
+| `00-PROJEKT.md` | Zielplattform(en), Zielgeraet, Sprache, Abnahmekriterien `A-` |
+| `01-FUNKTIONS-SPEC.md` | Jedes Verhalten: Ausloeser, Ablauf, Daten, Ergebnis, Fehlerfall, Regeln, Datenmodell |
+| `02-UI-SPEC.md` | Jede Farbe, jedes Mass, jede Schrift, jeder Bildschirm `B-`, jeder Zustand |
+| `03-MOTION-SPEC.md` | Jede Bewegung `M-` mit Dauer, Kurve, Verzoegerung, Wiederholung |
+| `AENDERUNGEN.md` | Nur zur Einordnung — was der Designer gegenueber v1 geaendert hat |
+
+Die Werte darin sind bereits gemessen und freigegeben. Du **extrahierst hier nichts mehr
+selbst** und rechnest nichts um — du liest ab. Den Design-Ordner ziehst du zusaetzlich
+heran, um das Ergebnis optisch abgleichen zu koennen (Abschnitte unten), nicht um die
+Werte zu ersetzen. Weicht der Design-Ordner vom Spec-Paket ab, gilt das Spec-Paket, und du
+meldest die Abweichung.
+
+Uebernimm die Abhakliste aus `BAU-AUFTRAG.md` §4 als deine Arbeitsliste — sie ersetzt das
+Inventar aus E2 und ist die Grundlage des Vollstaendigkeits-Abgleichs in Phase 8.
+
+### Betriebsart D — Design vollstaendig einlesen und Tokens extrahieren
 
 **Grundsatz:** Wer den Entwurf und seine Begleitdateien nicht komplett analysiert hat,
 kann ihn nicht 1:1 umsetzen.
@@ -339,6 +435,7 @@ Nach Phase 1 (Screen-Liste des Designs) und Phase 3 (was die App schon hat) steh
 
 | Fall | Situation | SPEC? (Phase 4) |
 |------|-----------|-----------------|
+| **P — Bau aus Spec-Paket** | Betriebsart P: `Specs/<App>/v2/` liegt vor | **NEIN** — das Spec-Paket **ist** das SPEC. Es wurde in Stufe 2 geschrieben und freigegeben. Kein zweites SPEC daneben schreiben. Direkt weiter zu Phase 5 |
 | **A — Neue App** | Es existiert (noch) keine App zum Design | **JA** — immer ein vollstaendiges SPEC schreiben, dann bauen |
 | **B — Redesign + neue Bereiche** | App existiert, aber der Entwurf enthaelt **neue** Screens/Funktionen, die es in der App noch nicht gibt | **JA** — SPEC fuer die **neuen Bereiche** schreiben; die restliche App nur optisch 1:1 angleichen |
 | **C — Reine Design-Anpassung** | App existiert, der Entwurf bringt **keine** neuen Funktionen — nur die Optik aendert sich | **NEIN** — kein SPEC; das Design einfach komplett 1:1 in die App uebernehmen |
@@ -354,7 +451,9 @@ oder kurz nachfragen.
 ## Phase 4 — SPEC schreiben (bedingt)
 
 **Wann:** Nur in **Fall A** (neue App) und **Fall B** (neue Bereiche). In **Fall C**
-(reine Design-Anpassung) wird **kein** SPEC geschrieben — direkt weiter zu Phase 5.
+(reine Design-Anpassung) und in **Fall P** (Bau aus Spec-Paket) wird **kein** SPEC
+geschrieben — direkt weiter zu Phase 5. In Fall P liegt das SPEC bereits als
+`Specs/<App>/v2/` vor; ein zweites danebenzuschreiben erzeugt nur zwei Wahrheiten.
 
 **Grundregel (vom Benutzer, absolut zentral):** Das SPEC **orientiert sich immer exakt
 am Design** — Farben, Abstaende, Schriftgroessen, Anordnung, **alle** Effekte
@@ -394,9 +493,15 @@ hier gezielt fragen.
 
 ---
 
-## Phase 5 — Mapping planen (Design → Compose)
+## Phase 5 — Mapping planen (Werte → Bausteine der Zielplattform)
 
-Uebersetze die Tokens aus Phase 1 in konkrete Compose-Bausteine — mit **exakten Werten**:
+Uebersetze die Werte aus Phase 1 in konkrete Bausteine der Zielplattform — mit **exakten
+Werten**. Der folgende Abschnitt beschreibt **Android/Compose**; darunter stehen die
+Entsprechungen fuer Windows und macOS. Die Werte sind auf allen drei Plattformen dieselben,
+nur die Bausteine unterscheiden sich.
+
+### Android — Kotlin / Jetpack Compose
+
 
 **Theme-Schicht:**
 - `Color.kt`: jede CSS-Variable → benannte `Color(0xFF……)`-Konstante. Alpha aus rgba
@@ -429,11 +534,61 @@ Uebersetze die Tokens aus Phase 1 in konkrete Compose-Bausteine — mit **exakte
 - Audio-Dateien unveraendert integrieren und Lifecycle, parallele Wiedergabe sowie
   Ressourcenfreigabe passend zur vorhandenen App-Architektur umsetzen.
 
+### Windows — C# / .NET / WPF
+
+**Theme-Schicht:**
+- Je Erscheinung ein `ResourceDictionary` (`Themes/<Erscheinung>.xaml`) mit `SolidColorBrush`
+  je Farbrolle — Name der Rolle als `x:Key`, Wert als exaktes `#AARRGGBB`. Alpha aus rgba
+  exakt umrechnen: `round(alpha*255)` als zweistelliges Hex, vorangestellt.
+- Umschaltung ueber `Application.Current.Resources.MergedDictionaries` — alle Erscheinungen
+  sind umschaltbar, nicht nur die Standard-Erscheinung.
+- Typografie als `Style`-Ressourcen je Rolle (`FontFamily`, `FontSize`, `FontWeight`,
+  `LineHeight`, `TextBlock.LineStackingStrategy="BlockLineHeight"`). Schriftgroessen des
+  Entwurfs sind px; WPF rechnet in geraeteunabhaengigen Einheiten (1/96 Zoll) — Werte
+  1:1 uebernehmen, sofern das Spec nichts anderes sagt.
+- Formen als `CornerRadius`-Ressourcen, Schatten ueber `DropShadowEffect`
+  (`BlurRadius`, `ShadowDepth`, `Direction`, `Opacity`, `Color`) exakt nach Vorgabe.
+- Verlaeufe als `LinearGradientBrush`/`RadialGradientBrush` mit den exakten Stops.
+
+**Fenster-/Screen-Schicht:**
+- Pro Bildschirm ein `UserControl` oder eine `Page`; Navigation ueber `Frame` bzw. einen
+  `ContentControl` mit `DataTemplate`-Auswahl. Kein Bildschirm ohne Rueckweg.
+- Abstaende als `Margin`/`Padding` exakt; Raster ueber `Grid`-Definitionen statt fester
+  Positionen, wo der Entwurf mitwaechst.
+
+**Bewegung:** `Storyboard` mit `DoubleAnimation`/`ColorAnimation`/`ThicknessAnimation`,
+Dauer als `Duration="0:0:0.240"`, Kurve als `KeySpline` einer `SplineDoubleKeyFrame`
+(`cubic-bezier(x1,y1,x2,y2)` → `KeySpline="x1,y1 x2,y2"`). Dauerbewegung ueber
+`RepeatBehavior="Forever"` und `AutoReverse` gemaess Vorgabe.
+
+### macOS — Swift / SwiftUI
+
+**Theme-Schicht:**
+- Je Erscheinung eine Farbtabelle (Asset-Katalog oder `Color`-Extension) mit den exakten
+  Werten; Auswahl ueber einen Theme-Wert in der `Environment`, damit **alle** Erscheinungen
+  umschaltbar sind — nicht nur ueber `colorScheme`.
+- Typografie ueber `Font.custom(_:size:)` mit exakter Familie, `.weight()`, Zeilenhoehe
+  ueber `.lineSpacing()` (Differenz zur Schriftgroesse beachten) und `.tracking()`.
+- Formen ueber `RoundedRectangle(cornerRadius:)`, Schatten ueber
+  `.shadow(color:radius:x:y:)` — `radius` entspricht dem halben CSS-Blur-Radius,
+  das ausdruecklich vermerken statt still zu uebernehmen.
+- Verlaeufe ueber `LinearGradient`/`RadialGradient` mit exakten Stops,
+  Weichzeichner ueber `.blur(radius:)`.
+
+**Screen-Schicht:**
+- Pro Bildschirm eine `View`; Navigation ueber `NavigationStack`/`NavigationSplitView`
+  je nach Entwurf. Abstaende exakt als `padding`/`spacing`.
+
+**Bewegung:** `withAnimation(.timingCurve(x1,y1,x2,y2, duration: 0.240))` bzw.
+`.animation(_:value:)`; Dauerbewegung ueber `.repeatForever(autoreverses:)`.
+
+### Danach
+
 Kurz den Umsetzungsplan (welche Dateien neu/geaendert) auflisten, dann umsetzen.
 
 ---
 
-## Phase 6 — 1:1-Umsetzung in Jetpack Compose (Code schreiben)
+## Phase 6 — 1:1-Umsetzung (Code schreiben)
 
 Jetzt wird **tatsaechlich Code geschrieben** — dies ist kein Vorschlags-Skill, sondern
 setzt direkt um. Schreibe/aendere die Kotlin-Dateien so, dass die App am Ende exakt
@@ -465,7 +620,31 @@ niemals still vereinfachen.
 
 ---
 
-## Phase 7 — Neue Funktionen aus dem Design mit-implementieren
+## Phase 7 — Funktionen bauen
+
+### Fall P — das ganze Verhalten aus dem Funktions-Spec
+
+In Betriebsart P ist die Oberflaeche nur die Haelfte des Auftrags. `01-FUNKTIONS-SPEC.md`
+wird **vollstaendig** umgesetzt — jede `F-`-Kennung, nicht nur die, die im Design sichtbar
+sind. Je Funktion:
+
+1. **Ablauf** genau in der beschriebenen Schrittfolge umsetzen — keine Schritte
+   zusammenfassen, keine umsortieren.
+2. **Datenmodell** aus §3 anlegen (Android: Room/DataStore; Windows: die im Repo uebliche
+   Datenschicht, sonst SQLite/JSON je nach Spec; macOS: SwiftData/`UserDefaults` je nach
+   Spec). Feldnamen, Typen, Pflichtfelder und Standardwerte exakt wie spezifiziert.
+3. **Zustaende und Uebergaenge** aus §4 als echten Zustandsautomaten bauen, nicht als lose
+   Boolean-Flags, wenn das Spec mehr als zwei Zustaende nennt.
+4. **Externe Dienste** aus §5 anbinden, inklusive des beschriebenen Verhaltens ohne Netz.
+   Zugangsschluessel niemals in den Quellcode schreiben.
+5. **Hintergrund und Lebenszyklus** aus §6 umsetzen — was weiterlaufen soll, laeuft weiter.
+6. **Fehlerfaelle** genau so behandeln, wie sie dastehen. Keine zusaetzliche
+   Fehlerbehandlung fuer Faelle erfinden, die das Spec nicht nennt.
+
+Eine Funktion gilt erst als gebaut, wenn sie **beobachtbar** tut, was das Spec sagt —
+nicht, wenn der Bildschirm dazu existiert.
+
+### Fall A/B/C — Neue Funktionen aus dem Design mit-implementieren
 
 **Sehr wichtig (ausdruecklicher Wunsch des Benutzers):** Wenn der Entwurf Funktionen
 oder Screens enthaelt, die es in der bestehenden App **noch gar nicht gibt** (Fall A/B),
@@ -514,6 +693,28 @@ Liste am Ende explizit auf, welche NEUEN Funktionen aus dem Design hinzugekommen
   Fehlt auch nur EIN Punkt, ist die Umsetzung **nicht fertig** — nachziehen, bis das
   Inventar zu 100% abgehakt ist. Am Ende die abgehakte Inventarliste kurz berichten.
 
+### Zusaetzlich in Fall P — die Abhakliste aus dem Bau-Auftrag
+
+In Betriebsart P tritt die Liste aus `BAU-AUFTRAG.md` §4 an die Stelle des selbst
+erstellten Inventars. Jede Kennung wird einzeln abgehakt, und zwar mit Fundstelle im Code:
+
+| Kennung | Nachweis, der zu erbringen ist |
+|---------|-------------------------------|
+| `B-xx` | Der Bildschirm existiert, ist erreichbar, sieht in **jeder** Erscheinung aus wie in `02-UI-SPEC.md` beschrieben, und alle dort genannten Zustaende (leer/laedt/Fehler/aktiv) sind gebaut |
+| `M-xx` | Die Bewegung laeuft, mit **exakt** der Dauer, Kurve, Verzoegerung und Wiederholung aus `03-MOTION-SPEC.md`. Eine Standardkurve statt der angegebenen `cubic-bezier` gilt als nicht erfuellt |
+| `F-xx` | Die Funktion tut **beobachtbar**, was `01-FUNKTIONS-SPEC.md` beschreibt — Ablauf, gespeicherte Daten, Ergebnis, Fehlerfall. Ein Bildschirm allein ist kein Nachweis |
+| `A-xx` | Das Abnahmekriterium aus `00-PROJEKT.md` ist durchgespielt und erfuellt |
+
+**Kein toter Knopf.** Zum Schluss jedes Bedienelement einmal durchgehen: Es fuehrt entweder
+zu einem Bildschirm (`B-`) oder loest eine Funktion (`F-`) aus. Ein Knopf, der nur gut
+aussieht, ist ein Fehler — kein "spaeter".
+
+Die drei Ergebnisse, an denen der Bau gemessen wird, ausdruecklich berichten:
+1. Das Programm **sieht aus** wie `02-UI-SPEC.md`.
+2. Es **bewegt sich** wie `03-MOTION-SPEC.md`.
+3. Es **funktioniert** wie `01-FUNKTIONS-SPEC.md` — das Design ist voll funktionstuechtig.
+
+
 **Projekt-Konventionen beachten (aus der globalen CLAUDE.md):** Nach der Umsetzung
 die sichtbare App-Version mit Zeitstempel bumpen. Committen/Pushen und der finale
 App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
@@ -545,6 +746,17 @@ App-Build/Install/Deploy erfolgen gemaess der uebergeordneten Aufgaben-Regel
 - ❌ Bei unklarem Design-Ordner einfach irgendeinen nehmen — bestaetigen lassen bzw. fragen.
 - ❌ Ein Design-Detail still vereinfachen — technische Grenzen offen benennen.
 - ❌ Ins falsche App-Projekt schreiben — App-Zuordnung immer bestaetigen lassen.
+- ❌ In Betriebsart P ein zweites SPEC schreiben — `Specs/<App>/v2/` **ist** das SPEC.
+- ❌ In Betriebsart P nur die Oberflaeche bauen und das Funktions-Spec liegenlassen —
+  das Design muss am Ende **funktionstuechtig** sein, nicht nur richtig aussehen.
+- ❌ Eine `cubic-bezier`-Kurve aus dem Motion-Spec durch eine eingebaute Standardkurve
+  (`FastOutSlowIn`, `.easeInOut`, `CubicEase`) ersetzen.
+- ❌ Die Zielplattform raten — sie steht in `00-PROJEKT.md` §2 bzw. im Spec-Paket.
+- ❌ Auf einer anderen Plattform bauen als der spezifizierten, weil sie "naeher liegt".
+- ❌ In `Designs/Inbox/` nach einem Design suchen — dort liegt der Hinweg zum Designer.
+- ❌ Aus einer losen `*-SPEC-v*`-Datei in `Outbox/` direkt bauen, ohne dass
+  `spec-rueckimport` daraus `Specs/<App>/v2/` gemacht hat.
+- ❌ Einen Bau-Auftrag losbauen, in dem noch offene Fragen (§5) stehen.
 
 ---
 
