@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyFacts } from "./design-facts.js";
-import { bedienelemente, funktionsSpec, neueBedienelemente, splitKommas, bauwegFor, bewegungenAusCss } from "./spec-package.js";
+import { bedienelemente, funktionsSpec, neueBedienelemente, splitKommas, bauwegFor, bewegungenAusCss, uiSpec } from "./spec-package.js";
 import type { ExportSection } from "./export-package.js";
 
 const abschnitt = (html: string): ExportSection => ({ id: "B-01", name: "Start", slug: "start", isStart: true, html });
@@ -54,5 +54,31 @@ describe("Bewegung", () => {
     expect(bewegungen).toHaveLength(1);
     expect(bewegungen[0]?.dauerMs).toBe(200);
     expect(bewegungen[0]?.kurve.punkte).toEqual([0.4, 0, 0.2, 1]);
+  });
+});
+
+describe("UI-Spec", () => {
+  it("beschreibt jeden Bildschirm einzeln — Aufbau, Bedienelemente und ihre Bewegungen", () => {
+    const css = ".pm-pause { animation: m-04-atmen 4000ms ease-in-out infinite; }";
+    const section: ExportSection = {
+      id: "B-01", name: "Start", slug: "start", isStart: true,
+      html: `<section class="werft-screen" data-screen-id="B-01">
+        <header class="pm-kopf">Perfect Moment</header>
+        <button class="pm-pause" data-werft-funktion="pausiert die laufende Sitzung">Pause</button>
+        <button data-werft-navigate="B-02">Verlauf</button>
+      </section>`
+    };
+    const text = uiSpec({
+      projectName: "Testapp", platform: "android", facts: emptyFacts("android"), variants: [],
+      document: { head: "", css, sections: [section] },
+      report: { bildschirmeImDesign: 1, bildschirmeExportiert: 1, erscheinungen: 1, dateienJeBildschirm: 1, nichtAufgebaut: [] }
+    }, bauwegFor("android"), "2026-08-09", bewegungenAusCss(css));
+    expect(text).toContain("### B-01 — Start");
+    expect(text).toContain("pm-kopf");
+    expect(text).toContain("pausiert die laufende Sitzung");
+    expect(text).toContain("führt zu `B-02`");
+    expect(text).toContain("Bewegungen auf diesem Bildschirm");
+    // Die im @keyframes-Namen eingebrannte Kennung gewinnt ueber die Zaehlnummer.
+    expect(text).toContain("M-04");
   });
 });

@@ -292,6 +292,51 @@ export function bedienelemente(section: ExportSection): Bedienelement[] {
   });
 }
 
+// ---------------------------------------------------------------- Bildschirm im Einzelnen
+
+const leereTags = /^(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+
+// Wer im Studio einen Knopf verschiebt, aendert das Aussehen — und genau das muss im UI-Spec
+// stehen, sonst baut der Umsetzer die alte Anordnung nach. Eine Tabelle der Bildschirme reicht
+// dafuer nicht; es braucht den Aufbau von oben nach unten.
+export function aufbau(section: ExportSection, hoechstens = 16): string[] {
+  const inner = section.html.replace(/^<section\b[^>]*>/i, "").replace(/<\/section\s*>\s*$/i, "");
+  const zeilen: string[] = [];
+  const muster = /<\/?([a-z][a-z0-9-]*)\b([^>]*)>/gi;
+  let tiefe = 0;
+  let treffer: RegExpExecArray | null;
+  while ((treffer = muster.exec(inner)) && zeilen.length < hoechstens) {
+    const tag = treffer[1]!.toLowerCase();
+    if (treffer[0].startsWith("</")) { tiefe = Math.max(0, tiefe - 1); continue; }
+    const attribute = treffer[2] ?? "";
+    if (tiefe <= 1) {
+      const klasse = /class="([^"]*)"/i.exec(attribute)?.[1]?.trim().split(/\s+/)[0];
+      const text = /^([^<]{1,48})/.exec(inner.slice(muster.lastIndex))?.[1]?.replace(/\s+/g, " ").trim();
+      zeilen.push(`${"  ".repeat(tiefe)}- \`<${tag}${klasse ? `.${klasse}` : ""}>\`${text ? ` — „${text}“` : ""}`);
+    }
+    if (!leereTags.test(tag) && !attribute.trim().endsWith("/")) tiefe += 1;
+  }
+  return zeilen;
+}
+
+const klassenIn = (html: string): Set<string> =>
+  new Set([...html.matchAll(/class="([^"]*)"/gi)].flatMap((treffer) => treffer[1]!.split(/\s+/)).filter(Boolean));
+
+// Eine Bewegung haengt an einem CSS-Selektor. Welchem Bildschirm sie gehoert, steht nirgends —
+// laesst sich aber ermitteln: kommt eine Klasse aus dem Selektor im Markup des Bildschirms vor,
+// wirkt die Bewegung dort. Ohne diese Zuordnung wuesste der Umsetzer nicht, WO er sie einbauen soll.
+export function bildschirmeZuBewegung(bewegung: Bewegung, bildschirme: Array<{ id: string; klassen: Set<string> }>): string[] {
+  const klassen = [...bewegung.selektor.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((treffer) => treffer[1]!);
+  if (!klassen.length) return [];
+  return bildschirme.filter((bildschirm) => klassen.some((klasse) => bildschirm.klassen.has(klasse))).map((bildschirm) => bildschirm.id);
+}
+
+const zielText = (element: Bedienelement): string => {
+  if (element.ziel) return `führt zu \`${element.ziel}\``;
+  if (element.funktion) return kennungsMuster.test(element.funktion) ? `löst \`${element.funktion.toUpperCase()}\` aus` : element.funktion;
+  return "**ohne Ziel und ohne Aufgabe — beim Rückimport klären**";
+};
+
 // ---------------------------------------------------------------- Vorlage aus dem Erst-Spec
 
 export type Vorlage = { projekt?: string; funktion?: string; ui?: string; motion?: string };
@@ -396,7 +441,7 @@ export function funktionsSpec(input: SpecInput, bauweg: Bauweg, stand: string): 
   return zeilen.join("\n");
 }
 
-export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string): string {
+export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string, bewegungen: Bewegung[]): string {
   const { facts, variants, document, report } = input;
   const zeilen = [kopf("UI-Spec", input.projectName, bauweg, stand), "",
     "Alle Werte sind **deterministisch aus dem Design gemessen**, nicht geschätzt. Sie sind verbindlich.", ""];
@@ -437,6 +482,29 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string): string 
     zeilen.push(`> **Achtung:** ${report.nichtAufgebaut.length} gemessene Bildschirme wurden im Design nicht aufgebaut und fehlen hier: ${report.nichtAufgebaut.join(", ")}.`, "");
   }
 
+  // Ohne diesen Teil waere das UI-Spec eine Inhaltsangabe: der Umsetzer wuesste, DASS es einen
+  // Bildschirm gibt, aber nicht, was darauf steht, wo es steht und was es tut. Ein im Studio
+  // verschobener oder neu gezeichneter Knopf bliebe unsichtbar.
+  const bildschirmKlassen = document.sections.map((section, index) => ({ id: bildschirmId(section, index), klassen: klassenIn(section.html) }));
+  for (const [index, section] of document.sections.entries()) {
+    const kennung = bildschirmId(section, index);
+    const elemente = bedienelemente(section);
+    const eigene = bewegungen.filter((bewegung) => bildschirmeZuBewegung(bewegung, bildschirmKlassen).includes(kennung));
+    zeilen.push(`### ${kennung} — ${section.name}`, "",
+      `Startbildschirm: ${section.isStart ? "ja" : "nein"} · Quelle: \`${section.id}\``, "",
+      "**Aufbau von oben nach unten**", "", ...(aufbau(section).length ? aufbau(section) : ["- (keine Struktur lesbar)"]), "");
+    zeilen.push("**Bedienelemente**", "");
+    if (!elemente.length) zeilen.push("Dieser Bildschirm hat keine anfassbaren Elemente.", "");
+    else {
+      zeilen.push("| Nr. | Element | Art | Was es tut |", "|-----|---------|-----|------------|",
+        ...elemente.map((element, nummer) => `| ${nummer + 1} | ${element.label || "—"} | ${element.art} | ${zielText(element)} |`), "");
+    }
+    if (eigene.length) {
+      zeilen.push("**Bewegungen auf diesem Bildschirm**", "",
+        ...eigene.map((bewegung) => `- \`${bewegung.id}\` ${bewegung.name} — ${Math.round(bewegung.dauerMs)} ms, \`${bewegung.kurve.css}\`, ${bewegung.wiederholung} (siehe Motion-Spec)`), "");
+    }
+  }
+
   if (facts.assets.length) {
     zeilen.push("## 7. Ikonografie und Bilder", "", "| Name | Art | Pfad |", "|------|-----|------|",
       ...facts.assets.map((asset) => `| ${asset.name} | ${asset.kind} | \`${asset.path}\` |`), "");
@@ -449,8 +517,8 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string): string 
   return zeilen.join("\n");
 }
 
-export function motionSpec(input: SpecInput, bauweg: Bauweg, stand: string): string {
-  const bewegungen = bewegungenAusCss(input.document.css);
+export function motionSpec(input: SpecInput, bauweg: Bauweg, stand: string, bewegungen: Bewegung[]): string {
+  const bildschirmKlassen = input.document.sections.map((section, index) => ({ id: bildschirmId(section, index), klassen: klassenIn(section.html) }));
   const ausFakten = input.facts.effects.filter((effect) => effect.kind === "animation");
   const zeilen = [kopf("Motion-Spec", input.projectName, bauweg, stand), "",
     `Jede Bewegung ist aus dem Design gemessen und für **${bauweg.rahmenwerk}** übersetzt.`,
@@ -462,7 +530,7 @@ export function motionSpec(input: SpecInput, bauweg: Bauweg, stand: string): str
   if (!bewegungen.length) zeilen.push("Dieses Design enthält keine gemessene Bewegung.", "");
   for (const bewegung of bewegungen) {
     zeilen.push(`### ${bewegung.id} — ${bewegung.name}`, "",
-      `- **Wo:** \`${bewegung.selektor}\``,
+      `- **Wo:** \`${bewegung.selektor}\`${bildschirmeZuBewegung(bewegung, bildschirmKlassen).length ? ` — auf ${bildschirmeZuBewegung(bewegung, bildschirmKlassen).join(", ")}` : ""}`,
       `- **Auslöser:** ${bewegung.ausloeser}`,
       `- **Was sich ändert:** ${bewegung.eigenschaften.join(", ") || "—"}`,
       `- **Dauer / Verzögerung:** ${Math.round(bewegung.dauerMs)} ms / ${Math.round(bewegung.verzoegerungMs)} ms`,
@@ -485,9 +553,13 @@ export type SpecFile = { path: string; content: string };
 
 export function buildSpecPackage(input: SpecInput, stand: string): SpecFile[] {
   const bauweg = bauwegFor(input.platform);
+  // Einmal messen, beide Specs beliefern: das UI-Spec nennt je Bildschirm seine Bewegungen, das
+  // Motion-Spec nennt je Bewegung ihren Bildschirm. Erst diese Verklammerung macht aus drei
+  // getrennten Dokumenten eine Bauanleitung.
+  const bewegungen = bewegungenAusCss(input.document.css);
   const funktion = funktionsSpec(input, bauweg, stand);
-  const ui = uiSpec(input, bauweg, stand);
-  const motion = motionSpec(input, bauweg, stand);
+  const ui = uiSpec(input, bauweg, stand, bewegungen);
+  const motion = motionSpec(input, bauweg, stand, bewegungen);
   const gesamt = [
     `# ${input.projectName} — Spec v2`,
     `Stand: ${stand} · Plattform: ${bauweg.plattform} (${bauweg.sprache} / ${bauweg.rahmenwerk})`,
