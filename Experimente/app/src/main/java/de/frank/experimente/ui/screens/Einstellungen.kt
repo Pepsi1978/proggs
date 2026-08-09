@@ -82,17 +82,9 @@ fun EinstellungenBildschirm(
     val activity = LocalContext.current as? ComponentActivity
 
     Column(modifier = modifier.fillMaxSize().background(farben.grund)) {
-        ObereLeiste(
-            titel = "Einstellungen",
-            links = {
-                SymbolKnopf(
-                    symbol = Icons.AutoMirrored.Filled.ArrowBack,
-                    beschreibung = "Zurück",
-                    onClick = aufZurueck,
-                    tint = farben.text,
-                )
-            },
-        )
+        // Die Messung zeigt auf B-08 nur den Titel bei x = 20 — keinen Zurück-Knopf.
+        // Zurück führt die Systemgeste, die der NavHost bedient.
+        ObereLeiste(titel = "Einstellungen")
 
         Column(
             modifier = Modifier
