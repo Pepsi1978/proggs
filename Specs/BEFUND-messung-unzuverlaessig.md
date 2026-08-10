@@ -9,6 +9,48 @@ Auftraggeber-Frage: „Lag der Fehler im Export von Werft Studio oder in der Ums
 
 ---
 
+## 0. Das Systemziel — und der strukturelle Fehler dahinter
+
+Der Auftraggeber hat das Ziel dreimal deutlich gemacht, und es ist **kein App-Ziel**:
+
+> „Es geht darum, dass das grundsätzlich funktioniert, die Pipeline. Wenn ich ein Design in
+> Werft Studio bearbeite, soll es auch wirklich so programmiert werden — und es dürfen keine
+> Fehler passieren, wenn ich das Design nur herunterlade."
+
+B-08 ist nur der Fall, an dem es aufgefallen ist. Der Fehler ist **struktureller Natur**:
+
+**Die Pipeline überträgt Momentaufnahmen statt der Quelle.**
+
+| Weg | Was übergeben wird | Übersetzungen bis zum Code |
+|-----|--------------------|----------------------------|
+| **Claude Designs** — das erklärte Vorbild, dort funktioniert es | die `*.dc.html`: **die Quelle selbst**, mit Markup, CSS-Variablen, Themes, Keyframes | **eine**: Quelle → Code |
+| **Werft heute** | Messwerte (`messung/*.json`) + gerenderte Bilder (`bilder/*.png`) + Spec-Prosa | **drei**: Design → Messung → Prosa → Code |
+
+Jede Übersetzung kann etwas verlieren. Und eine Momentaufnahme kann **falsch** sein, ohne dass
+es irgendwo auffällt — denn sie ist per Skill-Regel die verbindliche Wahrheit. Beim Fall B-08
+wurde eine falsche Momentaufnahme dreimal hintereinander sauber weitergetragen: in das Spec, in
+den Code, auf das Gerät. Build grün, Abhakliste vollständig, Ergebnis falsch.
+
+**Der strukturelle Fix — die Kernaussage dieses Befundes:**
+
+1. **Die Quelle geht mit und ist maßgeblich.** `WERFT-DESIGN/bildschirme/*.html` und
+   `design.css` liegen bereits im Archiv. Sie müssen beim Bauen **gelesen** werden, nicht nur
+   als „Augenschein" danebenliegen.
+2. **Die Rangfolge wird umgedreht.** Heute gilt: „Widersprechen sich Text und Messung, gilt die
+   Messung." Richtig ist: **Widersprechen sich Messung und Quelle, gewinnt die Quelle** — denn
+   die Messung ist aus ihr abgeleitet und kann beim Ableiten kaputtgehen. Die Messung bleibt
+   nützlich (sie löst Vererbung, `var()` und `color-mix()` auf), aber sie ist **Hilfsmittel,
+   nicht Ersatz**.
+3. **Jede Ableitung braucht eine Gegenprobe.** Wer messen will, muss danach prüfen können, ob
+   das Gemessene zur Quelle passt. Ohne Gegenprobe ist jede Ableitung ein blinder Fleck.
+4. **Der Export muss selbsttragend sein.** Eine Bildschirmdatei, die in verschiedenen Fenstern
+   verschieden aussieht, ist kein Entwurf, sondern eine Vorlage mit Nebenbedingung. Die
+   Renderbreite gehört in die Datei.
+
+Alles Weitere in dieser Datei sind Einzelbefunde, die dieses Muster belegen.
+
+---
+
 ## 1. Die Antwort: die Fensterbreite beim Rendern
 
 > **Korrektur.** Der erste Befund dieser Datei lautete „der Export ist richtig, nur die Messung
