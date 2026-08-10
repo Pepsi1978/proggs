@@ -195,7 +195,8 @@ PRIMAERE Quelle — nicht die uebrigen Projektdateien, die daneben liegen:
 
 | Pfad im Design-Ordner | Inhalt | Rolle |
 |-----------------------|--------|-------|
-| `WERFT-DESIGN/design-tokens.json` | Alle gemessenen Werte maschinenlesbar | **VERBINDLICH** — Erscheinungen mit vollstaendigen Token-Tabellen, Bildschirme, Farben, Masse, Typografie, Radien, Effekte, Assets, Texte |
+| `WERFT-DESIGN/bauplan/<erscheinung>/<nr>-<name>.json` | Die Layout-**Hierarchie** jedes Bildschirms | **VERBINDLICH FUER DIE ANORDNUNG** — sagt je Bauteil, wie es seine Kinder anordnet (`anordnung.art`: Spalte/Zeile/Raster/Fluss, `abstand`, `spalten`, `quer`, `laengs`, `innen`), in welcher Reihenfolge sie stehen, welche `funktion` daranhaengt, wohin es `fuehrtZu`, welche `eintraege` eine Auswahlliste hat, welchen `bereich` ein Schieberegler. Eine Hierarchie gilt bei JEDER Breite — eine Koordinate nur bei der gemessenen |
+| `WERFT-DESIGN/design-tokens.json` | Alle gemessenen Werte maschinenlesbar | **VERBINDLICH FUER DIE WERTE** — Erscheinungen mit vollstaendigen Token-Tabellen, Bildschirme, Farben, Masse, Typografie, **`schriften` mit Herkunft**, Radien, Effekte, Assets, Texte |
 | `WERFT-DESIGN/DESIGN-SPEC.md` | Dieselben Werte lesbar + Bildschirm-Tabelle | Checkliste fuer den Vollstaendigkeits-Abgleich |
 | `WERFT-DESIGN/bildschirme/<erscheinung>/<nr>-<name>.html` | JEDER Bildschirm in JEDER Erscheinung als eigene Datei | So muss der Bildschirm in genau dieser Erscheinung aussehen |
 | `WERFT-DESIGN/bildschirme/design.css` | Gemeinsames Stylesheet aller Bildschirme | Die Regeln, die in den Einzeldateien greifen |
@@ -204,6 +205,35 @@ PRIMAERE Quelle — nicht die uebrigen Projektdateien, die daneben liegen:
 
 Liegt `WERFT-DESIGN/` vor, entfaellt die Suche nach `*.dc.html`: `design-tokens.json` ersetzt
 die Token-Extraktion aus dem HTML. Fehlt der Ordner, ist es ein Claude-Design (Tabelle oben).
+
+> **Die Rangfolge bei Widerspruch — in dieser Reihenfolge, ohne Ausnahme:**
+>
+> 1. **`bauplan/`** entscheidet die **ANORDNUNG**: was steht ueber, unter, neben was; Spalte
+>    oder Zeile; welcher Abstand; welche Verschachtelung. Eine Hierarchie ist breitenunabhaengig
+>    wahr — „Beschriftung ueber dem Feld" bleibt richtig, `x=156` nur bei einer Breite.
+> 2. **`design-tokens.json`** entscheidet die **WERTE**: Farbe, Mass, Schriftgroesse, Gewicht,
+>    Radius, Effekt, Schriftfamilie. Nichts davon schaetzen oder runden.
+> 3. Eine **Messung** (`Specs/<App>/v2/messung/…`, falls vorhanden) ist ein NACHWEIS und ein
+>    Hilfsmittel — sie loest Vererbung, `var()` und `color-mix()` auf. Sie steht NICHT ueber dem
+>    Bauplan: sie ist aus ihm abgeleitet. Bei Anordnungs-Widerspruch gewinnt der Bauplan.
+> 4. Die **Prosa** (`.md`-Specs) gibt Absicht, Funktion und Kennungen — sie ersetzt keine Zahl.
+>
+> Warum die Reihenfolge so ist: Eine frueher gueltige Regel lautete „bei Widerspruch gilt die
+> Messung". Damit wurde eine falsche Messung unangreifbar. Real getroffen: ein
+> Einstellungsbildschirm mit „Beschriftung ueber dem Feld" kam als „Beschriftung neben dem Feld"
+> im Code an, weil die Messung eine falsch gerenderte Fassung gelesen hatte — und danach als
+> verbindlich galt. Die Kette Export → Messung → Spec → Code → Geraet lief durch, ohne eine
+> einzige Fehlermeldung.
+
+> **Die Schriften sind Teil des Designs, nicht Beiwerk.**
+>
+> `design-tokens.json` → `schriften` nennt je Familie ihre Herkunft:
+> `quelle: "verzeichnis"` (mit `url` und `gewichte`) heisst: genau diese Familie in genau diesen
+> Schnitten einrichten — auf Android als mitgelieferte oder heruntergeladene Schrift, nicht als
+> Systemschrift-Ersatz. `quelle: "eingebettet"` heisst: sie liegt im Paket. `quelle: "system"`
+> heisst: das Paket bringt sie NICHT mit — dann muss sie beschafft werden, BEVOR gebaut wird.
+> Eine ersetzte Schrift ist der auffaelligste Unterschied zum Entwurf, den es gibt; sie faellt
+> jedem sofort ins Auge, auch wenn jede Farbe und jeder Abstand stimmt.
 
 **Ablauf:**
 
@@ -238,6 +268,14 @@ Erst weitermachen, wenn der Projekt-Unterordner feststeht.
 >
 > Die `.md`-Dateien beschreiben dasselbe lesbar und geben Absicht, Funktion und Kennungen.
 > Sie **ersetzen die Messung nicht**. Widersprechen sich Text und Messung, gilt die Messung.
+>
+> **Aber: liegt ein `bauplan/` aus dem Werft-Paket vor, steht er ueber der Messung — fuer die
+> ANORDNUNG.** Die Messung liefert die Werte (Farben, Masse, Schriften, Effekte); der Bauplan
+> liefert die Struktur (was ueber/unter/neben was, Spalte oder Zeile, welcher Abstand). Eine
+> Messung ist eine Momentaufnahme bei genau einer Breite und aus dem Bauplan abgeleitet — sie kann
+> ihn deshalb nicht widerlegen. Wo beide sich zur Anordnung widersprechen, gewinnt der Bauplan,
+> und die Abweichung wird **gemeldet** statt stillschweigend aufgeloest: sie ist ein Hinweis, dass
+> beim Messen eine andere Breite oder eine andere Erscheinung gerendert wurde.
 >
 > Die Uebersetzungsvorschrift steht in `references/messung-umsetzen.md`. Sie ist
 > verbindlich; wo sie eine Luecke hat, wird sie ergaenzt statt das Fehlende zu erfinden.
@@ -322,6 +360,24 @@ im Quelle-Ziel-Mapping dokumentieren.
 
 Enthaelt der Design-Ordner `WERFT-DESIGN/`, laeuft Phase 1 anders — und deutlich genauer:
 
+0. **`WERFT-DESIGN/bauplan/<erscheinung>/<nr>-<name>.json` ZUERST lesen — je Bildschirm.** Das ist
+   die Bauvorlage fuer die Struktur; alles andere sind Werte, die in diese Struktur eingesetzt
+   werden. Je Bauteil steht dort:
+   - `anordnung.art` — `spalte`, `zeile`, `raster` oder `fluss`. Das entscheidet ueber Column,
+     Row, LazyVerticalGrid bzw. Box; **nicht** nach Augenmass und **nicht** nach Koordinaten.
+   - `anordnung.abstand` → `Arrangement.spacedBy(...)`, `quer` → `verticalAlignment`/
+     `horizontalAlignment`, `laengs` → `horizontalArrangement`/`verticalArrangement`,
+     `innen` → `Modifier.padding(...)`.
+   - `kinder[]` in genau dieser **Reihenfolge** — sie ist die Vorlesereihenfolge des Entwurfs.
+   - `funktion` (welche Funktion daranhaengt), `fuehrtZu` (Navigationsziel), `beschriftung`
+     (`aria-label` → `contentDescription`), `text`, `platzhalter`.
+   - `eintraege[]` bei einer Auswahlliste und `bereich` (`von`/`bis`/`schritt`/`wert`) bei einem
+     Schieberegler. **Ein Bedienelement wird nie durch ein anderes ersetzt**: `eintraege` heisst
+     Auswahlliste, nicht Knopf, der weiterschaltet; `bereich` heisst Schieberegler, nicht Knopfsatz.
+   - `versteckt: true` heisst **Zustand** (Ladezustand, Fehlerkarte, leerer Zustand), nicht
+     Wegfall. Jeder dieser Zustaende wird gebaut.
+   - `breite` — die Breite, fuer die dieser Bauplan gilt. Sie ist die Bezugsgroesse; weicht sie
+     vom Zielgeraet ab, wird das gemeldet, nicht stillschweigend umgerechnet.
 1. `WERFT-DESIGN/design-tokens.json` **vollstaendig** lesen. Alles darin ist deterministisch
    aus den Quellen gemessen; nichts davon schaetzen, runden oder "vereinheitlichen".
    - `erscheinungen[]` — jede mit `id`, `art` (light/dark/other) und **vollstaendiger**

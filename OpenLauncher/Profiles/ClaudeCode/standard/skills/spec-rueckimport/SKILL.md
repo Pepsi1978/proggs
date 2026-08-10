@@ -158,7 +158,19 @@ notfalls in mehreren Baecken mit `offset`/`limit`. Achte auf:
 
 Liegt `Designs/Outbox/<App>/WERFT-DESIGN/` vor, ist es die Wertequelle. Reihenfolge:
 
+0. **`bauplan/<erscheinung>/<nr>-<name>.json` ZUERST lesen — je Bildschirm.** Er ist die
+   verbindliche Vorlage fuer den AUFBAU und geht damit dem Rest voraus: je Bauteil `anordnung`
+   (`art` = spalte/zeile/raster/fluss, `abstand`, `spalten`, `quer`, `laengs`, `innen`), die
+   `kinder` in ihrer Reihenfolge, `funktion`, `fuehrtZu`, `beschriftung`, `text`, `platzhalter`,
+   `eintraege` bei Auswahllisten, `bereich` bei Schiebereglern, `versteckt` bei Zustaenden und
+   `breite` als Bezugsgroesse. Aus ihm entsteht Abschnitt „Aufbau je Bildschirm" des UI-Specs —
+   **nicht** aus dem Augenschein eines Bildes und **nicht** aus Koordinaten. Eine Hierarchie gilt
+   bei jeder Breite; eine Koordinate nur bei der, bei der sie gemessen wurde.
 1. **`design-tokens.json` vollstaendig lesen.** Aufbau:
+   - `schriften[]` — je Schriftfamilie ihre Herkunft: `quelle: "verzeichnis"` (mit `url` und
+     `gewichte`), `"eingebettet"` oder `"system"`. **Alle kommen ins UI-Spec, mit ihrer Herkunft.**
+     Steht dort `"system"`, bringt das Paket die Schrift nicht mit — das gehoert als offener Punkt
+     ins Spec, denn eine ersetzte Schrift ist der auffaelligste Unterschied zum Entwurf.
    - `erscheinungen[]` — je Erscheinung `id`, `art` (light/dark/other) und eine
      **vollstaendige** `tokens`-Tabelle. **ALLE** kommen ins UI-Spec, nicht nur die erste.
    - `bildschirme[]` — nummeriert, mit `istStart`, `navigiertZu` und je Erscheinung dem
@@ -205,9 +217,18 @@ Liegt `Designs/Outbox/<App>/WERFT-DESIGN/` vor, ist es die Wertequelle. Reihenfo
      `data-werft-funktion`, Navigationsziele und die `@keyframes`.
    - `Specs/<App>/v2/bilder/<erscheinung>/<name>.png` — dasselbe als Bild.
 
-   **Diese Messung ist ab hier die verbindliche Bauvorlage.** Das UI-Spec beschreibt sie
-   lesbar, ersetzt sie aber nicht. Steht etwas in der Messung und nicht im Spec, gilt die
+   **Die Messung ist ab hier die verbindliche Quelle fuer die WERTE.** Das UI-Spec beschreibt sie
+   lesbar, ersetzt sie aber nicht. Steht ein Wert in der Messung und nicht im Spec, gilt die
    Messung — und das Spec ist zu ergaenzen.
+
+   **Fuer den AUFBAU gilt dagegen der `bauplan/`** (Schritt 0 in Abschnitt 1b), nicht die Messung.
+   Grund: eine Messung ist eine Momentaufnahme bei genau einer Breite und aus dem Aufbau
+   abgeleitet — sie kann ihn nicht widerlegen. Die frueher hier stehende Regel „bei Widerspruch
+   gilt immer die Messung" hat eine falsche Messung unangreifbar gemacht: ein
+   Einstellungsbildschirm mit „Beschriftung ueber dem Feld" ist als „Beschriftung neben dem Feld"
+   im Code gelandet, weil die Messung eine falsch gerenderte Fassung gelesen hatte. Widersprechen
+   sich Bauplan und Messung zur Anordnung, gewinnt der Bauplan — und der Widerspruch wird
+   **gemeldet**, weil er auf eine falsche Messbreite oder Erscheinung hinweist.
 
    **Sieh dir jedes gerenderte Bild danach selbst an.** Was du im Bild siehst und in der
    Messung nicht wiederfindest, ist ein Fehler des Messfuehlers — melden, nicht uebergehen.

@@ -239,19 +239,8 @@ function Invoke-Cdp {
     ($sb.ToString() | ConvertFrom-Json).result.result.value
 }
 
-# Der Rahmen der Einzeldatei ist 1440 px breit — auf Geraetebreite zwingen, sonst misst man
-# einen Bildschirm, den es auf dem Geraet nie gibt.
-$rahmen = "<style>html,body{margin:0}.werft-screens{width:${Breite}px!important}" +
-          ".werft-screen{width:${Breite}px!important;height:${Hoehe}px!important;overflow:hidden!important}</style>"
-
 $arbeit = Join-Path $env:TEMP ("werft-messung-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
 New-Item -ItemType Directory -Force -Path $arbeit | Out-Null
-
-$chrome = Start-Process $browser -PassThru -ArgumentList `
-    "--headless=new", "--disable-gpu", "--hide-scrollbars", "--remote-debugging-port=$Port",
-    "--allow-file-access-from-files",
-    "--user-data-dir=$arbeit\profil", "--no-first-run", "--window-size=$Breite,$Hoehe", "about:blank"
-Start-Sleep -Seconds 3
 
 # Die Arbeitsliste: je Eintrag eine Erscheinung und eine HTML-Datei.
 $aufgaben = if ($werftAufbau) {
@@ -267,9 +256,59 @@ $aufgaben = if ($werftAufbau) {
         ForEach-Object { [pscustomobject]@{ Erscheinung = "standard"; Datei = $_ } }
 }
 
+# --- Die Breite kommt aus der DATEI, nicht aus einer Annahme --------------------------
+#
+# Warum das wichtig ist: Media Queries fragen die FENSTERbreite. Wird bei 412 px gemessen,
+# obwohl der Entwurf fuer 360 px gilt, greifen andere Regeln — und die Messung beschreibt eine
+# Anordnung, die es im Entwurf nie gab. Genau so ist ein Einstellungsbildschirm mit
+# "Beschriftung ueber dem Feld" als "Beschriftung neben dem Feld" im Code gelandet, ohne dass
+# irgendwo ein Fehler auftauchte.
+#
+# Der Export schreibt die gueltige Breite deshalb in jede Bildschirmdatei:
+#   <meta name="werft-render-width" content="412">
+# Sie wird hier gelesen und gilt. Der Parameter -Breite ist nur noch der Rueckfall fuer Dateien
+# ohne diese Angabe.
+foreach ($a in $aufgaben) {
+    $kopf = Get-Content $a.Datei.FullName -Raw -Encoding UTF8
+    $treffer = [regex]::Match($kopf, '<meta\s+name="werft-render-width"\s+content="(\d+)"', 'IgnoreCase')
+    $a | Add-Member -NotePropertyName Breite -NotePropertyValue ([int]$(if ($treffer.Success) { $treffer.Groups[1].Value } else { $Breite }))
+    $a | Add-Member -NotePropertyName BreiteAusDatei -NotePropertyValue $treffer.Success
+}
+
+$ohneAngabe = @($aufgaben | Where-Object { -not $_.BreiteAusDatei })
+if ($ohneAngabe.Count -gt 0) {
+    Write-Warning ("$($ohneAngabe.Count) Datei(en) ohne <meta name=""werft-render-width""> — dort gilt der Rueckfall $Breite px. " +
+                   "Stimmt der nicht, ist die Messung dieser Bildschirme nicht belastbar.")
+}
+$breiten = @($aufgaben | Select-Object -ExpandProperty Breite -Unique | Sort-Object)
+Write-Host ("Renderbreiten in diesem Design: " + ($breiten -join ", ") + " px")
+
+# --- Messen, je Breite ein eigener Browser ---------------------------------------------
+#
+# Der Browser wird PRO BREITE neu gestartet, damit die Fensterbreite beim ERZEUGEN des Kontexts
+# feststeht. `setViewportSize` bzw. ein nachtraegliches Vergroessern loest kein `resize`-Event aus
+# (dokumentiertes Verhalten, Playwright-Issue #36084) — nachtraeglich gesetzte Breiten koennen
+# alte Layoutwerte liefern. Ein Neustart je Breite kostet drei Sekunden und ist dafuer eindeutig.
 $gemessen = 0
+foreach ($breite in $breiten) {
+$Breite = $breite
+$gruppe = @($aufgaben | Where-Object { $_.Breite -eq $breite })
+Write-Host ""
+Write-Host ("Breite $breite px — $($gruppe.Count) Bildschirm(e)")
+
+# Der Rahmen der Einzeldatei ist 1440 px breit — auf Geraetebreite zwingen, sonst misst man
+# einen Bildschirm, den es auf dem Geraet nie gibt.
+$rahmen = "<style>html,body{margin:0}.werft-screens{width:${Breite}px!important}" +
+          ".werft-screen{width:${Breite}px!important;height:${Hoehe}px!important;overflow:hidden!important}</style>"
+
+$chrome = Start-Process $browser -PassThru -ArgumentList `
+    "--headless=new", "--disable-gpu", "--hide-scrollbars", "--remote-debugging-port=$Port",
+    "--allow-file-access-from-files", "--force-device-scale-factor=1",
+    "--user-data-dir=$arbeit\profil-$Breite", "--no-first-run", "--window-size=$Breite,$Hoehe", "about:blank"
+Start-Sleep -Seconds 3
+
 try {
-    $aufgaben | ForEach-Object {
+    $gruppe | ForEach-Object {
         $erscheinung = $_.Erscheinung
         $zielMessung = Join-Path $Ziel "messung\$erscheinung"
         $zielBild = Join-Path $Ziel "bilder\$erscheinung"
@@ -295,9 +334,13 @@ try {
             Invoke-RestMethod "http://127.0.0.1:$Port/json/close/$($seite.id)" | Out-Null
 
             if ($json) {
+                # Die Breite gehoert IN die Messung — sonst weiss niemand mehr, fuer welche
+                # Fensterbreite diese Kaesten gelten, und eine Koordinate ohne ihre Breite ist
+                # nicht nachpruefbar.
+                $json = $json -replace '^\{', ('{"breite":' + $Breite + ',')
                 [IO.File]::WriteAllText((Join-Path $zielMessung "$name.json"), $json, [Text.UTF8Encoding]::new($false))
                 $anzahl = ([regex]::Matches($json, '"pfad":')).Count
-                Write-Host ("  {0,-26} {1,4} Elemente" -f "$erscheinung/$name", $anzahl)
+                Write-Host ("  {0,-26} {1,4} Elemente  @{2}px" -f "$erscheinung/$name", $anzahl, $Breite)
                 $script:gemessen++
             } else {
                 Write-Warning "  $erscheinung/$name — keine Messung zurueckbekommen"
@@ -307,8 +350,10 @@ try {
 } finally {
     Stop-Process -Id $chrome.Id -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 300
-    Remove-Item $arbeit -Recurse -Force -ErrorAction SilentlyContinue
 }
+}   # Ende der Breiten-Schleife
+
+Remove-Item $arbeit -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "$gemessen Bildschirme vermessen."

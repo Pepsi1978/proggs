@@ -1,6 +1,8 @@
 # Design zu Code: wie ein Entwurf verlustfrei ankommt
 
-Stand: 10.08.2026 · Recherche über Engine A (Firecrawl + MiniMax), 6 Researcher, 29 Quellen
+Stand: 10.08.2026, 22:05 · Zwei Läufe: Engine A (Firecrawl + MiniMax, 6 Researcher, 29 Quellen)
+und Engine C (Sonnet-5-Schwarm, 7 Researcher, ~80 Quellen) — plus, am wertvollsten, die
+**Untersuchung zweier echter Claude-Design-Download-Pakete** (siehe §1a).
 Anlass: Beim eigenen Werkzeug (`~/proggs/WerftStudio/`) kam ein Bildschirm nicht 1:1 im Code an.
 Siehe `Specs/BEFUND-messung-unzuverlaessig.md` für den konkreten Fall.
 
@@ -21,6 +23,66 @@ Siehe `Specs/BEFUND-messung-unzuverlaessig.md` für den konkreten Fall.
    Anordnungen.
 6. **Gegenprobe per Pixel-Diff** gegen eine Baseline, mit Toleranzschwelle — Standardtechnik,
    kein Luxus.
+7. **Schriften als `<link rel="stylesheet">` in den Kopf, NIE als `@import`.** Ein `@import` ist
+   nur gültig, wenn er vor allen anderen Regeln steht; sonst verwirft ihn jeder Browser still und
+   das Design rendert in der Systemschrift. So macht es auch Claude Design. Details: Almanach B-07.
+8. **Layout wie der Browser ableiten, nicht nur aus Klassennamen.** Attribut- und Tag-Selektoren,
+   Vorfahren-Kette, Spezifität und besonders das `style`-Attribut gehören dazu — bei einem
+   Claude-Design-Paket steckt das Layout praktisch vollständig inline. Details: Almanach B-08.
+9. **Die Schrift ist der auffälligste Unterschied.** Stimmen alle Farben und Abstände, aber die
+   Schrift ist ersetzt, wirkt das Ergebnis sofort fremd. Herkunft je Familie mitgeben.
+
+---
+
+## 1a. Was ein Claude-Design-Download WIRKLICH enthält (empirisch, nicht recherchiert)
+
+Zwei echte Pakete untersucht (10.08.2026). Das ist der härteste verfügbare Beleg — Anthropic hat
+das Format nicht dokumentiert, aber ein ausgepacktes Exemplar lügt nicht.
+
+**Normalfall (frisch heruntergeladen, Android-Entwurf, 7 Einträge):**
+
+```
+App.dc.html          3 KB   Einstiegsdatei: Rahmen, Titel, Theme-Vergleich
+Phone.dc.html       59 KB   der eigentliche Bildschirm
+support.js          66 KB   die Laufzeit, die .dc.html interpretiert
+android-frame.jsx   10 KB   der Geräterahmen
+.thumbnail          15 KB   Vorschaubild
+v1/App.dc.html             ← VERSIONIERT: frühere Fassung im Unterordner
+v1/Phone.dc.html
+```
+
+**Was ausdrücklich NICHT drin ist:** kein `design-tokens.json`, keine Messung, kein Bauplan, kein
+Spec, kein README. Das ist die zentrale Erkenntnis: **Claude Design übersetzt nichts.** Es gibt das
+Design als *ausführbares Original* weiter, und Claude Code liest es direkt. Genau daher kommt die
+1:1-Treue — nicht aus einem besonders guten Zwischenformat, sondern aus dem Verzicht auf eines.
+
+**Die Bauweise der `.dc.html`:**
+
+| Element | Bedeutung |
+|---------|-----------|
+| `<x-dc>` | Wurzel des Dokuments |
+| `<helmet>` | Kopf-Inhalte: Schrift-`<link>`s und globales `<style>` |
+| `<dc-import name="Phone" theme="dark" hint-size="412px,892px">` | Komponenten-Einbindung — **Themes sind ein Parameter derselben Komponente**, nicht getrennte Dateien; die Renderbreite steht als Attribut daneben |
+| `{{ themeKey }}` | Platzhalter, den `support.js` auflöst |
+| `#fb[data-t^="vital"]`, `#fb[data-t$="-dark"]` | Themes als CSS-Variablenblöcke, adressiert über **Attribut-Selektoren** |
+| `style="display:flex;gap:20px;padding:28px 20px 60px"` | **Layout durchgängig inline** — 234 `style`-Attribute, 0 CSS-Klassen |
+
+**Schriften — genau so, wie es richtig ist:**
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&…" rel="stylesheet">
+```
+
+Kein `@import`. Das deckt sich mit der web.dev-Empfehlung und ist der Grund, warum bei Claude
+Design die Schrift ankommt (und bei einem `@import` mitten im Stylesheet nicht — Almanach B-07).
+
+**Sonderfall, NICHT verallgemeinern:** Ein drittes Paket (Windows-Redesign) enthielt zusätzlich
+`xaml-export/` mit fertigem `MainWindow.xaml`, `Themes/{Dark,Light}Theme.xaml`,
+`Services/ThemeManager.cs` und `screenshots/*.png`. Das lag daran, dass dort das **bestehende
+Programm mit eingelesen** worden war — es ist kein Regelverhalten des Downloads. Der Normalfall
+oben ist der Maßstab.
 
 ---
 
@@ -49,11 +111,27 @@ einzigen Anweisung an Claude Code übergeben wird.
 
 Und: **„not a lossy export"** — keine verlustbehaftete Übergabe.
 
-Ergänzend gibt es `/design-sync`, das in **beide** Richtungen läuft: Entwurf ins Repo holen, oder
-Gebautes zurück auf die Canvas schieben.
+> ⚠️ **Zuschreibungs-Korrektur (10.08.2026, zweiter Recherchelauf).** Diese beiden Sätze und die
+> Formulierung „the design tokens actually used on the canvas" sind **keine Anthropic-Zitate**. Sie
+> stammen aus dem Drittanbieter-Blog `claudefa.st` und sind dort redaktioneller Kommentar des
+> Autors, nicht als zitierte Anthropic-Aussage gekennzeichnet (direkt im Quellkontext geprüft).
+> Von Anthropic selbst wörtlich belegt ist im Wesentlichen ein Satz:
+> „When a design is ready to build, Claude packages everything into a handoff bundle that you can
+> pass to Claude Code with a single instruction." (anthropic.com/news/claude-design-anthropic-labs,
+> 17.04.2026). Die inhaltliche Aussage bleibt durch §1a **empirisch** bestätigt — sie steht jetzt
+> aber auf den echten Paketen statt auf einem falsch zugeschriebenen Zitat.
 
-**Nicht öffentlich belegbar:** Dateiendung, Schema, ob eine oder mehrere Dateien, ob versioniert.
-Das Format ist proprietär. Nachahmen lässt sich das **Prinzip**, nicht die Datei.
+> ⚠️ **`/design-sync` läuft NICHT in beide Richtungen.** Die offizielle Referenz
+> (`code.claude.com/docs/en/commands`) dokumentiert `/design-sync [hint]` und `/design-login`
+> ausschließlich als Richtung **Repo → Claude-Design-Canvas** (Design-System hochladen). Die
+> verbreitete Behauptung einer Zwei-Wege-Synchronisation stammt aus Drittanbieter-Blogs und einem
+> ungeprüften X-Post. Eine frühere Fassung dieser Datei hat sie übernommen — hiermit richtiggestellt.
+
+**Nicht öffentlich belegbar bleibt:** ein veröffentlichtes Schema, eine Feldnamen-Dokumentation, eine
+Zusage zur Stabilität des Formats. Anthropic hat den internen Aufbau nicht publiziert. Was das
+Format praktisch enthält, ist stattdessen **§1a** zu entnehmen — aus echten Paketen gelesen.
+Nachbauen lässt sich damit sowohl das Prinzip als auch die konkrete Mechanik (Kopf-Verweise für
+Schriften, Themes als Parameter, Renderbreite am Element, Versionsordner).
 
 ---
 
@@ -143,14 +221,16 @@ Schriftprobleme, Ausrichtungsfehler.
 
 ## 6. Was daraus für WerftStudio folgt
 
-| Nr | Maßnahme | Woraus abgeleitet |
-|----|----------|-------------------|
-| 1 | **Hierarchie exportieren, nicht nur Koordinaten.** Das Bündel braucht den Elternbaum mit Anordnungsart (Spalte/Zeile/Raster) je Bauteil — Koordinaten nur zusätzlich, mit der Breite, bei der sie gelten | §1, §2 |
-| 2 | **Die tatsächlich benutzten Tokens mitgeben**, nicht die ganze Bibliothek | §1 |
-| 3 | **Renderbreite in jede Bildschirmdatei schreiben**, damit der Export überall so aussieht wie im Designer | §4, Falle 3 |
-| 4 | **Messfühler:** Breite beim Kontext-Erzeugen setzen, Zoom auf 100 %, an jedem Breakpoint messen | §4 |
-| 5 | **Pixel-Diff als Abnahmetor** — Entwurf gegen Gebautes, je Breite und Erscheinung, mit Toleranz | §5 |
-| 6 | **Zuordnen statt übersetzen:** wo eine App schon Bauteile hat, sollte der Entwurf auf sie zeigen, statt neue erzeugen zu lassen | §3 |
+| Nr | Maßnahme | Woraus abgeleitet | Stand 10.08.2026, 22:05 |
+|----|----------|-------------------|--------------------------|
+| 1 | **Hierarchie exportieren, nicht nur Koordinaten.** Das Bündel braucht den Elternbaum mit Anordnungsart (Spalte/Zeile/Raster) je Bauteil — Koordinaten nur zusätzlich, mit der Breite, bei der sie gelten | §1, §2 | ✅ `bauplan/<erscheinung>/<nr>-<name>.json`; Ableitung liest jetzt auch Attribut-/Tag-Selektoren, Spezifität und Inline-Stile (vorher 11,3 % Verlust) |
+| 2 | **Die tatsächlich benutzten Tokens mitgeben**, nicht die ganze Bibliothek | §1 | ⚠️ `design-tokens.json` markiert `verwendet: true/false`, liefert aber beides. Bewusst verlustfrei — der Umsetzer filtert |
+| 3 | **Renderbreite in jede Bildschirmdatei schreiben**, damit der Export überall so aussieht wie im Designer | §4, Falle 3 | ✅ `<meta name="werft-render-width">` + aufgelöste Breiten-Regeln; der Messfühler liest sie jetzt statt fest 412 px anzunehmen |
+| 4 | **Messfühler:** Breite beim Kontext-Erzeugen setzen, Zoom auf 100 %, an jedem Breakpoint messen | §4 | ✅ Browser wird je Renderbreite neu gestartet (Breite steht beim Erzeugen fest); Breite wird in die Messdatei geschrieben |
+| 5 | **Pixel-Diff als Abnahmetor** — Entwurf gegen Gebautes, je Breite und Erscheinung, mit Toleranz | §5 | ❌ offen. `fidelity-check.ts` prüft nur die Import-Richtung (App → Design), nicht Entwurf → Gebautes |
+| 6 | **Zuordnen statt übersetzen:** wo eine App schon Bauteile hat, sollte der Entwurf auf sie zeigen, statt neue erzeugen zu lassen | §3 | ❌ offen |
+| 7 | **Schriften als Kopf-Verweis, mit Herkunft je Familie** | §1a, Almanach B-07 | ✅ `<link rel="preconnect">` + `<link rel="stylesheet">` in jeder Bildschirmdatei; `design-tokens.json` → `schriften` nennt Quelle, URL und Schnitte; Familie ohne Quelle wird gemeldet |
+| 8 | **Rangfolge bei Widerspruch festschreiben:** Bauplan (Anordnung) > Tokens/Messung (Werte) > Prosa | §2, Almanach B-05/B-06 | ✅ in `design-umsetzer` und `spec-rueckimport` verankert; die alte Regel „bei Widerspruch gilt immer die Messung" ist ersetzt |
 
 ---
 
