@@ -234,3 +234,17 @@ describe("Schriften kommen an", () => {
     expect(tokens!.content).toContain("Fraunces");
   });
 });
+
+describe("Fehlalarme bei Schriften", () => {
+  it("meldet generische Familien NICHT als fehlende Schrift", () => {
+    // `system-ui`, `sans-serif` und Co. heissen „nimm, was das System hat" — dafuer muss nichts
+    // beschafft werden. Eine Warnung, die immer kommt, liest irgendwann niemand mehr.
+    const verweise = schriftverweise(".a{font-family:system-ui,-apple-system,sans-serif}", "");
+    expect(verweise).toHaveLength(0);
+  });
+
+  it("meldet eine echte Schrift ohne Quelle weiterhin", () => {
+    const verweise = schriftverweise(".a{font-family:Fraunces,serif}", "");
+    expect(verweise.map((v) => v.familie)).toEqual(["Fraunces"]);
+  });
+});

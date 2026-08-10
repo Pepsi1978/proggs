@@ -238,6 +238,10 @@ export type Schriftverweis = { familie: string; quelle: "verzeichnis" | "eingebe
 
 const fontVerzeichnisse = /fonts\.googleapis\.com|fonts\.bunny\.net|use\.typekit\.net|fonts\.gstatic\.com/i;
 
+// Die generischen Familien der CSS-Spezifikation plus die verbreiteten Systemschrift-Kuerzel.
+// Sie bezeichnen „nimm, was das System hat" — dafuer muss nichts beschafft werden.
+const generischeFamilien = /^(?:serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-serif|ui-sans-serif|ui-monospace|ui-rounded|math|emoji|fangsong|-apple-system|blinkmacsystemfont|segoe ui|roboto|helvetica|helvetica neue|arial)$/i;
+
 /** Die URLs, die ein Schriftverzeichnis ansprechen — aus `@import`-Regeln und `<link>`-Tags. */
 export function schriftUrls(quelltext: string): string[] {
   const urls = new Set<string>();
@@ -285,7 +289,12 @@ export function schriftverweise(css: string, quelltext: string, facts?: DesignFa
   const benutzt = new Map<string, string>();
   const merke = (liste: string) => {
     const erste = liste.split(",")[0]?.trim().replace(/^["']|["']$/g, "");
-    if (erste && !/^(?:inherit|initial|unset|revert|currentcolor)$/i.test(erste)) benutzt.set(erste.toLowerCase(), erste);
+    if (!erste) return;
+    if (/^(?:inherit|initial|unset|revert|currentcolor)$/i.test(erste)) return;
+    // Generische Familien sind KEINE fehlende Schrift — sie zu melden wuerde die Warnung
+    // entwerten, und eine Warnung, die immer kommt, liest irgendwann niemand mehr.
+    if (generischeFamilien.test(erste)) return;
+    benutzt.set(erste.toLowerCase(), erste);
   };
   for (const type of facts?.typography ?? []) if (type.family) merke(type.family);
   // Der Wert kann direkt mit einem Anfuehrungszeichen beginnen (`font-family:"JetBrains Mono"`) —
