@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anordnungAus, baumAus, layoutFuer } from "./bauplan.js";
+import { anordnungAus, baumAus, layoutFuer, layoutFuerKette } from "./bauplan.js";
 import { breitenRegelnFuer } from "./export-package.js";
 
 /**
@@ -130,5 +130,90 @@ describe("baumAus", () => {
   it("haelt das Navigationsziel fest", () => {
     const weg = baumAus(html, css)[0]?.kinder?.find((k) => k.klassen === "weg");
     expect(weg?.fuehrtZu).toBe("B-09");
+  });
+});
+
+/**
+ * Die Faelle, an denen der Bauplan bisher STILL Layout verloren hat.
+ *
+ * Gemessen an einem echten Werft-Export: 42 von 371 Layout-Angaben (11,3 %) fielen heraus, weil
+ * `layoutFuer` jeden Selektor mit `[`, `>` oder `:` verworfen hat — und genau die sind die
+ * spezifischeren, die im Browser gewinnen. Werft Studio schreibt seine Bildschirm-Regeln selbst so.
+ *
+ * Bei einem Uebergabepaket von Claude Design ist es noch deutlicher: dort steht das Layout in
+ * `style`-Attributen (nachgezaehlt an einem echten Buendel: 234 `style`-Attribute, keine einzige
+ * CSS-Klasse). Ohne Inline-Stile waere der Bauplan dort vollstaendig leer.
+ */
+describe("layoutFuerKette — die Schichten, die im Browser gewinnen", () => {
+  const gescopt = `
+.karte { display: block; }
+.werft-screen[data-screen-id="B-08"] .karte { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+nav.leiste { display: flex; justify-content: space-between; }
+.a > .b { display: grid; grid-template-columns: 1fr 1fr; }
+.c:hover { display: none; }
+`;
+
+  it("liest eine Regel, die ueber einen Attribut-Selektor am Vorfahren haengt", () => {
+    const layout = layoutFuerKette(gescopt, [
+      { tag: "section", klassen: ["werft-screen"], attribute: { class: "werft-screen", "data-screen-id": "B-08" } },
+      { tag: "div", klassen: ["karte"], attribute: { class: "karte" } }
+    ]);
+    expect(layout["display"]).toBe("flex");
+    expect(layout["gap"]).toBe("12px");
+    expect(layout["padding"]).toBe("20px");
+  });
+
+  it("laesst die schwaechere Grundschicht gewinnen, wenn der Vorfahre NICHT passt", () => {
+    const layout = layoutFuerKette(gescopt, [
+      { tag: "section", klassen: ["werft-screen"], attribute: { class: "werft-screen", "data-screen-id": "B-01" } },
+      { tag: "div", klassen: ["karte"], attribute: { class: "karte" } }
+    ]);
+    expect(layout["display"]).toBe("block");
+    expect(layout["gap"]).toBeUndefined();
+  });
+
+  it("liest einen Selektor mit Tag-Anteil", () => {
+    const layout = layoutFuerKette(gescopt, [{ tag: "nav", klassen: ["leiste"], attribute: { class: "leiste" } }]);
+    expect(layout["justify-content"]).toBe("space-between");
+  });
+
+  it("achtet beim Kind-Kombinator auf die direkte Elternschaft", () => {
+    const kette = (tags: string[]) => tags.map((klasse) => ({ tag: "div", klassen: [klasse], attribute: { class: klasse } }));
+    expect(layoutFuerKette(gescopt, kette(["a", "b"]))["display"]).toBe("grid");
+    // `.a > .b` darf NICHT greifen, wenn zwischen a und b noch ein Element steht.
+    expect(layoutFuerKette(gescopt, kette(["a", "x", "b"]))["display"]).toBeUndefined();
+  });
+
+  it("laesst Zustands-Regeln aus dem Grundaufbau heraus", () => {
+    expect(layoutFuerKette(gescopt, [{ tag: "div", klassen: ["c"], attribute: { class: "c" } }])["display"]).toBeUndefined();
+  });
+
+  it("laesst den Inline-Stil ueber jede Regel aus dem Stylesheet gewinnen", () => {
+    const layout = layoutFuerKette(gescopt, [
+      { tag: "div", klassen: ["karte"], attribute: { class: "karte", style: "display:flex;flex-direction:row;gap:8px" } }
+    ]);
+    expect(layout["display"]).toBe("flex");
+    expect(layout["flex-direction"]).toBe("row");
+    expect(layout["gap"]).toBe("8px");
+  });
+
+  it("respektiert !important gegen eine spaetere Regel", () => {
+    const css = `.x { gap: 4px !important; }\n.y.x { gap: 99px; }`;
+    const layout = layoutFuerKette(css, [{ tag: "div", klassen: ["x", "y"], attribute: { class: "x y" } }]);
+    expect(layout["gap"]).toBe("4px");
+  });
+});
+
+/**
+ * Ein Uebergabepaket von Claude Design traegt sein Layout inline. Genau dieser Fall — nachgebaut
+ * aus einer echten `.dc.html` — muss im Bauplan ankommen, sonst ist er dort wertlos.
+ */
+describe("baumAus — Layout aus einem Claude-Design-artigen Paket", () => {
+  it("leitet die Anordnung aus dem style-Attribut ab, auch ohne jede CSS-Klasse", () => {
+    const inline = `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px 60px;">
+<span style="width:10px;height:10px;">Punkt</span>
+</div>`;
+    const baum = baumAus(inline, "");
+    expect(baum[0]?.anordnung).toEqual({ art: "spalte", abstand: "16px", quer: "center", innen: "28px 20px 60px" });
   });
 });

@@ -14,9 +14,56 @@ export const exportRoot = "WERFT-DESIGN/";
 
 export type ExportFile = { path: string; content: string };
 export type ExportSection = { id: string; name: string; slug: string; isStart: boolean; html: string };
-export type ExportDocument = { head: string; css: string; sections: ExportSection[]; width?: number; height?: number };
+export type ExportDocument = { head: string; css: string; sections: ExportSection[]; width?: number; height?: number; schriftUrls?: string[] };
 
 const styleBlockPattern = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
+
+/**
+ * Zieht alle `@import`-Regeln an den ANFANG eines Stylesheets.
+ *
+ * Der Grund ist ein Fehler, der ein ganzes Design entstellt hat, ohne irgendwo aufzufallen:
+ * Ein Entwurf holt seine Schriften per `@import url("https://fonts.googleapis.com/…")`. Nach der
+ * CSS-Kaskaden-Spezifikation ist eine `@import`-Regel aber NUR gueltig, wenn sie VOR allen anderen
+ * Regeln steht — erlaubt davor sind allein `@charset` und `@layer`-Anweisungen. Steht eine einzige
+ * Stilregel davor, verwirft jeder Browser den Import STILL: keine Warnung, keine Fehlermeldung,
+ * kein Eintrag in der Konsole. Die Folge ist, dass die Schrift des Entwurfs nie laedt, alles in der
+ * Systemschrift erscheint und der Umsetzer die App mit der falschen Schrift nachbaut. Schrift ist
+ * das Auffaelligste an einem Design — genau sie ging damit verloren.
+ *
+ * Real getroffen: ein Design mit Fraunces, Inter und JetBrains Mono. Der `@import` stand an
+ * Zeichen 6427 seines Style-Blocks, 6425 Zeichen Regeln davor. Keine der drei Schriften kam an —
+ * weder in der Studio-Vorschau noch in einer der exportierten Dateien.
+ *
+ * Hier wird nichts entfernt und nichts umgeschrieben: die Importe werden nur nach VORN gezogen, in
+ * ihrer urspruenglichen Reihenfolge. Danach sind sie gueltig, und die Kaskade der uebrigen Regeln
+ * bleibt unberuehrt — eine `@import`-Regel nimmt an der Kaskade ohnehin nicht als Stilregel teil.
+ */
+export function importeVoranstellen(css: string): { css: string; importe: string[] } {
+  const importe: string[] = [];
+  const rest = css.replace(importRulePattern, (regel) => { importe.push(regel.trim()); return ""; });
+  if (!importe.length) return { css, importe };
+  return { css: `${importe.join("\n")}\n${rest.replace(/^[ \t]*\r?\n/, "")}`, importe };
+}
+
+// Die URL eines Imports enthaelt selbst Semikolons (`family=Inter:wght@400;500;600`) — ein Muster,
+// das bis zum ersten `;` liest, wuerde sie mitten entzweischneiden und einen kaputten Import
+// hinterlassen. Deshalb wird zuerst die Klammer bzw. die Zeichenkette geschlossen und erst danach
+// das abschliessende Semikolon gesucht.
+const importRulePattern = /@import\s+(?:url\(\s*(?:"[^"]*"|'[^']*'|[^)]*)\s*\)|"[^"]*"|'[^']*')[^;]*;/gi;
+
+/**
+ * Reparierte Style-Bloecke im Dokument selbst — damit auch `design.html` und die Studio-Vorschau
+ * ihre Schriften laden, nicht nur die exportierten Einzeldateien. Jeder `<style>`-Block ist ein
+ * eigenes Stylesheet und wird deshalb einzeln behandelt.
+ */
+export function styleBloeckeReparieren(html: string): string {
+  return html.replace(styleBlockPattern, (all, css: string) => {
+    const repariert = importeVoranstellen(css).css;
+    // Ersatz als Funktion: ein `$` im CSS (etwa in `content: "$"`) wuerde sonst als
+    // Ersetzungsmuster gedeutet und die Datei stillschweigend verstuemmeln.
+    return repariert === css ? all : all.replace(css, () => repariert);
+  });
+}
 
 // Ein bewusst kleiner Schnitt entlang der Bloecke: die Bildschirme des Aufbaus sind flache
 // `<section class="werft-screen">`-Elemente, ihr Inhalt darf aber eigene `<section>` enthalten.
@@ -41,7 +88,14 @@ export function splitDesignDocument(html: string): ExportDocument {
     sections.push({ id, name, slug: screenSlug(name || id), isStart: /data-start="true"/i.test(attributes), html: html.slice(match.index, end) });
     opening.lastIndex = end;
   }
-  const css = [...html.matchAll(styleBlockPattern)].map((block) => block[1]!).join("\n");
+  // Die Style-Bloecke werden zu EINER `design.css` zusammengefuehrt. Dabei rutscht ein `@import`
+  // fast zwangslaeufig hinter eine andere Regel und ist damit laut Spezifikation ungueltig —
+  // deshalb wird er hier nach vorn gezogen (Sicherheitsnetz; der eigentliche Weg sind die
+  // `<link>`-Verweise im Kopf jeder Bildschirmdatei).
+  const css = importeVoranstellen([...html.matchAll(styleBlockPattern)].map((block) => block[1]!).join("\n")).css;
+  // Die Schriftverweise stehen mal als `@import` im Stil, mal als `<link>` im Kopf — beide Wege
+  // werden gelesen, damit keine Schrift verloren geht.
+  const gefundeneSchriften = schriftUrls(html);
   const preview = /<meta\s+name="werft-preview"\s+content='([^']*)'/i.exec(html)?.[1];
   let width: number | undefined, height: number | undefined;
   if (preview) {
@@ -51,7 +105,7 @@ export function splitDesignDocument(html: string): ExportDocument {
       if (typeof parsed.height === "number") height = parsed.height;
     } catch { /* Ohne lesbare Geometrie bleibt die Breite offen — der Bildschirm bringt sie selbst mit. */ }
   }
-  return { head: html.slice(0, html.indexOf("</head>") + 7), css, sections, ...(width ? { width } : {}), ...(height ? { height } : {}) };
+  return { head: html.slice(0, html.indexOf("</head>") + 7), css, sections, ...(width ? { width } : {}), ...(height ? { height } : {}), ...(gefundeneSchriften.length ? { schriftUrls: gefundeneSchriften } : {}) };
 }
 
 // `:root`- und `html`-Regeln sind die Theme-Definitionen selbst. Fuer die Farbabbildung zaehlen nur die
@@ -167,6 +221,102 @@ function insertBeforeHeadEnd(html: string, snippet: string): string {
   return /<\/head\s*>/i.test(html) ? html.replace(/<\/head\s*>/i, `${snippet}\n</head>`) : `${snippet}\n${html}`;
 }
 
+/**
+ * Die Schriften des Entwurfs — als VERWEIS im Dokumentkopf, nicht als `@import` im Stylesheet.
+ *
+ * So macht es auch Claude Design in seinem Uebergabepaket (nachgeprueft an einem echten
+ * `.dc.html`-Buendel): im Kopf stehen `<link rel="preconnect">` auf die Schriftauslieferung und
+ * danach ein `<link rel="stylesheet">` auf das Schriftverzeichnis. Kein `@import` irgendwo.
+ * Das ist auch die Empfehlung von web.dev — ein `@import` blockiert das Rendern zusaetzlich,
+ * weil der Browser erst das aeussere Stylesheet laden muss, um von der Schrift zu erfahren.
+ *
+ * Fuer den Export ist der Kopf-Verweis ausserdem die einzige ROBUSTE Stelle: sobald mehrere
+ * Style-Bloecke zu einer `design.css` zusammengefuehrt werden, rutscht ein `@import` fast
+ * zwangslaeufig hinter eine andere Regel — und ist dann laut Spezifikation ungueltig.
+ */
+export type Schriftverweis = { familie: string; quelle: "verzeichnis" | "eingebettet" | "system"; url?: string; gewichte?: string[] };
+
+const fontVerzeichnisse = /fonts\.googleapis\.com|fonts\.bunny\.net|use\.typekit\.net|fonts\.gstatic\.com/i;
+
+/** Die URLs, die ein Schriftverzeichnis ansprechen — aus `@import`-Regeln und `<link>`-Tags. */
+export function schriftUrls(quelltext: string): string[] {
+  const urls = new Set<string>();
+  for (const regel of quelltext.match(importRulePattern) ?? []) {
+    const url = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)|"([^"]*)"|'([^']*)'/.exec(regel);
+    const wert = (url?.[1] ?? url?.[2] ?? url?.[3] ?? url?.[4] ?? url?.[5] ?? "").trim();
+    if (wert && fontVerzeichnisse.test(wert)) urls.add(wert);
+  }
+  for (const tag of quelltext.match(/<link\b[^>]*>/gi) ?? []) {
+    const href = /href\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+    const wert = (href?.[1] ?? href?.[2] ?? "").trim();
+    if (wert && fontVerzeichnisse.test(wert) && /stylesheet/i.test(tag)) urls.add(wert);
+  }
+  return [...urls];
+}
+
+/**
+ * Welche Schriftfamilien der Entwurf benutzt und WOHER jede kommt.
+ *
+ * Das ist der vierte Bestandteil eines vollstaendigen Uebergabepakets: die Asset-Verweise. Ohne
+ * ihn weiss der Umsetzer nicht, dass er auf Android `Fraunces` als Downloadable Font einrichten
+ * oder mitliefern muss — er baut mit der Systemschrift, und das Ergebnis sieht sofort anders aus.
+ * Eine Familie ohne Quelle wird deshalb ausdruecklich BENANNT statt stillschweigend hingenommen.
+ */
+export function schriftverweise(css: string, quelltext: string, facts?: DesignFacts): Schriftverweis[] {
+  const urls = schriftUrls(`${css}\n${quelltext}`);
+  // Aus `family=Fraunces:wght@400;600&family=Inter:wght@400;500` die Familien und ihre Gewichte.
+  const ausVerzeichnis = new Map<string, { url: string; gewichte: string[] }>();
+  for (const url of urls) {
+    for (const treffer of url.matchAll(/family=([^:&]+)(?::([^&]*))?/gi)) {
+      const familie = decodeURIComponent(treffer[1]!.replace(/\+/g, " ")).trim();
+      const gewichte = [...(treffer[2] ?? "").matchAll(/(\d{3})/g)].map((m) => m[1]!);
+      if (familie) ausVerzeichnis.set(familie.toLowerCase(), { url, gewichte: [...new Set(gewichte)] });
+    }
+  }
+  // Eingebettete Schriften: `@font-face { font-family: "X" }`.
+  const eingebettet = new Set<string>();
+  for (const block of css.match(/@font-face\s*\{[^}]*\}/gi) ?? []) {
+    const name = /font-family\s*:\s*(?:"([^"]*)"|'([^']*)'|([^;}]+))/i.exec(block);
+    const wert = (name?.[1] ?? name?.[2] ?? name?.[3] ?? "").trim();
+    if (wert) eingebettet.add(wert.toLowerCase());
+  }
+  // Alle benutzten Familien: aus den gemessenen Fakten UND direkt aus dem Quelltext, damit auch
+  // eine nur inline gesetzte `font-family` erfasst wird.
+  const benutzt = new Map<string, string>();
+  const merke = (liste: string) => {
+    const erste = liste.split(",")[0]?.trim().replace(/^["']|["']$/g, "");
+    if (erste && !/^(?:inherit|initial|unset|revert|currentcolor)$/i.test(erste)) benutzt.set(erste.toLowerCase(), erste);
+  };
+  for (const type of facts?.typography ?? []) if (type.family) merke(type.family);
+  // Der Wert kann direkt mit einem Anfuehrungszeichen beginnen (`font-family:"JetBrains Mono"`) —
+  // ein Muster, das erst ein anfuehrungszeichenfreies Zeichen verlangt, uebersieht genau diese.
+  for (const treffer of `${css}\n${quelltext}`.matchAll(/font-family\s*:\s*([^;}]+)/gi)) merke(treffer[1]!);
+
+  return [...benutzt.entries()].map(([schluessel, familie]) => {
+    const verzeichnis = ausVerzeichnis.get(schluessel);
+    if (verzeichnis) return { familie, quelle: "verzeichnis" as const, url: verzeichnis.url, ...(verzeichnis.gewichte.length ? { gewichte: verzeichnis.gewichte } : {}) };
+    if (eingebettet.has(schluessel)) return { familie, quelle: "eingebettet" as const };
+    return { familie, quelle: "system" as const };
+  });
+}
+
+/**
+ * Der Kopf-Block fuer die Schriften einer exportierten Bildschirmdatei — 1:1 nach dem Vorbild des
+ * echten Claude-Design-Buendels: erst `preconnect`, dann `stylesheet`.
+ */
+export function schriftKopf(urls: string[]): string {
+  if (!urls.length) return "";
+  const hosts = new Set<string>();
+  for (const url of urls) { try { hosts.add(new URL(url).origin); } catch { /* relative Angabe braucht kein preconnect */ } }
+  // `fonts.googleapis.com` liefert das Verzeichnis, `fonts.gstatic.com` die Schriftdateien selbst —
+  // ohne den zweiten preconnect wartet der Browser die Verbindung erst beim Nachladen ab.
+  if ([...hosts].some((host) => /fonts\.googleapis\.com/i.test(host))) hosts.add("https://fonts.gstatic.com");
+  return [
+    ...[...hosts].map((host) => `<link rel="preconnect" href="${escapeHtml(host)}"${/gstatic/i.test(host) ? ' crossorigin="anonymous"' : ""}>`),
+    ...urls.map((url) => `<link rel="stylesheet" href="${escapeHtml(url)}">`)
+  ].join("\n");
+}
+
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const pad = (value: number, total: number) => String(value).padStart(String(total).length, "0");
 
@@ -180,6 +330,9 @@ export function screenDocuments(document: ExportDocument, variants: ThemeVariant
   // muss in der Datei stehen, damit Betrachter und Messfuehler nicht raten muessen.
   const breite = document.width;
   const aufgeloest = breite ? breitenRegelnFuer(document.css, breite) : "";
+  // Die Schriftverweise gehoeren in den KOPF jeder Datei — sonst rendert der Bildschirm in der
+  // Systemschrift, und der Umsetzer baut die App nach einer Vorlage, die er nie richtig gesehen hat.
+  const schriften = schriftKopf(document.schriftUrls ?? []);
 
   // Die CSS, die fuer die Zielbreite wirklich gilt — Grundlage fuer die Anordnung im Bauplan.
   const cssFuerBreite = breite ? `${document.css}\n${aufgeloest}` : document.css;
@@ -215,7 +368,14 @@ export function screenDocuments(document: ExportDocument, variants: ThemeVariant
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${breite ? `<meta name="werft-render-width" content="${breite}">\n` : ""}<title>${escapeHtml(title)} — ${escapeHtml(section.name)} — ${escapeHtml(variant.name)}</title>
-<link rel="stylesheet" href="../design.css">
+${schriften ? `<!--
+  Die Schriften des Entwurfs — als Kopf-Verweis, nicht als @import im Stil. Ein @import ist laut
+  CSS-Spezifikation nur gueltig, wenn er VOR allen anderen Regeln steht; beim Zusammenfuehren der
+  Style-Bloecke zu design.css rutscht er dahinter und wird von jedem Browser STILL verworfen.
+  Genau so ist ein Entwurf mit drei eigenen Schriften komplett in der Systemschrift gerendert
+  worden, ohne dass irgendwo ein Fehler auftauchte.
+-->
+${schriften}\n` : ""}<link rel="stylesheet" href="../design.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -261,11 +421,18 @@ export type PackageInput = {
   zielPlattform?: string;
 };
 
-export type PackageReport = { bildschirmeImDesign: number; bildschirmeExportiert: number; erscheinungen: number; dateienJeBildschirm: number; nichtAufgebaut: string[] };
+export type PackageReport = {
+  bildschirmeImDesign: number; bildschirmeExportiert: number; erscheinungen: number;
+  dateienJeBildschirm: number; nichtAufgebaut: string[];
+  /** Schriftfamilien, die der Entwurf benutzt, fuer die aber keine Quelle im Paket steht. */
+  schriftenOhneQuelle?: string[];
+};
 
 export function buildExportPackage(input: PackageInput): { files: ExportFile[]; report: PackageReport; documents: Array<{ path: string; html: string }> } {
   const variants = themeVariants(input.facts.themes);
-  const prepared = input.designs.map((design) => ({ ...design, html: ensureThemeControls(design.html, variants, input.facts) }));
+  // `styleBloeckeReparieren` zieht ungueltig positionierte `@import`-Regeln nach vorn — damit auch
+  // `design.html` selbst und die Studio-Vorschau ihre Schriften laden, nicht nur die Einzeldateien.
+  const prepared = input.designs.map((design) => ({ ...design, html: ensureThemeControls(styleBloeckeReparieren(design.html), variants, input.facts) }));
   const base = prepared.find((design) => design.path === input.entryPath) ?? prepared[0];
   const document = base ? splitDesignDocument(base.html) : { head: "", css: "", sections: [] as ExportSection[] };
   const files: ExportFile[] = [];
@@ -276,14 +443,19 @@ export function buildExportPackage(input: PackageInput): { files: ExportFile[]; 
   const built = new Set(document.sections.flatMap((section) => [section.id, section.name]));
   const measured = orderedScreens(input.facts);
   const missing = measured.filter((screen) => !built.has(screen.id) && !built.has(screen.name)).map((screen) => screen.name);
+  // Die Schriften sind der vierte Bestandteil des Uebergabepakets. Eine Familie ohne Quelle wird
+  // BENANNT — sonst baut der Umsetzer stillschweigend mit der Systemschrift weiter.
+  const schriften = schriftverweise(document.css, base?.html ?? "", input.facts);
+  const ohneQuelle = schriften.filter((schrift) => schrift.quelle === "system").map((schrift) => schrift.familie);
   const report: PackageReport = {
     bildschirmeImDesign: Math.max(document.sections.length, measured.length),
     bildschirmeExportiert: document.sections.length,
     erscheinungen: variants.length,
     dateienJeBildschirm: Math.max(1, variants.length),
-    nichtAufgebaut: missing
+    nichtAufgebaut: missing,
+    ...(ohneQuelle.length ? { schriftenOhneQuelle: ohneQuelle } : {})
   };
-  files.push({ path: `${exportRoot}design-tokens.json`, content: designTokens(input, variants, document, report) });
+  files.push({ path: `${exportRoot}design-tokens.json`, content: designTokens(input, variants, document, report, schriften) });
   files.push({ path: `${exportRoot}DESIGN-SPEC.md`, content: designSpec(input, variants, document, report) });
   files.push({ path: `${exportRoot}LIESMICH.md`, content: readme(input, variants, document, report) });
   // Die drei Specs liegen bewusst im ZIP-WURZELVERZEICHNIS, nicht unter WERFT-DESIGN/: der
@@ -295,7 +467,7 @@ export function buildExportPackage(input: PackageInput): { files: ExportFile[]; 
   return { files, report, documents: prepared.map((design) => ({ path: design.path, html: design.html })) };
 }
 
-function designTokens(input: PackageInput, variants: ThemeVariant[], document: ExportDocument, report: PackageReport): string {
+function designTokens(input: PackageInput, variants: ThemeVariant[], document: ExportDocument, report: PackageReport, schriften: Schriftverweis[] = []): string {
   const facts = input.facts;
   const screensById = new Map(facts.screens.map((screen) => [screen.id, screen] as const));
   return `${JSON.stringify({
@@ -318,6 +490,10 @@ function designTokens(input: PackageInput, variants: ThemeVariant[], document: E
     farben: facts.colors.map((color) => ({ name: color.name, css: color.css, quelle: color.source, verwendet: color.used === true })),
     masse: facts.dimensions.map((dimension) => ({ name: dimension.name, px: dimension.px, original: dimension.raw, quelle: dimension.source, verwendet: dimension.used === true })),
     typografie: facts.typography.map((type) => ({ name: type.name, schriftart: type.family, groessePx: type.sizePx, staerke: type.weight, zeilenhoehePx: type.lineHeightPx, laufweitePx: type.letterSpacingPx, quelle: type.source })),
+    // Die Schrift-Verweise: welche Familie der Entwurf benutzt und woher sie kommt. `system` heisst,
+    // dass das Paket keine Quelle mitbringt — dann MUSS der Umsetzer sie beschaffen (auf Android
+    // z. B. als Downloadable Font), sonst sieht die App sofort anders aus als der Entwurf.
+    schriften,
     formen: facts.shapes.map((shape) => ({ name: shape.name, radius: shape.radiusCss, quelle: shape.source })),
     effekte: facts.effects.map((effect) => ({ name: effect.name, art: effect.kind, css: effect.css, quelle: effect.source })),
     assets: facts.assets.map((asset) => ({ name: asset.name, art: asset.kind, pfad: asset.path, css: asset.css, svg: asset.svg })),
@@ -364,7 +540,7 @@ dazu alle gemessenen Farben, Maße, Schriften, Radien, Effekte, Assets und Texte
 | \`bildschirme/<erscheinung>/<nr>-<name>.html\` | Jeder Bildschirm einzeln, fest in dieser Erscheinung. ${report.bildschirmeExportiert} Bildschirme × ${Math.max(1, variants.length)} Erscheinungen = ${report.bildschirmeExportiert * Math.max(1, variants.length)} Dateien. |
 | \`bauplan/<erscheinung>/<nr>-<name>.json\` | **Die Layout-Hierarchie jedes Bildschirms — die verbindliche Bauvorlage.** Sagt je Bauteil, wie es seine Kinder anordnet (Spalte, Zeile, Raster, Abstand, Ausrichtung, Innenabstand), in welcher Reihenfolge sie stehen, welche Funktion daran hängt, wohin es führt, welche Einträge eine Auswahlliste hat und welche Grenzen ein Schieberegler. Breitenunabhängig gültig. |
 | \`bildschirme/design.css\` | Das gemeinsame Stylesheet aller Bildschirme. |
-| \`design-tokens.json\` | Alle gemessenen Werte maschinenlesbar (Erscheinungen mit vollständigen Token-Tabellen, Bildschirme, Farben, Maße, Typografie, Formen, Effekte, Assets, Texte). |
+| \`design-tokens.json\` | Alle gemessenen Werte maschinenlesbar (Erscheinungen mit vollständigen Token-Tabellen, Bildschirme, Farben, Maße, Typografie, **Schriften mit Herkunft**, Formen, Effekte, Assets, Texte). |
 | \`DESIGN-SPEC.md\` | Dieselben Werte als lesbare Spezifikation inklusive Bildschirm-Tabelle. |
 | Übriger ZIP-Inhalt | Das unveränderte Originalprojekt mit allen Begleitdateien (Bilder, Fonts, Audio, Daten). |
 
@@ -382,6 +558,7 @@ ${variants.length ? variants.map((variant) => `- **${variant.name}** — \`${var
 6. \`bildschirme/<erscheinung>/\` zeigt, wie **jeder** Bildschirm in **jeder** Erscheinung aussehen muss.
 7. \`design.html\` zeigt den Klickweg: \`data-werft-navigate="<ziel-id>"\` ist die Navigation.
 8. Alle Erscheinungen werden als umschaltbare Themes umgesetzt, nicht nur die zuerst sichtbare.
-5. Vollständig ist die Umsetzung erst, wenn jeder Bildschirm aus der Tabelle in \`DESIGN-SPEC.md\` im Code nachweisbar ist.
-${report.nichtAufgebaut.length ? `\n> **Achtung:** ${report.nichtAufgebaut.length} erkannte Bildschirme wurden beim Aufbau nicht erzeugt: ${report.nichtAufgebaut.join(", ")}. Sie fehlen in diesem Paket.\n` : ""}`;
+9. **Die Schriften aus \`design-tokens.json\` → \`schriften\` sind verbindlich.** Steht dort \`quelle: "verzeichnis"\` mit einer URL, ist die Familie samt \`gewichte\` genau so einzurichten (auf Android als heruntergeladene oder mitgelieferte Schrift, nicht als Systemschrift-Ersatz). Steht dort \`quelle: "system"\`, bringt das Paket keine Quelle mit — dann muss die Familie beschafft werden, bevor gebaut wird. Eine ersetzte Schrift ist der auffälligste Unterschied zum Entwurf, den es gibt.
+10. Vollständig ist die Umsetzung erst, wenn jeder Bildschirm aus der Tabelle in \`DESIGN-SPEC.md\` im Code nachweisbar ist.
+${report.nichtAufgebaut.length ? `\n> **Achtung:** ${report.nichtAufgebaut.length} erkannte Bildschirme wurden beim Aufbau nicht erzeugt: ${report.nichtAufgebaut.join(", ")}. Sie fehlen in diesem Paket.\n` : ""}${report.schriftenOhneQuelle?.length ? `\n> **Achtung — Schriften ohne Quelle:** ${report.schriftenOhneQuelle.join(", ")}. Diese Familien benutzt der Entwurf, aber das Paket bringt sie nicht mit. Vor dem Bauen beschaffen, sonst rendert die App in einer anderen Schrift als der Entwurf.\n` : ""}`;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyFacts, type DesignFacts } from "./design-facts.js";
-import { buildExportPackage, ensureThemeControls, screenScopedCss, splitDesignDocument } from "./export-package.js";
+import { buildExportPackage, ensureThemeControls, importeVoranstellen, schriftKopf, schriftUrls, schriftverweise, screenScopedCss, splitDesignDocument, styleBloeckeReparieren } from "./export-package.js";
 import { composeScreens, repairThemeSelectors, themeVariants } from "./screen-composer.js";
 
 // Der gemeldete Fall aus PerfectMoment: 18 Bildschirme, zwei Erscheinungen — heruntergeladen kam
@@ -138,5 +138,99 @@ describe("Übergabepaket im Download", () => {
     expect(zerlegt.sections[1]!.html).toContain("<section>Verlauf</section>");
     expect(zerlegt.width).toBe(412);
     expect(zerlegt.css).toContain(".pm-start-screen");
+  });
+});
+
+/**
+ * Der Schrift-Fehler, der ein ganzes Design entstellt hat, ohne aufzufallen.
+ *
+ * Ein Entwurf holt seine Schriften per `@import url("https://fonts.googleapis.com/…")`. Nach der
+ * CSS-Spezifikation ist eine `@import`-Regel nur gueltig, wenn sie VOR allen anderen Regeln steht
+ * (W3C CSS Cascade Level 5: "Any @import rules must precede all other valid at-rules and style
+ * rules in a style sheet"; MDN: "As the @import at-rule is declared after the styles it is invalid
+ * and hence ignored"). Real getroffen: der Import stand an Zeichen 6427 seines Style-Blocks —
+ * keine der drei Schriften kam an, weder in der Vorschau noch in einer exportierten Datei.
+ *
+ * Das echte Uebergabepaket von Claude Design macht es anders und richtig: `<link rel="preconnect">`
+ * plus `<link rel="stylesheet">` im Kopf, kein `@import` irgendwo.
+ */
+const fontUrl = "https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap";
+
+describe("Schriften kommen an", () => {
+  it("zieht einen ungueltig platzierten @import an den Anfang", () => {
+    const css = `.a { color: red; }
+@import url("${fontUrl}");
+.b { color: blue; }`;
+    const { css: repariert, importe } = importeVoranstellen(css);
+    expect(importe).toHaveLength(1);
+    expect(repariert.trimStart().startsWith("@import")).toBe(true);
+    // Verlustfrei: beide Regeln sind noch da, in ihrer Reihenfolge.
+    expect(repariert.indexOf(".a")).toBeLessThan(repariert.indexOf(".b"));
+  });
+
+  it("schneidet die URL nicht an ihren eigenen Semikolons entzwei", () => {
+    // `wght@400;600` enthaelt Semikolons — ein Muster, das bis zum ersten `;` liest, zerstoert sie.
+    const { importe } = importeVoranstellen(`.a{color:red}
+@import url("${fontUrl}");`);
+    expect(importe[0]).toContain("display=swap");
+    expect(importe[0]).toContain("JetBrains+Mono");
+  });
+
+  it("laesst ein Stylesheet ohne @import unveraendert", () => {
+    const css = ".a { color: red; }";
+    expect(importeVoranstellen(css).css).toBe(css);
+  });
+
+  it("repariert die Style-Bloecke im Dokument selbst", () => {
+    const html = `<html><head><style>.a{color:red}
+@import url("${fontUrl}");</style></head><body></body></html>`;
+    expect(styleBloeckeReparieren(html)).toMatch(/<style>\s*@import/);
+  });
+
+  it("findet die Schrift-URL sowohl im @import als auch im link-Tag", () => {
+    expect(schriftUrls(`@import url("${fontUrl}");`)).toEqual([fontUrl]);
+    expect(schriftUrls(`<link href="${fontUrl}" rel="stylesheet">`)).toEqual([fontUrl]);
+  });
+
+  it("baut den Kopf-Block wie das echte Claude-Design-Paket: preconnect, dann stylesheet", () => {
+    const kopf = schriftKopf([fontUrl]);
+    expect(kopf).toContain('<link rel="preconnect" href="https://fonts.googleapis.com">');
+    expect(kopf).toContain('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">');
+    expect(kopf.indexOf("preconnect")).toBeLessThan(kopf.indexOf("stylesheet"));
+  });
+
+  it("nennt je Schriftfamilie ihre Herkunft und ihre Gewichte", () => {
+    const verweise = schriftverweise(`@import url("${fontUrl}");
+.t{font-family:Fraunces,serif}
+.m{font-family:"JetBrains Mono",monospace}`, "");
+    const fraunces = verweise.find((v) => v.familie === "Fraunces");
+    expect(fraunces?.quelle).toBe("verzeichnis");
+    expect(fraunces?.gewichte).toEqual(["400", "600"]);
+    expect(verweise.find((v) => v.familie === "JetBrains Mono")?.quelle).toBe("verzeichnis");
+  });
+
+  it("benennt eine Schrift OHNE Quelle, statt sie stillschweigend hinzunehmen", () => {
+    const verweise = schriftverweise(".t{font-family:Fraunces,serif}", "");
+    expect(verweise.find((v) => v.familie === "Fraunces")?.quelle).toBe("system");
+  });
+
+  it("schreibt die Schriftverweise in den Kopf JEDER Bildschirmdatei", () => {
+    const html = `<!doctype html><html><head><meta name="werft-preview" content='{"width":412,"height":915}'><style>
+.werft-screen{display:block}
+@import url("${fontUrl}");
+</style></head><body><section class="werft-screen" data-screen-id="B-01" data-screen-name="Heute" data-start="true"><h1>Heute</h1></section></body></html>`;
+    const eigeneFacts: DesignFacts = { ...emptyFacts("android"), typography: [{ name: "titel", family: "Fraunces", source: "design.html" }] };
+    const { files } = buildExportPackage({
+      projectName: "Probe", platform: "android", facts: eigeneFacts, designs: [{ path: "design.html", html, label: "design.html" }],
+      entryPath: "design.html", sourceFiles: [{ path: "design.html", size: html.length }]
+    });
+    const bildschirm = files.find((datei) => /bildschirme\/.+\/1-heute\.html$/.test(datei.path));
+    expect(bildschirm).toBeDefined();
+    expect(bildschirm!.content).toContain('rel="stylesheet" href="' + fontUrl.replace(/&/g, "&amp;") + '"');
+    expect(bildschirm!.content).toContain('rel="preconnect"');
+    // Und die Schrift steht als Verweis im maschinenlesbaren Teil.
+    const tokens = files.find((datei) => datei.path.endsWith("design-tokens.json"));
+    expect(tokens!.content).toContain('"schriften"');
+    expect(tokens!.content).toContain("Fraunces");
   });
 });

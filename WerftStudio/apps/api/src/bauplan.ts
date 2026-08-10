@@ -80,16 +80,136 @@ function attribut(tag: string, name: string): string | undefined {
 }
 
 /**
- * Die fuer eine Klassenliste geltenden Layout-Eigenschaften aus der CSS zusammensetzen.
+ * ALLE Attribute eines Start-Tags einsammeln — auch die wertlosen wie `hidden`.
  *
- * Bewusst schlicht: es zaehlt die Reihenfolge im Stylesheet (spaeter gewinnt), genau wie im
- * Browser bei gleicher Spezifitaet. Die uebergebene CSS ist die fuer die Zielbreite bereits
- * aufgeloeste Fassung — dadurch steht hier die Anordnung, die der Entwerfer wirklich sieht.
+ * Sie sind nicht Beiwerk, sondern Teil des Selektor-Abgleichs: Werft Studio adressiert seine
+ * Bildschirme ueber `[data-screen-id="B-08"]`, und ein Claude-Design-Paket traegt sein Layout
+ * ueberwiegend im `style`-Attribut. Ohne diese Werte bliebe beides unsichtbar.
  */
-export function layoutFuer(css: string, klassen: string[]): Record<string, string> {
+export function attributeAus(tagInhalt: string): Record<string, string> {
   const gefunden: Record<string, string> = {};
-  const interessant = ["display", "flex-direction", "gap", "row-gap", "column-gap", "grid-template-columns", "align-items", "justify-content", "padding"];
-  let index = 0;
+  for (const treffer of tagInhalt.matchAll(/([\w:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g)) {
+    const name = treffer[1]!.toLowerCase();
+    if (name === "/") continue;
+    gefunden[name] = (treffer[2] ?? treffer[3] ?? treffer[4] ?? "").trim();
+  }
+  return gefunden;
+}
+
+/** Ein Element, so wie der Selektor-Abgleich es braucht. */
+export type Knoten = { tag: string; klassen: string[]; id?: string; attribute: Record<string, string> };
+
+const layoutEigenschaften = ["display", "flex-direction", "gap", "row-gap", "column-gap", "grid-template-columns", "align-items", "justify-content", "padding"];
+
+// Zustands-Pseudoklassen beschreiben NICHT den Grundaufbau, sondern einen Zustand (gedrueckt,
+// ueberfahren, ausgewaehlt). Sie bleiben bewusst ausgeschlossen — sonst stuende im Bauplan die
+// Anordnung des Hover-Zustands als die gewoehnliche.
+const zustandsPseudo = /::?(?:hover|active|focus|focus-within|focus-visible|checked|disabled|enabled|target|visited|link|before|after|placeholder|selection|first-line|first-letter|backdrop|marker)\b/i;
+
+/** Ein einzelnes Selektor-Glied (`div.karte[data-x="y"]`) gegen ein Element pruefen. */
+function gliedTrifft(glied: string, knoten: Knoten): boolean {
+  let rest = glied.trim();
+  if (!rest || rest === "*") return true;
+  // `:is(a, b)` und `:where(a, b)` sind reine Schreibabkuerzungen — in Alternativen aufloesen.
+  const gruppe = /^(.*?):(?:is|where)\(([^()]*)\)(.*)$/i.exec(rest);
+  if (gruppe) {
+    return gruppe[2]!.split(",").some((alternative) => gliedTrifft(`${gruppe[1]}${alternative.trim()}${gruppe[3]}`, knoten));
+  }
+  const nicht = /^(.*?):not\(([^()]*)\)(.*)$/i.exec(rest);
+  if (nicht) {
+    if (nicht[2]!.split(",").some((alternative) => gliedTrifft(alternative.trim(), knoten))) return false;
+    rest = `${nicht[1]}${nicht[3]}`;
+    if (!rest.trim()) return true;
+  }
+  // Attribut-Bedingungen zuerst herausnehmen — sie enthalten Zeichen, die sonst stoeren.
+  for (const treffer of [...rest.matchAll(/\[\s*([\w-]+)\s*(?:([~^$*|]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\]]*))\s*)?\]/g)]) {
+    const name = treffer[1]!.toLowerCase();
+    if (!(name in knoten.attribute)) return false;
+    const erwartet = (treffer[3] ?? treffer[4] ?? treffer[5] ?? "").trim();
+    if (!treffer[2]) continue;                      // `[hidden]` — Vorhandensein genuegt
+    const ist = knoten.attribute[name] ?? "";
+    const passt = treffer[2] === "=" ? ist === erwartet
+      : treffer[2] === "^=" ? ist.startsWith(erwartet)
+      : treffer[2] === "$=" ? ist.endsWith(erwartet)
+      : treffer[2] === "*=" ? ist.includes(erwartet)
+      : treffer[2] === "~=" ? ist.split(/\s+/).includes(erwartet)
+      : treffer[2] === "|=" ? ist === erwartet || ist.startsWith(`${erwartet}-`)
+      : false;
+    if (!passt) return false;
+  }
+  rest = rest.replace(/\[[^\]]*\]/g, "");
+  for (const klasse of rest.match(/\.[\w-]+/g) ?? []) if (!knoten.klassen.includes(klasse.slice(1))) return false;
+  const id = /#([\w-]+)/.exec(rest);
+  if (id && knoten.id !== id[1]) return false;
+  const tag = /^([a-zA-Z][\w-]*)/.exec(rest.replace(/[.#][\w-]+/g, ""));
+  if (tag && knoten.tag !== "*" && tag[1]!.toLowerCase() !== knoten.tag) return false;
+  return true;
+}
+
+/**
+ * Einen vollstaendigen Selektor gegen die Vorfahren-Kette pruefen (von rechts nach links).
+ *
+ * `kette` laeuft von der Wurzel bis zum Element; das letzte Glied ist das Element selbst.
+ * Unterstuetzt werden Nachfahren (Leerzeichen) und direkte Kinder (`>`). Geschwister-Kombinatoren
+ * (`+`, `~`) beschreiben eine Reihenfolge, die der Baum hier nicht mitfuehrt — sie werden
+ * uebersprungen statt falsch geraten.
+ */
+export function selektorTrifft(selektor: string, kette: Knoten[]): boolean {
+  if (!kette.length) return false;
+  if (zustandsPseudo.test(selektor)) return false;
+  if (/[+~]/.test(selektor.replace(/\[[^\]]*\]/g, ""))) return false;
+  const glieder = selektor.trim().split(/\s*(>)\s*|\s+/).filter((teil) => teil && teil.trim());
+  let ebene = kette.length - 1;
+  let direkt = false;
+  for (let i = glieder.length - 1; i >= 0; i -= 1) {
+    const glied = glieder[i]!;
+    if (glied === ">") { direkt = true; continue; }
+    if (ebene < 0) return false;
+    if (direkt) {
+      if (!gliedTrifft(glied, kette[ebene]!)) return false;
+      ebene -= 1;
+    } else {
+      let gefunden = -1;
+      for (let suche = ebene; suche >= 0; suche -= 1) if (gliedTrifft(glied, kette[suche]!)) { gefunden = suche; break; }
+      if (gefunden < 0) return false;
+      ebene = gefunden - 1;
+    }
+    direkt = false;
+  }
+  return true;
+}
+
+/** Die Spezifitaet eines Selektors als eine vergleichbare Zahl (IDs, dann Klassen, dann Tags). */
+export function spezifitaet(selektor: string): number {
+  const ohneAttribute = selektor.replace(/\[[^\]]*\]/g, "");
+  const ids = (ohneAttribute.match(/#[\w-]+/g) ?? []).length;
+  const klassen = (ohneAttribute.match(/\.[\w-]+/g) ?? []).length + (selektor.match(/\[[^\]]*\]/g) ?? []).length;
+  const tags = (ohneAttribute.replace(/[.#][\w-]+/g, "").match(/(?:^|[\s>+~])([a-zA-Z][\w-]*)/g) ?? []).length;
+  return ids * 10000 + klassen * 100 + tags;
+}
+
+/**
+ * Die fuer ein Element geltenden Layout-Eigenschaften aus der CSS zusammensetzen.
+ *
+ * Warum das genauer sein muss als ein Abgleich auf Klassennamen: Die fruehere Fassung hat JEDEN
+ * Selektor verworfen, der `[`, `>` oder `:` enthielt, und nur solche gelesen, deren letztes Glied
+ * ein reiner Klassen-Selektor war. Damit fiel genau die Schicht heraus, die im Browser GEWINNT —
+ * Werft Studio selbst schreibt seine Bildschirm-Regeln als
+ * `.werft-screen[data-screen-id="B-08"] .werft-b08__section { padding: 20px }`. Gemessen an einem
+ * echten Export gingen so 42 von 371 Layout-Angaben verloren (11,3 %), und zwar die spezifischeren.
+ *
+ * Noch deutlicher bei einem Uebergabepaket von Claude Design: dort steht das Layout ueberwiegend in
+ * `style`-Attributen am Element (nachgezaehlt an einem echten Buendel: 234 `style`-Attribute, davon
+ * 66 mit `display`, 72 mit `padding`, 45 mit `gap` — und KEINE einzige CSS-Klasse). Ein Bauplan, der
+ * Inline-Stile nicht liest, waere dort vollstaendig leer.
+ *
+ * Deshalb wird hier wie im Browser gearbeitet: alle Regeln, die auf die Vorfahren-Kette passen,
+ * werden nach Spezifitaet und Reihenfolge sortiert angewandt; danach gewinnt der Inline-Stil, und
+ * `!important` gewinnt ueber alles.
+ */
+export function layoutFuerKette(css: string, kette: Knoten[]): Record<string, string> {
+  const treffer: Array<{ gewicht: number; reihenfolge: number; body: string }> = [];
+  let index = 0, reihenfolge = 0;
   while (index < css.length) {
     const open = css.indexOf("{", index);
     if (open < 0) break;
@@ -102,22 +222,47 @@ export function layoutFuer(css: string, klassen: string[]): Record<string, strin
     }
     const body = css.slice(open + 1, cursor - 1);
     index = cursor;
+    reihenfolge += 1;
     if (/^@/.test(selector)) continue;
-    // Trifft der Selektor eine der Klassen? Nur einfache Klassen-Selektoren — zusammengesetzte
-    // Zustands-Selektoren (`:hover`, `[data-…]`) gehoeren nicht in den Grundaufbau.
-    const trifft = selector.split(",").some((teil) => {
+    // Von allen Alternativen einer Selektor-Liste zaehlt die, die passt — mit ihrer Spezifitaet.
+    let bestes = -1;
+    for (const teil of selector.split(",")) {
       const t = teil.trim();
-      if (/[:\[>+~]/.test(t)) return false;
-      const letzte = t.split(/\s+/).pop() ?? "";
-      return klassen.some((k) => letzte === `.${k}`);
-    });
-    if (!trifft) continue;
-    for (const eigenschaft of interessant) {
-      const wert = new RegExp(`(?:^|;)\\s*${eigenschaft}\\s*:\\s*([^;}]+)`, "i").exec(body)?.[1]?.trim();
-      if (wert) gefunden[eigenschaft] = wert.replace(/\s*!important$/i, "");
+      if (!t || !selektorTrifft(t, kette)) continue;
+      bestes = Math.max(bestes, spezifitaet(t));
     }
+    if (bestes < 0) continue;
+    treffer.push({ gewicht: bestes, reihenfolge, body });
   }
+  treffer.sort((links, rechts) => links.gewicht - rechts.gewicht || links.reihenfolge - rechts.reihenfolge);
+
+  const gefunden: Record<string, string> = {};
+  const wichtig = new Set<string>();
+  const uebernehmen = (body: string, inline: boolean) => {
+    for (const eigenschaft of layoutEigenschaften) {
+      const roh = new RegExp(`(?:^|;)\\s*${eigenschaft}\\s*:\\s*([^;}]+)`, "i").exec(body)?.[1]?.trim();
+      if (!roh) continue;
+      const istWichtig = /!important\s*$/i.test(roh);
+      if (wichtig.has(eigenschaft) && !istWichtig) continue;
+      if (istWichtig) wichtig.add(eigenschaft);
+      gefunden[eigenschaft] = roh.replace(/\s*!important\s*$/i, "").trim();
+      void inline;
+    }
+  };
+  for (const eintrag of treffer) uebernehmen(eintrag.body, false);
+  // Der Inline-Stil steht ueber jeder Regel aus dem Stylesheet — und ist bei einem
+  // Claude-Design-Paket die Hauptquelle des Layouts.
+  const inline = kette[kette.length - 1]?.attribute["style"];
+  if (inline) uebernehmen(inline, true);
   return gefunden;
+}
+
+/**
+ * Kurzform fuer den Abgleich auf eine blosse Klassenliste — ohne Vorfahren-Kette.
+ * Bleibt erhalten, damit bestehende Aufrufer und Tests unveraendert weiterlaufen.
+ */
+export function layoutFuer(css: string, klassen: string[]): Record<string, string> {
+  return layoutFuerKette(css, [{ tag: "*", klassen, attribute: {} }]);
 }
 
 /** Aus den Layout-Eigenschaften die Anordnung ableiten. */
@@ -157,6 +302,10 @@ export function baumAus(html: string, css: string): Bauteil[] {
   const wurzel: Bauteil[] = [];
   const stapel: Bauteil[][] = [wurzel];
   const offen: Bauteil[] = [];
+  // Die Vorfahren-Kette. Ohne sie kann ein Selektor wie
+  // `.werft-screen[data-screen-id="B-08"] .werft-b08__section` nicht geprueft werden — und genau
+  // diese Regeln sind die, die im Browser gewinnen.
+  const kette: Knoten[] = [];
   const tagMuster = /<(\/?)([a-zA-Z][\w-]*)([^>]*?)(\/?)>|<!--[\s\S]*?-->/g;
   let letzterIndex = 0;
   let treffer: RegExpExecArray | null;
@@ -184,12 +333,20 @@ export function baumAus(html: string, css: string): Bauteil[] {
     }
 
     if (schliessend) {
-      if (offen.length) { offen.pop(); stapel.pop(); }
+      if (offen.length) { offen.pop(); stapel.pop(); kette.pop(); }
       continue;
     }
 
     const klassen = attribut(attribute, "class");
-    const layout = klassen ? layoutFuer(css, klassen.split(/\s+/).filter(Boolean)) : {};
+    const knoten: Knoten = {
+      tag,
+      klassen: klassen ? klassen.split(/\s+/).filter(Boolean) : [],
+      ...(attribut(attribute, "id") ? { id: attribut(attribute, "id")! } : {}),
+      attribute: attributeAus(attribute)
+    };
+    // Der Abgleich braucht das Element MIT seinen Vorfahren — sonst bleiben die spezifischeren
+    // Regeln (und der Inline-Stil) unberuecksichtigt.
+    const layout = layoutFuerKette(css, [...kette, knoten]);
     const bauteil: Bauteil = { tag };
     if (klassen) bauteil.klassen = klassen;
     const funktion = attribut(attribute, "data-werft-funktion");
@@ -226,6 +383,7 @@ export function baumAus(html: string, css: string): Bauteil[] {
       bauteil.kinder = [];
       stapel.push(bauteil.kinder);
       offen.push(bauteil);
+      kette.push(knoten);
     }
   }
 
