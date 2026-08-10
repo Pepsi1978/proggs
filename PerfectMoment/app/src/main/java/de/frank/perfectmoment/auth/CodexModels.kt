@@ -18,6 +18,7 @@ enum class ReasoningEffort(val label: String, val apiValue: String) {
     MEDIUM("Mittel", "medium"),
     HIGH("Hoch", "high"),
     XHIGH("Sehr hoch", "xhigh"),
+    MAX("Maximal", "max"),
     ;
 
     companion object {

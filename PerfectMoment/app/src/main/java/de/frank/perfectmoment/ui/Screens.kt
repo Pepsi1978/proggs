@@ -45,6 +45,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -115,12 +117,15 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -722,6 +727,18 @@ private fun SessionQuestions(
             if (state?.refillInFlight == true) {
                 item { Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) { LoadingDots() } }
             }
+            state?.refillError?.let { refillError ->
+                item {
+                    Text(
+                        refillError,
+                        color = colors.text2,
+                        fontFamily = Inter,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+                    )
+                }
+            }
         }
         Row(
             Modifier.fillMaxWidth().height(56.dp).align(Alignment.TopCenter)
@@ -1220,8 +1237,8 @@ private fun HistoryRow(session: SessionEntity, rank: Int? = null, onClick: () ->
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    // The summary once the AI wrote it; until then the beginning of the wish.
-                    session.summary.ifBlank { session.topic },
+                    // The title once it is there; until then the beginning of the wish.
+                    historyDisplayTitle(session),
                     color = colors.text1,
                     fontFamily = Inter,
                     fontWeight = FontWeight.Medium,
@@ -1256,6 +1273,13 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
         } else {
             LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp)) {
                 item {
+                    HistoryTitleCard(
+                        title = viewModel.historyTitleDraft,
+                        fallback = detail.session.topic,
+                        onTitleChange = viewModel::updateHistoryTitle,
+                        onDone = viewModel::commitHistoryTitle,
+                    )
+                    Spacer(Modifier.height(14.dp))
                     val resumable = detail.session.resumeQuestionIndex != null
                     PrimaryButton(
                         if (resumable) "Sitzung fortsetzen" else "Erneut abspielen",
@@ -1346,6 +1370,97 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The name of the history entry, right at the top and ready to be typed over.
+ *
+ * The AI writes the first title; from the moment it is changed here by hand, that wording is
+ * what the history list shows. An emptied field hands the naming back to the AI, and the
+ * greyed out beginning of the wish shows what would stand there in the meantime.
+ */
+@Composable
+private fun HistoryTitleCard(
+    title: String,
+    fallback: String,
+    onTitleChange: (String) -> Unit,
+    onDone: () -> Unit,
+) {
+    val colors = LocalPmColors.current
+    val focusManager = LocalFocusManager.current
+    var focused by remember { mutableStateOf(false) }
+    PmCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel("Titel", Modifier.weight(1f))
+                Icon(
+                    Icons.Outlined.Edit,
+                    "Titel bearbeiten",
+                    tint = if (focused) colors.gold else colors.text3,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
+            BasicTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                singleLine = true,
+                cursorBrush = SolidColor(colors.gold),
+                textStyle = TextStyle(
+                    color = colors.text1,
+                    fontFamily = Inter,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 19.sp,
+                    lineHeight = 25.sp,
+                ),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
+                // Done saves and closes the keyboard; losing the focus saves just as well, so a
+                // tap somewhere else never drops what was typed.
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    .onFocusChanged { state ->
+                        if (focused && !state.isFocused) onDone()
+                        focused = state.isFocused
+                    },
+                decorationBox = { inner ->
+                    Box {
+                        if (title.isEmpty()) {
+                            Text(
+                                fallback.ifBlank { "Titel eingeben" },
+                                color = colors.text3,
+                                fontFamily = Inter,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 19.sp,
+                                lineHeight = 25.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        inner()
+                    }
+                },
+            )
+            Box(
+                Modifier.fillMaxWidth().padding(top = 10.dp).height(1.dp).background(
+                    if (focused) colors.gold.copy(alpha = 0.5f) else colors.surface2,
+                ),
+            )
+            Text(
+                if (title.isBlank()) {
+                    "Noch ohne eigenen Titel — die KI vergibt einen, oder du tippst ihn hier selbst."
+                } else {
+                    "Tippe hier, um den Titel zu ändern. Leer lassen gibt ihn wieder an die KI."
+                },
+                color = colors.text3,
+                fontFamily = Inter,
+                fontSize = 11.5.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -2305,6 +2420,8 @@ fun RawDataScreen(viewModel: AppViewModel) {
                 item(key = "session-${detail.session.id}") {
                     RawBlock(
                         "Session #${detail.session.id}\n" +
+                            "Titel: ${historyDisplayTitle(detail.session)}" +
+                            (if (detail.session.summaryManual) " (selbst vergeben)" else "") + "\n" +
                             "Thema: ${detail.session.topic}\n" +
                             "Start: ${formatSessionDate(detail.session.startedAt)}\n" +
                             "Dauer: ${formatSessionDuration(detail.session.durationMin)}\n" +

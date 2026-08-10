@@ -49,8 +49,23 @@ abstract class SessionDao {
     @Query("UPDATE sessions SET questionCount = :questionCount WHERE id = :sessionId")
     abstract suspend fun updateQuestionCount(sessionId: Long, questionCount: Int)
 
-    @Query("UPDATE sessions SET summary = :summary WHERE id = :sessionId")
-    abstract suspend fun updateSummary(sessionId: Long, summary: String)
+    /**
+     * Writes the title the AI came up with — but only where nobody typed one by hand and none
+     * is there yet. The condition sits in the statement itself so a title typed a heartbeat
+     * earlier can never be overwritten by a summary run that started before it.
+     */
+    @Query(
+        "UPDATE sessions SET summary = :summary " +
+            "WHERE id = :sessionId AND summary = '' AND summaryManual = 0",
+    )
+    abstract suspend fun fillSummaryIfEmpty(sessionId: Long, summary: String): Int
+
+    /**
+     * Writes the title the user typed. An empty title hands the entry back to the AI, which
+     * then names it again on the next visit to the history.
+     */
+    @Query("UPDATE sessions SET summary = :summary, summaryManual = :manual WHERE id = :sessionId")
+    abstract suspend fun updateManualSummary(sessionId: Long, summary: String, manual: Boolean)
 
     @Query(
         "UPDATE sessions SET voiceProviderOverride = :providerId, voiceOverride = :voiceId " +

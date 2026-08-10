@@ -58,7 +58,11 @@ internal fun codexQuestionInput(request: CodexQuestionRequest): String = buildSt
     append(request.topic.trim())
     append("\n\nZusatzkontext aus dem Intro (falls vorhanden):\n")
     append(request.introContext.trim())
-    append("\n\nBereits gestellte Fragen dieser Sitzung (nicht wiederholen, auch nicht sinngemäß):\n")
+    // Die frühere Auflage „auch nicht sinngemäß" war bei einem engen Thema praktisch nicht
+    // erfüllbar. Das Modell rang dann so lange damit, dass es mehrere Fragen in einen Eintrag
+    // presste oder die Antwort abbrach. Verlangt wird jetzt, was zählt: neue Formulierungen.
+    append("\n\nDiese Fragen sind in dieser Sitzung bereits gestellt worden. Formuliere davon ")
+    append("unabhängige, neue Fragen und verwende keine dieser Formulierungen erneut:\n")
     append(JSONArray(request.previousQuestions.map { it.trim() }).toString())
 }
 
@@ -86,6 +90,10 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
     }
     val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
         "\n\nDiese Perspektivvorgabe hat Vorrang vor allen widersprüchlichen Angaben: $perspectiveInstruction" +
+        // Ohne diese Vorgabe presst das Modell bei schwierigen Anfragen mehrere Fragen in einen
+        // Eintrag. Vorgelesen ergibt so ein Klumpen Unsinn.
+        "\n\nJeder Eintrag im Feld „fragen“ enthält genau EINE Frage, die mit einem Fragezeichen " +
+        "endet. Niemals mehrere Fragen in einem Eintrag, keine Nummerierung, kein Zusatztext." +
         "\n\nDiese Eingangsfragen sind nur Eingabehilfen und dürfen niemals als erzeugte Frage erscheinen: " +
         JSONArray(excludedEntranceQuestions).toString()
 
@@ -291,7 +299,6 @@ internal const val SUMMARY_MAX_CHARS = 150
 
 internal fun codexImproveWishPayload(
     wish: String,
-    skillText: String,
     previousVersions: List<String>,
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
@@ -303,22 +310,17 @@ internal fun codexImproveWishPayload(
         .put("properties", JSONObject().put("fassung", JSONObject().put("type", "string")))
     val instructions = buildString {
         append(
-            "Der Nutzer hat seinen Wunsch gesprochen; der Text kommt aus einer Spracherkennung " +
-                "und ist deshalb unsauber. Schreibe ihn zu einer klaren schriftlichen Anweisung " +
-                "an eine KI um. Erhalte JEDE inhaltliche Information und die vollständige " +
-                "Absicht — nichts weglassen, nichts erfinden, nichts abschwächen. Korrigiere " +
-                "Grammatik, Satzbau und Wortwahl, löse Versprecher und Wiederholungen auf und " +
-                "bringe die Anweisung so auf den Punkt, dass die Absicht eindeutig erkennbar " +
-                "ist. Behalte die Sprache und die Anrede des Originals bei. Antworte nur mit " +
-                "der umgeschriebenen Fassung, ohne Vorrede und ohne Anführungszeichen.",
+            "Der Text kommt aus einer Spracherkennung und ist deshalb unsauber. Erkenne seine " +
+                "Absicht und gib genau diese Absicht in sehr gutem Deutsch wieder. Korrigiere " +
+                "Grammatik, Satzbau und Wortwahl, löse Versprecher, Füllwörter und " +
+                "Wiederholungen auf. Füge NICHTS hinzu, was nicht im Text steht — keine " +
+                "Begründungen, keine Ziele, keine Ausschmückungen, keinen Auftrag an eine KI. " +
+                "Lass NICHTS weg und schwäche nichts ab. Behalte die Aussageform bei: aus einer " +
+                "Aussage wird eine Aussage, aus einem Wunsch ein Wunsch, aus einer Frage eine " +
+                "Frage. Behalte die Sprache, die Person und die Anrede des Originals bei. " +
+                "Antworte nur mit der umgeschriebenen Fassung, ohne Vorrede und ohne " +
+                "Anführungszeichen.",
         )
-        if (skillText.isNotBlank()) {
-            append(
-                "\n\nDie Anweisung wird anschließend von dieser Routine verarbeitet. Formuliere " +
-                    "sie so, dass die Routine sie bestmöglich umsetzen kann:\n",
-            )
-            append(skillText.trim().take(MAX_SKILL_CONTEXT_CHARS))
-        }
         if (previousVersions.isNotEmpty()) {
             append(
                 "\n\nDiese Fassungen wurden bereits vorgeschlagen. Liefere eine deutlich andere " +
@@ -338,7 +340,7 @@ internal fun codexImproveWishPayload(
             JSONArray().put(
                 JSONObject()
                     .put("role", "user")
-                    .put("content", "Gesprochener Wunsch:\n${wish.trim()}"),
+                    .put("content", "Text:\n${wish.trim()}"),
             ),
         )
         .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
@@ -354,9 +356,6 @@ internal fun codexImproveWishPayload(
             ),
         )
 }
-
-/** Keeps a long routine from crowding out the wish itself in the request. */
-private const val MAX_SKILL_CONTEXT_CHARS = 4_000
 
 internal fun parseImprovedWish(rawOutput: String): String {
     val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
@@ -616,14 +615,13 @@ class CodexAuthManager(context: Context) {
     }
 
     /**
-     * Rewrites a dictated wish into a clear instruction.
+     * Puts the dictated wish into good German without changing what it says.
      *
      * [previousVersions] are the ones already shown, so pressing the button again brings a fresh
      * wording instead of the same text once more.
      */
     suspend fun improveWish(
         wish: String,
-        skillText: String,
         previousVersions: List<String>,
         model: CodexModel,
         reasoningEffort: ReasoningEffort,
@@ -632,7 +630,7 @@ class CodexAuthManager(context: Context) {
         try {
             parseImprovedWish(
                 requestCodexResponse(
-                    codexImproveWishPayload(wish, skillText, previousVersions, model, reasoningEffort),
+                    codexImproveWishPayload(wish, previousVersions, model, reasoningEffort),
                     false,
                 ),
             )

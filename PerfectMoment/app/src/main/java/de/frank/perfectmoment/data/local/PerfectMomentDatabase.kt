@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 9,
+    version = 12,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -45,6 +45,9 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     Migration6To7,
                     Migration7To8,
                     Migration8To9,
+                    Migration9To10,
+                    Migration10To11,
+                    Migration11To12,
                 )
                     .addCallback(SeedCallback)
                     .build()
@@ -105,6 +108,35 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
             }
         }
 
+        private val Migration9To10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val updated = db.update(
+                    "skills",
+                    SQLiteDatabase.CONFLICT_ABORT,
+                    ContentValues().apply {
+                        put("text", PreinstalledContent.assumptionBoostSkillText)
+                    },
+                    "name = ?",
+                    arrayOf(PreinstalledContent.ASSUMPTION_BOOST_SKILL_NAME),
+                )
+                if (updated == 0) {
+                    insertAssumptionBoostSkill(db, System.currentTimeMillis())
+                }
+            }
+        }
+
+        private val Migration10To11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                insertAssumptionBoost2Skill(db, System.currentTimeMillis())
+            }
+        }
+
+        private val Migration11To12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sessions ADD COLUMN summaryManual INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         private fun insertAssumptionQuestionsSkill(db: SupportSQLiteDatabase, createdAt: Long) {
             db.insert(
                 "skills",
@@ -140,6 +172,18 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                 },
             )
         }
+
+        private fun insertAssumptionBoost2Skill(db: SupportSQLiteDatabase, createdAt: Long) {
+            db.insert(
+                "skills",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("name", PreinstalledContent.ASSUMPTION_BOOST_2_SKILL_NAME)
+                    put("text", PreinstalledContent.assumptionBoost2SkillText)
+                    put("createdAt", createdAt)
+                },
+            )
+        }
     }
 
     private object SeedCallback : Callback() {
@@ -159,6 +203,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
             insertAssumptionQuestionsSkill(db, now + 1)
             insertConsciousnessImageSkill(db, now + 2)
             insertAssumptionBoostSkill(db, now + 3)
+            insertAssumptionBoost2Skill(db, now + 4)
             PreinstalledContent.hooks.forEachIndexed { index, (emoji, text) ->
                 db.insert(
                     "hooks",

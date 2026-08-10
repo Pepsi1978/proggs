@@ -32,6 +32,8 @@ data class SessionEntity(
     @ColumnInfo(defaultValue = "0") val lastPlayedAt: Long = startedAt,
     /** The short title the history list shows instead of the whole wish. Empty until written. */
     @ColumnInfo(defaultValue = "") val summary: String = "",
+    /** True once the title was typed by hand. The AI then never renames the entry again. */
+    @ColumnInfo(defaultValue = "0") val summaryManual: Boolean = false,
     /** The voice this entry always plays with. Empty means the one from the settings. */
     @ColumnInfo(defaultValue = "") val voiceProviderOverride: String = "",
     @ColumnInfo(defaultValue = "") val voiceOverride: String = "",

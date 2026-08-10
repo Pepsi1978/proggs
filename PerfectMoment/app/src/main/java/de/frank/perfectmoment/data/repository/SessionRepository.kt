@@ -20,7 +20,11 @@ interface SessionRepository {
     suspend fun saveProgress(sessionId: Long, state: SessionState, config: SessionConfig)
     suspend fun clearProgress(sessionId: Long)
     suspend fun markPlayed(sessionId: Long)
-    suspend fun setSummary(sessionId: Long, summary: String)
+    /** Fills in the AI title; keeps its hands off entries that already carry one. */
+    suspend fun fillSummaryIfEmpty(sessionId: Long, summary: String)
+
+    /** Stores the title the user typed. Blank hands the entry back to the AI. */
+    suspend fun setManualSummary(sessionId: Long, summary: String)
     suspend fun setVoiceOverride(sessionId: Long, providerId: String, voiceId: String)
     suspend fun deleteSession(sessionId: Long): Boolean
 }
@@ -94,8 +98,12 @@ class RoomSessionRepository(
     override suspend fun markPlayed(sessionId: Long) =
         sessionDao.markPlayed(sessionId, System.currentTimeMillis())
 
-    override suspend fun setSummary(sessionId: Long, summary: String) =
-        sessionDao.updateSummary(sessionId, summary)
+    override suspend fun fillSummaryIfEmpty(sessionId: Long, summary: String) {
+        sessionDao.fillSummaryIfEmpty(sessionId, summary)
+    }
+
+    override suspend fun setManualSummary(sessionId: Long, summary: String) =
+        sessionDao.updateManualSummary(sessionId, summary, manual = summary.isNotBlank())
 
     override suspend fun setVoiceOverride(sessionId: Long, providerId: String, voiceId: String) =
         sessionDao.updateVoiceOverride(sessionId, providerId, voiceId)

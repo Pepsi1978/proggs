@@ -29,6 +29,7 @@ class SessionEngine(
     private var initialGenerationInFlight: Boolean = false,
     private val checkpoint: SessionCheckpoint? = null,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
+    private val refillStallMs: Long = REFILL_STALL_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
 ) : Closeable {
     private val engineJob = SupervisorJob(coroutineScope.coroutineContext[Job])
@@ -64,6 +65,7 @@ class SessionEngine(
     private var cadenceContinuation: (() -> Unit)? = null
     private var refillJob: Job? = null
     private var refillRetryJob: Job? = null
+    private var refillWatchdogJob: Job? = null
     private var offlineMonitorJob: Job? = null
     private var speechGeneration = 0L
     private var pausedAudioAtPosition = false
@@ -74,6 +76,7 @@ class SessionEngine(
     private var offlineNoticeInProgress = false
     private var offlineNoticeDelivered = false
     private val refillTriggers = mutableSetOf<Int>()
+    private var refillPending = false
     private val networkFailures = mutableMapOf<NetworkOperation, Long>()
 
     fun start() {
@@ -119,7 +122,11 @@ class SessionEngine(
     fun completeInitialGeneration() {
         scope.launch {
             initialGenerationInFlight = false
-            if (_state.value.currentIndex >= _state.value.questions.size) handleQuestionsExhausted()
+            if (_state.value.currentIndex >= _state.value.questions.size) {
+                handleQuestionsExhausted()
+            } else {
+                startPendingRefill()
+            }
         }
     }
 
@@ -410,56 +417,102 @@ class SessionEngine(
         requestRefill()
     }
 
+    /**
+     * Der nächste Block wird schon angefordert, sobald die erste Frage des laufenden Blocks
+     * gesprochen wird — bei Frage 1 die Fragen 31 bis 60, bei Frage 31 die Fragen 61 bis 90. So
+     * bleibt für die Erzeugung ein ganzer Block Vorlauf, auch bei hoher Denkstufe.
+     */
     private fun triggerRefillIfNeeded(index: Int) {
-        if (index < FIRST_REFILL_INDEX || (index - FIRST_REFILL_INDEX) % BLOCK_SIZE != 0) return
+        if (index % BLOCK_SIZE != 0) return
         if (refillTriggers.add(index)) requestRefill()
     }
 
+    /**
+     * Ein Auslöser, der gerade nicht bedient werden kann, darf nicht verfallen — sonst bliebe der
+     * Block, den er anfordern sollte, für immer aus. Er wird gemerkt und nachgeholt, sobald der
+     * laufende Lauf fertig ist.
+     */
+    private fun startPendingRefill() {
+        if (refillPending) requestRefill()
+    }
+
     private fun requestRefill() {
-        if (initialGenerationInFlight || refillPort == null || _state.value.refillInFlight ||
-            _state.value.phase == Phase.ENDED
-        ) {
+        if (refillPort == null || _state.value.phase == Phase.ENDED) return
+        if (initialGenerationInFlight || _state.value.refillInFlight) {
+            refillPending = true
             return
         }
+        refillPending = false
         refillRetryJob?.cancel()
         refillRetryJob = null
         _state.value = _state.value.copy(refillInFlight = true)
+        startRefillWatchdog()
         refillJob = scope.launch {
             try {
-                val parsed = refillPort.requestQuestions(_state.value.questions)
-                    .map(EmojiParser::parse)
-                    .filter { it.text.isNotBlank() }
-                    .map { Question(emoji = it.emoji, text = it.text) }
-                if (parsed.isEmpty()) {
-                    refillFailed()
+                // Jede Frage wird einzeln übernommen, sobald sie fertig ist. Wartet die Sitzung
+                // gerade am Listenende, geht es mit der ersten davon sofort weiter.
+                val delivered = refillPort.requestQuestions(_state.value.questions) { question ->
+                    persistencePort.persistQuestions(listOf(question))
+                    appendQuestions(listOf(question))
+                }
+                if (delivered.isEmpty()) {
+                    refillFailed(null)
                     return@launch
                 }
 
-                persistencePort.persistQuestions(parsed)
-                _state.value = _state.value.copy(
-                    questions = _state.value.questions + parsed,
-                    refillInFlight = false,
-                )
+                refillWatchdogJob?.cancel()
+                _state.value = _state.value.copy(refillInFlight = false, refillError = null)
                 markNetworkSuccess(NetworkOperation.REFILL)
-                if (_state.value.speakerOn && !_state.value.paused &&
-                    _state.value.currentIndex < _state.value.questions.size &&
-                    _state.value.phase == Phase.WAITING_NETWORK && !offlineNoticeInProgress
-                ) {
-                    afterOfflineNotice(::speakCurrentQuestion)
-                } else if (!_state.value.speakerOn && _state.value.phase == Phase.WAITING_NETWORK) {
-                    _state.value = _state.value.copy(phase = Phase.IDLE_MUTED)
-                }
+                startPendingRefill()
             } catch (cancelled: CancellationException) {
+                refillCancelled()
                 throw cancelled
-            } catch (_: Exception) {
-                refillFailed()
+            } catch (error: Throwable) {
+                // Bewusst jedes Throwable: bliebe eines ungefangen, stünde die Sitzung für immer
+                // auf „lädt“, ohne dass je ein neuer Versuch startet.
+                refillFailed(error.message)
             }
         }
     }
 
-    private fun refillFailed() {
-        _state.value = _state.value.copy(refillInFlight = false)
+    /**
+     * Deckelt, wie lange ein Versuch ergebnislos laufen darf.
+     *
+     * Der HTTP-Aufruf gibt sich acht Minuten, und OpenAI-Anfragen ohne gelieferte Frage werden
+     * darunter noch mehrfach wiederholt — ohne diese Grenze stünde die Sitzung eine halbe Stunde
+     * schweigend da. Kommt in der Zeit keine einzige Frage an, wird der Versuch verworfen und ein
+     * frischer gestartet. Läuft die Lieferung dagegen, greift die Grenze nicht.
+     */
+    private fun startRefillWatchdog() {
+        refillWatchdogJob?.cancel()
+        val stockAtStart = _state.value.questions.size
+        refillWatchdogJob = scope.launch {
+            delay(refillStallMs)
+            refillWatchdogJob = null
+            if (!_state.value.refillInFlight || _state.value.questions.size != stockAtStart) return@launch
+            refillJob?.cancel()
+            refillFailed(REFILL_STALLED_MESSAGE)
+        }
+    }
+
+    private fun refillFailed(reason: String?) {
+        refillWatchdogJob?.cancel()
+        _state.value = _state.value.copy(
+            refillInFlight = false,
+            refillError = reason?.takeIf(String::isNotBlank) ?: REFILL_FAILED_MESSAGE,
+        )
         markNetworkFailure(NetworkOperation.REFILL)
+        scheduleRefillRetry()
+    }
+
+    /**
+     * Ein abgebrochener Nachschub-Aufruf — etwa weil parallel eine andere OpenAI-Anfrage lief —
+     * darf die Sitzung nicht dauerhaft auf „lädt“ stehen lassen. Der Platz wird sofort wieder
+     * frei und der Nachschub kurz darauf erneut angefordert.
+     */
+    private fun refillCancelled() {
+        refillWatchdogJob?.cancel()
+        _state.value = _state.value.copy(refillInFlight = false)
         scheduleRefillRetry()
     }
 
@@ -588,6 +641,7 @@ class SessionEngine(
         pausedCadenceContinuation = null
         refillJob?.cancel()
         refillRetryJob?.cancel()
+        refillWatchdogJob?.cancel()
         offlineMonitorJob?.cancel()
         timerJob?.cancel()
     }
@@ -599,12 +653,14 @@ class SessionEngine(
 
     companion object {
         const val OFFLINE_MESSAGE = "Keine Verbindung. Die Sitzung wartet."
+        const val REFILL_FAILED_MESSAGE = "Neue Fragen kamen nicht an. Es läuft ein neuer Versuch."
+        const val REFILL_STALLED_MESSAGE = "Die Fragen brauchten zu lange. Es läuft ein neuer Versuch."
         const val REFILL_RETRY_MS = 15_000L
+        const val REFILL_STALL_MS = 240_000L
         const val OFFLINE_THRESHOLD_MS = 120_000L
         private const val TIMER_TICK_MS = 100L
-        private const val FIRST_REFILL_INDEX = 19
         private const val BLOCK_SIZE = 30
-        private const val RESUME_REFILL_THRESHOLD = BLOCK_SIZE - FIRST_REFILL_INDEX
+        private const val RESUME_REFILL_THRESHOLD = BLOCK_SIZE
         private const val MAX_TTS_ERRORS_PER_QUESTION = 3
     }
 }

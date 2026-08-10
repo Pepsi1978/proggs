@@ -93,6 +93,18 @@ enum class HistorySort(val label: String) {
     A_TO_Z("A–Z"),
 }
 
+/** The longest title the detail view accepts — beyond that the history rows stop being scannable. */
+internal const val HISTORY_TITLE_MAX_LENGTH = 80
+
+/**
+ * What the history shows for an entry: the title if there is one, otherwise the wish itself.
+ *
+ * List, sorting and detail view all read the name through here, so a renamed entry reads the
+ * same everywhere.
+ */
+internal fun historyDisplayTitle(session: SessionEntity): String =
+    session.summary.ifBlank { session.topic }
+
 internal fun sortHistorySessions(
     sessions: List<SessionEntity>,
     sort: HistorySort,
@@ -105,7 +117,7 @@ internal fun sortHistorySessions(
             .thenByDescending { it.startedAt }
         HistorySort.NEWEST -> compareByDescending<SessionEntity> { it.startedAt }
         HistorySort.OLDEST -> compareBy<SessionEntity> { it.startedAt }
-        HistorySort.A_TO_Z -> compareBy<SessionEntity> { it.topic.lowercase(Locale.GERMAN) }
+        HistorySort.A_TO_Z -> compareBy<SessionEntity> { historyDisplayTitle(it).lowercase(Locale.GERMAN) }
             .thenByDescending { it.startedAt }
     }
     return listOf(lastPlayed) + sessions.filterNot { it.id == lastPlayed.id }.sortedWith(remainingComparator)
@@ -300,6 +312,10 @@ class AppViewModel(
     var randomReplay by mutableStateOf(false)
         private set
     var historyDetail by mutableStateOf<SessionWithQuestions?>(null)
+        private set
+
+    /** The title of the open history entry while it is being typed. */
+    var historyTitleDraft by mutableStateOf("")
         private set
 
     var hookEditorId by mutableStateOf<Long?>(null)
@@ -575,6 +591,9 @@ class AppViewModel(
     }
 
     fun navigate(target: AppScreen) {
+        if (screen == AppScreen.HISTORY_DETAIL && target != AppScreen.HISTORY_DETAIL) {
+            commitHistoryTitle()
+        }
         cancelVoiceInput()
         if (target != AppScreen.VOICE) stopVoicePreview()
         sheet = null
@@ -588,11 +607,16 @@ class AppViewModel(
      *
      * A wish can run over many lines; the list shows the summary instead. Written once per
      * session and then kept, so the same entry always reads the same.
+     *
+     * Entries renamed by hand stay untouched — the write itself checks that again, so even a
+     * rename that happens while this runs survives.
      */
     private fun backfillSummaries() {
         if (summaryJob?.isActive == true) return
         if (chatGptState != ChatGptState.CONNECTED) return
-        val missing = sessions.filter { it.summary.isBlank() && it.topic.isNotBlank() }
+        val missing = sessions.filter {
+            it.summary.isBlank() && !it.summaryManual && it.topic.isNotBlank()
+        }
         if (missing.isEmpty()) return
         summaryJob = viewModelScope.launch {
             for (session in missing) {
@@ -605,7 +629,7 @@ class AppViewModel(
                     // next visit rather than running into the same error dozens of times.
                     return@launch
                 }
-                if (summary.isNotBlank()) sessionRepository.setSummary(session.id, summary)
+                if (summary.isNotBlank()) sessionRepository.fillSummaryIfEmpty(session.id, summary)
             }
         }
     }
@@ -617,6 +641,8 @@ class AppViewModel(
             closeSheet()
             return
         }
+        // Leaving the detail view saves the title even when the field still has the focus.
+        if (screen == AppScreen.HISTORY_DETAIL) commitHistoryTitle()
         screen = when (screen) {
             AppScreen.HISTORY_DETAIL -> AppScreen.HISTORY
             AppScreen.HOOKS, AppScreen.SKILLS, AppScreen.VOICE, AppScreen.CHAT_GPT,
@@ -667,7 +693,7 @@ class AppViewModel(
     }
 
     /**
-     * Rewrites the dictated wish into a clear instruction for the AI.
+     * Puts the dictated wish into good German without changing what it says.
      *
      * Every press produces a fresh wording; the previous ones are handed over so no suggestion
      * repeats and the best of them can be picked.
@@ -688,7 +714,6 @@ class AppViewModel(
             try {
                 val improved = authManager.improveWish(
                     wish = source,
-                    skillText = activeSkill?.text.orEmpty(),
                     previousVersions = improvedTopicVersions,
                     model = model,
                     reasoningEffort = reasoning,
@@ -1248,6 +1273,7 @@ class AppViewModel(
     fun openHistoryDetail(id: Long) {
         viewModelScope.launch {
             historyDetail = sessionRepository.getSession(id)
+            historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
                 pauseRep = session.pauseRep
                 pauseNext = session.pauseNext
@@ -1260,6 +1286,36 @@ class AppViewModel(
             }
             randomReplay = false
             screen = AppScreen.HISTORY_DETAIL
+        }
+    }
+
+    /** Takes what is typed into the title field of the open history entry. */
+    fun updateHistoryTitle(value: String) {
+        // A title stays one line — pasted line breaks would tear the history rows apart.
+        historyTitleDraft = value.replace(Regex("\\s*\\R\\s*"), " ").take(HISTORY_TITLE_MAX_LENGTH)
+    }
+
+    /**
+     * Saves the typed title. Runs when the field loses focus and when the screen is left, so no
+     * edit is lost, and does nothing while nothing changed.
+     *
+     * An emptied field hands the entry back to the AI: it shows the wish again until the next
+     * visit to the history gives it a fresh title.
+     */
+    fun commitHistoryTitle() {
+        val session = historyDetail?.session ?: return
+        val title = historyTitleDraft.trim()
+        historyTitleDraft = title
+        if (title == session.summary) return
+        viewModelScope.launch {
+            sessionRepository.setManualSummary(session.id, title)
+            val saved = sessionRepository.getSession(session.id)
+            // Only adopt the reload while the same entry is still open — otherwise a slow write
+            // would drag the previous entry back onto the screen.
+            if (historyDetail?.session?.id == session.id && saved != null) {
+                historyDetail = saved
+                historyTitleDraft = saved.session.summary
+            }
         }
     }
 

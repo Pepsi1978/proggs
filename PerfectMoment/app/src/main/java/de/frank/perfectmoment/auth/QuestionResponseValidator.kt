@@ -20,7 +20,7 @@ object QuestionResponseValidator {
         }
 
         val validator = IncrementalQuestionValidator(previousQuestions, excludedQuestions)
-        val accepted = rawQuestions.mapNotNull(validator::accept)
+        val accepted = rawQuestions.flatMap(validator::accept)
 
         if (accepted.size < MIN_ACCEPTED_COUNT) {
             throw QuestionValidationException(
@@ -28,6 +28,47 @@ object QuestionResponseValidator {
             )
         }
         return accepted
+    }
+
+    /**
+     * Zerlegt einen Modelleintrag in die Fragen, die wirklich darin stecken.
+     *
+     * Das Modell liefert gelegentlich einen ganzen Block statt einer einzelnen Frage: mehrere
+     * Fragen aneinandergehängt, die Emojis mitten im Text, dazu ein eingestreuter Fremdsatz. Als
+     * eine Frage ist so ein Block unbrauchbar — vorgelesen ergibt er Unsinn.
+     *
+     * Deshalb wird hier zurückzerlegt: An jedem Emoji, das auf ein Fragezeichen folgt, beginnt
+     * eine neue Frage, und jede Frage endet an ihrem eigenen ersten Fragezeichen. Alles dahinter
+     * — Fremdsätze, Nachklapp, Aufzählungsreste — fällt weg. Was danach keine Frage von
+     * vernünftiger Länge ist, wird verworfen.
+     */
+    internal fun splitIntoQuestions(raw: String): List<CodexQuestion> =
+        splitAtEmbeddedQuestions(raw.trim()).mapNotNull { segment ->
+            val question = splitLeadingEmoji(segment) ?: return@mapNotNull null
+            val end = question.text.indexOf(QUESTION_MARK)
+            if (end < 0) return@mapNotNull null
+            val text = question.text.substring(0, end + 1).trim()
+            if (text.length !in MIN_QUESTION_LENGTH..MAX_QUESTION_LENGTH) return@mapNotNull null
+            CodexQuestion(question.emoji, text)
+        }
+
+    /** Schneidet vor jedem Emoji, das einer abgeschlossenen Frage folgt. */
+    private fun splitAtEmbeddedQuestions(value: String): List<String> {
+        val cuts = mutableListOf(0)
+        var index = 0
+        var lastVisible = ' '
+        while (index < value.length) {
+            val codePoint = value.codePointAt(index)
+            val width = Character.charCount(codePoint)
+            if (index > 0 && lastVisible == QUESTION_MARK && leadingEmojiEnd(value.substring(index)) > 0) {
+                cuts += index
+            }
+            if (!Character.isWhitespace(codePoint)) lastVisible = value[index]
+            index += width
+        }
+        return cuts.mapIndexed { position, start ->
+            value.substring(start, cuts.getOrElse(position + 1) { value.length })
+        }
     }
 
     internal fun splitLeadingEmoji(raw: String): CodexQuestion? {
@@ -127,6 +168,9 @@ object QuestionResponseValidator {
 
     private fun isKeycapStart(codePoint: Int): Boolean = codePoint == '#'.code || codePoint == '*'.code || codePoint in '0'.code..'9'.code
 
+    private const val QUESTION_MARK = '?'
+    private const val MIN_QUESTION_LENGTH = 10
+    private const val MAX_QUESTION_LENGTH = 300
     private const val ZERO_WIDTH_JOINER = 0x200D
     private const val KEYCAP = 0x20E3
     private const val CANCEL_TAG = 0xE007F
@@ -140,13 +184,14 @@ internal class IncrementalQuestionValidator(
         .mapTo(mutableSetOf(), QuestionResponseValidator::normalizeQuestion)
         .apply { remove("") }
 
-    fun accept(raw: String): CodexQuestion? {
-        val question = QuestionResponseValidator.splitLeadingEmoji(raw) ?: return null
-        val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
-        return if (normalized.isEmpty() || !seen.add(normalized)) {
-            null
-        } else {
-            question
+    /**
+     * Nimmt einen Modelleintrag an und gibt die brauchbaren, noch nicht gestellten Fragen daraus
+     * zurück — meist genau eine, bei einem zusammengeklumpten Eintrag auch mehrere, bei Unsinn
+     * keine.
+     */
+    fun accept(raw: String): List<CodexQuestion> =
+        QuestionResponseValidator.splitIntoQuestions(raw).filter { question ->
+            val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
+            normalized.isNotEmpty() && seen.add(normalized)
         }
-    }
 }

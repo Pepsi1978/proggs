@@ -6,9 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImproveWishTest {
-    private fun instructions(previous: List<String>, skill: String = "") = codexImproveWishPayload(
+    private fun instructions(previous: List<String>) = codexImproveWishPayload(
         wish = "also ähm ich möchte ruhiger werden abends",
-        skillText = skill,
         previousVersions = previous,
         model = CodexModel.TERRA,
         reasoningEffort = ReasoningEffort.MEDIUM,
@@ -25,9 +24,18 @@ class ImproveWishTest {
     }
 
     @Test
-    fun `hands the chosen routine to the rewrite`() {
-        assertTrue(instructions(emptyList(), "Stelle stets Warum-Fragen.").contains("Stelle stets Warum-Fragen."))
-        assertFalse(instructions(emptyList()).contains("Routine sie bestmöglich"))
+    fun `only polishes the wording and keeps the routine out of it`() {
+        val instructions = codexImproveWishPayload(
+            wish = "also ähm ich möchte ruhiger werden abends",
+            previousVersions = emptyList(),
+            model = CodexModel.TERRA,
+            reasoningEffort = ReasoningEffort.MEDIUM,
+        ).getString("instructions")
+
+        assertFalse(instructions.contains("Routine"))
+        assertFalse(instructions.contains("Anweisung"))
+        assertTrue(instructions.contains("Füge NICHTS hinzu"))
+        assertTrue(instructions.contains("Lass NICHTS weg"))
     }
 
     @Test

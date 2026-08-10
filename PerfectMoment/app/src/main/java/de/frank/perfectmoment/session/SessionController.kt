@@ -2,6 +2,8 @@ package de.frank.perfectmoment.session
 
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
+import android.util.Log
 import androidx.core.content.ContextCompat
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
@@ -33,6 +35,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+/** Wie viele bereits gestellte Fragen der Anfrage als Wiederholungsschutz beigelegt werden. */
+private const val RECENT_QUESTION_CONTEXT = 60
+
+private const val TAG = "PmSession"
 
 data class SessionRuntime(
     val topic: String,
@@ -89,7 +96,7 @@ class SessionController(
             val streamedValidator = IncrementalQuestionValidator(excludedQuestions = listOf(entranceQuestion))
             val streamedQuestions = mutableListOf<Question>()
             val rawInitial = codexAuthManager.generateQuestions(requestBase) { rawQuestion ->
-                streamedValidator.accept(rawQuestion)?.let { parsed ->
+                streamedValidator.accept(rawQuestion).forEach { parsed ->
                     val question = Question(emoji = parsed.emoji, text = parsed.text)
                     sessionRepository.appendQuestions(sessionId, listOf(question))
                     withContext(Dispatchers.Main.immediate) {
@@ -364,20 +371,62 @@ class SessionController(
         )
     }
 
+    /**
+     * Lädt den nächsten Fragenblock nach und reicht jede Frage einzeln weiter, sobald sie fertig
+     * ist — genau wie beim Sitzungsstart. Ohne diesen Strom müsste die Sitzung auf den ganzen
+     * Block warten, was bei hoher Denkstufe Minuten dauert.
+     *
+     * Ein unvollständiger Block wird nicht verworfen: Was bereits angekommen ist, bleibt gültig.
+     * Sonst würde eine einzige fehlende oder doppelte Frage den gesamten Nachschub kosten.
+     */
     private fun newRefillPort(
         requestBase: CodexQuestionRequest,
         entranceQuestion: String,
-    ) = QuestionRefillPort { existing ->
-        val raw = codexAuthManager.generateQuestions(
-            requestBase.copy(previousQuestions = existing.map(Question::text)),
+    ) = QuestionRefillPort { existing, onQuestion ->
+        val validator = IncrementalQuestionValidator(
+            previousQuestions = existing.map(Question::text),
+            excludedQuestions = listOf(entranceQuestion),
         )
-        QuestionResponseValidator.validate(
-            raw,
-            existing.map(Question::text),
-            listOf(entranceQuestion),
+        val delivered = mutableListOf<Question>()
+        val startedAt = SystemClock.elapsedRealtime()
+        val deliver: suspend (String) -> Unit = { rawQuestion ->
+            validator.accept(rawQuestion).forEach { parsed ->
+                val question = Question(emoji = parsed.emoji, text = parsed.text)
+                delivered += question
+                onQuestion(question)
+                Log.i(TAG, "Nachschub: Frage ${delivered.size} nach ${seconds(startedAt)}s")
+            }
+        }
+        Log.i(
+            TAG,
+            "Nachschub angefordert: Modell=${requestBase.model.apiId}, " +
+                "Denkstufe=${requestBase.reasoningEffort.apiValue}, Vorrat=${existing.size}",
         )
-            .map { "${it.emoji} ${it.text}" }
+        try {
+            codexAuthManager.generateQuestions(
+                requestBase.copy(previousQuestions = recentQuestionTexts(existing)),
+                deliver,
+            ).forEach { deliver(it) }
+            Log.i(TAG, "Nachschub fertig: ${delivered.size} neue Fragen nach ${seconds(startedAt)}s")
+        } catch (cancelled: CancellationException) {
+            Log.w(TAG, "Nachschub abgebrochen nach ${seconds(startedAt)}s, ${delivered.size} Fragen angekommen")
+            throw cancelled
+        } catch (error: Throwable) {
+            Log.w(TAG, "Nachschub fehlgeschlagen nach ${seconds(startedAt)}s, ${delivered.size} Fragen angekommen", error)
+            if (delivered.isEmpty()) throw error
+        }
+        delivered
     }
+
+    private fun seconds(startedAt: Long) = (SystemClock.elapsedRealtime() - startedAt) / 1_000L
+
+    /**
+     * Nur die zuletzt gestellten Fragen gehen als „nicht wiederholen“ mit in die Anfrage. Ohne
+     * Grenze wüchse sie in einer Endlos-Sitzung mit jedem Block weiter, bis der Nachschub daran
+     * scheitert.
+     */
+    private fun recentQuestionTexts(existing: List<Question>): List<String> =
+        existing.takeLast(RECENT_QUESTION_CONTEXT).map(Question::text)
 
     private fun newPersistencePort(sessionId: Long) = QuestionPersistencePort { questions ->
         sessionRepository.appendQuestions(sessionId, questions)

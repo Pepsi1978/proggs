@@ -97,6 +97,7 @@ data class BackupPayload(
                             put("playCount", session.playCount)
                             put("lastPlayedAt", session.lastPlayedAt)
                             put("summary", session.summary)
+                            put("summaryManual", session.summaryManual)
                             put("voiceProviderOverride", session.voiceProviderOverride)
                             put("voiceOverride", session.voiceOverride)
                             put(
@@ -169,6 +170,7 @@ data class BackupPayload(
                     playCount = item.optInt("playCount", 1),
                     lastPlayedAt = item.optLong("lastPlayedAt", item.optLong("startedAt")),
                     summary = item.optString("summary"),
+                    summaryManual = item.optBoolean("summaryManual"),
                     voiceProviderOverride = item.optString("voiceProviderOverride"),
                     voiceOverride = item.optString("voiceOverride"),
                 )

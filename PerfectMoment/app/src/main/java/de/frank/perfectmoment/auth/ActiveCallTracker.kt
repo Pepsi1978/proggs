@@ -1,20 +1,30 @@
 package de.frank.perfectmoment.auth
 
-import java.util.concurrent.atomic.AtomicReference
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import okhttp3.Call
 
+/**
+ * Hält alle laufenden Codex-Aufrufe fest, damit sie gemeinsam abgebrochen werden können.
+ *
+ * Jeder Aufruf steht für sich: Die App fragt mehrere Dinge gleichzeitig an (Nachschub für die
+ * laufende Sitzung, Verlaufstitel, verbesserte Fassung). Würde ein neuer Aufruf den laufenden
+ * abbrechen, bliebe die Sitzung ohne neue Fragen stehen.
+ */
 internal class ActiveCallTracker {
-    private val activeCall = AtomicReference<Call?>()
+    private val activeCalls: MutableSet<Call> = Collections.newSetFromMap(ConcurrentHashMap())
 
     fun track(call: Call) {
-        activeCall.getAndSet(call)?.cancel()
+        activeCalls.add(call)
     }
 
     fun clear(call: Call) {
-        activeCall.compareAndSet(call, null)
+        activeCalls.remove(call)
     }
 
     fun cancel() {
-        activeCall.getAndSet(null)?.cancel()
+        val running = activeCalls.toList()
+        activeCalls.clear()
+        running.forEach(Call::cancel)
     }
 }

@@ -27,6 +27,7 @@ class BackupPayloadTest {
                     pauseNext = 6,
                     reps = 2,
                     summary = "Kurztitel",
+                    summaryManual = true,
                     voiceProviderOverride = "qwen_clone",
                     voiceOverride = "qwen-tts-vc-FrankHD-voice-1-a",
                 ),
@@ -58,6 +59,8 @@ class BackupPayloadTest {
 
         val session = restored!!.sessions.single().session
         assertEquals("Kurztitel", session.summary)
+        // Without the flag the AI would rename the entry after a restore.
+        assertEquals(true, session.summaryManual)
         assertEquals("qwen_clone", session.voiceProviderOverride)
         assertEquals("qwen-tts-vc-FrankHD-voice-1-a", session.voiceOverride)
     }

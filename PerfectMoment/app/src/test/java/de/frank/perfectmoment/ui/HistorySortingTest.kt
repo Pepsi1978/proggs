@@ -27,6 +27,30 @@ class HistorySortingTest {
         assertEquals(listOf(3L, 2L, 1L, 4L), sortedIds(HistorySort.A_TO_Z))
     }
 
+    @Test
+    fun `der Titel ersetzt den Wunsch in der Liste`() {
+        val ohneTitel = session(id = 1, topic = "Ein langer Wunsch", startedAt = 1, playCount = 1, lastPlayedAt = 1)
+
+        assertEquals("Ein langer Wunsch", historyDisplayTitle(ohneTitel))
+        assertEquals("Mein Titel", historyDisplayTitle(ohneTitel.copy(summary = "Mein Titel")))
+    }
+
+    @Test
+    fun `A bis Z sortiert nach dem selbst vergebenen Titel`() {
+        // Ohne Titel stuenden die Eintraege als Balance, Ankommen, Zuversicht da: 3, 2, 1, 4.
+        val umbenannt = sessions().map { entry ->
+            when (entry.id) {
+                4L -> entry.copy(summary = "Aufbruch", summaryManual = true)
+                else -> entry
+            }
+        }
+
+        assertEquals(
+            listOf(3L, 2L, 4L, 1L),
+            sortHistorySessions(umbenannt, HistorySort.A_TO_Z).map(SessionEntity::id),
+        )
+    }
+
     private fun sortedIds(sort: HistorySort) =
         sortHistorySessions(sessions(), sort).map(SessionEntity::id)
 

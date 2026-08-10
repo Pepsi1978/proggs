@@ -27,6 +27,8 @@ data class SessionState(
     val paused: Boolean = false,
     val remainingMs: Long,
     val refillInFlight: Boolean = false,
+    /** Grund des letzten fehlgeschlagenen Nachschubs, damit das Warten nicht stumm bleibt. */
+    val refillError: String? = null,
     val offline: Boolean = false,
 )
 
@@ -98,7 +100,17 @@ interface SessionTtsPort {
 }
 
 fun interface QuestionRefillPort {
-    suspend fun requestQuestions(existingQuestions: List<Question>): List<String>
+    /**
+     * Fordert neue Fragen an und meldet jede einzelne sofort über [onQuestion], sobald sie fertig
+     * ist. Die Sitzung wartet dadurch nicht auf den ganzen Block — bei hoher Denkstufe dauert der
+     * mehrere Minuten, die erste Frage steht aber schon nach Sekunden bereit.
+     *
+     * @return alle gelieferten Fragen. Eine leere Liste gilt als fehlgeschlagener Versuch.
+     */
+    suspend fun requestQuestions(
+        existingQuestions: List<Question>,
+        onQuestion: suspend (Question) -> Unit,
+    ): List<Question>
 }
 
 fun interface QuestionPersistencePort {

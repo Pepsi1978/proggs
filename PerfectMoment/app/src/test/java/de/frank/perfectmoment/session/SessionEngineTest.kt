@@ -1,6 +1,8 @@
 package de.frank.perfectmoment.session
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -125,7 +127,7 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `fordert Nachschub beim Sprechbeginn an Index 19 und 49 an`() = runTest {
+    fun `fordert Nachschub beim Sprechbeginn an Index 0 und 30 an`() = runTest {
         val refill = FakeRefill().apply {
             responses += List(30) { "✨ Nachschub ${it + 1}" }
             responses += List(30) { "✨ Weiterer Nachschub ${it + 1}" }
@@ -137,11 +139,7 @@ class SessionEngineTest {
         )
         fixture.startSpeaking()
 
-        repeat(19) {
-            fixture.tts.completeCurrent()
-            runCurrent()
-        }
-        assertEquals(19, fixture.engine.state.value.currentIndex)
+        assertEquals(0, fixture.engine.state.value.currentIndex)
         assertEquals(1, refill.requests)
         assertEquals(60, fixture.engine.state.value.questions.size)
 
@@ -149,9 +147,52 @@ class SessionEngineTest {
             fixture.tts.completeCurrent()
             runCurrent()
         }
-        assertEquals(49, fixture.engine.state.value.currentIndex)
+        assertEquals(30, fixture.engine.state.value.currentIndex)
         assertEquals(2, refill.requests)
         assertEquals(90, fixture.engine.state.value.questions.size)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `Nachschub waehrend der Erstgenerierung wird nach deren Ende nachgeholt`() = runTest {
+        val refill = FakeRefill().apply { responses += List(30) { "✨ Nachschub ${it + 1}" } }
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1),
+            refill = refill,
+            initialGenerationInFlight = true,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(0, refill.requests)
+
+        fixture.engine.completeInitialGeneration()
+        runCurrent()
+
+        assertEquals(1, refill.requests)
+        assertEquals(31, fixture.engine.state.value.questions.size)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `abgebrochener Nachschub blockiert die Sitzung nicht dauerhaft`() = runTest {
+        val refill = FakeRefill().apply { cancelNextRequest = true }
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 300_000),
+            refill = refill,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(1, refill.requests)
+        assertFalse(fixture.engine.state.value.refillInFlight)
+
+        refill.responses += listOf("🌲 Eine neue Frage")
+        advanceTimeBy(15_000)
+        runCurrent()
+
+        assertEquals(2, refill.requests)
+        assertEquals("Eine neue Frage", fixture.engine.state.value.questions.last().text)
         fixture.engine.close()
     }
 
@@ -168,12 +209,13 @@ class SessionEngineTest {
         runCurrent()
 
         assertEquals(Phase.WAITING_NETWORK, fixture.engine.state.value.phase)
-        assertEquals(1, refill.requests)
+        // Ein Versuch beim Sprechbeginn, ein zweiter am Listenende.
+        assertEquals(2, refill.requests)
         advanceTimeBy(14_999)
-        assertEquals(1, refill.requests)
+        assertEquals(2, refill.requests)
         advanceTimeBy(1)
         runCurrent()
-        assertEquals(2, refill.requests)
+        assertEquals(3, refill.requests)
 
         advanceTimeBy(105_000)
         runCurrent()
@@ -459,7 +501,7 @@ class SessionEngineTest {
     fun `fortgesetzte Sitzung mit vollem Vorrat laedt erst am Blocktrigger nach`() = runTest {
         val refill = FakeRefill().apply { responses += List(30) { "✨ Nachschub ${it + 1}" } }
         val fixture = fixture(
-            questions = List(30) { question(it + 1) },
+            questions = List(60) { question(it + 1) },
             config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
             refill = refill,
             checkpoint = SessionCheckpoint(currentIndex = 5, currentRep = 1, remainingMs = 600_000),
@@ -472,14 +514,160 @@ class SessionEngineTest {
 
         fixture.engine.togglePause()
         runCurrent()
-        repeat(14) {
+        repeat(25) {
             fixture.tts.completeCurrent()
             runCurrent()
         }
 
-        assertEquals(19, fixture.engine.state.value.currentIndex)
+        assertEquals(30, fixture.engine.state.value.currentIndex)
         assertEquals(1, refill.requests)
-        assertEquals(60, fixture.engine.state.value.questions.size)
+        assertEquals(90, fixture.engine.state.value.questions.size)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `ergebnisloser Nachschub wird nach vier Minuten abgebrochen und neu gestartet`() = runTest {
+        val refill = FakeRefill().apply { hangForever = true }
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 3_600_000),
+            refill = refill,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(1, refill.requests)
+        assertTrue(fixture.engine.state.value.refillInFlight)
+
+        advanceTimeBy(SessionEngine.REFILL_STALL_MS - 1)
+        runCurrent()
+        assertTrue(fixture.engine.state.value.refillInFlight)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertFalse(fixture.engine.state.value.refillInFlight)
+        assertEquals(SessionEngine.REFILL_STALLED_MESSAGE, fixture.engine.state.value.refillError)
+
+        refill.hangForever = false
+        refill.responses += listOf("🌲 Endlich eine Frage")
+        advanceTimeBy(15_000)
+        runCurrent()
+
+        assertEquals(2, refill.requests)
+        assertEquals("Endlich eine Frage", fixture.engine.state.value.questions.last().text)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `laufende Lieferung wird von der Zeitgrenze nicht abgebrochen`() = runTest {
+        val refill = FakeRefill().apply {
+            responses += listOf("✨ Nachschub 1")
+            hangAfterQuestions = true
+        }
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 3_600_000),
+            refill = refill,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(2, fixture.engine.state.value.questions.size)
+
+        advanceTimeBy(SessionEngine.REFILL_STALL_MS + 1_000)
+        runCurrent()
+
+        // Der Versuch liefert, also greift die Grenze nicht und es wird nichts verworfen.
+        assertEquals(1, refill.requests)
+        assertEquals("Nachschub 1", fixture.engine.state.value.questions.last().text)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `wartende Sitzung spricht die erste Nachschubfrage vor dem Blockende`() = runTest {
+        val refill = FakeRefill().apply { responses += List(30) { "✨ Nachschub ${it + 1}" } }
+        val fixture = fixture(
+            questions = List(30) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+            checkpoint = SessionCheckpoint(currentIndex = 30, currentRep = 1, remainingMs = 600_000),
+        )
+
+        fixture.engine.start()
+        runCurrent()
+        fixture.engine.togglePause()
+        runCurrent()
+
+        // Gesprochen wird die erste gelieferte Frage, nicht erst die dreissigste.
+        assertEquals("Nachschub 1", fixture.tts.spokenTexts.last())
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `angekommene Fragen bleiben erhalten wenn der Block danach scheitert`() = runTest {
+        val refill = FakeRefill().apply {
+            responses += List(30) { "✨ Nachschub ${it + 1}" }
+            failAfterFirstQuestion = "OpenAI hat 29 statt genau 30 Fragen geliefert."
+        }
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(2, fixture.engine.state.value.questions.size)
+        assertEquals("Nachschub 1", fixture.engine.state.value.questions.last().text)
+        assertEquals(
+            "OpenAI hat 29 statt genau 30 Fragen geliefert.",
+            fixture.engine.state.value.refillError,
+        )
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `leerer Nachschub nennt einen Grund und loescht ihn beim naechsten Erfolg`() = runTest {
+        val refill = FakeRefill()
+        val fixture = fixture(
+            questions = listOf(question(1)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+        )
+        fixture.startSpeaking()
+
+        assertEquals(SessionEngine.REFILL_FAILED_MESSAGE, fixture.engine.state.value.refillError)
+
+        refill.responses += listOf("🌲 Eine neue Frage")
+        advanceTimeBy(15_000)
+        runCurrent()
+
+        assertEquals(null, fixture.engine.state.value.refillError)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `fortgesetzte Sitzung erholt sich von einem abgebrochenen Nachschub`() = runTest {
+        val refill = FakeRefill().apply { cancelNextRequest = true }
+        val fixture = fixture(
+            questions = List(30) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 600_000),
+            refill = refill,
+            checkpoint = SessionCheckpoint(currentIndex = 30, currentRep = 1, remainingMs = 600_000),
+        )
+
+        fixture.engine.start()
+        runCurrent()
+
+        assertEquals(1, refill.requests)
+        assertFalse(fixture.engine.state.value.refillInFlight)
+
+        refill.responses += listOf("✨ Frage 31")
+        fixture.engine.togglePause()
+        runCurrent()
+
+        // Zweiter Versuch liefert Frage 31, deren Sprechbeginn gleich den nächsten Block anfordert.
+        assertEquals(3, refill.requests)
+        assertEquals("Frage 31", fixture.tts.spokenTexts.last())
+        assertEquals(Phase.SPEAKING, fixture.engine.state.value.phase)
         fixture.engine.close()
     }
 
@@ -636,9 +824,43 @@ class SessionEngineTest {
         val responses = ArrayDeque<List<String>>()
         var requests = 0
 
-        override suspend fun requestQuestions(existingQuestions: List<Question>): List<String> {
+        /** Bildet einen von aussen abgebrochenen OpenAI-Aufruf nach. */
+        var cancelNextRequest = false
+
+        /** Bildet einen Abbruch nach, der erst nach der ersten gelieferten Frage auftritt. */
+        var failAfterFirstQuestion: String? = null
+
+        /** Bildet eine Anfrage nach, die ohne jede Antwort offen bleibt. */
+        var hangForever = false
+
+        /** Bildet eine Anfrage nach, die liefert und danach offen bleibt. */
+        var hangAfterQuestions = false
+
+        override suspend fun requestQuestions(
+            existingQuestions: List<Question>,
+            onQuestion: suspend (Question) -> Unit,
+        ): List<Question> {
             requests++
-            return if (responses.isEmpty()) emptyList() else responses.removeFirst()
+            if (cancelNextRequest) {
+                cancelNextRequest = false
+                throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
+            }
+            if (hangForever) awaitCancellation()
+            val raw = if (responses.isEmpty()) emptyList() else responses.removeFirst()
+            val delivered = mutableListOf<Question>()
+            for (rawQuestion in raw) {
+                val parsed = EmojiParser.parse(rawQuestion)
+                if (parsed.text.isBlank()) continue
+                val question = Question(emoji = parsed.emoji, text = parsed.text)
+                delivered += question
+                onQuestion(question)
+                failAfterFirstQuestion?.let { message ->
+                    failAfterFirstQuestion = null
+                    throw IllegalStateException(message)
+                }
+            }
+            if (hangAfterQuestions) awaitCancellation()
+            return delivered
         }
     }
 

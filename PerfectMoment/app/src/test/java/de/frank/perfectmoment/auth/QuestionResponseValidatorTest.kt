@@ -168,4 +168,60 @@ class QuestionResponseValidatorTest {
         assertEquals(29, result.size)
         assertEquals(false, result.any { it.text == entranceQuestion })
     }
+
+    /** Der Klumpen stammt wortgetreu aus einer echten Sitzung (07.08.2026). */
+    @Test
+    fun zusammengeklumpterBlockWirdInEinzelneFragenZerlegt() {
+        val block = "🌟 Welchen Wert hat die Ruhe, mit der ich meine Geschichte betrachte? " +
+            "Hi, I'm here to help with your questions. What would you like to know? " +
+            "👣 Wieso bewegt sich mein Körper frei durch den ganzen Raum? " +
+            "🪟 Was fällt mir gerade auf, weil ich diesen Moment wach erlebe?"
+
+        val result = QuestionResponseValidator.splitIntoQuestions(block)
+
+        assertEquals(
+            listOf(
+                "Welchen Wert hat die Ruhe, mit der ich meine Geschichte betrachte?",
+                "Wieso bewegt sich mein Körper frei durch den ganzen Raum?",
+                "Was fällt mir gerade auf, weil ich diesen Moment wach erlebe?",
+            ),
+            result.map { it.text },
+        )
+        assertEquals(listOf("🌟", "👣", "🪟"), result.map { it.emoji })
+    }
+
+    @Test
+    fun einzelneFrageBleibtUnveraendert() {
+        val result = QuestionResponseValidator.splitIntoQuestions("✨ Warum genieße ich diesen Moment?")
+
+        assertEquals(1, result.size)
+        assertEquals("Warum genieße ich diesen Moment?", result.single().text)
+        assertEquals("✨", result.single().emoji)
+    }
+
+    @Test
+    fun eintragOhneFrageWirdVerworfen() {
+        assertTrue(QuestionResponseValidator.splitIntoQuestions("✨ Hier fehlt das Fragezeichen").isEmpty())
+        assertTrue(QuestionResponseValidator.splitIntoQuestions("   ").isEmpty())
+        assertTrue(QuestionResponseValidator.splitIntoQuestions("✨ Kurz?").isEmpty())
+    }
+
+    @Test
+    fun ueberlangerEintragOhneTrennstelleWirdVerworfen() {
+        val tooLong = "✨ " + "Warum ist dieser Satz so unendlich lang, ".repeat(20) + "warum nur?"
+
+        assertTrue(QuestionResponseValidator.splitIntoQuestions(tooLong).isEmpty())
+    }
+
+    @Test
+    fun zerlegterBlockZaehltAlsMehrereGueltigeFragen() {
+        val raw = (1..29).map { "🌟 Eigenständige Frage $it?" } +
+            "✨ Erste Klumpenfrage hier? 🔥 Zweite Klumpenfrage hier?"
+
+        val result = QuestionResponseValidator.validate(raw)
+
+        assertEquals(31, result.size)
+        assertTrue(result.any { it.text == "Erste Klumpenfrage hier?" })
+        assertTrue(result.any { it.text == "Zweite Klumpenfrage hier?" })
+    }
 }

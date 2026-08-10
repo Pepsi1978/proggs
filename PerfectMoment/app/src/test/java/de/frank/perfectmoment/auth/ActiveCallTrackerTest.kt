@@ -21,30 +21,45 @@ class ActiveCallTrackerTest {
     }
 
     @Test
-    fun replacementCancelsPreviousCallOnly() {
+    fun newCallLetsRunningCallContinue() {
         val tracker = ActiveCallTracker()
-        val previous = newCall()
-        val current = newCall()
+        val running = newCall()
+        val added = newCall()
 
-        tracker.track(previous)
-        tracker.track(current)
+        tracker.track(running)
+        tracker.track(added)
 
-        assertTrue(previous.isCanceled())
-        assertFalse(current.isCanceled())
+        assertFalse(running.isCanceled())
+        assertFalse(added.isCanceled())
     }
 
     @Test
-    fun clearingPreviousCallKeepsCurrentCallCancelable() {
+    fun cancelStopsEveryTrackedCall() {
         val tracker = ActiveCallTracker()
-        val previous = newCall()
-        val current = newCall()
+        val first = newCall()
+        val second = newCall()
 
-        tracker.track(previous)
-        tracker.track(current)
-        tracker.clear(previous)
+        tracker.track(first)
+        tracker.track(second)
         tracker.cancel()
 
-        assertTrue(current.isCanceled())
+        assertTrue(first.isCanceled())
+        assertTrue(second.isCanceled())
+    }
+
+    @Test
+    fun clearedCallIsNoLongerCancelled() {
+        val tracker = ActiveCallTracker()
+        val finished = newCall()
+        val running = newCall()
+
+        tracker.track(finished)
+        tracker.track(running)
+        tracker.clear(finished)
+        tracker.cancel()
+
+        assertFalse(finished.isCanceled())
+        assertTrue(running.isCanceled())
     }
 
     private fun newCall() = client.newCall(
