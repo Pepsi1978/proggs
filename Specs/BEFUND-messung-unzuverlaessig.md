@@ -49,6 +49,34 @@ den Code, auf das Gerät. Build grün, Abhakliste vollständig, Ergebnis falsch.
 
 Alles Weitere in dieser Datei sind Einzelbefunde, die dieses Muster belegen.
 
+### 0.1 Der Fix gehört nach WerftStudio — und der ist erreichbar
+
+**Wichtig für den nächsten Lauf:** `~/proggs/WerftStudio/` liegt im Repo, der Zugang in
+`~/SK/werft-studio/` (Adresse, Anmeldung, Zertifikat). Der Export ist also **kein fremder
+Dienst**, sondern eigener Code. Damit ist die Ursache an ihrer Wurzel behebbar, statt sie
+nachträglich im Rückimport auszubügeln.
+
+Zu ändern ist die Stelle, die *Projekt als ZIP herunterladen* bedient. Sie muss liefern, was
+Claude Designs mit der `.dc.html` liefert: **eine Datei, die überall so aussieht wie im
+Designer.** Konkret:
+
+1. **Renderbreite in jede Bildschirmdatei schreiben.** Die Vorschau im Designer steckt in einem
+   Handy-Rahmen; die exportierte Datei hat keinen. Deshalb greifen Media Queries beim Betrachten
+   und Vermessen anders. Ein `<meta name="viewport">` genügt nicht — die Datei braucht einen
+   Rahmen mit der Breite, für die entworfen wurde, oder die Breite als maschinenlesbare Angabe
+   im Kopf, an die sich Betrachter und Messfühler halten können.
+2. **Die Zielbreite ins `design-tokens.json`** (`geometrie`), damit Stufe 2 sie ohne Raten
+   kennt — heute steht dort `plattform: "web"`, was den Bau-Auftrag schon einmal in die Irre
+   geführt hat.
+3. **Selbstprüfung im Export:** Nach dem Schreiben jede Bildschirmdatei bei der Zielbreite
+   rendern und mit der Designer-Vorschau vergleichen. Weichen sie ab, ist der Export fehlerhaft
+   und meldet das — statt ein Archiv auszuliefern, das anders aussieht als der Entwurf.
+
+**Noch offen und ausdrücklich nicht erledigt:** die Recherche, wie Claude Designs die Übergabe
+tatsächlich löst (Weg A, vom Auftraggeber freigegeben). Der Vergleich in §0 stammt aus dem
+Repo-Wissen über das `.dc.html`-Format, **nicht** aus einer Quelle über deren Verfahren. Er ist
+plausibel, aber unbelegt — und muss belegt werden, bevor WerftStudio danach umgebaut wird.
+
 ---
 
 ## 1. Die Antwort: die Fensterbreite beim Rendern
