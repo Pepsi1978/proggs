@@ -9,11 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -25,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -47,14 +54,21 @@ import de.frank.experimente.ui.theme.Formen
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.Symbole
+import kotlin.math.roundToInt
 
 /**
- * **B-08 — Einstellungen.** Die Abschnitte sind Karten, die Abschnittstitel stehen in
- * Großbuchstaben, und die Beschriftungen sitzen **neben** ihren Feldern — so ist der
- * Bildschirm bei 475 dp gemessen.
+ * **B-08 — Einstellungen.**
  *
- * Enthält F-22 (Modell und Effort, getrennt), F-23 (Stimme), F-24 (Zugänge),
- * F-25 (Erinnerungen), F-26 (Erscheinung) und den Weg zu B-09.
+ * Aufgebaut nach dem Entwurf **in Handybreite**: jede Beschriftung steht **über** ihrem Feld,
+ * jedes Feld nimmt die volle Breite. Die Messung stammt aus einem 475 dp breiten Fenster, in
+ * dem Beschriftung und Feld nebeneinander liegen — bei Handybreite bricht der Entwurf um, und
+ * das ist die Fassung, die auf dem Gerät gilt. Wer die breite Messung übernimmt, baut für die
+ * falsche Breite.
+ *
+ * Die Bedienelemente sind die des Entwurfs, nicht ersetzt: **sieben Auswahllisten** mit
+ * Chevron (`select` mit 34 Einträgen), **ein Schieberegler** mit Skalenstrichen und Wertanzeige
+ * (`input type=range`, 0,70 bis 1,30 in Schritten von 0,05), und die Erinnerungen als **je
+ * eigene Unterkarte** mit Schalter oben und Zeitfeld samt Uhr-Symbol darunter.
  */
 @Composable
 fun Einstellungen(modell: AppViewModel) {
@@ -67,7 +81,6 @@ fun Einstellungen(modell: AppViewModel) {
     val geraetecode by modell.geraetecode.collectAsStateWithLifecycle()
     val meldung by modell.meldung.collectAsStateWithLifecycle()
 
-    // Die Einstellungen liegen verschlüsselt; hier gespiegelt, damit die Anzeige mitgeht.
     var modellExp by remember { mutableStateOf(einstellungen.modellExperimente) }
     var effortExp by remember { mutableStateOf(einstellungen.effortExperimente) }
     var modellLog by remember { mutableStateOf(einstellungen.modellLogbuch) }
@@ -108,35 +121,47 @@ fun Einstellungen(modell: AppViewModel) {
             meldung?.let { Karte { Text(it, style = schriften.fliesstext, color = farben.warnung) } }
 
             // --- F-22: KI ---------------------------------------------------------------
+            // Der Entwurf setzt hier keinen Abschnittstitel: die Karte beginnt direkt mit
+            // "Modell". Die Zwischenüberschrift "Logbuch" steht mitten in der Karte und
+            // trennt die beiden Paare.
             Karte {
-                Zwischenueberschrift("KI")
-                Box(Modifier.padding(top = 16.dp)) {
-                    Zeile("Experimente") {
-                        Wahl(CodexModell.entries.map { it.bezeichnung to it.apiId }, modellExp) {
-                            modellExp = it
-                            einstellungen.modellExperimente = it
-                        }
-                    }
+                Auswahl(
+                    beschriftung = "Modell",
+                    moeglichkeiten = CodexModell.entries.map { it.bezeichnung to it.apiId },
+                    jetzt = modellExp,
+                ) {
+                    modellExp = it
+                    einstellungen.modellExperimente = it
                 }
-                Zeile("Effort") {
-                    Wahl(Effort.entries.map { it.bezeichnung to it.apiWert }, effortExp) {
-                        effortExp = it
-                        einstellungen.effortExperimente = it
-                    }
+                Auswahl(
+                    beschriftung = "Effort",
+                    moeglichkeiten = Effort.entries.map { it.bezeichnung to it.apiWert },
+                    jetzt = effortExp,
+                ) {
+                    effortExp = it
+                    einstellungen.effortExperimente = it
                 }
-                Box(Modifier.padding(top = 20.dp)) {
-                    Zeile("Logbuch") {
-                        Wahl(CodexModell.entries.map { it.bezeichnung to it.apiId }, modellLog) {
-                            modellLog = it
-                            einstellungen.modellLogbuch = it
-                        }
-                    }
+                Text(
+                    text = "Logbuch",
+                    style = schriften.fliesstext,
+                    color = farben.text,
+                    modifier = Modifier.padding(top = 20.dp),
+                )
+                Auswahl(
+                    beschriftung = "Modell",
+                    moeglichkeiten = CodexModell.entries.map { it.bezeichnung to it.apiId },
+                    jetzt = modellLog,
+                ) {
+                    modellLog = it
+                    einstellungen.modellLogbuch = it
                 }
-                Zeile("Effort") {
-                    Wahl(Effort.entries.map { it.bezeichnung to it.apiWert }, effortLog) {
-                        effortLog = it
-                        einstellungen.effortLogbuch = it
-                    }
+                Auswahl(
+                    beschriftung = "Effort",
+                    moeglichkeiten = Effort.entries.map { it.bezeichnung to it.apiWert },
+                    jetzt = effortLog,
+                ) {
+                    effortLog = it
+                    einstellungen.effortLogbuch = it
                 }
                 Text(
                     "Das Logbuch darf ein anderes Modell benutzen als die Experimente.",
@@ -149,84 +174,100 @@ fun Einstellungen(modell: AppViewModel) {
             // --- F-23: Stimme -----------------------------------------------------------
             Karte {
                 Zwischenueberschrift("Stimme")
-                Box(Modifier.padding(top = 16.dp)) {
-                    Zeile("Anbieter") {
-                        Wahl(
-                            listOf(
-                                "Google Chirp 3 HD" to "google_cloud",
-                                "Meine Stimme" to "qwen_clone",
-                                "Microsoft Edge" to "edge",
-                            ),
-                            anbieter,
-                        ) {
-                            anbieter = it
-                            einstellungen.ttsAnbieter = it
-                        }
-                    }
+                Auswahl(
+                    beschriftung = "Anbieter",
+                    moeglichkeiten = listOf(
+                        "Google Chirp 3 HD" to "google_cloud",
+                        "Meine Stimme" to "qwen_clone",
+                        "Microsoft Edge" to "edge",
+                    ),
+                    jetzt = anbieter,
+                    obenAbstand = 16.dp,
+                ) {
+                    anbieter = it
+                    einstellungen.ttsAnbieter = it
                 }
                 when (anbieter) {
-                    "google_cloud" -> Zeile("Stimme") {
-                        Wahl(TtsCatalog.googleVoices.map { it.name to it.id }, stimmeGoogle) {
-                            stimmeGoogle = it
-                            einstellungen.stimmeGoogle = it
-                        }
+                    // Der Entwurf zeigt die Stimmkennung selbst, nicht den Kurznamen.
+                    "google_cloud" -> Auswahl(
+                        beschriftung = "Stimme",
+                        moeglichkeiten = TtsCatalog.googleVoices.map { it.id to it.id },
+                        jetzt = stimmeGoogle,
+                    ) {
+                        stimmeGoogle = it
+                        einstellungen.stimmeGoogle = it
                     }
-                    "qwen_clone" -> Zeile("Meine Stimme") {
+                    "qwen_clone" -> Column(Modifier.padding(top = 12.dp)) {
+                        Beschriftung("Stimme")
                         Textknopf("Stimme aufnehmen", { modell.sprechknopf(null) }, betont = false)
                     }
-                    else -> Zeile("Stimme") {
-                        Wahl(TtsCatalog.edgeVoices.map { it.name to it.id }, stimmeEdge) {
-                            stimmeEdge = it
-                            einstellungen.stimmeEdge = it
-                        }
+                    else -> Auswahl(
+                        beschriftung = "Stimme",
+                        moeglichkeiten = TtsCatalog.edgeVoices.map { it.id to it.id },
+                        jetzt = stimmeEdge,
+                    ) {
+                        stimmeEdge = it
+                        einstellungen.stimmeEdge = it
                     }
                 }
-                // F-23 Schritt 5: Sprechgeschwindigkeit 0,7 bis 1,3.
-                //
-                // Die fünf Stufen stehen in einer eigenen Zeile über die volle Breite: neben
-                // einer Beschriftungsspalte lief die letzte Stufe aus dem Bild und war damit
-                // nicht erreichbar — ein Bedienelement, das man nicht treffen kann, ist so
-                // gut wie keines.
-                Box(Modifier.padding(top = 16.dp)) { Zwischenueberschrift("Tempo") }
+
+                // F-23 Schritt 5: der Schieberegler, 0,70 bis 1,30 in Schritten von 0,05 —
+                // 12 Schritte, mit Skalenstrichen und dem Wert rechts daneben.
+                Box(Modifier.padding(top = 12.dp)) { Beschriftung("Sprechgeschwindigkeit") }
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    listOf(0.7f, 0.85f, 1.0f, 1.15f, 1.3f).forEach { wert ->
-                        Textknopf(
-                            text = wert.toString(),
-                            beiKlick = {
-                                tempo = wert
-                                einstellungen.sprechtempo = wert
-                            },
-                            modifier = Modifier.weight(1f),
-                            betont = tempo == wert,
-                        )
-                    }
+                    Slider(
+                        value = tempo,
+                        onValueChange = {
+                            tempo = (it * 20f).roundToInt() / 20f
+                            einstellungen.sprechtempo = tempo
+                        },
+                        valueRange = 0.7f..1.3f,
+                        steps = 11,
+                        colors = SliderDefaults.colors(
+                            thumbColor = farben.aktion,
+                            activeTrackColor = farben.aktion,
+                            inactiveTrackColor = farben.rand,
+                            activeTickColor = farben.aktion,
+                            inactiveTickColor = farben.blass,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.GERMAN, "%.2f", tempo),
+                        style = schriften.daten,
+                        color = farben.gedaempft,
+                        modifier = Modifier.padding(start = 16.dp),
+                    )
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
-                    Textknopf("Probe hören", modell::hoerProbe)
+
+                // Im Entwurf steht "Probe hören" linksbündig unter dem Regler.
+                Box(Modifier.padding(top = 12.dp)) {
+                    Textknopf("Probe hören", modell::hoerProbe, betont = false)
                 }
             }
 
             // --- F-24: Zugänge ----------------------------------------------------------
             Karte {
                 Zwischenueberschrift("Zugänge")
-                Box(Modifier.padding(top = 16.dp)) {
-                    Zeile("Codex") {
-                        if (angemeldet) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    modell.angemeldetAls ?: "angemeldet",
-                                    style = schriften.fliesstextKlein,
-                                    color = farben.gedaempft,
-                                    modifier = Modifier.padding(end = 12.dp),
-                                )
-                                Textknopf("Abmelden", modell::meldeAb, betont = false)
-                            }
-                        } else {
-                            Textknopf("Anmelden", modell::meldeAn)
-                        }
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Codex", style = schriften.fliesstext, color = farben.text)
+                        Text(
+                            text = if (angemeldet) modell.angemeldetAls ?: "angemeldet" else "nicht angemeldet",
+                            style = schriften.fliesstextKlein,
+                            color = farben.gedaempft,
+                        )
+                    }
+                    if (angemeldet) {
+                        Textknopf("Abmelden", modell::meldeAb, betont = false)
+                    } else {
+                        Textknopf("Anmelden", modell::meldeAn, betont = false)
                     }
                 }
                 geraetecode?.let { code ->
@@ -237,58 +278,59 @@ fun Einstellungen(modell: AppViewModel) {
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
-                Zeile("Groq") {
-                    Schluesselfeld(groq) {
-                        groq = it
-                        einstellungen.groqSchluessel = it
-                    }
+                Schluessel("Groq", groq) {
+                    groq = it
+                    einstellungen.groqSchluessel = it
                 }
-                Zeile("Google Cloud") {
-                    Schluesselfeld(googleKey) {
-                        googleKey = it
-                        einstellungen.googleTtsSchluessel = it
-                    }
+                Schluessel("Google Cloud", googleKey) {
+                    googleKey = it
+                    einstellungen.googleTtsSchluessel = it
                 }
-                Zeile("DashScope") {
-                    Schluesselfeld(qwenKey) {
-                        qwenKey = it
-                        einstellungen.qwenSchluessel = it
-                    }
+                // Der Entwurf nennt den Dienst "Alibaba", nicht "DashScope".
+                Schluessel("Alibaba", qwenKey) {
+                    qwenKey = it
+                    einstellungen.qwenSchluessel = it
                 }
             }
 
             // --- F-25: Erinnerungen -----------------------------------------------------
+            // Jede Erinnerung ist im Entwurf eine eigene Unterkarte: Name und Schalter in
+            // einer Zeile, darunter das Zeitfeld mit dem Uhr-Symbol rechts.
             Karte {
                 Zwischenueberschrift("Erinnerungen")
                 Box(Modifier.padding(top = 16.dp)) {
-                    Zeile("Morgens") {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Zeitfeld(morgensZeit) {
-                                morgensZeit = it
-                                einstellungen.erinnerungMorgensZeit = it
-                                modell.erinnerungenNeuSetzen()
-                            }
-                            Schalter(morgensAn) {
-                                morgensAn = it
-                                einstellungen.erinnerungMorgensAn = it
-                                modell.erinnerungenNeuSetzen()
-                            }
-                        }
-                    }
-                }
-                Zeile("Abends") {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Zeitfeld(abendsZeit) {
-                            abendsZeit = it
-                            einstellungen.erinnerungAbendsZeit = it
+                    Erinnerung(
+                        name = "Morgens",
+                        an = morgensAn,
+                        zeit = morgensZeit,
+                        beiSchalter = {
+                            morgensAn = it
+                            einstellungen.erinnerungMorgensAn = it
                             modell.erinnerungenNeuSetzen()
-                        }
-                        Schalter(abendsAn) {
+                        },
+                        beiZeit = {
+                            morgensZeit = it
+                            einstellungen.erinnerungMorgensZeit = it
+                            modell.erinnerungenNeuSetzen()
+                        },
+                    )
+                }
+                Box(Modifier.padding(top = 12.dp)) {
+                    Erinnerung(
+                        name = "Abends",
+                        an = abendsAn,
+                        zeit = abendsZeit,
+                        beiSchalter = {
                             abendsAn = it
                             einstellungen.erinnerungAbendsAn = it
                             modell.erinnerungenNeuSetzen()
-                        }
-                    }
+                        },
+                        beiZeit = {
+                            abendsZeit = it
+                            einstellungen.erinnerungAbendsZeit = it
+                            modell.erinnerungenNeuSetzen()
+                        },
+                    )
                 }
             }
 
@@ -303,7 +345,7 @@ fun Einstellungen(modell: AppViewModel) {
                         Modifier.weight(1f), betont = erscheinung == Erscheinung.HELL)
                     Textknopf("Dunkel", { modell.setzeErscheinung(Erscheinung.DUNKEL) },
                         Modifier.weight(1f), betont = erscheinung == Erscheinung.DUNKEL)
-                    Textknopf("Wie das System", { modell.setzeErscheinung(Erscheinung.SYSTEM) },
+                    Textknopf("System", { modell.setzeErscheinung(Erscheinung.SYSTEM) },
                         Modifier.weight(1f), betont = erscheinung == Erscheinung.SYSTEM)
                 }
             }
@@ -319,8 +361,6 @@ fun Einstellungen(modell: AppViewModel) {
                 )
             }
 
-            // Die sichtbare Version — ohne sie wirkt eine geglückte Installation wie eine
-            // fehlgeschlagene.
             Karte {
                 Zwischenueberschrift("Über")
                 Text(
@@ -336,112 +376,184 @@ fun Einstellungen(modell: AppViewModel) {
     }
 }
 
-/** Eine Zeile: Beschriftung links, Feld rechts — so ist B-08 gemessen. */
+/** Eine Beschriftung, wie der Entwurf sie setzt: Fließtext, über dem Feld. */
 @Composable
-private fun Zeile(beschriftung: String, feld: @Composable () -> Unit) {
-    val farben = LocalFarben.current
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = beschriftung,
-            style = LocalSchriften.current.fliesstextKlein,
-            color = farben.gedaempft,
-            modifier = Modifier.width(112.dp),
-        )
-        Box(Modifier.weight(1f)) { feld() }
-    }
+private fun Beschriftung(text: String) {
+    Text(
+        text = text,
+        style = LocalSchriften.current.fliesstext,
+        color = LocalFarben.current.text,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
 }
 
-/** Eine Auswahl: der aktuelle Wert steht da, ein Druck schaltet auf den nächsten. */
+/**
+ * Eine Auswahlliste: Beschriftung darüber, Feld über die volle Breite, Chevron rechts, beim
+ * Antippen klappt die Liste **aller** Möglichkeiten auf.
+ *
+ * Ein Feld, das bei jedem Druck zur nächsten Möglichkeit weiterschaltet, wäre ein anderes
+ * Bedienelement — der Entwurf zeigt `select` mit sichtbaren Einträgen.
+ */
 @Composable
-private fun Wahl(
+private fun Auswahl(
+    beschriftung: String,
     moeglichkeiten: List<Pair<String, String>>,
     jetzt: String,
+    obenAbstand: androidx.compose.ui.unit.Dp = 12.dp,
     beiWahl: (String) -> Unit,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
+    var offen by remember { mutableStateOf(false) }
     val nr = moeglichkeiten.indexOfFirst { it.second == jetzt }.coerceAtLeast(0)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(Formen.eingabefeld)
-            .background(farben.flaeche)
-            .border(1.dp, farben.rand, Formen.eingabefeld)
-            .clickable { beiWahl(moeglichkeiten[(nr + 1) % moeglichkeiten.size].second) }
-            .padding(horizontal = 14.dp, vertical = 13.dp),
-    ) {
-        Text(moeglichkeiten[nr].first, style = schriften.fliesstext, color = farben.text, maxLines = 1)
-    }
-}
 
-/** Ein Schlüsselfeld — verdeckt angezeigt, kein Schlüssel steht im Quellcode. */
-@Composable
-private fun Schluesselfeld(wert: String, beiAenderung: (String) -> Unit) {
-    val farben = LocalFarben.current
-    val schriften = LocalSchriften.current
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(Formen.eingabefeld)
-            .background(farben.flaeche)
-            .border(1.dp, farben.rand, Formen.eingabefeld)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
-    ) {
-        if (wert.isEmpty()) {
-            Text("nicht gesetzt", style = schriften.fliesstextKlein, color = farben.blass)
+    Column(Modifier.fillMaxWidth().padding(top = obenAbstand)) {
+        Beschriftung(beschriftung)
+        Box {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Formen.eingabefeld)
+                    .background(farben.flaeche)
+                    .border(1.dp, farben.rand, Formen.eingabefeld)
+                    .clickable { offen = true }
+                    .padding(horizontal = 16.dp, vertical = 15.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = moeglichkeiten.getOrNull(nr)?.first.orEmpty(),
+                    style = schriften.fliesstext,
+                    color = farben.text,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                // Das Chevron des Entwurfs — ein nach unten zeigender Winkel am rechten Rand.
+                Text(
+                    text = "⌄",
+                    style = schriften.fliesstext,
+                    color = farben.gedaempft,
+                )
+            }
+            DropdownMenu(
+                expanded = offen,
+                onDismissRequest = { offen = false },
+                modifier = Modifier.background(farben.erhoeht),
+            ) {
+                moeglichkeiten.forEach { (bezeichnung, wert) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = bezeichnung,
+                                style = schriften.fliesstext,
+                                color = if (wert == jetzt) farben.aktion else farben.text,
+                            )
+                        },
+                        onClick = {
+                            beiWahl(wert)
+                            offen = false
+                        },
+                    )
+                }
+            }
         }
-        BasicTextField(
-            value = wert,
-            onValueChange = beiAenderung,
-            textStyle = schriften.daten.copy(color = farben.text),
-            cursorBrush = SolidColor(farben.aktion),
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
+/** Ein Schlüsselfeld: Beschriftung darüber, verdeckte Eingabe über die volle Breite. */
 @Composable
-private fun Zeitfeld(wert: String, beiAenderung: (String) -> Unit) {
+private fun Schluessel(beschriftung: String, wert: String, beiAenderung: (String) -> Unit) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
-    Box(
-        Modifier
-            .width(84.dp)
-            .clip(Formen.eingabefeld)
-            .background(farben.flaeche)
-            .border(1.dp, farben.rand, Formen.eingabefeld)
-            .padding(horizontal = 12.dp, vertical = 13.dp),
-    ) {
-        BasicTextField(
-            value = wert,
-            onValueChange = { if (it.length <= 5) beiAenderung(it) },
-            textStyle = schriften.daten.copy(color = farben.text),
-            cursorBrush = SolidColor(farben.aktion),
-            singleLine = true,
-        )
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Beschriftung(beschriftung)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(Formen.eingabefeld)
+                .background(farben.flaeche)
+                .border(1.dp, farben.rand, Formen.eingabefeld)
+                .padding(horizontal = 16.dp, vertical = 15.dp),
+        ) {
+            if (wert.isEmpty()) {
+                Text("nicht gesetzt", style = schriften.fliesstextKlein, color = farben.blass)
+            }
+            BasicTextField(
+                value = wert,
+                onValueChange = beiAenderung,
+                textStyle = schriften.fliesstext.copy(color = farben.text),
+                cursorBrush = SolidColor(farben.aktion),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
+/**
+ * Eine Erinnerung als eigene Unterkarte: Name und Schalter in einer Zeile, darunter das
+ * Zeitfeld mit dem Uhr-Symbol in einem runden, gedeckten Feld rechts.
+ */
 @Composable
-private fun Schalter(an: Boolean, beiWechsel: (Boolean) -> Unit) {
+private fun Erinnerung(
+    name: String,
+    an: Boolean,
+    zeit: String,
+    beiSchalter: (Boolean) -> Unit,
+    beiZeit: (String) -> Unit,
+) {
     val farben = LocalFarben.current
-    Switch(
-        checked = an,
-        onCheckedChange = beiWechsel,
-        colors = SwitchDefaults.colors(
-            checkedThumbColor = farben.grund,
-            checkedTrackColor = farben.aktion,
-            uncheckedThumbColor = farben.gedaempft,
-            uncheckedTrackColor = farben.flaeche,
-            uncheckedBorderColor = farben.rand,
-        ),
-        modifier = Modifier.padding(start = 12.dp),
-    )
+    val schriften = LocalSchriften.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Formen.karte)
+            .background(farben.flaeche)
+            .border(1.dp, farben.randWeich, Formen.karte)
+            .padding(16.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(name, style = schriften.fliesstext, color = farben.text, modifier = Modifier.weight(1f))
+            Switch(
+                checked = an,
+                onCheckedChange = beiSchalter,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = farben.grund,
+                    checkedTrackColor = farben.aktion,
+                    uncheckedThumbColor = farben.gedaempft,
+                    uncheckedTrackColor = farben.flaeche,
+                    uncheckedBorderColor = farben.rand,
+                ),
+            )
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+                .clip(Formen.eingabefeld)
+                .border(1.dp, farben.randWeich, Formen.eingabefeld)
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicTextField(
+                value = zeit,
+                onValueChange = { if (it.length <= 5) beiZeit(it) },
+                textStyle = schriften.daten.copy(color = farben.text),
+                cursorBrush = SolidColor(farben.aktion),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(Formen.vollrund)
+                    .background(farben.aktionGedeckt),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("🕐", style = schriften.fliesstextKlein, color = farben.text)
+            }
+        }
+    }
 }
 
 /**
