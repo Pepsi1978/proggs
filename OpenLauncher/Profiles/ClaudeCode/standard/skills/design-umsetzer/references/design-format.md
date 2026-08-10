@@ -49,6 +49,40 @@ Grobstruktur:
 </html>
 ```
 
+> ## ⚠️ WICHTIGSTE WARNUNG: der Bildschirm-Inhalt steht meist NICHT im HTML
+>
+> Die Grobstruktur oben gilt fuer die **Einstiegsdatei** (oft `App.dc.html`, klein, ~3 KB): dort
+> steht Markup als echtes HTML mit `style`-Attributen, und man kann es lesen.
+>
+> **Die eigentlichen Bildschirme sind anders gebaut.** Nachgeprueft an einem echten Paket
+> (`Phone.dc.html`, 59 KB): die Datei enthaelt **ein einziges `<div>`** — und daneben
+> `<script type="text/x-dc" data-dc-script>` mit **55.865 Zeichen imperativem React-Code**:
+>
+> ```js
+> const el = React.createElement;
+> function IC(name,color,size,sw){ … return el('svg',p, CI(11,11,6.4), P('M20 20l-3.7-3.7')) }
+> ```
+>
+> Kein JSX. Kein HTML. **Null `style="…"`-Attribute, null `class=`** — die Stile sind
+> JavaScript-Objekte, die Symbole sind `el('path', {d: …})`-Aufrufe.
+>
+> **Folge:** Den Aufbau eines Claude-Design-Bildschirms kann man **nicht statisch aus der Datei
+> lesen** — weder als HTML-Baum noch per Textsuche. Wer es versucht, findet die Huelle und haelt
+> sie fuer den Bildschirm: gemessen wurden 6 Bauteile, wo es in Wahrheit hunderte sind. Es gibt
+> dabei keine Fehlermeldung — die Datei ist ja gueltig.
+>
+> **Der einzige verlaessliche Weg:** die `.dc.html` **im Browser rendern** (mit `support.js` im
+> selben Ordner, sonst bleibt die Seite leer) und danach das **gerenderte DOM** vermessen —
+> `spec-rueckimport/references/messe-design.ps1` tut genau das. Erst das gerenderte Ergebnis
+> zeigt Anordnung, Abstaende und Schrift.
+>
+> **Nuetzlich dabei:** Das Attribut `data-props` des Skript-Blocks traegt die Vorschaugroesse
+> maschinenlesbar, z. B. `{"$preview":{"width":412,"height":892}}`. Das ist das Gegenstueck zu
+> `<meta name="werft-render-width">` in einem Werft-Paket: **bei dieser Breite messen**, nicht bei
+> einer geratenen. Und `<dc-import name="Phone" theme="dark" hint-size="412px,892px">` in der
+> Einstiegsdatei nennt dieselbe Groesse — plus die Erscheinung, die dort gezeigt wird
+> (Themes sind bei Claude Design ein **Parameter derselben Komponente**, keine eigene Datei).
+
 ### Wo welche Werte stehen
 
 - **Farben & Themes:** In den CSS-Custom-Properties (`--name:wert;`) im `#fb{ … }`-Block

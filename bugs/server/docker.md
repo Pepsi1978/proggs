@@ -54,6 +54,8 @@
 | Logs in UTC trotz `TZ=Europe/Berlin` | `tzdata` fehlt im slim/alpine-Image → `tzdata` installieren ODER `/etc/localtime`+`/etc/timezone` `:ro` mounten (§7) |
 | `:latest` driftet / `compose up` zieht nicht neu | Per Tag/`@sha256:`-Digest pinnen; `docker compose pull` / `pull_policy: always` (§7) |
 | `restart: always` startet manuell gestoppten Container nach Reboot wieder | Fuer Dienste `unless-stopped` (merkt sich manuelles Stop ueber Reboot) (§5) |
+| **`docker compose up -d --build` „erfolgreich", aber ein Dienst fehlt / Weboberflaeche offline** | **`up` bricht beim ERSTEN Container-Fehler ab und laesst die restlichen auf `created` stehen — der Exit-Code verschweigt es. Nach JEDEM Deploy `ps -a` gegen die Soll-Liste pruefen, nie dem Exit-Code glauben (§8)** |
+| `Conflict. The container name "/<hash>_werft-api" is already in use` | Verwaister Umbenennungs-Rest eines **abgebrochenen** `up --build` (Compose benennt beim Recreate erst um). `docker ps -a --filter name=<dienst>` ansehen, verwaisten Rest entfernen, dann `up -d` erneut (§8) |
 
 ---
 
@@ -579,6 +581,75 @@ Vorteil: versioniert im Repo, keine Host-Aenderung. **Empfehlung fuer den second
 - **FIX:** `COPY --link` fuer unabhaengige, selten geaenderte Layer; zusaetzlich Cache-Mounts: `RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt` (persistiert auch bei Layer-Invalidierung).
 - **Versionen:** BuildKit (Default ab Engine 23+, gilt fuer 29.6.0).
 - **Quelle:** github.com/moby/buildkit/issues/4437 · docs.docker.com/build/cache/optimize/
+
+---
+
+## 8. Halb gelaufenes Deployment — `up` bricht ab, der Exit-Code schweigt
+
+**Real getroffen:** Werft Studio auf dem Hostinger-VPS, 10.08.2026, 22:08.
+
+**Symptom:** `docker compose -f compose.server.yaml up -d --build` laeuft durch, alle acht Images
+melden „Built", der Hintergrund-Job endet mit **Exit 0**. Trotzdem ist die Weboberflaeche nicht
+erreichbar. `docker compose ps` (ohne `-a`!) zeigt scheinbar friedlich neun laufende Dienste — dass
+**zwei fehlen**, sieht man nur, wenn man gegen die Soll-Liste zaehlt.
+
+**Ursache, zwei Schichten:**
+
+1. Compose benennt beim Recreate den alten Container zuerst um (`<hash>_<name>`) und entfernt ihn
+   erst nach dem erfolgreichen Start des neuen. Wird ein `up --build` **mitten in diesem Schritt**
+   abgebrochen (abgebrochene SSH-Sitzung, Timeout, Strg-C), bleibt der umbenannte Rest liegen.
+2. Beim naechsten `up` blockiert dieser Rest den Namen:
+   `Conflict. The container name "/<hash>_werft-api" is already in use`. **`up` bricht bei diesem
+   Fehler ab** — und alle Dienste, die in der Startreihenfolge danach kommen (hier `realtime` und
+   `web`, beide von `api: service_healthy` abhaengig), bleiben auf Status `created` stehen: erzeugt,
+   nie gestartet. Der Exit-Code des umgebenden Befehls verraet davon nichts.
+
+**Warum das besonders tueckisch ist:** Die API antwortete korrekt und mit der **neuen** Version, die
+Datenbank lief, die Worker liefen. Jede oberflaechliche Pruefung („Version stimmt, Health ist ok")
+haette das Deployment als erfolgreich bestaetigt — waehrend die Oberflaeche fuer den Benutzer
+komplett offline war.
+
+**ZUERST unterscheiden: abgebrochen oder nur noch nicht fertig?** Beide Faelle sehen im
+oberflaechlichen `ps` gleich aus („ein Dienst fehlt"), brauchen aber das GEGENTEIL an Reaktion —
+einmal eingreifen, einmal abwarten. Wer hier falsch abbiegt, loescht Container, wo Geduld genuegt
+haette.
+
+| Beobachtung | Bedeutung | Richtige Reaktion |
+|-------------|-----------|-------------------|
+| Status `created`, im Log eine **Fehlermeldung** (`Conflict …`), und der Dienstname taucht im Log **gar nicht** als Container auf (`grep -c "<projekt>-<dienst>" deploy.log` → `0`) | `up` ist abgebrochen, BEVOR der Dienst angefasst wurde. Er wartet nicht — er wurde nie gestartet | eingreifen (unten) |
+| Status `created`/`waiting`, **keine** Fehlermeldung, und ein Dienst, von dem er per `depends_on: condition: service_healthy` abhaengt, steht noch auf `health: starting` | Normale Startreihenfolge. Compose wartet absichtlich | **abwarten** und erneut `ps -a` — nichts entfernen. Erst wenn der Healthcheck dauerhaft `unhealthy` bleibt, ist §3 der richtige Abschnitt |
+
+Die Unterscheidung ist wichtig, weil ein Stack mit `depends_on: { api: { condition: service_healthy } }`
+seine Oberflaechen-Dienste tatsaechlich minutenlang zurueckhalten kann, wenn der Healthcheck des
+Kerndienstes langsam ist (Migrationen, Cache-Aufbau). Das ist dann kein Fehler, sondern die
+gewuenschte Reihenfolge.
+
+**Fix fuer den abgebrochenen Fall (funktionserhaltend, ohne Datenverlust):**
+
+```sh
+docker ps -a --filter "name=<dienst>" --format "{{.ID}}\t{{.Names}}\t{{.Status}}"  # Rest finden
+docker rm -f <verwaiste-id>          # nur den umbenannten Rest, nie ein Volume
+docker compose -f <datei> up -d      # ohne --build: die Images sind schon fertig
+```
+
+Steht der blockierende Container selbst gesund und aktuell da (im Vorfall: `werft-api`, `healthy`,
+aus dem neuen Image), ist nichts zu entfernen — dann genuegt `up -d`, und Compose startet die
+uebersprungenen Dienste nach.
+
+Volumes (`postgres`, `minio`, `redis`) bleiben unangetastet — der Namenskonflikt betrifft nur die
+Container-Huelle.
+
+**Poka-Yoke Stufe 2 — Pflicht-Verifikation nach JEDEM Deploy.** Dem Exit-Code nicht glauben,
+sondern die Soll-Liste pruefen:
+
+```sh
+docker compose -f <datei> ps -a --format "{{.Service}}\t{{.State}}"   # -a ist entscheidend!
+# Jeder Dienst MUSS "running" sein. "created" oder "exited" = Deployment ist NICHT fertig.
+curl -sk -o /dev/null -w "%{http_code}\n" https://<host>/<pfad-der-oberflaeche>   # muss 200 sein
+```
+
+Erst wenn beide Proben stimmen, ist deployt. Ein `ps` **ohne** `-a` genuegt nicht: es verbirgt
+genau die Dienste, die nie gestartet wurden.
 
 ---
 

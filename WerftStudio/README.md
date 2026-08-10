@@ -61,6 +61,46 @@ Das Archiv wird per `scp` als Datei übertragen und vor dem Entpacken mit `tar -
 Prüfsumme beider Seiten muss übereinstimmen. Ein `tar -czf - … | ssh …` mit `&` im selben Befehl
 liefert das Archiv abgeschnitten aus und würde einen Rebuild auf halbem Quellstand starten.
 
+### Abnahme nach dem Deployment (Pflicht — der Exit-Code genügt nicht)
+
+`docker compose up` **bricht beim ersten Container-Fehler ab** und lässt die in der Startreihenfolge
+folgenden Dienste auf `created` stehen — erzeugt, aber nie gestartet. Der Exit-Code des umgebenden
+Befehls verrät das nicht. Am 10.08.2026 blockierte ein verwaister Umbenennungs-Rest eines
+abgebrochenen Laufs den Namen `werft-api`; `realtime` und `web` starteten deshalb nicht, die API
+antwortete aber korrekt mit der neuen Version. Die Oberfläche war offline, und jede oberflächliche
+Prüfung hätte das Deployment als erfolgreich gemeldet.
+
+Darum nach **jedem** Deployment beide Proben laufen lassen:
+
+```sh
+# 1. Alle Dienste müssen "running" sein — das -a ist entscheidend, ohne es sieht man die
+#    nicht gestarteten gar nicht.
+ssh root@10.8.0.1 'cd /opt/werft-studio && docker compose -f compose.server.yaml ps -a \
+  --format "{{.Service}}\t{{.State}}"'
+
+# 2. Oberfläche und Version gegenprüfen.
+ssh root@10.8.0.1 'curl -sk https://10.8.0.1:8443/api/v1/health/live; \
+  curl -sk -o /dev/null -w "\n/app HTTP %{http_code}\n" https://10.8.0.1:8443/app/designs'
+```
+
+Die gemeldete `version` muss der `version` in der Wurzel-`package.json` entsprechen, `/app` muss
+`200` liefern.
+
+Steht ein Dienst auf `created`, gibt es zwei Ursachen, die man **nicht verwechseln darf**:
+
+- **Nur noch nicht fertig.** `web` hängt an `api: service_healthy` und `realtime: service_started`,
+  `realtime` ebenfalls an `api: service_healthy`. Solange der API-Healthcheck auf `starting` steht,
+  hält Compose beide absichtlich zurück. Dann gilt: **abwarten** und `ps -a` erneut ausführen —
+  nichts entfernen.
+- **Abgebrochenes `up`.** Steht im Deploy-Log eine Fehlermeldung (typisch
+  `Conflict. The container name … is already in use`) und der Dienst taucht im Log gar nicht als
+  Container auf, wurde er nie gestartet. Dann `docker ps -a --filter name=<dienst>` prüfen, einen
+  verwaisten Umbenennungs-Rest mit `docker rm -f` entfernen (Volumes bleiben unberührt) und
+  `docker compose -f compose.server.yaml up -d` **ohne** `--build` nachziehen. Ist der blockierende
+  Container selbst gesund und aktuell, genügt `up -d` allein.
+
+Hintergrund und die Unterscheidungstabelle: `bugs/server/docker.md` §8.
+
 Der Timer entfernt den ungenutzten Docker-Build-Cache stündlich und nach jedem Deployment. Der
 Papierkorb in den Einstellungen löst denselben Dienst sofort über eine feste Dateibrücke aus. Laufende Container,
 Images, Datenbanken und die im MinIO-Manifest geführten Design-Dateien werden dabei nicht gelöscht.
