@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Nur der Start-Anstrich. Die Erscheinung selbst kommt aus Compose (Theme.kt),
+      weil F-26 zwischen Hell, Dunkel und Automatik ohne Neustart umschaltet.
+      Grund dunkel = #151210 (UI-Spec 2.1), damit der Start nicht aufblitzt.
+    -->
+    <style name="Theme.Experimente" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#151210</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

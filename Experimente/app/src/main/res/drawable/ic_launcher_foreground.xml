@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Zeichen der App: der Kolben-Gedanke als einfache Form in der Aktionsfarbe (#C4623C).
+  Bewusst schlicht — das Design macht keine Aussage zum Symbol auf dem Startbildschirm.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#C4623C"
+        android:pathData="M45,30h18v14l14,24a12,12 0 0 1 -10,18h-26a12,12 0 0 1 -10,-18l14,-24z" />
+    <path
+        android:fillColor="#F4EEE7"
+        android:pathData="M42,32h24v5h-24z" />
+</vector>
