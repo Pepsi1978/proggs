@@ -217,3 +217,23 @@ describe("baumAus — Layout aus einem Claude-Design-artigen Paket", () => {
     expect(baum[0]?.anordnung).toEqual({ art: "spalte", abstand: "16px", quer: "center", innen: "28px 20px 60px" });
   });
 });
+
+describe("baumAus — jeder Container sagt, wie er anordnet", () => {
+  it("gibt einem Container ohne flex/grid ausdruecklich 'fluss', statt das Feld weglassen", () => {
+    // Ohne diese Angabe muesste der Umsetzer raten, ob die Kinder untereinander stehen.
+    const baum = baumAus("<main><h1>A</h1><p>B</p><p>C</p></main>", "");
+    expect(baum[0]?.anordnung).toEqual({ art: "fluss" });
+  });
+
+  it("laesst Blatt-Elemente ohne Anordnung — sie ordnen nichts an", () => {
+    const baum = baumAus("<main><h1>A</h1></main>", "");
+    expect(baum[0]?.kinder?.[0]?.tag).toBe("h1");
+    expect(baum[0]?.kinder?.[0]?.anordnung).toBeUndefined();
+  });
+
+  it("ueberschreibt eine echte Anordnung NICHT mit 'fluss'", () => {
+    const baum = baumAus('<div class="k"><span>A</span></div>', ".k{display:flex;gap:8px}");
+    expect(baum[0]?.anordnung?.art).toBe("zeile");
+    expect(baum[0]?.anordnung?.abstand).toBe("8px");
+  });
+});

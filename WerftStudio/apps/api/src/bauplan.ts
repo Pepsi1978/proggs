@@ -401,6 +401,23 @@ export function baumAus(html: string, css: string): Bauteil[] {
     }
   };
   listenFalten(wurzel);
+
+  // Ein Element MIT Kindern ordnet immer etwas an — auch wenn es keine `flex`/`grid`-Regel und
+  // keinen Abstand hat: dann stehen die Kinder im normalen Blockfluss, also untereinander. Ohne
+  // eine ausdrueckliche Angabe muesste der Umsetzer an dieser Stelle RATEN (Column? Box?), und
+  // genau das soll der Bauplan verhindern. Gemessen an einem echten Export blieben so 13 Container
+  // ohne Aussage, darunter ein `<main>` mit drei Kindern und ein `<header>` — Stellen, an denen ein
+  // falscher Griff den ganzen Bildschirm verschiebt. Blatt-Elemente bekommen weiterhin keine
+  // Anordnung: sie ordnen nichts an, und eine leere Angabe waere dort nur Rauschen.
+  const flussErgaenzen = (teile: Bauteil[]) => {
+    for (const teil of teile) {
+      if (teil.kinder?.length) {
+        if (!teil.anordnung) teil.anordnung = { art: "fluss" };
+        flussErgaenzen(teil.kinder);
+      }
+    }
+  };
+  flussErgaenzen(wurzel);
   return wurzel;
 }
 

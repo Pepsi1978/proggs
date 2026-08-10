@@ -1,6 +1,6 @@
 {
   "name": "werft-studio",
-  "version": "0.34.0-20260810.2148",
+  "version": "0.34.1-20260810.2218",
   "private": true,
   "packageManager": "pnpm@11.15.1",
   "scripts": {
