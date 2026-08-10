@@ -14,7 +14,7 @@
 |---|-----------|--------------------------|----------|
 | 1 | Ich will X durchsetzen | Entscheidungsbaum: muss-immer → Hook/`deny`, sonst CLAUDE.md/Rule | §0 |
 | 2 | Sicherheits-/Format-Garantie | NIE nur CLAUDE.md (advisory) — Hook oder `permissions.deny` | §1 |
-| 3 | Regel soll besser befolgt werden | Emphasis (YOU MUST), spezifisch, Begruendung, Beispiele | §2 |
+| 3 | Regel soll besser befolgt werden | Begruendung + praezise Formulierung; KEIN "YOU MUST", keine Beispiel-Listen (Claude-5: Overtriggering) | §2 |
 | 4 | CLAUDE.md schlank halten | < 200 Zeilen, Volltext in `~/.claude/rules/`; `@import` spart nichts | §3 |
 | 5 | Tokens echt sparen | path-scoped Rule (`paths:` quoten) oder Skill (on-demand) | §3 |
 | 6 | Rolle/Ton/Format dauerhaft | Output-Style (nicht CLAUDE.md), Projekt-Wissen bleibt in CLAUDE.md | §4 |

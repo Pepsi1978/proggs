@@ -10,6 +10,11 @@
 > Abgrenzung: Hooks im Detail → `01-hooks/`; MCP → `05-mcp/` + `best-practices-mcp-server.md`;
 > Python → `best-practices-python-windows.md`.
 
+> **Update 10.08.2026 (Claude-5-Generation):** §2 korrigiert — "Emphasis (YOU MUST)" und
+> "3-5 Beispiele beilegen" sind fuer Opus 5 / Fable 5 **ueberholt** (Overtriggering bzw. Einengung).
+> Ersatz: Begruendung statt Emphase, Schnittstellen-Design statt Beispiel-Listen. Modellspezifische
+> Leitplanken vollstaendig in `modell-opus5.md`.
+
 > **Update 2026-07-02:** Re-Recherche bestaetigt den bestehenden Entscheidungsbaum. Neu zu beachten: Symlink-Zielpfade laden bedingte Rules wieder korrekt, Hook-Matcher sind bei Bindestrich-Identifiern exact-match, und neue Env-Flags duerfen nur gezielt zur Diagnose/Policy genutzt werden.
 
 ---
@@ -24,7 +29,7 @@
 |---|-----------|--------------------------|----------|
 | 1 | Ich will X durchsetzen | Entscheidungsbaum: muss-immer → Hook/`deny`, sonst CLAUDE.md/Rule | §0 |
 | 2 | Sicherheits-/Format-Garantie | NIE nur CLAUDE.md (advisory) — Hook oder `permissions.deny` | §1 |
-| 3 | Regel soll besser befolgt werden | Emphasis (YOU MUST), spezifisch, Begruendung, Beispiele | §2 |
+| 3 | Regel soll besser befolgt werden | Begruendung + praezise Formulierung; KEIN "YOU MUST", keine Beispiel-Listen (Claude-5: Overtriggering) | §2 |
 | 4 | CLAUDE.md schlank halten | < 200 Zeilen, Volltext in `~/.claude/rules/`; `@import` spart nichts | §3 |
 | 5 | Tokens echt sparen | path-scoped Rule (`paths:` quoten) oder Skill (on-demand) | §3 |
 | 6 | Rolle/Ton/Format dauerhaft | Output-Style (nicht CLAUDE.md), Projekt-Wissen bleibt in CLAUDE.md | §4 |
@@ -83,11 +88,26 @@ Quelle: [features-overview](https://code.claude.com/docs/en/features-overview), 
 
 ## 2. Befolgungs-Techniken (hoehere Adherence) — alle offiziell
 
-- **Emphasis:** *"adding emphasis (e.g. 'IMPORTANT' or 'YOU MUST') to improve adherence."*
+- ⚠️ **Emphasis — fuer die Claude-5-Generation ueberholt (Stand 10.08.2026).** Die alte Empfehlung
+  lautete: *"adding emphasis (e.g. 'IMPORTANT' or 'YOU MUST') to improve adherence."* Sie stammt aus
+  der 4.x-Zeit. Ab Opus 4.5/4.6 und erst recht bei Opus 5 fuehrt aggressive Sprache zu
+  **Overtriggering**; Anthropic woertlich: *"Where you might have said 'CRITICAL: You MUST use this
+  tool when...', you can use more normal prompting like 'Use this tool when...'."*
+  ([prompting-best-practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices))
+  → Details und was stattdessen gilt: `modell-opus5.md` §7.
+- **Begruendung mitgeben — der Ersatz fuer Emphase.** Constraint mit "warum" erhoeht Befolgung
+  (z.B. "never use ellipses because this will be read by text-to-speech"); Anthropic: *"Claude is
+  smart enough to generalize from the explanation."* Das wirkt bei Claude 5 besser als jede
+  Grossschreibung.
 - **Spezifisch statt vage:** *"The more precise your instructions, the fewer corrections you'll need."*
+  Aber: Opus 5 nimmt Anweisungen **woertlicher** als Vorgaenger — eine zu eng gefasste Einschraenkung
+  ("nur High-Severity melden") wird exakt befolgt und schadet dann. Praezise heisst nicht eng.
 - **"Right altitude":** spezifisch genug zum Steuern, flexibel genug als Heuristik — beide Extreme (zu brittle / zu vage) scheitern. ([effective-context-engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents))
-- **Begruendung mitgeben:** Constraint mit "warum" erhoeht Befolgung (z.B. "never use ellipses because this will be read by text-to-speech").
-- **3-5 konkrete Beispiele** beilegen; **Ambiguitaet eliminieren** (fragt Claude nach etwas, das in CLAUDE.md steht → Formulierung ist mehrdeutig); **Colleague-Test** (verwirrt es einen Menschen ohne Kontext, verwirrt es auch Claude).
+- ⚠️ **Beispiele — ebenfalls ueberholt.** Die alte Empfehlung "3-5 konkrete Beispiele beilegen" gilt
+  fuer die Claude-5-Generation nicht mehr; das Claude-Code-Team: *"Adding examples to a system prompt
+  is no longer best practice for models like Fable 5 or even Opus 4.8"* — Beispiele schraenken die
+  neueren Modelle eher ein. Stattdessen: Schnittstellen/Werkzeuge selbsterklaerend gestalten.
+- **Ambiguitaet eliminieren** (fragt Claude nach etwas, das in CLAUDE.md steht → Formulierung ist mehrdeutig); **Colleague-Test** (verwirrt es einen Menschen ohne Kontext, verwirrt es auch Claude).
 - Quelle: [best-practices](https://code.claude.com/docs/en/best-practices), Anthropic Prompt-Guide (be-clear-and-direct) · **offiziell**
 
 ---
