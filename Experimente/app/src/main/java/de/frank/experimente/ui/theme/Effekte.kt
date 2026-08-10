@@ -23,8 +23,11 @@ import androidx.compose.ui.graphics.Color
  */
 fun Modifier.grundAuren(farben: Farben): Modifier = drawBehind {
     drawRect(farben.grund)
-    val warm = mische(farben.aktion, Color.Transparent, 0.82f)
-    val kuehl = mische(farben.erledigt, Color.Transparent, 0.88f)
+    // `color-mix(in srgb, aktion 18%, transparent)` heisst: 18 % Deckkraft der Aktionsfarbe,
+    // nicht 18 % Mischung gegen eine transparente Farbe. Über `mische` gerechnet käme die
+    // Aura so blass heraus, dass sie im Bild verschwindet.
+    val warm = farben.aktion.copy(alpha = 0.18f)
+    val kuehl = farben.erledigt.copy(alpha = 0.12f)
     val mitteWarm = Offset(size.width * 0.92f, size.height * 0.08f)
     drawCircle(
         brush = Brush.radialGradient(
@@ -82,7 +85,12 @@ fun Modifier.lichtsaum(farbe: Color, anteil: Float = 0.18f): Modifier = drawWith
     )
 }
 
-/** Die 1-dp-Trennlinie, die der Entwurf über die Oberkante der unteren Leiste zieht. */
-fun Modifier.oberkante(farbe: Color): Modifier = drawBehind {
-    drawRect(color = farbe, size = androidx.compose.ui.geometry.Size(size.width, 1f))
+/** Die 1-dp-Trennlinie, die der Entwurf unter die obere Leiste zieht. */
+fun Modifier.unterkante(farbe: Color): Modifier = drawWithContent {
+    drawContent()
+    drawRect(
+        color = farbe,
+        topLeft = Offset(0f, size.height - 1f),
+        size = androidx.compose.ui.geometry.Size(size.width, 1f),
+    )
 }

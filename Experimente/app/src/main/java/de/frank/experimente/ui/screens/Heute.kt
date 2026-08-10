@@ -46,7 +46,7 @@ import de.frank.experimente.ui.components.Wartezustand
 import de.frank.experimente.ui.components.Zwischenueberschrift
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.Erscheinung
-import de.frank.experimente.ui.theme.Formen
+import de.frank.experimente.ui.theme.Leistensymbole
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.Symbole
@@ -375,10 +375,15 @@ private fun Aufgabenzeile(aufgabe: Task, modell: AppViewModel) {
     }
 }
 
+/**
+ * F-26 Schritt 2: das Symbol kündigt den **nächsten** Modus eindeutig an — eine Sonne für
+ * Hell, eine Mondsichel für Dunkel, ein „A“ mit seitlichen Strahlen für Automatik. Bezogen
+ * über die Stellung im Baum (`svg[0..2]` des Schalters), nicht über den Namen.
+ */
 private fun symbolFuerErscheinung(naechste: Erscheinung) = when (naechste) {
-    Erscheinung.HELL -> Symbole.HellmodusEinschalten
-    Erscheinung.DUNKEL -> Symbole.HellmodusEinschalten2
-    Erscheinung.SYSTEM -> Symbole.HellmodusEinschalten3
+    Erscheinung.HELL -> Leistensymbole.Sonne
+    Erscheinung.DUNKEL -> Leistensymbole.Mond
+    Erscheinung.SYSTEM -> Leistensymbole.Automatik
 }
 
 private fun beschriftungFuer(naechste: Erscheinung) = when (naechste) {

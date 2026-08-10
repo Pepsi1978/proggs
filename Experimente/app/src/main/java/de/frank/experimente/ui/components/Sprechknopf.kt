@@ -93,6 +93,14 @@ fun Sprechknopf(
                 .clickable(onClick = beiKlick),
             contentAlignment = Alignment.Center,
         ) {
+            // Der innere Ring, 6 dp von der Kante: im Entwurf hebt er die Wölbung heraus.
+            // Ein `inset`-Schatten hat in Compose kein Gegenstück, also nachgezeichnet.
+            Box(
+                Modifier
+                    .size(76.dp)
+                    .clip(Formen.vollrund)
+                    .border(1.dp, farben.text.copy(alpha = 0.20f), Formen.vollrund),
+            )
             Icon(
                 imageVector = Symbole.LageEinsprechen,
                 contentDescription = beschriftung,

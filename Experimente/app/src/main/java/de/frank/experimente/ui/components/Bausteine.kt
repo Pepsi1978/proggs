@@ -39,6 +39,7 @@ import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.dauer
 import de.frank.experimente.ui.theme.lichtsaum
+import de.frank.experimente.ui.theme.unterkante
 
 /**
  * Die wiederkehrenden Bauteile — mit den Werten, die im Design gemessen wurden:
@@ -96,6 +97,9 @@ fun Kopfzeile(
         modifier
             .fillMaxWidth()
             .height(64.dp)
+            // Der Entwurf zieht eine feine Linie unter die obere Leiste — sie trennt
+            // Kopfzeile und Inhalt, ohne eine Fläche zu setzen.
+            .unterkante(farben.randWeich)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -165,7 +169,7 @@ fun Textknopf(
             .background(flaeche)
             .border(1.dp, if (betont) farben.aktion.copy(alpha = 0.55f) else farben.rand, Formen.eingabefeld)
             .clickable(enabled = aktiv, onClick = beiKlick)
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -173,6 +177,7 @@ fun Textknopf(
             style = schriften.knopf,
             color = if (aktiv) farben.aktion else farben.blass,
             textAlign = TextAlign.Center,
+            maxLines = 1,
         )
     }
 }

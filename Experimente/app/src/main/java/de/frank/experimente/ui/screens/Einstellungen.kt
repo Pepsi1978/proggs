@@ -182,18 +182,26 @@ fun Einstellungen(modell: AppViewModel) {
                     }
                 }
                 // F-23 Schritt 5: Sprechgeschwindigkeit 0,7 bis 1,3.
-                Zeile("Tempo") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0.7f, 0.85f, 1.0f, 1.15f, 1.3f).forEach { wert ->
-                            Textknopf(
-                                text = wert.toString(),
-                                beiKlick = {
-                                    tempo = wert
-                                    einstellungen.sprechtempo = wert
-                                },
-                                betont = tempo == wert,
-                            )
-                        }
+                //
+                // Die fünf Stufen stehen in einer eigenen Zeile über die volle Breite: neben
+                // einer Beschriftungsspalte lief die letzte Stufe aus dem Bild und war damit
+                // nicht erreichbar — ein Bedienelement, das man nicht treffen kann, ist so
+                // gut wie keines.
+                Box(Modifier.padding(top = 16.dp)) { Zwischenueberschrift("Tempo") }
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(0.7f, 0.85f, 1.0f, 1.15f, 1.3f).forEach { wert ->
+                        Textknopf(
+                            text = wert.toString(),
+                            beiKlick = {
+                                tempo = wert
+                                einstellungen.sprechtempo = wert
+                            },
+                            modifier = Modifier.weight(1f),
+                            betont = tempo == wert,
+                        )
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {

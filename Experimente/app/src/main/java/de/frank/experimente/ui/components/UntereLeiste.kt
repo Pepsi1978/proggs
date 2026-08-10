@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.sp
 import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalFarben
+import de.frank.experimente.ui.theme.Leistensymbole
 import de.frank.experimente.ui.theme.LocalSchriften
-import de.frank.experimente.ui.theme.Symbole
 import de.frank.experimente.ui.theme.dauer
 
 /**
@@ -124,11 +124,15 @@ private fun Feld(
 /**
  * Die Symbole der Leiste stammen aus der Messung — nicht aus einer Standardsammlung, weil
  * ein gleichnamiges Material-Symbol andere Proportionen und Strichstärken hat.
+ *
+ * Bezogen über die **Stellung im Baum** (`Leistensymbole`), nicht über den Namen: im Markup
+ * heißen alle fünf Felder „Hauptnavigation“, wodurch eine Benennung nach Beschriftung die
+ * Zuordnung um eins verschiebt.
  */
 private fun symbolFuer(ziel: Ziel) = when (ziel) {
-    Ziel.HEUTE -> Symbole.Heute2
-    Ziel.ZIELE -> Symbole.Hauptnavigation
-    Ziel.MERKLISTE -> Symbole.Hauptnavigation2
-    Ziel.ERKENNTNISSE -> Symbole.Hauptnavigation3
-    else -> Symbole.Hauptnavigation4
+    Ziel.HEUTE -> Leistensymbole.Heute
+    Ziel.ZIELE -> Leistensymbole.Ziele
+    Ziel.MERKLISTE -> Leistensymbole.Merkliste
+    Ziel.ERKENNTNISSE -> Leistensymbole.Erkenntnisse
+    else -> Leistensymbole.Logbuch
 }

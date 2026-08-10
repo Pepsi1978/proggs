@@ -8,7 +8,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -51,6 +54,10 @@ fun Navigation(modell: AppViewModel) {
             .fillMaxSize()
             .background(farben.grund)
             .grundAuren(farben)
+            // Die App zeichnet bis an die Kanten (`enableEdgeToEdge`), damit die Auren
+            // durchlaufen. Der Inhalt muss dann aber hinter Status- und Navigationsleiste
+            // ausweichen — sonst sitzt der Titel unter der Uhr.
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             .then(
                 if (!wischbar) Modifier else Modifier.pointerInput(ziel) {
                     var strecke = 0f
