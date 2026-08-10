@@ -1,104 +1,57 @@
-# OpenCode-Profil: Minimal
+# Open-Code-Profil: Minimal
 
-# Arbeitsregeln für Code-Aufgaben
+Diese Regeln gelten für jede Programmieraufgabe!
 
-Diese Regeln gelten für jede Programmieraufgabe.
-Projektspezifische Anweisungen haben Vorrang. Bei Widerspruch folge dem Projekt und sag es in einem Satz.
-Grundhaltung: Sorgfalt vor Geschwindigkeit. Bei trivialen Aufgaben mit Augenmaß anwenden.
+1. Zugangsdaten, Secrets und Deploy-Wege liegen in: C:\Users\barwa\SK 
+— Lies dort nach, bevor du deployst oder Zugangsdaten brauchst. Rate nie.
 
-## Kernregeln
+2. Best Practices und Bug Almanache liegen in den Ordnern C:\Users\barwa\proggs\best-practices und C:\Users\barwa\proggs\bugs
+- Lies den passenden Almanach oder die passenden Best Practices, wenn ein Fehler auftritt oder du in einem Bereich arbeitest, den du in dieser Sitzung noch nicht angefasst hast.
 
-1. Frag nach beim Ziel. Fehlerursachen klärst du selbst.
-2. Sieh nach, bevor du etwas verwendest.
-3. Schreib so wenig Code wie möglich.
-4. Ändere nur, was die Aufgabe verlangt.
-5. Leg fest, wann es fertig ist – und weise es nach.
-6. Ein roter Test ist ein Arbeitsauftrag, kein Grund anzuhalten.
+3. Skills liegen im Ordner C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\minimal\skills
 
-## 1. Erst denken, dann schreiben
+4. Aufgabentrennung und Ablauf
+` ; ` (Leerzeichen, Semikolon, Leerzeichen) trennt eigenständige Aufgaben.
+- Ein leerer Teil am Ende zählt nicht mit. Semikola in Code, SQL oder URLs trennen nicht.
+- Ordne die Aufgaben nach ihren Abhängigkeiten.
+- Widersprechen sich zwei Aufgaben: frag nach, bevor du anfängst.
+- Ab zwei Aufgaben: zeig vorab die nummerierte Liste in der Reihenfolge, in der du sie abarbeitest.
 
-- Nenne deine Annahmen, bevor du anfängst.
-- Sind mehrere Auslegungen der Aufgabe möglich: Liste sie auf und frag nach. Wähl nicht still eine aus.
-- Gibt es einen einfacheren Weg: Sag es. Widersprich, wenn die Anweisung fachlich schlecht ist.
-- Ist das Ziel unklar: Halt an, benenne die Unklarheit, frag.
-- Versteck Unsicherheit nie hinter selbstsicher formuliertem Code.
+5. Sprache
+- Alle Ausgaben an mich sind auf Deutsch, mit echten Umlauten: ä ö ü Ä Ö Ü ß. Keine Ersatzschreibung wie "ae" oder "ss".
 
-**Frag nach bei:** Absicht, Ziel, Erfolgsmaßstab, Auswirkungen auf den Nutzer.
+6. Version und Zeitstempel
+- Bump die Version genau einmal pro Commit, sichtbar. Der Bump gehört in denselben Commit wie die Änderung.
+- Hol Datum und Uhrzeit vorher per Befehl: `Get-Date -Format "dd.MM.yyyy HH:mm"`
+- Übernimm die Zeit nie aus dem Kontext, aus einer früheren Nachricht, aus dem Gedächtnis oder aus einer Anzeige in der App. Nie schätzen.
+- Wo die Version steht, hängt von der Plattform ab:
+  - Android: `app/build.gradle.kts` — `versionName = "1.0.27"` UND `buildConfigField("String", "VERSION_BUMPED_AT", "\"19.07.2026, 21:00 Uhr\"")`. 
+  Immer beide zusammen, nie nur eines. Uhrzeit mit Doppelpunkt, nicht mit Punkt. 
+  - .NET/WPF: `<Version>` in der `.csproj`, Form `2.1.84`. 
+  - Node/TypeScript: `version` in der Wurzel-`package.json`. Bei WerftStudio mit Zeitstempel-Suffix, Form `0.32.2-20260809.1545`.
+- Wird die Version in der App angezeigt (meist im Einstellungs-Bildschirm, sonst auf anderen Seiten suchen), zieh die Anzeige mit.
+- Weicht ein Projekt von diesen Mustern ab, steht die Regel in dessen eigener AGENTS.md. Findest du dort nichts und passt kein Muster: frag nach, rate nicht.
 
-**Frag nicht nach bei:** Details, die du selbst klären kannst – durch Nachsehen im Code, einen Test oder einen Versuch. Entscheide sie, nenne die Entscheidung in einem Satz, mach weiter.
-Dazu gehören ausdrücklich: Fehlerursachen, fehlgeschlagene Tests, Kompilier- und Lint-Fehler. Mehrere mögliche Ursachen für einen Fehler sind kein Grund zu fragen, sondern eine Liste, die du abarbeitest.
+7. Für alle research Aufgaben nutze den skill research und folge seinen Anweisungen.
 
-## 2. Erst nachsehen, dann verwenden
+8. Externe Regelwerke
+"Direktive 3" bezeichnet eine externe Datei, nicht Abschnitt 3 dieses Profils.
+- Wenn ich sage: "fixe nach Direktive 3": lies zuerst vollständig `C:\Users\barwa\proggs\claude-code-setup\docs\rules\resilient-bugfixing.md` und fang erst danach mit dem Fix an.
 
-- Verwende keine Bibliothek, Funktion, Datei, Umgebungsvariable oder Einstellung, ohne vorher nachgesehen zu haben, dass es sie in diesem Projekt gibt.
-- Prüfe Namen, Parameter und Rückgabewerte an der echten Quelle: Code, Abhängigkeiten, offizielle Dokumentation. Nicht aus dem Gedächtnis.
-- Fehlt etwas, das du brauchst: Sag es und frag, ob du es anlegen sollst. Tu nicht so, als wäre es vorhanden.
-- Kannst du etwas nicht prüfen: Schreib ausdrücklich „ungeprüfte Annahme" dazu.
+9. Abschluss bei Code-Änderungen (Pflicht)
+Sobald eine ` ; `-Teilaufgabe oder die Gesamtaufgabe Code geändert hat: → bauen → Version bumpen (echte Systemzeit) → committen → pushen → auf Gerät installieren bzw. deployen. Geht ein Schritt nicht (kein Gerät, roter Build, Push abgelehnt): melde das ausdrücklich, überspringe es nie stillschweigend.
 
-Eine erfundene Schnittstelle, die plausibel aussieht, kostet mehr Zeit als jede Rückfrage.
+10. Commits
+- Message-Stil: `<Projekt>: <was geändert wurde>`, klein, imperativ, eine Zeile. Das Projekt-Präfix nur, wenn der Commit ein einzelnes Projekt betrifft.
+- Sprache der Commit-Messages: Deutsch mit echten Umlauten. Nie ASCII-Ersatzschreibung ("ae", "ue", "ss").
+- Committe direkt auf `main`, kein Feature-Branch. Vor dem Push wird rebased.
 
-## 3. So wenig Code wie möglich
+11. Abschluss (Pflicht, ohne Ausnahme)
+Bevor du eine Antwort als fertig ausgibst, prüf diese zwei Punkte und hol Fehlendes sofort nach:
+- Ist jede ` ; `-Teilaufgabe wirklich erledigt?
+- Falls Code geändert wurde: sind alle fünf Schritte aus Regel 9 erledigt?
 
-- Bau nur, was verlangt wurde. Keine Zusatzfunktionen.
-- Keine Abstraktion für Code, der nur an einer Stelle benutzt wird.
-- Keine Flexibilität, Konfigurierbarkeit oder Erweiterbarkeit „für später".
-- Keine Fehlerbehandlung für Fälle, die nicht eintreten können.
-- Die Lösung muss zur Größe des Problems passen. Ist sie deutlich größer: wegwerfen und die kurze Fassung schreiben.
-
-**Prüffrage vor dem Abgeben:** Würde ein erfahrener Entwickler das „überkonstruiert" nennen? Wenn ja: kürzen.
-
-## 4. Nur anfassen, was nötig ist
-
-- Verbessere keinen benachbarten Code, keine Kommentare, keine Formatierung.
-- Bau nichts um, was funktioniert.
-- Übernimm den vorhandenen Stil, auch wenn du es anders machen würdest.
-- Fällt dir fremder toter Code auf: erwähne ihn, lösche ihn nicht.
-- Entferne nur die Importe, Variablen und Funktionen, die durch DEINE Änderung unbenutzt geworden sind. Vorher schon toten Code lässt du stehen.
-
-Für die Fehlersuche gilt: Lesen darfst du überall. Ändern nur dort, wo die Ursache liegt.
-
-**Prüffrage vor dem Abgeben:** Lässt sich jede geänderte Zeile direkt auf die Aufgabe zurückführen? Wenn nein: zurücknehmen.
-
-## 5. Ziel festlegen, dann bis zum Nachweis arbeiten
-
-Formuliere die Aufgabe in ein prüfbares Ziel um:
-
-- „Validierung hinzufügen" → „Tests für ungültige Eingaben schreiben, dann bestehen lassen"
-- „Fehler beheben" → „Test schreiben, der den Fehler zeigt, dann bestehen lassen"
-- „X umbauen" → „Tests laufen vorher und nachher durch"
-
-Bei mehreren Schritten nenne vorab einen kurzen Plan:
-
-1. [Schritt] → Nachweis: [Prüfung]
-2. [Schritt] → Nachweis: [Prüfung]
-3. [Schritt] → Nachweis: [Prüfung]
-
-- Arbeite dann eigenständig bis zum Nachweis durch. Frag nicht bei jedem Zwischenschritt.
-- Ein fehlgeschlagener Zwischenschritt ist kein erreichter Nachweis. Solange das Ziel erreichbar ist, arbeitest du weiter.
-- Halt nur an, wenn das Ziel selbst falsch, unvollständig oder unerreichbar ist. Sag dann, warum.
-- Melde am Ende in drei Punkten: was geändert, wie geprüft, was ungeprüft geblieben ist.
-
-„Ungeprüft" heißt: konnte nicht geprüft werden. Ein Test, der rot ist, gehört nicht dorthin – der wird behoben.
-
-## 6. Wenn eine Prüfung fehlschlägt
-
-Rote Tests, Kompilier-, Lint- und Typfehler sind normale Arbeit, kein Abbruch:
-
-1. Fehlermeldung vollständig lesen. Stacktrace, Zeile, erwarteter gegen tatsächlichen Wert.
-2. Ursache benennen, bevor du etwas änderst. Ein Satz reicht.
-3. Kleinstmögliche Korrektur umsetzen, erneut prüfen.
-4. Noch rot: neue Hypothese, nicht dieselbe nochmal.
-
-**Grenze:** Drei Anläufe an derselben Ursache ohne Fortschritt. Erst dann hältst du an und meldest den Fehler im Wortlaut, deine Hypothesen und was bei jeder passiert ist.
-
-**Nicht erlaubt, um grün zu werden:** Tests löschen, überspringen, auf `ignore`/`skip` setzen, Erwartungswerte an das falsche Ergebnis anpassen, Prüfungen auskommentieren, Fehler abfangen und schlucken. Hältst du einen Test selbst für falsch: sag es und lass ihn rot, statt ihn passend zu machen.
-
-**Sofort anhalten und melden** – ohne Reparaturversuch – bei: Git-Fehlern, fehlenden Zugängen oder Secrets, Infrastruktur- und Netzwerkproblemen außerhalb des Projekts, und wenn der Fix eine Entscheidung von mir bräuchte (Anforderung ändern, Abhängigkeit aufnehmen, Schnittstelle brechen).
-
-## Woran du erkennst, dass du dich daran hältst
-
-- Der Diff enthält keine Zeile, die nicht zur Aufgabe gehört.
-- Kein Name im Code, den du nicht nachgeschlagen hast.
-- Nichts musste wegen Überkomplizierung neu geschrieben werden.
-- Rückfragen kamen vor der Umsetzung, nicht nach dem Fehler.
-- Kein Fehler wurde gemeldet, den du selbst hättest beheben können.
+Melde danach kurz:
+- Was geändert wurde. 
+- Mache maximal 3 Verbesserungsvorschläge zum Projekt, falls dir etwas Substantielles aufgefallen ist.
+- Committet ja/nein, gepusht ja/nein, installiert auf welchem Gerät.
