@@ -1,3 +1,4 @@
+import { bauplanFuer } from "./bauplan.js";
 import { orderedScreens } from "./design-extract.js";
 import { renderFactSheet, type DesignFacts } from "./design-facts.js";
 import { buildSpecPackage, type Vorlage } from "./spec-package.js";
@@ -78,6 +79,70 @@ export function screenScopedCss(css: string): string {
   return parts.join("\n");
 }
 
+/**
+ * Loest die BREITENBEZOGENEN Media Queries auf eine feste Zielbreite auf.
+ *
+ * Der Grund ist der Fehler, der die ganze Kette verdorben hat: Media Queries fragen die
+ * FENSTERbreite, nicht die Breite des Bildschirms. Die Vorschau im Studio steckt in einem
+ * Geraeterahmen — dort greift `@media (max-width: 480px)`. Die exportierte Einzeldatei hat
+ * keinen Rahmen: im Browserfenster des Betrachters (und im Messfuehler) greift dieselbe Regel
+ * NICHT, und der Bildschirm sieht anders aus als im Studio. Genau so ist ein Einstellungs-
+ * bildschirm mit „Beschriftung ueber dem Feld" als „Beschriftung neben dem Feld" im Code
+ * gelandet — ohne dass irgendwo ein Fehler auftauchte.
+ *
+ * Hier werden deshalb alle breitenbezogenen Bedingungen bei der Zielbreite ausgewertet:
+ * was zutrifft, wird als flache Regel uebernommen (in Original-Reihenfolge, damit die Kaskade
+ * erhalten bleibt); was nicht zutrifft, entfaellt. Bedingungen, die NICHT an der Breite haengen
+ * (`prefers-color-scheme`, `prefers-reduced-motion`, `hover`, `print`), bleiben unangetastet —
+ * sie sind im Original richtig und muessen beim Betrachter weiter greifen.
+ *
+ * `design.css` bleibt vollstaendig erhalten. Das Ergebnis wird als zusaetzlicher Style-Block
+ * NACH ihr eingebunden: verlustfrei, und die richtige Fassung gewinnt.
+ */
+export function breitenRegelnFuer(css: string, breite: number): string {
+  const parts: string[] = [];
+  let index = 0;
+  while (index < css.length) {
+    const open = css.indexOf("{", index);
+    if (open < 0) break;
+    const selector = css.slice(index, open).trim();
+    let depth = 1, cursor = open + 1;
+    while (cursor < css.length && depth > 0) {
+      if (css[cursor] === "{") depth += 1;
+      else if (css[cursor] === "}") depth -= 1;
+      cursor += 1;
+    }
+    const body = css.slice(open + 1, cursor - 1);
+    index = cursor;
+    if (!/^@media\b/i.test(selector)) continue;
+
+    // Nur Bedingungen anfassen, die ueberhaupt an der Breite haengen.
+    const bedingungen = [...selector.matchAll(/\((min|max)-width:\s*([\d.]+)(px|em|rem)\)/gi)];
+    if (!bedingungen.length) continue;
+
+    const trifftZu = bedingungen.every(([, art, wert, einheit]) => {
+      // `em`/`rem` in Media Queries beziehen sich immer auf die Grundschrift (16px), nie auf
+      // eine geerbte Schriftgroesse — das ist in der Spezifikation so festgelegt.
+      const px = einheit!.toLowerCase() === "px" ? Number(wert) : Number(wert) * 16;
+      return art!.toLowerCase() === "max" ? breite <= px : breite >= px;
+    });
+    if (!trifftZu) continue;
+
+    // Bleibt neben der Breite noch eine andere Bedingung (z. B. `and (hover: hover)`), muss die
+    // beim Betrachter weiter geprueft werden — dann nur die Breiten-Bedingung herausnehmen.
+    const restlich = selector
+      .replace(/^@media\s*/i, "")
+      .replace(/\((min|max)-width:\s*[\d.]+(px|em|rem)\)/gi, "")
+      .replace(/\band\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const innen = /@media|@supports|@container/i.test(body) ? breitenRegelnFuer(body, breite) : body;
+    if (!innen.trim()) continue;
+    parts.push(restlich ? `@media ${restlich} {\n${innen}\n}` : innen);
+  }
+  return parts.join("\n");
+}
+
 const themesMeta = (variants: ThemeVariant[]) =>
   `<meta name="werft-themes" content='${JSON.stringify(variants.map(({ id, name, kind, color }) => ({ id, name, kind, color }))).replace(/'/g, "&#39;")}'>`;
 
@@ -111,26 +176,64 @@ export function screenDocuments(document: ExportDocument, variants: ThemeVariant
   if (!document.sections.length) return [];
   const files: ExportFile[] = [{ path: `${exportRoot}bildschirme/design.css`, content: document.css }];
   const appearances = variants.length ? variants : [{ id: "standard", name: "Standard", kind: "other" as const, color: "#ffffff", tokens: {} }];
+  // Die Breite, FUER die entworfen wurde. Sie entscheidet, welche Media Queries gelten — und sie
+  // muss in der Datei stehen, damit Betrachter und Messfuehler nicht raten muessen.
+  const breite = document.width;
+  const aufgeloest = breite ? breitenRegelnFuer(document.css, breite) : "";
+
+  // Die CSS, die fuer die Zielbreite wirklich gilt — Grundlage fuer die Anordnung im Bauplan.
+  const cssFuerBreite = breite ? `${document.css}\n${aufgeloest}` : document.css;
+
   for (const variant of appearances) {
     for (const [index, section] of document.sections.entries()) {
       const scheme = variant.kind === "dark" ? "dark" : "light";
+      const nummer = pad(index + 1, document.sections.length);
+
+      // Der Bauplan: die Layout-HIERARCHIE dieses Bildschirms. Er ist die verbindliche Vorlage —
+      // eine Hierarchie gilt bei jeder Breite, eine Koordinate nur bei der gemessenen.
       files.push({
-        path: `${exportRoot}bildschirme/${variant.id}/${pad(index + 1, document.sections.length)}-${section.slug}.html`,
+        path: `${exportRoot}bauplan/${variant.id}/${nummer}-${section.slug}.json`,
+        content: `${JSON.stringify(
+          bauplanFuer({
+            kennung: section.id,
+            name: section.name,
+            html: section.html,
+            css: cssFuerBreite,
+            ...(breite ? { breite } : {}),
+            erscheinung: variant.id,
+          }),
+          null,
+          2,
+        )}\n`,
+      });
+
+      files.push({
+        path: `${exportRoot}bildschirme/${variant.id}/${nummer}-${section.slug}.html`,
         content: `<!doctype html>
 <html lang="de" data-werft-theme="${escapeHtml(variant.id)}" data-theme="${scheme}" style="color-scheme: ${scheme};">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — ${escapeHtml(section.name)} — ${escapeHtml(variant.name)}</title>
+${breite ? `<meta name="werft-render-width" content="${breite}">\n` : ""}<title>${escapeHtml(title)} — ${escapeHtml(section.name)} — ${escapeHtml(variant.name)}</title>
 <link rel="stylesheet" href="../design.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 .werft-screen { display: block !important; position: relative; overflow: hidden; }
 </style>
-</head>
+${aufgeloest ? `<!--
+  Die breitenbezogenen Media Queries aus design.css, ausgewertet fuer ${breite} dp — die Breite,
+  fuer die dieser Bildschirm entworfen wurde. Ohne diesen Block haengt das Aussehen am Fenster
+  des Betrachters: eine Regel wie "max-width: 480px" greift im Studio-Geraeterahmen, im breiten
+  Browserfenster aber nicht — und die Datei zeigt eine Anordnung, die es im Entwurf nie gab.
+  design.css bleibt unveraendert; hier gewinnt nur, was bei ${breite} dp wirklich gilt.
+-->
+<style data-werft-aufgeloest="${breite}">
+${aufgeloest}
+</style>
+` : ""}</head>
 <body>
-<div class="werft-screens"${document.width ? ` style="width: ${document.width}px;"` : ""}>
+<div class="werft-screens"${breite ? ` style="width: ${breite}px;"` : ""}>
 ${section.html}
 </div>
 </body>
@@ -259,6 +362,7 @@ dazu alle gemessenen Farben, Maße, Schriften, Radien, Effekte, Assets und Texte
 |------|--------|
 | \`design.html\` | Das durchklickbare Gesamtdesign — alle ${report.bildschirmeExportiert} Bildschirme, mit Umschalter für Bildschirm **und** Erscheinung (oben rechts). |
 | \`bildschirme/<erscheinung>/<nr>-<name>.html\` | Jeder Bildschirm einzeln, fest in dieser Erscheinung. ${report.bildschirmeExportiert} Bildschirme × ${Math.max(1, variants.length)} Erscheinungen = ${report.bildschirmeExportiert * Math.max(1, variants.length)} Dateien. |
+| \`bauplan/<erscheinung>/<nr>-<name>.json\` | **Die Layout-Hierarchie jedes Bildschirms — die verbindliche Bauvorlage.** Sagt je Bauteil, wie es seine Kinder anordnet (Spalte, Zeile, Raster, Abstand, Ausrichtung, Innenabstand), in welcher Reihenfolge sie stehen, welche Funktion daran hängt, wohin es führt, welche Einträge eine Auswahlliste hat und welche Grenzen ein Schieberegler. Breitenunabhängig gültig. |
 | \`bildschirme/design.css\` | Das gemeinsame Stylesheet aller Bildschirme. |
 | \`design-tokens.json\` | Alle gemessenen Werte maschinenlesbar (Erscheinungen mit vollständigen Token-Tabellen, Bildschirme, Farben, Maße, Typografie, Formen, Effekte, Assets, Texte). |
 | \`DESIGN-SPEC.md\` | Dieselben Werte als lesbare Spezifikation inklusive Bildschirm-Tabelle. |
@@ -270,10 +374,14 @@ ${variants.length ? variants.map((variant) => `- **${variant.name}** — \`${var
 
 ## Für den Design-Umsetzer
 
-1. \`design-tokens.json\` ist die **verbindliche Quelle** für alle Werte — nichts daraus schätzen oder runden.
-2. \`bildschirme/<erscheinung>/\` zeigt, wie **jeder** Bildschirm in **jeder** Erscheinung aussehen muss.
-3. \`design.html\` zeigt den Klickweg: \`data-werft-navigate="<ziel-id>"\` ist die Navigation.
-4. Alle Erscheinungen werden als umschaltbare Themes umgesetzt, nicht nur die zuerst sichtbare.
+1. **Baue nach \`bauplan/<erscheinung>/<nr>-<name>.json\`, nicht nach Koordinaten.** Der Bauplan sagt, wie die Teile zueinander stehen — eine Hierarchie gilt bei jeder Breite, eine Koordinate nur bei der Breite, bei der sie gemessen wurde. Widersprechen sich Bauplan und ein gemessener Kasten, **gewinnt der Bauplan**.
+2. \`design-tokens.json\` ist die verbindliche Quelle für alle **Werte** — Farben, Maße, Schriften, Radien, Effekte. Nichts daraus schätzen oder runden. Sie sagt *womit* gebaut wird, der Bauplan sagt *wie*.
+3. **Ersetze kein Bedienelement durch ein anderes.** Steht im Bauplan \`tag: "select"\` mit \`eintraege\`, wird eine Auswahlliste gebaut — kein Feld, das bei jedem Druck weiterschaltet. Steht dort \`bereich\` mit \`von\`/\`bis\`/\`schritt\`, wird ein Schieberegler gebaut — kein Knopfsatz.
+4. \`versteckt: true\` heißt **Zustand**, nicht Wegfall: Ladezustand, Fehlerkarte, leerer Zustand. Alle diese Zustände werden gebaut.
+5. Die Bildschirmdateien in \`bildschirme/\` tragen im Kopf \`<meta name="werft-render-width">\` und einen aufgelösten Style-Block: sie sehen damit überall so aus wie im Studio. Wer sie vermisst, setzt die Fensterbreite **vor** dem Laden auf diesen Wert.
+6. \`bildschirme/<erscheinung>/\` zeigt, wie **jeder** Bildschirm in **jeder** Erscheinung aussehen muss.
+7. \`design.html\` zeigt den Klickweg: \`data-werft-navigate="<ziel-id>"\` ist die Navigation.
+8. Alle Erscheinungen werden als umschaltbare Themes umgesetzt, nicht nur die zuerst sichtbare.
 5. Vollständig ist die Umsetzung erst, wenn jeder Bildschirm aus der Tabelle in \`DESIGN-SPEC.md\` im Code nachweisbar ist.
 ${report.nichtAufgebaut.length ? `\n> **Achtung:** ${report.nichtAufgebaut.length} erkannte Bildschirme wurden beim Aufbau nicht erzeugt: ${report.nichtAufgebaut.join(", ")}. Sie fehlen in diesem Paket.\n` : ""}`;
 }
