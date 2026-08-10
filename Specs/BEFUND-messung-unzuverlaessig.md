@@ -72,10 +72,39 @@ Designer.** Konkret:
    rendern und mit der Designer-Vorschau vergleichen. Weichen sie ab, ist der Export fehlerhaft
    und meldet das — statt ein Archiv auszuliefern, das anders aussieht als der Entwurf.
 
-**Noch offen und ausdrücklich nicht erledigt:** die Recherche, wie Claude Designs die Übergabe
-tatsächlich löst (Weg A, vom Auftraggeber freigegeben). Der Vergleich in §0 stammt aus dem
-Repo-Wissen über das `.dc.html`-Format, **nicht** aus einer Quelle über deren Verfahren. Er ist
-plausibel, aber unbelegt — und muss belegt werden, bevor WerftStudio danach umgebaut wird.
+**Die Recherche ist gelaufen (10.08.2026, Engine A, 6 Researcher, 29 Quellen)** und hat den
+Vergleich in §0 bestätigt — mit einer wichtigen Präzisierung. Vollständig eingearbeitet in:
+
+- `best-practices/design/design-zu-code-treue.md` (das Verfahren)
+- `bugs/design/design-export-und-messung.md` (die sechs Fallen)
+
+**Die drei Kernbelege:**
+
+1. **Claude Design übergibt ein „Handoff Bundle"**: Komponentenstruktur als maschinenlesbare
+   Spezifikation, die *tatsächlich verwendeten* Tokens, die **Layout-Hierarchie** und
+   Asset-Referenzen. Anthropic grenzt ausdrücklich ab: „Not a PNG. Not a Figma URL that requires a
+   plugin." und **„not a lossy export"**. Das Schlüsselwort ist **Hierarchie** — sie ist
+   breitenunabhängig, eine Koordinate ist es nicht.
+2. **Der Unterschied ist gemessen, nicht behauptet** (Werkzeugvergleich 04/2026): Builder.io, das
+   von der Figma-**Dateistruktur** arbeitet, erreicht 4/5; v0, das von einem **Screenshot**
+   arbeitet, 3/5 — mit dem Befund „often misses exact spacing values, specific font weights and
+   subtle interaction details". Eine Messung ist dieselbe Art Ableitung wie ein Screenshot und
+   verliert dasselbe.
+3. **Figma geht weiter: zuordnen statt übersetzen.** Code Connect verbindet Design-Komponenten mit
+   echtem Code im Repo; Entwickler und KI sehen die Produktionskomponente statt generierten Code.
+   Die genaueste Übergabe ist die, bei der gar nichts übersetzt wird.
+
+**Zwei technische Fallen, die den Messfühler direkt betreffen:**
+
+- `setViewportSize` feuert **kein `resize`-Event** (Playwright-Issue #36084, vom Maintainer als
+  dokumentiert bestätigt) — nachträglich gesetzte Breiten liefern womöglich alte Layoutwerte. Die
+  Breite muss beim **Erzeugen des Kontexts** gesetzt werden.
+- **Browser-Zoom ≠ 100 %** verschiebt Breakpoints proportional (1200 px bei 110 % → 1320 px).
+
+**Und der fehlende Schritt:** Pixel-Diff gegen eine Baseline mit Toleranzschwelle, über mehrere
+Breiten und Erscheinungen, ist etablierte Standardtechnik (pixelmatch, Resemble.js, Playwright
+`toHaveScreenshot`, BackstopJS, Percy). In dieser Pipeline fehlt sie ganz — deshalb konnte die
+Abweichung bis aufs Gerät durchlaufen.
 
 ---
 
