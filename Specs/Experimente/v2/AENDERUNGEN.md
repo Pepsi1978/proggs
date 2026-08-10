@@ -162,3 +162,43 @@ Gestaltungsentscheidung war.
 
 `v1` bleibt unverändert unter `Specs/Experimente/v1/` und im Übergabepaket
 `Designs/Inbox/Experimente-SPEC-v1.zip` als Rückfallebene erhalten.
+
+---
+
+## 6. Nachtrag 10.08.2026, 11:00 — zweiter Rücklauf, Aktualität nachgewiesen
+
+Der Benutzer hat den Entwurf erneut aus Werft Studio heruntergeladen und als
+`Designs/Outbox/Experimente-SPEC-v2.zip` abgelegt (diesmal mit dem erwarteten Namen; der
+erste Rücklauf hieß `Experimente-SPEC-v1-SPEC-v2.zip`, siehe Logbuch B-05).
+
+**Nachweis, dass es derselbe Entwurf ist** — nicht behauptet, sondern gerechnet: alle 30
+Dateien des Archivs wurden gegen den bereits verarbeiteten Rücklauf gehasht (SHA-256).
+
+| Ergebnis | Anzahl | Welche |
+|----------|--------|--------|
+| byte-identisch | 26 | `WERFT-DESIGN/bildschirme/design.css`, alle 18 Bildschirm-HTMLs (9 × 2 Erscheinungen), `design-tokens.json`, `design.html` (beide Fassungen), `DESIGN-SPEC.md`, `LIESMICH.md` (beide), `01-FUNKTIONS-SPEC.md` |
+| abweichend | 4 | `00-PROJEKT.md`, `02-UI-SPEC.md`, `03-MOTION-SPEC.md`, `SPEC.md` |
+| nur im neuen / nur im alten | 0 | — |
+
+Die vier Abweichungen sind **je eine Datumszeile**, sechs Zeilen insgesamt:
+`Stand: 2026-08-09` → `Stand: 2026-08-10` und der Plattform-Stempel
+„beim Herunterladen … am 2026-08-09 gewählt" → „… am 2026-08-10 gewählt".
+**Kein gemessener Wert, kein Bildschirm, keine Kennung, keine Bewegung hat sich geändert.**
+
+**Zeitstempel im Archiv:** 10.08.2026, 08:51:48 (+02:00) — der Export ist von heute Morgen
+und damit der aktuellste Stand. Der Dateizeitstempel des ZIP (10:52) ist nur der Zeitpunkt
+des Herunterladens.
+
+**Zielplattform:** unverändert **Android (Kotlin / Jetpack Compose)** — der Stempel im Kopf
+von `00-PROJEKT.md` nennt sie erneut, nur mit dem neuen Datum.
+
+**Folge daraus:** `Specs/Experimente/v2/` bleibt gültig und wird **nicht** neu erzeugt. Es
+gibt kein `v3`. Insbesondere bleiben `messung/` und `bilder/` verbindlich — sie stammen aus
+Quelldateien, die byte-identisch nachgewiesen sind. Die Stand-Zeilen der v2-Dateien wurden
+**nicht** auf den 10.08. gehoben: sie datieren die Erstellung von v2, nicht den Export.
+
+**Ebenfalls in diesem Nachtrag gesichert:** die acht Messdateien von B-01, B-04, B-08 und
+B-09 (beide Erscheinungen) tragen seit dem letzten Lauf je Element das Feld `wert` — die
+Feldinhalte („08:00", „GPT 5.6 Terra", „de-DE-Chirp3-HD-Kore"), die der erste Messlauf nicht
+mitgelesen hatte. Reine Erweiterung, geprüft per Schlüsselvergleich: kein Feld ist
+weggefallen, hinzugekommen ist ausschließlich `/elemente[]/wert`.
