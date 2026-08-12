@@ -138,6 +138,33 @@ kein USB, keine Rückkamera, kein Bluetooth. Für echte Treue das Gerät spiegel
 
 ---
 
+## 11b. Samsung-Skin sprengt den Bildschirm und macht den Emulator unbedienbar
+
+**Symptom:** Nach dem Einbinden des Galaxy-Z-Fold8-Skins startet das Emulator-Fenster teilweise
+außerhalb des Bildschirms. Die Titelleiste liegt oberhalb des sichtbaren Bereichs, das Fenster lässt
+sich nicht mehr verschieben, die seitliche Bedienleiste fällt aus dem Bild.
+
+**Ursache:** Der Emulator stellt Skins **1:1 in Skin-Auflösung** dar und skaliert sie nicht
+(`-scale` ist abgeschafft, siehe Punkt 5). Samsungs Skin-Layouts sind größer als übliche Bildschirme:
+
+| Skin | Layoutgröße | passt auf 2880 × 1800? |
+|---|---|---|
+| Galaxy_Z_Fold8_Main_Screen | 2885 × 2261 | nein (zu breit **und** zu hoch) |
+| Galaxy_Z_Fold8_Cover_Screen | 1701 × 2388 | nein (zu hoch) |
+
+**Zweiter Effekt:** Der Skin überschreibt die Displaymaße der AVD. Aus 1848 × 2448 (hochkant) wird
+2448 × 1848 — der Emulator zeigt dann quer, obwohl `hw.initialOrientation=portrait` gesetzt ist.
+
+**Fix:** Auf diesen Bildschirmgrößen den Skin weglassen (`showDeviceFrame=no`, keine `skin.path`-
+Zeile). Ein Herunterskalieren der Skin-Grafiken hilft nicht, weil dann auch die Display-Definition
+im `layout` kleiner werden müsste — das senkt die Emulator-Auflösung unter die des echten Geräts.
+Der Skin liefert ohnehin nur den Gehäuserahmen, kein One UI (Punkt 11).
+
+**Ergänzend:** Automatische Drehung abschalten, damit nichts von selbst ins Querformat kippt:
+`adb shell settings put system accelerometer_rotation 0`.
+
+---
+
 ## 12. Falsches System-Image bei 16-KB-Seiten
 
 **Symptom:** `ps16k`-Image gewählt, obwohl das Zielgerät mit 4-KB-Seiten läuft (oder umgekehrt).

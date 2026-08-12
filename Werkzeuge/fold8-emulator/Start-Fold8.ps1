@@ -53,6 +53,9 @@ if ($laeuft) {
 # --- An das echte Geraet angleichen -------------------------------------
 # Frank hat die Schrift auf dem Fold 8 auf 90 Prozent gestellt
 & $adb -s emulator-5554 shell "settings put system font_scale 0.9" 2>$null | Out-Null
+# Hochformat festhalten: nicht selbsttaetig drehen, nur auf Zuruf
+& $adb -s emulator-5554 shell "settings put system accelerometer_rotation 0" 2>$null | Out-Null
+& $adb -s emulator-5554 shell "settings put system user_rotation 0" 2>$null | Out-Null
 
 # --- APK installieren ----------------------------------------------------
 if ($Apk -ne "") {

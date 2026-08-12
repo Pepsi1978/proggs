@@ -188,6 +188,17 @@ Manager unter *Default Skin* auswählen. Samsung empfiehlt zusätzlich, unter
 *Settings > Tools > Emulator* die Option *Launch in the Running Devices tool window* abzuschalten.
 Skin-Einschränkungen: keine Telefonate, kein USB, keine Rückkamera, kein Bluetooth.
 
+**Praxisurteil (getestet 12.08.2026): auf einem 2880 × 1800-Bildschirm unbrauchbar.** Der Emulator
+zeigt Skins immer 1:1 und skaliert sie nicht. Samsungs Layouts sind 2885 × 2261 (Hauptbildschirm)
+bzw. 1701 × 2388 (Cover) groß — beide höher als 1800 Pixel. Folge: Das Fenster ragt oben aus dem
+Bild, die Titelleiste ist nicht mehr greifbar, die seitliche Bedienleiste fällt weg. Zusätzlich
+überschreibt der Skin die Displaymaße (1848 × 2448 hochkant wird zu 2448 × 1848 quer).
+Auf solchen Bildschirmen ohne Rahmen arbeiten (`showDeviceFrame=no`) — der Rahmen ist reine Optik.
+
+Damit der Emulator nicht selbsttätig ins Querformat kippt:
+`adb shell settings put system accelerometer_rotation 0` — danach wird nur noch manuell gedreht
+(Bedienleiste rechts oder `adb shell settings put system user_rotation 0|1|2|3`).
+
 ---
 
 ## §5 Der einzige Weg zu vollständiger Treue: das echte Gerät spiegeln

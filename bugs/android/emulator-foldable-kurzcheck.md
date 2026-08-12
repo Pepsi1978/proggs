@@ -18,6 +18,7 @@
 | 9 | `adb pull` bricht Skript ab | adb meldet Erfolg auf stderr → `ErrorActionPreference = "Continue"` |
 | 10 | `Unerwartetes Token "??"` | `powershell -File` ist 5.1, kein pwsh 7 → kein `??`, `?.`, kein Ternär |
 | 11 | Kein One UI trotz Samsung-Skin | Skin liefert nur Rahmen, laut Samsung "does not include any One UI feature" |
+| 11b | Fenster ragt aus dem Bildschirm, quer statt hochkant | Samsung-Skin ist 2885 × 2261 groß und wird nie skaliert → auf 2880 × 1800 weglassen (`showDeviceFrame=no`) |
 | 12 | Falsches System-Image | `getconf PAGESIZE` prüfen: 4096 → **kein** `ps16k`-Image |
 | 13 | Schrift größer als am Gerät | `font_scale` des Geräts auslesen und im Emulator setzen |
 | 14 | `uiautomator dump` fast leer | Compose ohne `testTag`/`contentDescription` → Layout Inspector nehmen |

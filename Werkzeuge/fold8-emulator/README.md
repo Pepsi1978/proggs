@@ -68,6 +68,37 @@ adb -s emulator-5554 shell "dumpsys device_state | grep mCommittedState"
 Achtung: Der gefaltete Zustand zeigt nur einen Ausschnitt, Android rechnet das Layout nicht auf
 das Cover-Format um. Für echte Cover-Darstellung `-Cover` benutzen.
 
+## Ausrichtung
+
+Der Emulator startet im **Hochformat** (Frontansicht des aufgeklappten Geräts) und dreht sich nicht
+von selbst — `Start-Fold8.ps1` schaltet die automatische Drehung ab. Manuell drehen über die
+Bedienleiste rechts am Emulator oder:
+
+```powershell
+adb -s emulator-5554 shell settings put system user_rotation 0   # hochkant
+adb -s emulator-5554 shell settings put system user_rotation 1   # quer
+```
+
+## Warum kein Geräterahmen?
+
+Samsungs offizieller Galaxy-Z-Fold8-Skin liegt zwar unter
+`%LOCALAPPDATA%\Android\Sdk\skins\Galaxy_Z_Fold8\`, ist auf diesem Bildschirm aber **nicht nutzbar**:
+
+- Der Emulator stellt Skins immer 1:1 dar und skaliert sie nicht.
+- Die Layouts sind 2885 × 2261 (Hauptbildschirm) und 1701 × 2388 (Cover) groß — beide höher als die
+  1800 Pixel dieses Monitors. Das Fenster ragt dann oben heraus und ist nicht mehr greifbar.
+- Der Skin überschreibt zusätzlich die Displaymaße und dreht die Ansicht ins Querformat.
+
+Er brächte ohnehin nur den Gehäuserahmen, **kein One UI**. Wer ihn auf einem größeren Bildschirm
+testen will, setzt in der `config.ini`:
+
+```ini
+showDeviceFrame=yes
+skin.dynamic=no
+skin.name=Galaxy_Z_Fold8_Main_Screen
+skin.path=C:\Users\barwa\AppData\Local\Android\Sdk\skins\Galaxy_Z_Fold8\Galaxy_Z_Fold8_Main_Screen
+```
+
 ## Grenzen
 
 Der Emulator läuft mit Stock-Android, **nicht** mit One UI. Samsungs Emulator-Skin ändert daran
