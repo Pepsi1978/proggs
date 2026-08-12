@@ -9,6 +9,7 @@ import dagger.assisted.AssistedInject
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.domain.usecase.GenerateReviewUseCase
 import java.time.Instant
 import java.time.LocalDate
@@ -57,6 +58,7 @@ class WeeklyReviewWorker @AssistedInject constructor(
                 settings.setWeeklyReview(text, System.currentTimeMillis())
                 try {
                     notifier.postOrDelay(
+                        kind = AppNotification.WOCHENRUECKBLICK,
                         notificationId = NOTIFICATION_ID,
                         title = "Dein Wochenrueckblick ist fertig",
                         body = "Tippen, um ihn vom Genie vorlesen zu lassen.",

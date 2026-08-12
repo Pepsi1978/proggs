@@ -13,7 +13,11 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.R
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
+import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -34,6 +38,7 @@ import javax.inject.Singleton
 class ShiftAwareNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
     private val calendarDao: CalendarDayDao,
+    private val settings: AppSettings,
 ) {
 
     init { ensureChannel() }
@@ -42,14 +47,30 @@ class ShiftAwareNotifier @Inject constructor(
      * Sendet eine Notification — falls aktuell Schlaffenster, wird sie als WorkManager-Job
      * mit setInitialDelay bis zum Wachzeitpunkt+15min geplant.
      *
-     * Liefert true wenn sofort gesendet wurde, false wenn verzoegert geplant.
+     * Frank-Wunsch 2026-08-12: Vorher wird der Benutzer-Schalter aus
+     * "Einstellungen -> Benachrichtigungen" geprueft. Ist [kind] dort abgeschaltet,
+     * wird NICHTS gesendet — die dahinterliegende Funktion (Briefing erzeugen,
+     * Trigger feuern, Frage speichern) laeuft unveraendert weiter, nur die
+     * Benachrichtigung entfaellt.
+     *
+     * Liefert true wenn sofort gesendet wurde, false wenn abgeschaltet oder verzoegert.
      */
     suspend fun postOrDelay(
+        kind: AppNotification,
         notificationId: Int,
         title: String,
         body: String,
         deepLink: String? = null,
     ): Boolean {
+        if (!settings.isNotificationEnabled(kind.key)) {
+            Diag.i(
+                DiagnosticArea.AGENTIC,
+                TAG,
+                "Benachrichtigung '${kind.title}' ist in den Einstellungen abgeschaltet — nicht gesendet.",
+            )
+            return false
+        }
+
         val now = LocalDateTime.now(ZoneId.systemDefault())
         val today = now.toLocalDate()
         val day = calendarDao.getDay(today.toString()).first()
@@ -139,7 +160,8 @@ class ShiftAwareNotifier @Inject constructor(
     }
 
     companion object {
-        private const val CHANNEL_ID = "ki_questions"
+        private const val TAG = "ShiftAwareNotifier"
+        private const val CHANNEL_ID = AppNotification.CHANNEL_KI
         const val EXTRA_DEEP_LINK = "deep_link"
     }
 }

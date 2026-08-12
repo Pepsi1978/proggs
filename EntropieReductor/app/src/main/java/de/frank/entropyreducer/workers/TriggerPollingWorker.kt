@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
 import de.frank.entropyreducer.data.repository.KiTriggerRepository
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import kotlinx.coroutines.flow.first
 
 /**
@@ -57,6 +58,7 @@ class TriggerPollingWorker @AssistedInject constructor(
                     triggerRepo.markFired(trigger, now)
                     try {
                         notifier.postOrDelay(
+                            kind = AppNotification.TRIGGER_FEUERT,
                             notificationId = NOTIFICATION_BASE + trigger.id.hashCode().mod(1000),
                             title = trigger.name,
                             body = trigger.proposedAction,

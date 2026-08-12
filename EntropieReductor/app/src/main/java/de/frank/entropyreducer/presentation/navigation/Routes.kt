@@ -113,5 +113,6 @@ object Routes {
     const val SETTINGS_WIDGET = "settings/widget"
     const val SETTINGS_DIAGNOSTICS = "settings/diagnostics"
     const val SETTINGS_TTS = "settings/tts"
+    const val SETTINGS_NOTIFICATIONS = "settings/notifications"
 
 }

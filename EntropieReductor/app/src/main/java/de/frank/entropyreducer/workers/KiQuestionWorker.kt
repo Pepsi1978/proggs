@@ -14,6 +14,7 @@ import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.repository.KiQuestionRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.kiquestion.KiQuestionGenerator
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.flow.first
@@ -62,6 +63,7 @@ class KiQuestionWorker @AssistedInject constructor(
             if (question != null && previous?.triggerKey != question.triggerKey) {
                 try {
                     notifier.postOrDelay(
+                        kind = AppNotification.KI_FRAGE,
                         notificationId = NOTIFICATION_ID,
                         title = "Frage des Moments",
                         body = question.text,

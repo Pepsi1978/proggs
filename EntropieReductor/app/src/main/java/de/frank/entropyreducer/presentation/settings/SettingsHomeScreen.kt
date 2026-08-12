@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.RecordVoiceOver
@@ -47,7 +48,7 @@ import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
-/** Top-Liste der 7 Settings-Sektionen (Spec §6, Bild 16/26). */
+/** Top-Liste der Settings-Sektionen (Spec §6, Bild 16/26). */
 @Composable
 fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onSwitchTab: (String) -> Unit) {
     val cosmos = LocalCosmos.current
@@ -113,6 +114,13 @@ private fun sectionsFor(): List<SectionDef> =
             title = "Vorlesen",
             subtitle = "Lege Pausen und automatische Abschaltung für das Vorlesen fest.",
             route = Routes.SETTINGS_TTS,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.NotificationsActive,
+            accent = LocalCosmos.current.accent,
+            title = "Benachrichtigungen",
+            subtitle = "Schalte jede einzelne Meldung der App an oder aus — vom Tagesbriefing bis zum Trigger-Alarm.",
+            route = Routes.SETTINGS_NOTIFICATIONS,
         ),
         SectionDef(
             icon = Icons.Outlined.CalendarMonth,

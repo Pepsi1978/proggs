@@ -9,6 +9,7 @@ import dagger.assisted.AssistedInject
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.domain.usecase.GenerateReviewUseCase
 import java.time.LocalDate
 import java.time.ZoneId
@@ -60,6 +61,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 settings.setMonthlyReview(text, System.currentTimeMillis())
                 try {
                     notifier.postOrDelay(
+                        kind = AppNotification.MONATSRUECKBLICK,
                         notificationId = NOTIFICATION_ID,
                         title = "Dein Monatsrueckblick ist fertig",
                         body = "Tippen, um ihn vom Genie vorlesen zu lassen.",

@@ -531,6 +531,11 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                     onBack = { nav.popBackStack() }
                 )
             }
+            composable(Routes.SETTINGS_NOTIFICATIONS) {
+                de.frank.entropyreducer.presentation.settings.notifications.NotificationSettingsScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
         }
 
     }

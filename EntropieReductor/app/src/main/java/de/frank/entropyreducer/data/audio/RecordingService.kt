@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import de.frank.entropyreducer.R
+import de.frank.entropyreducer.domain.notifications.AppNotification
 
 /**
  * Foreground-Service für stabile Aufnahme bei Bildschirm-Aus (Spec §8.2).
@@ -66,7 +67,7 @@ class RecordingService : Service() {
             .build()
 
     companion object {
-        private const val CHANNEL = "recording"
+        private const val CHANNEL = AppNotification.CHANNEL_RECORDING
         private const val NOTIFICATION_ID = 4711
 
         fun start(context: Context) {

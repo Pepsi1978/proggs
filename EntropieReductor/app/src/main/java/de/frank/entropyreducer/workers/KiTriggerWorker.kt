@@ -8,6 +8,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.domain.usecase.GenerateKiTriggersUseCase
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -49,6 +50,7 @@ class KiTriggerWorker @AssistedInject constructor(
             if (count > 0) {
                 try {
                     notifier.postOrDelay(
+                        kind = AppNotification.KI_TRIGGER_VORSCHLAG,
                         notificationId = NOTIFICATION_ID,
                         title = "Die KI schlaegt $count neue Trigger vor",
                         body = "Tippen, um anzusehen — annehmen oder ablehnen.",

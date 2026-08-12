@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import de.frank.entropyreducer.R
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.presentation.MainActivity
 
 /**
@@ -78,7 +79,7 @@ class TtsPlaybackService : Service() {
     }
 
     companion object {
-        private const val CHANNEL = "tts_playback"
+        private const val CHANNEL = AppNotification.CHANNEL_TTS
         private const val NOTIFICATION_ID = 4721
         private const val EXTRA_LABEL = "label"
 

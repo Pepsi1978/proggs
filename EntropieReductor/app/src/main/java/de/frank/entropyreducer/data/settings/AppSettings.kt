@@ -486,6 +486,27 @@ class AppSettings @Inject constructor(
         prefs.remove(KEY_SECOND_BRAIN_IDEA_TITLES)
     }
 
+    // ------------------------------------------------------------------
+    // Benachrichtigungen (Frank-Wunsch 2026-08-12)
+    // ------------------------------------------------------------------
+    // Pro Benachrichtigungs-Art ein Schalter. Der Schluessel kommt aus
+    // AppNotification.key und darf sich NIE aendern. Default ist bewusst true —
+    // eine neu eingebaute Benachrichtigung verhaelt sich damit wie bisher, der
+    // Benutzer schaltet sie bei Bedarf ab.
+
+    /** Beobachtbarer Schalter einer Benachrichtigungs-Art (Default: an). */
+    fun notificationEnabledFlow(notificationKey: String): Flow<Boolean> = ds.data
+        .map { it[notificationEnabledKey(notificationKey)] ?: true }
+        .distinctUntilChanged()
+
+    /** Einmal-Lesung fuer Worker/Notifier kurz vor dem Senden. */
+    suspend fun isNotificationEnabled(notificationKey: String): Boolean =
+        ds.data.first()[notificationEnabledKey(notificationKey)] ?: true
+
+    suspend fun setNotificationEnabled(notificationKey: String, value: Boolean) = ds.edit {
+        it[notificationEnabledKey(notificationKey)] = value
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -548,6 +569,10 @@ class AppSettings @Inject constructor(
         private fun secondBrainTitlesKey(areaKey: String) =
             if (areaKey == "ideas") KEY_SECOND_BRAIN_IDEA_TITLES
             else stringSetPreferencesKey("second_brain_${areaKey}_titles")
+
+        /** Schalter je Benachrichtigungs-Art (siehe AppNotification.key). */
+        private fun notificationEnabledKey(notificationKey: String) =
+            booleanPreferencesKey("notification_enabled_$notificationKey")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         const val DEFAULT_TTS_AUTO_STOP_MINUTES = 15

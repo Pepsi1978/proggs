@@ -9,6 +9,7 @@ import dagger.assisted.AssistedInject
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import de.frank.entropyreducer.domain.usecase.GenerateDailyBriefingUseCase
 import java.time.LocalDate
 import java.time.ZoneId
@@ -64,6 +65,7 @@ class DailyBriefingWorker @AssistedInject constructor(
 
             try {
                 notifier.postOrDelay(
+                    kind = AppNotification.TAGESBRIEFING,
                     notificationId = NOTIFICATION_ID,
                     title = "Dein Tagesbriefing ist bereit",
                     body = "Tippen, um es vom Genie vorlesen zu lassen.",

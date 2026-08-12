@@ -21,6 +21,8 @@ import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.polar.PolarBulkImporter
+import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.notifications.AppNotification
 import java.io.File
 import java.io.IOException
 
@@ -56,6 +58,7 @@ constructor(
     private val workoutDao: AmazfitWorkoutDao,
     private val appDatabase: AppDatabase,
     private val syncCoordinator: SyncCoordinator,
+    private val settings: AppSettings,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -219,7 +222,15 @@ constructor(
         }
     }
 
-    private fun showCompletionNotification(imported: Int, skipped: Int) {
+    /**
+     * Frank-Wunsch 2026-08-12: respektiert den Schalter aus
+     * "Einstellungen -> Benachrichtigungen". Der Import selbst laeuft unabhaengig davon.
+     */
+    private suspend fun showCompletionNotification(imported: Int, skipped: Int) {
+        if (!settings.isNotificationEnabled(AppNotification.POLAR_IMPORT_FERTIG.key)) {
+            Diag.i(DiagnosticArea.POLAR, TAG, "Abschluss-Benachrichtigung ist abgeschaltet — nicht gesendet.")
+            return
+        }
         ensureChannel()
         val text =
             if (skipped > 0) {
@@ -238,7 +249,11 @@ constructor(
         nm.notify(NOTIFICATION_ID + 1, notification)
     }
 
-    private fun showFailureNotification(reason: String) {
+    private suspend fun showFailureNotification(reason: String) {
+        if (!settings.isNotificationEnabled(AppNotification.POLAR_IMPORT_FEHLER.key)) {
+            Diag.i(DiagnosticArea.POLAR, TAG, "Fehler-Benachrichtigung ist abgeschaltet — nicht gesendet.")
+            return
+        }
         ensureChannel()
         val notification =
             NotificationCompat.Builder(appContext, CHANNEL_ID)
@@ -263,7 +278,7 @@ constructor(
 
     companion object {
         private const val TAG = "PolarBulkImportWorker"
-        private const val CHANNEL_ID = "polar_bulk_import"
+        private const val CHANNEL_ID = AppNotification.CHANNEL_POLAR
         private const val NOTIFICATION_ID = 73101
         private const val MAX_RETRY_ATTEMPTS = 3
         const val KEY_ZIP_URI = "zip_uri"
