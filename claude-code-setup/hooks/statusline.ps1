@@ -1,6 +1,7 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
-# Einzeilig (Frank 2026-05-31, frueher zweizeilig):
-#   Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Ordner | Zeit
+# Zweizeilig (Frank 2026-08-12):
+#   Zeile 1: Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Zeit
+#   Zeile 2: Arbeitsordner (allein, damit er NIE vom rechten Rand abgeschnitten wird)
 #   (Context ganz vorne — Frank 2026-06-07)
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
@@ -55,9 +56,11 @@ if ($obj) {
             $cwd = ('~' + $cwd.Substring($homeDir.Length)) -replace '\\', '/'
         }
         # Smart-truncate fuer den Ordner-Pfad (Variante B):
-        # - <= 35 Zeichen: unveraendert
-        # - > 35 Zeichen: ~/proggs/<Projekt>/…/<vorletztes>/<letztes>
-        $maxLen = 35
+        # - <= maxLen Zeichen: unveraendert
+        # - > maxLen Zeichen: ~/proggs/<Projekt>/…/<vorletztes>/<letztes>
+        # maxLen seit 2026-08-12 auf 100: der Ordner steht ALLEIN in Zeile 2 und hat
+        # dort viel Platz — Kuerzung nur noch als Notbremse fuer absurd lange Pfade.
+        $maxLen = 100
         if ($cwd.Length -gt $maxLen) {
             $segs = $cwd.Split('/')
             $n = $segs.Length
@@ -649,16 +652,17 @@ if ($week_used -ne $null -and $week_resets -gt 0) {
 
 # (Context steht jetzt GANZ vorne — Frank 2026-06-07, frueher hier an Position 7)
 
-# ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
-# Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.
-
-# 8. Ordner (mit fuehrendem Trenner, da jetzt hinter dem Kontext in derselben Zeile)
-if ($cwd) {
-    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-}
-
-# 9. Uhrzeit
+# 8. Uhrzeit — letztes Element von Zeile 1
 $out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
+
+# ===== ZEILE 2: NUR der Arbeitsordner (Frank 2026-08-12) =====
+# Grund: In Zeile 1 wurde der Ordner am rechten Rand abgeschnitten und war damit
+# unsichtbar. Er bekommt jetzt eine eigene Zeile und wird dort praktisch ungekuerzt
+# gezeigt (maxLen 100 nur als Notbremse). Zeilenumbruch mit "`n" (LF) — identisch
+# zur statusline.sh, damit beide Plattformen dieselbe zweizeilige Leiste rendern.
+if ($cwd) {
+    $out += "`n${P}${ICON_DIR} ${cwd}${R}"
+}
 
 [Console]::Out.Write($out)
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
-# Einzeilig (Frank 2026-05-31, frueher zweizeilig):
-#   Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Ordner | Zeit
+# Zweizeilig (Frank 2026-08-12):
+#   Zeile 1: Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Zeit
+#   Zeile 2: Arbeitsordner (allein, damit er NIE vom rechten Rand abgeschnitten wird)
 #   (Context ganz vorne — Frank 2026-06-07)
 
 input=$(cat)
@@ -91,9 +92,12 @@ esac
 # - <= 35 Zeichen: unveraendert
 # - > 35 Zeichen: erstes Segment + …/ + letzte 2 Segmente
 # - Erstes Segment ist bei Frank meist "~/proggs/<Projekt>" → zwei Segmente am Anfang behalten
+# max_len ist seit 2026-08-12 ein Parameter (Default 35): der Ordner steht jetzt ALLEIN
+# in Zeile 2 und hat dort viel Platz — dort wird mit 100 aufgerufen, sodass praktisch
+# jeder reale Pfad ungekuerzt erscheint und nur absurd lange Pfade gekuerzt werden.
 shorten_path() {
     local path="$1"
-    local max_len=35
+    local max_len="${2:-35}"
     if [ -z "$path" ] || [ ${#path} -le $max_len ]; then
         echo "$path"
         return
@@ -112,7 +116,7 @@ shorten_path() {
         echo "${segs[0]}/${segs[1]}/…/${segs[n-2]}/${segs[n-1]}"
     fi
 }
-cwd=$(shorten_path "$cwd_raw")
+cwd=$(shorten_path "$cwd_raw" 100)
 # Hinweis: ctx_remaining, five_h_used_raw, five_h_resets_raw, week_used_raw,
 # session_id wurden bereits oben in einem einzigen jq-Aufruf geparst.
 
@@ -767,14 +771,17 @@ fi
 
 # (Context steht jetzt GANZ vorne — Frank 2026-06-07, frueher hier an Position 7)
 
-# ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
-# Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.
-
-# 8. Ordner (mit fuehrendem Trenner, da jetzt hinter dem Kontext in derselben Zeile)
-[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-
-# 9. Uhrzeit
+# 8. Uhrzeit — letztes Element von Zeile 1
 printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 echo
+
+# ===== ZEILE 2: NUR der Arbeitsordner (Frank 2026-08-12) =====
+# Grund: In Zeile 1 wurde der Ordner am rechten Rand abgeschnitten und war damit
+# unsichtbar. Er bekommt jetzt eine eigene Zeile und wird dort praktisch ungekuerzt
+# gezeigt (shorten_path mit max_len 100 nur als Notbremse fuer absurd lange Pfade).
+# Der Pfad wird als printf-ARGUMENT (%s) uebergeben, nicht in den Format-String
+# interpoliert — so koennen Backslashes/Prozentzeichen im Pfad nie als Escape wirken
+# (vgl. Windows-Pfad-Bug 2026-07-08, wo "\b" gedruckte Segmente wieder loeschte).
+[ -n "$cwd" ] && printf "${P}${ICON_DIR} %s${R}\n" "$cwd"
 
 exit 0
