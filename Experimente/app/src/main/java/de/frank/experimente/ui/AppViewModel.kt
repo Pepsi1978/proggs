@@ -610,15 +610,31 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     // --- E-23: Haptik ----------------------------------------------------------------------
     // Feste Muster aus UI-Spec §7.3. Auf der Stufe *Aus* schweigt das Gerät.
 
+    /**
+     * Ein Rüttelmuster abspielen.
+     *
+     * **Haptik darf nie etwas zum Absturz bringen.** Sie ist Beiwerk — auf der Stufe *Aus*
+     * gibt es sie gar nicht, und die App muss ohne sie vollständig bedienbar bleiben. Fehlt
+     * die Erlaubnis oder hat das Gerät keinen Vibrator, wird das vermerkt und weitergemacht.
+     *
+     * Genau daran ist die App gestorben: `VIBRATE` fehlte im Manifest, `vibrate()` warf eine
+     * SecurityException — und riss die Aufnahme mit, obwohl mit der Aufnahme alles in
+     * Ordnung war. Die Erlaubnis steht jetzt im Manifest; dieser Fangarm ist die zweite
+     * Schicht, damit dieselbe Klasse von Fehler nicht wiederkommen kann.
+     */
     private fun ruettle(muster: LongArray = longArrayOf(0, 30), staerke: IntArray? = null) {
         if (_effektstufe.value == Effektstufe.AUS) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val wirkung = if (staerke == null) {
-            VibrationEffect.createWaveform(muster, -1)
-        } else {
-            VibrationEffect.createWaveform(muster, staerke, -1)
+        try {
+            val wirkung = if (staerke == null) {
+                VibrationEffect.createWaveform(muster, -1)
+            } else {
+                VibrationEffect.createWaveform(muster, staerke, -1)
+            }
+            ruettler?.vibrate(wirkung)
+        } catch (fehler: Exception) {
+            android.util.Log.w("Haptik", "Rütteln nicht möglich: ${fehler.message}")
         }
-        ruettler?.vibrate(wirkung)
     }
 
     /** Kurz (10 ms) beim Abhaken. */

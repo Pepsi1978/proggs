@@ -47,7 +47,20 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         // ein `when` mit Literalen und einem `else`, das alles Unbekannte an Edge gab —
         // eine abweichende Kennung („qwen" statt „qwen_clone") landete damit **stumm** bei
         // der falschen Stimme, ohne jede Fehlermeldung. Jetzt ist jeder Anbieter benannt.
-        when (TtsProvider.entries.firstOrNull { it.id == anbieter } ?: TtsCatalog.DEFAULT_PROVIDER) {
+        val weg = TtsProvider.entries.firstOrNull { it.id == anbieter } ?: TtsCatalog.DEFAULT_PROVIDER
+        // Sonde: welcher Weg wirklich spricht. Genau das war von aussen nicht zu sehen, als
+        // „Meine Stimme" stumm bei Edge landete — man hoerte nur, dass etwas nicht stimmt.
+        android.util.Log.i(
+            "Vorleser",
+            "spricht ueber ${weg.id} (gespeichert: $anbieter, Stimme: " +
+                when (weg) {
+                    TtsProvider.GOOGLE_CLOUD -> einstellungen.stimmeGoogle
+                    TtsProvider.QWEN_CLONE -> einstellungen.stimmeQwen
+                    TtsProvider.EDGE -> einstellungen.stimmeEdge
+                } + ")",
+        )
+
+        when (weg) {
             TtsProvider.GOOGLE_CLOUD -> {
                 val schluessel = einstellungen.googleTtsSchluessel
                 if (schluessel.isBlank()) {

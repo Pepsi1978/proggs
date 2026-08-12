@@ -3,6 +3,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!--
+        E-23 (Haptik): feste Rüttelmuster beim Abhaken, Aufnehmen, Starten und Abschließen.
+        Ohne diese Erlaubnis wirft `Vibrator.vibrate()` eine SecurityException — sie ist eine
+        normale Berechtigung, sie wird nicht zur Laufzeit erfragt.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
