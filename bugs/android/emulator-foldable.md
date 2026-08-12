@@ -327,3 +327,37 @@ berechnet — unabhängig davon, auf welchem Bildschirm das Fenster tatsächlich
 
 **Fix:** `Screen::FromHandle(fensterHandle)` verwenden und den Maßstab über das Verhältnis der
 Bildschirmdiagonalen anpassen. Präventiv eingebaut, bevor der Fehler auftrat.
+
+---
+
+## 21. Falscher Absturz-Alarm: fremder Systemabsturz wird der App zugeschrieben
+
+**Symptom:** `Start-Fold8.ps1 -Projekt X` meldet "DIE APP IST ABGESTUERZT" und zeigt eine
+Bluetooth-Zeile (`system/gd/hci/hci_layer.cc:565 on_hardware_error: Hardware Error Event with
+code 0x42`) — die App läuft in Wahrheit einwandfrei im Vordergrund.
+
+**Ursache (zwei Fehler zugleich):**
+
+1. Der Puffer `logcat -b crash` sammelt die Abstürze **aller** Prozesse des Systems. Beim Boot
+   stürzt auf dem Emulator regelmäßig `com.android.bluetooth` ab. Die Prüfung suchte nach
+   `beginning of crash` — diese Trennzeile steht im Puffer, sobald **irgendein** Prozess abstürzt.
+2. Nach dem Start wurde genau 5 Sekunden gewartet und einmal `pidof` abgefragt. Ein Kaltstart
+   dauert auf dem Emulator länger; die leere Antwort galt dann fälschlich als Absturz.
+
+Verstärkend: Der Zeilenfilter `Error:` trifft wegen des case-insensitiven `-match` auch
+`on_hardware_error:` — deshalb wurde ausgerechnet die Bluetooth-Zeile als Ursache angezeigt.
+
+**Fix (Poka-Yoke Stufe 3 — falscher Alarm ist strukturell nicht mehr möglich):**
+Ein Absturz zählt nur noch, wenn eine Zeile des Puffers den **eigenen Paketnamen** nennt
+(`Process: <paket>` bei Java-Abstürzen, `>>> <paket> <<<` bei nativen Tombstones). Fremde
+Prozesse können die Bedingung nicht mehr erfüllen — unabhängig davon, welche Wörter ihre
+Meldung enthält. Statt der festen Wartezeit wird bis zu 20 s im Sekundentakt auf den Prozess
+gewartet. Fehlt der Prozess ohne eigenen Crash-Eintrag, lautet die Meldung "DIE APP LAEUFT NICHT"
+(nicht gestartet) statt "abgestürzt".
+
+**Funktionserhaltung geprüft:** Ein echter App-Absturz (`FATAL EXCEPTION` mit
+`Process: de.frank.entropyreducer.debug`) wird weiterhin erkannt und mit Stacktrace gezeigt.
+
+**Verwandte Stelle:** `Zeig-Fehler.ps1` filtert dasselbe Rauschen bereits über `$nativesRauschen`
+(`F DEBUG|libbluetooth|…`) — die Absturz-Erkennung in `Start-Fold8.ps1` war eine zweite,
+schwächere Kopie dieser Logik. Wer eine der beiden ändert, prüft immer auch die andere.

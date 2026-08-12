@@ -198,21 +198,37 @@ if ($Apk -ne "") {
       & $adb -s emulator-5554 shell "monkey -p $paket -c android.intent.category.LAUNCHER 1" 2>&1 | Out-Null
 
       # --- Laeuft die App ueberhaupt noch? -------------------------------
-      Start-Sleep -Seconds 5
-      $pid1 = (& $adb -s emulator-5554 shell "pidof $paket" 2>$null) -replace "\s",""
-      $absturz = & $adb -s emulator-5554 logcat -b crash -d 2>$null
+      # Ein Kaltstart dauert auf dem Emulator laenger als eine feste Wartezeit:
+      # bis zu 20 s auf den Prozess warten, statt vorschnell "abgestuerzt" zu melden.
+      $pid1 = ""
+      for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Seconds 1
+        $pid1 = (& $adb -s emulator-5554 shell "pidof $paket" 2>$null) -replace "\s",""
+        if ($pid1 -ne "") { break }
+      }
 
-      if ($pid1 -eq "" -or $absturz -match "FATAL EXCEPTION|beginning of crash") {
+      # Der crash-Puffer sammelt ALLE Prozesse des Systems - auch Bluetooth-Tombstones,
+      # die mit dieser App nichts zu tun haben. Nur Abstuerze zaehlen, die das eigene
+      # Paket nennen ("Process: <paket>" bei Java, ">>> <paket> <<<" bei nativen).
+      $absturz = @(& $adb -s emulator-5554 logcat -b crash -d 2>$null)
+      $paketRegex = [regex]::Escape($paket)
+      $eigenerCrash = @($absturz | Where-Object { $_ -match $paketRegex }).Count -gt 0
+
+      if ($pid1 -eq "" -or $eigenerCrash) {
         Write-Host ""
-        Write-Host "  DIE APP IST ABGESTUERZT." -ForegroundColor Red
-        $wichtig = $absturz | Where-Object {
-          $_ -match "FATAL EXCEPTION|Process:|Caused by:|^\s*at [a-z]+\.(frank|barwa)|Exception|Error:"
-        } | Select-Object -First 12
-        if ($wichtig) {
+        if ($eigenerCrash) {
+          Write-Host "  DIE APP IST ABGESTUERZT." -ForegroundColor Red
+          # Ab der ersten eigenen Zeile den zusammenhaengenden Stacktrace zeigen
+          $start = 0
+          for ($j = 0; $j -lt $absturz.Count; $j++) {
+            if ($absturz[$j] -match $paketRegex) { $start = [Math]::Max(0, $j - 2); break }
+          }
+          $ende = [Math]::Min($absturz.Count - 1, $start + 14)
           Write-Host ""
-          $wichtig | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+          $absturz[$start..$ende] | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
         } else {
-          Write-Host "  Kein Absturzprotokoll gefunden - moeglicherweise wurde die App nur beendet." -ForegroundColor DarkGray
+          Write-Host "  DIE APP LAEUFT NICHT." -ForegroundColor Red
+          Write-Host "  Kein Absturz fuer $paket im Protokoll - sie wurde vermutlich gar nicht erst gestartet." -ForegroundColor DarkGray
         }
         Write-Host ""
         Write-Host "  Vollstaendiges Protokoll:  .\Zeig-Fehler.ps1" -ForegroundColor DarkGray

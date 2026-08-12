@@ -29,3 +29,4 @@
 | 18 | Emulator startet riesig/außerhalb, ständiges Nachrücken | Er kennt **keine** Startgröße (`-scale` tot, `-window-size` nur Fuchsia, `emulator-user.ini` wird überschrieben) → einmal per `SetWindowPos` setzen, sobald das Fenster da ist |
 | 19 | "App viel zu groß" trotz korrekter Rechnung | Innendisplay (7,6″, 11,63 cm) mit Cover-Display (5,5″, 7,47 cm) verglichen → Emulator dem echten Gerät folgen lassen |
 | 20 | Maßstab falsch auf zweitem Bildschirm | `PrimaryScreen` statt `Screen::FromHandle` → Monitor unter dem Fenster ermitteln |
+| 21 | "App abgestürzt", läuft aber (Bluetooth-Zeile) | `logcat -b crash` sammelt **alle** Prozesse → Absturz nur zählen, wenn eine Zeile den eigenen Paketnamen nennt; auf den Prozess pollen statt fester 5 s |
