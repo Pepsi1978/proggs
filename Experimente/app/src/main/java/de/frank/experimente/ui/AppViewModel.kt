@@ -207,8 +207,16 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      *   „Nochmal". Er bleibt stehen, bis Frank ihn wegdrueckt; eine Fehlermeldung, die
      *   nach zweieinhalb Sekunden verschwindet, hat er womoeglich nie gelesen.
      */
-    private val _hinweis = MutableStateFlow<String?>(null)
-    val hinweis: StateFlow<String?> = _hinweis.asStateFlow()
+    /**
+     * **Nie direkt beschreiben — immer über `melde()`.** Nur dort läuft die Uhr, die den
+     * Hinweis nach 2600 ms wieder wegnimmt.
+     *
+     * Genau das ging schief: elf Stellen setzten das Feld direkt, und ihre Hinweise blieben
+     * für immer stehen — auf jedem Bildschirm, weil der Hinweis der ganzen App gehört. Der
+     * sperrige Name erinnert daran, dass hier nur eine Funktion schreibt.
+     */
+    private val _hinweisNurUeberMelde = MutableStateFlow<String?>(null)
+    val hinweis: StateFlow<String?> = _hinweisNurUeberMelde.asStateFlow()
 
     private val _stoerung = MutableStateFlow<String?>(null)
     val stoerung: StateFlow<String?> = _stoerung.asStateFlow()
@@ -225,11 +233,11 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     /** Ein kurzer Hinweis, der nach 2600 ms von allein geht („Code kopiert."). */
     fun melde(text: String) {
-        _hinweis.value = text
+        _hinweisNurUeberMelde.value = text
         hinweisUhr?.cancel()
         hinweisUhr = viewModelScope.launch {
             delay(2_600)
-            if (_hinweis.value == text) _hinweis.value = null
+            if (_hinweisNurUeberMelde.value == text) _hinweisNurUeberMelde.value = null
         }
     }
 
@@ -395,7 +403,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 _anlegeFeld.value = Feld()
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
-                _hinweis.value = "Steht jetzt unter „Steht an“."
+                melde("Steht jetzt unter „Steht an“.")
             } finally {
                 _wartet.value = null
             }
@@ -408,11 +416,13 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun uebernimm(vorschlag: Suggestion) {
         viewModelScope.launch {
             val id = ablage.uebernimm(vorschlag.id)
-            _hinweis.value = if (id == null) {
-                "„${vorschlag.title}“ steht schon im Monitor."
-            } else {
-                "„${vorschlag.title}“ steht jetzt im Monitor unter „Steht an“."
-            }
+            melde(
+                if (id == null) {
+                    "„${vorschlag.title}“ steht schon im Monitor."
+                } else {
+                    "„${vorschlag.title}“ steht jetzt im Monitor unter „Steht an“."
+                },
+            )
         }
     }
 
@@ -423,7 +433,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 lassFunkeln(experiment.id)
                 ruettleAufsteigend()
             } else {
-                _hinweis.value = DREI_LAUFEN
+                melde(DREI_LAUFEN)
             }
         }
     }
@@ -433,7 +443,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch {
             val id = ablage.starteSofort(vorschlag.id, heute)
             if (id == null) {
-                _hinweis.value = DREI_LAUFEN
+                melde(DREI_LAUFEN)
             } else {
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
@@ -446,7 +456,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun sortiere(experiment: Experiment, nachIndex: Int) {
         viewModelScope.launch {
             ablage.sortiere(experiment.id, nachIndex)
-            _hinweis.value = "Reihenfolge geändert."
+            melde("Reihenfolge geändert.")
         }
     }
 
@@ -454,11 +464,13 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun nimmAusMonitor(experiment: Experiment, aufMerkliste: Boolean) {
         viewModelScope.launch {
             ablage.nimmAusMonitor(experiment.id, aufMerkliste)
-            _hinweis.value = if (aufMerkliste) {
-                "„${experiment.title}“ ist wieder auf der Merkliste."
-            } else {
-                "„${experiment.title}“ ist gelöscht."
-            }
+            melde(
+                if (aufMerkliste) {
+                    "„${experiment.title}“ ist wieder auf der Merkliste."
+                } else {
+                    "„${experiment.title}“ ist gelöscht."
+                },
+            )
         }
     }
 
@@ -726,7 +738,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             // Laufen bereits drei, wird VORSCHLAEGE übersprungen: B-01 nennt den Grund und
             // verweist auf den Monitor (Funktions-Spec §4).
             if (laufende.value.size >= Ablage.MAX_LAUFEND) {
-                _hinweis.value = DREI_LAUFEN
+                melde(DREI_LAUFEN)
                 _tagZustand.value = TagZustand.LAGE_STEHT
                 return@launch
             }
@@ -772,7 +784,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun merke(vorschlag: Suggestion) {
         viewModelScope.launch {
             if (ablage.merke(vorschlag)) {
-                _hinweis.value = "„${vorschlag.title}“ liegt auf der Merkliste."
+                melde("„${vorschlag.title}“ liegt auf der Merkliste.")
             }
         }
     }
@@ -933,7 +945,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _auswertungsFeld.value = Feld()
             _einschaetzung.value = emptyList()
             gehe(Ziel.MONITOR)
-            _hinweis.value = "Abgeschlossen. Der Eintrag steht im Logbuch."
+            melde("Abgeschlossen. Der Eintrag steht im Logbuch.")
         }
     }
 
@@ -941,7 +953,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun nichtUmgesetzt(experiment: Experiment) {
         viewModelScope.launch {
             ablage.nichtUmgesetzt(experiment.id, _auswertungsFeld.value.text, heute)
-            _hinweis.value = "Nicht umgesetzt — der Eintrag steht im Logbuch."
+            melde("Nicht umgesetzt — der Eintrag steht im Logbuch.")
             bestimmeZustand()
         }
     }
@@ -1071,7 +1083,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 app.codex.anmelden { code -> _geraetecode.value = code }
                 _angemeldet.value = true
                 _geraetecode.value = null
-                _hinweis.value = "Angemeldet." + (app.codex.email?.let { " ($it)" } ?: "")
+                melde("Angemeldet." + (app.codex.email?.let { " ($it)" } ?: ""))
             } catch (fehler: Exception) {
                 _geraetecode.value = null
                 _stoerung.value = fehler.freundlich()
