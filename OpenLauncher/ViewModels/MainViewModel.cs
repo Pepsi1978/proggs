@@ -134,6 +134,10 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _modelDefaultButtonText = "Standard speichern";
     [ObservableProperty] private string _modelDefaultSummary = string.Empty;
     [ObservableProperty] private bool _hasModelDefault;
+    // Gegenstueck zu HasModelDefault: die Kontextzeile ("Claude Code · Minimal + …") und die
+    // Standard-Zeile teilen sich denselben Platz. Ohne dieses Gegenstueck stuenden beide
+    // untereinander und der Profil-Bereich saesse mit gespeichertem Standard eine Zeile tiefer.
+    [ObservableProperty] private bool _hasNoModelDefault = true;
     [ObservableProperty] private bool _canSaveModelDefault;
 
     partial void OnSelectedModelChanged(ModelEntry? value)
@@ -330,6 +334,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var stored = SelectedModel == null ? null : _modelDefaults.Find(SelectedModel.ModelString);
         HasModelDefault = stored != null;
+        HasNoModelDefault = stored == null;
         CanSaveModelDefault = SelectedModel != null && SelectedProfile != null && SelectedWorkMode != null;
         ModelDefaultSummary = stored == null
             ? string.Empty

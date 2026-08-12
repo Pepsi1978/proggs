@@ -25,6 +25,10 @@ $checks = @(
     @{ Name = 'Standard-Schalter steht neben den Bearbeiten-Knoepfen'; Pass = $xaml -match '(?s)Content="Modus bearbeiten".*?Command="\{Binding ToggleModelDefaultCommand\}"' }
     @{ Name = 'Schalter zeigt die dynamische Beschriftung'; Pass = $xaml -match 'Content="\{Binding ModelDefaultButtonText\}"' }
     @{ Name = 'gespeicherter Standard wird im Profil-Bereich angezeigt'; Pass = $xaml -match 'Text="\{Binding ModelDefaultSummary\}"' -and $xaml -match 'Visibility="\{Binding HasModelDefault, Converter=\{StaticResource BoolToVisibility\}\}"' }
+    # Die Standard-Zeile ERSETZT die Kontextzeile. Stuenden beide gleichzeitig, saesse der
+    # Profil-Bereich mit gespeichertem Standard eine Zeile tiefer als ohne.
+    @{ Name = 'Standard-Zeile ersetzt die Kontextzeile'; Pass = $xaml -match 'Text="\{Binding ProfileContextText\}"[^>]*Visibility="\{Binding HasNoModelDefault, Converter=\{StaticResource BoolToVisibility\}\}"' }
+    @{ Name = 'Kontextzeile und Standard-Zeile schliessen sich aus'; Pass = $viewModel -match '(?s)HasModelDefault = stored != null;\s*HasNoModelDefault = stored == null;' }
 )
 
 $failed = @($checks | Where-Object { -not $_.Pass })
