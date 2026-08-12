@@ -74,7 +74,10 @@ public sealed partial class MainViewModel : ObservableObject
             Description = "Randfälle und Härtung mitprüfen"
         });
         SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
-        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
+        // Freimodus ist die Vorauswahl fuer JEDES Profil und JEDES Modell: der Modellwechsel setzt
+        // das Minimalprofil, der Profilwechsel setzt wieder diesen Modus -> ohne aktives Umschalten
+        // laeuft jede Session ohne zusaetzlichen Modus-Prompt.
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -254,7 +257,7 @@ public sealed partial class MainViewModel : ObservableObject
         UpdateProfileAvailability();
         if (value == null) return;
 
-        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "schnell");
+        SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
         SelectProfileThinkingOption();
         StatusText = $"Profil {value.DisplayName} ausgewählt.";
     }

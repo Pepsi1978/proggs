@@ -82,6 +82,10 @@ Weitere Details:
   `gruendlich`) — bearbeitbar über den Button **„Modus bearbeiten"** neben „Profil bearbeiten".
 - Der Dateiinhalt ist der **komplette** Modus-Prompt und wird 1:1 verwendet; es wird nichts ergänzt
   oder umformuliert. **Leere Datei = dieser Modus ergänzt nichts** (Standard beim Freimodus).
+- **Vorauswahl: immer der Freimodus** — beim Start und nach jedem Profil- bzw. Modellwechsel
+  (Modellwechsel setzt das Minimalprofil, der Profilwechsel setzt den Modus). Gilt damit für alle
+  drei Profile (Minimal/Standard/Strikt) und für jedes Modell; ein anderer Modus greift nur, wenn er
+  vor dem Start bewusst angeklickt wird.
 - **OpenCode:** das Plugin `work-mode.js` liest die Datei bei **jedem** Modellaufruf frisch und hängt
   sie an den Systemprompt — auch nach dem Umschalten des Modus in der TUI. Der eingebaute Text in
   `token-cost-sidebar/dist/work-mode.ts` greift nur noch, wenn die Datei fehlt.

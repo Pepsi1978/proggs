@@ -15,9 +15,12 @@ $modeFiles = @('frei', 'schnell', 'normal', 'gruendlich') |
 $checks = @(
     @{ Name = 'vier Modi in richtiger Reihenfolge'; Pass = $viewModel -match '(?s)Id = "frei".*?Id = "schnell".*?Id = "normal".*?Id = "gruendlich"' }
     @{ Name = 'Minimalprofil ist Launcher-Standard'; Pass = $viewModel -match 'SelectedProfile = Profiles\.Single\(profile => profile\.Id == "minimal"\)' }
-    @{ Name = 'Schnellmodus ist Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "schnell"\)' }
+    @{ Name = 'Freimodus ist Launcher-Standard'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "frei"\)' }
     @{ Name = 'Modellwechsel setzt das Minimalprofil'; Pass = $viewModel -match 'SelectedProfile = Profiles\.FirstOrDefault\(profile => profile\.Id == "minimal"\)' }
-    @{ Name = 'Profilwechsel setzt immer den Schnellmodus'; Pass = $viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "schnell"\)' }
+    # Zwei Fundstellen: Konstruktor (Erststart) und Profilwechsel. Beide muessen auf "frei" stehen,
+    # sonst kippt die Vorauswahl bei Profil- oder Modellwechsel wieder auf einen anderen Modus.
+    @{ Name = 'Start UND Profilwechsel setzen den Freimodus'; Pass = ([regex]::Matches($viewModel, 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "frei"\)')).Count -eq 2 }
+    @{ Name = 'kein anderer Modus als Vorauswahl'; Pass = -not ($viewModel -match 'SelectedWorkMode = WorkModes\.Single\(mode => mode\.Id == "(?!frei")') }
     @{ Name = 'Standard und Minimal wählen High vor'; Pass = $viewModel -match 'SelectedProfile\.Id == "strict" \? "xhigh" : "high"' }
     @{ Name = 'Nicht unterstützte Stufe fällt auf höchste verfügbare zurück'; Pass = $viewModel -match '\?\? ThinkingOptions\.Last\(\)' }
     @{ Name = 'Thinking-Vorauswahl folgt Profilwechsel und Optionsladen'; Pass = ([regex]::Matches($viewModel, 'SelectProfileThinkingOption\(\);')).Count -eq 2 }
