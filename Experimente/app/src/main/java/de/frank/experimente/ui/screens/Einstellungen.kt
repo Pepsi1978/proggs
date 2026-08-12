@@ -40,6 +40,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.experimente.tts.TtsCatalog
+import de.frank.experimente.tts.TtsProvider
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.components.Bildschirmgeruest
@@ -66,12 +68,21 @@ private val MODELLE = listOf("gpt-5.6-sol" to "GPT 5.6 Sol", "gpt-5.6-terra" to 
 private val EFFORT = listOf(
     "low" to "Niedrig", "medium" to "Mittel", "high" to "Hoch", "xhigh" to "Sehr hoch", "max" to "Maximal",
 )
-private val GOOGLE_STIMMEN = listOf(
-    "de-DE-Chirp3-HD-Kore", "de-DE-Chirp3-HD-Puck", "de-DE-Chirp3-HD-Aoede", "de-DE-Chirp3-HD-Charon",
-)
-private val EDGE_STIMMEN = listOf(
-    "de-DE-SeraphinaMultilingualNeural", "de-DE-FlorianMultilingualNeural", "de-DE-KatjaNeural",
-)
+/**
+ * Anbieter und Stimmen kommen **ausschliesslich** aus `TtsCatalog` — derselben Quelle, aus
+ * der auch `Vorleser` liest.
+ *
+ * Vorher standen hier kurze, von Hand getippte Listen: vier von dreissig Chirp-3-Stimmen,
+ * drei von sechs Edge-Stimmen, und die Anbieter-Kennungen wichen ab (`qwen` statt
+ * `qwen_clone`). Damit fiel „Meine Stimme" im Vorleser in den else-Zweig und es sprach
+ * immer Edge. Eine zweite Liste neben dem Katalog ist die Ursache — deshalb gibt es sie
+ * nicht mehr.
+ */
+private fun stimmenVon(anbieter: String): List<Pair<String, String>> = when (anbieter) {
+    TtsProvider.GOOGLE_CLOUD.id -> TtsCatalog.googleVoices.map { it.id to it.id }
+    TtsProvider.EDGE.id -> TtsCatalog.edgeVoices.map { it.id to it.id }
+    else -> emptyList()
+}
 
 /**
  * **B-08 — Einstellungen.** Sieben Abschnitte in der Reihenfolge des Entwurfs:
@@ -159,26 +170,24 @@ fun Einstellungen(modell: AppViewModel) {
             Abschnittskarte {
                 Auswahl(
                     beschriftung = "Anbieter",
-                    eintraege = listOf(
-                        "google_cloud" to "Google Chirp 3 HD",
-                        "qwen" to "Meine Stimme",
-                        "edge" to "Microsoft Edge",
-                    ),
+                    eintraege = TtsCatalog.providers.map { it.id to it.label },
                     gewaehlt = anbieter,
                 ) { anbieter = it; einstellungen.ttsAnbieter = it }
 
                 when (anbieter) {
-                    "google_cloud" -> Auswahl(
+                    TtsProvider.GOOGLE_CLOUD.id -> Auswahl(
                         beschriftung = "Stimme",
-                        eintraege = GOOGLE_STIMMEN.map { it to it },
+                        eintraege = stimmenVon(anbieter),
                         gewaehlt = stimmeGoogle,
+                        mono = true,
                         modifier = Modifier.padding(top = 16.dp),
                     ) { stimmeGoogle = it; einstellungen.stimmeGoogle = it }
 
-                    "edge" -> Auswahl(
+                    TtsProvider.EDGE.id -> Auswahl(
                         beschriftung = "Stimme",
-                        eintraege = EDGE_STIMMEN.map { it to it },
+                        eintraege = stimmenVon(anbieter),
                         gewaehlt = stimmeEdge,
+                        mono = true,
                         modifier = Modifier.padding(top = 16.dp),
                     ) { stimmeEdge = it; einstellungen.stimmeEdge = it }
 
@@ -514,12 +523,19 @@ private fun Auswahl(
     gewaehlt: String,
     modifier: Modifier = Modifier,
     platzhalter: String = "—",
+    mono: Boolean = false,
     beiWahl: (String) -> Unit,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     var offen by remember { mutableStateOf(false) }
     val angezeigt = eintraege.firstOrNull { it.first == gewaehlt }?.second ?: platzhalter
+    // Stimmkennungen setzt der Entwurf in JetBrains Mono - sie sind Daten, kein Fliesstext.
+    val stil = if (mono) {
+        schriften.daten
+    } else {
+        schriften.knopfKlein.copy(fontWeight = androidx.compose.ui.text.font.FontWeight(400))
+    }
 
     // Das kleine Dreieck dreht sich beim Aufklappen (M-13, 120 ms, Hauskurve).
     val stufe = LocalEffektstufe.current
@@ -545,9 +561,7 @@ private fun Auswahl(
             ) {
                 Text(
                     text = angezeigt,
-                    style = schriften.knopfKlein.copy(
-                        fontWeight = androidx.compose.ui.text.font.FontWeight(400),
-                    ),
+                    style = stil,
                     color = if (angezeigt == platzhalter) farben.blass else farben.text,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -577,9 +591,7 @@ private fun Auswahl(
                         text = {
                             Text(
                                 text = anzeige,
-                                style = schriften.knopfKlein.copy(
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight(400),
-                                ),
+                                style = stil,
                                 color = if (aktiv) farben.aktion else farben.text,
                             )
                         },

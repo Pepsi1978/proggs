@@ -44,8 +44,21 @@ class Einstellungen(ctx: Context) {
         set(v) { p.edit().putString(EFFORT_LOGBOOK, v).commit() }
 
     // --- F-23: Stimme und Vorlesen ------------------------------------------------------
+    /**
+     * Die Kennung des Vorlese-Anbieters — verbindlich sind die Werte aus `TtsProvider`
+     * (`google_cloud`, `qwen_clone`, `edge_tts`).
+     *
+     * Eine frühere Fassung des Einstellungs-Bildschirms schrieb hier verkürzte Kennungen
+     * (`qwen`, `edge`). Die stehen auf dem Gerät noch in den Einstellungen und würden den
+     * Vorleser weiter auf den falschen Weg schicken — deshalb werden sie beim Lesen
+     * einmalig geradegezogen, statt sie als „unbekannt" zu behandeln.
+     */
     var ttsAnbieter: String
-        get() = p.getString(TTS_PROVIDER, "google_cloud")!!
+        get() = when (val gespeichert = p.getString(TTS_PROVIDER, "google_cloud")!!) {
+            "qwen" -> "qwen_clone"
+            "edge" -> "edge_tts"
+            else -> gespeichert
+        }
         set(v) { p.edit().putString(TTS_PROVIDER, v).commit() }
 
     var stimmeGoogle: String

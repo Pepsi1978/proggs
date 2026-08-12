@@ -43,8 +43,12 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
             beiFehler(f.message ?: "Das Vorlesen hat nicht geklappt.")
         }
 
-        when (anbieter) {
-            "google_cloud" -> {
+        // Verteilt wird über den Katalog, nicht über lose Zeichenketten. Vorher stand hier
+        // ein `when` mit Literalen und einem `else`, das alles Unbekannte an Edge gab —
+        // eine abweichende Kennung („qwen" statt „qwen_clone") landete damit **stumm** bei
+        // der falschen Stimme, ohne jede Fehlermeldung. Jetzt ist jeder Anbieter benannt.
+        when (TtsProvider.entries.firstOrNull { it.id == anbieter } ?: TtsCatalog.DEFAULT_PROVIDER) {
+            TtsProvider.GOOGLE_CLOUD -> {
                 val schluessel = einstellungen.googleTtsSchluessel
                 if (schluessel.isBlank()) {
                     beiFehler("Für diese Stimme fehlt der Schlüssel. Er steht in den Einstellungen.")
@@ -60,7 +64,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     onError = fehler,
                 )
             }
-            "qwen_clone" -> {
+            TtsProvider.QWEN_CLONE -> {
                 val schluessel = einstellungen.qwenSchluessel
                 val stimme = einstellungen.stimmeQwen
                 if (schluessel.isBlank() || stimme.isBlank()) {
@@ -76,7 +80,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     onError = fehler,
                 )
             }
-            else -> edge.speak(
+            TtsProvider.EDGE -> edge.speak(
                 text = text,
                 voice = einstellungen.stimmeEdge,
                 speechRate = tempo,
