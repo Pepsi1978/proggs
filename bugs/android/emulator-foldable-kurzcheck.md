@@ -24,3 +24,5 @@
 | 13 | Schrift größer als am Gerät | `font_scale` des Geräts auslesen und im Emulator setzen |
 | 14 | `uiautomator dump` fast leer | Compose ohne `testTag`/`contentDescription` → Layout Inspector nehmen |
 | 15 | Recherche liefert 0 Quellen | Firecrawl-Query zu lang → kurze Stichwort-Queries |
+| 16 | `getevent` sieht scrcpy-/`input tap`-Klicks nicht | Eingespeiste Events umgehen `/dev/input` → Maus auf der PC-Seite abgreifen; `dumpsys input` `RecentQueue` hat **keine** Koordinaten |
+| 17 | Touch-Koordinaten absurd groß | Rohbereich ist 0–4095, nicht Pixel; Fold hat zwei Touchscreens → `roh / 4095 * kante`, `wm size` jedes Mal neu lesen |

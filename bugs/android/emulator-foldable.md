@@ -232,3 +232,43 @@ finden nichts.
 
 **Fix:** Für Engine A kurze Stichwort-Queries formulieren (5–10 Wörter). Lange, präzise
 Formulierungen gehören in den Auswertungs-Prompt, nicht in die Suchanfrage.
+
+---
+
+## 16. `getevent` sieht Klicks aus scrcpy und `input tap` nicht
+
+**Symptom:** Ein Werkzeug soll mithören, wo der Benutzer tippt, und horcht dafür auf
+`adb shell getevent`. Bei echten Fingertipps auf dem Glas kommen Ereignisse an — bei Mausklicks
+im scrcpy-Fenster und bei `adb shell input tap` bleibt der Strom stumm.
+
+**Ursache:** scrcpy und `input` speisen Ereignisse über die InputManager-Schnittstelle ein. Die
+laufen am Kernel-Eingabegerät (`/dev/input/eventN`) vorbei, das `getevent` ausliest. Der
+InputDispatcher sieht sie, der Kernel nicht.
+
+**Nachweis (12.08.2026, Galaxy Z Fold 8 / One UI 8):** `getevent -lc 6` im Hintergrund starten,
+dann `input tap 600 430` — die Ausgabe enthält nur die Geräteliste, kein einziges Ereignis.
+
+**Fix:** Nicht auf dem Gerät mithören, sondern die Mausposition auf der PC-Seite abgreifen
+(Win32 `GetCursorPos` + `ScreenToClient` auf das scrcpy-Fenster) und über `wm size` in
+Gerätekoordinaten umrechnen. Umgesetzt in `Werkzeuge/zeigefinger/`.
+
+**Sackgasse, die man sich sparen kann:** `dumpsys input` → `RecentQueue` listet die letzten
+MotionEvents zwar auf (auch die eingespeisten), aber **ohne x/y-Koordinaten** — nur `age=…ms`.
+
+---
+
+## 17. Touch-Rohwerte sind 0–4095, nicht Pixel — und Foldables haben zwei Touchscreens
+
+**Symptom:** Aus `getevent` gelesene `ABS_MT_POSITION_X/Y` ergeben absurde Koordinaten weit
+außerhalb des Bildschirms.
+
+**Ursache:** Der Touch-Controller meldet einen geräteeigenen Wertebereich. Am Fold 8 ist er für
+**beide** Achsen 0–4095, obwohl das Display 1248×1972 (zugeklappt) bzw. 2448×1848 (aufgeklappt)
+hat. Zusätzlich existieren zwei getrennte Eingabegeräte — `sec_touchscreen` und
+`sec_touchscreen2` — mit identischem Rohbereich, aber unterschiedlichen Zieldisplays.
+
+**Fix:** Linear skalieren mit der **aktuellen** Displaygröße: `pixel = roh / 4095 * kante`, und
+`adb shell wm size` bei jeder Messung neu abfragen — der Wert ändert sich beim Auf- und
+Zuklappen mitten in der Sitzung. Die Zuordnung Eingabegerät→Display steht in `dumpsys input`
+(Achsen mit `source=TOUCHSCREEN` gegen `max=`-Werte vergleichen), lässt sich aber ganz umgehen,
+wenn man ohnehin von der PC-Seite her rechnet (siehe §16).
