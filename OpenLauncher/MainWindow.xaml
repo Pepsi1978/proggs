@@ -647,6 +647,10 @@
                             <StackPanel>
                                 <TextBlock Text="PROFIL" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="{Binding ProfileContextText}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
+                                <TextBlock Text="{Binding ModelDefaultSummary}" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentBrush}" Margin="0,3,0,0"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="330" HorizontalAlignment="Left"
+                                           Visibility="{Binding HasModelDefault, Converter={StaticResource BoolToVisibility}}"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Top">
                                 <Button Style="{StaticResource GhostBtn}" Content="Profil bearbeiten" Padding="11,6" FontSize="12"
@@ -654,6 +658,10 @@
                                         Command="{Binding EditProfileCommand}"/>
                                 <Button Style="{StaticResource GhostBtn}" Content="Modus bearbeiten" Margin="8,0,0,0" Padding="11,6" FontSize="12"
                                         Command="{Binding EditWorkModeCommand}"/>
+                                <Button Style="{StaticResource GhostBtn}" Content="{Binding ModelDefaultButtonText}" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                                        ToolTip="Profil, Modus und Effort als Standard dieses Modells merken - er wird bei jedem Wechsel auf das Modell und beim Start vorausgewählt."
+                                        IsEnabled="{Binding CanSaveModelDefault}"
+                                        Command="{Binding ToggleModelDefaultCommand}"/>
                             </StackPanel>
                         </DockPanel>
 

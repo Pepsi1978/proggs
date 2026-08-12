@@ -19,7 +19,9 @@ $checks = @(
     @{ Name = 'versteckte Listeneinträge sind eingeklappt'; Pass = $mainXaml -match '(?s)Binding IsHidden.*?Visibility" Value="Collapsed"' }
     @{ Name = 'zentraler Ausgeblendet-Button'; Pass = $mainXaml -match 'Command="\{Binding ShowHiddenModelsCommand\}"' }
     @{ Name = 'Wiederherstellung pro Modell'; Pass = $dialogXaml -match 'Command="\{Binding DataContext\.RestoreModelCommand' }
-    @{ Name = 'Version 1.22.0'; Pass = $project.Project.PropertyGroup.Version -contains '1.22.0' }
+    # Die Ausblend-Funktion kam in 1.22.0 dazu. Geprueft wird deshalb "mindestens 1.22.0" statt
+    # einer exakten Nummer: sonst schlaegt der Guard bei jedem Versions-Bump falschen Alarm.
+    @{ Name = 'Version mindestens 1.22.0'; Pass = @($project.Project.PropertyGroup.Version | Where-Object { $_ } | ForEach-Object { [version]$_ -ge [version]'1.22.0' }) -contains $true }
 )
 
 $failed = @($checks | Where-Object { -not $_.Pass })

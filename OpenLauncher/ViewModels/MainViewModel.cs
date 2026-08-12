@@ -18,8 +18,17 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly OpenLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
     private readonly InstructionProfileService _profiles = new();
+    private readonly ModelDefaultsService _modelDefaults = new();
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _thinkingCts;
+
+    // Standard des gerade gewaehlten Modells, solange er noch greift. Er ueberstimmt die
+    // profilabhaengige Effort-Vorauswahl - aber nur bis der Nutzer das Profil selbst umstellt;
+    // danach gilt wieder die normale Regel (Strikt -> X High, sonst High).
+    private ModelDefaultEntry? _pendingModelDefault;
+    // True, solange OnSelectedModelChanged den gespeicherten Standard setzt: die dabei ausgeloesten
+    // Profil-Wechsel sind programmatisch und duerfen _pendingModelDefault nicht verwerfen.
+    private bool _applyingModelDefault;
 
     public MainViewModel()
     {
@@ -122,10 +131,32 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
     [ObservableProperty] private bool _canEditSelectedProfile = true;
     [ObservableProperty] private bool _hasHiddenModels;
+    [ObservableProperty] private string _modelDefaultButtonText = "Standard speichern";
+    [ObservableProperty] private string _modelDefaultSummary = string.Empty;
+    [ObservableProperty] private bool _hasModelDefault;
+    [ObservableProperty] private bool _canSaveModelDefault;
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
-        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
+        // Gespeicherter Standard des Modells zuerst holen: er bestimmt Profil, Modus und (spaeter,
+        // sobald die Stufen geladen sind) den Effort. Ohne Standard bleibt es beim Minimalprofil.
+        _pendingModelDefault = value == null ? null : _modelDefaults.Find(value.ModelString);
+        _applyingModelDefault = true;
+        try
+        {
+            SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
+            if (_pendingModelDefault != null)
+            {
+                SelectedProfile = Profiles.FirstOrDefault(profile =>
+                    profile.Id == _pendingModelDefault.ProfileId && profile.IsEnabled) ?? SelectedProfile;
+                SelectedWorkMode = WorkModes.FirstOrDefault(mode => mode.Id == _pendingModelDefault.WorkModeId)
+                    ?? SelectedWorkMode;
+            }
+        }
+        finally
+        {
+            _applyingModelDefault = false;
+        }
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
@@ -134,6 +165,7 @@ public sealed partial class MainViewModel : ObservableObject
         ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
         ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · Minimal + Standard + Strikt" : "OpenCode · Profil-Snapshots";
         UpdateProfileAvailability();
+        RefreshModelDefaultState();
         if (value == null)
         {
             _loadCts?.Cancel();
@@ -149,10 +181,13 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedThinkingOptionChanged(ThinkingOptionEntry? value)
     {
+        RefreshModelDefaultState();
         if (SelectedModel == null || value == null) return;
         var label = IsClaudeCodeModel(SelectedModel) ? "Effort" : "Thinking";
         StatusText = $"{label} für {SelectedModel.DisplayName}: {value.DisplayName}";
     }
+
+    partial void OnSelectedWorkModeChanged(WorkModeEntry? value) => RefreshModelDefaultState();
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
     {
@@ -254,7 +289,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedProfileChanged(InstructionProfileEntry? value)
     {
+        // Stellt der Nutzer das Profil selbst um, ist der gespeicherte Standard verlassen: ab hier
+        // gilt wieder die profilabhaengige Effort-Vorauswahl.
+        if (!_applyingModelDefault) _pendingModelDefault = null;
         UpdateProfileAvailability();
+        RefreshModelDefaultState();
         if (value == null) return;
 
         SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
@@ -266,9 +305,99 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (SelectedProfile == null || ThinkingOptions.Count == 0) return;
 
+        // Ein von Hand gespeicherter Modell-Standard schlaegt die profilabhaengige Vorauswahl.
+        // Er greift erst hier, weil die Effort-Stufen erst nach dem Modellwechsel geladen sind.
+        var storedOption = string.IsNullOrWhiteSpace(_pendingModelDefault?.ThinkingValue)
+            ? null
+            : ThinkingOptions.FirstOrDefault(option => option.Value == _pendingModelDefault!.ThinkingValue);
+        if (storedOption != null)
+        {
+            SelectedThinkingOption = storedOption;
+            return;
+        }
+
         var preferredValue = SelectedProfile.Id == "strict" ? "xhigh" : "high";
         SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == preferredValue)
             ?? ThinkingOptions.Last();
+    }
+
+    /// <summary>
+    /// Haelt Schalterbeschriftung und Standard-Anzeige zum aktuell gewaehlten Modell aktuell.
+    /// Entspricht die Auswahl genau dem gespeicherten Standard, wird der Schalter zum Entfernen —
+    /// derselbe Knopf schaltet den Standard also an und wieder aus.
+    /// </summary>
+    private void RefreshModelDefaultState()
+    {
+        var stored = SelectedModel == null ? null : _modelDefaults.Find(SelectedModel.ModelString);
+        HasModelDefault = stored != null;
+        CanSaveModelDefault = SelectedModel != null && SelectedProfile != null && SelectedWorkMode != null;
+        ModelDefaultSummary = stored == null
+            ? string.Empty
+            : $"★ Standard: {DescribeProfile(stored.ProfileId)} · {DescribeWorkMode(stored.WorkModeId)} · {DescribeThinking(stored.ThinkingValue)}";
+        ModelDefaultButtonText = MatchesStoredDefault(stored) ? "★ Standard entfernen" : "☆ Standard speichern";
+    }
+
+    private bool MatchesStoredDefault(ModelDefaultEntry? stored) =>
+        stored != null &&
+        stored.ProfileId == SelectedProfile?.Id &&
+        stored.WorkModeId == SelectedWorkMode?.Id &&
+        string.Equals(stored.ThinkingValue, SelectedThinkingOption?.Value ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+    private string DescribeProfile(string profileId) =>
+        Profiles.FirstOrDefault(profile => profile.Id == profileId)?.DisplayName ?? profileId;
+
+    private string DescribeWorkMode(string workModeId) =>
+        WorkModes.FirstOrDefault(mode => mode.Id == workModeId)?.DisplayName ?? workModeId;
+
+    private static string DescribeThinking(string thinkingValue) =>
+        string.IsNullOrWhiteSpace(thinkingValue) ? "ohne Stufe" : ToThinkingOption(thinkingValue).DisplayName;
+
+    /// <summary>
+    /// Speichert die aktuelle Auswahl (Profil, Modus, Effort) als Standard des gewaehlten Modells —
+    /// oder entfernt ihn wieder, wenn genau dieser Standard schon gilt. Jedes Modell hat seinen
+    /// eigenen Standard; er wird bei jedem Wechsel auf dieses Modell und damit auch beim App-Start
+    /// vorausgewaehlt.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleModelDefault()
+    {
+        var model = SelectedModel;
+        if (model == null || SelectedProfile == null || SelectedWorkMode == null)
+        {
+            StatusText = "Bitte Modell, Profil und Modus wählen.";
+            return;
+        }
+
+        var key = model.ModelString;
+        var stored = _modelDefaults.Find(key);
+        if (MatchesStoredDefault(stored))
+        {
+            _modelDefaults.Remove(key);
+            _pendingModelDefault = null;
+            StatusText = $"Standard für {model.DisplayName} entfernt.";
+            Logger.Instance.Info("MainViewModel", "ToggleModelDefault", "Modell-Standard entfernt", new { key });
+        }
+        else
+        {
+            var entry = new ModelDefaultEntry
+            {
+                ProfileId = SelectedProfile.Id,
+                WorkModeId = SelectedWorkMode.Id,
+                ThinkingValue = SelectedThinkingOption?.Value ?? string.Empty
+            };
+            _modelDefaults.Save(key, entry);
+            _pendingModelDefault = entry;
+            StatusText = $"Standard für {model.DisplayName} gespeichert: {SelectedProfile.DisplayName} · {SelectedWorkMode.DisplayName} · {DescribeThinking(entry.ThinkingValue)}";
+            Logger.Instance.Info("MainViewModel", "ToggleModelDefault", "Modell-Standard gespeichert", new
+            {
+                key,
+                entry.ProfileId,
+                entry.WorkModeId,
+                entry.ThinkingValue
+            });
+        }
+
+        RefreshModelDefaultState();
     }
 
     private void UpdateProfileAvailability()
