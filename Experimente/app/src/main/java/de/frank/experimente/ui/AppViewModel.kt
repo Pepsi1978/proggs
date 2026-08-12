@@ -359,14 +359,26 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     val anlegenOffen: StateFlow<Boolean> = _anlegenOffen.asStateFlow()
 
     fun oeffneAnlegen() {
+        // Ein beiseitegelegter Text steht wieder da; nur nach „Abbrechen" ist das Feld leer.
         _anlegenOffen.value = true
-        _anlegeFeld.value = Feld()
     }
 
     /** F-33 — Abbrechen schließt die Fläche, ohne zu speichern; der Text wird verworfen. */
     fun schliesseAnlegen() {
         _anlegenOffen.value = false
         _anlegeFeld.value = Feld()
+    }
+
+    /**
+     * Die Anlegefläche beiseitelegen — sie schließt, der Text **bleibt** und steht beim
+     * nächsten Öffnen wieder da.
+     *
+     * Ein Druck neben die Fläche ist kein Abbruch. Eine eingesprochene und transkribierte
+     * Eingabe ist Arbeit, die nicht durch einen Fehlgriff verschwinden darf; verworfen wird
+     * sie nur auf den ausdrücklichen Knopf „Abbrechen" (F-33).
+     */
+    fun legeAnlegenBeiseite() {
+        _anlegenOffen.value = false
     }
 
     fun anlegeFeldFluss() = _anlegeFeld
@@ -668,7 +680,19 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             } catch (fehler: Exception) {
                 // Der ursprüngliche Text bleibt unangetastet.
                 feld.value = jetzt
-                _stoerung.value = "Der Text konnte nicht verbessert werden."
+                // Sonde: die echte Ursache. Vorher verschwand sie hinter dem Standardsatz,
+                // und aus „Der Text konnte nicht verbessert werden." liess sich nicht
+                // ablesen, ob die Anmeldung, das Kontingent oder das Netz das Problem war.
+                android.util.Log.e("Verbessern", "fehlgeschlagen: ${fehler.javaClass.simpleName}: ${fehler.message}", fehler)
+                // Der Wortlaut aus UI-Spec §8 bleibt — ergänzt um den konkreten Grund,
+                // wenn Codex einen genannt hat. Ein Satz ohne Grund ist eine Sackgasse.
+                zeigeStoerung(
+                    if (fehler is CodexFehler) {
+                        "Der Text konnte nicht verbessert werden. ${fehler.freundlich()}"
+                    } else {
+                        "Der Text konnte nicht verbessert werden."
+                    },
+                )
             }
         }
     }

@@ -64,7 +64,6 @@ fun WuenscheUndZiele(modell: AppViewModel) {
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
             SchwebenderPlusknopf("Ziel anlegen") { blattOffen = true }
-            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
             if (blattOffen) {
                 Anlegeblatt(
                     titel = "Neues Ziel",
@@ -85,6 +84,8 @@ fun WuenscheUndZiele(modell: AppViewModel) {
                     beiSchliessen = { blattOffen = false },
                 )
             }
+            // Ueber der Anlegeflaeche, damit die Stoerung sichtbar und bedienbar bleibt.
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         if (ziele.isEmpty()) {
@@ -136,7 +137,6 @@ fun Merkliste(modell: AppViewModel) {
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
             SchwebenderPlusknopf("Eigenes Experiment anlegen") { blattOffen = true }
-            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
             if (blattOffen) {
                 Anlegeblatt(
                     titel = "Eigenes Experiment",
@@ -155,6 +155,8 @@ fun Merkliste(modell: AppViewModel) {
                     beiSchliessen = { blattOffen = false },
                 )
             }
+            // Ueber der Anlegeflaeche, damit die Stoerung sichtbar und bedienbar bleibt.
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         items(merkliste, key = { it.id }) { eintrag ->

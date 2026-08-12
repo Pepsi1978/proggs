@@ -131,12 +131,15 @@ fun Monitor(modell: AppViewModel) {
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
             SchwebenderPlusknopf("Eigenes Experiment anlegen", modell::oeffneAnlegen)
+            // Die Anlegeflaeche liegt ueber dem Bildschirm - die Meldungen muessen ueber
+            // IHR liegen. Vorher lagen sie darunter: die Stoerung war unsichtbar, und der
+            // Druck auf "Nochmal" traf die Flaeche dahinter und schloss die Anlegeflaeche.
+            if (anlegenOffen) Anlegeflaeche(modell)
             Meldungen(
                 stoerung = stoerung,
                 beiNochmal = modell::schliesseMeldung,
                 hinweis = hinweis,
             )
-            if (anlegenOffen) Anlegeflaeche(modell)
         },
     ) {
         // Die Zählzeile — sie sagt in Worten, was die Abschnitte zeigen (kein Effekt trägt

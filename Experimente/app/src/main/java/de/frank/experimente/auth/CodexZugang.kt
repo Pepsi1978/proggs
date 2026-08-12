@@ -273,7 +273,19 @@ class CodexZugang(context: Context) {
             .getOrDefault(anfrage)
     }
 
-    private suspend fun einmalFragen(anfrage: JSONObject): String {
+    /**
+     * Eine Anfrage an Codex, einmal.
+     *
+     * Läuft **vollständig** auf `Dispatchers.IO`. Der Aufrufer ist `viewModelScope`, also
+     * der Hauptthread; das Lesen des Antwortstroms warf dort eine
+     * `NetworkOnMainThreadException`. Nach aussen sah man davon nichts — die Oberfläche
+     * meldete nur „Der Text konnte nicht verbessert werden.", und dasselbe hätte jeden
+     * anderen Codex-Aufruf getroffen (Vorschläge, Gespräch, Auswertung, Logbuch).
+     *
+     * Der Wechsel gehört hierher und nicht in die Aufrufer: die Netzschicht kennt ihre
+     * eigenen Anforderungen, und so kann kein künftiger Aufrufer ihn vergessen.
+     */
+    private suspend fun einmalFragen(anfrage: JSONObject): String = withContext(Dispatchers.IO) {
         val token = gueltigerToken()
         val kontoAusToken = jwtKontoId(token)
         if (kontoAusToken != null && kontoAusToken != kontoId) {
@@ -300,7 +312,7 @@ class CodexZugang(context: Context) {
                 ?: throw CodexFehler(FehlerArt.NETZ, "OpenAI hat keinen Antwortstrom geliefert.")
             leser.use { liesEreignisse(it, { daten -> sammler.nimm(daten) }, { sammler.fertig }) }
         }
-        return sammler.ergebnis()
+        sammler.ergebnis()
     }
 
     // --- Ereignisstrom ------------------------------------------------------------------
@@ -384,10 +396,12 @@ class CodexZugang(context: Context) {
         return alsText(anfrage)
     }
 
-    private suspend fun alsText(anfrage: Request): HttpErgebnis =
+    /** Wie `einmalFragen`: das Lesen des Rumpfes gehört auf `Dispatchers.IO`, nicht auf den Hauptthread. */
+    private suspend fun alsText(anfrage: Request): HttpErgebnis = withContext(Dispatchers.IO) {
         mitDnsGeduld { ANMELDE_CLIENT.newCall(anfrage).warteAufAntwort() }.use {
             HttpErgebnis(it.code, it.body?.string().orEmpty())
         }
+    }
 
     /** Frisch verbundenes WLAN löst den Namen manchmal erst nach einem Moment auf. */
     private suspend fun <T> mitDnsGeduld(block: suspend () -> T): T {

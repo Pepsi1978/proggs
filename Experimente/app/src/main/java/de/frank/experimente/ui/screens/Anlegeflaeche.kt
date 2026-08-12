@@ -73,6 +73,7 @@ fun BoxScope.Anlegeflaeche(modell: AppViewModel) {
         },
         beiSpeichern = modell::legeEigenesImMonitorAn,
         beiSchliessen = modell::schliesseAnlegen,
+        beiDaneben = modell::legeAnlegenBeiseite,
     )
 }
 
@@ -93,6 +94,7 @@ fun BoxScope.Anlegeblatt(
     beiVerbessern: () -> Unit,
     beiSpeichern: () -> Unit,
     beiSchliessen: () -> Unit,
+    beiDaneben: () -> Unit = beiSchliessen,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
@@ -111,11 +113,17 @@ fun BoxScope.Anlegeblatt(
         Modifier
             .fillMaxSize()
             .background(farben.grund.copy(alpha = 0.62f))
-            // Ein Druck auf die Fläche darüber schließt, ohne zu speichern (F-33).
+            // Ein Druck auf die Fläche darüber legt die Anlegefläche nur beiseite — der
+            // eingesprochene Text bleibt erhalten und steht beim nächsten Öffnen wieder da.
+            //
+            // F-33 („der eingesprochene Text wird verworfen") gilt für den ausdrücklichen
+            // Knopf „Abbrechen", nicht für einen Druck daneben. Genau daran ging eine
+            // fertige Transkription verloren: der Druck galt eigentlich der Störung, die
+            // unsichtbar dahinter lag.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = beiSchliessen,
+                onClick = beiDaneben,
             ),
         verticalArrangement = Arrangement.Bottom,
     ) {

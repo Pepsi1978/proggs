@@ -13,11 +13,11 @@ android {
         applicationId = "de.frank.experimente"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.10.2"
+        versionCode = 16
+        versionName = "0.10.3"
 
         // Sichtbar in der App (B-08, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.08.2026, 23:09 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.08.2026, 23:17 Uhr\"")
     }
 
     buildTypes {
