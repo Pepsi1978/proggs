@@ -153,6 +153,15 @@ Weitere Details:
    Updates später **immer** über `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` (schließt
    laufenden Launcher, baut Release, startet neu) — siehe Sperr-Hinweis bei Schritt 5.
 
+   > **Erzwungen per Wächter:** `.claude/hooks/openlauncher-deploy-guard.ps1` (eingehängt als
+   > `PreToolUse`-Hook in `.claude/settings.json`) blockiert Bauen, Beenden und Starten des
+   > Launchers von Hand und verweist auf `update-launcher.ps1`. Grund: Vor Einführung des Skripts
+   > wurde mehrfach die **alte** EXE gestartet und als neue Version gemeldet — das Skript prüft
+   > Build-Exit-Code, erzeugte Datei und Sofort-Absturz und macht das unmöglich.
+   > Lesende Befehle (`Get-Process`, `Get-Item`, `Test-Path`) bleiben erlaubt, damit die
+   > Versionsprüfung nach dem Deploy weiterhin geht. Notausstieg für den Erstbau bei geschlossener
+   > App: den Marker `guard-aus` in den Befehl schreiben — er steht dann sichtbar im Befehl.
+
 7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modus + Modell wählen → starten.
    Beim ersten Minimal-Start entsteht die Skills-Junction automatisch; der Login-Token wird bei
    Bedarf lokal in den Profil-Ordner kopiert.
