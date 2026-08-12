@@ -138,12 +138,20 @@ Weitere Details:
    ```
    Ergebnis: `OpenLauncher/bin/Release/net8.0-windows10.0.19041.0/win-x64/OpenLauncher.exe`
 
+   > **Läuft der Launcher schon, ist `dotnet build` der falsche Weg** — der laufende Prozess sperrt
+   > `OpenLauncher.exe`, der Build bricht nach 10 Kopierversuchen mit `MSB3027`/`MSB3021` ab (der
+   > Fehlertext nennt den sperrenden Prozess samt PID). Dann **immer**
+   > `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` nehmen: es fragt per Dialog nach, schließt den
+   > Launcher kontrolliert, baut Release und startet die neue Version. Das ist der normale Build-Weg
+   > für jede Änderung am Launcher-Code; nacktes `dotnet build` nur beim Erstbau oder bei
+   > geschlossener App.
+
 6. **Desktop-Verknüpfung**
    ```powershell
    pwsh ~/proggs/OpenLauncher/create_shortcut.ps1
    ```
-   Updates später: `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` (schließt laufenden
-   Launcher, baut Release, startet neu).
+   Updates später **immer** über `pwsh ~/proggs/OpenLauncher/update-launcher.ps1` (schließt
+   laufenden Launcher, baut Release, startet neu) — siehe Sperr-Hinweis bei Schritt 5.
 
 7. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modus + Modell wählen → starten.
    Beim ersten Minimal-Start entsteht die Skills-Junction automatisch; der Login-Token wird bei
