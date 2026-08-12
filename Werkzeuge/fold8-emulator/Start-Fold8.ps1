@@ -153,9 +153,36 @@ if ($Projekt -ne "") {
 if ($Apk -ne "") {
   if (Test-Path $Apk) {
     Write-Host "Installiere $(Split-Path $Apk -Leaf) ..." -ForegroundColor Cyan
+    # -r = ersetzen. Die App-Daten (API-Schluessel, Einstellungen, Datenbanken)
+    # bleiben dabei erhalten - nachgewiesen am 12.08.2026. NIEMALS uninstall
+    # verwenden, das wuerde alle eingetragenen Zugangsdaten loeschen.
     $meldung = & $adb -s emulator-5554 install -r $Apk 2>&1
-    $meldung | Select-Object -Last 1
+    $installOk = ($meldung -match "Success")
 
+    if (-not $installOk) {
+      Write-Host ""
+      Write-Host "  INSTALLATION FEHLGESCHLAGEN:" -ForegroundColor Red
+      $meldung | Select-Object -Last 4 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+      if ($meldung -match "UPDATE_INCOMPATIBLE|signatures do not match") {
+        Write-Host ""
+        Write-Host "  Ursache: Die neue Version ist anders signiert als die installierte." -ForegroundColor Yellow
+        Write-Host "  Ein Drueberinstallieren ist dann nicht moeglich." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  ACHTUNG: Eine Deinstallation wuerde alle App-Daten loeschen -" -ForegroundColor Red
+        Write-Host "  auch die eingetragenen API-Schluessel. Darum wird hier NICHT" -ForegroundColor Red
+        Write-Host "  automatisch deinstalliert. Vorher sichern:  .\Sichere-Appdaten.ps1" -ForegroundColor Red
+      }
+      Write-Host ""
+      $Apk = ""
+    } else {
+      $meldung | Select-Object -Last 1
+    }
+  } else {
+    Write-Host "APK nicht gefunden: $Apk" -ForegroundColor Red
+    $Apk = ""
+  }
+
+  if ($Apk -ne "") {
     # Paketnamen aus der APK lesen und die App gleich starten
     $aapt = Get-ChildItem "$sdk\build-tools" -Recurse -Filter "aapt2.exe" -ErrorAction SilentlyContinue |
             Sort-Object FullName -Descending | Select-Object -First 1
@@ -204,8 +231,6 @@ if ($Apk -ne "") {
     } else {
       Write-Host "Paketname nicht ermittelbar - App bitte selbst antippen." -ForegroundColor Yellow
     }
-  } else {
-    Write-Host "APK nicht gefunden: $Apk" -ForegroundColor Red
   }
 }
 
