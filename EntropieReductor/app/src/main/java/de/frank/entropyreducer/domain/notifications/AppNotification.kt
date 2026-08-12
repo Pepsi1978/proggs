@@ -11,6 +11,18 @@ package de.frank.entropyreducer.domain.notifications
  * [key] ist der DataStore-Schluessel und darf sich NIE aendern (sonst verliert der
  * Benutzer seine Einstellung).
  */
+/**
+ * Die vier Benachrichtigungs-Kanaele der App. Bewusst ein eigenes Objekt und nicht
+ * das Companion von [AppNotification]: Enum-Eintraege werden VOR dem Companion
+ * initialisiert, ein Zugriff von dort aus waere ein Compiler-Fehler.
+ */
+object NotificationChannels {
+    const val KI = "ki_questions"
+    const val POLAR = "polar_bulk_import"
+    const val RECORDING = "recording"
+    const val TTS = "tts_playback"
+}
+
 enum class NotificationGroup(val label: String) {
     GENIE("Genie & KI"),
     IMPORT("Importe"),
@@ -36,7 +48,7 @@ enum class AppNotification(
         description = "Die KI meldet sich mit einer kontextrelevanten Frage, wenn einer " +
             "der Trigger aus deinen Daten zutrifft.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     TAGESBRIEFING(
         key = "tagesbriefing",
@@ -44,7 +56,7 @@ enum class AppNotification(
         description = "Nach dem Aufwachen, sobald das Genie dein Briefing fuer heute " +
             "erstellt hat.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     WOCHENRUECKBLICK(
         key = "wochenrueckblick",
@@ -52,7 +64,7 @@ enum class AppNotification(
         description = "Sonntagabend, wenn der narrative Rueckblick auf die letzten " +
             "sieben Tage erzeugt wurde.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     MONATSRUECKBLICK(
         key = "monatsrueckblick",
@@ -60,7 +72,7 @@ enum class AppNotification(
         description = "Anfang des Monats, wenn der Rueckblick auf den Vormonat " +
             "erzeugt wurde.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     KI_TRIGGER_VORSCHLAG(
         key = "ki_trigger_vorschlag",
@@ -68,7 +80,7 @@ enum class AppNotification(
         description = "Mittwoch und Sonntag, wenn die Trigger-Engine neue Regeln " +
             "vorschlaegt, die du annehmen oder ablehnen kannst.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     TRIGGER_FEUERT(
         key = "trigger_feuert",
@@ -76,7 +88,7 @@ enum class AppNotification(
         description = "Wenn die Bedingung eines von dir angenommenen Triggers zutrifft " +
             "(z.B. HRV unter deinem Schwellwert) — mit der vorgeschlagenen Handlung.",
         group = NotificationGroup.GENIE,
-        channelId = CHANNEL_KI,
+        channelId = NotificationChannels.KI,
     ),
     POLAR_IMPORT_FERTIG(
         key = "polar_import_fertig",
@@ -84,7 +96,7 @@ enum class AppNotification(
         description = "Abschlussmeldung des Polar-Imports mit der Anzahl importierter " +
             "und uebersprungener Trainings.",
         group = NotificationGroup.IMPORT,
-        channelId = CHANNEL_POLAR,
+        channelId = NotificationChannels.POLAR,
     ),
     POLAR_IMPORT_FEHLER(
         key = "polar_import_fehler",
@@ -92,7 +104,7 @@ enum class AppNotification(
         description = "Fehlermeldung, wenn die Polar-ZIP nicht gelesen oder nicht " +
             "importiert werden konnte.",
         group = NotificationGroup.IMPORT,
-        channelId = CHANNEL_POLAR,
+        channelId = NotificationChannels.POLAR,
     ),
     POLAR_IMPORT_LAEUFT(
         key = "polar_import_laeuft",
@@ -100,7 +112,7 @@ enum class AppNotification(
         description = "Fortschrittsanzeige waehrend des Imports. Android verlangt diese " +
             "Anzeige, damit der Import bei ausgeschaltetem Bildschirm nicht abgebrochen wird.",
         group = NotificationGroup.LAUFEND,
-        channelId = CHANNEL_POLAR,
+        channelId = NotificationChannels.POLAR,
         systemRequired = true,
     ),
     AUFNAHME_LAEUFT(
@@ -109,7 +121,7 @@ enum class AppNotification(
         description = "Wird angezeigt, solange eine Sprachnotiz aufgenommen wird. Android " +
             "schreibt diese Anzeige bei Mikrofon-Nutzung im Hintergrund zwingend vor.",
         group = NotificationGroup.LAUFEND,
-        channelId = CHANNEL_RECORDING,
+        channelId = NotificationChannels.RECORDING,
         systemRequired = true,
     ),
     VORLESEN_LAEUFT(
@@ -118,17 +130,12 @@ enum class AppNotification(
         description = "Wird angezeigt, solange das Genie vorliest. Android schreibt diese " +
             "Anzeige bei Audio-Wiedergabe im Hintergrund zwingend vor.",
         group = NotificationGroup.LAUFEND,
-        channelId = CHANNEL_TTS,
+        channelId = NotificationChannels.TTS,
         systemRequired = true,
     ),
     ;
 
     companion object {
-        const val CHANNEL_KI = "ki_questions"
-        const val CHANNEL_POLAR = "polar_bulk_import"
-        const val CHANNEL_RECORDING = "recording"
-        const val CHANNEL_TTS = "tts_playback"
-
         /** Alle Benachrichtigungen einer Gruppe, in Deklarationsreihenfolge. */
         fun byGroup(): Map<NotificationGroup, List<AppNotification>> =
             entries.groupBy { it.group }

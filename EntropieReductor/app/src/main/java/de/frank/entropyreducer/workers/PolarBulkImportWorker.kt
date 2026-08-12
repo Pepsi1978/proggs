@@ -23,6 +23,7 @@ import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.polar.PolarBulkImporter
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.notifications.AppNotification
+import de.frank.entropyreducer.domain.notifications.NotificationChannels
 import java.io.File
 import java.io.IOException
 
@@ -278,7 +279,7 @@ constructor(
 
     companion object {
         private const val TAG = "PolarBulkImportWorker"
-        private const val CHANNEL_ID = AppNotification.CHANNEL_POLAR
+        private const val CHANNEL_ID = NotificationChannels.POLAR
         private const val NOTIFICATION_ID = 73101
         private const val MAX_RETRY_ATTEMPTS = 3
         const val KEY_ZIP_URI = "zip_uri"

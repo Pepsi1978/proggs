@@ -18,6 +18,7 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.notifications.AppNotification
+import de.frank.entropyreducer.domain.notifications.NotificationChannels
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -161,7 +162,7 @@ class ShiftAwareNotifier @Inject constructor(
 
     companion object {
         private const val TAG = "ShiftAwareNotifier"
-        private const val CHANNEL_ID = AppNotification.CHANNEL_KI
+        private const val CHANNEL_ID = NotificationChannels.KI
         const val EXTRA_DEEP_LINK = "deep_link"
     }
 }
