@@ -45,6 +45,22 @@ Rechnet den Maßstab aus Monitor-ppi (aus dem EDID) und Geräte-ppi und setzt di
 Auf diesem Rechner: Maßstab 0,6019 → 1112 × 1473 px = **11,63 × 15,4 cm**.
 Zurück zur Originalgröße immer mit dem Aufruf ohne `-Zoom`.
 
+## Zeig-Fehler.ps1
+
+```powershell
+.\Zeig-Fehler.ps1                  # Abstürze und Fehler der laufenden App
+.\Zeig-Fehler.ps1 -Live            # mitlaufen, Fehler sofort melden
+.\Zeig-Fehler.ps1 -Geraet R3GL7073MLM   # echtes Handy statt Emulator
+```
+
+Zeigt lesbar aufbereitet, was schiefgeht: Abstürze mit Ursache und eigener Codestelle, dazu
+Fehlermeldungen der laufenden App. Systemrauschen (Bluetooth, Grafiktreiber) wird ausgeblendet —
+das betrifft die App nicht.
+
+`Start-Fold8.ps1` prüft das automatisch: Nach dem Start wird geschaut, ob die App noch läuft.
+Ist sie abgestürzt, erscheint die Ursache sofort; schlägt schon der Build fehl, werden die
+Compiler-Fehler gezeigt und **nichts** installiert.
+
 ## Zeig-Elemente.ps1
 
 ```powershell

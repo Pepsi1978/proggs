@@ -114,11 +114,25 @@ if ($Projekt -ne "") {
     if (-not $OhneBauen) {
       Write-Host "Baue $(Split-Path $wurzel -Leaf) ..." -ForegroundColor Cyan
       Push-Location $wurzel
-      & ".\gradlew.bat" assembleDebug --console=plain 2>&1 | Select-Object -Last 6
+      $bauAusgabe = & ".\gradlew.bat" assembleDebug --console=plain 2>&1
       $bauOk = ($LASTEXITCODE -eq 0)
       Pop-Location
       if (-not $bauOk) {
-        Write-Host "Build fehlgeschlagen - es wird nichts installiert." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  BUILD FEHLGESCHLAGEN - es wird nichts installiert," -ForegroundColor Red
+        Write-Host "  damit die alte Version nicht faelschlich fuer die neue gehalten wird." -ForegroundColor Red
+        Write-Host ""
+        # Die eigentlichen Fehlerzeilen zeigen, nicht das Gradle-Rauschen
+        $fehlerZeilen = $bauAusgabe | Where-Object {
+          $_ -match "^e: |error:|FAILURE:|Caused by:|Unresolved reference|Compilation error|> Task .* FAILED"
+        } | Select-Object -First 15
+        if ($fehlerZeilen) {
+          Write-Host "  Fehler im Code:" -ForegroundColor Yellow
+          $fehlerZeilen | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+        } else {
+          $bauAusgabe | Select-Object -Last 12 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        }
+        Write-Host ""
         $Projekt = ""
       }
     }
@@ -152,7 +166,41 @@ if ($Apk -ne "") {
     }
     if ($paket -ne "") {
       Write-Host "Starte $paket ..." -ForegroundColor Cyan
+      # Absturzprotokoll leeren, damit nur NEUE Abstuerze gemeldet werden
+      & $adb -s emulator-5554 logcat -b crash -c 2>$null | Out-Null
       & $adb -s emulator-5554 shell "monkey -p $paket -c android.intent.category.LAUNCHER 1" 2>&1 | Out-Null
+
+      # --- Laeuft die App ueberhaupt noch? -------------------------------
+      Start-Sleep -Seconds 5
+      $pid1 = (& $adb -s emulator-5554 shell "pidof $paket" 2>$null) -replace "\s",""
+      $absturz = & $adb -s emulator-5554 logcat -b crash -d 2>$null
+
+      if ($pid1 -eq "" -or $absturz -match "FATAL EXCEPTION|beginning of crash") {
+        Write-Host ""
+        Write-Host "  DIE APP IST ABGESTUERZT." -ForegroundColor Red
+        $wichtig = $absturz | Where-Object {
+          $_ -match "FATAL EXCEPTION|Process:|Caused by:|^\s*at [a-z]+\.(frank|barwa)|Exception|Error:"
+        } | Select-Object -First 12
+        if ($wichtig) {
+          Write-Host ""
+          $wichtig | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+        } else {
+          Write-Host "  Kein Absturzprotokoll gefunden - moeglicherweise wurde die App nur beendet." -ForegroundColor DarkGray
+        }
+        Write-Host ""
+        Write-Host "  Vollstaendiges Protokoll:  .\Zeig-Fehler.ps1" -ForegroundColor DarkGray
+      } else {
+        Write-Host "Laeuft (PID $pid1)." -ForegroundColor Green
+        # Laufzeitfehler, die die App NICHT beenden, trotzdem melden
+        $meckern = & $adb -s emulator-5554 logcat -d -t 400 *:E 2>$null |
+                   Where-Object { $_ -match [regex]::Escape(($paket -replace '\.debug$','')) } |
+                   Select-Object -First 6
+        if ($meckern) {
+          Write-Host ""
+          Write-Host "  Die App laeuft, meldet aber Fehler:" -ForegroundColor Yellow
+          $meckern | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+        }
+      }
     } else {
       Write-Host "Paketname nicht ermittelbar - App bitte selbst antippen." -ForegroundColor Yellow
     }
