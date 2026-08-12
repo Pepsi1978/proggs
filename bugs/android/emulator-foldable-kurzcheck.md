@@ -30,3 +30,7 @@
 | 19 | "App viel zu groß" trotz korrekter Rechnung | Innendisplay (7,6″, 11,63 cm) mit Cover-Display (5,5″, 7,47 cm) verglichen → Emulator dem echten Gerät folgen lassen |
 | 20 | Maßstab falsch auf zweitem Bildschirm | `PrimaryScreen` statt `Screen::FromHandle` → Monitor unter dem Fenster ermitteln |
 | 21 | "App abgestürzt", läuft aber (Bluetooth-Zeile) | `logcat -b crash` sammelt **alle** Prozesse → Absturz nur zählen, wenn eine Zeile den eigenen Paketnamen nennt; auf den Prozess pollen statt fester 5 s |
+| 22 | Nach dem Drehen falsche Größe, springt, wird nie wieder richtig | Größe war Einmal-Aktion → Wächter (`-Ueberwachen`) rechnet aus `cur=` neu; Mutex (nur einer!) + selbstlösende Ping-Pong-Bremse |
+| 22b | "Rotation geht gar nicht" | `accelerometer_rotation 0` macht den Dreh-Knopf wirkungslos → auf 1 lassen, Hochformat über `emu sensor set acceleration 0:9.81:0` |
+| 22c | Eine von vier Lagen bleibt falsch (500×790) | 180°: Emulator-Rahmen hochkant, Android quer → Lage per `emu rotate` überspringen |
+| 23 | Startet aufgeklappt statt zugeklappt | Standard ist `Fold8_Cover`; läuft die falsche AVD, wird gewechselt; im Betrieb `Klappen.ps1 -Auf`/`-Zu` |

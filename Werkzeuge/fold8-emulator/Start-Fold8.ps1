@@ -28,31 +28,41 @@ Get-ChildItem env: | Where-Object { $_.Name -like "CLAUDE*" -or $_.Name -eq "NO_
   ForEach-Object { Remove-Item "env:$($_.Name)" -ErrorAction SilentlyContinue }
 $env:ANDROID_HOME = $sdk
 
-# --- Welches Display? Dem echten Geraet folgen ---------------------------
-# Frank vergleicht immer mit dem Handy in seiner Hand. Ist es zugeklappt, sieht
-# er das Cover-Display (5,5 Zoll); aufgeklappt das Innendisplay (7,6 Zoll). Der
-# Emulator waehlt darum genau das, was das angeschlossene Geraet gerade zeigt -
-# so kann das falsche Display gar nicht erst gezeigt werden.
-if (-not $Cover -and -not $Innen) {
-  $echt = & $adb devices | Where-Object { $_ -match "^\w+\s+device" -and $_ -notmatch "^emulator-" } | Select-Object -First 1
-  if ($echt) {
-    $seriennr = ($echt -split "\s+")[0]
-    $groesse = (& $adb -s $seriennr shell wm size 2>$null) -join " "
-    if ($groesse -match "1248x1972") {
-      $Cover = $true
-      Write-Host "Dein Fold ist zugeklappt - Emulator startet im Cover-Format (5,5 Zoll)." -ForegroundColor DarkGray
-    } elseif ($groesse -match "1848x2448|2448x1848") {
-      Write-Host "Dein Fold ist aufgeklappt - Emulator startet im Innenformat (7,6 Zoll)." -ForegroundColor DarkGray
-    }
-  }
-}
-
+# --- Welches Display? ZUGEKLAPPT ist der Normalfall ----------------------
+# So haelt man das Fold 8 im Alltag: zugeklappt, also auf dem Cover-Display
+# (5,5 Zoll). Das grosse Innendisplay gibt es nur auf ausdruecklichen Wunsch
+# mit -Innen.
+#
+# WICHTIG - warum eine eigene AVD und nicht der Scharnierwinkel:
+# Klappt man die Innen-AVD per "emu sensor set hinge-angle0 0" zu, zeigt der
+# Emulator nur einen AUSSCHNITT des grossen Panels. Android rechnet das Layout
+# nicht auf das Cover-Format um: "wm size" meldet weiter 1848x2448, die App
+# wird auch so gerendert und ragt links, rechts und unten aus dem Bild.
+# Deshalb hat das zugeklappte Geraet eine eigene AVD mit den echten
+# Cover-Massen (1248x1972 @ 420 dpi). Siehe bugs/android/emulator-foldable.md #1.
+if ($Innen) { $Cover = $false } else { $Cover = $true }
 $avd = if ($Cover) { "Fold8_Cover" } else { "Fold8" }
 
-# --- Laeuft schon einer? -------------------------------------------------
+# --- Laeuft schon einer - und ist es ueberhaupt der richtige? ------------
+# Laeuft die falsche AVD, nuetzt alles Weitere nichts: das Fenster behaelt das
+# falsche Format. Dann wird gewechselt, statt stillschweigend das Falsche zu zeigen.
 $laeuft = & $adb devices | Where-Object { $_ -match "^emulator-\d+\s+device" }
 if ($laeuft) {
-  Write-Host "Emulator laeuft bereits." -ForegroundColor DarkGray
+  $laufende = ((& $adb -s emulator-5554 emu avd name 2>$null) | Select-Object -First 1) -replace "\s",""
+  if ($laufende -ne $avd) {
+    Write-Host "Es laeuft $laufende, gebraucht wird $avd - wird gewechselt." -ForegroundColor Cyan
+    & $adb -s emulator-5554 emu kill 2>$null | Out-Null
+    for ($i = 0; $i -lt 30; $i++) {
+      Start-Sleep -Seconds 1
+      if (-not (& $adb devices | Where-Object { $_ -match "^emulator-\d+\s+device" })) { break }
+    }
+    $laeuft = $null
+  } else {
+    Write-Host "Emulator laeuft bereits ($avd)." -ForegroundColor DarkGray
+  }
+}
+if ($laeuft) {
+  # nichts zu tun - der richtige Emulator laeuft schon
 } else {
   Write-Host "Starte $avd ..." -ForegroundColor Cyan
   $argumente = @("-avd", $avd, "-gpu", "host", "-no-boot-anim")
@@ -86,20 +96,44 @@ if ($laeuft) {
 # --- An das echte Geraet angleichen -------------------------------------
 # Frank hat die Schrift auf dem Fold 8 auf 90 Prozent gestellt
 & $adb -s emulator-5554 shell "settings put system font_scale 0.9" 2>$null | Out-Null
-# Hochformat festhalten: nicht selbsttaetig drehen, nur auf Zuruf
-& $adb -s emulator-5554 shell "settings put system accelerometer_rotation 0" 2>$null | Out-Null
-& $adb -s emulator-5554 shell "settings put system user_rotation 0" 2>$null | Out-Null
+# Ausrichtung: startet im Hochformat, bleibt aber DREHBAR.
+#
+# accelerometer_rotation MUSS auf 1 stehen. Steht es auf 0, ist der Dreh-Knopf
+# des Emulators wirkungslos - dann "geht die Rotation gar nicht". Von selbst
+# dreht sich trotzdem nichts: der virtuelle Lagesensor bewegt sich nur, wenn
+# man ihn bewegt (Knopf oder adb).
+# Hochformat wird deshalb ueber den Lagesensor gesetzt (absolute Lage), nicht
+# ueber user_rotation - das wird bei eingeschalteter Auto-Drehung ignoriert.
+& $adb -s emulator-5554 shell "settings put system accelerometer_rotation 1" 2>$null | Out-Null
+$hochformat = $false
+for ($v = 1; $v -le 3; $v++) {
+  & $adb -s emulator-5554 emu sensor set acceleration 0:9.81:0 2>$null | Out-Null
+  Start-Sleep -Milliseconds 1200
+  $r = (& $adb -s emulator-5554 shell "dumpsys window" 2>$null | Select-String -Pattern "^\s*mRotation=(\d)" | Select-Object -First 1)
+  if ($r -and $r.Matches.Count -gt 0 -and $r.Matches[0].Groups[1].Value -eq "0") { $hochformat = $true; break }
+}
+if (-not $hochformat) {
+  Write-Host "Hinweis: Ausrichtung steht nicht auf Hochformat - im Emulator einmal drehen." -ForegroundColor Yellow
+}
 
-# WICHTIG: aufgeklappt erzwingen. Der Emulator sichert seinen Zustand ueber
-# Sitzungen hinweg - blieb er einmal zugeklappt, zeigt er beim naechsten Start
-# nur den Cover-Ausschnitt des grossen Panels. Die App wird dann weiterhin auf
-# 1848x2448 gerendert, aber links/rechts/unten abgeschnitten dargestellt.
+# WICHTIG: Die Innen-AVD muss wirklich aufgeklappt sein. Der Emulator sichert
+# seinen Faltzustand ueber Sitzungen hinweg und faellt gelegentlich auf einen
+# kleinen Scharnierwinkel zurueck; dann zeigt er nur den Cover-Ausschnitt des
+# grossen Panels, waehrend die App weiter auf 1848x2448 gerendert wird - sie
+# ragt dann links, rechts und unten aus dem Bild.
+# Darum bis zu dreimal aufklappen und den Erfolg an OPENED pruefen, statt
+# einmal blind zu setzen. (Die Cover-AVD hat gar kein Scharnier.)
 if (-not $Cover) {
-  & $adb -s emulator-5554 emu sensor set hinge-angle0 180 2>$null | Out-Null
-  Start-Sleep -Milliseconds 1500
-  $zustand = (& $adb -s emulator-5554 shell "dumpsys device_state | grep mCommittedState" 2>$null) -join ""
-  if ($zustand -notmatch "OPENED") {
-    Write-Host "Hinweis: Emulator meldet nicht OPENED - Ansicht koennte beschnitten sein." -ForegroundColor Yellow
+  $offen = $false
+  for ($v = 1; $v -le 3; $v++) {
+    & $adb -s emulator-5554 emu sensor set hinge-angle0 180 2>$null | Out-Null
+    Start-Sleep -Milliseconds 1500
+    $zustand = (& $adb -s emulator-5554 shell "dumpsys device_state | grep mCommittedState" 2>$null) -join ""
+    if ($zustand -match "OPENED") { $offen = $true; break }
+  }
+  if (-not $offen) {
+    Write-Host "Emulator laesst sich nicht aufklappen - Ansicht waere beschnitten." -ForegroundColor Red
+    Write-Host "Abhilfe: .\Start-Fold8.ps1 -Innen -Kaltstart  (ohne gespeicherten Zustand)" -ForegroundColor Yellow
   }
 }
 
@@ -111,6 +145,9 @@ if ($Projekt -ne "") {
   if (-not (Test-Path (Join-Path $wurzel "gradlew.bat"))) {
     Write-Host "Kein Gradle-Projekt unter $wurzel" -ForegroundColor Red
   } else {
+    # Merken, woran gerade gearbeitet wird - damit Klappen.ps1 beim Wechsel auf
+    # das andere Display dieselbe App wieder mitbringt, egal welche es ist.
+    Set-Content -Path (Join-Path $env:TEMP "fold8-letztes-projekt.txt") -Value $wurzel -Encoding UTF8 -ErrorAction SilentlyContinue
     if (-not $OhneBauen) {
       Write-Host "Baue $(Split-Path $wurzel -Leaf) ..." -ForegroundColor Cyan
       Push-Location $wurzel
@@ -250,11 +287,35 @@ if ($Apk -ne "") {
   }
 }
 
-# --- Originalgroesse setzen ----------------------------------------------
+# --- Originalgroesse setzen UND dauerhaft halten --------------------------
+# Einmal setzen genuegt nicht: Auf-/Zuklappen (AVD-Wechsel) und Drehen aendern
+# die angezeigte Flaeche im laufenden Betrieb. Darum zuerst sichtbar messen und
+# setzen, danach einen Waechter mitlaufen lassen, der bei JEDER Aenderung wieder
+# auf 1:1 stellt. Es laeuft immer genau einer - ein alter wird vorher beendet.
 $skript = Join-Path $hier "Set-Originalgroesse.ps1"
 if (Test-Path $skript) {
   if ($Cover) { & powershell -ExecutionPolicy Bypass -File $skript -Zoom $Zoom -Cover }
   else        { & powershell -ExecutionPolicy Bypass -File $skript -Zoom $Zoom }
+
+  $merker = Join-Path $env:TEMP "fold8-groessen-waechter.pid"
+  if (Test-Path $merker) {
+    $altePid = Get-Content $merker -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($altePid -match "^\d+$") {
+      # Nur beenden, wenn es wirklich noch eine PowerShell ist - PIDs werden wiederverwendet
+      Get-Process -Id ([int]$altePid) -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessName -match "powershell|pwsh" } |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    }
+  }
+  $wArgs = @("-ExecutionPolicy","Bypass","-File",$skript,"-Zoom",$Zoom,"-Ueberwachen","-Leise")
+  if ($Cover) { $wArgs += "-Cover" }
+  $waechter = Start-Process -FilePath "powershell" -ArgumentList $wArgs -WindowStyle Hidden -PassThru -ErrorAction SilentlyContinue
+  if ($waechter) {
+    Set-Content -Path $merker -Value $waechter.Id -Encoding ASCII
+    Write-Host "  Groessen-Waechter laeuft mit - klappen und drehen bleibt 1:1." -ForegroundColor DarkGray
+  } else {
+    Write-Host "  Groessen-Waechter konnte nicht starten - Groesse bleibt beim Startwert." -ForegroundColor Yellow
+  }
 }
 
 # --- Echtes Geraet daneben spiegeln --------------------------------------
@@ -290,7 +351,7 @@ if ($MitGeraet) {
 }
 
 Write-Host ""
-Write-Host "  Zuklappen:   adb -s emulator-5554 emu sensor set hinge-angle0 0" -ForegroundColor DarkGray
-Write-Host "  Aufklappen:  adb -s emulator-5554 emu sensor set hinge-angle0 180" -ForegroundColor DarkGray
+Write-Host "  Aufklappen:  .\Klappen.ps1 -Auf     (grosses Innendisplay)" -ForegroundColor DarkGray
+Write-Host "  Zuklappen:   .\Klappen.ps1 -Zu      (Cover-Display, Normalfall)" -ForegroundColor DarkGray
 Write-Host "  Elemente:    .\Zeig-Elemente.ps1" -ForegroundColor DarkGray
 Write-Host ""

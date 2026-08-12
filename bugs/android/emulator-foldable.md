@@ -361,3 +361,60 @@ gewartet. Fehlt der Prozess ohne eigenen Crash-Eintrag, lautet die Meldung "DIE 
 **Verwandte Stelle:** `Zeig-Fehler.ps1` filtert dasselbe Rauschen bereits über `$nativesRauschen`
 (`F DEBUG|libbluetooth|…`) — die Absturz-Erkennung in `Start-Fold8.ps1` war eine zweite,
 schwächere Kopie dieser Logik. Wer eine der beiden ändert, prüft immer auch die andere.
+
+---
+
+## 22. Fenster wird beim Drehen falsch groß und bleibt es
+
+**Symptom:** Nach einer Drehung stimmt der Maßstab nicht mehr — mal viel zu klein, mal springt das
+Fenster zwischen zwei Größen hin und her. Bei mehrfachem Drehen (5-7 ×) wird es nie wieder richtig.
+
+**Ursache (drei Fehler übereinander):**
+
+1. Die Fenstergröße wurde als **Einmal-Aktion** beim Start gesetzt. Der Emulator ändert sie beim
+   Drehen aber selbst — danach stimmt der Maßstab nicht mehr, und nichts führt ihn nach.
+2. `settings put system accelerometer_rotation 0` ("Hochformat festhalten") macht den **Dreh-Knopf
+   des Emulators wirkungslos** — es sieht aus, als ginge die Rotation gar nicht.
+   `user_rotation` wird bei eingeschalteter Auto-Drehung ignoriert.
+3. In der **180-Grad-Lage** dreht der Emulator seinen Fensterrahmen ins Hochformat, Android bleibt
+   aber quer (Hochformat kopfüber gibt es auf Handys nicht). Rahmen und Inhalt passen nicht
+   zusammen; das Fenster lässt sich in dieser Lage **nicht** auf die richtige Größe zwingen — der
+   Emulator setzt sein Rahmenverhältnis sofort zurück (beobachtet: 500 × 790 statt 1129 × 715).
+
+**Fix (`Set-Originalgroesse.ps1 -Ueberwachen`, von `Start-Fold8.ps1` automatisch gestartet):**
+
+- Ein **Wächter** liest alle 250 ms `cur=BxH` und `mRotation` und setzt das Fenster bei jeder
+  Änderung neu. Der Sollwert wird immer frisch aus dem gemeldeten Zustand gerechnet, nie
+  fortgeschrieben — deshalb ist die Anzahl der Drehungen egal.
+- Ausrichtung über den **Lagesensor** (`emu sensor set acceleration 0:9.81:0` = Hochformat) statt
+  über `user_rotation`, und `accelerometer_rotation` bleibt auf 1, damit der Dreh-Knopf wirkt.
+- Die kaputte 180-Grad-Lage wird **übersprungen**: Passt das Hoch-/Querverhältnis des Fensters
+  nach dem Setzen nicht zu dem, was Android meldet, sendet der Wächter einmal `emu rotate`
+  (höchstens alle 5 s, damit keine Endlosdrehung entsteht).
+
+**Stabilität des Wächters (drei Sicherungen):** systemweiter Mutex (zwei Wächter würden sich
+überstimmen — das war die Ursache für sichtbares Hin- und Herspringen) · Entprellen über zwei
+Messungen plus 1,2 s Ruhe nach jedem Eingriff (sonst regelt er gegen sich selbst) · Ping-Pong-Bremse
+mit **selbstlösender** Pause (eine Sperre, die sich nicht von selbst löst, lässt das Fenster nach
+mehrfachem Drehen dauerhaft falsch stehen — genau das war ein Zwischenstand dieses Fixes).
+
+**Regressionstest:** 7 × rechts, 7 × links (Lagesensor) und 8 × Dreh-Knopf, nach jedem Schritt
+Fenster-Ist gegen `cur × Monitor-ppi / Geräte-ppi` geprüft. Alle Messungen innerhalb 6 px.
+
+**Messfalle bei der Prüfung:** `GetClientRect` liefert ohne `SetProcessDpiAwareness(2)` skalierte
+Werte, und die Selbstkontrolle rechnet den Fehler wieder heraus — sie sieht dann richtig aus,
+obwohl das Fenster physisch falsch ist. Bei Zweifeln gegen einen Vollbild-Screenshot in echter
+Auflösung prüfen (hier: 2880 × 1800, EDID 30 × 19 cm → 242,9 ppi).
+
+---
+
+## 23. Zugeklappt ist der Normalfall, nicht aufgeklappt
+
+**Symptom:** Der Emulator startet immer mit dem großen Innendisplay, obwohl das Gerät im Alltag
+zugeklappt benutzt wird.
+
+**Fix:** `Start-Fold8.ps1` startet standardmäßig die AVD `Fold8_Cover`; `-Innen` schaltet auf das
+große Display. Läuft bereits ein Emulator mit der anderen AVD, wird sie **gewechselt** (alte
+beenden, richtige starten, App mitnehmen) statt stillschweigend das falsche Format zu zeigen.
+Zum Wechseln im Betrieb: `Klappen.ps1 -Auf` / `-Zu` — der Falt-Knopf im Emulator taugt dafür
+nicht (siehe #1).
