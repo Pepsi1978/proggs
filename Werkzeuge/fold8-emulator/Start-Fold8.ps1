@@ -8,6 +8,7 @@
 
 param(
   [switch]$Cover,
+  [switch]$Innen,
   [switch]$MitGeraet,
   [double]$Zoom = 1.0,
   [string]$Apk = "",
@@ -27,6 +28,25 @@ Get-ChildItem env: | Where-Object { $_.Name -like "CLAUDE*" -or $_.Name -eq "NO_
   ForEach-Object { Remove-Item "env:$($_.Name)" -ErrorAction SilentlyContinue }
 $env:ANDROID_HOME = $sdk
 
+# --- Welches Display? Dem echten Geraet folgen ---------------------------
+# Frank vergleicht immer mit dem Handy in seiner Hand. Ist es zugeklappt, sieht
+# er das Cover-Display (5,5 Zoll); aufgeklappt das Innendisplay (7,6 Zoll). Der
+# Emulator waehlt darum genau das, was das angeschlossene Geraet gerade zeigt -
+# so kann das falsche Display gar nicht erst gezeigt werden.
+if (-not $Cover -and -not $Innen) {
+  $echt = & $adb devices | Where-Object { $_ -match "^\w+\s+device" -and $_ -notmatch "^emulator-" } | Select-Object -First 1
+  if ($echt) {
+    $seriennr = ($echt -split "\s+")[0]
+    $groesse = (& $adb -s $seriennr shell wm size 2>$null) -join " "
+    if ($groesse -match "1248x1972") {
+      $Cover = $true
+      Write-Host "Dein Fold ist zugeklappt - Emulator startet im Cover-Format (5,5 Zoll)." -ForegroundColor DarkGray
+    } elseif ($groesse -match "1848x2448|2448x1848") {
+      Write-Host "Dein Fold ist aufgeklappt - Emulator startet im Innenformat (7,6 Zoll)." -ForegroundColor DarkGray
+    }
+  }
+}
+
 $avd = if ($Cover) { "Fold8_Cover" } else { "Fold8" }
 
 # --- Laeuft schon einer? -------------------------------------------------
@@ -35,9 +55,20 @@ if ($laeuft) {
   Write-Host "Emulator laeuft bereits." -ForegroundColor DarkGray
 } else {
   Write-Host "Starte $avd ..." -ForegroundColor Cyan
-  $argumente = @("-avd", $avd, "-gpu", "host")
+  $argumente = @("-avd", $avd, "-gpu", "host", "-no-boot-anim")
   if ($Kaltstart) { $argumente += "-no-snapshot-load" }
   Start-Process -FilePath $emulator -ArgumentList $argumente -WindowStyle Normal
+
+  # Fenstergroesse setzen, SOBALD das Fenster da ist - also lange vor dem
+  # fertigen Systemstart. Der Emulator kennt keine Startgroesse (siehe Kopf von
+  # Set-Originalgroesse.ps1) und erscheint zunaechst bildschirmfuellend; je
+  # frueher korrigiert wird, desto weniger sieht man davon.
+  $setzen = Join-Path $hier "Set-Originalgroesse.ps1"
+  if (Test-Path $setzen) {
+    $argListe = @("-ExecutionPolicy","Bypass","-File",$setzen,"-Warten","60","-Zoom",$Zoom,"-Leise")
+    if ($Cover) { $argListe += "-Cover" }
+    & powershell $argListe | Out-Null
+  }
 
   Write-Host "Warte auf den Systemstart..." -NoNewline
   $fertig = $false
@@ -146,7 +177,21 @@ if ($MitGeraet) {
               Select-Object -First 1 -ExpandProperty FullName
     if ($scrcpy) {
       Write-Host "Spiegle das echte Geraet ($seriennr) ..." -ForegroundColor Cyan
-      Start-Process -FilePath $scrcpy -ArgumentList "--serial", $seriennr, "--window-title", "Fold8-echt", "--max-size", "1000"
+      # scrcpy kann seine Fenstergroesse - anders als der Emulator - direkt beim
+      # Start bekommen. Damit steht die Spiegelung sofort im gleichen Massstab
+      # daneben und muss nie nachjustiert werden.
+      $gr = (& $adb -s $seriennr shell wm size 2>$null) -join " "
+      $breite = 0; $hoehe = 0
+      if ($gr -match "(\d+)x(\d+)") {
+        $gB = [int]$Matches[1]; $gH = [int]$Matches[2]
+        $gPpi = if ([math]::Max($gB,$gH) -eq 1972) { 424.3 } else { 403.6 }
+        $breite = [int][math]::Round($gB * (242.9 / $gPpi) * $Zoom)
+        $hoehe  = [int][math]::Round($gH * (242.9 / $gPpi) * $Zoom)
+      }
+      $scArgs = @("--serial", $seriennr, "--window-title", "Fold8-echt")
+      if ($breite -gt 0) { $scArgs += @("--window-width", "$breite", "--window-height", "$hoehe", "--window-x", "60", "--window-y", "80") }
+      else { $scArgs += @("--max-size", "1000") }
+      Start-Process -FilePath $scrcpy -ArgumentList $scArgs
     } else {
       Write-Host "scrcpy nicht gefunden. Installieren mit: winget install Genymobile.scrcpy" -ForegroundColor Yellow
     }

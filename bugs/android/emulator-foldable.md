@@ -272,3 +272,58 @@ hat. Zusätzlich existieren zwei getrennte Eingabegeräte — `sec_touchscreen` 
 Zuklappen mitten in der Sitzung. Die Zuordnung Eingabegerät→Display steht in `dumpsys input`
 (Achsen mit `source=TOUCHSCREEN` gegen `max=`-Werte vergleichen), lässt sich aber ganz umgehen,
 wenn man ohnehin von der PC-Seite her rechnet (siehe §16).
+
+---
+
+## 18. Der Emulator kennt keine Startgröße — Fenster erscheint immer bildschirmfüllend
+
+**Symptom:** Der Emulator startet riesig und teils außerhalb des Bildschirms; erst ein
+nachträgliches Zurechtrücken bringt ihn in Form. Das sichtbare Springen wirkt wie "30 Resize-
+Versuche".
+
+**Ursache — alle drei denkbaren Wege sind Sackgassen (am 12.08.2026 durchgetestet):**
+
+| Weg | Ergebnis |
+|---|---|
+| `-scale 0.6` | "obsolete as of Emulator 2.0 and will be ignored" |
+| `-window-size` | laut `emulator -help` **nur für Fuchsia** |
+| `emulator-user.ini` (`window.x/y`, `window.scale`) | wird beim Kaltstart **ignoriert** und beim Beenden mit `window.scale = -1.000000`, `window.x = 100`, `window.y = 100` **überschrieben** |
+
+Gemessen: Vorgabe `window.scale = 0.5725` → tatsächliche Darstellung mit Faktor 0,891, also
+bildschirmfüllend (1972 px × 0,891 = 1757 px bei 1800 px Bildschirmhöhe), Position −172 (oben raus).
+
+**Fix (Poka-Yoke Stufe 2, Stufe 3 ist hier nicht erreichbar):** Nach dem Start **einmal** per
+`SetWindowPos` Größe **und** Position gemeinsam setzen — und zwar so früh wie möglich, nämlich
+sobald das Fenster existiert (`-Warten`), nicht erst nach `sys.boot_completed`. Danach genau eine
+Kontrollmessung und höchstens eine Nachkorrektur. Umgesetzt in `Set-Originalgroesse.ps1`.
+
+**Gegenbeispiel scrcpy:** Dort geht Stufe 3 — `--window-width/--window-height/--window-x/--window-y`
+werden beim Start akzeptiert, die Spiegelung steht sofort maßstabsgetreu.
+
+---
+
+## 19. Falsches Display verglichen: Innendisplay gegen Cover-Display
+
+**Symptom:** "Die App ist viel zu groß, als wäre sie für ein Riesengerät gedacht" — obwohl die
+Skalierung rechnerisch stimmt.
+
+**Ursache:** Verglichen wurde der Emulator (aufgeklapptes **Innendisplay**, 7,6″, 11,63 cm breit,
+704 dp) mit dem echten Handy **im zugeklappten Zustand** (**Cover-Display**, 5,5″, 7,47 cm breit,
+475 dp). Zwei verschiedene Bildschirme desselben Geräts — das Innendisplay hat Tablet-Fläche.
+
+**Fix (Poka-Yoke Stufe 3):** Der Emulator folgt dem angeschlossenen Gerät. `Start-Fold8.ps1` liest
+`adb shell wm size` des echten Fold und wählt die passende AVD:
+`1248x1972` → `Fold8_Cover`, `1848x2448`/`2448x1848` → `Fold8`. Mit `-Cover`/`-Innen` überschreibbar.
+Damit kann das falsche Display strukturell nicht mehr gezeigt werden.
+
+---
+
+## 20. Maßstab stimmt nur auf dem Hauptmonitor
+
+**Symptom:** Auf einem zweiten Bildschirm ist das Fenster falsch groß.
+
+**Ursache:** Die Monitor-ppi wurde aus `Screen::PrimaryScreen` und dem ersten EDID-Eintrag
+berechnet — unabhängig davon, auf welchem Bildschirm das Fenster tatsächlich liegt.
+
+**Fix:** `Screen::FromHandle(fensterHandle)` verwenden und den Maßstab über das Verhältnis der
+Bildschirmdiagonalen anpassen. Präventiv eingebaut, bevor der Fehler auftrat.

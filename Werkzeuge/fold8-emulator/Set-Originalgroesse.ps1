@@ -1,16 +1,27 @@
-# Setzt das Emulator-Fenster so, dass das Handy-Bild auf dem Monitor
-# exakt so gross ist wie das echte Display in der Hand (1:1 in Zentimetern).
+# Setzt das Emulator-Fenster so, dass das Handy-Bild auf dem Monitor exakt so
+# gross ist wie das echte Display in der Hand (1:1 in Zentimetern), und stellt es
+# mittig auf den Bildschirm.
 #
 # Rechenweg:  Fensterbreite [Monitorpixel] = Geraetebreite [Geraetepixel] * (Monitor-ppi / Geraete-ppi)
 #
-# Aufruf:  .\Set-Originalgroesse.ps1                 -> Innendisplay, Originalgroesse
+# WARUM NACHTRAEGLICH? Der Android-Emulator kennt keine Startgroesse:
+#   -scale            ist seit Emulator 2.0 abgeschafft und wird ignoriert
+#   -window-size      gilt nur fuer Fuchsia
+#   emulator-user.ini wird beim Beenden mit scale = -1 ueberschrieben
+# Er startet immer bildschirmfuellend. Darum wird EINMAL korrigiert - so frueh wie
+# moeglich (sobald das Fenster existiert), nicht mehrfach.
+#
+# Aufruf:  .\Set-Originalgroesse.ps1                 -> Originalgroesse, mittig
 #          .\Set-Originalgroesse.ps1 -Zoom 1.5       -> 150 Prozent
-#          .\Set-Originalgroesse.ps1 -Cover          -> Cover-Display-Fenster
+#          .\Set-Originalgroesse.ps1 -Cover          -> Massstab fuers Cover-Display
+#          .\Set-Originalgroesse.ps1 -Warten 60      -> bis zu 60 s auf das Fenster warten
 
 param(
   [double]$Zoom = 1.0,
   [switch]$Cover,
-  [string]$Fenster = ""
+  [string]$Fenster = "",
+  [int]$Warten = 0,
+  [switch]$Leise
 )
 
 # --- Windows-Anzeigeskalierung abschalten (MUSS als Allererstes kommen,
@@ -24,12 +35,13 @@ public class Fenster {
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("shcore.dll")] public static extern int SetProcessDpiAwareness(int v);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
 }
 "@
 try { [void][Fenster]::SetProcessDpiAwareness(2) } catch { }
+
+function Schreib($text, $farbe) { if (-not $Leise) { Write-Host $text -ForegroundColor $farbe } }
 
 # --- Geraetewerte, am echten Fold 8 (SM-F971B) gemessen -----------------
 $INNEN_PX_B = 1848; $INNEN_PX_H = 2448; $INNEN_PPI = 403.6   # 7,6 Zoll
@@ -37,6 +49,8 @@ $COVER_PX_B = 1248; $COVER_PX_H = 1972; $COVER_PPI = 424.3   # 5,5 Zoll
 
 # --- Monitorwerte aus dem EDID -----------------------------------------
 Add-Type -AssemblyName System.Windows.Forms
+# Vorlaeufig der Hauptmonitor; sobald das Fenster bekannt ist, wird auf den
+# Monitor umgestellt, auf dem es tatsaechlich liegt (Mehrmonitor-Betrieb).
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen
 $edid = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue | Select-Object -First 1
 
@@ -46,24 +60,52 @@ if ($edid -and $edid.MaxHorizontalImageSize -gt 0) {
   $MONITOR_PPI = $diagPx / $diagZoll
 } else {
   $MONITOR_PPI = 242.9   # Rueckfallwert fuer diesen Rechner
-  Write-Host "EDID nicht lesbar - nutze Rueckfallwert $MONITOR_PPI ppi" -ForegroundColor Yellow
+  Schreib "EDID nicht lesbar - nutze Rueckfallwert $MONITOR_PPI ppi" Yellow
 }
 
+# --- Auf das Fenster warten (optional) ----------------------------------
+$muster = if ($Fenster -ne "") { $Fenster } else { "Android Emulator" }
+$p = $null
+$grenze = if ($Warten -gt 0) { $Warten * 5 } else { 1 }
+for ($i = 0; $i -lt $grenze; $i++) {
+  $p = Get-Process | Where-Object { $_.MainWindowTitle -like "*$muster*" } | Select-Object -First 1
+  if ($p) { break }
+  Start-Sleep -Milliseconds 200
+}
+if (-not $p) {
+  Schreib "" White
+  Schreib "  Kein Emulator-Fenster gefunden. Erst den Emulator starten." Red
+  exit 1
+}
+$h = $p.MainWindowHandle
+if ([Fenster]::IsIconic($h)) { [void][Fenster]::ShowWindow($h, 9); Start-Sleep -Milliseconds 500 }
+
+# Auf den Monitor umstellen, auf dem das Fenster wirklich liegt. Mit dem
+# Hauptmonitor zu rechnen waere falsch, sobald ein zweiter Bildschirm im Spiel
+# ist - dann stimmte der Massstab nicht mehr.
+$screenFenster = [System.Windows.Forms.Screen]::FromHandle($h)
+if ($screenFenster -and $screenFenster.DeviceName -ne $screen.DeviceName) {
+  $verhaeltnis = [math]::Sqrt([math]::Pow($screenFenster.Bounds.Width,2) + [math]::Pow($screenFenster.Bounds.Height,2)) /
+                 [math]::Sqrt([math]::Pow($screen.Bounds.Width,2) + [math]::Pow($screen.Bounds.Height,2))
+  $MONITOR_PPI = $MONITOR_PPI * $verhaeltnis
+  Schreib "  Fenster liegt auf $($screenFenster.DeviceName) - Massstab angepasst (Diagonale geschaetzt)." Yellow
+  $screen = $screenFenster
+}
+
+# --- Welches Display zeigt der Emulator gerade? -------------------------
 if ($Cover) { $pxB = $COVER_PX_B; $pxH = $COVER_PX_H; $ppi = $COVER_PPI; $was = "Cover-Display" }
 else        { $pxB = $INNEN_PX_B; $pxH = $INNEN_PX_H; $ppi = $INNEN_PPI; $was = "Innendisplay (aufgeklappt)" }
 
-# Die tatsaechliche Displaygroesse vom laufenden Emulator lesen - ein Skin kann
-# sie ueberschreiben (Samsungs Fold8-Skin dreht z.B. auf 2448x1848 quer).
+# Live nachfragen - ein Skin oder eine andere AVD kann die Masse aendern
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 if (Test-Path $adb) {
   $wm = (& $adb -s emulator-5554 shell wm size 2>$null) -join " "
   if ($wm -match "(\d+)x(\d+)") {
     $liveB = [int]$Matches[1]; $liveH = [int]$Matches[2]
-    # Passt die Auflaesung zum Cover- oder zum Innendisplay (Orientierung egal)?
     $lang = [math]::Max($liveB, $liveH); $kurz = [math]::Min($liveB, $liveH)
-    if ($lang -eq [math]::Max($COVER_PX_B,$COVER_PX_H) -and $kurz -eq [math]::Min($COVER_PX_B,$COVER_PX_H)) {
+    if ($lang -eq $COVER_PX_H -and $kurz -eq $COVER_PX_B) {
       $ppi = $COVER_PPI; $was = "Cover-Display"
-    } elseif ($lang -eq [math]::Max($INNEN_PX_B,$INNEN_PX_H) -and $kurz -eq [math]::Min($INNEN_PX_B,$INNEN_PX_H)) {
+    } elseif ($lang -eq $INNEN_PX_H -and $kurz -eq $INNEN_PX_B) {
       $ppi = $INNEN_PPI; $was = "Innendisplay (aufgeklappt)"
     }
     $pxB = $liveB; $pxH = $liveH
@@ -72,120 +114,77 @@ if (Test-Path $adb) {
 
 $faktor = ($MONITOR_PPI / $ppi) * $Zoom
 
-# Liegt ein Geraeterahmen (Skin) an, umfasst der Fensterinhalt den ganzen Rahmen,
-# nicht nur das Display. Dann muss der Rahmen skaliert werden, damit das DISPLAY
-# darin die Originalgroesse hat.
+# --- Geraeterahmen (Skin) beruecksichtigen, falls einer aktiv ist --------
 $avdName = if ($Cover) { "Fold8_Cover" } else { "Fold8" }
 $cfg = Join-Path $env:USERPROFILE ".android\avd\$avdName.avd\config.ini"
-$rahmenB = 0; $rahmenH = 0; $skinDispB = 0
+$rahmenB = 0; $rahmenH = 0
 if (Test-Path $cfg) {
   $skinPfad = (Get-Content $cfg | Where-Object { $_ -match "^skin\.path=" }) -replace "^skin\.path=", ""
   $layoutDatei = if ($skinPfad) { Join-Path $skinPfad "layout" } else { $null }
   if ($layoutDatei -and (Test-Path $layoutDatei)) {
     $lay = Get-Content $layoutDatei -Raw
-    # display { width X height Y }  -> Displaygroesse laut Skin
-    if ($lay -match "display\s*\{[^}]*?width\s+(\d+)[^}]*?height\s+(\d+)") { $skinDispB = [int]$Matches[1] }
-    # layouts { portrait { width X height Y -> Gesamtgroesse des Rahmens
     if ($lay -match "layouts\s*\{\s*\w+\s*\{\s*width\s+(\d+)\s+height\s+(\d+)") {
       $rahmenB = [int]$Matches[1]; $rahmenH = [int]$Matches[2]
     }
   }
 }
-
-if ($rahmenB -gt 0 -and $skinDispB -gt 0) {
-  # Faktor so waehlen, dass das Display im Rahmen die Originalgroesse erreicht
+if ($rahmenB -gt 0) {
   $zielB = [int][math]::Round($rahmenB * $faktor)
   $zielH = [int][math]::Round($rahmenH * $faktor)
-  $displayB = [int][math]::Round($skinDispB * $faktor)
-  Write-Host ""
-  Write-Host "  Geraeterahmen erkannt ($rahmenB x $rahmenH) - Display darin: $displayB px breit" -ForegroundColor DarkGray
 } else {
   $zielB = [int][math]::Round($pxB * $faktor)
   $zielH = [int][math]::Round($pxH * $faktor)
 }
 
-Write-Host ""
-Write-Host "  $was" -ForegroundColor Cyan
-Write-Host "  Monitor: $([math]::Round($MONITOR_PPI,1)) ppi   Geraet: $ppi ppi   Massstab: $([math]::Round($faktor,4))" -ForegroundColor DarkGray
-Write-Host "  Zielgroesse Bildbereich: $zielB x $zielH Pixel" -ForegroundColor DarkGray
-if ($Zoom -ne 1.0) { Write-Host "  Zoom: $($Zoom * 100) Prozent" -ForegroundColor Yellow }
-else { Write-Host "  Originalgroesse - so gross wie das Handy in der Hand" -ForegroundColor Green }
-
-# --- Fenster finden und setzen ------------------------------------------
-$muster = if ($Fenster -ne "") { $Fenster } else { "Android Emulator" }
-$p = Get-Process | Where-Object { $_.MainWindowTitle -like "*$muster*" } | Select-Object -First 1
-if (-not $p) {
-  Write-Host ""
-  Write-Host "  Kein Emulator-Fenster gefunden. Erst den Emulator starten." -ForegroundColor Red
-  exit 1
-}
-$h = $p.MainWindowHandle
-
-# Minimierte Fenster haben keine messbare Groesse -> erst wiederherstellen
-if ([Fenster]::IsIconic($h)) {
-  [void][Fenster]::ShowWindow($h, 9)   # 9 = SW_RESTORE
-  Start-Sleep -Milliseconds 600
-}
-
-# Rahmen und Titelleiste ermitteln, damit der INNENbereich exakt passt
+# --- Setzen: Groesse UND Position in einem Zug --------------------------
 $w = New-Object Fenster+RECT; $c = New-Object Fenster+RECT
 [void][Fenster]::GetWindowRect($h, [ref]$w)
 [void][Fenster]::GetClientRect($h, [ref]$c)
 $randB = ($w.R - $w.L) - ($c.R - $c.L)
 $randH = ($w.B - $w.T) - ($c.B - $c.T)
 
-# Position mitsetzen, damit das Fenster garantiert vollstaendig sichtbar ist.
-# Der Emulator merkt sich seine letzte Position und startet sonst gern halb
-# ausserhalb des Bildschirms - dann ist die Titelleiste weg und man kann ihn
-# nicht mehr verschieben.
 $arbeit = $screen.WorkingArea
 $vollB = $zielB + $randB
 $vollH = $zielH + $randH
-# Mittig setzen: so bleibt ringsum Platz - auch rechts fuer die seitliche
-# Bedienleiste des Emulators, die sonst aus dem Bildschirm faellt.
-$posX = $arbeit.Left + [int](($arbeit.Right - $arbeit.Left - $vollB) / 2)
-$posY = $arbeit.Top  + [int](($arbeit.Bottom - $arbeit.Top - $vollH) / 2)
-if ($posX -lt $arbeit.Left) { $posX = $arbeit.Left }
-if ($posY -lt $arbeit.Top)  { $posY = $arbeit.Top }
 
+function Mittig($breite, $hoehe) {
+  $x = $arbeit.Left + [int](($arbeit.Right - $arbeit.Left - $breite) / 2)
+  $y = $arbeit.Top  + [int](($arbeit.Bottom - $arbeit.Top - $hoehe) / 2)
+  if ($x -lt $arbeit.Left) { $x = $arbeit.Left }
+  if ($y -lt $arbeit.Top)  { $y = $arbeit.Top }
+  return @($x, $y)
+}
+
+$pos = Mittig $vollB $vollH
 # 0x0004 = SWP_NOZORDER
-[void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $posX, $posY, $vollB, $vollH, 0x0004)
-Start-Sleep -Milliseconds 400
+[void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $vollB, $vollH, 0x0004)
+Start-Sleep -Milliseconds 350
 
-# Nachmessen und einmal korrigieren (Anzeigeskalierung kann dazwischenfunken)
+# Genau EINE Nachkorrektur - der Rahmen kann sich beim Skalieren aendern
 [void][Fenster]::GetClientRect($h, [ref]$c)
 $istB = $c.R - $c.L; $istH = $c.B - $c.T
-if ([math]::Abs($istB - $zielB) -gt 2) {
+if ([math]::Abs($istB - $zielB) -gt 2 -or [math]::Abs($istH - $zielH) -gt 2) {
   $korrB = $vollB + ($zielB - $istB)
   $korrH = $vollH + ($zielH - $istH)
-  $posX = $arbeit.Left + [int](($arbeit.Right - $arbeit.Left - $korrB) / 2)
-  $posY = $arbeit.Top  + [int](($arbeit.Bottom - $arbeit.Top - $korrH) / 2)
-  if ($posX -lt $arbeit.Left) { $posX = $arbeit.Left }
-  if ($posY -lt $arbeit.Top)  { $posY = $arbeit.Top }
-  [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $posX, $posY, $korrB, $korrH, 0x0004)
-  Start-Sleep -Milliseconds 300
+  $pos = Mittig $korrB $korrH
+  [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $korrB, $korrH, 0x0004)
+  Start-Sleep -Milliseconds 250
   [void][Fenster]::GetClientRect($h, [ref]$c)
   $istB = $c.R - $c.L; $istH = $c.B - $c.T
 }
 
-# Letzte Sicherung: passt das Fenster ueberhaupt in den Arbeitsbereich?
-$w2 = New-Object Fenster+RECT
-[void][Fenster]::GetWindowRect($h, [ref]$w2)
-if ($w2.T -lt $arbeit.Top -or $w2.L -lt $arbeit.Left -or $w2.B -gt $arbeit.Bottom -or $w2.R -gt $arbeit.Right) {
-  $nx = [math]::Max($arbeit.Left, [math]::Min($posX, $arbeit.Right - ($w2.R - $w2.L)))
-  $ny = [math]::Max($arbeit.Top,  [math]::Min($posY, $arbeit.Bottom - ($w2.B - $w2.T)))
-  # 0x0001 = SWP_NOSIZE, 0x0004 = SWP_NOZORDER
-  [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $nx, $ny, 0, 0, 0x0005)
-  if (($w2.B - $w2.T) -gt ($arbeit.Bottom - $arbeit.Top)) {
-    Write-Host ""
-    Write-Host "  Hinweis: In Originalgroesse ist das Fenster hoeher als der sichtbare" -ForegroundColor Yellow
-    Write-Host "  Bereich. Mit -Zoom 0.8 wird es kleiner, aber dann nicht mehr massstabsgetreu." -ForegroundColor Yellow
-  }
-}
-
 $cmB = [math]::Round($istB / $MONITOR_PPI * 2.54, 2)
 $cmH = [math]::Round($istH / $MONITOR_PPI * 2.54, 2)
-Write-Host ""
-Write-Host "  Fertig: Bildbereich $istB x $istH Pixel  =  $cmB x $cmH cm auf dem Monitor" -ForegroundColor Green
-Write-Host "  ($($p.MainWindowTitle))" -ForegroundColor DarkGray
-Write-Host ""
+$sollCmB = [math]::Round($pxB / $ppi * 2.54 * $Zoom, 2)
+$sollCmH = [math]::Round($pxH / $ppi * 2.54 * $Zoom, 2)
+
+Schreib "" White
+Schreib "  $was  -  $($pxB)x$($pxH) px bei $ppi ppi" Cyan
+if ($Zoom -ne 1.0) { Schreib "  Zoom $($Zoom * 100) Prozent" Yellow }
+Schreib "  Fenster: $istB x $istH px  =  $cmB x $cmH cm   (Soll $sollCmB x $sollCmH cm)" Green
+
+$abwB = [math]::Abs($cmB - $sollCmB)
+if ($abwB -gt 0.15) {
+  Schreib "  Abweichung $([math]::Round($abwB,2)) cm - das Fenster passt vermutlich nicht auf den Bildschirm." Yellow
+}
+Schreib "" White
