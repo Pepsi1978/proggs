@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -31,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -89,9 +93,20 @@ fun Einstellungen(modell: AppViewModel) {
     val geraetecode by modell.geraetecode.collectAsStateWithLifecycle()
     val meldetAn by modell.meldetAn.collectAsStateWithLifecycle()
 
+    // Die gewaehlten Werte liegen im Zustand, nicht nur in den Einstellungen: nur was die
+    // Composition LIEST, zeichnet sie nach einer Aenderung neu. Ein blosser Zaehler, der
+    // hochgesetzt aber nirgends gelesen wird, bewegt nichts - das Feld zeigte dann weiter
+    // den alten Wert.
     var anbieter by remember { mutableStateOf(einstellungen.ttsAnbieter) }
     var tempo by remember { mutableStateOf(einstellungen.sprechtempo) }
-    var stand by remember { mutableStateOf(0) }
+    var modellExp by remember { mutableStateOf(einstellungen.modellExperimente) }
+    var effortExp by remember { mutableStateOf(einstellungen.effortExperimente) }
+    var modellLog by remember { mutableStateOf(einstellungen.modellLogbuch) }
+    var effortLog by remember { mutableStateOf(einstellungen.effortLogbuch) }
+    var stimmeGoogle by remember { mutableStateOf(einstellungen.stimmeGoogle) }
+    var stimmeEdge by remember { mutableStateOf(einstellungen.stimmeEdge) }
+    var morgensAn by remember { mutableStateOf(einstellungen.erinnerungMorgensAn) }
+    var abendsAn by remember { mutableStateOf(einstellungen.erinnerungAbendsAn) }
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
@@ -107,26 +122,26 @@ fun Einstellungen(modell: AppViewModel) {
             Abschnittskarte {
                 Gruppe("Experimente") {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Auswahl(
-                            "Modell", MODELLE, einstellungen.modellExperimente,
-                            Modifier.weight(1f),
-                        ) { einstellungen.modellExperimente = it; stand++ }
-                        Auswahl(
-                            "Effort", EFFORT, einstellungen.effortExperimente,
-                            Modifier.weight(1f),
-                        ) { einstellungen.effortExperimente = it; stand++ }
+                        Auswahl("Modell", MODELLE, modellExp, Modifier.weight(1f)) {
+                            modellExp = it
+                            einstellungen.modellExperimente = it
+                        }
+                        Auswahl("Effort", EFFORT, effortExp, Modifier.weight(1f)) {
+                            effortExp = it
+                            einstellungen.effortExperimente = it
+                        }
                     }
                 }
                 Gruppe("Logbuch", Modifier.padding(top = 18.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Auswahl(
-                            "Modell", MODELLE, einstellungen.modellLogbuch,
-                            Modifier.weight(1f),
-                        ) { einstellungen.modellLogbuch = it; stand++ }
-                        Auswahl(
-                            "Effort", EFFORT, einstellungen.effortLogbuch,
-                            Modifier.weight(1f),
-                        ) { einstellungen.effortLogbuch = it; stand++ }
+                        Auswahl("Modell", MODELLE, modellLog, Modifier.weight(1f)) {
+                            modellLog = it
+                            einstellungen.modellLogbuch = it
+                        }
+                        Auswahl("Effort", EFFORT, effortLog, Modifier.weight(1f)) {
+                            effortLog = it
+                            einstellungen.effortLogbuch = it
+                        }
                     }
                 }
                 Text(
@@ -156,32 +171,18 @@ fun Einstellungen(modell: AppViewModel) {
                     "google_cloud" -> Auswahl(
                         beschriftung = "Stimme",
                         eintraege = GOOGLE_STIMMEN.map { it to it },
-                        gewaehlt = einstellungen.stimmeGoogle,
+                        gewaehlt = stimmeGoogle,
                         modifier = Modifier.padding(top = 16.dp),
-                    ) { einstellungen.stimmeGoogle = it; stand++ }
+                    ) { stimmeGoogle = it; einstellungen.stimmeGoogle = it }
 
                     "edge" -> Auswahl(
                         beschriftung = "Stimme",
                         eintraege = EDGE_STIMMEN.map { it to it },
-                        gewaehlt = einstellungen.stimmeEdge,
+                        gewaehlt = stimmeEdge,
                         modifier = Modifier.padding(top = 16.dp),
-                    ) { einstellungen.stimmeEdge = it; stand++ }
+                    ) { stimmeEdge = it; einstellungen.stimmeEdge = it }
 
-                    else -> Column(Modifier.padding(top = 16.dp)) {
-                        Beschriftung("Stimme")
-                        KnopfUmrandet(
-                            text = "Stimme aufnehmen",
-                            beiKlick = { modell.nimmStimmeAuf() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text(
-                            text = "Deine eigene Stimme wird über Alibaba erzeugt. Der Zugang " +
-                                "dafür steht unter „Zugänge“.",
-                            style = schriften.erklaerung,
-                            color = farben.gedaempft,
-                            modifier = Modifier.padding(top = 10.dp),
-                        )
-                    }
+                    else -> EigeneStimmen(modell)
                 }
 
                 // Sprechgeschwindigkeit 0,70 bis 1,30 in Schritten von 0,05.
@@ -283,22 +284,22 @@ fun Einstellungen(modell: AppViewModel) {
             Erinnerung(
                 name = "Erinnerung morgens",
                 zeit = einstellungen.erinnerungMorgensZeit,
-                an = einstellungen.erinnerungMorgensAn,
+                an = morgensAn,
             ) {
+                morgensAn = it
                 einstellungen.erinnerungMorgensAn = it
                 modell.erinnerungenNeuSetzen()
-                stand++
             }
         }
         item("erinnerung-abends") {
             Erinnerung(
                 name = "Erinnerung abends",
                 zeit = einstellungen.erinnerungAbendsZeit,
-                an = einstellungen.erinnerungAbendsAn,
+                an = abendsAn,
             ) {
+                abendsAn = it
                 einstellungen.erinnerungAbendsAn = it
                 modell.erinnerungenNeuSetzen()
-                stand++
             }
         }
 
@@ -498,9 +499,13 @@ private fun Beschriftung(text: String) {
 }
 
 /**
- * Ein Auswahlfeld: 48 dp hoch, Radius 14 dp, 1 dp Rand, Fläche *Erhöht*, rechts das
- * kleine Dreieck. Ein Druck schaltet zum nächsten Eintrag weiter — der Entwurf zeigt eine
- * Klappliste; auf dem Gerät ist das Weiterschalten der kürzere Weg zum selben Ergebnis.
+ * Ein Auswahlfeld: 48 dp hoch, Radius 14 dp, 1 dp Rand, Fläche *Erhöht*, rechts das kleine
+ * Dreieck — wie das `<select>` im Entwurf. Ein Druck **klappt eine Liste auf**, aus der
+ * gewählt wird; er schaltet nicht weiter.
+ *
+ * Die Liste trägt die Sprache der App: Fläche *Fläche*, 1 dp Rand *Rand*, Radius 14 dp, je
+ * Eintrag mindestens 48 dp Tippfläche, der gewählte in *Aktion* mit einem Haken davor —
+ * damit die Farbe die Auswahl nicht allein trägt.
  */
 @Composable
 private fun Auswahl(
@@ -508,39 +513,168 @@ private fun Auswahl(
     eintraege: List<Pair<String, String>>,
     gewaehlt: String,
     modifier: Modifier = Modifier,
+    platzhalter: String = "—",
     beiWahl: (String) -> Unit,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
-    var jetzt by remember(gewaehlt) { mutableStateOf(gewaehlt) }
-    val nr = eintraege.indexOfFirst { it.first == jetzt }.coerceAtLeast(0)
+    var offen by remember { mutableStateOf(false) }
+    val angezeigt = eintraege.firstOrNull { it.first == gewaehlt }?.second ?: platzhalter
+
+    // Das kleine Dreieck dreht sich beim Aufklappen (M-13, 120 ms, Hauskurve).
+    val stufe = LocalEffektstufe.current
+    val drehung by animateFloatAsState(
+        targetValue = if (offen) 180f else 0f,
+        animationSpec = tween(dauer(Bewegung.KURZ, stufe), easing = Bewegung.ruhig),
+        label = "aufklappen",
+    )
 
     Column(modifier) {
         Beschriftung(beschriftung)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(farben.erhoeht)
-                .border(1.dp, farben.rand, RoundedCornerShape(14.dp))
-                .clickable {
-                    val neu = eintraege[(nr + 1) % eintraege.size].first
-                    jetzt = neu
-                    beiWahl(neu)
+        Box {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(farben.erhoeht)
+                    .border(1.dp, if (offen) farben.aktion else farben.rand, RoundedCornerShape(14.dp))
+                    .clickable { offen = true }
+                    .padding(start = 13.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = angezeigt,
+                    style = schriften.knopfKlein.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight(400),
+                    ),
+                    color = if (angezeigt == platzhalter) farben.blass else farben.text,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Symbole.Aufklappen,
+                    contentDescription = null,
+                    tint = if (offen) farben.aktion else farben.gedaempft,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { rotationZ = drehung },
+                )
+            }
+
+            DropdownMenu(
+                expanded = offen,
+                onDismissRequest = { offen = false },
+                shape = RoundedCornerShape(14.dp),
+                containerColor = farben.flaeche,
+                border = androidx.compose.foundation.BorderStroke(1.dp, farben.rand),
+                modifier = Modifier.heightIn(max = 360.dp),
+            ) {
+                eintraege.forEach { (wert, anzeige) ->
+                    val aktiv = wert == gewaehlt
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = anzeige,
+                                style = schriften.knopfKlein.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight(400),
+                                ),
+                                color = if (aktiv) farben.aktion else farben.text,
+                            )
+                        },
+                        leadingIcon = {
+                            if (aktiv) {
+                                Icon(
+                                    Symbole.KastenVoll,
+                                    contentDescription = "gewählt",
+                                    tint = farben.aktion,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Box(Modifier.size(20.dp))
+                            }
+                        },
+                        onClick = {
+                            offen = false
+                            beiWahl(wert)
+                        },
+                    )
                 }
-                .padding(start = 13.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = eintraege[nr].second,
-                style = schriften.knopfKlein.copy(fontWeight = androidx.compose.ui.text.font.FontWeight(400)),
-                color = farben.text,
-                maxLines = 1,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(Symbole.Aufklappen, null, tint = farben.gedaempft, modifier = Modifier.size(20.dp))
+            }
         }
+    }
+}
+
+/**
+ * **F-23 Schritt 3 — „Meine Stimme".**
+ *
+ * Frank hat bei Alibaba bereits Stimmen hinterlegt. Sie stehen hier als Auswahl, damit er
+ * die 46 Zeichen lange Kennung nicht abtippen muss; darunter kann er eine **weitere**
+ * aufnehmen und die gewählte wieder löschen.
+ *
+ * Die Liste wird beim Öffnen abgerufen und nach jeder Aufnahme erneut — eine gerade
+ * registrierte Stimme steht damit sofort zur Wahl.
+ */
+@Composable
+private fun EigeneStimmen(modell: AppViewModel) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+
+    val stimmen by modell.stimmen.collectAsStateWithLifecycle()
+    val laden by modell.stimmenLaden.collectAsStateWithLifecycle()
+    val gewaehlt by modell.stimmeQwen.collectAsStateWithLifecycle()
+    val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
+
+    androidx.compose.runtime.LaunchedEffect(Unit) { modell.ladeStimmen() }
+
+    Column(Modifier.padding(top = 16.dp)) {
+        Auswahl(
+            beschriftung = "Stimme",
+            eintraege = stimmen.map { it.id to it.name },
+            gewaehlt = gewaehlt,
+            platzhalter = when {
+                laden -> "wird geladen …"
+                stimmen.isEmpty() -> "noch keine Stimme aufgenommen"
+                else -> "keine gewählt"
+            },
+            beiWahl = modell::waehleStimme,
+        )
+
+        Row(
+            Modifier.fillMaxWidth().padding(top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            KnopfUmrandet(
+                text = if (nimmtAuf) "Aufnahme beenden" else "Neue Stimme aufnehmen",
+                beiKlick = { modell.nimmStimmeAuf() },
+                modifier = Modifier.weight(1f),
+                farbe = if (nimmtAuf) farben.aktion else farben.text,
+                randfarbe = if (nimmtAuf) farben.aktion else farben.rand,
+            )
+            KnopfUmrandet(
+                text = "Neu laden",
+                beiKlick = modell::ladeStimmen,
+                farbe = farben.gedaempft,
+            )
+        }
+
+        if (gewaehlt.isNotBlank()) {
+            Textknopf(
+                text = "Gewählte Stimme löschen",
+                beiKlick = { modell.loescheStimme(gewaehlt) },
+                farbe = farben.warnung,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+
+        Text(
+            text = "Deine eigene Stimme wird über Alibaba erzeugt. Der Zugang dafür steht " +
+                "unter „Zugänge“.",
+            style = schriften.erklaerung,
+            color = farben.gedaempft,
+            modifier = Modifier.padding(top = 10.dp),
+        )
     }
 }
 

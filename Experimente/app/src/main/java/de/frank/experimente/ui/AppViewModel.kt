@@ -474,6 +474,56 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     private var aufnahmeZiel: MutableStateFlow<Feld>? = null
     private var aufnahmeNachher: ((String) -> Unit)? = null
 
+    // --- Die Mikrofon-Erlaubnis ------------------------------------------------------------
+
+    /**
+     * F-01 Schritt 1: „Berechtigung `RECORD_AUDIO` prüfen, **bei Bedarf anfragen**."
+     *
+     * Genau das Anfragen fehlte. `MicRecorder` prüft die Erlaubnis nur und gibt `false`
+     * zurück, wenn sie fehlt — die App meldete dann „Ohne Mikrofon kann ich dich nicht
+     * hören", ohne sie je erfragt zu haben. Damit war **jede** Spracheingabe tot: F-01,
+     * F-09, F-10, F-18, F-20, F-21 und F-23.
+     *
+     * Die Anfrage kann nur eine Activity stellen, nicht das Modell. Deshalb setzt das Modell
+     * hier ein Signal, die Oberfläche stellt die Systemfrage und meldet die Antwort zurück —
+     * und dann läuft die *ursprünglich gewollte* Handlung weiter, ohne dass Frank noch
+     * einmal drücken muss.
+     */
+    private val _fragtMikrofon = MutableStateFlow(false)
+    val fragtMikrofon: StateFlow<Boolean> = _fragtMikrofon.asStateFlow()
+
+    private var nachErlaubnis: (() -> Unit)? = null
+
+    fun hatMikrofon(): Boolean = androidx.core.content.ContextCompat.checkSelfPermission(
+        getApplication(),
+        android.Manifest.permission.RECORD_AUDIO,
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    /** Führt `tue` aus — sofort, wenn die Erlaubnis steht, sonst nach der Systemfrage. */
+    private fun mitMikrofon(tue: () -> Unit) {
+        if (hatMikrofon()) {
+            tue()
+            return
+        }
+        nachErlaubnis = tue
+        _fragtMikrofon.value = true
+    }
+
+    /** Die Oberfläche meldet die Antwort der Systemfrage zurück. */
+    fun mikrofonBeantwortet(erlaubt: Boolean) {
+        _fragtMikrofon.value = false
+        val tue = nachErlaubnis
+        nachErlaubnis = null
+        if (erlaubt) {
+            tue?.invoke()
+        } else {
+            // Der Wortlaut steht in UI-Spec §8; der Verweis kommt aus F-01.
+            zeigeStoerung(
+                "Ohne Mikrofon kann ich dich nicht hören. Die Erlaubnis steht in den Systemeinstellungen.",
+            )
+        }
+    }
+
     /**
      * F-01 Schritte 2 bis 6: Aufnahme starten, kurze Vibration, beim zweiten Druck beenden,
      * Vorfilter, Transkription, Halluzinationsfilter.
@@ -493,9 +543,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         }
         aufnahmeZiel = feld
         aufnahmeNachher = nachher
+        mitMikrofon { starteAufnahme() }
+    }
+
+    /** Der zweite Teil von F-01 Schritt 2 — er läuft erst, wenn die Erlaubnis steht. */
+    private fun starteAufnahme() {
         val ging = aufnahme.start(viewModelScope)
         if (!ging) {
-            _stoerung.value = "Ohne Mikrofon kann ich dich nicht hören. Die Erlaubnis steht in den Systemeinstellungen."
+            zeigeStoerung("Die Aufnahme ließ sich nicht starten.")
             return
         }
         _nimmtAuf.value = true
@@ -1047,8 +1102,10 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 val registrierung = de.frank.experimente.tts.QwenVoiceEnrollment()
                 try {
                     val kennung = registrierung.create(schluessel, "frank", wav)
-                    einstellungen.stimmeQwen = kennung
-                    _hinweis.value = "Stimmprobe aufgenommen. Alibaba erzeugt daraus deine Stimme."
+                    waehleStimme(kennung)
+                    melde("Stimmprobe aufgenommen. Alibaba erzeugt daraus deine Stimme.")
+                    // Die neue Stimme soll sofort in der Auswahl stehen.
+                    ladeStimmen()
                 } catch (fehler: Exception) {
                     _stoerung.value = fehler.freundlich()
                 } finally {
@@ -1058,12 +1115,84 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             }
             return
         }
-        if (!aufnahme.start(viewModelScope)) {
-            _stoerung.value = "Ohne Mikrofon kann ich dich nicht hören."
+        mitMikrofon {
+            if (!aufnahme.start(viewModelScope)) {
+                zeigeStoerung("Die Aufnahme ließ sich nicht starten.")
+                return@mitMikrofon
+            }
+            _nimmtAuf.value = true
+            ruettleDoppelt()
+        }
+    }
+
+    // --- F-23: die eigenen Stimmen bei Alibaba ---------------------------------------------
+
+    /**
+     * Die bereits bei Alibaba registrierten Stimmen (F-23 Schritt 3: „bestehende Stimmen
+     * verwalten und löschen").
+     *
+     * Ohne diese Liste müsste Frank die 46 Zeichen lange Stimmkennung von Hand auf dem
+     * Telefon eintippen — deshalb gab es `QwenVoiceDirectory` von Anfang an; sie war nur
+     * nirgends angeschlossen.
+     */
+    private val _stimmen = MutableStateFlow<List<de.frank.experimente.tts.ClonedVoice>>(emptyList())
+    val stimmen: StateFlow<List<de.frank.experimente.tts.ClonedVoice>> = _stimmen.asStateFlow()
+
+    private val _stimmenLaden = MutableStateFlow(false)
+    val stimmenLaden: StateFlow<Boolean> = _stimmenLaden.asStateFlow()
+
+    /** Welche Stimme gerade gewählt ist — die Kennung aus den Einstellungen. */
+    private val _stimmeQwen = MutableStateFlow(einstellungen.stimmeQwen)
+    val stimmeQwen: StateFlow<String> = _stimmeQwen.asStateFlow()
+
+    /** Die Liste bei Alibaba abrufen. Ohne Schlüssel oder ohne Netz bleibt sie leer. */
+    fun ladeStimmen() {
+        val schluessel = einstellungen.qwenSchluessel
+        if (schluessel.isBlank()) {
+            _stimmen.value = emptyList()
             return
         }
-        _nimmtAuf.value = true
-        ruettleDoppelt()
+        if (_stimmenLaden.value) return
+        _stimmenLaden.value = true
+        viewModelScope.launch {
+            val verzeichnis = de.frank.experimente.tts.QwenVoiceDirectory()
+            try {
+                val liste = verzeichnis.list(schluessel)
+                _stimmen.value = liste
+                // Steht noch keine Stimme fest, wird die jüngste vorbelegt — sonst zeigt
+                // die Auswahl eine leere Kennung, obwohl Stimmen vorhanden sind.
+                if (_stimmeQwen.value.isBlank() && liste.isNotEmpty()) waehleStimme(liste.first().id)
+            } catch (fehler: Exception) {
+                zeigeStoerung("Die Stimmen ließen sich nicht laden. " + fehler.freundlich())
+            } finally {
+                verzeichnis.shutdown()
+                _stimmenLaden.value = false
+            }
+        }
+    }
+
+    fun waehleStimme(kennung: String) {
+        _stimmeQwen.value = kennung
+        einstellungen.stimmeQwen = kennung
+    }
+
+    /** F-23 Schritt 3 — eine registrierte Stimme wieder löschen. */
+    fun loescheStimme(kennung: String) {
+        val schluessel = einstellungen.qwenSchluessel
+        if (schluessel.isBlank()) return
+        viewModelScope.launch {
+            val registrierung = de.frank.experimente.tts.QwenVoiceEnrollment()
+            try {
+                registrierung.delete(schluessel, kennung)
+                if (_stimmeQwen.value == kennung) waehleStimme("")
+                melde("Stimme gelöscht.")
+                ladeStimmen()
+            } catch (fehler: Exception) {
+                zeigeStoerung(fehler.freundlich())
+            } finally {
+                registrierung.shutdown()
+            }
+        }
     }
 
     /** F-23 Schritt 6 — der Probe-Knopf liest einen Beispielsatz vor. */

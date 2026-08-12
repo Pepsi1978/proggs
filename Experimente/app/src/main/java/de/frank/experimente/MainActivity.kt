@@ -1,10 +1,14 @@
 package de.frank.experimente
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.experimente.ui.AppViewModel
@@ -25,6 +29,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
             val effektstufe by modell.effektstufe.collectAsStateWithLifecycle()
+
+            // F-01 Schritt 1: die Mikrofon-Erlaubnis wird beim ersten Druck auf einen
+            // Sprechknopf angefragt. Die Frage kann nur eine Activity stellen, deshalb
+            // steht der Starter hier und nicht im Modell.
+            val fragtMikrofon by modell.fragtMikrofon.collectAsStateWithLifecycle()
+            val mikrofonfrage = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { erlaubt -> modell.mikrofonBeantwortet(erlaubt) }
+            LaunchedEffect(fragtMikrofon) {
+                if (fragtMikrofon) mikrofonfrage.launch(Manifest.permission.RECORD_AUDIO)
+            }
+
             ExperimenteTheme(erscheinung = erscheinung, effektstufe = effektstufe) {
                 Navigation(modell)
             }
