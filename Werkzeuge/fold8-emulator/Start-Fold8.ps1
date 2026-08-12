@@ -11,6 +11,8 @@ param(
   [switch]$MitGeraet,
   [double]$Zoom = 1.0,
   [string]$Apk = "",
+  [string]$Projekt = "",
+  [switch]$OhneBauen,
   [switch]$Kaltstart
 )
 
@@ -57,11 +59,72 @@ if ($laeuft) {
 & $adb -s emulator-5554 shell "settings put system accelerometer_rotation 0" 2>$null | Out-Null
 & $adb -s emulator-5554 shell "settings put system user_rotation 0" 2>$null | Out-Null
 
-# --- APK installieren ----------------------------------------------------
+# WICHTIG: aufgeklappt erzwingen. Der Emulator sichert seinen Zustand ueber
+# Sitzungen hinweg - blieb er einmal zugeklappt, zeigt er beim naechsten Start
+# nur den Cover-Ausschnitt des grossen Panels. Die App wird dann weiterhin auf
+# 1848x2448 gerendert, aber links/rechts/unten abgeschnitten dargestellt.
+if (-not $Cover) {
+  & $adb -s emulator-5554 emu sensor set hinge-angle0 180 2>$null | Out-Null
+  Start-Sleep -Milliseconds 1500
+  $zustand = (& $adb -s emulator-5554 shell "dumpsys device_state | grep mCommittedState" 2>$null) -join ""
+  if ($zustand -notmatch "OPENED") {
+    Write-Host "Hinweis: Emulator meldet nicht OPENED - Ansicht koennte beschnitten sein." -ForegroundColor Yellow
+  }
+}
+
+# --- Projekt bauen, installieren und starten ------------------------------
+if ($Projekt -ne "") {
+  $wurzel = if (Test-Path $Projekt) { (Resolve-Path $Projekt).Path }
+            else { Join-Path (Join-Path $env:USERPROFILE "proggs") $Projekt }
+
+  if (-not (Test-Path (Join-Path $wurzel "gradlew.bat"))) {
+    Write-Host "Kein Gradle-Projekt unter $wurzel" -ForegroundColor Red
+  } else {
+    if (-not $OhneBauen) {
+      Write-Host "Baue $(Split-Path $wurzel -Leaf) ..." -ForegroundColor Cyan
+      Push-Location $wurzel
+      & ".\gradlew.bat" assembleDebug --console=plain 2>&1 | Select-Object -Last 6
+      $bauOk = ($LASTEXITCODE -eq 0)
+      Pop-Location
+      if (-not $bauOk) {
+        Write-Host "Build fehlgeschlagen - es wird nichts installiert." -ForegroundColor Red
+        $Projekt = ""
+      }
+    }
+  }
+
+  if ($Projekt -ne "") {
+    $apkDatei = Get-ChildItem (Join-Path $wurzel "app\build\outputs\apk\debug") -Filter "*.apk" -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $apkDatei) {
+      $apkDatei = Get-ChildItem $wurzel -Recurse -Filter "*-debug.apk" -ErrorAction SilentlyContinue |
+                  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    }
+    if ($apkDatei) { $Apk = $apkDatei.FullName }
+    else { Write-Host "Keine Debug-APK gefunden." -ForegroundColor Red }
+  }
+}
+
 if ($Apk -ne "") {
   if (Test-Path $Apk) {
-    Write-Host "Installiere $Apk ..." -ForegroundColor Cyan
-    & $adb -s emulator-5554 install -r $Apk 2>&1 | Select-Object -Last 1
+    Write-Host "Installiere $(Split-Path $Apk -Leaf) ..." -ForegroundColor Cyan
+    $meldung = & $adb -s emulator-5554 install -r $Apk 2>&1
+    $meldung | Select-Object -Last 1
+
+    # Paketnamen aus der APK lesen und die App gleich starten
+    $aapt = Get-ChildItem "$sdk\build-tools" -Recurse -Filter "aapt2.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1
+    $paket = ""
+    if ($aapt) {
+      $info = & $aapt.FullName dump packagename $Apk 2>$null
+      if ($info) { $paket = ($info | Select-Object -First 1).Trim() }
+    }
+    if ($paket -ne "") {
+      Write-Host "Starte $paket ..." -ForegroundColor Cyan
+      & $adb -s emulator-5554 shell "monkey -p $paket -c android.intent.category.LAUNCHER 1" 2>&1 | Out-Null
+    } else {
+      Write-Host "Paketname nicht ermittelbar - App bitte selbst antippen." -ForegroundColor Yellow
+    }
   } else {
     Write-Host "APK nicht gefunden: $Apk" -ForegroundColor Red
   }

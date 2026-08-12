@@ -25,6 +25,29 @@ Cover-Darstellung dort prüfen. Die Foldable-AVD bleibt für Posture-/FoldingFea
 
 ---
 
+## 1b. Emulator startet zugeklappt und zeigt die App abgeschnitten
+
+**Symptom:** Die App wirkt "viel zu groß, wie für ein Riesengerät gedacht", links, rechts und unten
+fehlt etwas. Das Fenster hat ein schmales Seitenverhältnis (~0,63 statt 0,755), obwohl die AVD auf
+1848 × 2448 steht.
+
+**Ursache:** Der Emulator sichert den Faltzustand über Sitzungen hinweg (Schnellstart-Zustand).
+Wurde er einmal zugeklappt, startet er wieder zugeklappt — auch nach `emu kill` und Neustart.
+`wm size` meldet weiterhin 1848 × 2448, die App wird auch so gerendert, aber nur der
+Cover-Ausschnitt wird angezeigt (siehe Punkt 1). Ergebnis: ein vergrößert wirkender Ausschnitt.
+
+**Erkennen:**
+```bash
+adb -s emulator-5554 emu sensor get hinge-angle0                    # 15 statt 180
+adb -s emulator-5554 shell "dumpsys device_state | grep mCommitted" # CLOSED statt OPENED
+```
+Zweites Indiz: Das Fensterinnenmaß weicht in der **Breite** vom Sollwert ab, während die Höhe passt.
+
+**Fix:** Beim Start immer aufklappen — `adb emu sensor set hinge-angle0 180` — und den Erfolg an
+`OPENED` prüfen. In `Start-Fold8.ps1` fest eingebaut.
+
+---
+
 ## 2. Neue AVD startet ohne GPU-Beschleunigung
 
 **Symptom:** Träge Darstellung, Grafikeffekte wirken anders als am Gerät.

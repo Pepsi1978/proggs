@@ -15,16 +15,23 @@ Hintergrund und Fallen: `best-practices/android/emulator-foldable.md` · `bugs/a
 ## Start-Fold8.ps1
 
 ```powershell
-.\Start-Fold8.ps1                  # aufgeklappt, Originalgröße
-.\Start-Fold8.ps1 -Cover           # Cover-Display
-.\Start-Fold8.ps1 -MitGeraet       # zusätzlich das echte Fold live daneben
-.\Start-Fold8.ps1 -Zoom 1.5        # größer als das echte Handy
-.\Start-Fold8.ps1 -Apk app.apk     # APK gleich mitinstallieren
-.\Start-Fold8.ps1 -Kaltstart       # ohne gespeicherten Zustand starten
+.\Start-Fold8.ps1                            # aufgeklappt, Originalgröße
+.\Start-Fold8.ps1 -Projekt EntropieReductor  # App bauen, installieren, starten
+.\Start-Fold8.ps1 -Projekt X -OhneBauen      # vorhandene APK nehmen, nicht neu bauen
+.\Start-Fold8.ps1 -Cover                     # Cover-Display
+.\Start-Fold8.ps1 -MitGeraet                 # zusätzlich das echte Fold live daneben
+.\Start-Fold8.ps1 -Zoom 1.5                  # größer als das echte Handy
+.\Start-Fold8.ps1 -Apk app.apk               # fertige APK installieren
+.\Start-Fold8.ps1 -Kaltstart                 # ohne gespeicherten Zustand starten
 ```
 
-Startet den Emulator, wartet auf den Systemstart, setzt die Schriftskalierung auf 0,9 wie am
-echten Gerät und stellt die Originalgröße ein.
+Startet den Emulator (falls noch keiner läuft), wartet auf den Systemstart, setzt Schriftskalierung
+0,9 und Hochformat wie am echten Gerät und stellt die Originalgröße ein.
+
+Mit `-Projekt` wird zusätzlich `gradlew assembleDebug` ausgeführt, die frisch gebaute Debug-APK
+installiert und die App gleich gestartet. Der Projektname genügt (gesucht wird unter
+`~\proggs\<Name>`), ein vollständiger Pfad geht auch. Schlägt der Build fehl, wird **nichts**
+installiert — dann steht die alte Version nicht fälschlich für die neue.
 
 ## Set-Originalgroesse.ps1
 

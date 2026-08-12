@@ -8,6 +8,7 @@
 | # | Symptom | Kern in einem Satz |
 |---|---------|--------------------|
 | 1 | Zugeklappt sind Inhalte abgeschnitten | `displayRegion` schneidet nur aus, Layout wird nicht umgerechnet → zweite AVD fürs Cover |
+| 1b | App wirkt zu groß, Ränder fehlen | Emulator startete zugeklappt (Zustand überlebt Neustart) → `emu sensor set hinge-angle0 180`, auf `OPENED` prüfen |
 | 2 | Emulator träge, Effekte falsch | Neue AVD steht auf `hw.gpu.enabled=no` → auf `yes` + `mode=host` |
 | 3 | Animationen wirken anders als am Gerät | `hw.lcd.vsync` steht auf 60 → auf 120 setzen |
 | 4 | `avd.name=<build>` in der config.ini | Platzhalter von `avdmanager`, von Hand setzen; `hw.device.hash2` entfernen |
