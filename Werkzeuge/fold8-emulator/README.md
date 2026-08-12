@@ -83,8 +83,25 @@ Drei Sicherungen halten ihn stabil:
 - **Ping-Pong-Bremse**: Hält der Emulator dagegen, pausiert die Nachführung 4 Sekunden. Die Sperre
   löst sich immer von selbst wieder, damit sie sich nie dauerhaft festfahren kann.
 
-Getestet mit je 7 Drehungen nach rechts und links sowie 8 × über den Dreh-Knopf: alle Messungen
-1:1 (Toleranz 6 px ≙ 0,6 mm).
+Der Wächter dreht **nie selbst am Gerät** — mit einer Ausnahme: Die 180-Grad-Lage („Hochformat
+kopfüber") unterstützt Android auf Handys nicht. Der Emulator stellt dort seinen Rahmen hochkant,
+während die Anzeige quer bleibt; in dieser Lage wird der Inhalt **immer** gekippt gezeichnet, mit
+jeder Fenstergröße. Sie wird daher automatisch übersprungen (`emu rotate`, höchstens alle 6 s).
+
+## Pruefe-Massstab.ps1
+
+```powershell
+.\Pruefe-Massstab.ps1              # 10 Drehungen über den Dreh-Knopf
+.\Pruefe-Massstab.ps1 -Runden 20   # länger prüfen
+.\Pruefe-Massstab.ps1 -Sensor      # über den Lagesensor, links und rechts
+```
+
+Prüft nach jeder Drehung **zwei** Dinge: die Größe (auf 6 px ≙ 0,6 mm genau) **und** die Lage —
+ob Fenster und Anzeige dieselbe Ausrichtung haben. Ohne die Lage-Prüfung meldet ein Test „alles
+1:1", während der Emulator den Inhalt um 90 Grad gekippt zeichnet: Die Maße stimmen dabei nämlich.
+
+Stand der letzten Prüfung: **23 von 23 bestanden** (10 × Dreh-Knopf, 6 × links, 6 × rechts,
+1 × zurück ins Hochformat).
 
 ## Zeig-Fehler.ps1
 

@@ -285,7 +285,8 @@ $kandidat = ""; $kandidatZaehler = 0
 $korrekturZeiten = @()
 $pauseBis = Get-Date
 $ruheBis = Get-Date
-$sprungFrei = Get-Date
+$schiefSeit = $null; $schiefGemeldet = $false
+$sprungFrei = Get-Date; $spruenge = 0
 $takt = [math]::Max(150, [int]($Intervall * 250))   # Standard 250 ms - flink genug fuers Drehen
 
 try {
@@ -311,6 +312,48 @@ try {
     $jetzt = Hole-Zustand
     if (-not $jetzt) { continue }
 
+    # ---- LAGE-ABGLEICH: laeuft in JEDEM Durchlauf, vor allem anderen --------
+    # Der Emulator dreht seinen Fensterrahmen und Android seine Anzeige - aber
+    # nicht gleichzeitig, und in einer Lage gar nicht gemeinsam. Passen beide
+    # nicht zusammen, darf die Groesse NICHT gesetzt werden: ein Hochformat-Mass
+    # auf einem querstehenden Rahmen (oder umgekehrt) laesst den Emulator den
+    # Inhalt um 90 Grad GEKIPPT zeichnen - der Text liegt dann seitwaerts.
+    # Erkennung: das unangetastete Fenster hat immer das Verhaeltnis des
+    # Emulator-Rahmens, Android meldet seines ueber "cur=BxH".
+    # Diese Pruefung MUSS in jedem Durchlauf laufen, nicht nur beim Wechsel:
+    # der Emulator stellt sein Fenster erst kurz NACH der Android-Meldung um.
+    $c0 = New-Object Fenster+RECT
+    [void][Fenster]::GetClientRect($h, [ref]$c0)
+    $c0B = $c0.R - $c0.L; $c0H = $c0.B - $c0.T
+    if ($c0B -gt 50 -and $c0H -gt 50 -and (($c0B -gt $c0H) -ne ($jetzt.B -gt $jetzt.H))) {
+      if ($schiefSeit -eq $null) { $schiefSeit = Get-Date }
+
+      # Waehrend einer Drehung stehen beide kurz schief - das ist normal und geht
+      # von selbst vorbei. Bleibt es laenger als zwei Sekunden schief, ist es die
+      # 180-Grad-Lage: Der Emulator stellt seinen Rahmen hochkant, Android kennt
+      # kein Hochformat kopfueber und bleibt quer. Diese Lage ist unbrauchbar -
+      # der Inhalt wird darin IMMER gekippt gezeichnet, mit jeder Fenstergroesse.
+      # Dann eine Stufe weiterdrehen, damit die naechste brauchbare Lage kommt.
+      if (((Get-Date) - $schiefSeit).TotalSeconds -ge 1.2 -and (Get-Date) -gt $sprungFrei) {
+        if ($spruenge -ge 2) {
+          if (-not $schiefGemeldet) {
+            Schreib "  Emulator-Rahmen und Anzeige bleiben quer zueinander - bitte im Emulator einmal drehen." Yellow
+            $schiefGemeldet = $true
+          }
+          continue
+        }
+        Schreib "  Unbrauchbare Lage (Rahmen und Anzeige stehen quer zueinander) - eine Stufe weiter." DarkGray
+        & $adb -s emulator-5554 emu rotate 2>$null | Out-Null
+        $spruenge++
+        $sprungFrei = (Get-Date).AddSeconds(6)   # nie zwei Spruenge kurz hintereinander
+        $ruheBis = (Get-Date).AddMilliseconds(800)
+        $schiefSeit = $null
+        $letzterSchluessel = ""                  # nach dem Sprung neu bewerten
+      }
+      continue            # in dieser Lage NIEMALS die Groesse setzen
+    }
+    $schiefSeit = $null; $schiefGemeldet = $false; $spruenge = 0
+
     $schluessel = "$($jetzt.Avd)|$($jetzt.B)x$($jetzt.H)|$($jetzt.Rot)"
     if ($schluessel -ne $letzterSchluessel) {
       # Entprellen: Beim Drehen und Klappen meldet Android Zwischenzustaende.
@@ -320,28 +363,6 @@ try {
       if ($kandidatZaehler -lt 2) { continue }
 
       $ergebnis = Setze-Groesse $h $jetzt $true
-
-      # KAPUTTE ZWISCHENLAGE UEBERSPRINGEN
-      # In der 180-Grad-Lage dreht der Emulator seinen Fensterrahmen ins
-      # Hochformat, Android bleibt aber quer (Hochformat kopfueber gibt es auf
-      # Handys nicht). Rahmen und Inhalt passen dann nicht zusammen, und die
-      # Groesse laesst sich nicht setzen - der Emulator zwingt sein
-      # Rahmenverhaeltnis durch. Erkennbar daran, dass das Fenster nach dem
-      # Setzen ein anderes Hoch-/Querverhaeltnis hat als Android meldet.
-      # Dann einmal weiterdrehen: die unbrauchbare Lage wird uebersprungen.
-      if ($ergebnis -and (Get-Date) -gt $sprungFrei) {
-        $istQuer   = $ergebnis.IstB -gt $ergebnis.IstH
-        $sollQuer  = $jetzt.B -gt $jetzt.H
-        if ($istQuer -ne $sollQuer) {
-          Schreib "  Zwischenlage ohne passendes Format - drehe eine Stufe weiter." DarkGray
-          & $adb -s emulator-5554 emu rotate 2>$null | Out-Null
-          $sprungFrei = (Get-Date).AddSeconds(5)   # nie zwei Spruenge hintereinander
-          $ruheBis = (Get-Date).AddMilliseconds(1500)
-          $letzterSchluessel = ""                  # nach dem Sprung neu bewerten
-          continue
-        }
-      }
-
       Melde $jetzt $ergebnis
       $letzterSchluessel = $schluessel
       $korrekturZeiten = @()
