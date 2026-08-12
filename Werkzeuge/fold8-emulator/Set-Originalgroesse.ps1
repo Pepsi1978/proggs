@@ -197,13 +197,24 @@ function Setze-Groesse($h, $zustand, [bool]$mittig) {
     return @($x, $y)
   }
 
-  # 0x0004 = SWP_NOZORDER, 0x0002 = SWP_NOMOVE (Position unangetastet lassen)
-  if ($mittig) {
-    $pos = Mittig $vollB $vollH
-    [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $vollB, $vollH, 0x0004)
-  } else {
-    [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, 0, 0, $vollB, $vollH, 0x0006)
+  # Bleibt das Fenster stehen, wo es ist, kann es beim Groesserwerden (hoch ->
+  # quer) ueber den Bildschirmrand ragen. Dann nur so weit hineinschieben wie
+  # noetig - NICHT zentrieren: ein Fenster, das bei jeder Drehung in die
+  # Bildschirmmitte springt, ist im Weg.
+  function Einpassen($breite, $hoehe) {
+    $r = New-Object Fenster+RECT
+    [void][Fenster]::GetWindowRect($h, [ref]$r)
+    $x = $r.L; $y = $r.T
+    if ($x + $breite -gt $arbeit.Right)  { $x = $arbeit.Right - $breite }
+    if ($y + $hoehe  -gt $arbeit.Bottom) { $y = $arbeit.Bottom - $hoehe }
+    if ($x -lt $arbeit.Left) { $x = $arbeit.Left }
+    if ($y -lt $arbeit.Top)  { $y = $arbeit.Top }
+    return @($x, $y)
   }
+
+  # 0x0004 = SWP_NOZORDER
+  $pos = if ($mittig) { Mittig $vollB $vollH } else { Einpassen $vollB $vollH }
+  [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $vollB, $vollH, 0x0004)
   Start-Sleep -Milliseconds 350
 
   # Genau EINE Nachkorrektur - der Rahmen kann sich beim Skalieren aendern
@@ -212,12 +223,8 @@ function Setze-Groesse($h, $zustand, [bool]$mittig) {
   if ([math]::Abs($istB - $zielB) -gt 2 -or [math]::Abs($istH - $zielH) -gt 2) {
     $korrB = $vollB + ($zielB - $istB)
     $korrH = $vollH + ($zielH - $istH)
-    if ($mittig) {
-      $pos = Mittig $korrB $korrH
-      [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $korrB, $korrH, 0x0004)
-    } else {
-      [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, 0, 0, $korrB, $korrH, 0x0006)
-    }
+    $pos = if ($mittig) { Mittig $korrB $korrH } else { Einpassen $korrB $korrH }
+    [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], $korrB, $korrH, 0x0004)
     Start-Sleep -Milliseconds 250
     [void][Fenster]::GetClientRect($h, [ref]$c)
     $istB = $c.R - $c.L; $istH = $c.B - $c.T
@@ -342,8 +349,15 @@ try {
           }
           continue
         }
-        Schreib "  Unbrauchbare Lage (Rahmen und Anzeige stehen quer zueinander) - eine Stufe weiter." DarkGray
-        & $adb -s emulator-5554 emu rotate 2>$null | Out-Null
+        # ZURUECK INS HOCHFORMAT - nicht eine Stufe weiterdrehen.
+        # Diese Lage ist "kopfueber". Ein echtes Handy zeigt dann Hochformat,
+        # weil Android Hochformat-kopfueber nicht unterstuetzt. Genau das wird
+        # hier hergestellt: Lagesensor auf Hochformat. Dann stehen Rahmen UND
+        # Anzeige hochkant, das Bild ist aufrecht und massstabsgetreu.
+        # (Frueher wurde eine Stufe weitergedreht - dann sprang die Ansicht ins
+        # Querformat, was niemand erwartet.)
+        Schreib "  Lage kopfueber - Android kennt das nicht: zurueck ins Hochformat." DarkGray
+        & $adb -s emulator-5554 emu sensor set acceleration 0:9.81:0 2>$null | Out-Null
         $spruenge++
         $sprungFrei = (Get-Date).AddSeconds(6)   # nie zwei Spruenge kurz hintereinander
         $ruheBis = (Get-Date).AddMilliseconds(800)
@@ -362,7 +376,10 @@ try {
       if ($schluessel -eq $kandidat) { $kandidatZaehler++ } else { $kandidat = $schluessel; $kandidatZaehler = 1 }
       if ($kandidatZaehler -lt 2) { continue }
 
-      $ergebnis = Setze-Groesse $h $jetzt $true
+      # Position BEIBEHALTEN (kein Zentrieren): Das Fenster steht dort, wohin es
+      # geschoben wurde. Nur beim allerersten Setzen nach dem Start wird mittig
+      # gestellt - danach nie wieder von selbst.
+      $ergebnis = Setze-Groesse $h $jetzt $false
       Melde $jetzt $ergebnis
       $letzterSchluessel = $schluessel
       $korrekturZeiten = @()

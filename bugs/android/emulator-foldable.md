@@ -388,11 +388,23 @@ Fenster zwischen zwei Größen hin und her. Bei mehrfachem Drehen (5-7 ×) wird 
   fortgeschrieben — deshalb ist die Anzahl der Drehungen egal.
 - Ausrichtung über den **Lagesensor** (`emu sensor set acceleration 0:9.81:0` = Hochformat) statt
   über `user_rotation`, und `accelerometer_rotation` bleibt auf 1, damit der Dreh-Knopf wirkt.
-- Die kaputte 180-Grad-Lage wird **übersprungen**: Der Lage-Abgleich läuft in **jedem** Durchlauf
-  (nicht nur beim Zustandswechsel — der Emulator stellt sein Fenster erst kurz *nach* der
+- Die kaputte 180-Grad-Lage wird **ins Hochformat aufgelöst**: Der Lage-Abgleich läuft in **jedem**
+  Durchlauf (nicht nur beim Zustandswechsel — der Emulator stellt sein Fenster erst kurz *nach* der
   Android-Meldung um) und misst das **unangetastete** Fenster, dessen Verhältnis immer dem
-  Emulator-Rahmen entspricht. Steht es länger als 1,2 s quer zu dem, was Android meldet, sendet
-  der Wächter einmal `emu rotate` — höchstens alle 6 s und maximal zweimal in Folge.
+  Emulator-Rahmen entspricht. Steht es länger als 1,2 s quer zu dem, was Android meldet, setzt der
+  Wächter den Lagesensor auf Hochformat (`emu sensor set acceleration 0:9.81:0`) — höchstens alle
+  6 s und maximal zweimal in Folge.
+
+  **Nicht weiterdrehen!** Ein erster Ansatz sendete stattdessen `emu rotate`. Damit sprang die
+  Ansicht nach zwei Drehungen sichtbar ins **Querformat** zurück — das erwartet niemand. Ein echtes
+  Handy zeigt kopfüber gehalten **Hochformat**, weil Android Upside-Down nicht unterstützt. Genau
+  dieser Zustand wird jetzt hergestellt: Rahmen und Anzeige stehen beide hochkant, das Bild ist
+  aufrecht und maßstabsgetreu.
+
+- **Position bleibt erhalten:** Beim Drehen wird nur die Größe gesetzt, nie zentriert. Sonst springt
+  das Fenster bei jeder Drehung in die Bildschirmmitte zurück (gemessen: von 120,120 nach 1071,252).
+  Mittig gestellt wird ausschließlich einmal beim Start; ragt das Fenster nach dem Vergrößern über
+  den Rand, wird es nur so weit hineingeschoben wie nötig.
 
 **Fallstrick — der Fix kann das Problem verschlimmern (zweimal passiert):**
 

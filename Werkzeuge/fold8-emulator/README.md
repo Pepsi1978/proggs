@@ -83,10 +83,16 @@ Drei Sicherungen halten ihn stabil:
 - **Ping-Pong-Bremse**: Hält der Emulator dagegen, pausiert die Nachführung 4 Sekunden. Die Sperre
   löst sich immer von selbst wieder, damit sie sich nie dauerhaft festfahren kann.
 
-Der Wächter dreht **nie selbst am Gerät** — mit einer Ausnahme: Die 180-Grad-Lage („Hochformat
-kopfüber") unterstützt Android auf Handys nicht. Der Emulator stellt dort seinen Rahmen hochkant,
-während die Anzeige quer bleibt; in dieser Lage wird der Inhalt **immer** gekippt gezeichnet, mit
-jeder Fenstergröße. Sie wird daher automatisch übersprungen (`emu rotate`, höchstens alle 6 s).
+Das Fenster bleibt dabei **stehen, wo es hingeschoben wurde**. Mittig gestellt wird nur einmal beim
+Start; beim Drehen ändert sich ausschließlich die Größe. Ragt das Fenster dabei über den
+Bildschirmrand, wird es nur so weit hineingeschoben wie nötig — nie zentriert.
+
+Der Wächter greift **nie selbst in die Drehung ein** — mit einer Ausnahme: der 180-Grad-Lage
+(„kopfüber"). Android unterstützt Hochformat-kopfüber auf Handys nicht und bleibt quer, während der
+Emulator seinen Rahmen hochkant stellt; in dieser Lage wird der Inhalt **immer** gekippt gezeichnet,
+mit jeder Fenstergröße. Der Wächter stellt dann den Lagesensor auf **Hochformat** — genau das, was
+ein echtes Fold 8 kopfüber gehalten zeigt. Es wird **nicht** eine Stufe weitergedreht: Dann spränge
+die Ansicht ins Querformat, was niemand erwartet.
 
 ## Pruefe-Massstab.ps1
 
