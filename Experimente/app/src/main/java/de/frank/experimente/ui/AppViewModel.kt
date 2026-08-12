@@ -198,14 +198,44 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     // --- Meldungen und Wartezustand ------------------------------------------------------
 
-    private val _meldung = MutableStateFlow<String?>(null)
-    val meldung: StateFlow<String?> = _meldung.asStateFlow()
+    /**
+     * Der Entwurf kennt **zwei** Arten von Meldung, und sie verhalten sich verschieden:
+     *
+     * - **Hinweis** (`melde`) — die kurze Bestaetigung unten am Rand („Reihenfolge
+     *   geaendert."). Sie verschwindet nach 2600 ms von allein, genau wie im Entwurf.
+     * - **Stoerung** (`zeigeStoerung`) — der Fehlerbalken unter der Kopfleiste, mit
+     *   „Nochmal". Er bleibt stehen, bis Frank ihn wegdrueckt; eine Fehlermeldung, die
+     *   nach zweieinhalb Sekunden verschwindet, hat er womoeglich nie gelesen.
+     */
+    private val _hinweis = MutableStateFlow<String?>(null)
+    val hinweis: StateFlow<String?> = _hinweis.asStateFlow()
+
+    private val _stoerung = MutableStateFlow<String?>(null)
+    val stoerung: StateFlow<String?> = _stoerung.asStateFlow()
+
+    private var hinweisUhr: kotlinx.coroutines.Job? = null
 
     private val _wartet = MutableStateFlow<String?>(null)
     val wartet: StateFlow<String?> = _wartet.asStateFlow()
 
+    /** Die Stoerung wegdruecken — „Nochmal" auf dem Fehlerbalken. */
     fun schliesseMeldung() {
-        _meldung.value = null
+        _stoerung.value = null
+    }
+
+    /** Ein kurzer Hinweis, der nach 2600 ms von allein geht („Code kopiert."). */
+    fun melde(text: String) {
+        _hinweis.value = text
+        hinweisUhr?.cancel()
+        hinweisUhr = viewModelScope.launch {
+            delay(2_600)
+            if (_hinweis.value == text) _hinweis.value = null
+        }
+    }
+
+    /** Eine Stoerung, die stehen bleibt, bis sie weggedrueckt wird. */
+    fun zeigeStoerung(text: String) {
+        _stoerung.value = text
     }
 
     // --- Felder ---------------------------------------------------------------------------
@@ -353,7 +383,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 _anlegeFeld.value = Feld()
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
-                _meldung.value = "Steht jetzt unter „Steht an“."
+                _hinweis.value = "Steht jetzt unter „Steht an“."
             } finally {
                 _wartet.value = null
             }
@@ -366,7 +396,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun uebernimm(vorschlag: Suggestion) {
         viewModelScope.launch {
             val id = ablage.uebernimm(vorschlag.id)
-            _meldung.value = if (id == null) {
+            _hinweis.value = if (id == null) {
                 "„${vorschlag.title}“ steht schon im Monitor."
             } else {
                 "„${vorschlag.title}“ steht jetzt im Monitor unter „Steht an“."
@@ -381,7 +411,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 lassFunkeln(experiment.id)
                 ruettleAufsteigend()
             } else {
-                _meldung.value = DREI_LAUFEN
+                _hinweis.value = DREI_LAUFEN
             }
         }
     }
@@ -391,7 +421,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch {
             val id = ablage.starteSofort(vorschlag.id, heute)
             if (id == null) {
-                _meldung.value = DREI_LAUFEN
+                _hinweis.value = DREI_LAUFEN
             } else {
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
@@ -404,7 +434,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun sortiere(experiment: Experiment, nachIndex: Int) {
         viewModelScope.launch {
             ablage.sortiere(experiment.id, nachIndex)
-            _meldung.value = "Reihenfolge geändert."
+            _hinweis.value = "Reihenfolge geändert."
         }
     }
 
@@ -412,7 +442,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun nimmAusMonitor(experiment: Experiment, aufMerkliste: Boolean) {
         viewModelScope.launch {
             ablage.nimmAusMonitor(experiment.id, aufMerkliste)
-            _meldung.value = if (aufMerkliste) {
+            _hinweis.value = if (aufMerkliste) {
                 "„${experiment.title}“ ist wieder auf der Merkliste."
             } else {
                 "„${experiment.title}“ ist gelöscht."
@@ -458,14 +488,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         }
         val schluessel = einstellungen.groqSchluessel
         if (schluessel.isBlank()) {
-            _meldung.value = "Für die Spracherkennung fehlt der Groq-Schlüssel. Er steht in den Einstellungen."
+            _stoerung.value = "Für die Spracherkennung fehlt der Groq-Schlüssel. Er steht in den Einstellungen."
             return
         }
         aufnahmeZiel = feld
         aufnahmeNachher = nachher
         val ging = aufnahme.start(viewModelScope)
         if (!ging) {
-            _meldung.value = "Ohne Mikrofon kann ich dich nicht hören. Die Erlaubnis steht in den Systemeinstellungen."
+            _stoerung.value = "Ohne Mikrofon kann ich dich nicht hören. Die Erlaubnis steht in den Systemeinstellungen."
             return
         }
         _nimmtAuf.value = true
@@ -494,7 +524,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch {
             val wav = aufnahme.stop()
             if (wav == null || wav.isEmpty()) {
-                _meldung.value = "Da war nichts zu hören."
+                _stoerung.value = "Da war nichts zu hören."
                 bestimmeZustand()
                 return@launch
             }
@@ -504,7 +534,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 val text = schreiber.transcribe(wav)
                 schreiber.shutdown()
                 if (text.isBlank()) {
-                    _meldung.value = "Da war nichts zu hören."
+                    _stoerung.value = "Da war nichts zu hören."
                 } else {
                     feld?.value = Feld(text = text)
                     nachher?.invoke(text)
@@ -514,7 +544,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                     }
                 }
             } catch (fehler: Exception) {
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
                 if (_tagZustand.value == TagZustand.AUFNAHME) bestimmeZustand()
@@ -567,7 +597,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             } catch (fehler: Exception) {
                 // Der ursprüngliche Text bleibt unangetastet.
                 feld.value = jetzt
-                _meldung.value = "Der Text konnte nicht verbessert werden."
+                _stoerung.value = "Der Text konnte nicht verbessert werden."
             }
         }
     }
@@ -601,7 +631,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             // Laufen bereits drei, wird VORSCHLAEGE übersprungen: B-01 nennt den Grund und
             // verweist auf den Monitor (Funktions-Spec §4).
             if (laufende.value.size >= Ablage.MAX_LAUFEND) {
-                _meldung.value = DREI_LAUFEN
+                _hinweis.value = DREI_LAUFEN
                 _tagZustand.value = TagZustand.LAGE_STEHT
                 return@launch
             }
@@ -616,7 +646,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 ablage.schreibeLogbuchFort("Lage heute: $text", heute)
             } catch (fehler: Exception) {
                 _tagZustand.value = TagZustand.LAGE_STEHT
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -635,7 +665,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             try {
                 ablage.aktualisiereVorschlaege(heute)
             } catch (fehler: Exception) {
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -647,7 +677,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun merke(vorschlag: Suggestion) {
         viewModelScope.launch {
             if (ablage.merke(vorschlag)) {
-                _meldung.value = "„${vorschlag.title}“ liegt auf der Merkliste."
+                _hinweis.value = "„${vorschlag.title}“ liegt auf der Merkliste."
             }
         }
     }
@@ -711,9 +741,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _wartet.value = "Ich überlege …"
             try {
                 val antwort = ablage.sprich(id, text)
-                app.vorleser.lies(antwort) { _meldung.value = it }
+                app.vorleser.lies(antwort) { _stoerung.value = it }
             } catch (fehler: Exception) {
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -775,7 +805,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 bestimmeZustand()
             } catch (fehler: Exception) {
                 _auswertungsZustand.value = AuswertungZustand.TEXT
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -808,7 +838,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _auswertungsFeld.value = Feld()
             _einschaetzung.value = emptyList()
             gehe(Ziel.MONITOR)
-            _meldung.value = "Abgeschlossen. Der Eintrag steht im Logbuch."
+            _hinweis.value = "Abgeschlossen. Der Eintrag steht im Logbuch."
         }
     }
 
@@ -816,7 +846,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun nichtUmgesetzt(experiment: Experiment) {
         viewModelScope.launch {
             ablage.nichtUmgesetzt(experiment.id, _auswertungsFeld.value.text, heute)
-            _meldung.value = "Nicht umgesetzt — der Eintrag steht im Logbuch."
+            _hinweis.value = "Nicht umgesetzt — der Eintrag steht im Logbuch."
             bestimmeZustand()
         }
     }
@@ -842,7 +872,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _mitlese.value = -1
             return
         }
-        app.vorleser.lies(text) { _meldung.value = it }
+        app.vorleser.lies(text) { _stoerung.value = it }
         val abschnitte = _einschaetzung.value
         if (abschnitte.isEmpty()) return
         viewModelScope.launch {
@@ -877,7 +907,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 ablage.legeEigenesAn(text)
                 _merkFeld.value = Feld()
             } catch (fehler: Exception) {
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -930,20 +960,57 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     val angemeldetAls: String? get() = app.codex.email
 
-    /** F-24 — Geräteanmeldung: Benutzercode anzeigen, Seite öffnen, auf Bestätigung warten. */
+    private var anmeldeLauf: kotlinx.coroutines.Job? = null
+
+    /**
+     * F-24 — Geräteanmeldung: Benutzercode anzeigen, Seite öffnen, auf Bestätigung warten.
+     *
+     * Der Code bleibt sichtbar, **solange** die App auf die Bestätigung wartet — er wird
+     * erst gelöscht, wenn die Anmeldung durch ist oder abgebrochen wurde. Ohne ihn kann
+     * Frank auf der OpenAI-Seite nichts eintippen.
+     */
     fun meldeAn() {
-        viewModelScope.launch {
+        if (anmeldeLauf?.isActive == true) return
+        anmeldeLauf = viewModelScope.launch {
             try {
                 app.codex.anmelden { code -> _geraetecode.value = code }
                 _angemeldet.value = true
                 _geraetecode.value = null
-                _meldung.value = "Angemeldet." + (app.codex.email?.let { " ($it)" } ?: "")
+                _hinweis.value = "Angemeldet." + (app.codex.email?.let { " ($it)" } ?: "")
             } catch (fehler: Exception) {
                 _geraetecode.value = null
-                _meldung.value = fehler.freundlich()
+                _stoerung.value = fehler.freundlich()
             }
         }
     }
+
+    /**
+     * Die Anmeldeseite noch einmal öffnen. Die App öffnet sie beim Start der Anmeldung
+     * selbst; hat Frank den Browser inzwischen geschlossen, kommt er hierüber zurück,
+     * ohne die Anmeldung neu starten zu müssen (der Code bliebe sonst nicht derselbe).
+     */
+    fun oeffneAnmeldeseite(adresse: String) {
+        runCatching {
+            getApplication<Application>().startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(adresse),
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.onFailure { _stoerung.value = "Die Seite ließ sich nicht öffnen: $adresse" }
+    }
+
+    /** Die laufende Anmeldung abbrechen — sonst wartet sie bis zu 15 Minuten weiter. */
+    fun brichAnmeldungAb() {
+        anmeldeLauf?.cancel()
+        anmeldeLauf = null
+        _geraetecode.value = null
+    }
+
+    /** Läuft gerade eine Anmeldung? Dann steht der Code auf dem Bildschirm. */
+    val meldetAn: StateFlow<Boolean> = _geraetecode
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun meldeAb() {
         app.codex.abmelden()
@@ -968,12 +1035,12 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             viewModelScope.launch {
                 val wav = aufnahme.stop()
                 if (wav == null || wav.isEmpty()) {
-                    _meldung.value = "Da war nichts zu hören."
+                    _stoerung.value = "Da war nichts zu hören."
                     return@launch
                 }
                 val schluessel = einstellungen.qwenSchluessel
                 if (schluessel.isBlank()) {
-                    _meldung.value = "Für diese Stimme fehlt der Schlüssel."
+                    _stoerung.value = "Für diese Stimme fehlt der Schlüssel."
                     return@launch
                 }
                 _wartet.value = "Ich richte deine Stimme ein …"
@@ -981,9 +1048,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 try {
                     val kennung = registrierung.create(schluessel, "frank", wav)
                     einstellungen.stimmeQwen = kennung
-                    _meldung.value = "Stimmprobe aufgenommen. Alibaba erzeugt daraus deine Stimme."
+                    _hinweis.value = "Stimmprobe aufgenommen. Alibaba erzeugt daraus deine Stimme."
                 } catch (fehler: Exception) {
-                    _meldung.value = fehler.freundlich()
+                    _stoerung.value = fehler.freundlich()
                 } finally {
                     registrierung.shutdown()
                     _wartet.value = null
@@ -992,7 +1059,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             return
         }
         if (!aufnahme.start(viewModelScope)) {
-            _meldung.value = "Ohne Mikrofon kann ich dich nicht hören."
+            _stoerung.value = "Ohne Mikrofon kann ich dich nicht hören."
             return
         }
         _nimmtAuf.value = true
@@ -1001,7 +1068,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     /** F-23 Schritt 6 — der Probe-Knopf liest einen Beispielsatz vor. */
     fun hoerProbe() {
-        app.vorleser.lies("So klinge ich, wenn ich dir etwas vorlese.") { _meldung.value = it }
+        app.vorleser.lies("So klinge ich, wenn ich dir etwas vorlese.") { _stoerung.value = it }
     }
 
     // --- Lebenszyklus ---------------------------------------------------------------------

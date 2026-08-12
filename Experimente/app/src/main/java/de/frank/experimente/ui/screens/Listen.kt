@@ -53,7 +53,8 @@ fun WuenscheUndZiele(modell: AppViewModel) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val ziele by modell.ziele.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val feld by modell.zielFeld.collectAsStateWithLifecycle()
     var blattOffen by remember { mutableStateOf(false) }
 
@@ -63,7 +64,7 @@ fun WuenscheUndZiele(modell: AppViewModel) {
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
             SchwebenderPlusknopf("Ziel anlegen") { blattOffen = true }
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
             if (blattOffen) {
                 Anlegeblatt(
                     titel = "Neues Ziel",
@@ -124,7 +125,8 @@ fun Merkliste(modell: AppViewModel) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val merkliste by modell.merkliste.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val feld by modell.merkFeld.collectAsStateWithLifecycle()
     var blattOffen by remember { mutableStateOf(false) }
 
@@ -134,7 +136,7 @@ fun Merkliste(modell: AppViewModel) {
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
             SchwebenderPlusknopf("Eigenes Experiment anlegen") { blattOffen = true }
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
             if (blattOffen) {
                 Anlegeblatt(
                     titel = "Eigenes Experiment",
@@ -201,14 +203,15 @@ fun Erkenntnisse(modell: AppViewModel) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val erkenntnisse by modell.erkenntnisse.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
 
     Bildschirmgeruest(
         kopf = { Titel("Erkenntnisse") },
         leiste = Ziel.ERKENNTNISSE,
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         if (erkenntnisse.isEmpty()) {
@@ -255,7 +258,8 @@ fun Logbuch(modell: AppViewModel) {
     val schriften = LocalSchriften.current
     val ausfuehrlich by modell.logAusfuehrlich.collectAsStateWithLifecycle()
     val verdichtet by modell.logVerdichtet.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     var langzeit by remember { mutableStateOf(false) }
 
     val eintraege = if (langzeit) verdichtet else ausfuehrlich
@@ -280,7 +284,7 @@ fun Logbuch(modell: AppViewModel) {
             }
         },
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         if (eintraege.isEmpty()) {

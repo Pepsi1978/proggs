@@ -83,8 +83,11 @@ fun Einstellungen(modell: AppViewModel) {
     val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
     val effektstufe by modell.effektstufe.collectAsStateWithLifecycle()
     val angemeldet by modell.angemeldet.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val liestVor by modell.liestVor.collectAsStateWithLifecycle()
+    val geraetecode by modell.geraetecode.collectAsStateWithLifecycle()
+    val meldetAn by modell.meldetAn.collectAsStateWithLifecycle()
 
     var anbieter by remember { mutableStateOf(einstellungen.ttsAnbieter) }
     var tempo by remember { mutableStateOf(einstellungen.sprechtempo) }
@@ -95,7 +98,7 @@ fun Einstellungen(modell: AppViewModel) {
         kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueck) },
         kopf = { Titel("Einstellungen", klein = true) },
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         // --- Modelle (F-22) ---------------------------------------------------------
@@ -246,12 +249,16 @@ fun Einstellungen(modell: AppViewModel) {
                             color = if (angemeldet) farben.erledigt else farben.gedaempft,
                         )
                     }
-                    if (angemeldet) {
-                        KnopfUmrandet("Abmelden", modell::meldeAb)
-                    } else {
-                        KnopfBetont("Anmelden", modell::meldeAn)
+                    when {
+                        angemeldet -> KnopfUmrandet("Abmelden", modell::meldeAb)
+                        meldetAn -> KnopfUmrandet("Abbrechen", modell::brichAnmeldungAb)
+                        else -> KnopfBetont("Anmelden", modell::meldeAn)
                     }
                 }
+
+                // F-24 — der Benutzercode, den Frank auf der OpenAI-Seite eintippt.
+                geraetecode?.let { code -> Geraetecodekarte(code, modell) }
+
                 Text(
                     text = "Codex läuft über deine Anmeldung, nicht über einen Schlüssel.",
                     style = schriften.erklaerung,
@@ -379,7 +386,8 @@ fun Selbstbild(modell: AppViewModel) {
     val farben = LocalFarben.current
     val feld by modell.selbstbildFeld.collectAsStateWithLifecycle()
     val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
 
     androidx.compose.runtime.LaunchedEffect(Unit) { modell.ladeSelbstbildInsFeld() }
 
@@ -398,7 +406,7 @@ fun Selbstbild(modell: AppViewModel) {
         },
         kopf = { Titel("Selbstbild", klein = true) },
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         item("feld") {
@@ -533,6 +541,89 @@ private fun Auswahl(
             )
             Icon(Symbole.Aufklappen, null, tint = farben.gedaempft, modifier = Modifier.size(20.dp))
         }
+    }
+}
+
+/**
+ * **F-24 — der Gerätecode.** Solange die App auf die Bestätigung wartet, steht der
+ * Benutzercode hier: groß, in JetBrains Mono mit weiter Laufweite, damit man ihn beim
+ * Abtippen nicht verliest — und daneben „Kopieren", das ihn in die Zwischenablage legt.
+ *
+ * Der Code kommt von OpenAI in der Form `ABCD-EFGHI` (vier Zeichen, Bindestrich, fünf).
+ * Er wird **wörtlich** angezeigt, nicht umformatiert: was auf dem Bildschirm steht, ist
+ * genau das, was die Seite erwartet.
+ *
+ * Ein Druck auf den Code selbst kopiert ihn ebenfalls — die Fläche ist größer als der
+ * Knopf und damit schneller zu treffen.
+ */
+@Composable
+private fun Geraetecodekarte(code: de.frank.experimente.auth.Geraetecode, modell: AppViewModel) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    val ablage = androidx.compose.ui.platform.LocalClipboardManager.current
+
+    val kopieren = {
+        ablage.setText(androidx.compose.ui.text.AnnotatedString(code.benutzercode))
+        modell.melde("Code kopiert.")
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(farben.erhoeht)
+            .border(1.dp, farben.aktion.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "Diesen Code auf der geöffneten Seite eintippen",
+            style = schriften.feldbeschriftung,
+            color = farben.gedaempft,
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = code.benutzercode,
+                style = schriften.zahl.copy(
+                    fontSize = androidx.compose.ui.unit.TextUnit(
+                        26f, androidx.compose.ui.unit.TextUnitType.Sp,
+                    ),
+                    lineHeight = androidx.compose.ui.unit.TextUnit(
+                        32f, androidx.compose.ui.unit.TextUnitType.Sp,
+                    ),
+                    letterSpacing = androidx.compose.ui.unit.TextUnit(
+                        3f, androidx.compose.ui.unit.TextUnitType.Sp,
+                    ),
+                ),
+                color = farben.aktion,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = kopieren)
+                    .padding(vertical = 4.dp),
+            )
+            KnopfUmrandet(
+                text = "Kopieren",
+                beiKlick = kopieren,
+                farbe = farben.aktion,
+                randfarbe = farben.aktion,
+            )
+        }
+        Text(
+            text = code.adresse,
+            style = schriften.stufe,
+            color = farben.blass,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Textknopf(
+            text = "Seite erneut öffnen",
+            beiKlick = { modell.oeffneAnmeldeseite(code.adresse) },
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 

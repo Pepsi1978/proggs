@@ -85,7 +85,8 @@ fun Heute(modell: AppViewModel) {
     val vorschlaege by modell.vorschlaege.collectAsStateWithLifecycle()
     val laufende by modell.laufende.collectAsStateWithLifecycle()
     val lageFeld by modell.lageFeld.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val istVoll by modell.istVoll.collectAsStateWithLifecycle()
 
     Bildschirmgeruest(
@@ -101,7 +102,7 @@ fun Heute(modell: AppViewModel) {
         leiste = Ziel.HEUTE,
         beiLeistenwahl = modell::gehe,
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
         // Datum links, der Morgen/Abend-Umschalter rechts.

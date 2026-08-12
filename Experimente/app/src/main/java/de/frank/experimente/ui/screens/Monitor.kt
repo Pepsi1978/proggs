@@ -106,7 +106,8 @@ fun Monitor(modell: AppViewModel) {
     val istVoll by modell.istVoll.collectAsStateWithLifecycle()
     val aufgeklappt by modell.aufgeklappt.collectAsStateWithLifecycle()
     val funkelt by modell.funkelt.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val anlegenOffen by modell.anlegenOffen.collectAsStateWithLifecycle()
 
     Bildschirmgeruest(
@@ -131,9 +132,9 @@ fun Monitor(modell: AppViewModel) {
         ueberlagerung = {
             SchwebenderPlusknopf("Eigenes Experiment anlegen", modell::oeffneAnlegen)
             Meldungen(
-                stoerung = null,
+                stoerung = stoerung,
                 beiNochmal = modell::schliesseMeldung,
-                hinweis = meldung,
+                hinweis = hinweis,
             )
             if (anlegenOffen) Anlegeflaeche(modell)
         },

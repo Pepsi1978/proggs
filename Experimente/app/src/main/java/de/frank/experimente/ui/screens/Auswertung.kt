@@ -68,7 +68,8 @@ fun Auswertung(modell: AppViewModel) {
     val mitlese by modell.mitlese.collectAsStateWithLifecycle()
     val liestVor by modell.liestVor.collectAsStateWithLifecycle()
     val bluete by modell.bluete.collectAsStateWithLifecycle()
-    val meldung by modell.meldung.collectAsStateWithLifecycle()
+    val hinweis by modell.hinweis.collectAsStateWithLifecycle()
+    val stoerung by modell.stoerung.collectAsStateWithLifecycle()
 
     val experiment = laufende.firstOrNull { it.id == wertetAus }
 
@@ -77,7 +78,7 @@ fun Auswertung(modell: AppViewModel) {
         kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueck) },
         kopf = { Titel("Auswertung", klein = true) },
         ueberlagerung = {
-            Meldungen(stoerung = null, beiNochmal = modell::schliesseMeldung, hinweis = meldung)
+            Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
             if (bluete) {
                 val stufe = LocalEffektstufe.current
                 val weg by animateFloatAsState(
