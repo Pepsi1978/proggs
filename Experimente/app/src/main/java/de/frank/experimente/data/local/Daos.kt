@@ -95,19 +95,39 @@ interface VorschlaegeDao {
 
 @Dao
 interface ExperimenteDao {
-    @Query("SELECT * FROM experimente WHERE state = 'OFFEN' ORDER BY startedAt ASC, id ASC")
-    fun beobachteOffene(): Flow<List<Experiment>>
+    /**
+     * Abschnitt „Läuft“ des Monitors — höchstens drei, das jüngst gestartete oben (F-34).
+     * Laufende ordnen sich nach ihrem Startzeitpunkt und sind nicht verschiebbar (F-38).
+     */
+    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY startedAt DESC, id DESC")
+    fun beobachteLaufende(): Flow<List<Experiment>>
 
-    @Query("SELECT * FROM experimente WHERE state = 'OFFEN' ORDER BY startedAt ASC, id ASC")
-    suspend fun offene(): List<Experiment>
+    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY startedAt DESC, id DESC")
+    suspend fun laufende(): List<Experiment>
 
-    @Query("SELECT COUNT(*) FROM experimente WHERE state = 'OFFEN'")
-    suspend fun anzahlOffene(): Int
+    /** Abschnitt „Steht an“ — beliebig viele, in Franks eigener Reihenfolge (F-38). */
+    @Query("SELECT * FROM experimente WHERE state = 'ANSTEHEND' ORDER BY order_index ASC, addedAt DESC")
+    fun beobachteAnstehende(): Flow<List<Experiment>>
+
+    @Query("SELECT * FROM experimente WHERE state = 'ANSTEHEND' ORDER BY order_index ASC, addedAt DESC")
+    suspend fun anstehende(): List<Experiment>
+
+    /** Die Grenze von drei gilt fürs Laufen, nicht fürs Vormerken (F-34, F-37). */
+    @Query("SELECT COUNT(*) FROM experimente WHERE state = 'LAEUFT'")
+    suspend fun anzahlLaufende(): Int
+
+    /** F-36 — ein Vorschlag lässt sich nicht doppelt übernehmen. */
+    @Query("SELECT COUNT(*) FROM experimente WHERE title = :titel AND state IN ('ANSTEHEND', 'LAEUFT')")
+    suspend fun zaehleImMonitor(titel: String): Int
+
+    /** F-35 — neue Karten kommen **oben** im Abschnitt „Steht an“ an. */
+    @Query("SELECT MIN(order_index) FROM experimente WHERE state = 'ANSTEHEND'")
+    suspend fun kleinsterRang(): Int?
 
     @Query("SELECT * FROM experimente WHERE id = :id")
     suspend fun einer(id: Long): Experiment?
 
-    @Query("SELECT * FROM experimente WHERE state != 'OFFEN' ORDER BY closedAt DESC")
+    @Query("SELECT * FROM experimente WHERE state IN ('ABGESCHLOSSEN', 'NICHT_UMGESETZT') ORDER BY closedAt DESC")
     suspend fun abgeschlossene(): List<Experiment>
 
     @Insert
@@ -115,6 +135,14 @@ interface ExperimenteDao {
 
     @Update
     suspend fun aendere(experiment: Experiment)
+
+    /** F-38 — die neue Reihenfolge aller betroffenen Sätze. */
+    @Query("UPDATE experimente SET order_index = :rang WHERE id = :id")
+    suspend fun setzeRang(id: Long, rang: Int)
+
+    /** F-39, Weg „Löschen“ — endgültig, mitsamt seinen Aufgaben. */
+    @Delete
+    suspend fun loesche(experiment: Experiment)
 }
 
 @Dao
@@ -127,6 +155,14 @@ interface AufgabenDao {
 
     @Insert
     suspend fun lege(aufgaben: List<Task>)
+
+    /** F-39 — mit dem Experiment gehen auch seine Aufgaben. */
+    @Query("DELETE FROM aufgaben WHERE experimentId = :experimentId")
+    suspend fun loescheZu(experimentId: Long)
+
+    /** F-37 Schritt 1 — beim Start werden die Aufgaben auf die Tage verteilt. */
+    @Query("SELECT * FROM aufgaben WHERE experimentId = :experimentId ORDER BY dayIndex ASC, order_index ASC")
+    suspend fun alleZu(experimentId: Long): List<Task>
 
     @Query("UPDATE aufgaben SET doneAt = :zeitpunkt WHERE id = :id")
     suspend fun setzeHaken(id: Long, zeitpunkt: java.time.Instant?)

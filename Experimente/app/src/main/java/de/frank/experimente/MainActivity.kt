@@ -24,7 +24,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
-            ExperimenteTheme(erscheinung = erscheinung) {
+            val effektstufe by modell.effektstufe.collectAsStateWithLifecycle()
+            ExperimenteTheme(erscheinung = erscheinung, effektstufe = effektstufe) {
                 Navigation(modell)
             }
         }

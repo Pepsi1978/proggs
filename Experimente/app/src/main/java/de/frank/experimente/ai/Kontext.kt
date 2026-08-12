@@ -59,7 +59,10 @@ data class Kontext(
             "LAUFENDE EXPERIMENTE",
             if (laufende.isEmpty()) "(keines offen)"
             else laufende.joinToString("\n") {
-                "- ${it.title} (seit ${it.startedAt.format(TAG)}, ${it.days} Tag(e), Stufe ${it.level.name.lowercase()})"
+                // `startedAt` ist leer, solange ein Experiment nur ansteht (F-37). Hier
+                // stehen nur laufende, aber der Typ lässt beides zu.
+                val seit = it.startedAt?.format(TAG)?.let { tag -> "seit $tag, " }.orEmpty()
+                "- ${it.title} ($seit${it.days} Tag(e), Stufe ${it.level.name.lowercase()})"
             },
         )
 

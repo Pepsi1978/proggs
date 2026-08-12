@@ -32,6 +32,7 @@ enum class Erscheinung(val schluessel: String) {
 @Composable
 fun ExperimenteTheme(
     erscheinung: Erscheinung,
+    effektstufe: Effektstufe = Effektstufe.VOLL,
     inhalt: @Composable () -> Unit,
 ) {
     // `isSystemInDarkTheme()` liest die Systemdarstellung bei jeder Neuzeichnung neu —
@@ -76,6 +77,8 @@ fun ExperimenteTheme(
     CompositionLocalProvider(
         LocalFarben provides farben,
         LocalSchriften provides Schriften(),
+        // A-30: „Bewegung reduzieren" und der Energiesparmodus erzwingen mindestens *Gedämpft*.
+        LocalEffektstufe provides geltendeStufe(effektstufe),
     ) {
         MaterialTheme(colorScheme = schema, content = inhalt)
     }

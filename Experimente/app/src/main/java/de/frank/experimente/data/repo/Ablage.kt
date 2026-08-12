@@ -11,6 +11,7 @@ import de.frank.experimente.data.local.Experiment
 import de.frank.experimente.data.local.ExperimenteDatenbank
 import de.frank.experimente.data.local.ExperimentZustand
 import de.frank.experimente.data.local.Goal
+import de.frank.experimente.data.local.Herkunft
 import de.frank.experimente.data.local.Insight
 import de.frank.experimente.data.local.Lage
 import de.frank.experimente.data.local.LogDay
@@ -38,8 +39,11 @@ class Ablage(
     private val aufgabenKi: Aufgaben,
 ) {
     companion object {
-        /** Höchstens drei gleichzeitig offene Experimente (F-06). */
-        const val MAX_OFFEN = 3
+        /**
+         * Höchstens drei gleichzeitig **laufende** Experimente (F-06, F-37).
+         * Anstehende zählen nicht mit — sie sind unbegrenzt (F-34).
+         */
+        const val MAX_LAUFEND = 3
 
         /** Nach 15 Tagen wandert ein Tag ins Langzeit-Log (F-15). */
         const val TAGE_AUSFUEHRLICH = 15L
@@ -48,6 +52,9 @@ class Ablage(
         private const val LOG_ROHSTOFF = "log"
         private const val VERDICHTUNG = "verdichtung"
         private const val ERKENNTNIS = "erkenntnis"
+
+        /** F-35 ohne Netz: die Aufgabenliste wird beim nächsten Lauf nachgetragen. */
+        private const val EIGENES = "eigenes"
     }
 
     private val modellExperimente get() = CodexModell.aus(einstellungen.modellExperimente)
@@ -59,7 +66,12 @@ class Ablage(
 
     fun beobachteLage(tag: LocalDate) = db.lage().beobachte(tag)
     fun beobachteVorschlaege(tag: LocalDate) = db.vorschlaege().beobachte(tag)
-    fun beobachteOffene() = db.experimente().beobachteOffene()
+
+    /** B-10, Abschnitt „Läuft“ (F-34). */
+    fun beobachteLaufende() = db.experimente().beobachteLaufende()
+
+    /** B-10, Abschnitt „Steht an“ (F-34). */
+    fun beobachteAnstehende() = db.experimente().beobachteAnstehende()
     fun beobachteZiele() = db.ziele().beobachte()
     fun beobachteMerkliste() = db.merkliste().beobachte()
     fun beobachteErkenntnisse() = db.erkenntnisse().beobachte()
@@ -79,7 +91,7 @@ class Ablage(
         aktuellesLog = db.logbuch().alleAusfuehrlich(),
         langzeitLog = db.logbuch().alleVerdichtet(),
         erkenntnisse = db.erkenntnisse().alle(),
-        laufende = db.experimente().offene(),
+        laufende = db.experimente().laufende(),
         heutigeLage = db.lage().anTag(tag)?.text,
         merkliste = if (mitMerkliste) db.merkliste().alle() else emptyList(),
     )
@@ -108,7 +120,7 @@ class Ablage(
      * @return true wenn Vorschläge entstanden sind
      */
     suspend fun erzeugeVorschlaege(tag: LocalDate = LocalDate.now()): Boolean {
-        if (db.experimente().anzahlOffene() >= MAX_OFFEN) return false
+        if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return false
         val roh = aufgabenKi.fuenfVorschlaege(
             kontext = kontext(tag, mitMerkliste = true),
             verworfeneTitel = db.vorschlaege().verworfeneTitel(tag),
@@ -185,59 +197,205 @@ class Ablage(
 
     suspend fun istGemerkt(titel: String): Boolean = db.merkliste().zaehleMitTitel(titel) > 0
 
-    // --- F-06 ---------------------------------------------------------------------------
+    // --- F-36 / F-35: in den Monitor ----------------------------------------------------
 
     /**
-     * F-06 — Experiment starten. Aus dem Vorschlag wird ein Experiment mit Startdatum,
-     * Dauer, Stufe und der Aufgabenliste je Tag; die übrigen vier verschwinden.
+     * F-36 — einen KI-Vorschlag in den Monitor übernehmen. Aus dem `Suggestion` wird ein
+     * `Experiment` im Zustand `ANSTEHEND` mit der vollständigen Aufgabenliste je Tag.
      *
-     * @return die Kennung, oder null wenn schon drei offen sind (dann ist die Auswahl gesperrt)
+     * **Übernehmen ist nicht starten:** es zählt nicht gegen die Grenze von drei, die greift
+     * erst bei F-37. Die übrigen Vorschläge bleiben stehen — Frank kann mehrere hintereinander
+     * übernehmen. Ein Vorschlag lässt sich nicht doppelt übernehmen.
+     *
+     * @return die Kennung, oder null wenn der Vorschlag schon im Monitor steht
      */
-    suspend fun starte(vorschlagId: Long, tag: LocalDate = LocalDate.now()): Long? {
-        if (db.experimente().anzahlOffene() >= MAX_OFFEN) return null
+    suspend fun uebernimm(vorschlagId: Long): Long? {
         val vorschlag = db.vorschlaege().einer(vorschlagId) ?: return null
+        if (db.experimente().zaehleImMonitor(vorschlag.title) > 0) return null
 
+        val id = legeAnstehendAn(
+            titel = vorschlag.title,
+            beschreibung = vorschlag.description,
+            tage = vorschlag.days,
+            stufe = vorschlag.level,
+            herkunft = if (vorschlag.fromWatchlist) Herkunft.MERKLISTE else Herkunft.KI_VORSCHLAG,
+            aufgabenJeTag = ausJson(vorschlag.tasksJson),
+        )
+        // Kam der Vorschlag von der Merkliste, wird er dort entfernt.
+        if (vorschlag.fromWatchlist) db.merkliste().loescheMitTitel(vorschlag.title)
+        return id
+    }
+
+    /**
+     * F-35 — ein eigenes Experiment anlegen. Dauer, Stufe und Aufgabenliste ergänzt die KI
+     * beim Speichern.
+     *
+     * **Ohne Netz wird trotzdem gespeichert** — mit dem eingetippten Text, Dauer 1 und Stufe
+     * *mittel*. Die Aufgabenliste wird beim nächsten erfolgreichen Lauf nachgetragen. Es geht
+     * nichts verloren.
+     */
+    suspend fun legeEigenesImMonitorAn(text: String): Long {
+        val sauber = text.trim()
+        return try {
+            val geschaetzt = aufgabenKi.schaetzeEigenes(sauber, modellExperimente, effortExperimente)
+            legeAnstehendAn(
+                titel = geschaetzt.titel,
+                beschreibung = geschaetzt.beschreibung,
+                tage = geschaetzt.tage,
+                stufe = geschaetzt.stufe,
+                herkunft = Herkunft.EIGEN,
+                aufgabenJeTag = geschaetzt.aufgabenJeTag,
+            )
+        } catch (fehler: Exception) {
+            einstellungen.merkeAusstehend("$EIGENES:$sauber")
+            legeAnstehendAn(
+                titel = sauber.lineSequence().first().take(80),
+                beschreibung = sauber,
+                tage = 1,
+                stufe = Stufe.MITTEL,
+                herkunft = Herkunft.EIGEN,
+                aufgabenJeTag = emptyList(),
+            )
+        }
+    }
+
+    /** Neue Karten kommen **oben** im Abschnitt „Steht an“ an (F-35 Schritt 4). */
+    private suspend fun legeAnstehendAn(
+        titel: String,
+        beschreibung: String,
+        tage: Int,
+        stufe: Stufe,
+        herkunft: Herkunft,
+        aufgabenJeTag: List<List<String>>,
+    ): Long {
         val id = db.experimente().lege(
             Experiment(
-                title = vorschlag.title,
-                description = vorschlag.description,
-                days = vorschlag.days,
-                level = vorschlag.level,
-                startedAt = tag,
-                state = ExperimentZustand.OFFEN,
+                title = titel,
+                description = beschreibung,
+                days = tage,
+                level = stufe,
+                origin = herkunft,
+                addedAt = Instant.now(),
+                order = (db.experimente().kleinsterRang() ?: 0) - 1,
+                startedAt = null,
+                state = ExperimentZustand.ANSTEHEND,
             ),
         )
-        val jeTag = ausJson(vorschlag.tasksJson)
         val aufgaben = mutableListOf<Task>()
-        jeTag.forEachIndexed { index, texte ->
+        aufgabenJeTag.forEachIndexed { index, texte ->
             texte.forEachIndexed { nr, text ->
                 aufgaben += Task(experimentId = id, dayIndex = index + 1, text = text, order = nr)
             }
         }
         if (aufgaben.isNotEmpty()) db.aufgaben().lege(aufgaben)
-
-        // Die übrigen vier verschwinden.
-        db.vorschlaege().verwerfeAlle(tag, Instant.now())
-
-        // Ist der Vorschlag von der Merkliste gekommen, wird er dort entfernt.
-        if (vorschlag.fromWatchlist) db.merkliste().loescheMitTitel(vorschlag.title)
         return id
+    }
+
+    /** F-36 — steht dieser Titel schon im Monitor? Der Knopf zeigt dann den übernommenen Zustand. */
+    suspend fun stehtImMonitor(titel: String): Boolean = db.experimente().zaehleImMonitor(titel) > 0
+
+    // --- F-37 / F-06: starten -----------------------------------------------------------
+
+    /**
+     * F-37 — ein anstehendes Experiment starten. Der Zustand wechselt auf `LAEUFT`,
+     * `startedAt` wird auf heute gesetzt, die Aufgaben werden auf die Tage verteilt.
+     *
+     * @return true wenn gestartet wurde; false wenn schon drei laufen (dann ist der Knopf
+     *   gesperrt und die Karte bleibt anstehend)
+     */
+    suspend fun starte(experimentId: Long, tag: LocalDate = LocalDate.now()): Boolean {
+        if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return false
+        val experiment = db.experimente().einer(experimentId) ?: return false
+        if (experiment.state != ExperimentZustand.ANSTEHEND) return false
+        db.experimente().aendere(
+            experiment.copy(state = ExperimentZustand.LAEUFT, startedAt = tag),
+        )
+        return true
+    }
+
+    /**
+     * F-06 — „Jetzt starten“ auf einer Vorschlagskarte: der Abkürzungsweg, der F-36 und F-37
+     * in einem Zug ausführt.
+     *
+     * Die übrigen vier Vorschläge **bleiben stehen** und lassen sich weiterhin in den Monitor
+     * übernehmen — das ist der Unterschied zur ersten Fassung, in der sie verschwanden.
+     *
+     * @return die Kennung, oder null wenn schon drei laufen
+     */
+    suspend fun starteSofort(vorschlagId: Long, tag: LocalDate = LocalDate.now()): Long? {
+        if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return null
+        val id = uebernimm(vorschlagId) ?: return null
+        return if (starte(id, tag)) id else null
+    }
+
+    // --- F-38 / F-39 --------------------------------------------------------------------
+
+    /**
+     * F-38 — die Reihenfolge unter „Steht an“ ändern. Nur dieser Abschnitt ist sortierbar;
+     * laufende Experimente ordnen sich nach ihrem Startzeitpunkt.
+     */
+    suspend fun sortiere(experimentId: Long, nachIndex: Int) {
+        val liste = db.experimente().anstehende().toMutableList()
+        val von = liste.indexOfFirst { it.id == experimentId }
+        if (von < 0) return
+        val nach = nachIndex.coerceIn(0, liste.size - 1)
+        if (von == nach) return
+        liste.add(nach, liste.removeAt(von))
+        liste.forEachIndexed { rang, satz -> db.experimente().setzeRang(satz.id, rang) }
+    }
+
+    /**
+     * F-39 — ein anstehendes Experiment aus dem Monitor nehmen. Zwei Wege:
+     * `aufMerkliste = true` erhält es vollständig auf der Merkliste (B-05),
+     * `false` entfernt es endgültig.
+     *
+     * Gilt **nur für anstehende**. Ein laufendes wird über „Nicht umgesetzt“ (F-13) beendet,
+     * nicht gelöscht — sonst ginge seine Geschichte verloren.
+     */
+    suspend fun nimmAusMonitor(experimentId: Long, aufMerkliste: Boolean) {
+        val experiment = db.experimente().einer(experimentId) ?: return
+        if (experiment.state != ExperimentZustand.ANSTEHEND) return
+        if (aufMerkliste) {
+            val jeTag = db.aufgaben().alleZu(experimentId)
+                .groupBy { it.dayIndex }
+                .toSortedMap()
+                .map { (_, aufgaben) -> aufgaben.sortedBy { it.order }.map { it.text } }
+            db.merkliste().lege(
+                WatchlistItem(
+                    title = experiment.title,
+                    description = experiment.description,
+                    days = experiment.days,
+                    level = experiment.level,
+                    tasksJson = alsJson(jeTag),
+                    source = if (experiment.origin == Herkunft.EIGEN) Quelle.EIGEN else Quelle.GEMERKT,
+                    createdAt = Instant.now(),
+                ),
+            )
+        }
+        db.aufgaben().loescheZu(experimentId)
+        db.experimente().loesche(experiment)
     }
 
     // --- F-07 / F-08 --------------------------------------------------------------------
 
     /**
-     * F-07 — die **eine** To-Do-Liste des Tages: je offenes Experiment sein Titel und
-     * darunter dessen heutige Aufgaben. Nicht eine Liste je Experiment.
+     * F-07 — die **eine** To-Do-Liste des Tages: je laufendes Experiment sein Titel und
+     * darunter dessen heutige Aufgaben. Nicht eine Liste je Experiment. Sie steht seit dieser
+     * Fassung unter dem Abschnitt „Läuft“ im Monitor.
      */
     suspend fun tagesliste(tag: LocalDate = LocalDate.now()): List<Pair<Experiment, List<Task>>> =
-        db.experimente().offene().map { experiment ->
+        db.experimente().laufende().map { experiment ->
             experiment to db.aufgaben().tagesaufgaben(experiment.id, tagNummer(experiment, tag))
         }
 
-    /** Welcher Tag eines mehrtägigen Experiments heute ist — 1 = erster Tag. */
-    fun tagNummer(experiment: Experiment, tag: LocalDate = LocalDate.now()): Int =
-        (ChronoUnit.DAYS.between(experiment.startedAt, tag).toInt() + 1).coerceIn(1, experiment.days)
+    /**
+     * Welcher Tag eines mehrtägigen Experiments heute ist — 1 = erster Tag.
+     * Ein anstehendes Experiment hat noch keinen Starttag; für es gilt Tag 1.
+     */
+    fun tagNummer(experiment: Experiment, tag: LocalDate = LocalDate.now()): Int {
+        val start = experiment.startedAt ?: return 1
+        return (ChronoUnit.DAYS.between(start, tag).toInt() + 1).coerceIn(1, experiment.days)
+    }
 
     fun istLetzterTag(experiment: Experiment, tag: LocalDate = LocalDate.now()): Boolean =
         tagNummer(experiment, tag) >= experiment.days

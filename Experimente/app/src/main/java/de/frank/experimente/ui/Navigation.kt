@@ -4,14 +4,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -24,40 +23,39 @@ import de.frank.experimente.ui.screens.Gespraech
 import de.frank.experimente.ui.screens.Heute
 import de.frank.experimente.ui.screens.Logbuch
 import de.frank.experimente.ui.screens.Merkliste
+import de.frank.experimente.ui.screens.Monitor
 import de.frank.experimente.ui.screens.Selbstbild
 import de.frank.experimente.ui.screens.WuenscheUndZiele
 import de.frank.experimente.ui.theme.Bewegung
+import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.dauer
-import de.frank.experimente.ui.theme.grundAuren
 import kotlin.math.abs
 
 /**
  * Der Wechsel zwischen den Bildschirmen.
  *
- * M-63: zwischen den Hauptbildschirmen reines Überblenden, 200 ms, `cubic-bezier(.4,0,.6,1)`.
- * Bewusst **kein** Pager: der würde das Schieben erzwingen und M-63 widersprechen. Das
- * Wischen (F-27) läuft deshalb als eigene Geste, die den Bildschirm wechselt statt ihn
- * mitzuziehen.
+ * **E-12 · M-91** — der abgehende Bildschirm wird auf 96 % verkleinert, der neue kommt auf
+ * 104 % beginnend herein; 260 ms mit `cubic-bezier(.2, 0, 0, 1)`. Das ist der `hoch`-Verlauf
+ * des Entwurfs (`opacity 0 → 1`, `translateY(14px) scale(.98) → 0/1`).
+ *
+ * Bewusst **kein** Pager: der würde das Schieben erzwingen. Das Wischen (F-27) läuft deshalb
+ * als eigene Geste, die den Bildschirm wechselt statt ihn mitzuziehen — über alle **sechs**
+ * Hauptbildschirme in der Reihenfolge der unteren Leiste.
  */
 @Composable
 fun Navigation(modell: AppViewModel) {
     val ziel by modell.ziel.collectAsStateWithLifecycle()
     val farben = LocalFarben.current
-    val blenden = dauer(Bewegung.MITTEL)
+    val stufe = LocalEffektstufe.current
+    val wechsel = dauer(Bewegung.WECHSEL, stufe)
 
-    // Nur die fünf Hauptbildschirme reagieren auf Wischen (F-27 Regeln).
     val wischbar = ziel in Ziel.hauptreihe
 
     Box(
         Modifier
             .fillMaxSize()
             .background(farben.grund)
-            .grundAuren(farben)
-            // Die App zeichnet bis an die Kanten (`enableEdgeToEdge`), damit die Auren
-            // durchlaufen. Der Inhalt muss dann aber hinter Status- und Navigationsleiste
-            // ausweichen — sonst sitzt der Titel unter der Uhr.
-            .windowInsetsPadding(WindowInsets.safeDrawing)
             .then(
                 if (!wischbar) Modifier else Modifier.pointerInput(ziel) {
                     var strecke = 0f
@@ -73,12 +71,18 @@ fun Navigation(modell: AppViewModel) {
         AnimatedContent(
             targetState = ziel,
             transitionSpec = {
-                fadeIn(tween(blenden, easing = Bewegung.blenden)) togetherWith
-                    fadeOut(tween(blenden, easing = Bewegung.blenden))
+                (
+                    fadeIn(tween(wechsel, easing = Bewegung.ruhig)) +
+                        scaleIn(tween(wechsel, easing = Bewegung.ruhig), initialScale = 1.04f)
+                    ) togetherWith (
+                    fadeOut(tween(wechsel, easing = Bewegung.ruhig)) +
+                        scaleOut(tween(wechsel, easing = Bewegung.ruhig), targetScale = 0.96f)
+                    )
             },
             label = "bildschirmwechsel",
         ) { welcher ->
             when (welcher) {
+                Ziel.MONITOR -> Monitor(modell)
                 Ziel.HEUTE -> Heute(modell)
                 Ziel.GESPRAECH -> Gespraech(modell)
                 Ziel.AUSWERTUNG -> Auswertung(modell)

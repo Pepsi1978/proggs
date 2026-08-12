@@ -15,8 +15,29 @@ import java.time.LocalDate
 /** Stufe eines Experiments — sichtbar auf jeder Karte (F-03). */
 enum class Stufe { LEICHT, MITTEL, FORDERND }
 
-/** F-13: umgesetzt, nicht umgesetzt, oder noch offen. */
-enum class ExperimentZustand { OFFEN, ABGESCHLOSSEN, NICHT_UMGESETZT }
+/**
+ * Der Lebensweg eines Experiments (Funktions-Spec §4).
+ *
+ * `ANSTEHEND` ist der neue Anfangszustand: Jedes Experiment entsteht im Monitor, egal ob es
+ * aus einem KI-Vorschlag stammt (F-36) oder selbst angelegt wurde (F-35). Nur F-06
+ * („Jetzt starten“) überspringt ihn.
+ *
+ * **`OFFEN` heißt jetzt `LAEUFT`.** Wo im Spec „offenes Experiment“ steht, ist `LAEUFT`
+ * gemeint — eines, das gestartet wurde und ausgewertet werden will. Anstehende zählen nicht
+ * gegen die Grenze von drei und erscheinen nicht in der Abend-Auswertung.
+ */
+enum class ExperimentZustand { ANSTEHEND, LAEUFT, ABGESCHLOSSEN, NICHT_UMGESETZT }
+
+/**
+ * Woher ein Experiment in den Monitor kam (F-34 Schritt 2) — trägt das sichtbare
+ * Herkunftsetikett auf jeder Monitor-Karte. Beide Herkünfte stehen gleichrangig
+ * nebeneinander (A-25).
+ */
+enum class Herkunft(val etikett: String) {
+    KI_VORSCHLAG("KI-Vorschlag"),
+    EIGEN("selbst angelegt"),
+    MERKLISTE("von der Merkliste"),
+}
 
 /** Wer im Gespräch spricht (F-09). */
 enum class Rolle { ICH, KI }
@@ -69,7 +90,15 @@ data class Suggestion(
     val discardedAt: Instant? = null,
 )
 
-/** Ein laufendes oder abgeschlossenes Experiment (F-06, F-13). */
+/**
+ * Ein anstehendes, laufendes oder abgeschlossenes Experiment (F-35, F-36, F-37, F-13).
+ *
+ * `origin`, `addedAt` und `order` sind mit dem Monitor dazugekommen; `startedAt` ist leer,
+ * solange das Experiment nur ansteht, und wird erst beim Start gesetzt (F-37).
+ *
+ * `order` heißt in SQL anders, weil `ORDER` ein Schlüsselwort ist — der Spec-Name bleibt am
+ * Kotlin-Feld erhalten.
+ */
 @Entity(tableName = "experimente")
 data class Experiment(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -77,8 +106,11 @@ data class Experiment(
     val description: String,
     val days: Int = 1,
     val level: Stufe,
-    val startedAt: LocalDate,
-    val state: ExperimentZustand = ExperimentZustand.OFFEN,
+    val origin: Herkunft = Herkunft.KI_VORSCHLAG,
+    val addedAt: Instant,
+    @ColumnInfo(name = "order_index") val order: Int = 0,
+    val startedAt: LocalDate? = null,
+    val state: ExperimentZustand = ExperimentZustand.ANSTEHEND,
     val closedAt: LocalDate? = null,
 )
 

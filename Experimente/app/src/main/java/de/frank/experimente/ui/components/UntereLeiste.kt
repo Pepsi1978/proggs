@@ -2,7 +2,6 @@ package de.frank.experimente.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,23 +20,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.theme.Bewegung
-import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.Leistensymbole
+import de.frank.experimente.ui.theme.LocalEffektstufe
+import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.dauer
+import de.frank.experimente.ui.theme.glas
 
 /**
- * Die untere Leiste — sie **schwebt**: 12 dp Abstand zu den Seiten und nach unten, Höhe 64,
- * Radius 24, 1 dp Rand, Fläche *fläche*. So ist sie im Entwurf gemessen.
+ * Die untere Leiste — **sechs** Felder statt fünf, in dieser festen Reihenfolge:
+ * **Monitor · Heute · Ziele · Merkliste · Erkenntnisse · Logbuch.**
  *
- * Das aktive Feld trägt eine Pille (Radius 20, Fläche *Aktion gedeckt*, Schrift und Symbol in
- * *Aktion*). Der Wechsel läuft über M-50/M-51 (240 ms, `cubic-bezier(.2,0,0,1)`) — dadurch
- * wandert das aktive Feld mit, wenn gewischt wird (F-27 Schritt 2).
+ * Gemessen aus dem Entwurf: sie schwebt mit 12 dp Abstand nach links, rechts und unten, ist
+ * 64 dp hoch, hat Radius 24 dp, ist eine Glasfläche (`E-03`) mit 1 dp Rand
+ * `color-mix(Rand 70%, transparent)` und liegt auf dem Schatten `0 16px 32px rgba(0,0,0,.28)`.
+ *
+ * Je Feld: Symbol 22 dp über der Beschriftung in Inter 11/14, 3 dp Abstand dazwischen. Das
+ * aktive Feld färbt Symbol **und** Schrift in *Aktion* — die Farbe trägt die Information
+ * nicht allein, denn die Beschriftung steht ohnehin da.
+ *
+ * Sie ist auf B-10, B-01, B-04, B-05, B-06 und B-07 identisch; F-27 (Wischen) läuft über
+ * alle sechs in genau dieser Reihenfolge.
  */
 @Composable
 fun UntereLeiste(
@@ -46,90 +55,72 @@ fun UntereLeiste(
     modifier: Modifier = Modifier,
 ) {
     val farben = LocalFarben.current
+    val stufe = LocalEffektstufe.current
+    val form = RoundedCornerShape(24.dp)
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
             .height(64.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(farben.flaeche)
-            .border(1.dp, farben.rand, RoundedCornerShape(24.dp))
-            .padding(horizontal = 5.dp),
+            .shadow(16.dp, form, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(form)
+            .glas(farben, stufe)
+            .border(1.dp, farben.rand.copy(alpha = 0.7f), form),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        Feld(Ziel.HEUTE, "Heute", jetzt, beiWahl, Modifier.weight(1f))
-        Feld(Ziel.ZIELE, "Ziele", jetzt, beiWahl, Modifier.weight(1f))
-        Feld(Ziel.MERKLISTE, "Merkliste", jetzt, beiWahl, Modifier.weight(1f))
-        Feld(Ziel.ERKENNTNISSE, "Erkenntnisse", jetzt, beiWahl, Modifier.weight(1f))
-        Feld(Ziel.LOGBUCH, "Logbuch", jetzt, beiWahl, Modifier.weight(1f))
+        Ziel.hauptreihe.forEach { ziel ->
+            Feld(ziel, jetzt, beiWahl, Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
 private fun Feld(
     ziel: Ziel,
-    beschriftung: String,
     jetzt: Ziel,
     beiWahl: (Ziel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val farben = LocalFarben.current
+    val stufe = LocalEffektstufe.current
     val aktiv = ziel == jetzt
-    val lang = dauer(Bewegung.LANG)
 
-    val flaeche by animateColorAsState(
-        targetValue = if (aktiv) farben.aktionGedeckt else Color.Transparent,
-        animationSpec = tween(lang, easing = Bewegung.ruhig),
-        label = "feldflaeche",
-    )
+    // M-94 — das Leistenfeld leuchtet auf: 240 ms, `cubic-bezier(.2, 0, 0, 1)`.
     val vordergrund by animateColorAsState(
         targetValue = if (aktiv) farben.aktion else farben.gedaempft,
-        animationSpec = tween(lang, easing = Bewegung.ruhig),
-        label = "feldfarbe",
-    )
-    val randfarbe by animateColorAsState(
-        targetValue = if (aktiv) farben.aktion else Color.Transparent,
-        animationSpec = tween(lang, easing = Bewegung.ruhig),
-        label = "feldrand",
+        animationSpec = tween(dauer(Bewegung.LEUCHTEN, stufe), easing = Bewegung.ruhig),
+        label = "leistenfarbe",
     )
 
+    val quelle = merkeDruck()
     Column(
         modifier
-            .padding(vertical = 5.dp)
+            .height(64.dp)
+            .federdruck(quelle)
             .clip(RoundedCornerShape(20.dp))
-            .background(flaeche)
-            .border(1.dp, randfarbe, RoundedCornerShape(20.dp))
-            .clickable { beiWahl(ziel) }
-            .padding(vertical = 6.dp),
+            .clickable(interactionSource = quelle, indication = null) { beiWahl(ziel) },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = symbolFuer(ziel),
-            contentDescription = beschriftung,
+            contentDescription = ziel.beschriftung,
             tint = vordergrund,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(22.dp),
         )
+        Box(Modifier.height(3.dp))
         Text(
-            text = beschriftung,
-            style = LocalSchriften.current.stufe.copy(fontSize = 12.sp),
+            text = ziel.beschriftung,
+            style = LocalSchriften.current.leiste,
             color = vordergrund,
             maxLines = 1,
-            modifier = Modifier.padding(top = 3.dp),
         )
     }
 }
 
-/**
- * Die Symbole der Leiste stammen aus der Messung — nicht aus einer Standardsammlung, weil
- * ein gleichnamiges Material-Symbol andere Proportionen und Strichstärken hat.
- *
- * Bezogen über die **Stellung im Baum** (`Leistensymbole`), nicht über den Namen: im Markup
- * heißen alle fünf Felder „Hauptnavigation“, wodurch eine Benennung nach Beschriftung die
- * Zuordnung um eins verschiebt.
- */
-private fun symbolFuer(ziel: Ziel) = when (ziel) {
+/** Die Symbole der sechs Felder, in der Reihenfolge des Entwurfs. */
+private fun symbolFuer(ziel: Ziel): ImageVector = when (ziel) {
+    Ziel.MONITOR -> Leistensymbole.Monitor
     Ziel.HEUTE -> Leistensymbole.Heute
     Ziel.ZIELE -> Leistensymbole.Ziele
     Ziel.MERKLISTE -> Leistensymbole.Merkliste

@@ -27,6 +27,8 @@ data class Farben(
     val erledigt: Color,
     val erledigtGedeckt: Color,
     val warnung: Color,
+    /** `--aufaktion` — die Schrift **auf** der Aktionsfläche. In beiden Erscheinungen gleich. */
+    val aufAktion: Color,
     val istDunkel: Boolean,
 )
 
@@ -45,6 +47,7 @@ val FarbenDunkel = Farben(
     erledigt = Color(0xFF6F8F6A),
     erledigtGedeckt = Color(0xFF22301F),
     warnung = Color(0xFFD8A03C),
+    aufAktion = Color(0xFFFFF6F1),
     istDunkel = true,
 )
 
@@ -63,6 +66,7 @@ val FarbenHell = Farben(
     erledigt = Color(0xFF5A7A55),
     erledigtGedeckt = Color(0xFFE6EFE3),
     warnung = Color(0xFF9A6A12),
+    aufAktion = Color(0xFFFFF6F1),
     istDunkel = false,
 )
 

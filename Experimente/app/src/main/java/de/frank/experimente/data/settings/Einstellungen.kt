@@ -100,6 +100,15 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(THEME, "dark")!!
         set(v) { p.edit().putString(THEME, v).commit() }
 
+    // --- F-41: Effekt-Stärke -------------------------------------------------------------
+    /**
+     * `voll` · `gedaempft` · `aus`. Die Wahl wirkt sofort, ohne Neustart, auf allen
+     * Bildschirmen. Auf *Aus* bleibt jede Funktion vollständig bedienbar.
+     */
+    var effektstufe: String
+        get() = p.getString(EFFECT_LEVEL, "voll")!!
+        set(v) { p.edit().putString(EFFECT_LEVEL, v).commit() }
+
     // --- Nachlauf offener Hintergrundschritte (§6) ---------------------------------------
     /**
      * F-14 / F-15 / F-17 merken sich, dass sie ausstehen, wenn kein Netz da war, und laufen
@@ -145,6 +154,7 @@ class Einstellungen(ctx: Context) {
         const val REMINDER_EVENING_ON = "reminder_evening_on"
         const val REMINDER_EVENING_TIME = "reminder_evening_time"
         const val THEME = "theme"
+        const val EFFECT_LEVEL = "effect_level"
         const val AUSSTEHEND = "ausstehend"
         const val VERDICHTET_AM = "verdichtet_am"
         const val HINWEIS_BENACHRICHTIGUNG = "hinweis_benachrichtigung"
