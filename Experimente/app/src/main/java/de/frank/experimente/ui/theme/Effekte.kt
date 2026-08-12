@@ -1,5 +1,6 @@
 package de.frank.experimente.ui.theme
 
+import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -22,6 +24,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -111,30 +118,38 @@ private fun DrawScope.aura(farbe: Color, mitte: Offset, radius: Float, endeBei: 
  * **E-02 — Filmkorn.** Eine feine Rauschtextur über dem Grund, Deckkraft 3,5 % (im Entwurf
  * `opacity:.035`). Sie verhindert Farbstreifen in den Verläufen.
  *
+ * Der Entwurf kachelt dafür eine 120 × 120 große SVG-Rauschtextur. Genau so wird es hier
+ * gemacht: **eine** Kachel wird einmal erzeugt und danach wiederholt gezeichnet.
+ *
+ * Das ist kein Detail. Die erste Fassung zeichnete das Rauschen Punkt für Punkt bei jedem
+ * Bild — auf dem Fold-Außendisplay rund 273 000 Rechtecke je Bild. Die App hing sofort
+ * (ANR). Eine gekachelte Textur kostet einen einzigen Zeichenbefehl.
+ *
  * Rückfallebene: entfällt ersatzlos — sie trägt keine Information.
  */
+@Composable
 fun Modifier.filmkorn(stufe: Effektstufe): Modifier {
     if (stufe == Effektstufe.AUS) return this
+    val kachel = remember { rauschkachel() }
+    val pinsel = remember(kachel) {
+        ShaderBrush(ImageShader(kachel, TileMode.Repeated, TileMode.Repeated))
+    }
     return this.drawWithContent {
         drawContent()
-        val schritt = 3f
-        var y = 0f
-        var keim = 0x9E3779B9.toInt()
-        while (y < size.height) {
-            var x = 0f
-            while (x < size.width) {
-                keim = keim * 1_664_525 + 1_013_904_223
-                val helligkeit = ((keim ushr 24) and 0xFF) / 255f
-                drawRect(
-                    color = Color.White.copy(alpha = 0.035f * helligkeit),
-                    topLeft = Offset(x, y),
-                    size = Size(schritt, schritt),
-                )
-                x += schritt
-            }
-            y += schritt
-        }
+        drawRect(brush = pinsel, alpha = 0.035f)
     }
+}
+
+/** Die 120 × 120 große Rauschkachel — einmal erzeugt, danach nur noch wiederholt. */
+private fun rauschkachel(kante: Int = 120): ImageBitmap {
+    val punkte = IntArray(kante * kante)
+    var keim = 0x9E3779B9.toInt()
+    for (i in punkte.indices) {
+        keim = keim * 1_664_525 + 1_013_904_223
+        val helligkeit = (keim ushr 24) and 0xFF
+        punkte[i] = (0xFF shl 24) or (helligkeit shl 16) or (helligkeit shl 8) or helligkeit
+    }
+    return Bitmap.createBitmap(punkte, kante, kante, Bitmap.Config.ARGB_8888).asImageBitmap()
 }
 
 // ---------------------------------------------------------------------------------------

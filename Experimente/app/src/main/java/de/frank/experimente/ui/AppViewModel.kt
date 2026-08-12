@@ -265,21 +265,6 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     // --- Start ----------------------------------------------------------------------------
 
-    init {
-        viewModelScope.launch {
-            // §6: Beim ersten Öffnen an einem neuen Kalendertag läuft F-15, BEVOR etwas
-            // anderes angezeigt wird. Solange zeigt der Monitor die Schimmer-Skelette (E-13).
-            if (ablage.verdichtungFaellig(heute)) {
-                _monitorLaedt.value = true
-                _wartet.value = "Ich ordne die älteren Tage ein …"
-                runCatching { ablage.verdichteFaellige(heute) }
-                _wartet.value = null
-                _monitorLaedt.value = false
-            }
-            bestimmeZustand()
-        }
-    }
-
     /** Leitet den Zustand von B-01 aus dem ab, was gespeichert ist. */
     private suspend fun bestimmeZustand() {
         val hatLage = ablage.kontext(heute).heutigeLage?.isNotBlank() == true
@@ -1060,6 +1045,33 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 "Dein Kontingent ist erschöpft. Versuch es später noch einmal."
             this is CodexFehler -> "Dafür brauche ich Netz."
             else -> message ?: "Das hat nicht geklappt."
+        }
+    }
+
+    // --- Start ------------------------------------------------------------------------------
+
+    /**
+     * Der Startlauf steht bewusst **am Ende der Klasse**.
+     *
+     * Kotlin führt Eigenschaften und `init`-Blöcke in Deklarationsreihenfolge aus. Stand der
+     * Block weiter oben, las er `_monitorLaedt`, das erst darunter angelegt wurde — und die
+     * App stürzte beim Start mit einer `NullPointerException` ab. Ganz unten kann das
+     * konstruktionsbedingt nicht mehr passieren: dort ist jede Eigenschaft fertig.
+     *
+     * Wer hier etwas ergänzt, lässt den Block unten stehen.
+     */
+    init {
+        viewModelScope.launch {
+            // §6: Beim ersten Öffnen an einem neuen Kalendertag läuft F-15, BEVOR etwas
+            // anderes angezeigt wird. Solange zeigt der Monitor die Schimmer-Skelette (E-13).
+            if (ablage.verdichtungFaellig(heute)) {
+                _monitorLaedt.value = true
+                _wartet.value = "Ich ordne die älteren Tage ein …"
+                runCatching { ablage.verdichteFaellige(heute) }
+                _wartet.value = null
+                _monitorLaedt.value = false
+            }
+            bestimmeZustand()
         }
     }
 }
