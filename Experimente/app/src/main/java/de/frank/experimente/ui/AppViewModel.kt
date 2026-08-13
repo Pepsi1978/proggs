@@ -108,7 +108,36 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         anwendung.getSystemService(Vibrator::class.java)
     }
 
-    val heute: LocalDate = LocalDate.now()
+    /**
+     * Der heutige Tag.
+     *
+     * Er stand als feste Größe im Modell, einmal beim Start gesetzt. Wer die App abends
+     * offen liegen ließ und morgens weitermachte, schrieb Lage, Auswertung und Logbuch noch
+     * immer in den **Vortag** — und die Tagesverdichtung hielt sich für erledigt. Jetzt wird
+     * er bei jeder Rückkehr in den Vordergrund nachgezogen.
+     */
+    private val _heute = MutableStateFlow(LocalDate.now())
+    val heuteFluss: StateFlow<LocalDate> = _heute.asStateFlow()
+    val heute: LocalDate get() = _heute.value
+
+    /**
+     * Beim Zurückkehren in den Vordergrund: hat der Tag gewechselt, wird alles Tagesbezogene
+     * neu bestimmt — einschließlich der fälligen Verdichtung (F-15).
+     */
+    fun beimZurueckkehren() {
+        val jetzt = LocalDate.now()
+        if (jetzt == _heute.value) return
+        _heute.value = jetzt
+        _abendOffen.value = false
+        _lageFeld.value = Feld()
+        viewModelScope.launch {
+            if (ablage.verdichtungFaellig(jetzt)) {
+                runCatching { ablage.verdichteFaellige(jetzt) }
+            }
+            holeNach()
+            bestimmeZustand()
+        }
+    }
 
     // --- Erscheinung (F-26) --------------------------------------------------------------
 
@@ -328,8 +357,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     // --- Datenströme ----------------------------------------------------------------------
 
-    val lage = ablage.beobachteLage(heute).alsZustand(null)
-    val vorschlaege = ablage.beobachteVorschlaege(heute).alsZustand(emptyList<Suggestion>())
+    // Tagesbezogene Ströme hängen am Datum: wechselt der Tag, zeigen sie den neuen — vorher
+    // beobachteten sie für immer den Tag des App-Starts.
+    @Suppress("OPT_IN_USAGE")
+    val lage = _heute.flatMapLatest { ablage.beobachteLage(it) }.alsZustand(null)
+
+    @Suppress("OPT_IN_USAGE")
+    val vorschlaege = _heute.flatMapLatest { ablage.beobachteVorschlaege(it) }
+        .alsZustand(emptyList<Suggestion>())
 
     /** B-10, Abschnitt „Läuft“ — höchstens drei (F-34). */
     val laufende = ablage.beobachteLaufende().alsZustand(emptyList<Experiment>())
@@ -343,7 +378,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     val logAusfuehrlich = ablage.beobachteLogAusfuehrlich().alsZustand(emptyList<LogDay>())
     val logVerdichtet = ablage.beobachteLogVerdichtet().alsZustand(emptyList<LogDay>())
     val selbstbild = ablage.beobachteSelbstbild().alsZustand(null)
-    val auswertungenHeute = ablage.beobachteAuswertungen(heute).alsZustand(emptyList<Evaluation>())
+    @Suppress("OPT_IN_USAGE")
+    val auswertungenHeute = _heute.flatMapLatest { ablage.beobachteAuswertungen(it) }
+        .alsZustand(emptyList<Evaluation>())
 
     /** Die Aufgaben der laufenden Experimente — für die eine To-Do-Liste des Tages (F-07). */
     @Suppress("OPT_IN_USAGE")
@@ -362,17 +399,32 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     // --- Start ----------------------------------------------------------------------------
 
-    /** Leitet den Zustand von B-01 aus dem ab, was gespeichert ist. */
+    /**
+     * Leitet den Zustand von B-01 aus dem ab, was gespeichert ist.
+     *
+     * Gelesen wird **direkt aus der Ablage**, nicht aus den beobachteten Strömen: die
+     * beginnen leer und füllen sich erst kurz darauf. Beim Start landete die App deshalb auf
+     * `LAGE_STEHT`, obwohl die fünf Vorschläge des Tages längst gespeichert waren — sie waren
+     * da, wurden aber nicht gezeigt.
+     *
+     * Nebenbei brauchte die alte Fassung für eine einzige Frage den **vollen** Kontext
+     * (Selbstbild, Logbuch, alle Erkenntnisse) — und baute ihn bei gesetzter Lage gleich
+     * zweimal auf.
+     */
     private suspend fun bestimmeZustand() {
-        val hatLage = ablage.kontext(heute).heutigeLage?.isNotBlank() == true
+        val tag = _heute.value
+        val lageText = ablage.lageAmTag(tag)
+        val hatLage = !lageText.isNullOrBlank()
+        val hatVorschlaege = ablage.hatVorschlaege(tag)
+        val laeuftEtwas = ablage.anzahlLaufende() > 0
         _tagZustand.value = when {
-            _abendOffen.value && laufende.value.isNotEmpty() -> TagZustand.ABEND
+            _abendOffen.value && laeuftEtwas -> TagZustand.ABEND
             !hatLage -> TagZustand.LEER
-            vorschlaege.value.isNotEmpty() -> TagZustand.VORSCHLAEGE
+            hatVorschlaege -> TagZustand.VORSCHLAEGE
             else -> TagZustand.LAGE_STEHT
         }
         if (hatLage && _lageFeld.value.text.isBlank()) {
-            _lageFeld.value = Feld(text = ablage.kontext(heute).heutigeLage.orEmpty())
+            _lageFeld.value = Feld(text = lageText.orEmpty())
         }
     }
 
@@ -795,8 +847,10 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch {
             ablage.speichereLage(text, heute)
             // Laufen bereits drei, wird VORSCHLAEGE übersprungen: B-01 nennt den Grund und
-            // verweist auf den Monitor (Funktions-Spec §4).
-            if (laufende.value.size >= Ablage.MAX_LAUFEND) {
+            // verweist auf den Monitor (Funktions-Spec §4). Gezählt wird in der Ablage — der
+            // beobachtete Strom kann beim Start noch leer sein und hätte dann drei laufende
+            // Experimente übersehen.
+            if (ablage.anzahlLaufende() >= Ablage.MAX_LAUFEND) {
                 melde(DREI_LAUFEN)
                 _tagZustand.value = TagZustand.LAGE_STEHT
                 return@launch
@@ -842,9 +896,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     fun merke(vorschlag: Suggestion) {
         viewModelScope.launch {
-            if (ablage.merke(vorschlag)) {
-                melde("„${vorschlag.title}“ liegt auf der Merkliste.")
-            }
+            melde(
+                if (ablage.merke(vorschlag)) {
+                    "„${vorschlag.title}“ liegt auf der Merkliste."
+                } else {
+                    // Vorher passierte hier gar nichts — der Druck sah aus wie verschluckt.
+                    "„${vorschlag.title}“ liegt schon auf der Merkliste."
+                },
+            )
         }
     }
 
@@ -1492,6 +1551,15 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 _monitorLaedt.value = false
             }
             bestimmeZustand()
+            // §6 — was ohne Netz liegengeblieben ist, wird jetzt nachgeholt. Still im
+            // Hintergrund: es ist Aufräumarbeit, kein Vorgang, auf den Frank warten müsste.
+            holeNach()
         }
+    }
+
+    /** Der Nachlauf aus §6 — auch von Hand anstoßbar, etwa nach der Rückkehr in den Tag. */
+    private suspend fun holeNach() {
+        runCatching { ablage.holeNach(_heute.value) }
+            .onFailure { android.util.Log.w("Nachlauf", "nicht vollständig: ${it.message}") }
     }
 }

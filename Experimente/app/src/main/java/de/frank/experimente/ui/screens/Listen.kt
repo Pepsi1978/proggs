@@ -30,10 +30,14 @@ import de.frank.experimente.data.local.LogDay
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.components.Bildschirmgeruest
+import de.frank.experimente.ui.components.Eingabefeld
 import de.frank.experimente.ui.components.Einflug
+import de.frank.experimente.ui.components.KnopfBetont
+import de.frank.experimente.ui.components.KnopfUmrandet
 import de.frank.experimente.ui.components.LeererZustand
 import de.frank.experimente.ui.components.Meldungen
 import de.frank.experimente.ui.components.SchwebenderPlusknopf
+import de.frank.experimente.ui.components.Textknopf
 import de.frank.experimente.ui.components.Titel
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
@@ -93,24 +97,74 @@ fun WuenscheUndZiele(modell: AppViewModel) {
         }
         items(ziele, key = { it.id }) { ziel ->
             Einflug(ziele.indexOf(ziel)) {
+                // F-20 — ändern und löschen waren im Modell fertig, aber von keinem Knopf
+                // aus erreichbar: ein einmal eingesprochenes Ziel liess sich nie mehr
+                // berichtigen, obwohl es in jede Anfrage eingeht.
+                var bearbeitet by remember(ziel.id) { mutableStateOf<String?>(null) }
                 Listenkarte {
-                    Text(
-                        text = ziel.text.lineSequence().first().take(80),
-                        style = schriften.kartentitel,
-                        color = farben.text,
-                    )
-                    Text(
-                        text = ziel.text,
-                        style = schriften.kartentext,
-                        color = farben.gedaempft,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                    Text(
-                        text = "seit ${TAGESFORM.format(ziel.createdAt.atZone(java.time.ZoneId.systemDefault()))}",
-                        style = schriften.stufe,
-                        color = farben.blass,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
+                    if (bearbeitet == null) {
+                        Text(
+                            text = ziel.text.lineSequence().first().take(80),
+                            style = schriften.kartentitel,
+                            color = farben.text,
+                        )
+                        Text(
+                            text = ziel.text,
+                            style = schriften.kartentext,
+                            color = farben.gedaempft,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = "seit ${TAGESFORM.format(ziel.createdAt.atZone(java.time.ZoneId.systemDefault()))}",
+                                style = schriften.stufe,
+                                color = farben.blass,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Textknopf("Ändern", { bearbeitet = ziel.text })
+                                Box(
+                                    Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(percent = 50))
+                                        .clickable { modell.loescheZiel(ziel) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Symbole.Loeschen,
+                                        contentDescription = "Ziel löschen",
+                                        tint = farben.blass,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Eingabefeld(
+                            text = bearbeitet.orEmpty(),
+                            beiAenderung = { bearbeitet = it },
+                            platzhalter = "Was willst du erreichen?",
+                            mindesthoehe = 120.dp,
+                        )
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            KnopfUmrandet("Abbrechen", { bearbeitet = null }, Modifier.weight(1f))
+                            KnopfBetont(
+                                text = "Sichern",
+                                beiKlick = {
+                                    val neu = bearbeitet.orEmpty().trim()
+                                    if (neu.isNotBlank()) modell.aendereZiel(ziel, neu)
+                                    bearbeitet = null
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -293,7 +347,7 @@ fun Logbuch(modell: AppViewModel) {
             item("leer") { LeererZustand("Das Logbuch beginnt mit dem ersten Tag.") }
         }
         items(eintraege, key = { it.date.toString() }) { tag ->
-            Einflug(eintraege.indexOf(tag)) { Logeintrag(tag, langzeit) }
+            Einflug(eintraege.indexOf(tag)) { Logeintrag(tag, langzeit, modell) }
         }
     }
 }
@@ -319,26 +373,92 @@ private fun Reiter(text: String, aktiv: Boolean, modifier: Modifier = Modifier, 
     }
 }
 
-/** Ein Logbuch-Eintrag: Datum in *Aktion*, Titel in Fraunces, Text in *Gedämpft*. */
+/**
+ * Ein Logbuch-Eintrag: Datum in *Aktion*, Titel in Fraunces, Text in *Gedämpft*.
+ *
+ * **F-16 — Ändern und Löschen.** Beide Wege waren im Modell und in der Ablage fertig gebaut,
+ * aber hier hing kein Knopf daran: das Logbuch war nur lesbar. Es geht in jede Anfrage ein,
+ * eine falsche Zeile wirkte also dauerhaft weiter, ohne dass sie sich berichtigen liess.
+ */
 @Composable
-private fun Logeintrag(tag: LogDay, langzeit: Boolean) {
+private fun Logeintrag(tag: LogDay, langzeit: Boolean, modell: AppViewModel) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val text = (if (langzeit) tag.compactText else tag.detailText).orEmpty()
+    var bearbeitet by remember(tag.date, langzeit) { mutableStateOf<String?>(null) }
+    var fragtLoeschen by remember(tag.date) { mutableStateOf(false) }
+
     Listenkarte {
         Text(TAGESFORM.format(tag.date), style = schriften.stufe, color = farben.aktion)
-        Text(
-            text = text.lineSequence().first().take(90),
-            style = schriften.kartentitel,
-            color = farben.text,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Text(
-            text = text,
-            style = schriften.kartentext,
-            color = farben.gedaempft,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+
+        if (bearbeitet == null) {
+            Text(
+                text = text.lineSequence().first().take(90),
+                style = schriften.kartentitel,
+                color = farben.text,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Text(
+                text = text,
+                style = schriften.kartentext,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Textknopf("Ändern", { bearbeitet = text })
+                Box(Modifier.weight(1f))
+                if (fragtLoeschen) {
+                    // Ein Logbuchtag ist endgültig weg — deshalb wird einmal nachgefragt.
+                    Textknopf("Wirklich löschen", {
+                        fragtLoeschen = false
+                        modell.loescheLogtag(tag)
+                    }, farbe = farben.warnung)
+                    Textknopf("Behalten", { fragtLoeschen = false })
+                } else {
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .clickable { fragtLoeschen = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Symbole.Loeschen,
+                            contentDescription = "Diesen Tag löschen",
+                            tint = farben.blass,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        } else {
+            Eingabefeld(
+                text = bearbeitet.orEmpty(),
+                beiAenderung = { bearbeitet = it },
+                platzhalter = "Was an diesem Tag war.",
+                mindesthoehe = 160.dp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                KnopfUmrandet("Abbrechen", { bearbeitet = null }, Modifier.weight(1f))
+                KnopfBetont(
+                    text = "Sichern",
+                    beiKlick = {
+                        val neu = bearbeitet.orEmpty()
+                        if (neu.isNotBlank()) modell.aendereLogtag(tag, neu)
+                        bearbeitet = null
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

@@ -24,7 +24,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Kam die App über die Abend-Erinnerung, öffnet sie B-01 im Abend-Zustand (F-25).
-        if (intent?.getBooleanExtra(EXTRA_ABEND, false) == true) modell.zeigeAbend()
+        //
+        // Das Extra wird danach entfernt: sonst sprang die App bei jeder Neuerzeugung der
+        // Activity — Systemtheme-Wechsel, Drehen, Aufklappen des Foldables — zurück in den
+        // Abend, auch mitten am Tag.
+        if (intent?.getBooleanExtra(EXTRA_ABEND, false) == true) {
+            intent.removeExtra(EXTRA_ABEND)
+            modell.zeigeAbend()
+        }
 
         setContent {
             val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
@@ -45,6 +52,13 @@ class MainActivity : ComponentActivity() {
                 Navigation(modell)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Hat sich der Kalendertag geändert, während die App im Hintergrund lag, wird alles
+        // Tagesbezogene nachgezogen — sonst schriebe sie weiter in den Vortag.
+        modell.beimZurueckkehren()
     }
 
     override fun onStop() {

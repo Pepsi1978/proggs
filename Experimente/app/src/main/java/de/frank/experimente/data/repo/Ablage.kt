@@ -112,6 +112,18 @@ class Ablage(
         db.lage().schreibe(Lage(date = tag, text = text.trim(), createdAt = Instant.now()))
     }
 
+    // Drei schmale Fragen für den Zustand von B-01 — ohne dafür den vollen Kontext zu bauen.
+
+    /** Die Lage eines Tages, oder `null`. */
+    suspend fun lageAmTag(tag: LocalDate = LocalDate.now()): String? = db.lage().anTag(tag)?.text
+
+    /** Stehen für diesen Tag noch nicht verworfene Vorschläge bereit? */
+    suspend fun hatVorschlaege(tag: LocalDate = LocalDate.now()): Boolean =
+        db.vorschlaege().aktuelle(tag).isNotEmpty()
+
+    /** Wie viele Experimente laufen gerade? */
+    suspend fun anzahlLaufende(): Int = db.experimente().anzahlLaufende()
+
     // --- F-02 ---------------------------------------------------------------------------
 
     suspend fun verbessere(text: String, bisherige: List<String>): String =
@@ -581,7 +593,10 @@ class Ablage(
         val bisheriger = db.logbuch().tag(tag)
         val nachlauf = einstellungen.ausstehend.filter { it.startsWith("$LOG_ROHSTOFF:") }
             .map { it.removePrefix("$LOG_ROHSTOFF:") }
-        val stoff = (nachlauf + neuerStoff).joinToString("\n\n")
+        // Ein leerer Anstoß aus dem Nachlauf darf keinen leeren Merker erzeugen.
+        val teile = (nachlauf + neuerStoff).filter { it.isNotBlank() }
+        if (teile.isEmpty()) return
+        val stoff = teile.joinToString("\n\n")
         try {
             val text = aufgabenKi.logbuchFortschreiben(
                 tag = tag,
@@ -635,6 +650,76 @@ class Ablage(
     fun verdichtungFaellig(heute: LocalDate = LocalDate.now()): Boolean =
         einstellungen.verdichtetAm != heute.toString()
 
+    /**
+     * §6 — die ohne Netz liegengebliebenen Schritte nachholen.
+     *
+     * Der Merker wurde an fünf Stellen gesetzt, und überall stand im Kommentar „läuft beim
+     * nächsten Start nach, es geht nichts verloren". **Nachgeholt hat es nie jemand:** die
+     * Einträge sammelten sich in den Einstellungen an, ohne dass sie eine Funktion je wieder
+     * gelesen hätte. Ein eigenes Experiment ohne Netz blieb für immer ohne Aufgabenliste,
+     * und eine Erkenntnis, die einmal am Netz scheiterte, entstand nie.
+     *
+     * Der Lauf ist absichtlich anspruchslos: was jetzt nicht geht, bleibt stehen und kommt
+     * beim nächsten Mal wieder dran. Kein Eintrag wird verworfen, ohne erledigt zu sein.
+     */
+    suspend fun holeNach(heute: LocalDate = LocalDate.now()) {
+        for (eintrag in einstellungen.ausstehend.toList()) {
+            try {
+                when {
+                    eintrag.startsWith("$EIGENES:") -> {
+                        val text = eintrag.removePrefix("$EIGENES:")
+                        // Die Karte steht längst im Monitor — nachzutragen ist ihre
+                        // Aufgabenliste, und nur wenn sie noch fehlt.
+                        val geschaetzt = aufgabenKi.schaetzeEigenes(text, modellExperimente, effortExperimente)
+                        val karte = db.experimente().anstehende()
+                            .firstOrNull { it.description == text || it.title == text.lineSequence().first().take(80) }
+                        if (karte != null && db.aufgaben().alleZu(karte.id).isEmpty()) {
+                            val aufgaben = mutableListOf<Task>()
+                            geschaetzt.aufgabenJeTag.forEachIndexed { index, texte ->
+                                texte.forEachIndexed { nr, zeile ->
+                                    aufgaben += Task(experimentId = karte.id, dayIndex = index + 1, text = zeile, order = nr)
+                                }
+                            }
+                            if (aufgaben.isNotEmpty()) db.aufgaben().lege(aufgaben)
+                            db.experimente().aendere(
+                                karte.copy(
+                                    title = geschaetzt.titel,
+                                    description = geschaetzt.beschreibung,
+                                    days = geschaetzt.tage,
+                                    level = geschaetzt.stufe,
+                                ),
+                            )
+                        }
+                        einstellungen.erledigeAusstehend(eintrag)
+                    }
+
+                    eintrag.startsWith("$ERKENNTNIS:") -> {
+                        val auswertung = eintrag.removePrefix("$ERKENNTNIS:")
+                        // Erst den Merker lösen, dann schreiben: sonst legt ein erneuter
+                        // Fehlschlag denselben Eintrag ein zweites Mal an.
+                        einstellungen.erledigeAusstehend(eintrag)
+                        schreibeErkenntnisseFort(auswertung)
+                    }
+
+                    eintrag.startsWith("$VERDICHTUNG:") -> {
+                        // Die Verdichtung arbeitet die fälligen Tage ohnehin von vorn ab.
+                        einstellungen.erledigeAusstehend(eintrag)
+                        verdichteFaellige(heute)
+                    }
+
+                    eintrag.startsWith("$LOG_ROHSTOFF:") -> {
+                        // Der Rohstoff läuft beim nächsten Fortschreiben von selbst mit —
+                        // hier wird er angestoßen, damit er nicht auf einen Anlass wartet.
+                        schreibeLogbuchFort("", heute)
+                    }
+                }
+            } catch (fehler: Exception) {
+                // Bleibt stehen und kommt beim nächsten Mal wieder dran.
+                break
+            }
+        }
+    }
+
     /** F-16 — einen Logbuch-Eintrag ändern. Gilt für beide Reiter. */
     suspend fun aendereLogtag(tag: LogDay, neuerText: String) {
         db.logbuch().schreibe(
@@ -668,16 +753,25 @@ class Ablage(
 
     // --- F-18 / F-19 --------------------------------------------------------------------
 
-    /** F-18 — eigenes Experiment anlegen. Dauer und Stufe schätzt die KI beim Speichern mit. */
+    /**
+     * F-18 — eigenes Experiment anlegen. Dauer und Stufe schätzt die KI beim Speichern mit.
+     *
+     * **Ohne Netz wird trotzdem gespeichert**, genau wie beim Weg in den Monitor (F-35). Vorher
+     * warf diese Stelle den Fehler nach oben durch und legte gar nichts an: eine eingesprochene
+     * Idee war nach der Störungsmeldung nirgends abgelegt.
+     */
     suspend fun legeEigenesAn(text: String) {
-        val geschaetzt = aufgabenKi.schaetzeEigenes(text, modellExperimente, effortExperimente)
+        val sauber = text.trim()
+        val geschaetzt = runCatching {
+            aufgabenKi.schaetzeEigenes(sauber, modellExperimente, effortExperimente)
+        }.getOrNull()
         db.merkliste().lege(
             WatchlistItem(
-                title = geschaetzt.titel,
-                description = geschaetzt.beschreibung,
-                days = geschaetzt.tage,
-                level = geschaetzt.stufe,
-                tasksJson = alsJson(geschaetzt.aufgabenJeTag),
+                title = geschaetzt?.titel ?: sauber.lineSequence().first().take(80),
+                description = geschaetzt?.beschreibung ?: sauber,
+                days = geschaetzt?.tage ?: 1,
+                level = geschaetzt?.stufe ?: Stufe.MITTEL,
+                tasksJson = alsJson(geschaetzt?.aufgabenJeTag ?: emptyList()),
                 source = Quelle.EIGEN,
                 createdAt = Instant.now(),
             ),

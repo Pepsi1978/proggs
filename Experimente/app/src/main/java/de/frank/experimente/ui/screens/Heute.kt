@@ -81,6 +81,8 @@ fun Heute(modell: AppViewModel) {
 
     val zustand by modell.tagZustand.collectAsStateWithLifecycle()
     val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
+    // Über den Strom, damit die Zeile beim Tageswechsel mitzieht.
+    val heute by modell.heuteFluss.collectAsStateWithLifecycle()
     val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
     val vorschlaege by modell.vorschlaege.collectAsStateWithLifecycle()
     val laufende by modell.laufende.collectAsStateWithLifecycle()
@@ -113,7 +115,7 @@ fun Heute(modell: AppViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = modell.heute
+                    text = heute
                         .format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMAN))
                         .uppercase(),
                     style = schriften.daten,
