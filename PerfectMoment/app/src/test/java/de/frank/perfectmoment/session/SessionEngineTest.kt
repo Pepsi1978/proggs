@@ -746,25 +746,63 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `Wiedergabe aus dem Verlauf spielt den gesamten Bestand und endet ohne Nachschub`() = runTest {
+    fun `Wiedergabe aus dem Verlauf laedt erst 30 Fragen vor Bestandsende nach`() = runTest {
+        val refill = FakeRefill().apply {
+            responses += List(30) { "✨ Nachschub ${it + 271}" }
+        }
         val fixture = fixture(
             questions = List(270) { question(it + 1) },
             config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 0),
-            endWhenQuestionsExhausted = true,
+            refill = refill,
+            refillWhenStockIsLow = true,
         )
         fixture.startSpeaking()
 
-        advanceTimeBy(600_001)
-        runCurrent()
+        assertEquals(0, refill.requests)
 
-        repeat(270) {
+        repeat(239) {
+            fixture.tts.completeCurrent()
+            runCurrent()
+        }
+        assertEquals(0, refill.requests)
+
+        fixture.tts.completeCurrent()
+        runCurrent()
+        assertEquals(1, refill.requests)
+        assertEquals(300, fixture.engine.state.value.questions.size)
+
+        repeat(30) {
             fixture.tts.completeCurrent()
             runCurrent()
         }
 
-        assertEquals(List(270) { "Frage ${it + 1}" }, fixture.tts.spokenTexts)
-        assertEquals(270, fixture.engine.state.value.questions.size)
-        assertEquals(Phase.ENDED, fixture.engine.state.value.phase)
+        assertEquals(List(270) { "Frage ${it + 1}" }, fixture.tts.spokenTexts.take(270))
+        assertEquals("Nachschub 271", fixture.tts.spokenTexts.last())
+        assertEquals(2, refill.requests)
+        fixture.engine.close()
+    }
+
+    @Test
+    fun `gemischte Wiedergabe behaelt jede gespeicherte Frage genau einmal vor Nachschub`() = runTest {
+        val shuffled = List(270) { question(it + 1) }.shuffled()
+        val stored = List(270) { question(it + 1) }.reversed()
+        val refill = FakeRefill().apply { responses += List(30) { "✨ Neu ${it + 1}" } }
+        val fixture = fixture(
+            questions = shuffled,
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 0),
+            refill = refill,
+            refillWhenStockIsLow = true,
+        )
+        fixture.startSpeaking()
+
+        repeat(269) {
+            fixture.tts.completeCurrent()
+            runCurrent()
+        }
+
+        assertEquals(shuffled.map(Question::text), fixture.tts.spokenTexts)
+        assertEquals(stored.map(Question::text).toSet(), fixture.tts.spokenTexts.toSet())
+        assertEquals(270, fixture.tts.spokenTexts.toSet().size)
         fixture.engine.close()
     }
 
@@ -774,7 +812,7 @@ class SessionEngineTest {
         refill: FakeRefill? = null,
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
-        endWhenQuestionsExhausted: Boolean = false,
+        refillWhenStockIsLow: Boolean = false,
     ): Fixture {
         val tts = FakeTts()
         val engine = SessionEngine(
@@ -787,7 +825,7 @@ class SessionEngineTest {
             clock = SessionClock { testScheduler.currentTime },
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
-            endWhenQuestionsExhausted = endWhenQuestionsExhausted,
+            refillWhenStockIsLow = refillWhenStockIsLow,
         )
         return Fixture(engine, tts, this)
     }

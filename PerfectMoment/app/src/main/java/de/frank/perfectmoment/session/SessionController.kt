@@ -169,11 +169,7 @@ class SessionController(
         }
     }
 
-    /**
-     * Spielt ausschließlich den unveränderten Fragenbestand einer gespeicherten Sitzung ab.
-     * Nachschub und Perspektiv-Umschreibung bleiben bewusst aus, damit „Von vorne abspielen“
-     * den Verlauf weder ergänzt noch inhaltlich verändert.
-     */
+    /** Spielt den vollständigen Bestand erneut ab und lädt 30 Fragen vor dessen Ende nach. */
     suspend fun replaySession(sourceSessionId: Long, shuffle: Boolean) = operationMutex.withLock {
         releaseEngine()
         val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
@@ -183,14 +179,20 @@ class SessionController(
         val questions = source.questions
             .map { Question(id = it.id, emoji = it.emoji, text = it.text) }
             .let { if (shuffle) it.shuffled() else it }
+        val entranceQuestion = source.session.entranceQuestion
+        val requestBase = newQuestionRequest(
+            topic = source.session.topic,
+            introContext = source.session.introContext,
+            entranceQuestion = entranceQuestion,
+        )
         sessionRepository.markPlayed(sourceSessionId)
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
             questions = questions,
-            refillPort = null,
-            persistencePort = QuestionPersistencePort { },
+            refillPort = newRefillPort(requestBase, entranceQuestion),
+            persistencePort = newPersistencePort(sourceSessionId),
             voice = SessionVoice.of(source.session),
-            endWhenQuestionsExhausted = true,
+            refillWhenStockIsLow = true,
         )
         startForegroundSessionService()
     }
@@ -299,7 +301,7 @@ class SessionController(
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
         voice: SessionVoice? = null,
-        endWhenQuestionsExhausted: Boolean = false,
+        refillWhenStockIsLow: Boolean = false,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
@@ -312,7 +314,7 @@ class SessionController(
             dispatcher = Dispatchers.Main.immediate,
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
-            endWhenQuestionsExhausted = endWhenQuestionsExhausted,
+            refillWhenStockIsLow = refillWhenStockIsLow,
         )
         engine = created
         _runtime.value = runtime.copy(generating = initialGenerationInFlight)

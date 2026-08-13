@@ -28,7 +28,7 @@ class SessionEngine(
     private val clock: SessionClock = MonotonicSessionClock,
     private var initialGenerationInFlight: Boolean = false,
     private val checkpoint: SessionCheckpoint? = null,
-    private val endWhenQuestionsExhausted: Boolean = false,
+    private val refillWhenStockIsLow: Boolean = false,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
     private val refillStallMs: Long = REFILL_STALL_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
@@ -77,6 +77,7 @@ class SessionEngine(
     private var offlineNoticeInProgress = false
     private var offlineNoticeDelivered = false
     private val refillTriggers = mutableSetOf<Int>()
+    private var nextLowStockRefillIndex = (initialQuestions.size - BLOCK_SIZE).coerceAtLeast(0)
     private var refillPending = false
     private val networkFailures = mutableMapOf<NetworkOperation, Long>()
 
@@ -423,7 +424,12 @@ class SessionEngine(
      * bleibt für die Erzeugung ein ganzer Block Vorlauf, auch bei hoher Denkstufe.
      */
     private fun triggerRefillIfNeeded(index: Int) {
-        if (index % BLOCK_SIZE != 0) return
+        if (refillWhenStockIsLow) {
+            if (index < nextLowStockRefillIndex) return
+            nextLowStockRefillIndex += BLOCK_SIZE
+        } else if (index % BLOCK_SIZE != 0) {
+            return
+        }
         if (refillTriggers.add(index)) requestRefill()
     }
 
@@ -526,10 +532,6 @@ class SessionEngine(
     }
 
     private fun handleQuestionsExhausted() {
-        if (endWhenQuestionsExhausted) {
-            endSession()
-            return
-        }
         _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
         if (!initialGenerationInFlight) requestRefill()
     }
