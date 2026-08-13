@@ -24,15 +24,21 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
     private val _pausiert = MutableStateFlow(false)
     val pausiert: StateFlow<Boolean> = _pausiert
 
-    /** Welcher Weg gerade spricht — damit Anhalten und Fortsetzen den richtigen trifft. */
-    private var derzeit: String? = null
+    /**
+     * Welcher Weg gerade spricht — damit Anhalten und Fortsetzen den richtigen trifft.
+     *
+     * Als **Anbieter**, nicht als Zeichenkette: `lies()` löst eine unbekannte Kennung über
+     * den Katalog auf, `umschalten()` verglich sie danach aber wieder mit Literalen und fiel
+     * in seinen `else`-Zweig. Pause und Fortsetzen trafen dann Edge, während in Wirklichkeit
+     * Google sprach — der Druck blieb wirkungslos.
+     */
+    private var derzeit: TtsProvider? = null
 
     fun lies(text: String, beiFehler: (String) -> Unit) {
         if (text.isBlank()) return
         halteAn()
         val anbieter = einstellungen.ttsAnbieter
         val tempo = einstellungen.sprechtempo
-        derzeit = anbieter
 
         val start = { _laeuft.value = true; _pausiert.value = false }
         val fertig = { _laeuft.value = false; _pausiert.value = false; derzeit = null }
@@ -48,6 +54,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         // eine abweichende Kennung („qwen" statt „qwen_clone") landete damit **stumm** bei
         // der falschen Stimme, ohne jede Fehlermeldung. Jetzt ist jeder Anbieter benannt.
         val weg = TtsProvider.entries.firstOrNull { it.id == anbieter } ?: TtsCatalog.DEFAULT_PROVIDER
+        derzeit = weg
         // Sonde: welcher Weg wirklich spricht. Genau das war von aussen nicht zu sehen, als
         // „Meine Stimme" stumm bei Edge landete — man hoerte nur, dass etwas nicht stimmt.
         android.util.Log.i(
@@ -107,18 +114,19 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
     /** Erneuter Druck hält an; ein weiterer setzt fort (F-12 Schritt 3). */
     fun umschalten() {
         if (!_laeuft.value) return
+        val weg = derzeit ?: return
         if (_pausiert.value) {
-            val ging = when (derzeit) {
-                "google_cloud" -> google.resume()
-                "qwen_clone" -> qwen.resume()
-                else -> edge.resume()
+            val ging = when (weg) {
+                TtsProvider.GOOGLE_CLOUD -> google.resume()
+                TtsProvider.QWEN_CLONE -> qwen.resume()
+                TtsProvider.EDGE -> edge.resume()
             }
             if (ging) _pausiert.value = false
         } else {
-            val ging = when (derzeit) {
-                "google_cloud" -> google.pause()
-                "qwen_clone" -> qwen.pause()
-                else -> edge.pause()
+            val ging = when (weg) {
+                TtsProvider.GOOGLE_CLOUD -> google.pause()
+                TtsProvider.QWEN_CLONE -> qwen.pause()
+                TtsProvider.EDGE -> edge.pause()
             }
             if (ging) _pausiert.value = true
         }

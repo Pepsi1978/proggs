@@ -1,6 +1,7 @@
 package de.frank.experimente
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,15 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(zustand)
         enableEdgeToEdge()
 
-        // Kam die App über die Abend-Erinnerung, öffnet sie B-01 im Abend-Zustand (F-25).
-        //
-        // Das Extra wird danach entfernt: sonst sprang die App bei jeder Neuerzeugung der
-        // Activity — Systemtheme-Wechsel, Drehen, Aufklappen des Foldables — zurück in den
-        // Abend, auch mitten am Tag.
-        if (intent?.getBooleanExtra(EXTRA_ABEND, false) == true) {
-            intent.removeExtra(EXTRA_ABEND)
-            modell.zeigeAbend()
-        }
+        werteAbsichtAus(intent)
 
         setContent {
             val erscheinung by modell.erscheinung.collectAsStateWithLifecycle()
@@ -51,6 +44,31 @@ class MainActivity : ComponentActivity() {
             ExperimenteTheme(erscheinung = erscheinung, effektstufe = effektstufe) {
                 Navigation(modell)
             }
+        }
+    }
+
+    /**
+     * Die Erinnerung öffnet die App über `FLAG_ACTIVITY_CLEAR_TOP`. Läuft sie bereits, gibt
+     * es dabei **kein** `onCreate` — die Absicht kommt hier an. Ohne diese Stelle blieb der
+     * Druck auf die Abend-Erinnerung wirkungslos, sobald die App noch im Speicher lag.
+     */
+    override fun onNewIntent(absicht: Intent) {
+        super.onNewIntent(absicht)
+        setIntent(absicht)
+        werteAbsichtAus(absicht)
+    }
+
+    /**
+     * Kam die App über die Abend-Erinnerung, öffnet sie B-01 im Abend-Zustand (F-25).
+     *
+     * Das Extra wird danach entfernt: sonst sprang die App bei jeder Neuerzeugung der
+     * Activity — Systemtheme-Wechsel, Drehen, Aufklappen des Foldables — zurück in den
+     * Abend, auch mitten am Tag.
+     */
+    private fun werteAbsichtAus(absicht: Intent?) {
+        if (absicht?.getBooleanExtra(EXTRA_ABEND, false) == true) {
+            absicht.removeExtra(EXTRA_ABEND)
+            modell.zeigeAbend()
         }
     }
 

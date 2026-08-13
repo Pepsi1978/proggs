@@ -1393,11 +1393,24 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             return
         }
         mitMikrofon {
-            if (!aufnahme.start(viewModelScope)) {
+            // Die Stimmprobe wird in der höheren Rate aufgenommen, mit der die Referenz
+            // seinerzeit gut geklont hat. `CLONING_SAMPLE_RATE` stand dafür bereit, wurde
+            // aber nirgends übergeben — jede Stimmprobe lief in Diktier-Qualität zu Alibaba.
+            if (!aufnahme.start(viewModelScope, MicRecorder.CLONING_SAMPLE_RATE)) {
                 zeigeStoerung("Die Aufnahme ließ sich nicht starten.")
                 return@mitMikrofon
             }
             _nimmtAuf.value = true
+            // Auch hier soll die Sekundenanzeige laufen — sonst steht sie bei der Stimmprobe
+            // stumm auf dem Stand der letzten Aufnahme.
+            _aufnahmeSekunden.value = 0
+            uhr?.cancel()
+            uhr = viewModelScope.launch {
+                while (true) {
+                    delay(1_000)
+                    _aufnahmeSekunden.value += 1
+                }
+            }
             ruettleDoppelt()
         }
     }
