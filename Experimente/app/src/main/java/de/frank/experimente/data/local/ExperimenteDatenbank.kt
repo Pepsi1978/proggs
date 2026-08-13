@@ -44,7 +44,7 @@ class Wandler {
         Insight::class,
         Lage::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -126,6 +126,59 @@ abstract class ExperimenteDatenbank : RoomDatabase() {
             }
         }
 
+        /**
+         * 3 → 4: jede Aufnahme bleibt für sich stehen.
+         *
+         * Zwei reine Hinzufügungen, keine Zeile wird angefasst:
+         *
+         * - `auswertungen.dayIndex` — der wievielte Versuchstag eine Auswertung war. Für den
+         *   Bestand wird er aus `date` und dem Starttag des Experiments errechnet; das geht
+         *   nur hier, weil die Dauer später verändert werden kann. Ohne Starttag (oder ohne
+         *   Experiment) bleibt er leer, und die Oberfläche zeigt dann schlicht das Datum.
+         * - `gespraech.art` — trennt Gesprächsrunden von Auswertungsrunden. Der Bestand wird
+         *   nachgezogen: eine eigene Runde, die mit „Auswertung Tag" beginnt, ist eine
+         *   Auswertung, und die unmittelbar darauf folgende Antwort der KI zum selben
+         *   Experiment gehört dazu. Beides bleibt im Faden, nur die Anzeige unterscheidet.
+         */
+        val VON_3_NACH_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE auswertungen ADD COLUMN dayIndex INTEGER")
+                db.execSQL(
+                    """
+                    UPDATE auswertungen SET dayIndex = (
+                        SELECT MAX(
+                            1,
+                            CAST(julianday(auswertungen.date) - julianday(e.startedAt) AS INTEGER) + 1
+                        )
+                        FROM experimente e
+                        WHERE e.id = auswertungen.experimentId AND e.startedAt IS NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "ALTER TABLE gespraech ADD COLUMN art TEXT NOT NULL DEFAULT 'GESPRAECH'",
+                )
+                db.execSQL(
+                    """
+                    UPDATE gespraech SET art = 'AUSWERTUNG'
+                    WHERE role = 'ICH' AND text LIKE 'Auswertung Tag%'
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    UPDATE gespraech SET art = 'AUSWERTUNG'
+                    WHERE role = 'KI' AND EXISTS (
+                        SELECT 1 FROM gespraech eigen
+                        WHERE eigen.role = 'ICH'
+                          AND eigen.art = 'AUSWERTUNG'
+                          AND eigen.experimentId = gespraech.experimentId
+                          AND eigen.id = gespraech.id - 1
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
         @Volatile
         private var vorhanden: ExperimenteDatenbank? = null
 
@@ -135,7 +188,8 @@ abstract class ExperimenteDatenbank : RoomDatabase() {
                     ctx.applicationContext,
                     ExperimenteDatenbank::class.java,
                     "experimente.db",
-                ).addMigrations(VON_1_NACH_2, VON_2_NACH_3).build().also { vorhanden = it }
+                ).addMigrations(VON_1_NACH_2, VON_2_NACH_3, VON_3_NACH_4)
+                    .build().also { vorhanden = it }
             }
     }
 }

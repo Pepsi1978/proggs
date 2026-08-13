@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Embedded
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
@@ -193,8 +192,20 @@ data class AuswertungMitTitel(
     val experimentTitel: String?,
 )
 
+/** Wie viele Auswertungen zu einem Experiment vorliegen — für die Karte im Monitor. */
+data class AuswertungZahl(val experimentId: Long, val anzahl: Int)
+
 @Dao
 interface AuswertungenDao {
+
+    /**
+     * Die Anzahl je Experiment.
+     *
+     * Sie steht auf der Laufkarte, damit im Monitor sichtbar ist, **dass** es einen Verlauf
+     * gibt: „3 Aufnahmen" führt zu „Wie ist es gelaufen?", wo sie einzeln aufklappbar liegen.
+     */
+    @Query("SELECT experimentId, COUNT(*) AS anzahl FROM auswertungen GROUP BY experimentId")
+    fun beobachteZahlen(): Flow<List<AuswertungZahl>>
 
     /**
      * Alle Auswertungen, die jüngste zuerst — der vollständige Wortlaut, dauerhaft.
@@ -219,20 +230,38 @@ interface AuswertungenDao {
     fun beobachteZumExperiment(experimentId: Long): Flow<List<Evaluation>>
 
     /**
-     * Die Auswertung eines Tages.
+     * Die **jüngste** Auswertung eines Experiments — für den Abschluss (F-13).
      *
-     * `LIMIT 1` mit der jüngsten zuerst: der Primärschlüssel wird erzeugt, `REPLACE` konnte
-     * also nie greifen. Eine zweite Auswertung am selben Tag legte eine zweite Zeile an, und
-     * ohne `LIMIT` lieferte diese Abfrage danach die **älteste** — der KI-Text landete in der
-     * falschen Zeile und die neue blieb für immer ohne Einschätzung.
+     * Sie tritt an die Stelle der früheren Abfrage „die Auswertung dieses Tages". Die gab es
+     * nie: an einem Tag können mehrere entstehen, und wer sie suchte, um sie fortzuschreiben,
+     * hat die vorige überschrieben. Für den Abschluss zählt schlicht die letzte.
      */
-    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId AND date = :tag ORDER BY id DESC LIMIT 1")
-    suspend fun anTag(experimentId: Long, tag: LocalDate): Evaluation?
+    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId ORDER BY id DESC LIMIT 1")
+    suspend fun letzteZu(experimentId: Long): Evaluation?
 
     @Query("SELECT * FROM auswertungen WHERE date = :tag")
     fun beobachteTag(tag: LocalDate): Flow<List<Evaluation>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    /**
+     * Die Einschätzung nachtragen — **gezielt an ihrer Zeile**, nie über eine Suche.
+     *
+     * Vorher wurde die Zeile nach Experiment und Tag wiedergesucht; entstand in der Zwischen-
+     * zeit eine zweite Auswertung, landete der Text an der falschen. Die Kennung ist eindeutig.
+     */
+    @Query("UPDATE auswertungen SET aiText = :text WHERE id = :id")
+    suspend fun setzeKiText(id: Long, text: String)
+
+    @Query("UPDATE auswertungen SET isFinal = 1 WHERE id = :id")
+    suspend fun setzeAbschluss(id: Long)
+
+    /**
+     * Eine neue Auswertung anlegen.
+     *
+     * Schlichtes `@Insert`: der Schlüssel wird erzeugt, ein Konflikt kann nicht auftreten.
+     * `REPLACE` stand hier ohne Wirkung und hätte im Fall der Fälle die alte Zeile gelöscht
+     * statt sie zu behalten (Room-Almanach K1/K2).
+     */
+    @Insert
     suspend fun lege(auswertung: Evaluation): Long
 
     @Update
@@ -241,9 +270,21 @@ interface AuswertungenDao {
 
 @Dao
 interface GespraechDao {
-    @Query("SELECT * FROM gespraech WHERE experimentId = :experimentId ORDER BY createdAt ASC, id ASC")
+    /**
+     * Was B-02 anzeigt: **nur das Gespräch**. Die Auswertungen haben ihren eigenen Ort unter
+     * „Wie ist es gelaufen?" — als Blase im Gespräch standen sie doppelt und verdrängten das,
+     * wofür der Bildschirm da ist.
+     */
+    @Query(
+        """
+        SELECT * FROM gespraech
+        WHERE experimentId = :experimentId AND art = 'GESPRAECH'
+        ORDER BY createdAt ASC, id ASC
+        """,
+    )
     fun beobachte(experimentId: Long): Flow<List<ChatTurn>>
 
+    /** Was die KI bekommt: **der ganze Faden**, Gespräch und Auswertungen in ihrer Folge. */
     @Query("SELECT * FROM gespraech WHERE experimentId = :experimentId ORDER BY createdAt ASC, id ASC")
     suspend fun faden(experimentId: Long): List<ChatTurn>
 

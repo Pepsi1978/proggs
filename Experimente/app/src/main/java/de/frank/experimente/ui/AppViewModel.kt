@@ -416,6 +416,11 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      */
     val alleAuswertungen = ablage.beobachteAlleAuswertungen()
         .alsZustand(emptyList<de.frank.experimente.data.local.AuswertungMitTitel>())
+
+    /** Wie viele Auswertungen je Experiment vorliegen — die Laufkarte weist den Verlauf aus. */
+    val auswertungsZahlen: StateFlow<Map<Long, Int>> = ablage.beobachteAuswertungsZahlen()
+        .map { liste -> liste.associate { it.experimentId to it.anzahl } }
+        .alsZustand(emptyMap())
     val selbstbild = ablage.beobachteSelbstbild().alsZustand(null)
     @Suppress("OPT_IN_USAGE")
     val auswertungenHeute = _heute.flatMapLatest { ablage.beobachteAuswertungen(it) }
@@ -1053,6 +1058,26 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         }
         gehe(Ziel.AUSWERTUNG)
     }
+
+    /**
+     * Die Überschrift einer Auswertung im Verlauf: „Tag 2" — oder schlicht „Auswertung",
+     * wenn der Versuchstag nicht mehr feststeht (Bestand aus der Zeit vor `dayIndex`, bei
+     * dem das Experiment inzwischen gelöscht wurde).
+     */
+    fun auswertungsTagwort(auswertung: Evaluation): String =
+        auswertung.dayIndex?.let { "Tag $it" } ?: "Auswertung"
+
+    /**
+     * Der Zeitpunkt einer Auswertung: „13.08.2026, 19:41 Uhr".
+     *
+     * Ohne Uhrzeit steht nur der Kalendertag da — Auswertungen aus der Zeit vor dem
+     * Zeitstempel haben keine, und eine erfundene wäre schlimmer als keine.
+     */
+    fun auswertungsZeitpunkt(auswertung: Evaluation): String =
+        auswertung.createdAt
+            ?.atZone(java.time.ZoneId.systemDefault())
+            ?.let { ZEITFORM_AUSWERTUNG.format(it) }
+            ?: TAGESFORM_AUSWERTUNG.format(auswertung.date)
 
     /**
      * Die bisherigen Auswertungen des gerade geöffneten Experiments — B-03 zeigt sie unter
@@ -1757,3 +1782,11 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             .onFailure { android.util.Log.w("Nachlauf", "nicht vollständig: ${it.message}") }
     }
 }
+
+/** „13.08.2026, 19:41 Uhr" — an einem Tag können mehrere Auswertungen entstehen. */
+private val ZEITFORM_AUSWERTUNG: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", java.util.Locale.GERMAN)
+
+/** „13.08.2026" — für den Bestand ohne Uhrzeit. */
+private val TAGESFORM_AUSWERTUNG: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy", java.util.Locale.GERMAN)

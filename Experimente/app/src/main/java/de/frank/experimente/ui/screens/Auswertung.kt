@@ -33,11 +33,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.experimente.data.local.Evaluation
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.AuswertungZustand
 import de.frank.experimente.ui.KENNUNG_EINSCHAETZUNG
 import de.frank.experimente.ui.components.Bildschirmgeruest
 import de.frank.experimente.ui.components.Eingabefeld
+import de.frank.experimente.ui.components.Klappkarte
 import de.frank.experimente.ui.components.KnopfBetont
 import de.frank.experimente.ui.components.KnopfUmrandet
 import de.frank.experimente.ui.components.Meldungen
@@ -85,6 +87,14 @@ fun Auswertung(modell: AppViewModel) {
     // Nicht aus `laufende` gefischt: sobald die letzte Auswertung steht, ist das Experiment
     // abgeschlossen und fällt dort heraus — der Titel wurde dann zu „Experiment".
     val experiment by modell.ausgewertetes.collectAsStateWithLifecycle()
+
+    // Der Verlauf: die jüngste Aufnahme oben. Sie steht offen da — was gerade erzählt wurde,
+    // will man sehen, ohne erst zu suchen; die älteren bleiben zugeklappt.
+    val vergangene = remember(frueher) {
+        frueher.filter { it.ownText.isNotBlank() }.sortedByDescending { it.id }
+    }
+    val neueste = vergangene.firstOrNull()?.id
+    var offeneEintraege by remember(neueste) { mutableStateOf(setOfNotNull(neueste)) }
 
     var verlaengernOffen by remember { mutableStateOf(false) }
     if (verlaengernOffen) {
@@ -305,84 +315,126 @@ fun Auswertung(modell: AppViewModel) {
             }
         }
 
-        // --- Was bisher gesagt wurde -------------------------------------------------
+        // --- Der Verlauf ---------------------------------------------------------------
         //
-        // Der eingesprochene Text war nach „Weiter" nicht mehr auffindbar: er lag in der
-        // Ablage, aber kein Bildschirm zeigte ihn. Hier steht er, Tag für Tag.
-        val vergangene = frueher.filter { it.ownText.isNotBlank() }
+        // **Jede Aufnahme bleibt stehen.** Vorher überschrieb eine zweite Aufnahme am selben
+        // Kalendertag die erste — wer nachts um halb eins erzählte und am Abend darauf noch
+        // einmal, verlor den ganzen Vortag. Hier steht nun jede einzelne für sich, die
+        // jüngste oben, jede zum Aufklappen.
         if (vergangene.isNotEmpty()) {
-            item("kopf-bisher") {
+            item("kopf-verlauf") {
                 Text(
-                    text = "Bisher gesagt".uppercase(),
+                    text = "Verlauf · ${vergangene.size} ${if (vergangene.size == 1) "Aufnahme" else "Aufnahmen"}"
+                        .uppercase(),
                     style = schriften.zwischenueberschrift,
                     color = farben.gedaempft,
                     modifier = Modifier.padding(top = 24.dp),
                 )
             }
             items(vergangene, key = { "aus${it.id}" }) { eintrag ->
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(farben.flaeche)
-                        .border(1.dp, farben.rand, RoundedCornerShape(20.dp))
-                        .padding(18.dp),
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = TAGESFORM_AUSWERTUNG.format(eintrag.date),
-                            style = schriften.stufe,
-                            color = farben.aktion,
-                        )
-                        Vorleseknopf(
-                            spricht = liest == "frueher-${eintrag.id}",
-                            beiKlick = {
-                                modell.liesVor(
-                                    "frueher-${eintrag.id}",
-                                    buildString {
-                                        append(eintrag.ownText)
-                                        eintrag.aiText?.takeIf { it.isNotBlank() }?.let {
-                                            append("\n\nEinschätzung: ")
-                                            append(it)
-                                        }
-                                    },
-                                )
-                            },
-                            beschriftung = "Diese Auswertung vorlesen",
-                        )
-                    }
-                    Text(
-                        text = eintrag.ownText,
-                        style = schriften.fliesstext,
-                        color = farben.text,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    eintrag.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
-                        Text(
-                            text = "Einschätzung".uppercase(),
-                            style = schriften.zwischenueberschrift,
-                            color = farben.gedaempft,
-                            modifier = Modifier.padding(top = 14.dp),
-                        )
-                        Text(
-                            text = einschaetzung,
-                            style = schriften.kartentext,
-                            color = farben.gedaempft,
-                            modifier = Modifier.padding(top = 6.dp),
-                        )
-                    }
-                }
+                Auswertungsklappe(
+                    eintrag = eintrag,
+                    offen = eintrag.id in offeneEintraege,
+                    beiUmschalten = {
+                        offeneEintraege = if (eintrag.id in offeneEintraege) {
+                            offeneEintraege - eintrag.id
+                        } else {
+                            offeneEintraege + eintrag.id
+                        }
+                    },
+                    liest = liest,
+                    modell = modell,
+                )
             }
         }
     }
 }
 
-private val TAGESFORM_AUSWERTUNG: java.time.format.DateTimeFormatter =
-    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy", java.util.Locale.GERMAN)
+/**
+ * Eine einzelne Aufnahme im Verlauf: zugeklappt ihre Überschrift („Tag 2 · 13.08.2026,
+ * 19:41 Uhr"), aufgeklappt der volle Wortlaut und die Einschätzung.
+ */
+@Composable
+fun Auswertungsklappe(
+    eintrag: Evaluation,
+    offen: Boolean,
+    beiUmschalten: () -> Unit,
+    liest: String?,
+    modell: AppViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+
+    Klappkarte(
+        offen = offen,
+        beiUmschalten = beiUmschalten,
+        modifier = modifier,
+        beschriftung = "Auswertung vom ${modell.auswertungsZeitpunkt(eintrag)}",
+        kopf = {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = modell.auswertungsTagwort(eintrag),
+                    style = schriften.stufe,
+                    color = farben.aktion,
+                )
+                Text(
+                    text = modell.auswertungsZeitpunkt(eintrag),
+                    style = schriften.stufe,
+                    color = farben.blass,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            if (eintrag.isFinal) {
+                Text("Abschluss", style = schriften.stufe, color = farben.erledigt)
+            }
+            Vorleseknopf(
+                spricht = liest == "frueher-${eintrag.id}",
+                beiKlick = {
+                    modell.liesVor(
+                        "frueher-${eintrag.id}",
+                        buildString {
+                            append(eintrag.ownText)
+                            eintrag.aiText?.takeIf { it.isNotBlank() }?.let {
+                                append("\n\nEinschätzung: ")
+                                append(it)
+                            }
+                        },
+                    )
+                },
+                beschriftung = "Diese Auswertung vorlesen",
+                groesse = 40.dp,
+            )
+        },
+    ) {
+        Text(
+            text = "Was ich erzählt habe".uppercase(),
+            style = schriften.zwischenueberschrift,
+            color = farben.gedaempft,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+        Text(
+            text = eintrag.ownText,
+            style = schriften.fliesstext,
+            color = farben.text,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        eintrag.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
+            Text(
+                text = "Einschätzung".uppercase(),
+                style = schriften.zwischenueberschrift,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+            Text(
+                text = einschaetzung,
+                style = schriften.kartentext,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
 
 /**
  * „Weiterführen" — um wie viele Tage soll es weitergehen?

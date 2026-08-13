@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -894,5 +895,76 @@ fun Vorleseknopf(
             tint = if (spricht) farben.aktion else farben.gedaempft,
             modifier = Modifier.size(groesse * 0.5f),
         )
+    }
+}
+
+/**
+ * **Die Klappkarte** — eine Karte, die zugeklappt nur ihre Kopfzeile zeigt und auf Druck
+ * ihren Inhalt freigibt (wie die Laufkarte im Monitor, `F-40` · `M-86`).
+ *
+ * Sie trägt die Verläufe: ein Experiment mit allen seinen Auswertungen, eine Auswertung mit
+ * ihrem Wortlaut. Ohne sie stünde alles Erzählte auf einer endlosen Bahn untereinander, und
+ * je länger ein Experiment läuft, desto unauffindbarer würde der einzelne Tag.
+ *
+ * Der Pfeil dreht sich beim Aufklappen um 180 Grad — er zeigt zugeklappt nach unten
+ * („da ist mehr") und aufgeklappt nach oben.
+ */
+@Composable
+fun Klappkarte(
+    offen: Boolean,
+    beiUmschalten: () -> Unit,
+    kopf: @Composable RowScope.() -> Unit,
+    modifier: Modifier = Modifier,
+    beschriftung: String = "Aufklappen",
+    innen: Dp = 18.dp,
+    inhalt: @Composable ColumnScope.() -> Unit,
+) {
+    val farben = LocalFarben.current
+    val stufe = LocalEffektstufe.current
+    val quelle = merkeDruck()
+    val drehung by animateFloatAsState(
+        targetValue = if (offen) 180f else 0f,
+        animationSpec = tween(dauer(Bewegung.KLAPPEN, stufe), easing = Bewegung.ruhig),
+        label = "klapppfeil",
+    )
+
+    Column(
+        modifier
+            .fillMaxWidth()
+            .federdruck(quelle)
+            .clip(RoundedCornerShape(20.dp))
+            .background(farben.flaeche)
+            .border(1.dp, farben.rand, RoundedCornerShape(20.dp))
+            .lichtsaum(farben.text, 0.12f)
+            .padding(innen),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(interactionSource = quelle, indication = null, onClick = beiUmschalten)
+                .semantics { contentDescription = if (offen) "$beschriftung zuklappen" else beschriftung },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = {
+                kopf()
+                Icon(
+                    imageVector = Symbole.Aufklappen,
+                    contentDescription = null,
+                    tint = farben.gedaempft,
+                    modifier = Modifier.size(22.dp).rotate(drehung),
+                )
+            },
+        )
+        androidx.compose.animation.AnimatedVisibility(
+            visible = offen,
+            enter = androidx.compose.animation.expandVertically(
+                spring(Bewegung.KLAPP_DAEMPFUNG, Bewegung.KLAPP_STEIFE),
+            ) + androidx.compose.animation.fadeIn(tween(dauer(Bewegung.KLAPPEN, stufe))),
+            exit = androidx.compose.animation.shrinkVertically(
+                spring(Bewegung.KLAPP_DAEMPFUNG, Bewegung.KLAPP_STEIFE),
+            ),
+        ) {
+            Column(Modifier.fillMaxWidth(), content = inhalt)
+        }
     }
 }

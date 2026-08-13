@@ -33,6 +33,7 @@ import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.components.Bildschirmgeruest
 import de.frank.experimente.ui.components.Eingabefeld
 import de.frank.experimente.ui.components.Einflug
+import de.frank.experimente.ui.components.Klappkarte
 import de.frank.experimente.ui.components.KnopfBetont
 import de.frank.experimente.ui.components.KnopfUmrandet
 import de.frank.experimente.ui.components.LeererZustand
@@ -49,10 +50,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val TAGESFORM: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
-
-/** Datum **und** Uhrzeit — an einem Tag können mehrere Auswertungen entstehen. */
-private val ZEITFORM: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN)
 
 /**
  * **B-04 — Wünsche & Ziele** (F-20). Sie gehen als voller Text in jede Vorschlagsanfrage
@@ -362,6 +359,23 @@ fun Logbuch(modell: AppViewModel) {
 
     val eintraege = if (reiter == Logreiter.LANGZEIT) verdichtet else ausfuehrlich
 
+    // --- Der Reiter *Auswertungen*: ein Klappfach je Experiment ------------------------
+    //
+    // Untereinander gereiht wuchs die Liste mit jedem Tag, und die Zugehörigkeit ging
+    // verloren: bei drei Experimenten über zwei Wochen stehen vierzig Auswertungen bunt
+    // gemischt. Jedes Experiment ist jetzt ein eigenes Fach, in dem seine Aufnahmen der
+    // Reihe nach liegen — die jüngste oben.
+    val gruppen = remember(auswertungen) {
+        auswertungen
+            .groupBy { it.auswertung.experimentId }
+            .map { (id, liste) -> Auswertungsgruppe(id, liste.first().experimentTitel, liste.sortedByDescending { it.auswertung.id }) }
+            .sortedByDescending { gruppe -> gruppe.eintraege.first().auswertung.id }
+    }
+    var offeneGruppen by remember(gruppen.firstOrNull()?.experimentId) {
+        mutableStateOf(setOfNotNull(gruppen.firstOrNull()?.experimentId))
+    }
+    var offeneEintraege by remember { mutableStateOf(emptySet<Long>()) }
+
     Bildschirmgeruest(
         kopf = { Titel("Logbuch") },
         leiste = Ziel.LOGBUCH,
@@ -389,14 +403,34 @@ fun Logbuch(modell: AppViewModel) {
         },
     ) {
         if (reiter == Logreiter.AUSWERTUNGEN) {
-            if (auswertungen.isEmpty()) {
+            if (gruppen.isEmpty()) {
                 item("leer-auswertungen") {
                     LeererZustand("Noch keine Auswertung. Sie entsteht, wenn du erzählst, wie es gelaufen ist.")
                 }
             }
-            items(auswertungen, key = { "aus${it.auswertung.id}" }) { eintrag ->
-                Einflug(auswertungen.indexOf(eintrag)) {
-                    Auswertungseintrag(eintrag, modell, liest)
+            items(gruppen, key = { "grp${it.experimentId}" }) { gruppe ->
+                Einflug(gruppen.indexOf(gruppe)) {
+                    Experimentfach(
+                        gruppe = gruppe,
+                        offen = gruppe.experimentId in offeneGruppen,
+                        beiUmschalten = {
+                            offeneGruppen = if (gruppe.experimentId in offeneGruppen) {
+                                offeneGruppen - gruppe.experimentId
+                            } else {
+                                offeneGruppen + gruppe.experimentId
+                            }
+                        },
+                        offeneEintraege = offeneEintraege,
+                        beiEintrag = { id ->
+                            offeneEintraege = if (id in offeneEintraege) {
+                                offeneEintraege - id
+                            } else {
+                                offeneEintraege + id
+                            }
+                        },
+                        modell = modell,
+                        liest = liest,
+                    )
                 }
             }
             return@Bildschirmgeruest
@@ -413,105 +447,63 @@ fun Logbuch(modell: AppViewModel) {
     }
 }
 
+/** Alle Auswertungen eines Experiments, die jüngste zuerst. */
+private data class Auswertungsgruppe(
+    val experimentId: Long,
+    val titel: String?,
+    val eintraege: List<AuswertungMitTitel>,
+)
+
 /**
- * Ein Eintrag im Reiter *Auswertungen*: Zeitpunkt, Experiment, Franks Wortlaut und die
- * vollständige Einschätzung — ungekürzt. Aus diesem Bestand werden die Erkenntnisse gezogen.
+ * Ein Experiment im Reiter *Auswertungen* — ein Fach zum Aufklappen.
+ *
+ * Zugeklappt zeigt es Titel, Anzahl der Aufnahmen und die jüngste Zeit; aufgeklappt liegt
+ * jede Aufnahme darin, wiederum zum Aufklappen. So bleibt der ganze Verlauf eines
+ * Experiments an einem Ort, ohne dass eine lange Liste den Bildschirm zuschüttet.
  */
 @Composable
-private fun Auswertungseintrag(
-    eintrag: AuswertungMitTitel,
+private fun Experimentfach(
+    gruppe: Auswertungsgruppe,
+    offen: Boolean,
+    beiUmschalten: () -> Unit,
+    offeneEintraege: Set<Long>,
+    beiEintrag: (Long) -> Unit,
     modell: AppViewModel,
     liest: String?,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
-    val auswertung = eintrag.auswertung
-    val zeitpunkt = auswertung.createdAt
-        ?.atZone(java.time.ZoneId.systemDefault())
-        ?.let { ZEITFORM.format(it) }
-        // Auswertungen aus der Zeit vor dem Zeitstempel tragen nur ihren Kalendertag. Eine
-        // erfundene Uhrzeit wäre schlimmer als keine.
-        ?: TAGESFORM.format(auswertung.date)
+    val anzahl = gruppe.eintraege.size
 
-    Listenkarte {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(zeitpunkt, style = schriften.stufe, color = farben.aktion)
-            if (auswertung.isFinal) {
-                Text("Abschluss", style = schriften.stufe, color = farben.erledigt)
-            }
-        }
-        // Titel und der Lautsprecher für die ganze Auswertung — er liest beides vor, den
-        // eigenen Text und die Einschätzung, in der Reihenfolge, in der sie dastehen.
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = eintrag.experimentTitel ?: "Gelöschtes Experiment",
-                style = schriften.kartentitel,
-                color = farben.text,
-                modifier = Modifier.weight(1f),
-            )
-            Vorleseknopf(
-                spricht = liest == "logaus-${auswertung.id}",
-                beiKlick = {
-                    modell.liesVor(
-                        "logaus-${auswertung.id}",
-                        buildString {
-                            append(auswertung.ownText)
-                            auswertung.aiText?.takeIf { it.isNotBlank() }?.let {
-                                append("\n\nEinschätzung: ")
-                                append(it)
-                            }
-                        },
-                    )
-                },
-                beschriftung = "Ganze Auswertung vorlesen",
-            )
-        }
-
-        Text(
-            text = "Was ich erzählt habe".uppercase(),
-            style = schriften.zwischenueberschrift,
-            color = farben.gedaempft,
-            modifier = Modifier.padding(top = 14.dp),
-        )
-        Text(
-            text = auswertung.ownText,
-            style = schriften.kartentext,
-            color = farben.text,
-            modifier = Modifier.padding(top = 6.dp),
-        )
-
-        auswertung.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
-            Row(
-                Modifier.fillMaxWidth().padding(top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
+    Klappkarte(
+        offen = offen,
+        beiUmschalten = beiUmschalten,
+        beschriftung = "Auswertungen zu ${gruppe.titel ?: "diesem Experiment"}",
+        kopf = {
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Einschätzung".uppercase(),
-                    style = schriften.zwischenueberschrift,
-                    color = farben.gedaempft,
+                    text = gruppe.titel ?: "Gelöschtes Experiment",
+                    style = schriften.kartentitel,
+                    color = farben.text,
                 )
-                // Zweiter Knopf: nur die Einschätzung, ohne den eigenen Text davor.
-                Vorleseknopf(
-                    spricht = liest == "logki-${auswertung.id}",
-                    beiKlick = { modell.liesVor("logki-${auswertung.id}", einschaetzung) },
-                    beschriftung = "Nur die Einschätzung vorlesen",
+                Text(
+                    text = "$anzahl ${if (anzahl == 1) "Aufnahme" else "Aufnahmen"} · zuletzt " +
+                        modell.auswertungsZeitpunkt(gruppe.eintraege.first().auswertung),
+                    style = schriften.stufe,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 6.dp),
                 )
             }
-            // Ungekürzt: der Reiter ist der Ort, an dem der volle Wortlaut steht.
-            Text(
-                text = einschaetzung,
-                style = schriften.kartentext,
-                color = farben.gedaempft,
-                modifier = Modifier.padding(top = 6.dp),
+        },
+    ) {
+        gruppe.eintraege.forEach { eintrag ->
+            Auswertungsklappe(
+                eintrag = eintrag.auswertung,
+                offen = eintrag.auswertung.id in offeneEintraege,
+                beiUmschalten = { beiEintrag(eintrag.auswertung.id) },
+                liest = liest,
+                modell = modell,
+                modifier = Modifier.padding(top = 12.dp),
             )
         }
     }

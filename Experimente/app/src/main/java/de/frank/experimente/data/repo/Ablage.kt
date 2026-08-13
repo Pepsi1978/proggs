@@ -17,6 +17,7 @@ import de.frank.experimente.data.local.Lage
 import de.frank.experimente.data.local.LogDay
 import de.frank.experimente.data.local.Quelle
 import de.frank.experimente.data.local.Rolle
+import de.frank.experimente.data.local.Rundenart
 import de.frank.experimente.data.local.SelfImage
 import de.frank.experimente.data.local.Stufe
 import de.frank.experimente.data.local.Suggestion
@@ -92,6 +93,9 @@ class Ablage(
 
     /** B-03 — die bisherigen Auswertungen eines Experiments, Tag für Tag. */
     fun beobachteAuswertungenZu(experimentId: Long) = db.auswertungen().beobachteZumExperiment(experimentId)
+
+    /** B-10 — wie viele Auswertungen es je Experiment gibt (Anzeige auf der Laufkarte). */
+    fun beobachteAuswertungsZahlen() = db.auswertungen().beobachteZahlen()
 
     /** B-07, Reiter *Auswertungen* — alle, im vollen Wortlaut, die jüngste zuerst. */
     fun beobachteAlleAuswertungen() = db.auswertungen().beobachteAlleMitTitel()
@@ -484,29 +488,24 @@ class Ablage(
         val tagNr = tagNummer(experiment, tag)
         val sauber = eigenerText.trim()
 
-        // Die Auswertung des Tages wird FORTGESCHRIEBEN, nicht ein zweites Mal angelegt —
-        // sonst stünden nach einem zweiten Anlauf zwei Zeilen zum selben Tag in der Ablage.
-        val bisherige = db.auswertungen().anTag(experimentId, tag)
-        if (bisherige == null) {
-            db.auswertungen().lege(
-                Evaluation(
-                    experimentId = experimentId,
-                    date = tag,
-                    ownText = sauber,
-                    isFinal = letzter,
-                    createdAt = Instant.now(),
-                ),
-            )
-        } else {
-            db.auswertungen().aendere(
-                bisherige.copy(
-                    ownText = sauber,
-                    aiText = null,
-                    isFinal = letzter,
-                    createdAt = Instant.now(),
-                ),
-            )
-        }
+        // **Jede Aufnahme wird als eigene Zeile angelegt. Nichts wird fortgeschrieben.**
+        //
+        // Vorher suchte diese Stelle die Auswertung *dieses Kalendertages* und überschrieb
+        // sie: `ownText` ersetzt, `aiText` gelöscht. Wer an einem Tag zweimal erzählte —
+        // etwa nachts um halb eins und am folgenden Abend, für ihn zwei verschiedene Tage —
+        // verlor die erste Aufnahme restlos, samt Einschätzung. Ein Experiment ist ein
+        // fortlaufender Vorgang: jede Aufnahme ist ein Stand, und ein Stand wird nicht
+        // korrigiert, sondern ergänzt.
+        val auswertungId = db.auswertungen().lege(
+            Evaluation(
+                experimentId = experimentId,
+                date = tag,
+                ownText = sauber,
+                isFinal = letzter,
+                createdAt = Instant.now(),
+                dayIndex = tagNr,
+            ),
+        )
 
         // **Der eingesprochene Text gehört in den Gesprächsfaden — sofort, vor dem Netz.**
         //
@@ -521,6 +520,7 @@ class Ablage(
                 role = Rolle.ICH,
                 text = "Auswertung Tag $tagNr:\n$sauber",
                 createdAt = Instant.now(),
+                art = Rundenart.AUSWERTUNG,
             ),
         )
 
@@ -544,12 +544,12 @@ class Ablage(
             effort = effortExperimente,
         )
 
-        db.auswertungen().anTag(experimentId, tag)?.let {
-            db.auswertungen().aendere(it.copy(aiText = kiText))
-        }
+        // Die Einschätzung geht an GENAU die eben angelegte Zeile — nicht an „die Auswertung
+        // von heute", die inzwischen eine andere sein könnte.
+        db.auswertungen().setzeKiText(auswertungId, kiText)
 
-        // Die Einschätzung gehört in denselben Faden wie Franks Text — im Gespräch stehen
-        // beide danach untereinander und gehen in jede weitere Anfrage ein.
+        // Die Einschätzung gehört in denselben Faden wie Franks Text — sie geht damit in jede
+        // weitere Anfrage ein, auch wenn sie auf dem Gesprächsbildschirm nicht als Blase steht.
         if (kiText.isNotBlank()) {
             db.gespraech().lege(
                 ChatTurn(
@@ -557,6 +557,7 @@ class Ablage(
                     role = Rolle.KI,
                     text = kiText,
                     createdAt = Instant.now(),
+                    art = Rundenart.AUSWERTUNG,
                 ),
             )
         }
@@ -586,10 +587,11 @@ class Ablage(
         db.experimente().aendere(
             experiment.copy(state = ExperimentZustand.ABGESCHLOSSEN, closedAt = tag),
         )
-        val letzteAuswertung = db.auswertungen().anTag(experimentId, tag)
-        db.auswertungen().anTag(experimentId, tag)?.let {
-            db.auswertungen().aendere(it.copy(isFinal = true))
-        }
+        // Die jüngste Auswertung überhaupt — nicht „die von heute". Wer am Morgen erzählt und
+        // am Abend abschließt, hat heute keine zweite gesprochen; der Abschluss gehört
+        // trotzdem an die letzte, die es gibt.
+        val letzteAuswertung = db.auswertungen().letzteZu(experimentId)
+        letzteAuswertung?.let { db.auswertungen().setzeAbschluss(it.id) }
         val stoff = letzteAuswertung?.aiText?.takeIf { it.isNotBlank() }
             ?: letzteAuswertung?.ownText
         if (!stoff.isNullOrBlank()) schreibeErkenntnisseFort(stoff)
@@ -694,8 +696,17 @@ class Ablage(
      */
     suspend fun schreibeLogbuchFort(neuerStoff: String, tag: LocalDate = LocalDate.now()) {
         val bisheriger = db.logbuch().tag(tag)
-        val nachlauf = einstellungen.ausstehend.filter { it.startsWith("$LOG_ROHSTOFF:") }
-            .map { it.removePrefix("$LOG_ROHSTOFF:") }
+
+        // **Liegengebliebener Stoff kehrt in SEINEN Tag zurück, nicht in den heutigen.**
+        //
+        // Der Merker trug bisher nur den Text. Was am Vorabend am fehlenden Netz scheiterte,
+        // wurde deshalb am nächsten Tag in den Eintrag des NÄCHSTEN Tages geschrieben — der
+        // Vortag blieb für immer leer und sein Erlebtes stand unter falschem Datum. Jetzt
+        // trägt jeder Merker sein Datum: `<Tag>|<Text>`.
+        val merker = einstellungen.ausstehend.filter { it.startsWith("$LOG_ROHSTOFF:") }
+        val meine = merker.filter { tagVonMerker(it) == null || tagVonMerker(it) == tag }
+        val nachlauf = meine.map { stoffVonMerker(it) }
+
         // Ein leerer Anstoß aus dem Nachlauf darf keinen leeren Merker erzeugen.
         val teile = (nachlauf + neuerStoff).filter { it.isNotBlank() }
         if (teile.isEmpty()) return
@@ -703,20 +714,57 @@ class Ablage(
         try {
             val text = aufgabenKi.logbuchFortschreiben(
                 tag = tag,
-                bisheriger = bisheriger?.detailText,
+                // Ein bereits verdichteter Tag hat keinen ausführlichen Text mehr — dann geht
+                // der verdichtete als Grundlage ein, sonst ginge er beim Schreiben verloren.
+                bisheriger = bisheriger?.detailText ?: bisheriger?.compactText,
                 neuerStoff = stoff,
                 modell = modellLogbuch,
                 effort = effortLogbuch,
             )
+            val verdichtet = bisheriger != null &&
+                bisheriger.detailText == null && bisheriger.compactText != null
             db.logbuch().schreibe(
-                (bisheriger ?: LogDay(date = tag)).copy(detailText = text, compactText = null),
+                if (verdichtet) {
+                    // Ein verdichteter Tag bleibt verdichtet; er wird nicht heimlich wieder
+                    // ausführlich, sonst käme er ein zweites Mal in die Verdichtung.
+                    bisheriger.copy(compactText = text)
+                } else {
+                    (bisheriger ?: LogDay(date = tag)).copy(detailText = text, compactText = null)
+                },
             )
-            nachlauf.forEach { einstellungen.erledigeAusstehend("$LOG_ROHSTOFF:$it") }
+            meine.forEach { einstellungen.erledigeAusstehend(it) }
         } catch (fehler: Exception) {
-            // Der Rohstoff bleibt erhalten und läuft beim nächsten Mal mit.
-            einstellungen.merkeAusstehend("$LOG_ROHSTOFF:$neuerStoff")
+            // Der Rohstoff bleibt erhalten — mit seinem Tag — und läuft beim nächsten Mal mit.
+            if (neuerStoff.isNotBlank()) {
+                einstellungen.merkeAusstehend("$LOG_ROHSTOFF:$tag|$neuerStoff")
+            }
         }
     }
+
+    /**
+     * Der Tag eines Rohstoff-Merkers, oder `null` bei den alten Merkern ohne Datum.
+     *
+     * Alte Merker laufen weiterhin mit, egal an welchem Tag geschrieben wird — sonst blieben
+     * sie für immer liegen. Sie sind die einzige Stelle, an der ein Tag nicht sicher ist.
+     */
+    private fun tagVonMerker(merker: String): LocalDate? {
+        val rest = merker.removePrefix("$LOG_ROHSTOFF:")
+        val trenner = rest.indexOf('|')
+        if (trenner <= 0) return null
+        return runCatching { LocalDate.parse(rest.take(trenner)) }.getOrNull()
+    }
+
+    private fun stoffVonMerker(merker: String): String {
+        val rest = merker.removePrefix("$LOG_ROHSTOFF:")
+        return if (tagVonMerker(merker) != null) rest.substringAfter('|') else rest
+    }
+
+    /** Alle Tage, für die noch Logbuch-Stoff liegengeblieben ist (§6). */
+    private fun offeneRohstoffTage(heute: LocalDate): List<LocalDate> =
+        einstellungen.ausstehend.filter { it.startsWith("$LOG_ROHSTOFF:") }
+            .map { tagVonMerker(it) ?: heute }
+            .distinct()
+            .sorted()
 
     /**
      * F-15 — Tagesverdichtung, beim ersten Öffnen an einem neuen Kalendertag.
@@ -817,9 +865,12 @@ class Ablage(
                     }
 
                     eintrag.startsWith("$LOG_ROHSTOFF:") -> {
-                        // Der Rohstoff läuft beim nächsten Fortschreiben von selbst mit —
-                        // hier wird er angestoßen, damit er nicht auf einen Anlass wartet.
-                        schreibeLogbuchFort("", heute)
+                        // Jeder liegengebliebene Tag wird EINZELN angestoßen — in seinen
+                        // eigenen Eintrag. Ein Sammelaufruf mit `heute` hätte den Stoff des
+                        // Vortags in den heutigen Tag geschrieben.
+                        offeneRohstoffTage(heute).forEach { offenerTag ->
+                            schreibeLogbuchFort("", offenerTag)
+                        }
                     }
                 }
             } catch (fehler: Exception) {

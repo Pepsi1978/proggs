@@ -259,6 +259,8 @@ private fun Laufkarte(
     val heutige = modell.heutigeAufgaben(experiment)
     val fertig = heutige.count { it.doneAt != null }
     val anteil = if (heutige.isEmpty()) 0f else fertig.toFloat() / heutige.size
+    val zahlen by modell.auswertungsZahlen.collectAsStateWithLifecycle()
+    val auswertungsZahl = zahlen[experiment.id] ?: 0
 
     var dauerOffen by remember(experiment.id) { mutableStateOf(false) }
     if (dauerOffen) {
@@ -358,6 +360,19 @@ private fun Laufkarte(
                             modifier = Modifier.padding(bottom = 6.dp),
                         )
                     }
+                    // Der Verlauf ist im Monitor sichtbar, nicht nur ahnbar: die Zahl sagt,
+                    // dass jede Aufnahme erhalten ist, der Knopf darunter führt zu ihnen.
+                    val zahl = auswertungsZahl
+                    if (zahl > 0) {
+                        Text(
+                            text = "$zahl ${if (zahl == 1) "Auswertung" else "Auswertungen"} " +
+                                "bisher — jede einzeln unter „Wie ist es gelaufen?“",
+                            style = schriften.stufe,
+                            color = farben.blass,
+                            modifier = Modifier.padding(top = 14.dp),
+                        )
+                    }
+
                     Row(
                         Modifier.fillMaxWidth().padding(top = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),

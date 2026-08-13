@@ -42,6 +42,17 @@ enum class Herkunft(val etikett: String) {
 /** Wer im Gespräch spricht (F-09). */
 enum class Rolle { ICH, KI }
 
+/**
+ * Woher eine Runde im Faden stammt.
+ *
+ * Der Faden trägt zweierlei: das freie Gespräch (F-09) und die Auswertungen (F-10/F-11). Für
+ * die KI gehört beides zusammen — sie soll beim Antworten alles kennen. Auf dem Bildschirm
+ * gehört es das nicht: die Auswertung eines Tages ist kein Gesprächsbeitrag, sie hat ihren
+ * eigenen Ort unter „Wie ist es gelaufen?". Diese Markierung trennt die Anzeige, ohne den
+ * Faden zu zerreißen.
+ */
+enum class Rundenart { GESPRAECH, AUSWERTUNG }
+
 /** Woher ein Merklisten-Eintrag kommt (F-05, F-18, F-13). */
 enum class Quelle { GEMERKT, EIGEN, NICHT_UMGESETZT }
 
@@ -131,11 +142,20 @@ data class Task(
 )
 
 /**
- * Die Auswertung eines Tages zu einem Experiment (F-10, F-11).
+ * **Eine einzelne Auswertung** zu einem Experiment (F-10, F-11).
  *
  * `createdAt` kam dazu, weil der Logbuch-Reiter *Auswertungen* jede Auswertung mit Datum
  * **und Uhrzeit** ausweist: an einem Tag können mehrere entstehen, und ohne Uhrzeit stehen
  * sie ununterscheidbar untereinander.
+ *
+ * **Jede Aufnahme ist eine eigene Zeile — es gibt keine „Auswertung des Tages".** Vorher galt
+ * genau das: wer an einem Kalendertag ein zweites Mal erzählte, überschrieb seinen ersten
+ * Text und verlor die dazugehörige Einschätzung. Wer nach Mitternacht sprach und am selben
+ * Abend noch einmal, verlor damit den ganzen Vortag. Ein Experiment ist ein fortlaufender
+ * Vorgang; jede Aufnahme ist ein Zeugnis eines Standes und bleibt erhalten.
+ *
+ * `dayIndex` hält fest, der wievielte Versuchstag es war — er lässt sich später nicht mehr
+ * zuverlässig ausrechnen, weil die Dauer eines Experiments nachträglich änderbar ist.
  */
 @Entity(tableName = "auswertungen")
 data class Evaluation(
@@ -146,9 +166,15 @@ data class Evaluation(
     val aiText: String? = null,
     val isFinal: Boolean = false,
     val createdAt: Instant? = null,
+    val dayIndex: Int? = null,
 )
 
-/** Eine Runde im Gespräch (F-09). Der Faden gehört genau einem Experiment. */
+/**
+ * Eine Runde im Faden (F-09). Der Faden gehört genau einem Experiment.
+ *
+ * `art` trennt das freie Gespräch von den Auswertungsrunden: die KI bekommt beides, der
+ * Gesprächsbildschirm zeigt nur das Gespräch.
+ */
 @Entity(tableName = "gespraech")
 data class ChatTurn(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -156,6 +182,7 @@ data class ChatTurn(
     val role: Rolle,
     val text: String,
     val createdAt: Instant,
+    @ColumnInfo(defaultValue = "GESPRAECH") val art: Rundenart = Rundenart.GESPRAECH,
 )
 
 /** Ein Eintrag der Merkliste (F-05, F-18, F-19). */

@@ -181,6 +181,22 @@ fun Gespraech(modell: AppViewModel) {
             if (denkt != null) {
                 item("denkt") { Denkpunkte() }
             }
+            // **Auswertungen stehen hier nicht mehr als Blase.** Sie liefen früher mit,
+            // weil sie im selben Faden liegen — im Gespräch verdrängten sie aber genau das,
+            // wofür der Bildschirm da ist, und standen zweimal in der App. Die KI bekommt
+            // sie weiterhin; dieser Satz sagt, wo sie zu lesen sind.
+            if (nachrichten.isEmpty()) {
+                item("leer-gespraech") {
+                    Text(
+                        text = "Hier steht das Gespräch zu diesem Experiment.\n" +
+                            "Deine Auswertungen findest du unter „Wie ist es gelaufen?“ — " +
+                            "dort steht jeder Tag einzeln.",
+                        style = schriften.fliesstext,
+                        color = farben.gedaempft,
+                        modifier = Modifier.padding(vertical = 24.dp),
+                    )
+                }
+            }
         }
 
         // Die Eingabeleiste: Glasfläche, 96 dp hoch.
