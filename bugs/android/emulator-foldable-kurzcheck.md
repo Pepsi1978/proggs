@@ -27,6 +27,8 @@
 | 16 | `getevent` sieht scrcpy-/`input tap`-Klicks nicht | Eingespeiste Events umgehen `/dev/input` → Maus auf der PC-Seite abgreifen; `dumpsys input` `RecentQueue` hat **keine** Koordinaten |
 | 17 | Touch-Koordinaten absurd groß | Rohbereich ist 0–4095, nicht Pixel; Fold hat zwei Touchscreens → `roh / 4095 * kante`, `wm size` jedes Mal neu lesen |
 | 18 | Emulator startet riesig/außerhalb, ständiges Nachrücken | Er kennt **keine** Startgröße (`-scale` tot, `-window-size` nur Fuchsia, `emulator-user.ini` wird überschrieben) → einmal per `SetWindowPos` setzen, sobald das Fenster da ist |
+| 18b | Fenster startet oben aus dem Bild (y negativ), Titelleiste nicht greifbar | Kette umgangen — `emulator.exe -avd` direkt statt `Start-Fold8.ps1`; Position war falsch, Größe war es nicht → `emulator-start-guard`-Hook blockt den nackten Start |
+| 18c | Fenster vertikal mittig, horizontal daneben | Nach **Soll**maß zentriert; der Emulator zieht das Fenster verzögert auf sein Seitenverhältnis → warten bis die Größe stabil ist, dann nach **Ist**maß nur die Position setzen |
 | 19 | "App viel zu groß" trotz korrekter Rechnung | Innendisplay (7,6″, 11,63 cm) mit Cover-Display (5,5″, 7,47 cm) verglichen → Emulator dem echten Gerät folgen lassen |
 | 20 | Maßstab falsch auf zweitem Bildschirm | `PrimaryScreen` statt `Screen::FromHandle` → Monitor unter dem Fenster ermitteln |
 | 21 | "App abgestürzt", läuft aber (Bluetooth-Zeile) | `logcat -b crash` sammelt **alle** Prozesse → Absturz nur zählen, wenn eine Zeile den eigenen Paketnamen nennt; auf den Prozess pollen statt fester 5 s |

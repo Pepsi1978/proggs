@@ -302,6 +302,55 @@ werden beim Start akzeptiert, die Spiegelung steht sofort maßstabsgetreu.
 
 ---
 
+## 18b. Kette umgangen — Fenster startet außerhalb des Bildschirms
+
+**Symptom:** Der Emulator startet halb außerhalb des Bildschirms; oben ragt er hinaus, die
+Titelleiste ist mit der Maus nicht mehr greifbar. Gemessen am 13.08.2026: x=1019, **y=−648**
+bei einem Bildschirm von 2880 × 1800.
+
+**Ursache — nicht der Emulator, sondern der Startweg:** `emulator.exe -avd Fold8` wurde direkt
+aufgerufen statt `Start-Fold8.ps1`. Damit lief weder die Größenkorrektur (#18) noch die
+Zentrierung noch der Wächter (#22); der Emulator wählt seine Position dann selbst, und
+`emulator-user.ini` (`window.x/y = 100`) wird beim Kaltstart ignoriert. Aufschlussreich: Das
+Fenster war mit 666 × 1083 klein genug für den Bildschirm — **nur die Position war falsch**.
+Die Absicherung existierte also längst, sie war nur umgehbar.
+
+**Fix (Poka-Yoke Stufe 2 + Regel):**
+- Hook `emulator-start-guard.{py,ps1,sh}` (PreToolUse, Matcher `Bash|PowerShell`) blockiert jeden
+  Aufruf, der `emulator[.exe]` mit `-avd` (oder der Kurzform `@<avd>`) kombiniert, per
+  `permissionDecision=deny` und nennt den richtigen Befehl. `Start-Fold8.ps1` ist ausgenommen.
+  Logik in einer gemeinsamen `.py` (kein `jq`, siehe `claude-tooling/claude-hooks.md` §16.2), die
+  beiden Wrapper können nicht auseinanderlaufen. Notaus: leere Datei
+  `emulator-start-guard-disable.flag` im TEMP.
+- Regel `~/.claude/rules/android-emulator-werkzeugkette.md`.
+
+**Falle beim Guard-Bau:** Der erste Regex verlangte eine Wortgrenze vor `emulator` und ließ damit
+ausgerechnet die PowerShell-Schreibweise `& $emulator -avd Fold8` durch — `$` (und `&`, `(`, `=`)
+gehören mit in die Zeichenklasse. Beim Testen aufgefallen, nicht erst im Betrieb.
+
+---
+
+## 18c. Zentrierung sitzt daneben — nach Sollmaß statt Istmaß gerechnet
+
+**Symptom:** Das Fenster steht vertikal mittig, horizontal aber sichtbar daneben (gemessen: Rand
+links 871, rechts 1051 — 90 px aus der Mitte).
+
+**Ursache:** `Set-Originalgroesse.ps1` zentrierte nach der **angeforderten** Fenstergröße. Der
+Emulator zieht das Fenster danach auf sein eigenes Seitenverhältnis zusammen (angefordert 1138
+breit, tatsächlich 958) — und zwar **verzögert**, also auch nach der einen Nachkorrektur noch.
+Die Höhe stimmte zufällig (1544 vs. 1545), deshalb fiel nur die Breite auf. Rechnerisch
+nachweisbar: 871 = (2880 − 1138)/2, also mit dem Sollwert gerechnet.
+
+**Fix:** Zum Schluss warten, bis zwei `GetWindowRect`-Messungen dieselbe Größe liefern
+(max 10 × 150 ms), dann nach dem **Istmaß** zentrieren — dabei nur die Position setzen
+(`SWP_NOSIZE`), nie die Größe, sonst wäre die eben gesetzte 1:1-Größe wieder hin. Zusätzlich
+fängt `Mittig()` jetzt allseitig ein (auch rechts und unten, vorher nur oben/links) und deckelt
+die Zielgröße auf die Arbeitsfläche minus 24 px Mindestrand; passt die Originalgröße nicht auf
+den Monitor, wird proportional verkleinert und das **gemeldet**, statt das Fenster stumm über
+den Rand laufen zu lassen. Gemessen nachher: links 961, rechts 961.
+
+---
+
 ## 19. Falsches Display verglichen: Innendisplay gegen Cover-Display
 
 **Symptom:** "Die App ist viel zu groß, als wäre sie für ein Riesengerät gedacht" — obwohl die

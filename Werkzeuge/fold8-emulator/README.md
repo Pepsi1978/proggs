@@ -5,6 +5,12 @@ plus Live-Spiegelung des echten Geräts.
 
 Hintergrund und Fallen: `best-practices/android/emulator-foldable.md` · `bugs/android/emulator-foldable.md`
 
+> **Pflichtweg:** Der Emulator wird **immer** über `Start-Fold8.ps1` gestartet, nie über
+> `emulator.exe` direkt. Der Emulator kennt weder Startgröße noch Startposition — nackt gestartet
+> landet das Fenster außerhalb des Bildschirms (gemessen: 648 px oberhalb des oberen Rands).
+> Der Hook `emulator-start-guard` blockiert den direkten Aufruf; Regel:
+> `~/.claude/rules/android-emulator-werkzeugkette.md`, Almanach #18b.
+
 ## Voraussetzungen (einmalig, bereits eingerichtet)
 
 - System-Image `system-images;android-37.0;google_apis_playstore;x86_64` (Android 17 / API 37)
