@@ -6,12 +6,26 @@
     "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh",
     "refreshInterval": 10
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
     "**/.claude/rules/**"
   ],
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/emulator-start-guard.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
 }
