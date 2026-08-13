@@ -57,6 +57,7 @@ import de.frank.experimente.ui.theme.Farben
 import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
+import de.frank.experimente.ui.theme.Symbole
 import de.frank.experimente.ui.theme.aktionsVerlauf
 import de.frank.experimente.ui.theme.dauer
 import de.frank.experimente.ui.theme.glas
@@ -848,6 +849,50 @@ private fun Sprung(wert: Int, aktiv: Boolean, modifier: Modifier = Modifier, bei
             style = LocalSchriften.current.stufe,
             color = if (aktiv) farben.aktion else farben.gedaempft,
             maxLines = 1,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Vorlesen
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Der Lautsprecher, der einen Text vorlesen lässt (F-12).
+ *
+ * Vorlesen gab es bisher an genau **einer** Stelle: für die frische Einschätzung auf B-03.
+ * Gesprächsrunden, Erkenntnisse, Logbuch-Tage und frühere Auswertungen waren nur lesbar,
+ * obwohl die App auf Sprache gebaut ist.
+ *
+ * Er trägt die Form der übrigen Rundknöpfe: 44 dp Tippfläche, Symbol 22 dp, Federdruck. Der
+ * gerade sprechende Knopf färbt sich in *Aktion* und legt die Fläche *Aktion gedeckt*
+ * darunter — die Farbe trägt die Information nicht allein, die Fläche zeigt es mit.
+ */
+@Composable
+fun Vorleseknopf(
+    spricht: Boolean,
+    beiKlick: () -> Unit,
+    modifier: Modifier = Modifier,
+    beschriftung: String = "Vorlesen",
+    groesse: Dp = 44.dp,
+) {
+    val farben = LocalFarben.current
+    val quelle = merkeDruck()
+    Box(
+        modifier
+            .size(groesse)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(if (spricht) farben.aktionGedeckt else Color.Transparent)
+            .federdruck(quelle)
+            .clickable(interactionSource = quelle, indication = null, onClick = beiKlick)
+            .semantics { contentDescription = if (spricht) "$beschriftung anhalten" else beschriftung },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (spricht) Symbole.Stopp else Symbole.Vorlesen,
+            contentDescription = null,
+            tint = if (spricht) farben.aktion else farben.gedaempft,
+            modifier = Modifier.size(groesse * 0.5f),
         )
     }
 }

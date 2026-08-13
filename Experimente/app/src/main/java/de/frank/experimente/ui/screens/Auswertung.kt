@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.AuswertungZustand
+import de.frank.experimente.ui.KENNUNG_EINSCHAETZUNG
 import de.frank.experimente.ui.components.Bildschirmgeruest
 import de.frank.experimente.ui.components.Eingabefeld
 import de.frank.experimente.ui.components.KnopfBetont
@@ -44,6 +45,7 @@ import de.frank.experimente.ui.components.Rundknopf
 import de.frank.experimente.ui.components.Sprechknopf
 import de.frank.experimente.ui.components.Tagewahl
 import de.frank.experimente.ui.components.Textknopf
+import de.frank.experimente.ui.components.Vorleseknopf
 import de.frank.experimente.ui.components.Titel
 import de.frank.experimente.ui.components.Wartekarte
 import de.frank.experimente.ui.theme.Bewegung
@@ -76,6 +78,7 @@ fun Auswertung(modell: AppViewModel) {
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val frueher by modell.bisherigeAuswertungen.collectAsStateWithLifecycle()
+    val liest by modell.liestKennung.collectAsStateWithLifecycle()
 
     val letzterTag by modell.letzterTagErreicht.collectAsStateWithLifecycle()
 
@@ -205,20 +208,11 @@ fun Auswertung(modell: AppViewModel) {
                             style = schriften.zwischenueberschrift,
                             color = farben.aktion,
                         )
-                        Box(
-                            Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .clickable { modell.lies(abschnitte.joinToString("")) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Symbole.Vorlesen,
-                                contentDescription = "Auswertung vorlesen",
-                                tint = if (liestVor) farben.aktion else farben.text,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
+                        Vorleseknopf(
+                            spricht = liestVor && liest == KENNUNG_EINSCHAETZUNG,
+                            beiKlick = { modell.lies(abschnitte.joinToString("")) },
+                            beschriftung = "Einschätzung vorlesen",
+                        )
                     }
 
                     // E-21 — der gerade gesprochene Abschnitt wird hervorgehoben.
@@ -334,16 +328,38 @@ fun Auswertung(modell: AppViewModel) {
                         .border(1.dp, farben.rand, RoundedCornerShape(20.dp))
                         .padding(18.dp),
                 ) {
-                    Text(
-                        text = TAGESFORM_AUSWERTUNG.format(eintrag.date),
-                        style = schriften.stufe,
-                        color = farben.aktion,
-                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = TAGESFORM_AUSWERTUNG.format(eintrag.date),
+                            style = schriften.stufe,
+                            color = farben.aktion,
+                        )
+                        Vorleseknopf(
+                            spricht = liest == "frueher-${eintrag.id}",
+                            beiKlick = {
+                                modell.liesVor(
+                                    "frueher-${eintrag.id}",
+                                    buildString {
+                                        append(eintrag.ownText)
+                                        eintrag.aiText?.takeIf { it.isNotBlank() }?.let {
+                                            append("\n\nEinschätzung: ")
+                                            append(it)
+                                        }
+                                    },
+                                )
+                            },
+                            beschriftung = "Diese Auswertung vorlesen",
+                        )
+                    }
                     Text(
                         text = eintrag.ownText,
                         style = schriften.fliesstext,
                         color = farben.text,
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                     eintrag.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
                         Text(

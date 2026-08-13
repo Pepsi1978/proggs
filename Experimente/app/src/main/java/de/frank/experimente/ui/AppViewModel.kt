@@ -57,6 +57,14 @@ enum class MonitorZustand { LAEDT, LEER, NUR_ANSTEHEND, LAEUFT, VOLL }
 /** Der Weg durch B-03 (Funktions-Spec F-10/F-11). */
 enum class AuswertungZustand { AUFNAHME, TEXT, WARTET, ANTWORT }
 
+/**
+ * Die Kennung des Vorlese-Knopfs an der frischen Einschätzung auf B-03.
+ *
+ * Auf Dateiebene, weil sie auch der Bildschirm braucht: alle Lautsprecher teilen sich einen
+ * Zustand, und jeder muss wissen, ob **er** gemeint ist.
+ */
+internal const val KENNUNG_EINSCHAETZUNG = "einschaetzung"
+
 /** Welcher Bildschirm gerade zu sehen ist. */
 enum class Ziel(val kennung: String, val beschriftung: String) {
     MONITOR("B-10", "Monitor"),
@@ -1260,6 +1268,51 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     val liestVor: StateFlow<Boolean> get() = app.vorleser.laeuft
 
+    // --- F-12: Vorlesen an jeder Stelle -----------------------------------------------------
+    //
+    // Vorlesen gab es nur auf B-03 für die frische Einschätzung. Alles andere — die Runden
+    // im Gespräch, die früheren Auswertungen, die Erkenntnisse, die Logbuch-Tage — war nur
+    // lesbar, obwohl die App auf Sprache gebaut ist und der Vorleser längst bereitstand.
+
+    /**
+     * Welcher Text gerade gesprochen wird, als Kennung (etwa `"erkenntnis-7"`).
+     *
+     * Nötig, weil auf einem Bildschirm viele Lautsprecher stehen: ohne sie wüsste keiner,
+     * ob **er** gerade spricht, und alle sähen gleich aus.
+     */
+    private val _liestKennung = MutableStateFlow<String?>(null)
+    val liestKennung: StateFlow<String?> = _liestKennung.asStateFlow()
+
+    /**
+     * Einen beliebigen Text vorlesen — der Knopf an Gesprächsrunden, Erkenntnissen,
+     * Logbuch-Tagen und Auswertungen.
+     *
+     * Ein zweiter Druck auf denselben Knopf hält an; ein Druck auf einen anderen wechselt
+     * zum neuen Text.
+     */
+    fun liesVor(kennung: String, text: String) {
+        if (text.isBlank()) {
+            melde("Hier ist nichts zum Vorlesen.")
+            return
+        }
+        if (_liestKennung.value == kennung && app.vorleser.laeuft.value) {
+            app.vorleser.halteAn()
+            _liestKennung.value = null
+            return
+        }
+        _liestKennung.value = kennung
+        app.vorleser.lies(text) { grund ->
+            // Der Rückfall auf die Gerätestimme meldet sich ebenfalls hierüber. Er ist kein
+            // Fehler, sondern ein Hinweis — deshalb der leise Weg, nicht der Störungsbalken.
+            if (grund.contains("Ich lese mit der Stimme des Geräts vor")) {
+                melde(grund)
+            } else {
+                _liestKennung.value = null
+                zeigeStoerung(grund)
+            }
+        }
+    }
+
     /**
      * F-12 — vorlesen. **E-21:** der gerade gesprochene Abschnitt wird hervorgehoben; ohne
      * Zeitmarken des Anbieters wird gleichmäßig über die Dauer geschätzt.
@@ -1268,9 +1321,12 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         if (app.vorleser.laeuft.value) {
             app.vorleser.umschalten()
             _mitlese.value = -1
+            _liestKennung.value = null
             return
         }
-        app.vorleser.lies(text) { _stoerung.value = it }
+        // Über denselben Weg wie alle anderen Lautsprecher — sonst wüsste dieser Knopf
+        // nichts davon, wenn nebenan etwas anderes vorgelesen wird.
+        liesVor(KENNUNG_EINSCHAETZUNG, text)
         val abschnitte = _einschaetzung.value
         if (abschnitte.isEmpty()) return
         viewModelScope.launch {
@@ -1682,6 +1738,16 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             // §6 — was ohne Netz liegengeblieben ist, wird jetzt nachgeholt. Still im
             // Hintergrund: es ist Aufräumarbeit, kein Vorgang, auf den Frank warten müsste.
             holeNach()
+        }
+
+        // Endet eine Wiedergabe, hört der zugehörige Lautsprecher auf zu leuchten.
+        // **Ein** Beobachter für alle — nicht einer je Druck, der nie wieder endet.
+        viewModelScope.launch {
+            var lief = false
+            app.vorleser.laeuft.collect { laeuft ->
+                if (lief && !laeuft) _liestKennung.value = null
+                lief = laeuft
+            }
         }
     }
 

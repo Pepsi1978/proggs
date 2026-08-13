@@ -4,6 +4,12 @@ enum class TtsProvider(val id: String, val label: String) {
     EDGE("edge_tts", "Microsoft Edge"),
     GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD"),
     QWEN_CLONE("qwen_clone", "Meine Stimme"),
+
+    /**
+     * Androids eingebaute Sprachausgabe — ohne Netz, ohne Schlüssel, immer da.
+     * Zugleich die Rückfallebene, wenn einer der anderen Wege nicht durchkommt.
+     */
+    GERAET("geraet", "Stimme des Geräts (ohne Netz)"),
 }
 
 enum class VoiceGender {

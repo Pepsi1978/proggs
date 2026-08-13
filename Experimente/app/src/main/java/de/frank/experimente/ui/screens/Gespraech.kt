@@ -50,6 +50,7 @@ import de.frank.experimente.data.local.Rolle
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.components.Kopfzeile
 import de.frank.experimente.ui.components.Rundknopf
+import de.frank.experimente.ui.components.Vorleseknopf
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
@@ -79,6 +80,7 @@ fun Gespraech(modell: AppViewModel) {
     val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
     val laufende by modell.laufende.collectAsStateWithLifecycle()
     val gespraechZu by modell.gespraechZu.collectAsStateWithLifecycle()
+    val liest by modell.liestKennung.collectAsStateWithLifecycle()
 
     val experiment = laufende.firstOrNull { it.id == gespraechZu }
     var entwurf by remember { mutableStateOf("") }
@@ -130,10 +132,22 @@ fun Gespraech(modell: AppViewModel) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = if (eigen) Arrangement.End else Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // Der Lautsprecher steht **aussen** neben der Blase: bei eigenen Runden
+                    // links davon, bei Antworten rechts — so bleibt er immer am Rand und
+                    // verschiebt die Blase nicht aus ihrer Flucht.
+                    if (eigen) {
+                        Vorleseknopf(
+                            spricht = liest == "runde-${runde.id}",
+                            beiKlick = { modell.liesVor("runde-${runde.id}", runde.text) },
+                            beschriftung = "Diese Nachricht vorlesen",
+                            groesse = 40.dp,
+                        )
+                    }
                     Box(
                         Modifier
-                            .widthIn(max = 322.dp)
+                            .widthIn(max = 300.dp)
                             .clip(
                                 if (eigen) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
                                 else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
@@ -152,6 +166,14 @@ fun Gespraech(modell: AppViewModel) {
                             text = runde.text,
                             style = schriften.fliesstext.copy(lineHeight = schriften.fliesstext.lineHeight),
                             color = farben.text,
+                        )
+                    }
+                    if (!eigen) {
+                        Vorleseknopf(
+                            spricht = liest == "runde-${runde.id}",
+                            beiKlick = { modell.liesVor("runde-${runde.id}", runde.text) },
+                            beschriftung = "Antwort vorlesen",
+                            groesse = 40.dp,
                         )
                     }
                 }

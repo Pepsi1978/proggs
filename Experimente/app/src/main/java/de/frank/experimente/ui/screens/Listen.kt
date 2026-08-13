@@ -40,6 +40,7 @@ import de.frank.experimente.ui.components.Meldungen
 import de.frank.experimente.ui.components.SchwebenderPlusknopf
 import de.frank.experimente.ui.components.Textknopf
 import de.frank.experimente.ui.components.Titel
+import de.frank.experimente.ui.components.Vorleseknopf
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.Symbole
@@ -269,6 +270,7 @@ fun Erkenntnisse(modell: AppViewModel) {
     val erkenntnisse by modell.erkenntnisse.collectAsStateWithLifecycle()
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
+    val liest by modell.liestKennung.collectAsStateWithLifecycle()
 
     Bildschirmgeruest(
         kopf = { Titel("Erkenntnisse") },
@@ -286,18 +288,33 @@ fun Erkenntnisse(modell: AppViewModel) {
         items(erkenntnisse, key = { it.id }) { erkenntnis ->
             Einflug(erkenntnisse.indexOf(erkenntnis)) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 18.dp)) {
-                    Text(
-                        text = TAGESFORM.format(
-                            erkenntnis.updatedAt.atZone(java.time.ZoneId.systemDefault()),
-                        ),
-                        style = schriften.stufe,
-                        color = farben.blass,
-                    )
+                    // Datum links, Lautsprecher rechts — die Zeile trägt beides, ohne dass
+                    // der Fließtext seine Ruhe verliert.
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = TAGESFORM.format(
+                                erkenntnis.updatedAt.atZone(java.time.ZoneId.systemDefault()),
+                            ),
+                            style = schriften.stufe,
+                            color = farben.blass,
+                        )
+                        Vorleseknopf(
+                            spricht = liest == "erkenntnis-${erkenntnis.id}",
+                            beiKlick = {
+                                modell.liesVor("erkenntnis-${erkenntnis.id}", erkenntnis.text)
+                            },
+                            beschriftung = "Erkenntnis vorlesen",
+                        )
+                    }
                     Text(
                         text = erkenntnis.text,
                         style = schriften.fliesstext,
                         color = farben.text,
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                     Box(
                         Modifier
@@ -340,6 +357,7 @@ fun Logbuch(modell: AppViewModel) {
     val auswertungen by modell.alleAuswertungen.collectAsStateWithLifecycle()
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
+    val liest by modell.liestKennung.collectAsStateWithLifecycle()
     var reiter by remember { mutableStateOf(Logreiter.AKTUELL) }
 
     val eintraege = if (reiter == Logreiter.LANGZEIT) verdichtet else ausfuehrlich
@@ -377,7 +395,9 @@ fun Logbuch(modell: AppViewModel) {
                 }
             }
             items(auswertungen, key = { "aus${it.auswertung.id}" }) { eintrag ->
-                Einflug(auswertungen.indexOf(eintrag)) { Auswertungseintrag(eintrag) }
+                Einflug(auswertungen.indexOf(eintrag)) {
+                    Auswertungseintrag(eintrag, modell, liest)
+                }
             }
             return@Bildschirmgeruest
         }
@@ -387,7 +407,7 @@ fun Logbuch(modell: AppViewModel) {
         }
         items(eintraege, key = { it.date.toString() }) { tag ->
             Einflug(eintraege.indexOf(tag)) {
-                Logeintrag(tag, reiter == Logreiter.LANGZEIT, modell)
+                Logeintrag(tag, reiter == Logreiter.LANGZEIT, modell, liest)
             }
         }
     }
@@ -398,7 +418,11 @@ fun Logbuch(modell: AppViewModel) {
  * vollständige Einschätzung — ungekürzt. Aus diesem Bestand werden die Erkenntnisse gezogen.
  */
 @Composable
-private fun Auswertungseintrag(eintrag: AuswertungMitTitel) {
+private fun Auswertungseintrag(
+    eintrag: AuswertungMitTitel,
+    modell: AppViewModel,
+    liest: String?,
+) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val auswertung = eintrag.auswertung
@@ -420,12 +444,36 @@ private fun Auswertungseintrag(eintrag: AuswertungMitTitel) {
                 Text("Abschluss", style = schriften.stufe, color = farben.erledigt)
             }
         }
-        Text(
-            text = eintrag.experimentTitel ?: "Gelöschtes Experiment",
-            style = schriften.kartentitel,
-            color = farben.text,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+        // Titel und der Lautsprecher für die ganze Auswertung — er liest beides vor, den
+        // eigenen Text und die Einschätzung, in der Reihenfolge, in der sie dastehen.
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = eintrag.experimentTitel ?: "Gelöschtes Experiment",
+                style = schriften.kartentitel,
+                color = farben.text,
+                modifier = Modifier.weight(1f),
+            )
+            Vorleseknopf(
+                spricht = liest == "logaus-${auswertung.id}",
+                beiKlick = {
+                    modell.liesVor(
+                        "logaus-${auswertung.id}",
+                        buildString {
+                            append(auswertung.ownText)
+                            auswertung.aiText?.takeIf { it.isNotBlank() }?.let {
+                                append("\n\nEinschätzung: ")
+                                append(it)
+                            }
+                        },
+                    )
+                },
+                beschriftung = "Ganze Auswertung vorlesen",
+            )
+        }
 
         Text(
             text = "Was ich erzählt habe".uppercase(),
@@ -441,12 +489,23 @@ private fun Auswertungseintrag(eintrag: AuswertungMitTitel) {
         )
 
         auswertung.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
-            Text(
-                text = "Einschätzung".uppercase(),
-                style = schriften.zwischenueberschrift,
-                color = farben.gedaempft,
-                modifier = Modifier.padding(top = 16.dp),
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Einschätzung".uppercase(),
+                    style = schriften.zwischenueberschrift,
+                    color = farben.gedaempft,
+                )
+                // Zweiter Knopf: nur die Einschätzung, ohne den eigenen Text davor.
+                Vorleseknopf(
+                    spricht = liest == "logki-${auswertung.id}",
+                    beiKlick = { modell.liesVor("logki-${auswertung.id}", einschaetzung) },
+                    beschriftung = "Nur die Einschätzung vorlesen",
+                )
+            }
             // Ungekürzt: der Reiter ist der Ort, an dem der volle Wortlaut steht.
             Text(
                 text = einschaetzung,
@@ -487,15 +546,27 @@ private fun Reiter(text: String, aktiv: Boolean, modifier: Modifier = Modifier, 
  * eine falsche Zeile wirkte also dauerhaft weiter, ohne dass sie sich berichtigen liess.
  */
 @Composable
-private fun Logeintrag(tag: LogDay, langzeit: Boolean, modell: AppViewModel) {
+private fun Logeintrag(tag: LogDay, langzeit: Boolean, modell: AppViewModel, liest: String?) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val text = (if (langzeit) tag.compactText else tag.detailText).orEmpty()
     var bearbeitet by remember(tag.date, langzeit) { mutableStateOf<String?>(null) }
     var fragtLoeschen by remember(tag.date) { mutableStateOf(false) }
+    val kennung = "logtag-${tag.date}-${if (langzeit) "lang" else "kurz"}"
 
     Listenkarte {
-        Text(TAGESFORM.format(tag.date), style = schriften.stufe, color = farben.aktion)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(TAGESFORM.format(tag.date), style = schriften.stufe, color = farben.aktion)
+            Vorleseknopf(
+                spricht = liest == kennung,
+                beiKlick = { modell.liesVor(kennung, text) },
+                beschriftung = "Diesen Tag vorlesen",
+            )
+        }
 
         if (bearbeitet == null) {
             Text(

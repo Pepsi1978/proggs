@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import de.frank.experimente.tts.TtsProvider
 
 /**
  * Die Einstellungen aus `01-FUNKTIONS-SPEC.md` §3 — verschlüsselt auf dem Gerät
@@ -54,7 +55,12 @@ class Einstellungen(ctx: Context) {
      * einmalig geradegezogen, statt sie als „unbekannt" zu behandeln.
      */
     var ttsAnbieter: String
-        get() = when (val gespeichert = p.getString(TTS_PROVIDER, "google_cloud")!!) {
+        // Der Standard war `google_cloud` — ein Weg, der ohne hinterlegten Schlüssel
+        // **niemals** sprechen kann. Wer die App frisch benutzte, bekam auf jeden Druck auf
+        // einen Lautsprecher eine Fehlermeldung. Voreingestellt ist deshalb Edge: es braucht
+        // nur Netz, keinen Schlüssel. Kommt auch das nicht durch, übernimmt die Stimme des
+        // Geräts (siehe `Vorleser`).
+        get() = when (val gespeichert = p.getString(TTS_PROVIDER, TtsProvider.EDGE.id)!!) {
             "qwen" -> "qwen_clone"
             "edge" -> "edge_tts"
             else -> gespeichert

@@ -9,6 +9,12 @@
         normale Berechtigung, sie wird nicht zur Laufzeit erfragt.
     -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+        F-12 (Vorlesen): der LoudnessEnhancer hebt die Sprachausgabe um 12 dB an. Die rohen
+        Sprachdateien der Anbieter liegen deutlich unter dem Pegel, den ein Telefonlautsprecher
+        braucht — ohne diese Erlaubnis bleibt der Effekt aus und das Vorlesen ist kaum hörbar.
+    -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />

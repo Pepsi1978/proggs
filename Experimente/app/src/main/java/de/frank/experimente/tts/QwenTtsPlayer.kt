@@ -183,12 +183,14 @@ class QwenTtsPlayer(context: Context) {
         try {
             synchronized(lock) {
                 if (requestGeneration != generation.get()) {
+                    SpeechLoudness.release(player)
                     player.release()
                     file.delete()
                     return
                 }
                 mediaPlayer = player
                 activeJob = null
+                player.setAudioAttributes(SpeechLoudness.attributes)
                 player.setDataSource(file.absolutePath)
                 player.setOnCompletionListener {
                     finishComplete(requestGeneration, callbacks)
@@ -202,6 +204,7 @@ class QwenTtsPlayer(context: Context) {
                     true
                 }
                 player.prepare()
+                SpeechLoudness.boost(player)
                 player.start()
             }
             signalStart(requestGeneration, callbacks)
@@ -298,6 +301,7 @@ class QwenTtsPlayer(context: Context) {
         } catch (_: Exception) {
             // MediaPlayer can already be completed or in an error state.
         }
+        SpeechLoudness.release(player)
         player?.release()
         file?.delete()
     }
