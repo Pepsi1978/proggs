@@ -19,12 +19,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,6 +124,10 @@ fun Einstellungen(modell: AppViewModel) {
     var stimmeEdge by remember { mutableStateOf(einstellungen.stimmeEdge) }
     var morgensAn by remember { mutableStateOf(einstellungen.erinnerungMorgensAn) }
     var abendsAn by remember { mutableStateOf(einstellungen.erinnerungAbendsAn) }
+    // Auch die Uhrzeiten liegen im Zustand — sonst zeigte die Zeile nach dem Einstellen
+    // weiter die alte Zeit, obwohl die neue längst gespeichert war.
+    var morgensZeit by remember { mutableStateOf(einstellungen.erinnerungMorgensZeit) }
+    var abendsZeit by remember { mutableStateOf(einstellungen.erinnerungAbendsZeit) }
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
@@ -292,24 +302,45 @@ fun Einstellungen(modell: AppViewModel) {
         item("erinnerung-morgens") {
             Erinnerung(
                 name = "Erinnerung morgens",
-                zeit = einstellungen.erinnerungMorgensZeit,
+                zeit = morgensZeit,
                 an = morgensAn,
-            ) {
-                morgensAn = it
-                einstellungen.erinnerungMorgensAn = it
-                modell.erinnerungenNeuSetzen()
-            }
+                beiZeit = { neu ->
+                    morgensZeit = neu
+                    einstellungen.erinnerungMorgensZeit = neu
+                    modell.erinnerungenNeuSetzen()
+                    modell.melde("Morgens um $neu Uhr.")
+                },
+                beiWechsel = {
+                    morgensAn = it
+                    einstellungen.erinnerungMorgensAn = it
+                    modell.erinnerungenNeuSetzen()
+                },
+            )
         }
         item("erinnerung-abends") {
             Erinnerung(
                 name = "Erinnerung abends",
-                zeit = einstellungen.erinnerungAbendsZeit,
+                zeit = abendsZeit,
                 an = abendsAn,
-            ) {
-                abendsAn = it
-                einstellungen.erinnerungAbendsAn = it
-                modell.erinnerungenNeuSetzen()
-            }
+                beiZeit = { neu ->
+                    abendsZeit = neu
+                    einstellungen.erinnerungAbendsZeit = neu
+                    modell.erinnerungenNeuSetzen()
+                    modell.melde("Abends um $neu Uhr.")
+                },
+                beiWechsel = {
+                    abendsAn = it
+                    einstellungen.erinnerungAbendsAn = it
+                    modell.erinnerungenNeuSetzen()
+                },
+            )
+        }
+        item("erinnerung-erklaerung") {
+            Text(
+                text = "Tipp auf den Wecker, um die Uhrzeit zu ändern.",
+                style = schriften.fliesstextKlein,
+                color = farben.gedaempft,
+            )
         }
 
         // --- Effekte (F-41, NEU) ----------------------------------------------------
@@ -872,11 +903,18 @@ private fun Schluessel(name: String, zweck: String, wert: String, beiAenderung: 
  * (48 × 28 dp, Knopf 22 dp, `left` wandert in 200 ms mit der Hauskurve — M-27).
  */
 @Composable
-private fun Erinnerung(name: String, zeit: String, an: Boolean, beiWechsel: (Boolean) -> Unit) {
+private fun Erinnerung(
+    name: String,
+    zeit: String,
+    an: Boolean,
+    beiZeit: (String) -> Unit,
+    beiWechsel: (Boolean) -> Unit,
+) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val stufe = LocalEffektstufe.current
     var jetzt by remember(an) { mutableStateOf(an) }
+    var uhrOffen by remember { mutableStateOf(false) }
 
     val knopfLinks by animateDpAsState(
         targetValue = if (jetzt) 23.dp else 3.dp,
@@ -895,9 +933,30 @@ private fun Erinnerung(name: String, zeit: String, an: Boolean, beiWechsel: (Boo
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(name, style = schriften.fliesstext, color = farben.text)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(zeit, style = schriften.zahl.copy(fontWeight = androidx.compose.ui.text.font.FontWeight(400)), color = farben.gedaempft)
+        Text(name, style = schriften.fliesstext, color = farben.text, modifier = Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Wecker und Uhrzeit sind **eine** Tippfläche: das Symbol allein wäre mit 24 dp
+            // zu klein, und wer die Zeit ändern will, tippt ohnehin auf die Zahl.
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(percent = 50))
+                    .clickable { uhrOffen = true }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Symbole.Wecker,
+                    contentDescription = "Uhrzeit für „$name“ einstellen, jetzt $zeit Uhr",
+                    tint = farben.aktion,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = zeit,
+                    style = schriften.zahl.copy(fontWeight = androidx.compose.ui.text.font.FontWeight(400)),
+                    color = farben.text,
+                )
+            }
             Box(
                 Modifier
                     .size(width = 48.dp, height = 28.dp)
@@ -915,4 +974,83 @@ private fun Erinnerung(name: String, zeit: String, an: Boolean, beiWechsel: (Boo
             }
         }
     }
+
+    if (uhrOffen) {
+        Uhrzeitwahl(
+            titel = name,
+            zeit = zeit,
+            beiSchliessen = { uhrOffen = false },
+            beiWahl = { neu ->
+                uhrOffen = false
+                beiZeit(neu)
+                // Eine eingestellte Zeit ohne eingeschaltete Erinnerung wäre wirkungslos —
+                // wer die Uhr stellt, will geweckt werden.
+                if (!jetzt) {
+                    jetzt = true
+                    beiWechsel(true)
+                }
+            },
+        )
+    }
+}
+
+/**
+ * F-25 — die Uhr, an der die Weckzeit eingestellt wird.
+ *
+ * 24-Stunden-Anzeige, weil die Zeiten als `HH:mm` gespeichert werden und Frank sie in der
+ * Zeile genauso wiederfindet.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Uhrzeitwahl(
+    titel: String,
+    zeit: String,
+    beiWahl: (String) -> Unit,
+    beiSchliessen: () -> Unit,
+) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    val start = remember(zeit) {
+        runCatching { java.time.LocalTime.parse(zeit) }.getOrElse { java.time.LocalTime.of(8, 0) }
+    }
+    val zustand = rememberTimePickerState(
+        initialHour = start.hour,
+        initialMinute = start.minute,
+        is24Hour = true,
+    )
+
+    AlertDialog(
+        onDismissRequest = beiSchliessen,
+        containerColor = farben.flaeche,
+        titleContentColor = farben.text,
+        textContentColor = farben.text,
+        shape = RoundedCornerShape(20.dp),
+        title = { Text(titel, style = schriften.kartentitel, color = farben.text) },
+        text = {
+            TimePicker(
+                state = zustand,
+                colors = TimePickerDefaults.colors(
+                    clockDialColor = farben.erhoeht,
+                    selectorColor = farben.aktion,
+                    containerColor = farben.flaeche,
+                    clockDialSelectedContentColor = farben.aufAktion,
+                    clockDialUnselectedContentColor = farben.text,
+                    timeSelectorSelectedContainerColor = farben.aktionGedeckt,
+                    timeSelectorUnselectedContainerColor = farben.erhoeht,
+                    timeSelectorSelectedContentColor = farben.aktion,
+                    timeSelectorUnselectedContentColor = farben.text,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { beiWahl("%02d:%02d".format(zustand.hour, zustand.minute)) }) {
+                Text("Übernehmen", style = schriften.knopf, color = farben.aktion)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = beiSchliessen) {
+                Text("Abbrechen", style = schriften.knopf, color = farben.gedaempft)
+            }
+        },
+    )
 }

@@ -185,6 +185,25 @@ object Symbole {
         )
     }
 
+    // --- Erinnerungen ---------------------------------------------------------------------
+
+    /**
+     * Der Wecker vor der Uhrzeit einer Erinnerung (F-25) — ein Druck öffnet die Uhr, an der
+     * die Zeit eingestellt wird. Als Strich gezeichnet wie die Automatik, damit die Bügel
+     * nicht zu Flächen verklumpen.
+     */
+    val Wecker: ImageVector by lazy {
+        gestrichelt(
+            "Wecker", 1.8f,
+            // Das Zifferblatt und die Zeiger.
+            "M12 5.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15Z",
+            "M12 9v4l2.75 1.75",
+            // Die beiden Bügel und die Füße.
+            "M4.5 5.25 7.25 3", "M19.5 5.25 16.75 3",
+            "M6.75 19.25 5.25 21", "M17.25 19.25 18.75 21",
+        )
+    }
+
     /** Das durchgestrichene Auge — den Schlüssel wieder verbergen. */
     val AugeAus: ImageVector by lazy {
         gefuellt(
