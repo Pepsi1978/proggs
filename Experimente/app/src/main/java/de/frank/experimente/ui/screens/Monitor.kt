@@ -115,10 +115,10 @@ fun Monitor(modell: AppViewModel) {
         kopf = {
             Titel("Monitor")
             Box(Modifier.weight(1f))
-            // F-26: der Schnellschalter kündigt den nächsten Modus an.
+            // F-26: der Schnellschalter zeigt, was gerade gilt.
             Rundknopf(
-                symbol = symbolFuerErscheinung(erscheinung.naechste()),
-                beschriftung = beschriftungFuer(erscheinung.naechste()),
+                symbol = symbolFuerErscheinung(erscheinung),
+                beschriftung = beschriftungFuer(erscheinung),
                 beiKlick = modell::naechsteErscheinung,
             )
             Rundknopf(
@@ -586,15 +586,33 @@ private fun Aufgabenzeile(aufgabe: Task, modell: AppViewModel) {
     }
 }
 
-/** F-26 Schritt 2: das Symbol kündigt den **nächsten** Modus eindeutig an. */
-internal fun symbolFuerErscheinung(naechste: Erscheinung) = when (naechste) {
+/**
+ * F-26 — das Symbol zeigt den **gerade aktiven** Modus.
+ *
+ * Vorher kündigte es den nächsten an. Das las sich von außen wie eine Falschanzeige: bei
+ * hellem Bildschirm stand dort der Mond, und wer die Sonne sah, saß im Dunkeln. Ein
+ * Anzeigeelement soll den Zustand berichten, nicht das, was ein Druck aus ihm machen würde —
+ * das gehört in die Beschriftung, die die Sprachausgabe vorliest.
+ *
+ * Sonne = Hell · Mond = Dunkel · das „A" mit den Strahlen = der Systemdarstellung folgend.
+ */
+internal fun symbolFuerErscheinung(aktiv: Erscheinung) = when (aktiv) {
     Erscheinung.HELL -> Leistensymbole.Sonne
     Erscheinung.DUNKEL -> Leistensymbole.Mond
     Erscheinung.SYSTEM -> Leistensymbole.Automatik
 }
 
-internal fun beschriftungFuer(naechste: Erscheinung) = when (naechste) {
-    Erscheinung.HELL -> "Hellmodus einschalten"
-    Erscheinung.DUNKEL -> "Dunkelmodus einschalten"
-    Erscheinung.SYSTEM -> "Der Systemdarstellung folgen"
+/** Was gerade gilt — und wohin der nächste Druck führt. Beides in einem Satz. */
+internal fun beschriftungFuer(aktiv: Erscheinung): String {
+    val jetzt = when (aktiv) {
+        Erscheinung.HELL -> "Hellmodus"
+        Erscheinung.DUNKEL -> "Dunkelmodus"
+        Erscheinung.SYSTEM -> "Automatik, folgt der Systemdarstellung"
+    }
+    val gleich = when (aktiv.naechste()) {
+        Erscheinung.HELL -> "Hellmodus"
+        Erscheinung.DUNKEL -> "Dunkelmodus"
+        Erscheinung.SYSTEM -> "Automatik"
+    }
+    return "$jetzt aktiv — weiter zu $gleich"
 }

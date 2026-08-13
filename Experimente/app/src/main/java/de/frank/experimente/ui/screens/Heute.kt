@@ -94,8 +94,8 @@ fun Heute(modell: AppViewModel) {
             Titel("Heute")
             Box(Modifier.weight(1f))
             Rundknopf(
-                symbol = symbolFuerErscheinung(erscheinung.naechste()),
-                beschriftung = beschriftungFuer(erscheinung.naechste()),
+                symbol = symbolFuerErscheinung(erscheinung),
+                beschriftung = beschriftungFuer(erscheinung),
                 beiKlick = modell::naechsteErscheinung,
             )
         },
