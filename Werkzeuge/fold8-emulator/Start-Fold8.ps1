@@ -14,7 +14,13 @@ param(
   [string]$Apk = "",
   [string]$Projekt = "",
   [switch]$OhneBauen,
-  [switch]$Kaltstart
+  [switch]$Kaltstart,
+  # Ausgabeweg fuer den Ton. Der Emulator kennt unter Windows "winaudio"
+  # (Standard) und "dsound". Hackt oder knistert die Wiedergabe, ist der
+  # Wechsel des Backends der erste Hebel - die Gastseite ist dann in Ordnung,
+  # nur der Weg zum Windows-Mixer nicht. Leer = Emulator entscheidet selbst.
+  [ValidateSet("", "winaudio", "dsound", "none")]
+  [string]$Audio = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -67,6 +73,7 @@ if ($laeuft) {
   Write-Host "Starte $avd ..." -ForegroundColor Cyan
   $argumente = @("-avd", $avd, "-gpu", "host", "-no-boot-anim")
   if ($Kaltstart) { $argumente += "-no-snapshot-load" }
+  if ($Audio -ne "") { $argumente += @("-audio", $Audio) }
   Start-Process -FilePath $emulator -ArgumentList $argumente -WindowStyle Normal
 
   # Fenstergroesse setzen, SOBALD das Fenster da ist - also lange vor dem
