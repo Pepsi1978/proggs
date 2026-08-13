@@ -237,6 +237,7 @@ class EdgeTtsPlayer(context: Context) {
                     return
                 }
                 mediaPlayer = player
+                player.setAudioAttributes(SpeechLoudness.attributes)
                 player.setDataSource(file.absolutePath)
                 player.setOnCompletionListener {
                     finishComplete(requestGeneration, callbacks)
@@ -250,6 +251,7 @@ class EdgeTtsPlayer(context: Context) {
                     true
                 }
                 player.prepare()
+                SpeechLoudness.boost(player)
                 player.start()
             }
             signalStart(requestGeneration, callbacks)
@@ -390,6 +392,7 @@ class EdgeTtsPlayer(context: Context) {
         } catch (_: Exception) {
             // MediaPlayer can already be completed or in an error state.
         }
+        SpeechLoudness.release(player)
         player?.release()
         file?.delete()
     }
