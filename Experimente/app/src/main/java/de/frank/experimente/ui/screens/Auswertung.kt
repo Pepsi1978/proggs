@@ -15,10 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +42,7 @@ import de.frank.experimente.ui.components.KnopfUmrandet
 import de.frank.experimente.ui.components.Meldungen
 import de.frank.experimente.ui.components.Rundknopf
 import de.frank.experimente.ui.components.Sprechknopf
+import de.frank.experimente.ui.components.Tagewahl
 import de.frank.experimente.ui.components.Textknopf
 import de.frank.experimente.ui.components.Titel
 import de.frank.experimente.ui.components.Wartekarte
@@ -71,9 +77,23 @@ fun Auswertung(modell: AppViewModel) {
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val frueher by modell.bisherigeAuswertungen.collectAsStateWithLifecycle()
 
+    val letzterTag by modell.letzterTagErreicht.collectAsStateWithLifecycle()
+
     // Nicht aus `laufende` gefischt: sobald die letzte Auswertung steht, ist das Experiment
     // abgeschlossen und fällt dort heraus — der Titel wurde dann zu „Experiment".
     val experiment by modell.ausgewertetes.collectAsStateWithLifecycle()
+
+    var verlaengernOffen by remember { mutableStateOf(false) }
+    if (verlaengernOffen) {
+        Verlaengern(
+            jetzigeTage = experiment?.days ?: 1,
+            beiSchliessen = { verlaengernOffen = false },
+            beiWahl = { zusaetzlich ->
+                verlaengernOffen = false
+                modell.fuehreFort(zusaetzlich)
+            },
+        )
+    }
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
@@ -226,30 +246,66 @@ fun Auswertung(modell: AppViewModel) {
                         modifier = Modifier.padding(top = 14.dp),
                     )
 
+                    // --- Wie geht es weiter? ------------------------------------------
+                    //
+                    // **Die App beendet nichts von selbst.** Vorher schloss die Auswertung am
+                    // letzten Tag das Experiment stillschweigend ab — wer bei „Tag 2 von 2"
+                    // erzählte, wie es lief, hatte es damit beendet, auch wenn er es
+                    // fortführen wollte. Hier wird gefragt.
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 18.dp)
+                            .height(1.dp)
+                            .background(farben.randWeich),
+                    )
+                    Text(
+                        text = if (letzterTag) {
+                            "Der letzte geplante Tag ist erreicht. Wie soll es weitergehen?"
+                        } else {
+                            "Wie soll es weitergehen?"
+                        },
+                        style = schriften.fliesstext,
+                        color = farben.text,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+
                     Row(
-                        Modifier.fillMaxWidth().padding(top = 18.dp),
+                        Modifier.fillMaxWidth().padding(top = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         KnopfUmrandet(
-                            text = "Überspringen",
-                            beiKlick = modell::ueberspringeAuswertung,
+                            text = "Weiterführen",
+                            beiKlick = { verlaengernOffen = true },
                             modifier = Modifier.weight(1f),
+                            farbe = farben.aktion,
                         )
                         KnopfBetont(
-                            text = "Fertig",
+                            text = "Abschließen",
                             beiKlick = modell::schliesseAb,
                             modifier = Modifier.weight(1f),
                         )
                     }
 
-                    // F-13, zweiter Weg. Er war im Modell fertig gebaut, aber von keinem
-                    // Knopf aus erreichbar — hier ist er.
-                    experiment?.let { offenes ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Textknopf(
-                            text = "Nicht umgesetzt",
-                            beiKlick = { modell.nichtUmgesetzt(offenes) },
-                            modifier = Modifier.padding(top = 12.dp),
+                            text = if (letzterTag) "Später entscheiden" else "Zwischenstand",
+                            beiKlick = modell::behalteOffen,
                         )
+                        Box(Modifier.weight(1f))
+                        // F-13, zweiter Weg. Er war im Modell fertig gebaut, aber von keinem
+                        // Knopf aus erreichbar — hier ist er.
+                        experiment?.let { offenes ->
+                            Textknopf(
+                                text = "Nicht umgesetzt",
+                                beiKlick = { modell.nichtUmgesetzt(offenes) },
+                                farbe = farben.gedaempft,
+                            )
+                        }
                     }
                 }
             }
@@ -311,3 +367,57 @@ fun Auswertung(modell: AppViewModel) {
 
 private val TAGESFORM_AUSWERTUNG: java.time.format.DateTimeFormatter =
     java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy", java.util.Locale.GERMAN)
+
+/**
+ * „Weiterführen" — um wie viele Tage soll es weitergehen?
+ *
+ * Gefragt wird nach den **zusätzlichen** Tagen, nicht nach der neuen Gesamtdauer: aus Franks
+ * Sicht geht es weiter, und „noch drei Tage" ist die Zahl, die er im Kopf hat.
+ */
+@Composable
+private fun Verlaengern(jetzigeTage: Int, beiWahl: (Int) -> Unit, beiSchliessen: () -> Unit) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    var zusaetzlich by remember { mutableStateOf(3) }
+
+    AlertDialog(
+        onDismissRequest = beiSchliessen,
+        containerColor = farben.flaeche,
+        shape = RoundedCornerShape(20.dp),
+        title = { Text("Weiterführen", style = schriften.kartentitel, color = farben.text) },
+        text = {
+            Column {
+                Text(
+                    text = "Bisher $jetzigeTage ${if (jetzigeTage == 1) "Tag" else "Tage"} — " +
+                        "wie viele sollen dazukommen?",
+                    style = schriften.fliesstextKlein,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Tagewahl(
+                    tage = zusaetzlich,
+                    beiAenderung = { zusaetzlich = it },
+                    beschriftung = "Zusätzliche Tage",
+                    groesstes = 60 - jetzigeTage.coerceAtMost(59),
+                )
+                Text(
+                    text = "Danach läuft es ${jetzigeTage + zusaetzlich} Tage. " +
+                        "Die Aufgaben für die neuen Tage kommen dazu.",
+                    style = schriften.stufe,
+                    color = farben.blass,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { beiWahl(zusaetzlich) }) {
+                Text("Weiterführen", style = schriften.knopf, color = farben.aktion)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = beiSchliessen) {
+                Text("Abbrechen", style = schriften.knopf, color = farben.gedaempft)
+            }
+        },
+    )
+}

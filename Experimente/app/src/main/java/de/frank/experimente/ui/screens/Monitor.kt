@@ -25,11 +25,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +65,7 @@ import de.frank.experimente.ui.components.Meldungen
 import de.frank.experimente.ui.components.Rundknopf
 import de.frank.experimente.ui.components.SchwebenderPlusknopf
 import de.frank.experimente.ui.components.Skelett
+import de.frank.experimente.ui.components.Tagewahl
 import de.frank.experimente.ui.components.Textknopf
 import de.frank.experimente.ui.components.Titel
 import de.frank.experimente.ui.components.Zwischenueberschrift
@@ -255,6 +260,19 @@ private fun Laufkarte(
     val fertig = heutige.count { it.doneAt != null }
     val anteil = if (heutige.isEmpty()) 0f else fertig.toFloat() / heutige.size
 
+    var dauerOffen by remember(experiment.id) { mutableStateOf(false) }
+    if (dauerOffen) {
+        Dauerwahl(
+            experiment = experiment,
+            laufendenTag = modell.tagNummerVon(experiment),
+            beiSchliessen = { dauerOffen = false },
+            beiWahl = { neu ->
+                dauerOffen = false
+                modell.aendereDauer(experiment, neu)
+            },
+        )
+    }
+
     // E-15 · M-84 — die Funken laufen 1200 ms, sobald das Experiment gestartet wurde.
     val funkenweg by animateFloatAsState(
         targetValue = if (funkelt) 1f else 0f,
@@ -297,9 +315,16 @@ private fun Laufkarte(
                     Row(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Etikett(modell.stufenwort(experiment), Etikettart.STUFE)
-                        Etikett(modell.tagText(experiment), Etikettart.ANGABE)
+                        // Antippbar: hierüber wird die Dauer geändert (F-37, nachträglich).
+                        Etikett(
+                            text = modell.tagText(experiment),
+                            art = Etikettart.ANGABE,
+                            beiKlick = { dauerOffen = true },
+                            beschriftung = "Dauer ändern, zurzeit ${modell.tagText(experiment)}",
+                        )
                         Etikett(experiment.origin.etikett, Etikettart.HERKUNFT)
                     }
                 }
@@ -383,6 +408,20 @@ private fun Anstehendkarte(
     var ziehweg by remember { mutableFloatStateOf(0f) }
     val zieht = ziehweg != 0f
 
+    var dauerOffen by remember(experiment.id) { mutableStateOf(false) }
+    if (dauerOffen) {
+        Dauerwahl(
+            experiment = experiment,
+            // Ein anstehendes Experiment läuft noch nicht — jede Dauer ist erlaubt.
+            laufendenTag = null,
+            beiSchliessen = { dauerOffen = false },
+            beiWahl = { neu ->
+                dauerOffen = false
+                modell.aendereDauer(experiment, neu)
+            },
+        )
+    }
+
     // M-85 — die Karte hebt sich beim Ziehen ab: 160 ms, Hauskurve.
     val hebung by animateFloatAsState(
         targetValue = if (zieht) 1.02f else 1f,
@@ -460,8 +499,15 @@ private fun Anstehendkarte(
                     Row(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Etikett(modell.dauerwort(experiment), Etikettart.ANGABE)
+                        // Auch vor dem Start änderbar — dort ist die Dauer am ehesten falsch.
+                        Etikett(
+                            text = modell.dauerwort(experiment),
+                            art = Etikettart.ANGABE,
+                            beiKlick = { dauerOffen = true },
+                            beschriftung = "Dauer ändern, zurzeit ${modell.dauerwort(experiment)}",
+                        )
                         Etikett(experiment.origin.etikett, Etikettart.HERKUNFT)
                     }
                 }
@@ -615,4 +661,86 @@ internal fun beschriftungFuer(aktiv: Erscheinung): String {
         Erscheinung.SYSTEM -> "Automatik"
     }
     return "$jetzt aktiv — weiter zu $gleich"
+}
+
+/**
+ * **Die Dauer eines Experiments nachträglich ändern.**
+ *
+ * Erreichbar über die Tagesangabe auf der Karte („Tag 4 von 5"). Sie war bisher eine reine
+ * Anzeige: die KI legte die Dauer beim Anlegen fest, und danach ließ sie sich nirgends mehr
+ * berichtigen — aus „die nächsten sechs, sieben Tage" wurden zwei, und dabei blieb es.
+ *
+ * Beim Verlängern kommen die Aufgaben für die neuen Tage dazu. Beim Kürzen wird nichts
+ * gelöscht: die Aufgaben der wegfallenden Tage bleiben stehen und sind nach einer erneuten
+ * Verlängerung unverändert wieder da.
+ */
+@Composable
+internal fun Dauerwahl(
+    experiment: Experiment,
+    laufendenTag: Int?,
+    beiWahl: (Int) -> Unit,
+    beiSchliessen: () -> Unit,
+) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    var tage by remember(experiment.id) { mutableIntStateOf(experiment.days) }
+    // Ein laufendes Experiment kann nicht kürzer werden als der Tag, an dem es steht.
+    val kleinstes = (laufendenTag ?: 1).coerceAtLeast(1)
+
+    AlertDialog(
+        onDismissRequest = beiSchliessen,
+        containerColor = farben.flaeche,
+        shape = RoundedCornerShape(20.dp),
+        title = { Text("Wie lange?", style = schriften.kartentitel, color = farben.text) },
+        text = {
+            Column {
+                Text(
+                    text = experiment.title,
+                    style = schriften.fliesstext,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Tagewahl(
+                    tage = tage,
+                    beiAenderung = { tage = it },
+                    kleinstes = kleinstes,
+                    beschriftung = "Gesamtdauer",
+                )
+                Text(
+                    text = when {
+                        tage > experiment.days ->
+                            "Die Aufgaben für die neuen Tage kommen dazu."
+                        tage < experiment.days ->
+                            "Es endet früher. Die Aufgaben der späteren Tage bleiben gespeichert."
+                        else -> "Unverändert."
+                    },
+                    style = schriften.stufe,
+                    color = farben.blass,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                if (laufendenTag != null && laufendenTag > 1) {
+                    Text(
+                        text = "Es läuft im Moment an Tag $laufendenTag — kürzer geht es nicht.",
+                        style = schriften.stufe,
+                        color = farben.blass,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { beiWahl(tage) }, enabled = tage != experiment.days) {
+                Text(
+                    text = "Übernehmen",
+                    style = schriften.knopf,
+                    color = if (tage != experiment.days) farben.aktion else farben.blass,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = beiSchliessen) {
+                Text("Abbrechen", style = schriften.knopf, color = farben.gedaempft)
+            }
+        },
+    )
 }

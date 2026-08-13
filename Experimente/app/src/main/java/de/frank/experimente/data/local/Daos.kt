@@ -2,6 +2,7 @@ package de.frank.experimente.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -181,8 +182,35 @@ interface AufgabenDao {
     suspend fun eine(id: Long): Task?
 }
 
+/**
+ * Eine Auswertung samt dem Titel ihres Experiments — für den Logbuch-Reiter *Auswertungen*.
+ *
+ * Der Titel steht in der anderen Tabelle, und ein abgeschlossenes Experiment ist auf keinem
+ * Bildschirm mehr zu sehen. Ohne diesen Verbund stünde die Auswertung ohne Zugehörigkeit da.
+ */
+data class AuswertungMitTitel(
+    @Embedded val auswertung: Evaluation,
+    val experimentTitel: String?,
+)
+
 @Dao
 interface AuswertungenDao {
+
+    /**
+     * Alle Auswertungen, die jüngste zuerst — der vollständige Wortlaut, dauerhaft.
+     *
+     * Sie waren bisher nirgends abrufbar: sobald das Experiment abgeschlossen war,
+     * verschwand die Karte aus dem Monitor und mit ihr der einzige Weg zur Auswertung.
+     */
+    @Query(
+        """
+        SELECT a.*, e.title AS experimentTitel
+        FROM auswertungen a
+        LEFT JOIN experimente e ON e.id = a.experimentId
+        ORDER BY a.date DESC, a.id DESC
+        """,
+    )
+    fun beobachteAlleMitTitel(): Flow<List<AuswertungMitTitel>>
     @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId ORDER BY date ASC, id ASC")
     suspend fun zumExperiment(experimentId: Long): List<Evaluation>
 

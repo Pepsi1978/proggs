@@ -355,6 +355,28 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     private val _anlegeFeld = MutableStateFlow(Feld())
     val anlegeFeld: StateFlow<Feld> = _anlegeFeld.asStateFlow()
 
+    /**
+     * Die beim Anlegen **selbst gewählte** Dauer.
+     *
+     * Bisher schätzte die KI sie allein — aus „die nächsten sechs, sieben Tage" wurden zwei.
+     * Drei Tage sind der Anfangswert, nicht die Vorgabe: die Zeile steht sichtbar über dem
+     * Speichern-Knopf.
+     */
+    private val _anlegeTage = MutableStateFlow(STANDARD_TAGE)
+    val anlegeTage: StateFlow<Int> = _anlegeTage.asStateFlow()
+
+    fun setzeAnlegeTage(tage: Int) {
+        _anlegeTage.value = tage.coerceIn(1, Ablage.MAX_TAGE)
+    }
+
+    /** Dieselbe Wahl für die Merkliste (F-18). */
+    private val _merkTage = MutableStateFlow(STANDARD_TAGE)
+    val merkTage: StateFlow<Int> = _merkTage.asStateFlow()
+
+    fun setzeMerkTage(tage: Int) {
+        _merkTage.value = tage.coerceIn(1, Ablage.MAX_TAGE)
+    }
+
     // --- Datenströme ----------------------------------------------------------------------
 
     // Tagesbezogene Ströme hängen am Datum: wechselt der Tag, zeigen sie den neuen — vorher
@@ -377,6 +399,15 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     val erkenntnisse = ablage.beobachteErkenntnisse().alsZustand(emptyList<Insight>())
     val logAusfuehrlich = ablage.beobachteLogAusfuehrlich().alsZustand(emptyList<LogDay>())
     val logVerdichtet = ablage.beobachteLogVerdichtet().alsZustand(emptyList<LogDay>())
+
+    /**
+     * B-07, Reiter *Auswertungen* — jede je erzeugte Auswertung im vollen Wortlaut.
+     *
+     * Sie waren gespeichert, aber unerreichbar: mit dem Abschluss verschwindet die Karte aus
+     * dem Monitor, und über sie führte der einzige Weg dorthin. Hier fällt nichts mehr heraus.
+     */
+    val alleAuswertungen = ablage.beobachteAlleAuswertungen()
+        .alsZustand(emptyList<de.frank.experimente.data.local.AuswertungMitTitel>())
     val selbstbild = ablage.beobachteSelbstbild().alsZustand(null)
     @Suppress("OPT_IN_USAGE")
     val auswertungenHeute = _heute.flatMapLatest { ablage.beobachteAuswertungen(it) }
@@ -505,16 +536,21 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     /** F-35 — speichern. Ohne Netz wird trotzdem gespeichert; nichts geht verloren. */
     fun legeEigenesImMonitorAn() {
         val text = _anlegeFeld.value.text
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            melde("Da steht noch nichts. Sprich etwas ein oder tipp es.")
+            return
+        }
+        val tage = _anlegeTage.value
         _anlegenOffen.value = false
         viewModelScope.launch {
             _wartet.value = "Ich ordne das ein …"
             try {
-                val id = ablage.legeEigenesImMonitorAn(text)
+                val id = ablage.legeEigenesImMonitorAn(text, tage)
                 _anlegeFeld.value = Feld()
+                _anlegeTage.value = STANDARD_TAGE
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
-                melde("Steht jetzt unter „Steht an“.")
+                melde("Steht jetzt unter „Steht an“ — $tage ${if (tage == 1) "Tag" else "Tage"}.")
             } finally {
                 _wartet.value = null
             }
@@ -924,6 +960,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             .sortedBy { it.order }
     }
 
+    /** An welchem Tag ein laufendes Experiment gerade steht — 1 = erster Tag. */
+    fun tagNummerVon(experiment: Experiment): Int = ablage.tagNummer(experiment, heute)
+
     /** Das Etikett einer Laufkarte: „Tag 2 von 3“ — bei eintägigen schlicht „heute“. */
     fun tagText(experiment: Experiment): String =
         if (experiment.days <= 1) "heute" else "Tag ${ablage.tagNummer(experiment, heute)} von ${experiment.days}"
@@ -1088,6 +1127,60 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         _mitlese.value = -1
     }
 
+    /**
+     * Steht das Experiment an seinem letzten Tag? Dann fragt B-03 nach dem Abschluss —
+     * **fragt**, und beendet nicht von selbst.
+     */
+    val letzterTagErreicht: StateFlow<Boolean> = ausgewertetes
+        .map { it != null && ablage.istLetzterTag(it, _heute.value) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * „Weiterführen" auf die Abschlussfrage: das Experiment läuft mit mehr Tagen weiter.
+     *
+     * Genau das fehlte. Die Auswertung am letzten Tag beendete das Experiment stillschweigend
+     * — auch wenn Frank es fortsetzen wollte, weil die Dauer von Anfang an zu kurz geraten war.
+     */
+    fun fuehreFort(zusaetzlicheTage: Int) {
+        val experiment = ausgewertetes.value ?: return
+        val neu = (experiment.days + zusaetzlicheTage).coerceIn(1, Ablage.MAX_TAGE)
+        viewModelScope.launch {
+            _wartet.value = "Ich plane die weiteren Tage …"
+            try {
+                ablage.fuehreFort(experiment.id, neu)
+                melde("Läuft weiter — jetzt $neu Tage.")
+            } catch (fehler: Exception) {
+                _stoerung.value = fehler.freundlich()
+            } finally {
+                _wartet.value = null
+            }
+            _auswertungsFeld.value = Feld()
+            _einschaetzung.value = emptyList()
+            _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+            _wertetAus.value = null
+            gehe(Ziel.MONITOR)
+        }
+    }
+
+    /** Die Dauer eines Experiments ändern — über die Tagesangabe auf seiner Karte. */
+    fun aendereDauer(experiment: Experiment, neueTage: Int) {
+        viewModelScope.launch {
+            val vorher = experiment.days
+            _wartet.value = if (neueTage > vorher) "Ich plane die weiteren Tage …" else null
+            try {
+                ablage.aendereDauer(experiment.id, neueTage)
+                melde(
+                    if (neueTage > vorher) "„${experiment.title}“ läuft jetzt $neueTage Tage."
+                    else "„${experiment.title}“ endet jetzt nach $neueTage Tagen.",
+                )
+            } catch (fehler: Exception) {
+                _stoerung.value = fehler.freundlich()
+            } finally {
+                _wartet.value = null
+            }
+        }
+    }
+
     /** F-30 — überspringen: das Experiment bleibt offen und kommt am nächsten Abend erneut. */
     fun ueberspringeAuswertung() {
         // Das Gesagte ist längst gespeichert (Auswertung + Gesprächsfaden); hier wird nur
@@ -1108,10 +1201,16 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      * sonst sagt die App etwas anderes als sie tut.
      */
     fun schliesseAb() {
-        val abgeschlossen = ausgewertetes.value?.state == ExperimentZustand.ABGESCHLOSSEN
+        val id = _wertetAus.value
         viewModelScope.launch {
             _bluete.value = true
             ruettleLangWeich()
+            // Hier wird der Abschluss wirklich vollzogen — vorher verließ sich diese
+            // Funktion darauf, dass die Auswertung ihn nebenbei erledigt hatte.
+            if (id != null) {
+                runCatching { ablage.schliesseAb(id, heute) }
+                    .onFailure { _stoerung.value = "Der Abschluss ließ sich nicht speichern." }
+            }
             kotlinx.coroutines.delay(Bewegung.BLUETE.toLong())
             _bluete.value = false
             _auswertungsFeld.value = Feld()
@@ -1119,11 +1218,18 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _auswertungsZustand.value = AuswertungZustand.AUFNAHME
             _wertetAus.value = null
             gehe(Ziel.MONITOR)
-            melde(
-                if (abgeschlossen) "Abgeschlossen. Der Eintrag steht im Logbuch."
-                else "Zwischenstand gespeichert. Es läuft weiter.",
-            )
+            melde("Abgeschlossen. Die Auswertung steht im Logbuch.")
         }
+    }
+
+    /** „Zwischenstand" — der Tag ist ausgewertet, das Experiment läuft unverändert weiter. */
+    fun behalteOffen() {
+        _auswertungsFeld.value = Feld()
+        _einschaetzung.value = emptyList()
+        _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+        _wertetAus.value = null
+        gehe(Ziel.MONITOR)
+        melde("Zwischenstand gespeichert. Es läuft weiter.")
     }
 
     /**
@@ -1192,12 +1298,18 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     fun legeEigenesAn() {
         val text = _merkFeld.value.text
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            melde("Da steht noch nichts. Sprich etwas ein oder tipp es.")
+            return
+        }
+        val tage = _merkTage.value
         viewModelScope.launch {
             _wartet.value = "Ich ordne das ein …"
             try {
-                ablage.legeEigenesAn(text)
+                ablage.legeEigenesAn(text, tage)
                 _merkFeld.value = Feld()
+                _merkTage.value = STANDARD_TAGE
+                melde("Liegt auf der Merkliste — $tage ${if (tage == 1) "Tag" else "Tage"}.")
             } catch (fehler: Exception) {
                 _stoerung.value = fehler.freundlich()
             } finally {
@@ -1522,6 +1634,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
         /** So tief darf der Rückweg werden — tiefer verschachtelt die App nicht. */
         const val RUECKWEG_TIEFE = 8
+
+        /** Womit die Tagewahl beginnt, bevor Frank sie einstellt. */
+        const val STANDARD_TAGE = 3
     }
 
     /**

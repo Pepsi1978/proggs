@@ -44,7 +44,7 @@ class Wandler {
         Insight::class,
         Lage::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -110,6 +110,22 @@ abstract class ExperimenteDatenbank : RoomDatabase() {
             }
         }
 
+        /**
+         * 2 → 3: der Logbuch-Reiter *Auswertungen*.
+         *
+         * `auswertungen` bekommt `createdAt`, damit jede Auswertung mit Datum **und Uhrzeit**
+         * dasteht. Die Spalte darf leer sein — bestehende Auswertungen haben keine Uhrzeit,
+         * und eine erfundene wäre schlimmer als keine. Für sie wird der Kalendertag angezeigt.
+         *
+         * Reines Hinzufügen einer Spalte: `ALTER TABLE ADD COLUMN` genügt, die Tabelle wird
+         * nicht neu gebaut, kein Satz wird angefasst.
+         */
+        val VON_2_NACH_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE auswertungen ADD COLUMN createdAt TEXT")
+            }
+        }
+
         @Volatile
         private var vorhanden: ExperimenteDatenbank? = null
 
@@ -119,7 +135,7 @@ abstract class ExperimenteDatenbank : RoomDatabase() {
                     ctx.applicationContext,
                     ExperimenteDatenbank::class.java,
                     "experimente.db",
-                ).addMigrations(VON_1_NACH_2).build().also { vorhanden = it }
+                ).addMigrations(VON_1_NACH_2, VON_2_NACH_3).build().also { vorhanden = it }
             }
     }
 }

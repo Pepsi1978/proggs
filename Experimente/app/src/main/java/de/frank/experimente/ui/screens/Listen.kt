@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.experimente.data.local.AuswertungMitTitel
 import de.frank.experimente.data.local.LogDay
 import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.Ziel
@@ -47,6 +48,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val TAGESFORM: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
+
+/** Datum **und** Uhrzeit — an einem Tag können mehrere Auswertungen entstehen. */
+private val ZEITFORM: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN)
 
 /**
  * **B-04 — Wünsche & Ziele** (F-20). Sie gehen als voller Text in jede Vorschlagsanfrage
@@ -183,6 +188,7 @@ fun Merkliste(modell: AppViewModel) {
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val feld by modell.merkFeld.collectAsStateWithLifecycle()
+    val tage by modell.merkTage.collectAsStateWithLifecycle()
     var blattOffen by remember { mutableStateOf(false) }
 
     Bildschirmgeruest(
@@ -199,6 +205,8 @@ fun Merkliste(modell: AppViewModel) {
                     sprechbeschriftung = "Eigenes Experiment einsprechen",
                     feld = feld,
                     modell = modell,
+                    tage = tage,
+                    beiTage = modell::setzeMerkTage,
                     beiSprechen = { modell.sprechknopf(modell.merkFeldFluss()) },
                     beiAenderung = { modell.setzeText(modell.merkFeldFluss(), it) },
                     beiVerbessern = {
@@ -304,9 +312,24 @@ fun Erkenntnisse(modell: AppViewModel) {
     }
 }
 
+/** Die drei Reiter von B-07. */
+private enum class Logreiter(val beschriftung: String) {
+    // Kurz gehalten: zu dritt bleibt je Reiter nur ein Drittel der Breite, und ein
+    // abgeschnittenes „Letzte 15 Ta…" sagt weniger als „15 Tage".
+    AKTUELL("15 Tage"),
+    LANGZEIT("Langzeit"),
+    AUSWERTUNGEN("Auswertungen"),
+}
+
 /**
- * **B-07 — Logbuch** (F-31, F-32). Zwei Reiter: *Letzte 15 Tage* zeigt die ausführlichen
- * Tage, *Langzeit* die verdichteten. Nichts fällt heraus.
+ * **B-07 — Logbuch** (F-31, F-32). Drei Reiter: *Letzte 15 Tage* zeigt die ausführlichen
+ * Tage, *Langzeit* die verdichteten, *Auswertungen* jede Auswertung im vollen Wortlaut.
+ * Nichts fällt heraus.
+ *
+ * Der dritte Reiter kam dazu, weil eine abgeschlossene Auswertung sonst nirgends mehr zu
+ * finden war: sie stand in der Ablage, aber mit dem Abschluss verschwand die Karte aus dem
+ * Monitor — und über sie führte der einzige Weg dorthin. Die verdichtete Fassung im
+ * Tageseintrag ersetzt den Wortlaut nicht.
  */
 @Composable
 fun Logbuch(modell: AppViewModel) {
@@ -314,11 +337,12 @@ fun Logbuch(modell: AppViewModel) {
     val schriften = LocalSchriften.current
     val ausfuehrlich by modell.logAusfuehrlich.collectAsStateWithLifecycle()
     val verdichtet by modell.logVerdichtet.collectAsStateWithLifecycle()
+    val auswertungen by modell.alleAuswertungen.collectAsStateWithLifecycle()
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
-    var langzeit by remember { mutableStateOf(false) }
+    var reiter by remember { mutableStateOf(Logreiter.AKTUELL) }
 
-    val eintraege = if (langzeit) verdichtet else ausfuehrlich
+    val eintraege = if (reiter == Logreiter.LANGZEIT) verdichtet else ausfuehrlich
 
     Bildschirmgeruest(
         kopf = { Titel("Logbuch") },
@@ -335,19 +359,101 @@ fun Logbuch(modell: AppViewModel) {
                     .padding(5.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Reiter("Letzte 15 Tage", !langzeit, Modifier.weight(1f)) { langzeit = false }
-                Reiter("Langzeit", langzeit, Modifier.weight(1f)) { langzeit = true }
+                Logreiter.entries.forEach { welcher ->
+                    Reiter(welcher.beschriftung, reiter == welcher, Modifier.weight(1f)) {
+                        reiter = welcher
+                    }
+                }
             }
         },
         ueberlagerung = {
             Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
         },
     ) {
+        if (reiter == Logreiter.AUSWERTUNGEN) {
+            if (auswertungen.isEmpty()) {
+                item("leer-auswertungen") {
+                    LeererZustand("Noch keine Auswertung. Sie entsteht, wenn du erzählst, wie es gelaufen ist.")
+                }
+            }
+            items(auswertungen, key = { "aus${it.auswertung.id}" }) { eintrag ->
+                Einflug(auswertungen.indexOf(eintrag)) { Auswertungseintrag(eintrag) }
+            }
+            return@Bildschirmgeruest
+        }
+
         if (eintraege.isEmpty()) {
             item("leer") { LeererZustand("Das Logbuch beginnt mit dem ersten Tag.") }
         }
         items(eintraege, key = { it.date.toString() }) { tag ->
-            Einflug(eintraege.indexOf(tag)) { Logeintrag(tag, langzeit, modell) }
+            Einflug(eintraege.indexOf(tag)) {
+                Logeintrag(tag, reiter == Logreiter.LANGZEIT, modell)
+            }
+        }
+    }
+}
+
+/**
+ * Ein Eintrag im Reiter *Auswertungen*: Zeitpunkt, Experiment, Franks Wortlaut und die
+ * vollständige Einschätzung — ungekürzt. Aus diesem Bestand werden die Erkenntnisse gezogen.
+ */
+@Composable
+private fun Auswertungseintrag(eintrag: AuswertungMitTitel) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    val auswertung = eintrag.auswertung
+    val zeitpunkt = auswertung.createdAt
+        ?.atZone(java.time.ZoneId.systemDefault())
+        ?.let { ZEITFORM.format(it) }
+        // Auswertungen aus der Zeit vor dem Zeitstempel tragen nur ihren Kalendertag. Eine
+        // erfundene Uhrzeit wäre schlimmer als keine.
+        ?: TAGESFORM.format(auswertung.date)
+
+    Listenkarte {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(zeitpunkt, style = schriften.stufe, color = farben.aktion)
+            if (auswertung.isFinal) {
+                Text("Abschluss", style = schriften.stufe, color = farben.erledigt)
+            }
+        }
+        Text(
+            text = eintrag.experimentTitel ?: "Gelöschtes Experiment",
+            style = schriften.kartentitel,
+            color = farben.text,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+
+        Text(
+            text = "Was ich erzählt habe".uppercase(),
+            style = schriften.zwischenueberschrift,
+            color = farben.gedaempft,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+        Text(
+            text = auswertung.ownText,
+            style = schriften.kartentext,
+            color = farben.text,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+
+        auswertung.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
+            Text(
+                text = "Einschätzung".uppercase(),
+                style = schriften.zwischenueberschrift,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+            // Ungekürzt: der Reiter ist der Ort, an dem der volle Wortlaut steht.
+            Text(
+                text = einschaetzung,
+                style = schriften.kartentext,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
     }
 }

@@ -55,6 +55,15 @@ class Ablage(
 
         /** F-35 ohne Netz: die Aufgabenliste wird beim nächsten Lauf nachgetragen. */
         private const val EIGENES = "eigenes"
+
+        /** Eine Verlängerung, deren neue Tage noch keine Aufgaben haben. */
+        private const val AUFGABEN = "aufgaben"
+
+        /**
+         * So lange darf ein Experiment höchstens laufen. Keine fachliche Grenze — eine
+         * Schranke gegen Vertipper („70" statt „7"), damit nicht 70 Tagesspalten entstehen.
+         */
+        const val MAX_TAGE = 60
     }
 
     private val modellExperimente get() = CodexModell.aus(einstellungen.modellExperimente)
@@ -83,6 +92,9 @@ class Ablage(
 
     /** B-03 — die bisherigen Auswertungen eines Experiments, Tag für Tag. */
     fun beobachteAuswertungenZu(experimentId: Long) = db.auswertungen().beobachteZumExperiment(experimentId)
+
+    /** B-07, Reiter *Auswertungen* — alle, im vollen Wortlaut, die jüngste zuerst. */
+    fun beobachteAlleAuswertungen() = db.auswertungen().beobachteAlleMitTitel()
 
     /** Ein Experiment unabhängig von seinem Zustand — auch ein abgeschlossenes. */
     fun beobachteExperiment(experimentId: Long) = db.experimente().beobachteEines(experimentId)
@@ -252,14 +264,17 @@ class Ablage(
      * *mittel*. Die Aufgabenliste wird beim nächsten erfolgreichen Lauf nachgetragen. Es geht
      * nichts verloren.
      */
-    suspend fun legeEigenesImMonitorAn(text: String): Long {
+    suspend fun legeEigenesImMonitorAn(text: String, tage: Int? = null): Long {
         val sauber = text.trim()
+        val gewaehlt = tage?.coerceIn(1, MAX_TAGE)
         return try {
-            val geschaetzt = aufgabenKi.schaetzeEigenes(sauber, modellExperimente, effortExperimente)
+            val geschaetzt = aufgabenKi.schaetzeEigenes(
+                sauber, modellExperimente, effortExperimente, gewaehlt,
+            )
             legeAnstehendAn(
                 titel = geschaetzt.titel,
                 beschreibung = geschaetzt.beschreibung,
-                tage = geschaetzt.tage,
+                tage = gewaehlt ?: geschaetzt.tage,
                 stufe = geschaetzt.stufe,
                 herkunft = Herkunft.EIGEN,
                 aufgabenJeTag = geschaetzt.aufgabenJeTag,
@@ -269,7 +284,8 @@ class Ablage(
             legeAnstehendAn(
                 titel = sauber.lineSequence().first().take(80),
                 beschreibung = sauber,
-                tage = 1,
+                // Auch ohne Netz gilt die gewählte Dauer — sie kommt von Frank, nicht vom Netz.
+                tage = gewaehlt ?: 1,
                 stufe = Stufe.MITTEL,
                 herkunft = Herkunft.EIGEN,
                 aufgabenJeTag = emptyList(),
@@ -478,11 +494,17 @@ class Ablage(
                     date = tag,
                     ownText = sauber,
                     isFinal = letzter,
+                    createdAt = Instant.now(),
                 ),
             )
         } else {
             db.auswertungen().aendere(
-                bisherige.copy(ownText = sauber, aiText = null, isFinal = letzter),
+                bisherige.copy(
+                    ownText = sauber,
+                    aiText = null,
+                    isFinal = letzter,
+                    createdAt = Instant.now(),
+                ),
             )
         }
 
@@ -544,13 +566,94 @@ class Ablage(
             tag,
         )
 
-        if (letzter) {
-            db.experimente().aendere(
-                experiment.copy(state = ExperimentZustand.ABGESCHLOSSEN, closedAt = tag),
-            )
-            schreibeErkenntnisseFort(kiText)
-        }
+        // **Die Auswertung schließt das Experiment NICHT ab.**
+        //
+        // Vorher tat sie genau das: am letzten Tag setzte sie den Zustand auf ABGESCHLOSSEN,
+        // still, im selben Zug. Wer bei „Tag 2 von 2" erzählte, wie es gelaufen ist, hatte
+        // sein Experiment damit beendet — auch wenn er es fortführen wollte. Erzählen ist
+        // nicht beenden. Über das Ende entscheidet Frank auf B-03, nicht der Kalender.
         return kiText
+    }
+
+    /**
+     * F-13 — das Experiment tatsächlich abschließen. Erst hier entstehen die Erkenntnisse.
+     *
+     * Getrennt von [werteAus], damit die Auswertung eines Tages nie das ganze Experiment
+     * beendet.
+     */
+    suspend fun schliesseAb(experimentId: Long, tag: LocalDate = LocalDate.now()) {
+        val experiment = db.experimente().einer(experimentId) ?: return
+        db.experimente().aendere(
+            experiment.copy(state = ExperimentZustand.ABGESCHLOSSEN, closedAt = tag),
+        )
+        val letzteAuswertung = db.auswertungen().anTag(experimentId, tag)
+        db.auswertungen().anTag(experimentId, tag)?.let {
+            db.auswertungen().aendere(it.copy(isFinal = true))
+        }
+        val stoff = letzteAuswertung?.aiText?.takeIf { it.isNotBlank() }
+            ?: letzteAuswertung?.ownText
+        if (!stoff.isNullOrBlank()) schreibeErkenntnisseFort(stoff)
+    }
+
+    /**
+     * Das Experiment läuft weiter, obwohl sein letzter Tag erreicht ist — Frank verlängert es
+     * um weitere Tage. Die Aufgaben für die neuen Tage liefert die KI nach.
+     */
+    suspend fun fuehreFort(experimentId: Long, neueTage: Int) {
+        aendereDauer(experimentId, neueTage)
+    }
+
+    /**
+     * Die Dauer eines Experiments ändern — beim Anlegen **und** mittendrin.
+     *
+     * Die KI schätzte die Dauer bisher allein, und sie ließ sich danach nirgends berichtigen:
+     * aus „die nächsten sechs, sieben Tage" wurden zwei, und dabei blieb es. Jetzt entscheidet
+     * Frank, jederzeit.
+     *
+     * **Beim Kürzen wird nichts gelöscht.** Die Aufgaben der wegfallenden Tage bleiben in der
+     * Ablage stehen; wird später wieder verlängert, sind sie unverändert da. Beim Verlängern
+     * liefert die KI die fehlenden Tage nach — geht das gerade nicht, bleibt es vorgemerkt.
+     */
+    suspend fun aendereDauer(experimentId: Long, neueTage: Int) {
+        val experiment = db.experimente().einer(experimentId) ?: return
+        val tage = neueTage.coerceIn(1, MAX_TAGE)
+        if (tage == experiment.days) return
+        db.experimente().aendere(experiment.copy(days = tage))
+        if (tage > experiment.days) ergaenzeAufgaben(experimentId)
+    }
+
+    /**
+     * Für Tage ohne Aufgaben welche nachliefern — nach einer Verlängerung, oder wenn ein
+     * eigenes Experiment ohne Netz angelegt wurde.
+     */
+    suspend fun ergaenzeAufgaben(experimentId: Long) {
+        val experiment = db.experimente().einer(experimentId) ?: return
+        val vorhanden = db.aufgaben().alleZu(experimentId)
+        val belegteTage = vorhanden.map { it.dayIndex }.toSet()
+        val fehlende = (1..experiment.days).filterNot { it in belegteTage }
+        if (fehlende.isEmpty()) return
+
+        val bisher = vorhanden.groupBy { it.dayIndex }.toSortedMap()
+            .map { (tag, liste) -> tag to liste.sortedBy { it.order }.map { it.text } }
+        try {
+            val neue = aufgabenKi.weitereTage(
+                experiment = experiment,
+                bisherJeTag = bisher,
+                fehlendeTage = fehlende,
+                modell = modellExperimente,
+                effort = effortExperimente,
+            )
+            val zuLegen = mutableListOf<Task>()
+            neue.forEach { (tagNr, texte) ->
+                texte.forEachIndexed { nr, text ->
+                    zuLegen += Task(experimentId = experimentId, dayIndex = tagNr, text = text, order = nr)
+                }
+            }
+            if (zuLegen.isNotEmpty()) db.aufgaben().lege(zuLegen)
+        } catch (fehler: Exception) {
+            // Vorgemerkt statt verloren: der Nachlauf holt es beim nächsten Mal.
+            einstellungen.merkeAusstehend("$AUFGABEN:$experimentId")
+        }
     }
 
     /**
@@ -693,6 +796,12 @@ class Ablage(
                         einstellungen.erledigeAusstehend(eintrag)
                     }
 
+                    eintrag.startsWith("$AUFGABEN:") -> {
+                        val id = eintrag.removePrefix("$AUFGABEN:").toLongOrNull()
+                        einstellungen.erledigeAusstehend(eintrag)
+                        if (id != null) ergaenzeAufgaben(id)
+                    }
+
                     eintrag.startsWith("$ERKENNTNIS:") -> {
                         val auswertung = eintrag.removePrefix("$ERKENNTNIS:")
                         // Erst den Merker lösen, dann schreiben: sonst legt ein erneuter
@@ -760,16 +869,17 @@ class Ablage(
      * warf diese Stelle den Fehler nach oben durch und legte gar nichts an: eine eingesprochene
      * Idee war nach der Störungsmeldung nirgends abgelegt.
      */
-    suspend fun legeEigenesAn(text: String) {
+    suspend fun legeEigenesAn(text: String, tage: Int? = null) {
         val sauber = text.trim()
+        val gewaehlt = tage?.coerceIn(1, MAX_TAGE)
         val geschaetzt = runCatching {
-            aufgabenKi.schaetzeEigenes(sauber, modellExperimente, effortExperimente)
+            aufgabenKi.schaetzeEigenes(sauber, modellExperimente, effortExperimente, gewaehlt)
         }.getOrNull()
         db.merkliste().lege(
             WatchlistItem(
                 title = geschaetzt?.titel ?: sauber.lineSequence().first().take(80),
                 description = geschaetzt?.beschreibung ?: sauber,
-                days = geschaetzt?.tage ?: 1,
+                days = gewaehlt ?: geschaetzt?.tage ?: 1,
                 level = geschaetzt?.stufe ?: Stufe.MITTEL,
                 tasksJson = alsJson(geschaetzt?.aufgabenJeTag ?: emptyList()),
                 source = Quelle.EIGEN,

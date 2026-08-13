@@ -130,7 +130,13 @@ data class Task(
     @ColumnInfo(name = "order_index") val order: Int,
 )
 
-/** Die Auswertung eines Tages zu einem Experiment (F-10, F-11). */
+/**
+ * Die Auswertung eines Tages zu einem Experiment (F-10, F-11).
+ *
+ * `createdAt` kam dazu, weil der Logbuch-Reiter *Auswertungen* jede Auswertung mit Datum
+ * **und Uhrzeit** ausweist: an einem Tag können mehrere entstehen, und ohne Uhrzeit stehen
+ * sie ununterscheidbar untereinander.
+ */
 @Entity(tableName = "auswertungen")
 data class Evaluation(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -139,6 +145,7 @@ data class Evaluation(
     val ownText: String,
     val aiText: String? = null,
     val isFinal: Boolean = false,
+    val createdAt: Instant? = null,
 )
 
 /** Eine Runde im Gespräch (F-09). Der Faden gehört genau einem Experiment. */

@@ -346,10 +346,19 @@ class Aufgaben(private val codex: CodexZugang) {
     // --- F-18 ---------------------------------------------------------------------------
 
     /** F-18 — Dauer und Stufe eines eigenen Experiments schätzt die KI beim Speichern mit. */
+    /**
+     * F-18 / F-35 — aus einer eingesprochenen Idee ein Experiment machen.
+     *
+     * [tageVorgabe] ist die von Frank **selbst gewählte** Dauer. Ist sie gesetzt, hat die KI
+     * hier nichts zu entscheiden: sie verteilt die Aufgaben auf genau diese Tage. Vorher
+     * schätzte sie die Dauer immer selbst — aus „die nächsten sechs, sieben Tage" wurden
+     * zwei, und danach ließ sich das nirgends mehr richtigstellen.
+     */
     suspend fun schaetzeEigenes(
         text: String,
         modell: CodexModell,
         effort: Effort,
+        tageVorgabe: Int? = null,
     ): RoherVorschlag {
         val schema = JSONObject()
             .put("type", "object")
@@ -378,18 +387,32 @@ class Aufgaben(private val codex: CodexZugang) {
                         ),
                     ),
             )
-        val anweisung =
-            "Frank hat eine eigene Experiment-Idee eingesprochen. Mach daraus einen kurzen Titel, " +
-                "eine Beschreibung (was genau zu tun ist), eine geschätzte Dauer in Tagen, eine " +
-                "Stufe und die Aufgabenliste je Tag. Erfinde nichts dazu, was nicht in seinem Text " +
-                "steht — nur ordnen und ergänzen, was zum Durchführen nötig ist."
+        val anweisung = buildString {
+            append(
+                "Frank hat eine eigene Experiment-Idee eingesprochen. Mach daraus einen kurzen Titel, " +
+                    "eine Beschreibung (was genau zu tun ist), eine Stufe und die Aufgabenliste je Tag. " +
+                    "Erfinde nichts dazu, was nicht in seinem Text steht — nur ordnen und ergänzen, was " +
+                    "zum Durchführen nötig ist.",
+            )
+            if (tageVorgabe != null) {
+                append(
+                    "\n\nDie Dauer steht bereits fest: GENAU $tageVorgabe Tage. Gib im Feld „tage" +
+                        "\" exakt $tageVorgabe zurück und verteile die Aufgaben auf genau $tageVorgabe " +
+                        "Tage — jeder Tag bekommt seine eigenen. Steigert sich das Vorhaben, verteile " +
+                        "die Steigerung gleichmäßig über diese Tage.",
+                )
+            } else {
+                append(" Schätze auch die Dauer in Tagen.")
+            }
+        }
         val antwort = codex.frage(anweisung, text.trim(), modell, effort, schema, "eigenes")
         val o = JSONObject(saeubere(antwort))
         val aufgaben = o.optJSONArray("aufgabenJeTag")
         return RoherVorschlag(
             titel = o.optString("titel").trim().ifBlank { text.take(60) },
             beschreibung = o.optString("beschreibung").trim().ifBlank { text },
-            tage = o.optInt("tage", 1).coerceAtLeast(1),
+            // Franks Vorgabe gewinnt immer — auch wenn die KI etwas anderes zurückgibt.
+            tage = tageVorgabe ?: o.optInt("tage", 1).coerceAtLeast(1),
             stufe = alsStufe(o.optString("stufe")),
             vonMerkliste = false,
             aufgabenJeTag = (0 until (aufgaben?.length() ?: 0)).map { tag ->
@@ -399,6 +422,89 @@ class Aufgaben(private val codex: CodexZugang) {
                 }
             },
         )
+    }
+
+    /**
+     * Aufgaben für Tage nachliefern, die noch keine haben.
+     *
+     * Fällt an, wenn Frank ein laufendes Experiment verlängert: die neuen Tage stünden sonst
+     * leer da. Die bisherigen Tage gehen mit in die Anfrage, damit der Faden weitergesponnen
+     * und nicht neu erfunden wird — bei „schrittweise früher aufstehen" muss der siebte Tag
+     * an den sechsten anschließen.
+     *
+     * @return je Tagesnummer die Aufgaben dieses Tages
+     */
+    suspend fun weitereTage(
+        experiment: Experiment,
+        bisherJeTag: List<Pair<Int, List<String>>>,
+        fehlendeTage: List<Int>,
+        modell: CodexModell,
+        effort: Effort,
+    ): Map<Int, List<String>> {
+        if (fehlendeTage.isEmpty()) return emptyMap()
+
+        val eintrag = JSONObject()
+            .put("type", "object")
+            .put("additionalProperties", false)
+            .put("required", JSONArray().put("tag").put("aufgaben"))
+            .put(
+                "properties",
+                JSONObject()
+                    .put("tag", JSONObject().put("type", "integer"))
+                    .put(
+                        "aufgaben",
+                        JSONObject().put("type", "array")
+                            .put("items", JSONObject().put("type", "string")),
+                    ),
+            )
+        val schema = JSONObject()
+            .put("type", "object")
+            .put("additionalProperties", false)
+            .put("required", JSONArray().put("tage"))
+            .put(
+                "properties",
+                JSONObject().put("tage", JSONObject().put("type", "array").put("items", eintrag)),
+            )
+
+        val anweisung =
+            "Ein laufendes Experiment wurde verlängert. Für die genannten Tage fehlen noch die " +
+                "Aufgaben. Schreibe sie so, dass sie den bisherigen Verlauf FORTSETZEN und " +
+                "aufeinander aufbauen — nicht von vorn beginnen und nichts wiederholen. Steigert " +
+                "sich das Vorhaben schrittweise, führe die Steigerung folgerichtig weiter. " +
+                "Liefere ausschließlich die angefragten Tagesnummern, je 1 bis 4 Aufgaben."
+
+        val frage = buildString {
+            append("Experiment: ${experiment.title}\n")
+            append("Beschreibung: ${experiment.description}\n")
+            append("Gesamtdauer neu: ${experiment.days} Tage\n\n")
+            append("Bisherige Tage:\n")
+            if (bisherJeTag.isEmpty()) {
+                append("(noch keine)\n")
+            } else {
+                bisherJeTag.forEach { (tag, aufgaben) ->
+                    append("Tag $tag:\n")
+                    aufgaben.forEach { append("  - $it\n") }
+                }
+            }
+            append("\nFehlende Tage: ${fehlendeTage.joinToString(", ")}")
+        }
+
+        val antwort = codex.frage(anweisung, frage, modell, effort, schema, "weitereTage")
+        val tage = JSONObject(saeubere(antwort)).optJSONArray("tage") ?: return emptyMap()
+        val ergebnis = mutableMapOf<Int, List<String>>()
+        for (i in 0 until tage.length()) {
+            val satz = tage.optJSONObject(i) ?: continue
+            val nr = satz.optInt("tag", -1)
+            // Nur die angefragten Tage übernehmen — sonst überschriebe eine übereifrige
+            // Antwort die Aufgaben bestehender Tage.
+            if (nr !in fehlendeTage) continue
+            val liste = satz.optJSONArray("aufgaben") ?: continue
+            val texte = (0 until liste.length()).mapNotNull {
+                liste.optString(it).trim().takeIf(String::isNotBlank)
+            }
+            if (texte.isNotEmpty()) ergebnis[nr] = texte
+        }
+        return ergebnis
     }
 
     private fun alsStufe(wert: String): Stufe = when (wert.trim().lowercase()) {

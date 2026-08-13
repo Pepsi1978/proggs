@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -271,7 +273,18 @@ enum class Etikettart { STUFE, ANGABE, HERKUNFT }
  * - `HERKUNFT` — nur 1 dp Rand *Rand*, Schrift *Gedämpft*
  */
 @Composable
-fun Etikett(text: String, art: Etikettart = Etikettart.ANGABE, modifier: Modifier = Modifier) {
+fun Etikett(
+    text: String,
+    art: Etikettart = Etikettart.ANGABE,
+    modifier: Modifier = Modifier,
+    /**
+     * Macht das Etikett antippbar — die Tagesangabe „Tag 4 von 5" öffnet damit die
+     * Dauer-Änderung. Ein antippbares Etikett trägt einen Rand in *Aktion*, damit es sich
+     * sichtbar von den bloßen Angaben daneben unterscheidet.
+     */
+    beiKlick: (() -> Unit)? = null,
+    beschriftung: String? = null,
+) {
     val farben = LocalFarben.current
     val form = RoundedCornerShape(percent = 50)
     val flaeche = when (art) {
@@ -281,17 +294,34 @@ fun Etikett(text: String, art: Etikettart = Etikettart.ANGABE, modifier: Modifie
     }
     Box(
         modifier
-            .height(24.dp)
+            // Antippbare Etiketten sind höher: 24 dp wären als Tippfläche zu klein.
+            .height(if (beiKlick == null) 24.dp else 32.dp)
             .clip(form)
             .background(flaeche)
-            .then(if (art == Etikettart.HERKUNFT) Modifier.border(1.dp, farben.rand, form) else Modifier)
-            .padding(horizontal = 10.dp),
+            .then(
+                when {
+                    beiKlick != null -> Modifier.border(1.dp, farben.aktion.copy(alpha = 0.55f), form)
+                    art == Etikettart.HERKUNFT -> Modifier.border(1.dp, farben.rand, form)
+                    else -> Modifier
+                },
+            )
+            .then(
+                if (beiKlick == null) Modifier
+                else Modifier
+                    .clickable(onClick = beiKlick)
+                    .semantics { contentDescription = beschriftung ?: text },
+            )
+            .padding(horizontal = if (beiKlick == null) 10.dp else 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             style = LocalSchriften.current.stufe,
-            color = if (art == Etikettart.STUFE) farben.aktion else farben.gedaempft,
+            color = when {
+                art == Etikettart.STUFE -> farben.aktion
+                beiKlick != null -> farben.text
+                else -> farben.gedaempft
+            },
             maxLines = 1,
         )
     }
@@ -706,5 +736,118 @@ fun Pillenwahl(
                 )
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Dauer eines Experiments
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Die Wahl der Tagesanzahl — beim Anlegen, beim Verlängern und beim nachträglichen Ändern.
+ *
+ * Die Dauer kam bisher ausschließlich aus der KI-Schätzung und ließ sich danach nirgends
+ * berichtigen: aus „die nächsten sechs, sieben Tage" wurden zwei, und dabei blieb es. Diese
+ * Zeile gehört Frank.
+ *
+ * Minus und Plus decken den Alltag ab, die schnellen Sprünge darunter die üblichen Längen.
+ */
+@Composable
+fun Tagewahl(
+    tage: Int,
+    beiAenderung: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    kleinstes: Int = 1,
+    groesstes: Int = 60,
+    beschriftung: String = "Dauer",
+) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+
+    Column(modifier.fillMaxWidth()) {
+        Text(
+            text = beschriftung,
+            style = schriften.feldbeschriftung,
+            color = farben.gedaempft,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Schritt("−", "Ein Tag weniger", tage > kleinstes) {
+                beiAenderung((tage - 1).coerceAtLeast(kleinstes))
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "$tage",
+                    style = schriften.zahl,
+                    color = farben.aktion,
+                )
+                Text(
+                    text = if (tage == 1) "Tag" else "Tage",
+                    style = schriften.stufe,
+                    color = farben.gedaempft,
+                )
+            }
+            Schritt("+", "Ein Tag mehr", tage < groesstes) {
+                beiAenderung((tage + 1).coerceAtMost(groesstes))
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(1, 3, 7, 14, 30).filter { it in kleinstes..groesstes }.forEach { wert ->
+                Sprung(wert, wert == tage, Modifier.weight(1f)) { beiAenderung(wert) }
+            }
+        }
+    }
+}
+
+/** Ein Schritt-Knopf der Tagewahl: 48 dp, damit er sicher zu treffen ist. */
+@Composable
+private fun Schritt(zeichen: String, beschriftung: String, aktiv: Boolean, beiKlick: () -> Unit) {
+    val farben = LocalFarben.current
+    val quelle = merkeDruck()
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(if (aktiv) farben.erhoeht else farben.erhoeht.copy(alpha = 0.4f))
+            .border(1.dp, farben.rand, RoundedCornerShape(percent = 50))
+            .federdruck(quelle, aktiv)
+            .clickable(interactionSource = quelle, indication = null, enabled = aktiv, onClick = beiKlick)
+            .semantics { contentDescription = beschriftung },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = zeichen,
+            style = LocalSchriften.current.knopf,
+            color = if (aktiv) farben.text else farben.blass,
+        )
+    }
+}
+
+/** Eine der üblichen Längen zum Antippen. */
+@Composable
+private fun Sprung(wert: Int, aktiv: Boolean, modifier: Modifier = Modifier, beiKlick: () -> Unit) {
+    val farben = LocalFarben.current
+    Box(
+        modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(if (aktiv) farben.aktionGedeckt else Color.Transparent)
+            .border(1.dp, if (aktiv) farben.aktion else farben.rand, RoundedCornerShape(percent = 50))
+            .clickable(onClick = beiKlick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "$wert",
+            style = LocalSchriften.current.stufe,
+            color = if (aktiv) farben.aktion else farben.gedaempft,
+            maxLines = 1,
+        )
     }
 }

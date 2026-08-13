@@ -34,6 +34,7 @@ import de.frank.experimente.ui.AppViewModel
 import de.frank.experimente.ui.components.Eingabefeld
 import de.frank.experimente.ui.components.KnopfBetont
 import de.frank.experimente.ui.components.KnopfUmrandet
+import de.frank.experimente.ui.components.Tagewahl
 import de.frank.experimente.ui.components.merkeDruck
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalEffektstufe
@@ -58,6 +59,7 @@ import de.frank.experimente.ui.theme.lichtsaum
 @Composable
 fun BoxScope.Anlegeflaeche(modell: AppViewModel) {
     val feld by modell.anlegeFeld.collectAsStateWithLifecycle()
+    val tage by modell.anlegeTage.collectAsStateWithLifecycle()
     Anlegeblatt(
         titel = "Eigenes Experiment",
         unterzeile = "Einsprechen oder tippen. Es steht danach unter „Steht an“.",
@@ -65,6 +67,8 @@ fun BoxScope.Anlegeflaeche(modell: AppViewModel) {
         sprechbeschriftung = "Eigenes Experiment einsprechen",
         feld = feld,
         modell = modell,
+        tage = tage,
+        beiTage = modell::setzeAnlegeTage,
         beiSprechen = { modell.sprechknopf(modell.anlegeFeldFluss()) },
         beiAenderung = { modell.setzeText(modell.anlegeFeldFluss(), it) },
         beiVerbessern = {
@@ -95,6 +99,9 @@ fun BoxScope.Anlegeblatt(
     beiSpeichern: () -> Unit,
     beiSchliessen: () -> Unit,
     beiDaneben: () -> Unit = beiSchliessen,
+    /** Die selbst gewählte Dauer. `null` bei Blättern ohne Dauer (Ziele). */
+    tage: Int? = null,
+    beiTage: ((Int) -> Unit)? = null,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
@@ -174,6 +181,17 @@ fun BoxScope.Anlegeblatt(
                     mindesthoehe = 120.dp,
                     innen = 14.dp,
                     modifier = Modifier.weight(1f),
+                )
+            }
+
+            // Die Dauer bestimmt Frank, nicht die Schätzung: sie stand vorher gar nicht zur
+            // Wahl und liess sich hinterher nirgends berichtigen.
+            if (tage != null && beiTage != null) {
+                Tagewahl(
+                    tage = tage,
+                    beiAenderung = beiTage,
+                    beschriftung = "Wie viele Tage soll es laufen?",
+                    modifier = Modifier.padding(top = 18.dp),
                 )
             }
 
