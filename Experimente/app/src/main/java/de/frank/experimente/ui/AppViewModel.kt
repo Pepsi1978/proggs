@@ -141,17 +141,34 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     val ziel: StateFlow<Ziel> = _ziel.asStateFlow()
 
     /**
-     * Wohin der Zurück-Pfeil führt. Der Entwurf merkt sich den Bildschirm, von dem aus
-     * B-02, B-03, B-08 oder B-09 geöffnet wurde — sonst landet Frank nach einem Gespräch
-     * aus dem Monitor auf „Heute“.
+     * Der Weg zurück — ein **Stapel**, kein einzelner Wert.
+     *
+     * Vorher merkte sich die App genau *einen* Herkunftsbildschirm. Das Selbstbild wird aus
+     * den Einstellungen geöffnet, und weil auch B-09 sich seine Herkunft merkt, überschrieb
+     * es den Merker mit *Einstellungen*. Der Zurück-Pfeil der Einstellungen führte danach
+     * auf die Einstellungen selbst: eine Sackgasse, aus der nur half, die App aus dem
+     * Speicher zu werfen. Ein einziger Besuch im Selbstbild genügte, auch ohne Eingabe.
+     *
+     * Ein Stapel kann das konstruktionsbedingt nicht: jeder geöffnete Bildschirm legt seine
+     * Herkunft **oben drauf**, der Rückweg nimmt sie wieder herunter. Damit er nicht
+     * unbegrenzt wächst, wird ein bereits enthaltenes Ziel bis zu seiner Stelle abgeräumt
+     * (ein Kreis kann so nicht entstehen).
      */
-    private val _zurueckZu = MutableStateFlow(Ziel.MONITOR)
+    private val _rueckweg = MutableStateFlow<List<Ziel>>(emptyList())
 
     private val _gespraechZu = MutableStateFlow<Long?>(null)
     val gespraechZu: StateFlow<Long?> = _gespraechZu.asStateFlow()
 
     fun gehe(ziel: Ziel) {
-        if (ziel in MERKT_HERKUNFT) _zurueckZu.value = _ziel.value
+        val jetzt = _ziel.value
+        if (ziel == jetzt) return
+        if (ziel in MERKT_HERKUNFT) {
+            _rueckweg.value = (_rueckweg.value + jetzt).takeLast(RUECKWEG_TIEFE)
+        } else {
+            // Ein Hauptbildschirm ist immer ein Neuanfang — von dort führt der Rückweg
+            // nirgendwo hin, und alte Zwischenstationen wären nur Ballast.
+            _rueckweg.value = emptyList()
+        }
         _ziel.value = ziel
     }
 
@@ -160,12 +177,43 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         Ziel.aus(kennung)?.let { gehe(it) }
     }
 
-    fun zurueck() {
-        _ziel.value = when (_ziel.value) {
-            Ziel.SELBSTBILD -> Ziel.EINSTELLUNGEN
-            else -> _zurueckZu.value
+    /**
+     * Zurück. Gibt `false` zurück, wenn es nichts mehr gibt, wohin man zurück könnte —
+     * dann darf die Zurück-Taste des Geräts die App verlassen.
+     */
+    fun zurueck(): Boolean {
+        val stapel = _rueckweg.value
+        if (stapel.isNotEmpty()) {
+            _rueckweg.value = stapel.dropLast(1)
+            _ziel.value = stapel.last()
+            return true
         }
+        // Kein Rückweg gemerkt (etwa nach einem Neustart mitten im Selbstbild): der
+        // vernünftige Ausgang, nie ein Verharren auf demselben Bildschirm.
+        val ausweg = when (_ziel.value) {
+            Ziel.SELBSTBILD -> Ziel.EINSTELLUNGEN
+            Ziel.MONITOR -> null
+            else -> Ziel.MONITOR
+        } ?: return false
+        _ziel.value = ausweg
+        return true
     }
+
+    /** Der Zurück-Pfeil in der Kopfleiste — er interessiert sich nicht für das Ergebnis. */
+    fun zurueckTippen() {
+        zurueck()
+    }
+
+    /**
+     * Gibt es innerhalb der App noch einen Weg zurück? Nur dann fängt die App die
+     * Zurück-Taste ab; auf dem Monitor führt sie wie gewohnt aus der App heraus.
+     *
+     * Bis hierher behandelte die App die Zurück-Geste **überhaupt nicht**. Zusammen mit der
+     * Sackgasse im Rückweg blieb nur, sie aus dem Speicher zu werfen.
+     */
+    val kannZurueck: StateFlow<Boolean> = combine(_rueckweg, _ziel) { stapel, jetzt ->
+        stapel.isNotEmpty() || jetzt != Ziel.MONITOR
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /**
      * F-27 — Wischen zwischen den **sechs** Hauptbildschirmen. An den Enden passiert nichts,
@@ -176,7 +224,10 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         val jetzt = reihe.indexOf(_ziel.value)
         if (jetzt < 0) return
         val neu = if (nachLinks) jetzt + 1 else jetzt - 1
-        if (neu in reihe.indices) _ziel.value = reihe[neu]
+        if (neu in reihe.indices) {
+            _rueckweg.value = emptyList()
+            _ziel.value = reihe[neu]
+        }
     }
 
     // --- Zustand von B-01 ----------------------------------------------------------------
@@ -186,10 +237,17 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     private val _abendOffen = MutableStateFlow(false)
 
+    /**
+     * Der Abend-Zustand von B-01.
+     *
+     * `bestimmeZustand()` fehlte hier: der Merker wurde gesetzt, aber niemand leitete daraus
+     * den Zustand ab — der Abend-Abschnitt erschien nie, auch nicht über die Erinnerung.
+     */
     fun zeigeAbend() {
         _abendOffen.value = true
-        _zurueckZu.value = Ziel.MONITOR
+        _rueckweg.value = emptyList()
         _ziel.value = Ziel.HEUTE
+        viewModelScope.launch { bestimmeZustand() }
     }
 
     fun zeigeMorgen() {
@@ -1113,13 +1171,53 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch { ablage.loescheZiel(ziel) }
     }
 
-    fun speichereSelbstbild() {
-        viewModelScope.launch { ablage.speichereSelbstbild(_selbstbildFeld.value.text) }
+    // --- F-21: das Selbstbild -------------------------------------------------------------
+    //
+    // Das Selbstbild war die undichteste Stelle der App: es wurde einzig beim Druck auf den
+    // Zurück-Pfeil gespeichert. Wer die App danach aus dem Speicher warf — und genau dazu
+    // zwang die Sackgasse im Rückweg —, fand das Feld beim nächsten Mal leer. Ein langer,
+    // eingesprochener Text war weg.
+    //
+    // Drei Schichten sichern ihn jetzt: der ausdrückliche Knopf, das Verlassen des
+    // Bildschirms und das Verlassen der App.
+
+    /** Der zuletzt gesicherte Stand — daran hängt „Gespeichert" gegen „Nicht gesichert". */
+    private val _selbstbildGesichert = MutableStateFlow("")
+
+    /** Steht im Feld etwas anderes als in der Ablage? */
+    val selbstbildOffen: StateFlow<Boolean> = combine(
+        _selbstbildFeld, _selbstbildGesichert,
+    ) { feld, gesichert -> feld.text.trim() != gesichert.trim() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Ausdrücklich speichern — der Knopf auf B-09. */
+    fun speichereSelbstbild(mitMeldung: Boolean = false) {
+        val text = _selbstbildFeld.value.text
+        if (text.trim() == _selbstbildGesichert.value.trim()) {
+            if (mitMeldung) melde("Schon gespeichert.")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                ablage.speichereSelbstbild(text)
+                _selbstbildGesichert.value = text
+                if (mitMeldung) melde("Selbstbild gespeichert.")
+            } catch (fehler: Exception) {
+                // Nie stillschweigend verlieren: der Text bleibt im Feld stehen.
+                zeigeStoerung("Das Selbstbild ließ sich nicht speichern. " + fehler.freundlich())
+            }
+        }
     }
 
+    /** Beim Betreten von B-09 — direkt aus der Ablage, nicht aus dem beobachteten Strom. */
     fun ladeSelbstbildInsFeld() {
-        if (_selbstbildFeld.value.text.isBlank()) {
-            _selbstbildFeld.value = Feld(text = selbstbild.value?.text.orEmpty())
+        viewModelScope.launch {
+            val gespeichert = runCatching { ablage.liesSelbstbild() }.getOrDefault("")
+            _selbstbildGesichert.value = gespeichert
+            // Ein noch ungesicherter Entwurf im Feld gewinnt — er wäre sonst überschrieben.
+            if (_selbstbildFeld.value.text.isBlank()) {
+                _selbstbildFeld.value = Feld(text = gespeichert)
+            }
         }
     }
 
@@ -1332,6 +1430,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             viewModelScope.launch { aufnahme.stop() }
         }
         app.vorleser.halteAn()
+        // Dritte Schicht für F-21: was im Selbstbild-Feld steht, überlebt auch das
+        // Wegwischen der App aus dem Speicher.
+        speichereSelbstbild()
     }
 
     override fun onCleared() {
@@ -1346,6 +1447,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
         /** Diese Bildschirme merken sich, von wo aus sie geöffnet wurden. */
         val MERKT_HERKUNFT = setOf(Ziel.GESPRAECH, Ziel.AUSWERTUNG, Ziel.EINSTELLUNGEN, Ziel.SELBSTBILD)
+
+        /** So tief darf der Rückweg werden — tiefer verschachtelt die App nicht. */
+        const val RUECKWEG_TIEFE = 8
     }
 
     /**

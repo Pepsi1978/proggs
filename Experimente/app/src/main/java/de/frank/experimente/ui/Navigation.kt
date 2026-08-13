@@ -1,5 +1,6 @@
 package de.frank.experimente.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -46,9 +47,18 @@ import kotlin.math.abs
 @Composable
 fun Navigation(modell: AppViewModel) {
     val ziel by modell.ziel.collectAsStateWithLifecycle()
+    val kannZurueck by modell.kannZurueck.collectAsStateWithLifecycle()
     val farben = LocalFarben.current
     val stufe = LocalEffektstufe.current
     val wechsel = dauer(Bewegung.WECHSEL, stufe)
+
+    // Die Zurück-Taste und die Wischgeste des Geräts führen denselben Weg zurück wie der
+    // Pfeil in der Kopfleiste. Auf dem Monitor bleibt sie unangetastet und verlässt die App.
+    BackHandler(enabled = kannZurueck) {
+        // Ein offener Selbstbild-Text wird auch auf diesem Weg gesichert.
+        if (ziel == Ziel.SELBSTBILD) modell.speichereSelbstbild()
+        modell.zurueck()
+    }
 
     val wischbar = ziel in Ziel.hauptreihe
 

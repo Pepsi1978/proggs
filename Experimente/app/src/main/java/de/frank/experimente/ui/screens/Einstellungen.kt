@@ -121,7 +121,7 @@ fun Einstellungen(modell: AppViewModel) {
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
-        kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueck) },
+        kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueckTippen) },
         kopf = { Titel("Einstellungen", klein = true) },
         ueberlagerung = {
             Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)
@@ -394,10 +394,12 @@ fun Einstellungen(modell: AppViewModel) {
 @Composable
 fun Selbstbild(modell: AppViewModel) {
     val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
     val feld by modell.selbstbildFeld.collectAsStateWithLifecycle()
     val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
+    val offen by modell.selbstbildOffen.collectAsStateWithLifecycle()
 
     androidx.compose.runtime.LaunchedEffect(Unit) { modell.ladeSelbstbildInsFeld() }
 
@@ -410,7 +412,7 @@ fun Selbstbild(modell: AppViewModel) {
                 beiKlick = {
                     // F-21: das Selbstbild wird beim Verlassen gespeichert.
                     modell.speichereSelbstbild()
-                    modell.zurueck()
+                    modell.zurueckTippen()
                 },
             )
         },
@@ -427,6 +429,26 @@ fun Selbstbild(modell: AppViewModel) {
                 mindesthoehe = 360.dp,
             )
         }
+
+        // Der Stand ist ablesbar, nicht zu erraten: entweder es ist gesichert, oder es steht
+        // ausdrücklich da, dass noch etwas offen ist.
+        item("stand") {
+            Text(
+                text = if (offen) "Noch nicht gespeichert." else "Gespeichert.",
+                style = schriften.fliesstextKlein,
+                color = if (offen) farben.warnung else farben.erledigt,
+            )
+        }
+
+        item("speichern") {
+            KnopfBetont(
+                text = "Speichern",
+                beiKlick = { modell.speichereSelbstbild(mitMeldung = true) },
+                modifier = Modifier.fillMaxWidth(),
+                gross = true,
+            )
+        }
+
         item("knoepfe") {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KnopfUmrandet(
@@ -454,6 +476,16 @@ fun Selbstbild(modell: AppViewModel) {
                     )
                 }
             }
+        }
+
+        item("hinweis-wirkung") {
+            Text(
+                text = "Dein Selbstbild geht als erster Block in jede Anfrage ein — es prägt " +
+                    "alle Vorschläge und Einschätzungen.",
+                style = schriften.fliesstextKlein,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

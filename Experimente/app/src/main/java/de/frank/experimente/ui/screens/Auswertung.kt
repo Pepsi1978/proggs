@@ -77,7 +77,7 @@ fun Auswertung(modell: AppViewModel) {
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
-        kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueck) },
+        kopfLinks = { Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueckTippen) },
         kopf = { Titel("Auswertung", klein = true) },
         ueberlagerung = {
             Meldungen(stoerung = stoerung, beiNochmal = modell::schliesseMeldung, hinweis = hinweis)

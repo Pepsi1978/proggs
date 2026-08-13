@@ -98,7 +98,7 @@ fun Gespraech(modell: AppViewModel) {
         Kopfzeile(
             innenAbstand = 8.dp,
             links = {
-                Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueck)
+                Rundknopf(Symbole.Zurueck, "Zurück", modell::zurueckTippen)
             },
         ) {
             Column(Modifier.weight(1f)) {

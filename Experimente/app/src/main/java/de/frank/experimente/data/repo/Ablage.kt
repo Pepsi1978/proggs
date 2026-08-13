@@ -704,6 +704,15 @@ class Ablage(
     suspend fun speichereSelbstbild(text: String) =
         db.selbstbild().schreibe(SelfImage(id = 1, text = text, updatedAt = Instant.now()))
 
+    /**
+     * F-21 — das gespeicherte Selbstbild direkt aus der Ablage.
+     *
+     * B-09 las es vorher aus dem beobachteten Strom. Der beginnt aber bei `null` und wird
+     * erst kurz darauf gefüllt — beim Betreten des Bildschirms stand deshalb regelmäßig ein
+     * leeres Feld da, obwohl der Text längst gespeichert war.
+     */
+    suspend fun liesSelbstbild(): String = db.selbstbild().lies()?.text.orEmpty()
+
     // --- Aufgaben je Tag als JSON -------------------------------------------------------
 
     private fun alsJson(jeTag: List<List<String>>): String {
