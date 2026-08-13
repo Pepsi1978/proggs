@@ -112,7 +112,14 @@ if ($laeuft) {
     Write-Host "  Ton-Puffer: $TonPufferMs ms ueber $Audio" -ForegroundColor DarkGray
   }
   if ($Audio -ne "") { $argumente += @("-audio", $Audio) }
-  if ($TonGeraet -eq "hda")    { $argumente += @("-feature", "-VirtioSndCard") }
+  if ($TonGeraet -eq "hda") {
+    # ACHTUNG (13.08.2026 geprueft, Image android-37 google_apis_playstore):
+    # Die HDA-Karte startet zwar (QEMU meldet "-soundhw hda"), aber das Android
+    # dieses Abbilds bringt keinen Treiber dafuer mit - es kommt dann GAR KEIN
+    # Ton mehr. Nur zum Vergleichsmessen nehmen, nie als Dauerzustand.
+    Write-Host "  ACHTUNG: HDA hat auf Android 37 keinen Treiber - es kommt KEIN Ton." -ForegroundColor Yellow
+    $argumente += @("-feature", "-VirtioSndCard")
+  }
   if ($TonGeraet -eq "virtio") { $argumente += @("-feature", "VirtioSndCard") }
   if ($TonProtokoll) {
     $tonLog = Join-Path $env:TEMP "fold8-audio-debug.log"

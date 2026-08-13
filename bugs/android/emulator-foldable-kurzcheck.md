@@ -27,6 +27,9 @@
 | 16 | `getevent` sieht scrcpy-/`input tap`-Klicks nicht | Eingespeiste Events umgehen `/dev/input` → Maus auf der PC-Seite abgreifen; `dumpsys input` `RecentQueue` hat **keine** Koordinaten |
 | 17 | Touch-Koordinaten absurd groß | Rohbereich ist 0–4095, nicht Pixel; Fold hat zwei Touchscreens → `roh / 4095 * kante`, `wm size` jedes Mal neu lesen |
 | 18 | Emulator startet riesig/außerhalb, ständiges Nachrücken | Er kennt **keine** Startgröße (`-scale` tot, `-window-size` nur Fuchsia, `emulator-user.ini` wird überschrieben) → einmal per `SetWindowPos` setzen, sobald das Fenster da ist |
+| 24 | Ton knistert/hackt NUR im Emulator (echtes Geraet sauber) | UNGELOEST. Gast liefert lueckenlos (Underruns=0); `-audio`/DSOUND-Puffer kommen gar nicht an (mit `-TonProtokoll` pruefen); HDA-Karte = gar kein Ton. Klang auf echter Hardware pruefen |
+| 24b | Ton-Schalter am Emulator wirkungslos | Erst `Start-Fold8.ps1 -TonProtokoll` und nachsehen, ob der Schalter in der QEMU-Zeile steht — sonst aendert man nichts |
+| 24c | Schwarzer Emulator-Bildschirm nach Soundkarten-Wechsel | Schnappschuss passt nicht zur neuen Bestueckung → Kaltstart (wird bei `-TonGeraet` erzwungen); sonst zuerst auf Bildschirmsperre pruefen |
 | 18b | Fenster startet oben aus dem Bild (y negativ), Titelleiste nicht greifbar | Kette umgangen — `emulator.exe -avd` direkt statt `Start-Fold8.ps1`; Position war falsch, Größe war es nicht → `emulator-start-guard`-Hook blockt den nackten Start |
 | 18c | Fenster vertikal mittig, horizontal daneben | Nach **Soll**maß zentriert; der Emulator zieht das Fenster verzögert auf sein Seitenverhältnis → warten bis die Größe stabil ist, dann nach **Ist**maß nur die Position setzen |
 | 19 | "App viel zu groß" trotz korrekter Rechnung | Innendisplay (7,6″, 11,63 cm) mit Cover-Display (5,5″, 7,47 cm) verglichen → Emulator dem echten Gerät folgen lassen |

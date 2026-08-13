@@ -497,3 +497,52 @@ große Display. Läuft bereits ein Emulator mit der anderen AVD, wird sie **gewe
 beenden, richtige starten, App mitnehmen) statt stillschweigend das falsche Format zu zeigen.
 Zum Wechseln im Betrieb: `Klappen.ps1 -Auf` / `-Zu` — der Falt-Knopf im Emulator taugt dafür
 nicht (siehe #1).
+
+---
+
+## 24. Ton knistert und hackt — nur im Emulator, nicht auf echter Hardware
+
+**Symptom:** Die Tonwiedergabe im Emulator klingt zerhackt, als bräche sie ständig kurz ab.
+Dieselbe APK klingt auf dem echten Gerät völlig sauber, und anderer Ton auf dem PC (Musik,
+Video) läuft ebenfalls störungsfrei — betroffen ist ausschließlich der Emulator.
+
+**Stand 13.08.2026 — UNGELÖST.** Der Abschnitt hält den Ausschlussweg fest, damit niemand ihn
+ein zweites Mal durchläuft.
+
+**Was nachweislich NICHT die Ursache ist** (jeweils gemessen, nicht vermutet):
+
+| Verdacht | Widerlegung |
+|----------|-------------|
+| Die App / ihre Audio-Verstärkung | Ohne jede Verstärkung knistert es identisch; auf echter Hardware nie |
+| Zu hoher Pegel / Übersteuerung | Auch bei Gain 0 unverändert |
+| Dauerlast durch Poll-Prozesse | Größen-Wächter (4 adb-Abfragen/s) gestoppt → keine Änderung |
+| Zu wenig Rechenzeit | Priorität von `qemu-system-x86_64` auf Hoch **und** Echtzeit → keine Änderung |
+| Aussetzer im Gast | `dumpsys media.audio_flinger`: `raw underrun counters: partial=0 empty=0`, Track-`Underruns=0` — Android liefert lückenlos |
+| Abtastraten-Umrechnung | Windows-Ausgabe 48000 Hz/32 bit = exakt die Emulator-Mixerrate |
+| Veralteter Emulator | 37.1.11.0 ist die neueste Version, kein Update verfügbar |
+| Windows-Audio allgemein (DPC-Latenz, Realtek-Effekte, Energieplan) | Anderer Ton auf demselben PC ist sauber |
+
+**Zwei Hebel, die gar nicht ankommen** (wichtigste Lehre): `-audio dsound` und die
+DirectSound-Umgebungswerte (`QEMU_DSOUND_LATENCY_MILLIS`, `QEMU_DSOUND_BUFSIZE_OUT`) erscheinen
+**nicht** in der QEMU-Befehlszeile, die der Emulator tatsächlich startet. Sie sind wirkungslos,
+nicht "getestet und verworfen". Sichtbar wird das nur mit `-debug audio,audioout,init`
+(`Start-Fold8.ps1 -TonProtokoll`, Log in `%TEMP%\fold8-audio-debug.log`): dort steht die
+vollständige Zeile, u. a. `-soundhw virtio-snd-pci`. **Vor jedem Ton-Schalter erst prüfen, ob er
+in dieser Zeile auftaucht.**
+
+**Sackgasse Intel-HDA:** Das Emulator-Feature `VirtioSndCard` (in `emulator/lib/advancedFeatures.ini`,
+Standard `on`) lässt sich per `-feature -VirtioSndCard` abschalten, dann startet QEMU mit
+`-soundhw hda`. Das kommt zwar an, führt auf dem Image `android-37 google_apis_playstore` aber zu
+**gar keinem Ton** — Android bringt für die HDA-Karte keinen Treiber mehr mit. Nur zum
+Vergleichsmessen brauchbar, nie als Dauerzustand; `Start-Fold8.ps1 -TonGeraet hda` warnt deshalb.
+
+**Nebenwirkung:** Ein Wechsel der Soundkarte ändert die Gerätebestückung. Wird danach der
+Schnappschuss geladen, bleibt der Bildschirm schwarz → **Kaltstart Pflicht**. `Start-Fold8.ps1`
+erzwingt ihn bei gesetztem `-TonGeraet` selbst.
+
+**Empfohlener Umgang:** Emulator zum Sehen und Bedienen, Klangprüfung auf dem echten Gerät.
+
+**Falsche Fährte bei der Diagnose:** Ein schwarzer Emulator-Bildschirm bedeutet nicht, dass
+Android hängt — es kann schlicht die Bildschirmsperre sein. Und ein per Pipe geholter Screenshot
+(`adb exec-out screencap -p > datei`) ist unter Git Bash/PowerShell verstümmelt (hier konstant
+14 KB statt 1,2 MB); immer `screencap` auf dem Gerät + `adb pull` (siehe #8).
