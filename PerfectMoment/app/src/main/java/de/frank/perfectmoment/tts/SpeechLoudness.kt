@@ -42,6 +42,7 @@ object SpeechLoudness {
         } catch (error: Exception) {
             logger.warning("Playback volume could not be set: ${error.message}")
         }
+        if (TARGET_GAIN_MILLIBEL <= 0) return
         try {
             val enhancer = LoudnessEnhancer(player.audioSessionId)
             enhancer.setTargetGain(TARGET_GAIN_MILLIBEL)

@@ -20,7 +20,27 @@ param(
   # Wechsel des Backends der erste Hebel - die Gastseite ist dann in Ordnung,
   # nur der Weg zum Windows-Mixer nicht. Leer = Emulator entscheidet selbst.
   [ValidateSet("", "winaudio", "dsound", "none")]
-  [string]$Audio = ""
+  [string]$Audio = "",
+  # Groesse des Ton-Puffers in Millisekunden. Knistert oder hackt die Wiedergabe,
+  # fordert der Emulator beim Windows-Mixer eine zu kurze Latenz an: der Puffer
+  # ist leer, bevor Nachschub da ist - das hoert man als Aussetzer. Ein groesserer
+  # Wert (80-150) glaettet das, um den Preis minimal spaeterer Tonausgabe.
+  # Wirkt nur ueber das DirectSound-Backend, darum wird dieses dann mitgesetzt.
+  # 0 = nicht eingreifen, der Emulator entscheidet selbst.
+  [int]$TonPufferMs = 0,
+  # Schreibt mit, was der Ton-Teil des Emulators tut (welcher Ausgabeweg, welche
+  # Puffer, welche Fehler). Pflicht, bevor man an Ton-Schaltern dreht: sonst
+  # aendert man Werte, die gar nicht ankommen. Log: %TEMP%\fold8-audio-debug.log
+  [switch]$TonProtokoll,
+  # Welche Soundkarte der Emulator dem Android vorspielt.
+  #   virtio = virtio-snd (Voreinstellung des Emulators, Feature "VirtioSndCard")
+  #   hda    = die aeltere Intel-HDA-Karte
+  # Knistert oder hackt der Ton NUR im Emulator, waehrend Windows sonst sauber
+  # klingt, ist das der wirksamste Hebel: die beiden Karten haben voellig
+  # verschiedene Puffer- und Zeitsteuerungen. Umgestellt wird ueber "-feature",
+  # also nur fuer diesen Start - kein bleibender Eingriff am System.
+  [ValidateSet("", "virtio", "hda")]
+  [string]$TonGeraet = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -72,9 +92,37 @@ if ($laeuft) {
 } else {
   Write-Host "Starte $avd ..." -ForegroundColor Cyan
   $argumente = @("-avd", $avd, "-gpu", "host", "-no-boot-anim")
+  # Wird die Soundkarte gewechselt, MUSS kalt gestartet werden: der Schnappschuss
+  # haelt die alte Geraetebestueckung fest: laedt man ihn mit anderer Karte, bleibt
+  # der Bildschirm schwarz (erlebt am 13.08.2026). Darum hier erzwungen, nicht
+  # dem Aufrufer ueberlassen.
+  if ($TonGeraet -ne "" -and -not $Kaltstart) {
+    Write-Host "  Soundkarte gewechselt - Kaltstart wird erzwungen." -ForegroundColor DarkGray
+    $Kaltstart = $true
+  }
   if ($Kaltstart) { $argumente += "-no-snapshot-load" }
+  # Groesserer Ton-Puffer gegen Knistern. Die Werte liest das DirectSound-Backend
+  # des eingebetteten QEMU aus der Umgebung (LATENCY_MILLIS / BUFSIZE_OUT); sie
+  # werden an den Kindprozess vererbt. BUFSIZE in Bytes: 48 kHz, 16 bit, stereo
+  # = 192 Byte je Millisekunde.
+  if ($TonPufferMs -gt 0) {
+    if ($Audio -eq "") { $Audio = "dsound" }
+    $env:QEMU_DSOUND_LATENCY_MILLIS = "$TonPufferMs"
+    $env:QEMU_DSOUND_BUFSIZE_OUT    = "$($TonPufferMs * 192)"
+    Write-Host "  Ton-Puffer: $TonPufferMs ms ueber $Audio" -ForegroundColor DarkGray
+  }
   if ($Audio -ne "") { $argumente += @("-audio", $Audio) }
-  Start-Process -FilePath $emulator -ArgumentList $argumente -WindowStyle Normal
+  if ($TonGeraet -eq "hda")    { $argumente += @("-feature", "-VirtioSndCard") }
+  if ($TonGeraet -eq "virtio") { $argumente += @("-feature", "VirtioSndCard") }
+  if ($TonProtokoll) {
+    $tonLog = Join-Path $env:TEMP "fold8-audio-debug.log"
+    $argumente += @("-debug", "audio,audioout,init")
+    Start-Process -FilePath $emulator -ArgumentList $argumente -WindowStyle Normal `
+      -RedirectStandardOutput $tonLog -RedirectStandardError "$tonLog.err"
+    Write-Host "  Ton-Protokoll: $tonLog" -ForegroundColor DarkGray
+  } else {
+    Start-Process -FilePath $emulator -ArgumentList $argumente -WindowStyle Normal
+  }
 
   # Fenstergroesse setzen, SOBALD das Fenster da ist - also lange vor dem
   # fertigen Systemstart. Der Emulator kennt keine Startgroesse (siehe Kopf von
