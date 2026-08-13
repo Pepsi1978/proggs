@@ -218,11 +218,11 @@ data class SessionState(
 
 **`CodexAuthManager.kt` aus KarteikartenLernen als Ganzes übernehmen** (Auth + SSE + Fehlerklassifikation), nur den Payload-Teil ersetzen.
 
-### 8.1 Anmeldung (Device-Code, „2×4 Zeichen")
+### 8.1 Anmeldung (Device-Code, Länge bestimmt der Server)
 
 Konstanten wörtlich: `CLIENT_ID app_EMoamEEZ73f0CkXaXp7hrann` · `TOKEN_URL https://auth.openai.com/oauth/token` · `DEVICE_USER_CODE_URL https://auth.openai.com/api/accounts/deviceauth/usercode` · `DEVICE_TOKEN_URL https://auth.openai.com/api/accounts/deviceauth/token` · Browser-Seite `https://auth.openai.com/codex/device` · `RESPONSES_URL https://chatgpt.com/backend-api/codex/responses`.
 
-Ablauf: `POST usercode {client_id}` → `user_code` (Format `XXXX-XXXX`, Anzeige 40 px Mono wie Muster), `device_auth_id`, `interval` → Browser-Intent → Polling `POST deviceauth/token {device_auth_id, user_code}` (Start 5 s, min 3 s, max 30 s, bei 429 +5 s, Netzfehler +2 s, Lebensdauer 15 min; 403/404/429/5xx = pending) → bei 200 `authorization_code` + `code_verifier` → PKCE-Exchange an `/oauth/token`. Tokens in `codex_oauth`-Prefs; Refresh mit 120 s Vorlauf; `account_id` aus JWT-Claim `https://api.openai.com/auth`. `withDnsRetry` + `awaitForegroundAndNetwork` übernehmen (App kommt aus dem Browser zurück, Netz braucht Momente). UI-Zustände exakt wie Muster ⑤d (nicht verbunden / Code / abgelaufen / verbunden mit E-Mail + „Verbindung trennen").
+Ablauf: `POST usercode {client_id}` → `user_code` (Anzeige 40 px Mono wie Muster; **Länge nie annehmen** — der Server liefert derzeit neun Zeichen, die Browser-Seite fragt sie als 4 + 5 ab. Die Anzeige teilt den Code über `deviceCodeGroups()` in Gruppen und kürzt ihn NIE; sonst fehlt dem Benutzer ein Zeichen und die Anmeldung ist unmöglich), `device_auth_id`, `interval` → Browser-Intent → Polling `POST deviceauth/token {device_auth_id, user_code}` (Start 5 s, min 3 s, max 30 s, bei 429 +5 s, Netzfehler +2 s, Lebensdauer 15 min; 403/404/429/5xx = pending) → bei 200 `authorization_code` + `code_verifier` → PKCE-Exchange an `/oauth/token`. Tokens in `codex_oauth`-Prefs; Refresh mit 120 s Vorlauf; `account_id` aus JWT-Claim `https://api.openai.com/auth`. `withDnsRetry` + `awaitForegroundAndNetwork` übernehmen (App kommt aus dem Browser zurück, Netz braucht Momente). UI-Zustände exakt wie Muster ⑤d (nicht verbunden / Code / abgelaufen / verbunden mit E-Mail + „Verbindung trennen").
 
 ### 8.2 Frage-Erzeugung (Responses-API, SSE)
 

@@ -138,6 +138,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.auth.QuestionPerspective
+import de.frank.perfectmoment.auth.deviceCodeGroups
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SkillEntity
@@ -2316,11 +2317,11 @@ private fun DeviceCodeState(
     val info = viewModel.deviceAuthInfo
     val expired = viewModel.chatGptState == ChatGptState.EXPIRED
     val code = info?.userCode.orEmpty()
-    val codeCharacters = code.filter(Char::isLetterOrDigit).take(8)
-    val codeGroups = listOf(
-        codeCharacters.take(4).padEnd(4, '–'),
-        codeCharacters.drop(4).take(4).padEnd(4, '–'),
-    )
+    // The server decides how long the code is (currently 4 + 5 characters), so the
+    // groups are derived from the code itself - never padded, never truncated.
+    val codeGroups = deviceCodeGroups(code)
+    val codeLength = codeGroups.sumOf { it.length }
+    val codeFontSize = if (codeLength > 8) 34.sp else 40.sp
     Column(
         Modifier.fillMaxSize().padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
@@ -2333,7 +2334,7 @@ private fun DeviceCodeState(
                     color = if (expired) colors.text3 else colors.goldHi,
                     style = TextStyle(
                         fontFamily = JetBrainsMono,
-                        fontSize = 40.sp,
+                        fontSize = codeFontSize,
                         letterSpacing = 4.sp,
                         shadow = Shadow(
                             colors.goldHi.copy(alpha = if (expired) 0f else 0.28f),
@@ -2343,7 +2344,7 @@ private fun DeviceCodeState(
                     textDecoration = if (expired) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                     maxLines = 1,
                 )
-                if (index == 0) Box(Modifier.width(16.dp).height(1.5.dp).background(colors.goldDim))
+                if (index < codeGroups.lastIndex) Box(Modifier.width(16.dp).height(1.5.dp).background(colors.goldDim))
             }
         }
         Text("Gib diesen Code auf der geöffneten Seite ein.", color = colors.text2, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.padding(top = 18.dp))
