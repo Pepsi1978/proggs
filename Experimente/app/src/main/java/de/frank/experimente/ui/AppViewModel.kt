@@ -16,6 +16,7 @@ import de.frank.experimente.auth.Geraetecode
 import de.frank.experimente.data.local.ChatTurn
 import de.frank.experimente.data.local.Evaluation
 import de.frank.experimente.data.local.Experiment
+import de.frank.experimente.data.local.ExperimentZustand
 import de.frank.experimente.data.local.Goal
 import de.frank.experimente.data.local.Insight
 import de.frank.experimente.data.local.LogDay
@@ -869,12 +870,49 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     private val _wertetAus = MutableStateFlow<Long?>(null)
     val wertetAus: StateFlow<Long?> = _wertetAus.asStateFlow()
 
+    /**
+     * B-03 öffnen.
+     *
+     * Das Feld wird **nur** geleert, wenn ein *anderes* Experiment ausgewertet wird. Beim
+     * Zurückkehren zum selben steht der eingesprochene Text wieder da — er ist Arbeit, und
+     * ein Fehlgriff auf den Zurück-Pfeil darf ihn nicht kosten.
+     */
     fun oeffneAuswertung(experiment: Experiment? = null) {
-        _wertetAus.value = (experiment ?: laufende.value.firstOrNull())?.id
-        _auswertungsFeld.value = Feld()
-        _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+        val neueId = (experiment ?: laufende.value.firstOrNull())?.id
+        if (neueId != _wertetAus.value) {
+            _wertetAus.value = neueId
+            _auswertungsFeld.value = Feld()
+            _einschaetzung.value = emptyList()
+            _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+        } else if (_auswertungsFeld.value.text.isBlank()) {
+            _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+        }
         gehe(Ziel.AUSWERTUNG)
     }
+
+    /**
+     * Die bisherigen Auswertungen des gerade geöffneten Experiments — B-03 zeigt sie unter
+     * der heutigen Eingabe, damit nichts Eingesprochenes unsichtbar wird.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val bisherigeAuswertungen: StateFlow<List<Evaluation>> = _wertetAus
+        .flatMapLatest { id ->
+            if (id == null) kotlinx.coroutines.flow.flowOf(emptyList())
+            else ablage.beobachteAuswertungenZu(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Das ausgewertete Experiment — auch wenn es durch die letzte Auswertung soeben
+     * abgeschlossen wurde und damit aus der Liste der laufenden gefallen ist.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val ausgewertetes: StateFlow<Experiment?> = _wertetAus
+        .flatMapLatest { id ->
+            if (id == null) kotlinx.coroutines.flow.flowOf(null)
+            else ablage.beobachteExperiment(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Der Weg durch B-03: einsprechen → Text → warten → Antwort (Funktions-Spec §4). */
     private val _auswertungsZustand = MutableStateFlow(AuswertungZustand.AUFNAHME)
@@ -899,9 +937,17 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     /** F-10 Schritt 3 und F-11: nach dem Eintrag läuft die KI-Auswertung. */
     fun werteAus() {
-        val id = _wertetAus.value ?: return
+        val id = _wertetAus.value
+        if (id == null) {
+            // Vorher brach die Funktion hier still ab: „Weiter" tat nichts, ohne ein Wort.
+            zeigeStoerung("Zu welchem Experiment gehört das? Öffne es im Monitor.")
+            return
+        }
         val text = _auswertungsFeld.value.text
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            melde("Da steht noch nichts. Sprich etwas ein oder tipp es.")
+            return
+        }
         viewModelScope.launch {
             _auswertungsZustand.value = AuswertungZustand.WARTET
             _wartet.value = "Ich denke darüber nach …"
@@ -927,16 +973,25 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
 
     /** F-30 — überspringen: das Experiment bleibt offen und kommt am nächsten Abend erneut. */
     fun ueberspringeAuswertung() {
+        // Das Gesagte ist längst gespeichert (Auswertung + Gesprächsfaden); hier wird nur
+        // die Anzeige geräumt.
         _auswertungsFeld.value = Feld()
         _einschaetzung.value = emptyList()
+        _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+        _wertetAus.value = null
         zurueck()
     }
 
     /**
      * F-13 — abschließen. Die Karte verlässt den Monitor mit der Lichtblüte (`E-16`, M-93),
      * danach ist ein Platz der drei wieder frei.
+     *
+     * Den Abschluss selbst trägt `Ablage.werteAus` am letzten Tag ein. An einem Zwischentag
+     * läuft das Experiment weiter — dann darf hier nicht „Abgeschlossen" gemeldet werden,
+     * sonst sagt die App etwas anderes als sie tut.
      */
     fun schliesseAb() {
+        val abgeschlossen = ausgewertetes.value?.state == ExperimentZustand.ABGESCHLOSSEN
         viewModelScope.launch {
             _bluete.value = true
             ruettleLangWeich()
@@ -944,16 +999,29 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             _bluete.value = false
             _auswertungsFeld.value = Feld()
             _einschaetzung.value = emptyList()
+            _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+            _wertetAus.value = null
             gehe(Ziel.MONITOR)
-            melde("Abgeschlossen. Der Eintrag steht im Logbuch.")
+            melde(
+                if (abgeschlossen) "Abgeschlossen. Der Eintrag steht im Logbuch."
+                else "Zwischenstand gespeichert. Es läuft weiter.",
+            )
         }
     }
 
-    /** F-13, Weg „Nicht umgesetzt“. */
+    /**
+     * F-13, Weg „Nicht umgesetzt“ — das Experiment endet, kommt aber vollständig zurück auf
+     * die Merkliste, mit dem Vermerk, was im Weg stand.
+     */
     fun nichtUmgesetzt(experiment: Experiment) {
         viewModelScope.launch {
             ablage.nichtUmgesetzt(experiment.id, _auswertungsFeld.value.text, heute)
-            melde("Nicht umgesetzt — der Eintrag steht im Logbuch.")
+            _auswertungsFeld.value = Feld()
+            _einschaetzung.value = emptyList()
+            _auswertungsZustand.value = AuswertungZustand.AUFNAHME
+            _wertetAus.value = null
+            gehe(Ziel.MONITOR)
+            melde("Nicht umgesetzt — es liegt wieder auf der Merkliste.")
             bestimmeZustand()
         }
     }

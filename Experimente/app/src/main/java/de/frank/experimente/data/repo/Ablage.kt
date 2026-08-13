@@ -80,6 +80,12 @@ class Ablage(
     fun beobachteSelbstbild() = db.selbstbild().beobachte()
     fun beobachteGespraech(experimentId: Long) = db.gespraech().beobachte(experimentId)
     fun beobachteAuswertungen(tag: LocalDate) = db.auswertungen().beobachteTag(tag)
+
+    /** B-03 — die bisherigen Auswertungen eines Experiments, Tag für Tag. */
+    fun beobachteAuswertungenZu(experimentId: Long) = db.auswertungen().beobachteZumExperiment(experimentId)
+
+    /** Ein Experiment unabhängig von seinem Zustand — auch ein abgeschlossenes. */
+    fun beobachteExperiment(experimentId: Long) = db.experimente().beobachteEines(experimentId)
     fun beobachteAufgaben(experimentIds: List<Long>) = db.aufgaben().beobachte(experimentIds)
 
     // --- Kontext ------------------------------------------------------------------------
@@ -447,17 +453,44 @@ class Ablage(
     suspend fun werteAus(experimentId: Long, eigenerText: String, tag: LocalDate = LocalDate.now()): String? {
         val experiment = db.experimente().einer(experimentId) ?: return null
         val letzter = istLetzterTag(experiment, tag)
+        val tagNr = tagNummer(experiment, tag)
+        val sauber = eigenerText.trim()
 
-        db.auswertungen().lege(
-            Evaluation(
+        // Die Auswertung des Tages wird FORTGESCHRIEBEN, nicht ein zweites Mal angelegt —
+        // sonst stünden nach einem zweiten Anlauf zwei Zeilen zum selben Tag in der Ablage.
+        val bisherige = db.auswertungen().anTag(experimentId, tag)
+        if (bisherige == null) {
+            db.auswertungen().lege(
+                Evaluation(
+                    experimentId = experimentId,
+                    date = tag,
+                    ownText = sauber,
+                    isFinal = letzter,
+                ),
+            )
+        } else {
+            db.auswertungen().aendere(
+                bisherige.copy(ownText = sauber, aiText = null, isFinal = letzter),
+            )
+        }
+
+        // **Der eingesprochene Text gehört in den Gesprächsfaden — sofort, vor dem Netz.**
+        //
+        // Vorher lag er allein in `auswertungen`, und diese Tabelle zeigt kein Bildschirm an:
+        // nach „Weiter" war das Gesagte für Frank spurlos verschwunden. Es ging auch nicht in
+        // den Faden ein, den jede spätere Anfrage mitbekommt — eingesprochen, aber wirkungslos.
+        //
+        // Er wird VOR dem KI-Aufruf geschrieben. Fällt das Netz aus, ist er trotzdem da.
+        db.gespraech().lege(
+            ChatTurn(
                 experimentId = experimentId,
-                date = tag,
-                ownText = eigenerText.trim(),
-                isFinal = letzter,
+                role = Rolle.ICH,
+                text = "Auswertung Tag $tagNr:\n$sauber",
+                createdAt = Instant.now(),
             ),
         )
 
-        val heutige = db.aufgaben().tagesaufgaben(experimentId, tagNummer(experiment, tag))
+        val heutige = db.aufgaben().tagesaufgaben(experimentId, tagNr)
         val stand = if (heutige.isEmpty()) {
             "keine Aufgaben für heute"
         } else {
@@ -481,8 +514,22 @@ class Ablage(
             db.auswertungen().aendere(it.copy(aiText = kiText))
         }
 
+        // Die Einschätzung gehört in denselben Faden wie Franks Text — im Gespräch stehen
+        // beide danach untereinander und gehen in jede weitere Anfrage ein.
+        if (kiText.isNotBlank()) {
+            db.gespraech().lege(
+                ChatTurn(
+                    experimentId = experimentId,
+                    role = Rolle.KI,
+                    text = kiText,
+                    createdAt = Instant.now(),
+                ),
+            )
+        }
+
         schreibeLogbuchFort(
-            "Auswertung zu „${experiment.title}“ ($stand)\nFrank: $eigenerText\nEinschätzung: $kiText",
+            "Auswertung zu „${experiment.title}“ ($stand)\nFrank: $sauber\nEinschätzung: $kiText",
+            tag,
         )
 
         if (letzter) {
@@ -502,6 +549,12 @@ class Ablage(
         val experiment = db.experimente().einer(experimentId) ?: return
         db.experimente().aendere(
             experiment.copy(state = ExperimentZustand.NICHT_UMGESETZT, closedAt = tag),
+        )
+        // Die Oberfläche sagt „der Eintrag steht im Logbuch" — bis hierher stand er dort nie.
+        schreibeLogbuchFort(
+            "„${experiment.title}“ wurde nicht umgesetzt." +
+                grund.trim().takeIf { it.isNotBlank() }?.let { "\nGrund: $it" }.orEmpty(),
+            tag,
         )
         val aufgaben = db.aufgaben().tagesaufgaben(experimentId, 1)
         db.merkliste().lege(

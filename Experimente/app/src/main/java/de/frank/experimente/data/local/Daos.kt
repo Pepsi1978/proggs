@@ -127,6 +127,16 @@ interface ExperimenteDao {
     @Query("SELECT * FROM experimente WHERE id = :id")
     suspend fun einer(id: Long): Experiment?
 
+    /**
+     * Ein einzelnes Experiment, unabhängig von seinem Zustand.
+     *
+     * B-03 braucht das: sobald die letzte Auswertung steht, wechselt das Experiment auf
+     * `ABGESCHLOSSEN` und fällt aus der Liste der laufenden — der Bildschirm zeigte dann
+     * schlicht „Experiment" statt seines Titels, obwohl er noch offen davor stand.
+     */
+    @Query("SELECT * FROM experimente WHERE id = :id")
+    fun beobachteEines(id: Long): Flow<Experiment?>
+
     @Query("SELECT * FROM experimente WHERE state IN ('ABGESCHLOSSEN', 'NICHT_UMGESETZT') ORDER BY closedAt DESC")
     suspend fun abgeschlossene(): List<Experiment>
 
@@ -173,10 +183,22 @@ interface AufgabenDao {
 
 @Dao
 interface AuswertungenDao {
-    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId ORDER BY date ASC")
+    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId ORDER BY date ASC, id ASC")
     suspend fun zumExperiment(experimentId: Long): List<Evaluation>
 
-    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId AND date = :tag")
+    /** Alle Auswertungen eines Experiments — B-03 zeigt sie unter der heutigen Eingabe. */
+    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId ORDER BY date ASC, id ASC")
+    fun beobachteZumExperiment(experimentId: Long): Flow<List<Evaluation>>
+
+    /**
+     * Die Auswertung eines Tages.
+     *
+     * `LIMIT 1` mit der jüngsten zuerst: der Primärschlüssel wird erzeugt, `REPLACE` konnte
+     * also nie greifen. Eine zweite Auswertung am selben Tag legte eine zweite Zeile an, und
+     * ohne `LIMIT` lieferte diese Abfrage danach die **älteste** — der KI-Text landete in der
+     * falschen Zeile und die neue blieb für immer ohne Einschätzung.
+     */
+    @Query("SELECT * FROM auswertungen WHERE experimentId = :experimentId AND date = :tag ORDER BY id DESC LIMIT 1")
     suspend fun anTag(experimentId: Long, tag: LocalDate): Evaluation?
 
     @Query("SELECT * FROM auswertungen WHERE date = :tag")

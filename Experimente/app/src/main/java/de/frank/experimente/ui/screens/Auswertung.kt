@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -62,16 +63,17 @@ fun Auswertung(modell: AppViewModel) {
     val zustand by modell.auswertungsZustand.collectAsStateWithLifecycle()
     val feld by modell.auswertungsFeld.collectAsStateWithLifecycle()
     val nimmtAuf by modell.nimmtAuf.collectAsStateWithLifecycle()
-    val laufende by modell.laufende.collectAsStateWithLifecycle()
-    val wertetAus by modell.wertetAus.collectAsStateWithLifecycle()
     val abschnitte by modell.einschaetzung.collectAsStateWithLifecycle()
     val mitlese by modell.mitlese.collectAsStateWithLifecycle()
     val liestVor by modell.liestVor.collectAsStateWithLifecycle()
     val bluete by modell.bluete.collectAsStateWithLifecycle()
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
+    val frueher by modell.bisherigeAuswertungen.collectAsStateWithLifecycle()
 
-    val experiment = laufende.firstOrNull { it.id == wertetAus }
+    // Nicht aus `laufende` gefischt: sobald die letzte Auswertung steht, ist das Experiment
+    // abgeschlossen und fällt dort heraus — der Titel wurde dann zu „Experiment".
+    val experiment by modell.ausgewertetes.collectAsStateWithLifecycle()
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
@@ -239,8 +241,73 @@ fun Auswertung(modell: AppViewModel) {
                             modifier = Modifier.weight(1f),
                         )
                     }
+
+                    // F-13, zweiter Weg. Er war im Modell fertig gebaut, aber von keinem
+                    // Knopf aus erreichbar — hier ist er.
+                    experiment?.let { offenes ->
+                        Textknopf(
+                            text = "Nicht umgesetzt",
+                            beiKlick = { modell.nichtUmgesetzt(offenes) },
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- Was bisher gesagt wurde -------------------------------------------------
+        //
+        // Der eingesprochene Text war nach „Weiter" nicht mehr auffindbar: er lag in der
+        // Ablage, aber kein Bildschirm zeigte ihn. Hier steht er, Tag für Tag.
+        val vergangene = frueher.filter { it.ownText.isNotBlank() }
+        if (vergangene.isNotEmpty()) {
+            item("kopf-bisher") {
+                Text(
+                    text = "Bisher gesagt".uppercase(),
+                    style = schriften.zwischenueberschrift,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
+            items(vergangene, key = { "aus${it.id}" }) { eintrag ->
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(farben.flaeche)
+                        .border(1.dp, farben.rand, RoundedCornerShape(20.dp))
+                        .padding(18.dp),
+                ) {
+                    Text(
+                        text = TAGESFORM_AUSWERTUNG.format(eintrag.date),
+                        style = schriften.stufe,
+                        color = farben.aktion,
+                    )
+                    Text(
+                        text = eintrag.ownText,
+                        style = schriften.fliesstext,
+                        color = farben.text,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    eintrag.aiText?.takeIf { it.isNotBlank() }?.let { einschaetzung ->
+                        Text(
+                            text = "Einschätzung".uppercase(),
+                            style = schriften.zwischenueberschrift,
+                            color = farben.gedaempft,
+                            modifier = Modifier.padding(top = 14.dp),
+                        )
+                        Text(
+                            text = einschaetzung,
+                            style = schriften.kartentext,
+                            color = farben.gedaempft,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+private val TAGESFORM_AUSWERTUNG: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy", java.util.Locale.GERMAN)
