@@ -189,9 +189,32 @@ function Setze-Groesse($h, $zustand, [bool]$mittig) {
   $vollB = $zielB + $randB
   $vollH = $zielH + $randH
 
+  # Das Fenster MUSS frei auf dem Bildschirm stehen - mit Luft oben, unten,
+  # links und rechts. Passt die Originalgroesse nicht auf den Monitor, wird
+  # proportional verkleinert und das GEMELDET, statt das Fenster ueber den Rand
+  # hinauslaufen zu lassen: ein Fenster, dessen Titelleiste oberhalb des
+  # Bildschirms liegt, laesst sich mit der Maus nicht mehr greifen.
+  $randMin = 24
+  $maxB = ($arbeit.Right - $arbeit.Left) - 2 * $randMin
+  $maxH = ($arbeit.Bottom - $arbeit.Top) - 2 * $randMin
+  $schrumpf = 1.0
+  if ($vollB -gt $maxB -and $vollB -gt 0) { $schrumpf = [math]::Min($schrumpf, $maxB / $vollB) }
+  if ($vollH -gt $maxH -and $vollH -gt 0) { $schrumpf = [math]::Min($schrumpf, $maxH / $vollH) }
+  if ($schrumpf -lt 1.0 -and $schrumpf -gt 0) {
+    $zielB = [int][math]::Floor($zielB * $schrumpf)
+    $zielH = [int][math]::Floor($zielH * $schrumpf)
+    $vollB = $zielB + $randB
+    $vollH = $zielH + $randH
+    Schreib ("  Bildschirm zu klein fuer Originalgroesse - auf " + [int][math]::Round($schrumpf * 100) + " Prozent verkleinert.") Yellow
+  }
+
   function Mittig($breite, $hoehe) {
     $x = $arbeit.Left + [int](($arbeit.Right - $arbeit.Left - $breite) / 2)
     $y = $arbeit.Top  + [int](($arbeit.Bottom - $arbeit.Top - $hoehe) / 2)
+    # Allseitig einfangen - auch rechts und unten. Ein nur nach oben/links
+    # begrenztes Fenster steht sonst zwar buendig, ragt aber unten wieder raus.
+    if ($x + $breite -gt $arbeit.Right)  { $x = $arbeit.Right - $breite }
+    if ($y + $hoehe  -gt $arbeit.Bottom) { $y = $arbeit.Bottom - $hoehe }
     if ($x -lt $arbeit.Left) { $x = $arbeit.Left }
     if ($y -lt $arbeit.Top)  { $y = $arbeit.Top }
     return @($x, $y)
@@ -228,6 +251,33 @@ function Setze-Groesse($h, $zustand, [bool]$mittig) {
     Start-Sleep -Milliseconds 250
     [void][Fenster]::GetClientRect($h, [ref]$c)
     $istB = $c.R - $c.L; $istH = $c.B - $c.T
+  }
+
+  # Zentriert wird zum Schluss nach der TATSAECHLICHEN Fenstergroesse. Der
+  # Emulator setzt sein eigenes Seitenverhaeltnis durch, das Fenster weicht
+  # danach von den angeforderten Massen ab; wer nach dem Sollwert zentriert,
+  # steht daneben (gemessen: 90 px aus der Mitte). Nur die Position wird
+  # gesetzt, nie die Groesse - sonst waere die eben gesetzte 1:1-Groesse wieder hin.
+  if ($mittig) {
+    # Der Emulator zieht sein Fenster VERZOEGERT auf sein eigenes
+    # Seitenverhaeltnis zusammen (gemessen: angefordert 1138 breit, danach 958).
+    # Sofort messen heisst nach dem falschen Wert zentrieren - das Fenster stand
+    # dadurch 90 px aus der Mitte. Darum warten, bis zwei Messungen in Folge
+    # dieselbe Groesse liefern; erst dann steht die endgueltige Groesse fest.
+    $w2 = New-Object Fenster+RECT
+    $letztB = -1; $letztH = -1; $echtB = 0; $echtH = 0
+    for ($v = 0; $v -lt 10; $v++) {
+      [void][Fenster]::GetWindowRect($h, [ref]$w2)
+      $echtB = $w2.R - $w2.L; $echtH = $w2.B - $w2.T
+      if ($echtB -eq $letztB -and $echtH -eq $letztH) { break }
+      $letztB = $echtB; $letztH = $echtH
+      Start-Sleep -Milliseconds 150
+    }
+    if ($echtB -gt 50 -and $echtH -gt 50) {
+      $pos = Mittig $echtB $echtH
+      # 0x0001 = SWP_NOSIZE, 0x0004 = SWP_NOZORDER
+      [void][Fenster]::SetWindowPos($h, [IntPtr]::Zero, $pos[0], $pos[1], 0, 0, 0x0005)
+    }
   }
 
   return @{ IstB = $istB; IstH = $istH; ZielB = $zielB; ZielH = $zielH; MonitorPpi = $monitorPpi }
