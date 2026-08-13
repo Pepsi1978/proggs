@@ -1384,10 +1384,7 @@ class AppViewModel(
         val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
-                if (!sessionController.replaySession(sessionId, shuffle)) {
-                    message = "Die Fragen laufen im gespeicherten Wortlaut. " +
-                        "OpenAI war für die Perspektivumstellung gerade nicht erreichbar."
-                }
+                sessionController.replaySession(sessionId, shuffle)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {

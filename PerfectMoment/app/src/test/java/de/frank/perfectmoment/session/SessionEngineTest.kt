@@ -745,12 +745,36 @@ class SessionEngineTest {
         fixture.engine.close()
     }
 
+    @Test
+    fun `Wiedergabe aus dem Verlauf spielt den gesamten Bestand und endet ohne Nachschub`() = runTest {
+        val fixture = fixture(
+            questions = List(270) { question(it + 1) },
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 1, durationMs = 0),
+            endWhenQuestionsExhausted = true,
+        )
+        fixture.startSpeaking()
+
+        advanceTimeBy(600_001)
+        runCurrent()
+
+        repeat(270) {
+            fixture.tts.completeCurrent()
+            runCurrent()
+        }
+
+        assertEquals(List(270) { "Frage ${it + 1}" }, fixture.tts.spokenTexts)
+        assertEquals(270, fixture.engine.state.value.questions.size)
+        assertEquals(Phase.ENDED, fixture.engine.state.value.phase)
+        fixture.engine.close()
+    }
+
     private fun TestScope.fixture(
         questions: List<Question>,
         config: SessionConfig = config(),
         refill: FakeRefill? = null,
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
+        endWhenQuestionsExhausted: Boolean = false,
     ): Fixture {
         val tts = FakeTts()
         val engine = SessionEngine(
@@ -763,6 +787,7 @@ class SessionEngineTest {
             clock = SessionClock { testScheduler.currentTime },
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
+            endWhenQuestionsExhausted = endWhenQuestionsExhausted,
         )
         return Fixture(engine, tts, this)
     }

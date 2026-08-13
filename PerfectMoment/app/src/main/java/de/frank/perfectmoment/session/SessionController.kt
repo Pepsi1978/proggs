@@ -5,8 +5,6 @@ import android.content.Intent
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
-import de.frank.perfectmoment.auth.AuthErrorKind
-import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexAuthManager
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.CodexQuestionRequest
@@ -172,41 +170,29 @@ class SessionController(
     }
 
     /**
-     * Spielt eine gespeicherte Sitzung erneut ab. Sie verhält sich dabei wie eine frisch
-     * gestartete Sitzung: neue Fragen werden im Hintergrund nachgeladen und in dieselbe
-     * gespeicherte Sitzung geschrieben, die Sitzung endet also nicht nach dem gespeicherten
-     * Vorrat.
-     *
-     * @return false, wenn die Fragen im gespeicherten Wortlaut laufen, weil die Umstellung auf
-     *         die aktuelle Perspektive nicht möglich war.
+     * Spielt ausschließlich den unveränderten Fragenbestand einer gespeicherten Sitzung ab.
+     * Nachschub und Perspektiv-Umschreibung bleiben bewusst aus, damit „Von vorne abspielen“
+     * den Verlauf weder ergänzt noch inhaltlich verändert.
      */
-    suspend fun replaySession(sourceSessionId: Long, shuffle: Boolean): Boolean = operationMutex.withLock {
+    suspend fun replaySession(sourceSessionId: Long, shuffle: Boolean) = operationMutex.withLock {
         releaseEngine()
         val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
             "Die gespeicherte Sitzung wurde nicht gefunden."
         }
-        val config = currentConfig()
-        val entranceQuestion = source.session.entranceQuestion
-        val requestBase = newQuestionRequest(
-            topic = source.session.topic,
-            introContext = source.session.introContext,
-            entranceQuestion = entranceQuestion,
-        )
-        val storedTexts = source.questions.map { it.text }
-        val perspectiveQuestions = rewriteForPerspectiveOrNull(storedTexts)
-        val questions = source.questions.zip(perspectiveQuestions ?: storedTexts) { entity, text ->
-            Question(id = entity.id, emoji = entity.emoji, text = text)
-        }.let { if (shuffle) it.shuffled() else it }
+        val config = currentConfig().copy(durationMs = 0L)
+        val questions = source.questions
+            .map { Question(id = it.id, emoji = it.emoji, text = it.text) }
+            .let { if (shuffle) it.shuffled() else it }
         sessionRepository.markPlayed(sourceSessionId)
         createEngine(
             runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
             questions = questions,
-            refillPort = newRefillPort(requestBase, entranceQuestion),
-            persistencePort = newPersistencePort(sourceSessionId),
+            refillPort = null,
+            persistencePort = QuestionPersistencePort { },
             voice = SessionVoice.of(source.session),
+            endWhenQuestionsExhausted = true,
         )
         startForegroundSessionService()
-        perspectiveQuestions != null
     }
 
     /**
@@ -313,6 +299,7 @@ class SessionController(
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
         voice: SessionVoice? = null,
+        endWhenQuestionsExhausted: Boolean = false,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
@@ -325,6 +312,7 @@ class SessionController(
             dispatcher = Dispatchers.Main.immediate,
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
+            endWhenQuestionsExhausted = endWhenQuestionsExhausted,
         )
         engine = created
         _runtime.value = runtime.copy(generating = initialGenerationInFlight)
@@ -430,28 +418,6 @@ class SessionController(
 
     private fun newPersistencePort(sessionId: Long) = QuestionPersistencePort { questions ->
         sessionRepository.appendQuestions(sessionId, questions)
-    }
-
-    /**
-     * Überträgt gespeicherte Fragen in die eingestellte Perspektive. Ist OpenAI dafür gerade
-     * nicht erreichbar, liefert die Funktion null — die Sitzung startet dann mit dem
-     * gespeicherten Wortlaut, statt gar nicht zu starten. Nur eine nötige Neuanmeldung wird
-     * durchgereicht, weil der Nutzer dann handeln muss.
-     */
-    private suspend fun rewriteForPerspectiveOrNull(questions: List<String>): List<String>? = try {
-        codexAuthManager.rewriteQuestionsForPerspective(
-            questions = questions,
-            perspective = QuestionPerspective.fromId(settings.questionPerspective),
-            model = CodexModel.fromLabel(settings.model),
-            reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
-        )
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (error: CodexAuthException) {
-        if (error.kind == AuthErrorKind.REAUTH) throw error
-        null
-    } catch (_: Exception) {
-        null
     }
 
     private fun newSessionEntity(

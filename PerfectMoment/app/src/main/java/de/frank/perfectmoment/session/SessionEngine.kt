@@ -28,6 +28,7 @@ class SessionEngine(
     private val clock: SessionClock = MonotonicSessionClock,
     private var initialGenerationInFlight: Boolean = false,
     private val checkpoint: SessionCheckpoint? = null,
+    private val endWhenQuestionsExhausted: Boolean = false,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
     private val refillStallMs: Long = REFILL_STALL_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
@@ -95,7 +96,7 @@ class SessionEngine(
             )
             if (!_state.value.paused) startTimer()
             if (_state.value.questions.isEmpty() && !initialGenerationInFlight) {
-                requestRefill()
+                handleQuestionsExhausted()
             } else if (restored) {
                 refillIfResumedStockIsLow()
             }
@@ -373,10 +374,9 @@ class SessionEngine(
             _state.value = _state.value.copy(
                 currentIndex = nextIndex,
                 currentRep = 1,
-                phase = Phase.WAITING_NETWORK,
             )
             ttsErrorsForCurrentQuestion = 0
-            requestRefill()
+            handleQuestionsExhausted()
             return
         }
 
@@ -525,11 +525,11 @@ class SessionEngine(
         }
     }
 
-    /**
-     * Am Listenende endet die Sitzung nie von selbst — sie wartet auf Nachschub. Das gilt für
-     * jede Sitzung, auch für gespeicherte aus dem Verlauf.
-     */
     private fun handleQuestionsExhausted() {
+        if (endWhenQuestionsExhausted) {
+            endSession()
+            return
+        }
         _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
         if (!initialGenerationInFlight) requestRefill()
     }

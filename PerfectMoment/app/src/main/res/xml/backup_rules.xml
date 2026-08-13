@@ -11,9 +11,4 @@
     <include domain="database" path="perfect_moment.db" />
     <include domain="database" path="perfect_moment.db-wal" />
     <include domain="database" path="perfect_moment.db-shm" />
-
-    <exclude domain="sharedpref" path="." />
-    <exclude domain="file" path="." />
-    <exclude domain="external" path="." />
-    <exclude domain="root" path="." />
 </full-backup-content>
