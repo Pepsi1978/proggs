@@ -1,5 +1,8 @@
 package de.frank.experimente.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -128,6 +131,47 @@ fun Einstellungen(modell: AppViewModel) {
     // weiter die alte Zeit, obwohl die neue längst gespeichert war.
     var morgensZeit by remember { mutableStateOf(einstellungen.erinnerungMorgensZeit) }
     var abendsZeit by remember { mutableStateOf(einstellungen.erinnerungAbendsZeit) }
+    var backupOrdnerGewaehlt by remember { mutableStateOf(einstellungen.backupOrdnerUri.isNotBlank()) }
+    var importKandidat by remember { mutableStateOf<Uri?>(null) }
+    val ordnerwahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            backupOrdnerGewaehlt = modell.setzeBackupOrdner(uri)
+        }
+    }
+    val importwahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        importKandidat = uri
+    }
+
+    importKandidat?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { importKandidat = null },
+            containerColor = farben.flaeche,
+            titleContentColor = farben.text,
+            textContentColor = farben.text,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text("Vollbackup importieren?", style = schriften.kartentitel) },
+            text = {
+                Text(
+                    "Alle aktuellen Experimente, Listen, Logbuchdaten, das Selbstbild und die Einstellungen " +
+                        "werden durch den Stand aus dieser Datei ersetzt. Die Datei wird vorab vollständig geprüft.",
+                    style = schriften.fliesstext,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        importKandidat = null
+                        modell.importiereBackup(uri)
+                    },
+                ) { Text("Importieren", style = schriften.knopf, color = farben.aktion) }
+            },
+            dismissButton = {
+                TextButton(onClick = { importKandidat = null }) {
+                    Text("Abbrechen", style = schriften.knopf, color = farben.gedaempft)
+                }
+            },
+        )
+    }
 
     Bildschirmgeruest(
         kopfInnen = 8.dp,
@@ -294,6 +338,56 @@ fun Einstellungen(modell: AppViewModel) {
                 Schluessel("Alibaba", "eigene Stimme", einstellungen.qwenSchluessel) {
                     einstellungen.qwenSchluessel = it
                 }
+            }
+        }
+
+        // --- Vollbackup (markierter Einbauort zwischen Zugängen und Erinnerungen) ----
+        item("kopf-backup") { Zwischenueberschrift("Import & Export", Modifier.padding(top = 16.dp)) }
+        item("backup") {
+            Abschnittskarte {
+                Text("Vollständiges Backup", style = schriften.kartentitel, color = farben.text)
+                Text(
+                    "Sichert Monitor, Aufgaben, Auswertungen, Ziele, Merkliste, Erkenntnisse, " +
+                        "Logbuch und Langzeit, Selbstbild sowie alle nicht geheimen Einstellungen.",
+                    style = schriften.fliesstextKlein,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Text(
+                    "Ziel: Google Drive › Meine Ablage › Dokumente › Apps Backup › Experimente",
+                    style = schriften.daten,
+                    color = if (backupOrdnerGewaehlt) farben.erledigt else farben.aktion,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                Text(
+                    if (backupOrdnerGewaehlt) "Google-Drive-Ordner ist dauerhaft freigegeben."
+                    else "Wähle diesen Ordner einmalig aus.",
+                    style = schriften.stufe,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                KnopfUmrandet(
+                    text = if (backupOrdnerGewaehlt) "Backup-Ordner ändern" else "Google-Drive-Ordner wählen",
+                    beiKlick = { ordnerwahl.launch(null) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                )
+                KnopfBetont(
+                    text = "Backup exportieren",
+                    beiKlick = modell::exportiereBackup,
+                    aktiv = backupOrdnerGewaehlt,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                )
+                KnopfUmrandet(
+                    text = "Backup importieren",
+                    beiKlick = { importwahl.launch(arrayOf("application/json", "application/octet-stream")) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                )
+                Text(
+                    "Anmeldungen und API-Schlüssel bleiben auf dem Gerät und werden nicht exportiert.",
+                    style = schriften.stufe,
+                    color = farben.blass,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
             }
         }
 

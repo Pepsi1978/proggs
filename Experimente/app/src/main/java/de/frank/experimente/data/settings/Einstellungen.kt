@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.experimente.tts.TtsProvider
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Die Einstellungen aus `01-FUNKTIONS-SPEC.md` §3 — verschlüsselt auf dem Gerät
@@ -155,6 +157,62 @@ class Einstellungen(ctx: Context) {
         get() = p.getBoolean(HINWEIS_BENACHRICHTIGUNG, false)
         set(v) { p.edit().putBoolean(HINWEIS_BENACHRICHTIGUNG, v).commit() }
 
+    /** Persistierte SAF-Berechtigung auf Franks gewählten Google-Drive-Backupordner. */
+    var backupOrdnerUri: String
+        get() = p.getString(BACKUP_ORDNER_URI, "")!!
+        set(v) { p.edit().putString(BACKUP_ORDNER_URI, v).commit() }
+
+    /**
+     * Alle portablen Einstellungen als Teil des Vollbackups.
+     *
+     * Anmeldungen und API-Schlüssel bleiben bewusst auf dem Gerät und stehen nie im Backup.
+     */
+    fun exportiereVollstaendig(): JSONObject = JSONObject()
+        .put(MODEL_EXPERIMENTS, modellExperimente)
+        .put(EFFORT_EXPERIMENTS, effortExperimente)
+        .put(MODEL_LOGBOOK, modellLogbuch)
+        .put(EFFORT_LOGBOOK, effortLogbuch)
+        .put(TTS_PROVIDER, ttsAnbieter)
+        .put(TTS_VOICE_GOOGLE, stimmeGoogle)
+        .put(TTS_VOICE_EDGE, stimmeEdge)
+        .put(TTS_VOICE_QWEN, stimmeQwen)
+        .put(TTS_RATE, sprechtempo.toDouble())
+        .put(REMINDER_MORNING_ON, erinnerungMorgensAn)
+        .put(REMINDER_MORNING_TIME, erinnerungMorgensZeit)
+        .put(REMINDER_EVENING_ON, erinnerungAbendsAn)
+        .put(REMINDER_EVENING_TIME, erinnerungAbendsZeit)
+        .put(THEME, erscheinung)
+        .put(EFFECT_LEVEL, effektstufe)
+        .put(AUSSTEHEND, JSONArray(ausstehend.sorted()))
+        .put(VERDICHTET_AM, verdichtetAm)
+        .put(HINWEIS_BENACHRICHTIGUNG, hinweisBenachrichtigungGezeigt)
+
+    /** Übernimmt ausschließlich bekannte Werte; der gerätespezifische Drive-Ordner bleibt. */
+    fun importiereVollstaendig(json: JSONObject) {
+        val offen = json.getJSONArray(AUSSTEHEND)
+        val geschrieben = p.edit()
+            .putString(MODEL_EXPERIMENTS, json.getString(MODEL_EXPERIMENTS))
+            .putString(EFFORT_EXPERIMENTS, json.getString(EFFORT_EXPERIMENTS))
+            .putString(MODEL_LOGBOOK, json.getString(MODEL_LOGBOOK))
+            .putString(EFFORT_LOGBOOK, json.getString(EFFORT_LOGBOOK))
+            .putString(TTS_PROVIDER, json.getString(TTS_PROVIDER))
+            .putString(TTS_VOICE_GOOGLE, json.getString(TTS_VOICE_GOOGLE))
+            .putString(TTS_VOICE_EDGE, json.getString(TTS_VOICE_EDGE))
+            .putString(TTS_VOICE_QWEN, json.getString(TTS_VOICE_QWEN))
+            .putFloat(TTS_RATE, json.getDouble(TTS_RATE).toFloat())
+            .putBoolean(REMINDER_MORNING_ON, json.getBoolean(REMINDER_MORNING_ON))
+            .putString(REMINDER_MORNING_TIME, json.getString(REMINDER_MORNING_TIME))
+            .putBoolean(REMINDER_EVENING_ON, json.getBoolean(REMINDER_EVENING_ON))
+            .putString(REMINDER_EVENING_TIME, json.getString(REMINDER_EVENING_TIME))
+            .putString(THEME, json.getString(THEME))
+            .putString(EFFECT_LEVEL, json.getString(EFFECT_LEVEL))
+            .putStringSet(AUSSTEHEND, (0 until offen.length()).map(offen::getString).toSet())
+            .putString(VERDICHTET_AM, json.getString(VERDICHTET_AM))
+            .putBoolean(HINWEIS_BENACHRICHTIGUNG, json.getBoolean(HINWEIS_BENACHRICHTIGUNG))
+            .commit()
+        check(geschrieben) { "Die Einstellungen ließen sich nicht vollständig speichern." }
+    }
+
     private companion object {
         const val MODEL_EXPERIMENTS = "model_experiments"
         const val EFFORT_EXPERIMENTS = "effort_experiments"
@@ -177,5 +235,6 @@ class Einstellungen(ctx: Context) {
         const val AUSSTEHEND = "ausstehend"
         const val VERDICHTET_AM = "verdichtet_am"
         const val HINWEIS_BENACHRICHTIGUNG = "hinweis_benachrichtigung"
+        const val BACKUP_ORDNER_URI = "backup_ordner_uri"
     }
 }

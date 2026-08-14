@@ -1,6 +1,8 @@
 package de.frank.experimente.ui
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -1476,6 +1478,85 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     // --- F-22 bis F-25 --------------------------------------------------------------------
 
     fun einstellungenZugriff() = einstellungen
+
+    /** Behält den gewählten Google-Drive-Ordner über App- und Geräteneustarts. */
+    fun setzeBackupOrdner(uri: Uri): Boolean = try {
+            getApplication<Application>().contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+            einstellungen.backupOrdnerUri = uri.toString()
+            melde("Backup-Ordner gespeichert.")
+            true
+        } catch (fehler: Exception) {
+            zeigeStoerung("Der Google-Drive-Ordner ließ sich nicht dauerhaft freigeben.")
+            false
+        }
+
+    private var backupLaeuft = false
+
+    fun exportiereBackup() {
+        if (backupLaeuft) {
+            melde("Ein Backup-Vorgang läuft bereits.")
+            return
+        }
+        val ordner = einstellungen.backupOrdnerUri.takeIf(String::isNotBlank)?.let(Uri::parse)
+        if (ordner == null) {
+            melde("Wähle zuerst den Google-Drive-Ordner.")
+            return
+        }
+        viewModelScope.launch {
+            backupLaeuft = true
+            _wartet.value = "Ich sichere alles …"
+            try {
+                val datei = app.backup.exportiereIn(ordner)
+                melde("Vollbackup gespeichert: $datei")
+            } catch (fehler: Exception) {
+                zeigeStoerung("Das Backup ließ sich nicht speichern. ${fehler.message.orEmpty()}")
+            } finally {
+                _wartet.value = null
+                backupLaeuft = false
+            }
+        }
+    }
+
+    fun importiereBackup(uri: Uri) {
+        if (backupLaeuft) {
+            melde("Ein Backup-Vorgang läuft bereits.")
+            return
+        }
+        viewModelScope.launch {
+            backupLaeuft = true
+            _wartet.value = "Ich stelle das Backup wieder her …"
+            try {
+                val zeilen = app.backup.importiereVon(uri)
+                _erscheinung.value = Erscheinung.aus(einstellungen.erscheinung)
+                _effektstufe.value = Effektstufe.aus(einstellungen.effektstufe)
+                _stimmeQwen.value = einstellungen.stimmeQwen
+                _lageFeld.value = Feld()
+                _zielFeld.value = Feld()
+                _merkFeld.value = Feld()
+                _selbstbildFeld.value = Feld()
+                _auswertungsFeld.value = Feld()
+                _anlegeFeld.value = Feld()
+                _selbstbildGesichert.value = ""
+                _abendOffen.value = false
+                _gespraechZu.value = null
+                _wertetAus.value = null
+                _einschaetzung.value = emptyList()
+                erinnerungenNeuSetzen()
+                _rueckweg.value = emptyList()
+                _ziel.value = Ziel.MONITOR
+                bestimmeZustand()
+                melde("Backup vollständig importiert: $zeilen Datensätze.")
+            } catch (fehler: Exception) {
+                zeigeStoerung("Das Backup ließ sich nicht importieren. ${fehler.message.orEmpty()}")
+            } finally {
+                _wartet.value = null
+                backupLaeuft = false
+            }
+        }
+    }
 
     private val _geraetecode = MutableStateFlow<Geraetecode?>(null)
     val geraetecode: StateFlow<Geraetecode?> = _geraetecode.asStateFlow()

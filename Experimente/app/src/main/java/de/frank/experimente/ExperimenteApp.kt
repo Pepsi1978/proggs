@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import de.frank.experimente.ai.Aufgaben
 import de.frank.experimente.auth.CodexZugang
+import de.frank.experimente.data.backup.BackupVerwaltung
 import de.frank.experimente.data.local.ExperimenteDatenbank
 import de.frank.experimente.data.repo.Ablage
 import de.frank.experimente.data.settings.Einstellungen
@@ -22,6 +23,8 @@ class ExperimenteApp : Application() {
         private set
     lateinit var ablage: Ablage
         private set
+    lateinit var backup: BackupVerwaltung
+        private set
     lateinit var vorleser: Vorleser
         private set
 
@@ -33,8 +36,11 @@ class ExperimenteApp : Application() {
 
         einstellungen = Einstellungen(this)
         codex = CodexZugang(this)
+        val datenbank = ExperimenteDatenbank.hol(this)
+        backup = BackupVerwaltung(this, datenbank, einstellungen)
+        backup.stelleImportKonsistenzHer()
         ablage = Ablage(
-            db = ExperimenteDatenbank.hol(this),
+            db = datenbank,
             einstellungen = einstellungen,
             aufgabenKi = Aufgaben(codex),
         )
