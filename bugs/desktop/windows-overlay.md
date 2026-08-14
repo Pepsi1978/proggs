@@ -308,6 +308,25 @@
 - **FIX:** `AllowsTransparency` vermeiden; runde Ecken/Schatten über DWM (W4) + `WindowChrome ResizeBorderThickness`. Wenn Transparenz nötig: eigener `WM_NCHITTEST`-Hook gibt `HTLEFT`/`HTTOP`/`HTBOTTOMRIGHT` etc. zurück.
 - **Quelle:** https://learn.microsoft.com/en-us/answers/questions/644595/
 
+### C17. Eingehängtes Kindfenster (`SetParent`): Deckkraft gilt NICHT für seinen Inhalt ⭐ HAEUFIG
+- **Symptom:** Ein Overlay wird per `SetParent` in ein fremdes Fenster eingehängt und mit `SetLayeredWindowAttributes(..., LWA_ALPHA)` fast durchsichtig gestellt — es bleibt trotzdem **voll deckend**. Jede Änderung des Alpha-Werts bleibt wirkungslos. Als eigenständiges Fenster funktioniert derselbe Aufruf.
+- **Ursache:** `WS_EX_LAYERED` wirkt nur auf die Zeichnung des Fensters **selbst**. Kindfenster mit eigenem HWND (jedes Widget in Tk/WinForms, jeder Control-Handle) sind nicht Teil dieser Ebene und werden ungefiltert darüber gemalt. Bei einem Top-Level-Fenster fällt das nicht auf, weil dort die gesamte Fensterfläche über eine Ebene komponiert wird.
+- **Versionen:** alle (layered Kindfenster überhaupt erst ab Windows 8).
+- **Erkennen:** `GetLayeredWindowAttributes` je HWND abfragen, inklusive `EnumChildWindows`:
+  ```
+  TkTopLevel : WS_EX_LAYERED True,  Alpha 1/255      <- hier sitzt die Durchsichtigkeit
+  TkChild    : WS_EX_LAYERED False, keine Deckkraft  <- und das malt deckend darüber
+  ```
+- **FIX:** Nicht einhängen. Das Overlay als eigenständiges Top-Level-Fenster (`WS_EX_TOOLWINDOW`, topmost) über das Zielfenster legen und seine Lage nachführen — dann greift die Deckkraft auf den gesamten Inhalt. Wer einhängen *muss*, darf im Kindfenster nichts zeichnen, was eigene HWNDs erzeugt.
+- **Gemessen:** 14.08.2026, Werkzeug `Werkzeuge/zeigefinger` (Python/Tk über scrcpy), Windows 11 26200.
+
+### C18. Falsche Fährte: Bildschirmfotos zeigen eingehängte Layered-Fenster nicht ⭐ HAEUFIG
+- **Symptom:** Auf dem Schirm ist die Fläche knallig eingefärbt, das Bildschirmfoto zeigt sie **nicht**. Eine Pixel-Messung „vorher/nachher" meldet Farbunterschied 0 — und man sucht den Fehler an der falschen Stelle.
+- **Ursache:** Aufnahmen über den Bildschirm-DC (`BitBlt`, PIL `ImageGrab`, viele Screenshot-Skripte) erfassen so ein Fenster nicht verlässlich; die Zusammensetzung passiert erst im DWM.
+- **Versionen:** alle mit DWM.
+- **FIX:** Für Transparenz-Fragen **nie** ein Bildschirmfoto als Beweis nehmen. Windows direkt befragen: `GetWindowLong(GWL_EXSTYLE)` auf `WS_EX_LAYERED` prüfen und `GetLayeredWindowAttributes` nach Alpha/Farbschlüssel fragen — je HWND, Kindfenster eingeschlossen. Zum Abfotografieren sonst `PrintWindow` mit `PW_RENDERFULLCONTENT` statt `BitBlt`.
+- **Gemessen:** 14.08.2026, selber Fall wie C17 — drei Messrunden liefen ins Leere, bevor die direkte Abfrage die Ursache zeigte.
+
 ---
 
 ## H) Hotkeys

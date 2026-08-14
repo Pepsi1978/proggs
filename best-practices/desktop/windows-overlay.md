@@ -28,6 +28,10 @@
 | 14 | Andere Instanz nach vorne holen | `AllowSetForegroundWindow` / Selbst-Aktivierung in alter Instanz | §9, §10 |
 | 15 | Aufmerksamkeit ohne Fokus-Klau | `FlashWindowEx` mit `FLASHW_TIMERNOFG` | §10 |
 | 16 | Vollbild-App/Spiel erkennen | `SHQueryUserNotificationState` → bei Vollbild ausblenden | §10 |
+| 17 | Unsichtbare Fangflaeche ueber fremdem Fenster | NICHT per `SetParent` einhaengen (Alpha gilt nicht fuer Kind-HWNDs) — eigenstaendiges Top-Level darueberlegen und nachfuehren | §5 |
+| 18 | „Unsichtbar", aber Klicks sollen ankommen | Alpha **1**/255, nicht 0 (bei 0 nimmt das Fenster keine Maustaste an); Farbschluessel taugt nicht — dort fallen Klicks durch | §5 |
+| 19 | Sichtbare Linie ueber halbdurchsichtiger Flaeche | Nicht auf der Flaeche zeichnen (wird blass) — eigenes Farbschluessel-Fenster darueber | §5 |
+| 20 | Pruefen, ob Durchsichtigkeit wirklich sitzt | `GetLayeredWindowAttributes` je HWND fragen; Bildschirmfoto beweist es NICHT | §5 |
 
 ---
 
@@ -207,6 +211,41 @@ einblenden (vermeidet Start-Blitz); DWM-Attribute in `SourceInitialized`/nach `E
 sparsam); `BitmapCache` für statische Teile.
 
 Quellen: [DWMWINDOWATTRIBUTE](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute) · [Apply rounded corners (Win11)](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners) · [Graphics Rendering Tiers](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/graphics-rendering-tiers) · [What's new WPF .NET 9](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/whats-new/net90) · offiziell. `extern`: [Airspace (Dwayne Need)](https://dwayneneed.github.io/wpf/2013/02/26/mitigating-airspace-issues-in-wpf-applications.html), [Mica in WPF (tvc-16)](https://tvc-16.science/mica-wpf.html), [WPF-UI lepoco](https://wpfui.lepo.co).
+
+**Weg C — unsichtbare Fangflaeche ueber einem fremden Fenster (Tk, WinForms, jedes Toolkit):**
+Soll ein Overlay die Maus abfangen, ohne das Bild darunter zu veraendern (Auswahl-Werkzeuge,
+Messwerkzeuge, Lupen), gilt:
+
+1. **Nicht per `SetParent` in das Zielfenster einhaengen.** `WS_EX_LAYERED` wirkt nur auf die
+   Zeichnung des Fensters selbst; jedes Kind-HWND darin (in Tk die Zeichenflaeche, in WinForms
+   jedes Control) wird ungefiltert darueber gemalt und bleibt **voll deckend**. Der eingestellte
+   Alpha-Wert ist dann folgenlos — ein Fehlerbild, das man endlos am falschen Ende sucht
+   (Bug-Almanach C17).
+2. **Stattdessen ein eigenstaendiges Top-Level-Fenster darueberlegen** (`WS_EX_TOOLWINDOW`,
+   topmost, randlos) und seine Lage dem Zielfenster nachfuehren — z. B. alle 250 ms aus
+   `GetClientRect` + `ClientToScreen`. Dann greift die Deckkraft auf den gesamten Inhalt.
+3. **Deckkraft 1/255, nicht 0.** Bei 0 nimmt das Fenster keine Maustaste mehr an; 1/255 ist mit
+   blossem Auge nicht von unsichtbar zu unterscheiden und faengt weiter.
+4. **Farbschluessel (`LWA_COLORKEY`) taugt hier NICHT** als „unsichtbar": Klicks fallen durch die
+   schluesselfarbenen Bereiche hindurch. Er ist das Mittel der Wahl fuer das Gegenteil — sichtbare
+   Linien ohne Flaeche, etwa einen Auswahlrahmen: Fenster in der Schluesselfarbe fuellen, nur die
+   Linie in echter Farbe zeichnen, `WS_EX_TRANSPARENT` dazu, damit es die Maus nicht abfaengt.
+5. **Farbe niemals auf der halbdurchsichtigen Flaeche zeichnen.** Eine Linie auf einer Flaeche mit
+   11 % Deckkraft kommt als blasses Grau an. Sichtbare Elemente gehoeren in ein eigenes
+   Farbschluessel-Fenster darueber (Punkt 4).
+6. **Pruefen, nicht fotografieren.** Ob die Durchsichtigkeit sitzt, beantwortet
+   `GetLayeredWindowAttributes` je HWND — Bildschirmfotos ueber `BitBlt`/`ImageGrab` erfassen solche
+   Fenster nicht verlaesslich und liefern falsche Entwarnung (Bug-Almanach C18).
+
+Gegenprobe in drei Zeilen (Python/ctypes, sinngemaess in jeder Sprache):
+
+```python
+stil = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)          # WS_EX_LAYERED gesetzt?
+ok = user32.GetLayeredWindowAttributes(hwnd, byref(key), byref(alpha), byref(flags))
+# ok == 0  -> keine Deckkraft gesetzt -> Fenster ist voll deckend
+```
+
+Belegt am 14.08.2026 im Werkzeug `Werkzeuge/zeigefinger` (Python/Tk ueber scrcpy), Windows 11 26200.
 
 ---
 

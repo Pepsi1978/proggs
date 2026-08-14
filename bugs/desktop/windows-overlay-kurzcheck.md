@@ -41,3 +41,5 @@
 | 27 | Push-to-Talk-DLL fehlt im Release (SharpHook) | Expliziter RID, native Lib mit-entpacken | H10 |
 | 28 | Trimming/NativeAOT → WPF startet nicht | Trimming/AOT für WPF nicht nutzen; SingleFile ohne Trim | P7 |
 | 29 | Topmost verschwindet bei Win+D / virt. Desktop / Monitor-Sleep | eigenes HWND-Topmost / `IVirtualDesktopManager` / `WM_DISPLAYCHANGE` | A14, A15, A16 |
+| 30 | Eingehängtes Overlay (`SetParent`) bleibt deckend, Alpha wirkungslos | `WS_EX_LAYERED` gilt nicht für Kind-HWNDs darin → nicht einhängen, eigenständiges Top-Level darüberlegen und nachführen | C17 |
+| 31 | Bildschirmfoto zeigt kein Rot, auf dem Schirm ist alles rot | `BitBlt`/`ImageGrab` erfassen eingehängte Layered-Fenster nicht → `GetLayeredWindowAttributes` je HWND fragen statt fotografieren | C18 |

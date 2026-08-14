@@ -24,3 +24,7 @@
 | 14 | Andere Instanz nach vorne holen | `AllowSetForegroundWindow` / Selbst-Aktivierung in alter Instanz | §9, §10 |
 | 15 | Aufmerksamkeit ohne Fokus-Klau | `FlashWindowEx` mit `FLASHW_TIMERNOFG` | §10 |
 | 16 | Vollbild-App/Spiel erkennen | `SHQueryUserNotificationState` → bei Vollbild ausblenden | §10 |
+| 17 | Unsichtbare Fangflaeche ueber fremdem Fenster | NICHT per `SetParent` einhaengen (Alpha gilt nicht fuer Kind-HWNDs) — eigenstaendiges Top-Level darueberlegen und nachfuehren | §5 |
+| 18 | „Unsichtbar", aber Klicks sollen ankommen | Alpha **1**/255, nicht 0 (bei 0 nimmt das Fenster keine Maustaste an); Farbschluessel taugt nicht — dort fallen Klicks durch | §5 |
+| 19 | Sichtbare Linie ueber halbdurchsichtiger Flaeche | Nicht auf der Flaeche zeichnen (wird blass) — eigenes Farbschluessel-Fenster darueber | §5 |
+| 20 | Pruefen, ob Durchsichtigkeit wirklich sitzt | `GetLayeredWindowAttributes` je HWND fragen; Bildschirmfoto beweist es NICHT | §5 |
