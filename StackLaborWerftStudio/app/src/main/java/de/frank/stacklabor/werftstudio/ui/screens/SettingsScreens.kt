@@ -70,6 +70,13 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.navigation.Origin
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.components.RaisedPanel
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
+import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,12 +160,14 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
         if (seedWarning) {
             Dialog(onDismissRequest = { seedWarning = false }) {
                 Surface(
-                    Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(18.dp)).drawBehind {
-                        drawRect(colors.red, size = androidx.compose.ui.geometry.Size(size.width, 4.dp.toPx()))
-                    },
+                    Modifier.fillMaxWidth()
+                        .depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f)
+                        .drawBehind {
+                            drawRect(colors.red, size = androidx.compose.ui.geometry.Size(size.width, 4.dp.toPx()))
+                        },
                     shape = RoundedCornerShape(18.dp),
                     color = StackLaborTheme.colors.surface,
-                    border = BorderStroke(1.dp, StackLaborTheme.colors.border),
+                    border = BorderStroke(1.5.dp, metalRim(0.85f)),
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Der Startbestand überschreibt alle vorhandenen Stacks. Fortfahren?", style = MaterialTheme.typography.bodyMedium)
@@ -182,10 +191,11 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
             ) {
                 Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
                     Surface(
-                        Modifier.fillMaxWidth().heightIn(max = 640.dp).shadow(18.dp, RoundedCornerShape(20.dp)),
+                        Modifier.fillMaxWidth().heightIn(max = 640.dp)
+                            .depthShadow(RoundedCornerShape(20.dp), 30.dp, strength = 1.5f),
                         shape = RoundedCornerShape(20.dp),
-                        color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
-                        border = BorderStroke(1.dp, StackLaborTheme.colors.border),
+                        color = StackLaborTheme.colors.surface.copy(alpha = 0.97f),
+                        border = BorderStroke(1.5.dp, metalRim(0.9f)),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(20.dp)) {
                             Text(selection.title, style = MaterialTheme.typography.titleLarge)
@@ -193,9 +203,24 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                             selection.options.forEach { option ->
                                 val selected = option == selection.value
                                 Row(
-                                    Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(12.dp))
-                                        .background(if (selected) StackLaborTheme.colors.accent.copy(alpha = 0.1f) else StackLaborTheme.colors.surface)
-                                        .border(1.dp, if (selected) StackLaborTheme.colors.accent else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+                                    Modifier.fillMaxWidth().height(52.dp)
+                                        .depthShadow(RoundedCornerShape(12.dp), if (selected) 10.dp else 4.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (selected) {
+                                                Brush.verticalGradient(
+                                                    listOf(
+                                                        StackLaborTheme.colors.accent.copy(alpha = 0.22f),
+                                                        StackLaborTheme.colors.accent.copy(alpha = 0.06f),
+                                                    ),
+                                                )
+                                            } else {
+                                                Brush.verticalGradient(
+                                                    listOf(StackLaborTheme.colors.surface.lightenBy(0.25f), StackLaborTheme.colors.surface),
+                                                )
+                                            },
+                                        )
+                                        .border(1.dp, if (selected) metalRim(1f) else metalRim(0.4f), RoundedCornerShape(12.dp))
                                         .clickable {
                                             callbacks.onEvent(StackLaborEvent.SelectSettingValue(selection.id, option))
                                             selectionId = null
@@ -254,16 +279,27 @@ private fun SettingsGroup(title: String, icon: ImageVector, content: @Composable
     val shape = RoundedCornerShape(18.dp)
     val colors = StackLaborTheme.colors
     Column(
-        Modifier.fillMaxWidth().shadow(16.dp, shape, ambientColor = androidx.compose.ui.graphics.Color(0x295A3508), spotColor = androidx.compose.ui.graphics.Color(0x245A3508))
-            .clip(shape).background(StackLaborTheme.colors.surface).border(1.dp, StackLaborTheme.colors.border, shape),
+        Modifier.fillMaxWidth().depthShadow(shape, 18.dp)
+            .clip(shape).background(StackLaborTheme.colors.surface).border(1.5.dp, metalRim(0.8f), shape),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(44.dp).background(colors.elevated).drawBehind {
-                drawLine(colors.border, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
-            }.padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().height(44.dp)
+                .background(Brush.verticalGradient(listOf(colors.elevated.lightenBy(0.12f), colors.elevated.darkenBy(0.05f))))
+                .bevel(0.8f)
+                .drawBehind {
+                    drawLine(colors.accent.copy(alpha = 0.55f), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                }.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.width(4.dp).height(16.dp).background(StackLaborTheme.colors.accent, RoundedCornerShape(2.dp)))
+            Box(
+                Modifier.width(4.dp).height(16.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.accent.lightenBy(0.35f), colors.accent, colors.accent.darkenBy(0.25f)),
+                        ),
+                        RoundedCornerShape(2.dp),
+                    ),
+            )
             Spacer(Modifier.width(10.dp))
             Text(title, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold))
         }
@@ -283,23 +319,32 @@ private fun SettingsItem(
     onClick: () -> Unit,
 ) {
     val colors = StackLaborTheme.colors
+    RaisedPanel(
+        Modifier.fillMaxWidth().height(64.dp),
+        rimAlpha = if (selected) 1f else 0.6f,
+        background = if (selected) {
+            Brush.verticalGradient(listOf(colors.accent.copy(alpha = 0.18f), colors.accent.copy(alpha = 0.05f)))
+        } else null,
+        onClick = onClick,
+    ) {
     Row(
-        Modifier.fillMaxWidth().height(64.dp)
-            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = androidx.compose.ui.graphics.Color(0x295A3508), spotColor = androidx.compose.ui.graphics.Color(0x245A3508))
-            .clip(RoundedCornerShape(12.dp))
-            .then(
-                if (selected) Modifier.background(StackLaborTheme.colors.accent.copy(alpha = 0.08f))
-                else Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(StackLaborTheme.colors.elevated.copy(alpha = 0.48f), StackLaborTheme.colors.surface))),
-            )
-            .border(1.dp, if (selected) StackLaborTheme.colors.accent else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+        Modifier.fillMaxSize()
             .drawBehind {
                 if (selected) drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height))
-            }.clickable(onClick = onClick).padding(start = 12.dp, end = 8.dp),
+            }.padding(start = 12.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(48.dp).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
             Box(
-                Modifier.size(36.dp).background(StackLaborTheme.colors.accent.copy(alpha = 0.12f), RoundedCornerShape(18.dp)),
+                Modifier.depthShadow(RoundedCornerShape(18.dp), 6.dp)
+                    .size(36.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.accent.copy(alpha = 0.24f), colors.accent.copy(alpha = 0.08f)),
+                        ),
+                        RoundedCornerShape(18.dp),
+                    )
+                    .border(1.dp, metalRim(0.45f), RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(LocalSettingsIcon.current, null, Modifier.size(22.dp), tint = iconTint)
@@ -324,6 +369,7 @@ private fun SettingsItem(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(24.dp), tint = StackLaborTheme.colors.textMuted)
         }
     }
+    }
 }
 
 @Composable
@@ -333,18 +379,32 @@ private fun SettingsDivider() {
 
 @Composable
 private fun SettingsToggle(checked: Boolean) {
+    val colors = StackLaborTheme.colors
     val x by androidx.compose.animation.core.animateDpAsState(
         if (checked) 22.dp else 2.dp,
         androidx.compose.animation.core.tween(if (StackLaborTheme.motionEnabled) 180 else 0),
         label = "settingsToggle",
     )
     Box(
+        // Sunken track with a raised knob riding in it.
         Modifier.width(44.dp).height(24.dp).clip(RoundedCornerShape(12.dp))
-            .background(if (checked) StackLaborTheme.colors.accent else StackLaborTheme.colors.disabled),
+            .background(
+                if (checked) {
+                    Brush.verticalGradient(listOf(colors.accent.darkenBy(0.25f), colors.accent))
+                } else {
+                    Brush.verticalGradient(listOf(colors.disabled.darkenBy(0.18f), colors.disabled))
+                },
+            )
+            .border(1.dp, Color.Black.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
     ) {
         Box(
-            Modifier.offset { IntOffset(x.roundToPx(), 2.dp.roundToPx()) }.size(20.dp)
-                .background(StackLaborTheme.colors.surface, RoundedCornerShape(10.dp)),
+            Modifier.offset { IntOffset(x.roundToPx(), 2.dp.roundToPx()) }
+                .depthShadow(RoundedCornerShape(10.dp), 6.dp)
+                .size(20.dp)
+                .background(
+                    Brush.verticalGradient(listOf(colors.surface.lightenBy(0.5f), colors.surface)),
+                    RoundedCornerShape(10.dp),
+                ),
         )
     }
 }

@@ -74,6 +74,11 @@ import de.frank.stacklabor.werftstudio.ui.navigation.Origin
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 import de.frank.stacklabor.werftstudio.ui.theme.GoldDarkContent
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 
 @Composable
 fun StackGoalsSheet(
@@ -142,9 +147,9 @@ private fun GoalSelectionRow(
     val shape = RoundedCornerShape(12.dp)
     Box(
         Modifier.fillMaxWidth().height(if (isExpanded) 112.dp else 64.dp)
-            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .depthShadow(shape, 14.dp)
             .clip(shape).background(StackLaborTheme.colors.surface)
-            .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.4f), shape),
+            .border(1.dp, metalRim(0.7f), shape),
     ) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -354,7 +359,7 @@ private fun RelationshipRow(item: RelationshipUi) {
     }
     Box(
         Modifier.fillMaxWidth().height(76.dp)
-            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
             .background(StackLaborTheme.colors.surface),
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -453,7 +458,7 @@ fun QuestionsSheet(
                             } else {
                                 Row(
                                     Modifier.fillMaxWidth().heightIn(min = 60.dp).background(StackLaborTheme.colors.surface)
-                                        .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+                                        .depthShadow(RoundedCornerShape(12.dp), 14.dp)
                                         .drawBehind {
                                             drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
                                         }.clickable {
@@ -627,7 +632,7 @@ fun HistorySheet(
                 items(state.history, key = { it.id }) { run ->
                     Box(
                         Modifier.fillMaxWidth().height(64.dp)
-                            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+                            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
                             .background(if (run.selectedForComparison) StackLaborTheme.colors.elevated else StackLaborTheme.colors.surface),
                     ) {
                         Row(Modifier.fillMaxSize()) {
@@ -799,7 +804,7 @@ private fun CompactInput(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.height(height)
-            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
             .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
             .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
         singleLine = singleLine,

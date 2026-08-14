@@ -63,6 +63,11 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.navigation.Origin
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 
 @Composable
 fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
@@ -187,10 +192,10 @@ private fun GoalCatalogCard(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 76.dp)
-            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .depthShadow(shape, 14.dp)
             .clip(shape)
             .background(colors.surface)
-            .border(1.dp, colors.accent.copy(alpha = 0.4f), shape),
+            .border(1.dp, metalRim(0.7f), shape),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp), verticalArrangement = Arrangement.Center) {
@@ -308,10 +313,10 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
                     .align(Alignment.TopEnd)
                     .padding(top = 48.dp, end = 8.dp)
                     .width(192.dp)
-                    .shadow(18.dp, menuShape)
+                    .depthShadow(menuShape, 26.dp, strength = 1.4f)
                     .clip(menuShape)
                     .background(Brush.verticalGradient(listOf(StackLaborTheme.colors.elevated, StackLaborTheme.colors.surface)))
-                    .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.45f), menuShape),
+                    .border(1.dp, metalRim(0.85f), menuShape),
             ) {
                 Box(
                     Modifier
@@ -336,10 +341,10 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .shadow(18.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.45f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .border(1.dp, metalRim(0.85f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .padding(12.dp),
             ) {
                 Text(
@@ -368,10 +373,10 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
                     .fillMaxWidth()
                     .padding(end = 68.dp)
                     .height(48.dp)
-                    .shadow(12.dp, RoundedCornerShape(12.dp))
+                    .depthShadow(RoundedCornerShape(12.dp), 14.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .border(1.dp, metalRim(0.7f), RoundedCornerShape(12.dp))
                     .padding(start = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -430,13 +435,13 @@ private fun MedicineCatalogCard(
         Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .depthShadow(shape, 14.dp)
             .clip(shape)
             .background(
                 if (selected) Brush.linearGradient(listOf(colors.elevated, colors.elevated))
                 else Brush.linearGradient(listOf(colors.surface, colors.accent.copy(alpha = 0.12f))),
             )
-            .then(if (selected) Modifier.border(1.dp, colors.accent.copy(alpha = 0.9f), shape) else Modifier)
+            .then(if (selected) Modifier.border(1.dp, metalRim(1f), shape) else Modifier)
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {

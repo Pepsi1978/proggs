@@ -52,14 +52,8 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,7 +68,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -94,13 +87,22 @@ import de.frank.stacklabor.werftstudio.ui.model.Solubility
 import de.frank.stacklabor.werftstudio.ui.model.StackSummaryUi
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
 import de.frank.stacklabor.werftstudio.ui.theme.GoldDarkContent
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.goldActionSurface
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
+import de.frank.stacklabor.werftstudio.ui.theme.pressDepth
+import de.frank.stacklabor.werftstudio.ui.theme.raisedSurface
+import de.frank.stacklabor.werftstudio.ui.theme.sheen
+import de.frank.stacklabor.werftstudio.ui.theme.softMetalRim
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
-private val GoldActionBrush = Brush.linearGradient(
-    listOf(Color(0xFFE7C879), Color(0xFFA87523), Color(0xFF704511)),
-)
+private val CardShape = RoundedCornerShape(12.dp)
 
-private fun Modifier.goldCardShadow(shape: RoundedCornerShape = RoundedCornerShape(12.dp)) =
-    shadow(16.dp, shape, clip = false, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+private fun Modifier.goldCardShadow(shape: RoundedCornerShape = CardShape) =
+    depthShadow(shape, 14.dp)
 
 @Composable
 fun WerftScreen(modifier: Modifier = Modifier, goldDark: Boolean = false, content: @Composable BoxScope.() -> Unit) {
@@ -132,11 +134,22 @@ fun GlassHeader(
     Row(
         modifier
             .fillMaxWidth()
-            .shadow(7.dp, ambientColor = Color(0x24784F17), spotColor = Color(0x24784F17))
+            .depthShadow(RoundedCornerShape(0.dp), 12.dp)
             .background(colors.glass)
             .drawBehind {
-                drawRect(Brush.verticalGradient(listOf(colors.textStrong.copy(alpha = 0.03f), Color.Transparent)))
-                drawLine(Color(0x6BB8892D), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                drawRect(
+                    Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.10f), Color.Transparent, colors.textStrong.copy(alpha = 0.05f)),
+                    ),
+                )
+                drawLine(
+                    Brush.horizontalGradient(
+                        listOf(colors.accent.copy(alpha = 0.25f), colors.accent, colors.accent.copy(alpha = 0.25f)),
+                    ),
+                    Offset(0f, size.height),
+                    Offset(size.width, size.height),
+                    1.5.dp.toPx(),
+                )
             }
             .statusBarsPadding()
             .height(StackLaborTheme.dimens.headerHeight),
@@ -148,8 +161,10 @@ fun GlassHeader(
                 "Zurück",
                 onBack,
                 if (framedBack) {
-                    Modifier.shadow(2.dp, CircleShape, ambientColor = colors.textStrong.copy(alpha = 0.1f), spotColor = colors.textStrong.copy(alpha = 0.1f))
-                        .clip(CircleShape).background(colors.surface).border(1.dp, colors.border, CircleShape)
+                    Modifier.depthShadow(CircleShape, 8.dp)
+                        .clip(CircleShape)
+                        .background(Brush.verticalGradient(listOf(colors.surface.lightenBy(0.25f), colors.elevated)))
+                        .border(1.dp, metalRim(0.7f), CircleShape)
                 } else Modifier,
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(22.dp)) }
             Spacer(Modifier.width(8.dp))
@@ -199,7 +214,7 @@ fun AnimatedGradientHeader(
     Box(
         Modifier
             .fillMaxWidth()
-            .shadow(10.dp, ambientColor = Color(0x4D53340D), spotColor = Color(0x4D53340D))
+            .depthShadow(RoundedCornerShape(0.dp), 18.dp, strength = 1.3f)
             .background(
                 Brush.linearGradient(
                     listOf(Color(0xFF6F4813), Color(0xFFD8AE55), Color(0xFF8B5E1A)),
@@ -207,6 +222,24 @@ fun AnimatedGradientHeader(
                     end = Offset(progress * 600f + 300f, 0f),
                 ),
             )
+            // Curved metal look: light collects along the top, the lower third falls away.
+            .drawBehind {
+                drawRect(
+                    Brush.verticalGradient(
+                        0.00f to Color.White.copy(alpha = 0.26f),
+                        0.30f to Color.White.copy(alpha = 0.05f),
+                        0.55f to Color.Transparent,
+                        1.00f to Color.Black.copy(alpha = 0.28f),
+                    ),
+                )
+                drawLine(Color(0xFFFFF1CB).copy(alpha = 0.55f), Offset(0f, 0f), Offset(size.width, 0f), 1.5.dp.toPx())
+                drawLine(
+                    Color(0xFF3A2405).copy(alpha = 0.55f),
+                    Offset(0f, size.height),
+                    Offset(size.width, size.height),
+                    1.5.dp.toPx(),
+                )
+            }
             .statusBarsPadding()
             .height(96.dp),
         content = content,
@@ -215,15 +248,72 @@ fun AnimatedGradientHeader(
 
 @Composable
 fun PrimaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    GoldSurface(modifier.height(44.dp), onClick = onClick) {
+        Text(label, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2A1B05))
+    }
+}
+
+/**
+ * The physical gold key every primary action is built from: lit face, sheen across the
+ * upper half, a metal rim and a shadow that collapses while the finger is down.
+ */
+@Composable
+fun GoldSurface(
+    modifier: Modifier = Modifier,
+    shape: RoundedCornerShape = CardShape,
+    elevation: Dp = 14.dp,
+    onClick: () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier
-            .height(44.dp)
-            .shadow(12.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x525B390B), spotColor = Color(0x525B390B))
-            .clip(RoundedCornerShape(12.dp))
-            .background(GoldActionBrush)
-            .clickable(onClick = onClick),
+            .pressDepth(interaction, shape, elevation)
+            .clip(shape)
+            .background(goldActionSurface())
+            .sheen()
+            .border(1.dp, Color(0xFFF3DFAE).copy(alpha = 0.75f), shape)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = StackLaborTheme.colors.onAccent) }
+        content = content,
+    )
+}
+
+/**
+ * A raised panel with the continuous metal rim. Every card, row and menu in the app uses
+ * this so the rim never fades out on one side.
+ */
+@Composable
+fun RaisedPanel(
+    modifier: Modifier = Modifier,
+    shape: RoundedCornerShape = CardShape,
+    elevation: Dp = 12.dp,
+    rimWidth: Dp = 1.dp,
+    rimAlpha: Float = 0.75f,
+    bevelStrength: Float = 1f,
+    background: Brush? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val base = if (onClick != null) {
+        modifier.pressDepth(interaction, shape, elevation)
+    } else {
+        modifier.depthShadow(shape, elevation)
+    }
+    Box(
+        base
+            .clip(shape)
+            .background(background ?: raisedSurface())
+            .bevel(bevelStrength)
+            .border(rimWidth, metalRim(rimAlpha), shape)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                } else Modifier,
+            ),
+        content = content,
+    )
 }
 
 @Composable
@@ -267,16 +357,27 @@ fun SearchField(
 @Composable
 fun SelectPill(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val colors = StackLaborTheme.colors
-    Surface(
-        modifier = modifier.height(28.dp).clickable(onClick = onClick),
-        shape = CircleShape,
-        color = if (selected) Color(0xFFA87523) else Color.Transparent,
-        contentColor = if (selected) colors.onAccent else colors.textMuted,
-        border = if (selected) null else BorderStroke(1.dp, colors.border),
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier
+            .pressDepth(interaction, CircleShape, if (selected) 10.dp else 3.dp)
+            .height(28.dp)
+            .clip(CircleShape)
+            .background(
+                if (selected) goldActionSurface()
+                else Brush.verticalGradient(listOf(colors.surface, colors.elevated.copy(alpha = 0.6f))),
+            )
+            .then(if (selected) Modifier.sheen() else Modifier)
+            .border(1.dp, if (selected) metalRim(1f) else softMetalRim(0.35f), CircleShape)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-            Text(label, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-        }
+        Text(
+            label,
+            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+            color = if (selected) Color(0xFF2A1B05) else colors.textMuted,
+        )
     }
 }
 
@@ -329,36 +430,20 @@ fun StackCard(
         )
         alpha
     } else 0f
-    Card(
+    RaisedPanel(
         modifier = modifier
             .fillMaxWidth()
             .height(StackLaborTheme.dimens.stackHeight)
-            .goldCardShadow()
             .drawBehind {
                 if (aura > 0f) drawCircle(colors.red.copy(alpha = aura), radius = size.maxDimension * 0.65f, center = center)
-            }
-            .clickable(onClick = onOpen),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(
-            1.5.dp,
-            Brush.sweepGradient(
-                listOf(
-                    colors.accent,
-                    colors.accent.copy(alpha = 0.18f),
-                    Color.Transparent,
-                    colors.accent.copy(alpha = 0.18f),
-                    colors.accent,
-                ),
-            ),
-        ),
+            },
+        elevation = 16.dp,
+        rimWidth = 1.5.dp,
+        rimAlpha = 1f,
+        onClick = onOpen,
     ) {
-        Row(
-            Modifier.fillMaxSize().background(
-                Brush.linearGradient(listOf(colors.surface.copy(alpha = 0.96f), colors.surface, colors.elevated.copy(alpha = 0.45f))),
-            ),
-        ) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(stack.signal.color()))
+        Row(Modifier.fillMaxSize()) {
+            SignalBar(stack.signal.color())
             Column(Modifier.weight(1f).padding(start = 12.dp, top = 7.dp, bottom = 7.dp)) {
                 Text(stack.name, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(stack.meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
@@ -379,6 +464,25 @@ fun StackCard(
     }
 }
 
+/**
+ * The coloured signal strip on the left edge of every row — rounded and shaded so it
+ * looks inlaid instead of painted on.
+ */
+@Composable
+fun SignalBar(color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    Box(
+        modifier
+            .width(5.dp)
+            .fillMaxHeight()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 5.dp)
+            .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
+            .background(
+                Brush.horizontalGradient(listOf(color.darkenBy(0.22f), color, color.lightenBy(0.22f))),
+            ),
+    )
+}
+
 @Composable
 fun MedicineCard(
     medicine: MedicineUi,
@@ -389,20 +493,18 @@ fun MedicineCard(
 ) {
     val colors = StackLaborTheme.colors
     val opacity = if (medicine.active) 1f else 0.38f
-    Card(
-        modifier = modifier.fillMaxWidth().height(56.dp).goldCardShadow(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f)),
+    RaisedPanel(
+        modifier = modifier.fillMaxWidth().height(56.dp),
+        elevation = if (medicine.active) 12.dp else 4.dp,
+        rimAlpha = if (medicine.active) 0.7f else 0.3f,
+        bevelStrength = if (medicine.active) 1f else 0.35f,
+        background = if (medicine.active) null else Brush.verticalGradient(listOf(colors.background, colors.background)),
     ) {
         Row(
-            Modifier.fillMaxSize().background(
-                if (medicine.active) Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.34f), colors.surface, colors.surface))
-                else Brush.linearGradient(listOf(colors.background, colors.background)),
-            ),
+            Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(if (medicine.active) medicine.signal.color() else colors.disabled).clickable(onClick = onSignal))
+            SignalBar(if (medicine.active) medicine.signal.color() else colors.disabled, onClick = onSignal)
             Column(Modifier.weight(1f).clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp).alpha(opacity)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SolubilityMarks(medicine.solubility)
@@ -431,17 +533,43 @@ fun MedicineCard(
 @Composable
 fun CatalogRow(title: String, meta: String, onOpen: () -> Unit, onEdit: (() -> Unit)? = null) {
     val colors = StackLaborTheme.colors
-    Row(
-        Modifier.fillMaxWidth().height(56.dp).goldCardShadow().clip(RoundedCornerShape(12.dp))
-            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface)))
-            .border(1.dp, colors.accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).fillMaxHeight().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.Center) {
-            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
+    RaisedPanel(Modifier.fillMaxWidth().height(56.dp)) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).fillMaxHeight().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.Center) {
+                Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
+            }
+            if (onEdit != null) IconTouchButton("$title bearbeiten", onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(20.dp)) }
         }
-        if (onEdit != null) IconTouchButton("$title bearbeiten", onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(20.dp)) }
+    }
+}
+
+/** Inlaid check box — sunken when empty, raised gold when ticked. */
+@Composable
+fun WerftCheckbox(checked: Boolean, enabledTint: Color = StackLaborTheme.colors.accent) {
+    val colors = StackLaborTheme.colors
+    val shape = RoundedCornerShape(6.dp)
+    Box(
+        Modifier
+            .then(if (checked) Modifier.depthShadow(shape, 6.dp) else Modifier)
+            .size(22.dp)
+            .clip(shape)
+            .then(
+                if (checked) {
+                    Modifier
+                        .background(
+                            Brush.verticalGradient(listOf(enabledTint.lightenBy(0.35f), enabledTint, enabledTint.darkenBy(0.25f))),
+                        )
+                        .border(1.dp, enabledTint.lightenBy(0.45f), shape)
+                } else {
+                    Modifier
+                        .background(Brush.verticalGradient(listOf(colors.background.darkenBy(0.05f), colors.surface)))
+                        .border(1.dp, colors.border, shape)
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (checked) Icon(Icons.Default.Check, null, Modifier.size(17.dp), tint = colors.onAccent)
     }
 }
 
@@ -456,38 +584,47 @@ fun GoalRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = StackLaborTheme.colors
-    Column(
-        modifier.fillMaxWidth().goldCardShadow().clip(RoundedCornerShape(12.dp))
-            .background(colors.surface).border(1.dp, colors.accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-    ) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
-            if (onToggle != null) {
-                Box(Modifier.requiredSize(44.dp).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
+    RaisedPanel(modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
+                if (onToggle != null) {
+                    Box(Modifier.requiredSize(44.dp).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
+                        WerftCheckbox(goal.selected)
+                    }
+                }
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                     Box(
-                        Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).then(
-                            if (goal.selected) Modifier.background(colors.accent) else Modifier.border(1.dp, colors.border, RoundedCornerShape(5.dp)),
-                        ),
+                        Modifier
+                            .depthShadow(CircleShape, 4.dp)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Brush.verticalGradient(listOf(colors.elevated.lightenBy(0.18f), colors.elevated.darkenBy(0.08f))))
+                            .border(1.dp, colors.border, CircleShape),
                         contentAlignment = Alignment.Center,
-                    ) { if (goal.selected) Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = colors.onAccent) }
+                    ) {
+                        Text(goal.rank.toString(), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                    }
                 }
-            }
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(20.dp).clip(CircleShape).background(colors.elevated), contentAlignment = Alignment.Center) {
-                    Text(goal.rank.toString(), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                    Text(goal.text, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
                 }
+                if (draggable && onDrag != null) IconTouchButton("${goal.text} verschieben", onDrag) { Icon(Icons.Default.DragHandle, null, tint = colors.textMuted) }
+                else Spacer(Modifier.width(16.dp))
             }
-            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                Text(goal.text, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+            AnimatedVisibility(
+                visible = expanded && goal.reason.isNotEmpty(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                Text(
+                    goal.reason,
+                    Modifier.fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(colors.elevated.darkenBy(0.05f), colors.elevated)))
+                        .padding(12.dp),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = colors.textMuted,
+                )
             }
-            if (draggable && onDrag != null) IconTouchButton("${goal.text} verschieben", onDrag) { Icon(Icons.Default.DragHandle, null, tint = colors.textMuted) }
-            else Spacer(Modifier.width(16.dp))
-        }
-        AnimatedVisibility(
-            visible = expanded && goal.reason.isNotEmpty(),
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut(),
-        ) {
-            Text(goal.reason, Modifier.fillMaxWidth().background(colors.elevated).padding(12.dp), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
         }
     }
 }
@@ -495,17 +632,14 @@ fun GoalRow(
 @Composable
 fun SettingsRow(label: String, value: String = "", trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     val colors = StackLaborTheme.colors
-    Row(
-        Modifier.fillMaxWidth().height(64.dp).goldCardShadow().clip(RoundedCornerShape(12.dp))
-            .background(Brush.verticalGradient(listOf(colors.elevated.copy(alpha = 0.48f), colors.surface)))
-            .border(1.dp, colors.border, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-        if (value.isNotEmpty()) Text(value, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
-        if (trailing != null) {
-            Spacer(Modifier.width(8.dp))
-            trailing()
+    RaisedPanel(Modifier.fillMaxWidth().height(64.dp), onClick = onClick) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+            if (value.isNotEmpty()) Text(value, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
+            if (trailing != null) {
+                Spacer(Modifier.width(8.dp))
+                trailing()
+            }
         }
     }
 }
@@ -527,13 +661,13 @@ fun BreathingFab(description: String, animationsEnabled: Boolean, onClick: () ->
         val value by transition.animateFloat(1f, 1.02f, infiniteRepeatable(tween(3_200), RepeatMode.Reverse), label = "fabScale")
         value
     } else 1f
-    Box(
-        modifier.size(56.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(12.dp, CircleShape, ambientColor = Color(0x525B390B), spotColor = Color(0x525B390B))
-            .clip(CircleShape).background(GoldActionBrush).clickable(onClick = onClick)
+    GoldSurface(
+        modifier = modifier.size(56.dp).graphicsLayer { scaleX = scale; scaleY = scale }
             .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Default.Add, null, tint = StackLaborTheme.colors.onAccent) }
+        shape = RoundedCornerShape(28.dp),
+        elevation = 18.dp,
+        onClick = onClick,
+    ) { Icon(Icons.Default.Add, null, tint = Color(0xFF2A1B05)) }
 }
 
 @Composable
@@ -572,11 +706,12 @@ fun BottomSheetFrame(
         )
         Surface(
             Modifier.fillMaxWidth().then(if (fixedHeight != null) Modifier.height(fixedHeight) else Modifier.fillMaxHeight(heightFraction))
-                .align(Alignment.BottomCenter).shadow(18.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), ambientColor = Color(0x52523406), spotColor = Color(0x52523406))
+                .align(Alignment.BottomCenter)
+                .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
                 .graphicsLayer { translationY = size.height * (1f - progress) },
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
-            border = BorderStroke(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.38f)),
+            border = BorderStroke(1.5.dp, metalRim(0.9f)),
         ) {
             Column {
                 if (showGrip) {

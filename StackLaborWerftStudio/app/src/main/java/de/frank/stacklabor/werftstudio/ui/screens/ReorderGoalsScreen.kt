@@ -55,6 +55,11 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 
 @Composable
 fun ReorderGoalsScreen(stackId: String, state: StackLaborUiState, callbacks: StackLaborCallbacks) {
@@ -113,7 +118,7 @@ private fun ReorderGoalRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = StackLaborTheme.colors
-    Box(modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(0.dp), clip = false)) {
+    Box(modifier.fillMaxWidth().depthShadow(RoundedCornerShape(0.dp), 16.dp)) {
         Column {
             Row(
                 Modifier.fillMaxWidth().height(40.dp).clickable(enabled = goal.reason.isNotEmpty(), onClick = onClick),

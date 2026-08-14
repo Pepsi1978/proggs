@@ -1,7 +1,6 @@
 package de.frank.stacklabor.werftstudio.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,8 +33,6 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrackChanges
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -86,6 +82,15 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.navigation.Origin
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.components.GoldSurface
+import de.frank.stacklabor.werftstudio.ui.components.RaisedPanel
+import de.frank.stacklabor.werftstudio.ui.components.SignalBar
+import de.frank.stacklabor.werftstudio.ui.components.WerftCheckbox
+import de.frank.stacklabor.werftstudio.ui.theme.bevel
+import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
+import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
+import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
+import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 
 @Composable
 fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
@@ -122,10 +127,23 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                 }
                 DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp))
             }
+            val stripBorder = StackLaborTheme.colors.border
             Row(
-                Modifier.fillMaxWidth().height(48.dp).background(StackLaborTheme.colors.elevated).clickable {
-                    callbacks.onNavigate(StackLaborRoute.AllStacks)
-                }.padding(horizontal = 12.dp),
+                Modifier.fillMaxWidth().height(48.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                StackLaborTheme.colors.elevated.lightenBy(0.10f),
+                                StackLaborTheme.colors.elevated.darkenBy(0.06f),
+                            ),
+                        ),
+                    )
+                    .drawBehind {
+                        drawLine(stripBorder.copy(alpha = 0.6f), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                    }
+                    .clickable {
+                        callbacks.onNavigate(StackLaborRoute.AllStacks)
+                    }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Alle Stacks zusammen prüfen", Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
@@ -168,10 +186,11 @@ private fun DoseVariantSwitch(variant: DoseVariant, callbacks: StackLaborCallbac
         modifier
             .width(112.dp)
             .height(28.dp)
-            .shadow(4.dp, CircleShape, ambientColor = Color(0x335A3508), spotColor = Color(0x335A3508))
             .clip(CircleShape)
-            .background(colors.elevated)
-            .border(1.dp, colors.border, CircleShape),
+            // Sunken track, so the selected half reads as a raised knob inside it.
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.22f), colors.elevated)))
+            .border(1.dp, Color.Black.copy(alpha = 0.25f), CircleShape)
+            .padding(2.dp),
     ) {
         DoseVariantOption("Frei", variant == DoseVariant.Frei, Modifier.weight(1f)) {
             callbacks.onEvent(StackLaborEvent.ChangeDoseVariant(DoseVariant.Frei))
@@ -184,11 +203,19 @@ private fun DoseVariantSwitch(variant: DoseVariant, callbacks: StackLaborCallbac
 
 @Composable
 private fun DoseVariantOption(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val colors = StackLaborTheme.colors
     Box(
         modifier
             .fillMaxHeight()
+            .then(if (selected) Modifier.depthShadow(CircleShape, 6.dp) else Modifier)
             .clip(CircleShape)
-            .background(if (selected) StackLaborTheme.colors.surface else Color.Transparent)
+            .then(
+                if (selected) {
+                    Modifier
+                        .background(Brush.verticalGradient(listOf(colors.surface.lightenBy(0.4f), colors.surface)))
+                        .border(1.dp, metalRim(0.55f), CircleShape)
+                } else Modifier,
+            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -196,7 +223,7 @@ private fun DoseVariantOption(label: String, selected: Boolean, modifier: Modifi
             label,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = if (selected) StackLaborTheme.colors.accent else StackLaborTheme.colors.textMuted,
+            color = if (selected) colors.accent else colors.textMuted,
         )
     }
 }
@@ -274,11 +301,12 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                 Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 48.dp, end = 8.dp)
-                    .width(224.dp)
-                    .shadow(22.dp, menuShape, ambientColor = Color(0x52361604), spotColor = Color(0x52361604))
+                    .width(232.dp)
+                    .depthShadow(menuShape, 28.dp, strength = 1.5f)
                     .clip(menuShape)
-                    .background(Brush.linearGradient(listOf(StackLaborTheme.colors.elevated, StackLaborTheme.colors.surface)))
-                    .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.58f), menuShape),
+                    .background(Brush.verticalGradient(listOf(StackLaborTheme.colors.surface.lightenBy(0.20f), StackLaborTheme.colors.elevated)))
+                    .bevel()
+                    .border(1.5.dp, metalRim(0.95f), menuShape),
             ) {
                 MenuItem("Stack bearbeiten") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.StackEdit(stackId, Origin.StackDetail)) }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
@@ -293,11 +321,17 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
 @Composable
 private fun TargetStrip(state: StackLaborUiState, onClick: () -> Unit) {
     val selectedGoals = state.goals.filter { it.selected }
+    val colors = StackLaborTheme.colors
     Row(
-        Modifier.fillMaxWidth().height(40.dp).background(StackLaborTheme.colors.surface).clickable(onClick = onClick).padding(start = 13.dp, end = 12.dp),
+        Modifier.fillMaxWidth().height(40.dp)
+            .background(Brush.verticalGradient(listOf(colors.surface.lightenBy(0.18f), colors.surface)))
+            .drawBehind {
+                drawLine(colors.border.copy(alpha = 0.5f), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+            }
+            .clickable(onClick = onClick).padding(start = 13.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(StackLaborTheme.colors.red))
+        Box(Modifier.width(3.dp).fillMaxHeight().padding(vertical = 6.dp).clip(CircleShape).background(colors.red))
         Spacer(Modifier.width(10.dp))
         Text("Ziele ${selectedGoals.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.width(8.dp))
@@ -315,8 +349,18 @@ private fun TargetStrip(state: StackLaborUiState, onClick: () -> Unit) {
 
 @Composable
 private fun ToolsRow(state: StackLaborUiState, searchOpen: Boolean, onSearch: () -> Unit, callbacks: StackLaborCallbacks) {
+    val toolsBorder = StackLaborTheme.colors.border
     Row(
-        Modifier.fillMaxWidth().height(36.dp).background(StackLaborTheme.colors.elevated).padding(start = 12.dp),
+        Modifier.fillMaxWidth().height(36.dp)
+            .background(
+                Brush.verticalGradient(
+                    listOf(StackLaborTheme.colors.elevated.darkenBy(0.06f), StackLaborTheme.colors.elevated.lightenBy(0.06f)),
+                ),
+            )
+            .drawBehind {
+                drawLine(toolsBorder.copy(alpha = 0.45f), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+            }
+            .padding(start = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -412,25 +456,26 @@ private fun StackMedicineRow(
     val colors = StackLaborTheme.colors
     val opacity = if (medicine.active) 1f else 0.38f
     Box(modifier.fillMaxWidth().height(64.dp)) {
-        Card(
-            Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508)),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f)),
+        RaisedPanel(
+            Modifier.fillMaxWidth().height(56.dp),
+            elevation = if (medicine.active) 12.dp else 4.dp,
+            rimAlpha = if (medicine.active) 0.7f else 0.3f,
+            bevelStrength = if (medicine.active) 1f else 0.35f,
         ) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface, colors.surface)))) {
+            Box(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.width(3.dp).fillMaxHeight().background(if (medicine.active) medicine.signal.color() else colors.disabled))
+                    SignalBar(if (medicine.active) medicine.signal.color() else colors.disabled)
                     Column(Modifier.weight(1f).clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp).alpha(opacity)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (intakePosition != null) {
                                 Box(
-                                    Modifier.size(20.dp).clip(CircleShape)
-                                        .background(colors.accent.copy(alpha = 0.1f))
-                                        .border(1.dp, colors.accent.copy(alpha = 0.62f), CircleShape),
+                                    Modifier.depthShadow(CircleShape, 4.dp).size(20.dp).clip(CircleShape)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(colors.accent.copy(alpha = 0.22f), colors.accent.copy(alpha = 0.06f)),
+                                            ),
+                                        )
+                                        .border(1.dp, metalRim(0.8f), CircleShape),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(intakePosition.toString(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = colors.accent)
@@ -447,14 +492,7 @@ private fun StackMedicineRow(
                         }
                     }
                     IconTouchButton(if (medicine.active) "${medicine.name} deaktivieren" else "${medicine.name} aktivieren", onToggle) {
-                        Box(
-                            Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).then(
-                                if (medicine.active) Modifier.background(colors.accent) else Modifier.border(1.dp, colors.disabled, RoundedCornerShape(5.dp)),
-                            ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (medicine.active) Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = colors.onAccent)
-                        }
+                        WerftCheckbox(medicine.active)
                     }
                 }
                 Box(Modifier.width(44.dp).fillMaxHeight().clickable(onClick = onSignal))
@@ -466,24 +504,14 @@ private fun StackMedicineRow(
 @Composable
 private fun EvaluationLink(meta: String, onClick: () -> Unit) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(12.dp)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .shadow(12.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface)))
-            .border(1.dp, colors.accent.copy(alpha = 0.58f), shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = colors.accent)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text("Auswertung im Vollbild", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    RaisedPanel(Modifier.fillMaxWidth().height(56.dp), rimAlpha = 0.95f, onClick = onClick) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = colors.accent)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Auswertung im Vollbild", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -497,21 +525,12 @@ private fun EvaluateFooter(callbacks: StackLaborCallbacks, modifier: Modifier = 
 
 @Composable
 private fun EvaluationAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(12.dp)
-    Row(
-        modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .shadow(12.dp, shape, ambientColor = Color(0x525B390B), spotColor = Color(0x525B390B))
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(Color(0xFFE7C879), Color(0xFFA87523), Color(0xFF704511))))
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = StackLaborTheme.colors.onAccent)
-        Spacer(Modifier.width(8.dp))
-        Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = StackLaborTheme.colors.onAccent)
+    GoldSurface(modifier.fillMaxWidth().height(44.dp), onClick = onClick) {
+        Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = Color(0xFF2A1B05))
+            Spacer(Modifier.width(8.dp))
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2A1B05))
+        }
     }
 }
 
@@ -577,7 +596,7 @@ private fun DoseRow(name: String, dose: String, meta: String, signal: SignalStat
         },
     ) {
         if (signal != null && signal != SignalState.Green) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(signal.color()))
+            SignalBar(signal.color())
         }
         Row(Modifier.fillMaxSize().padding(start = 13.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -599,34 +618,23 @@ private fun AllStacksSectionTitle(title: String) {
 @Composable
 private fun CompetitionCard(title: String, detail: String, signal: SignalState?, onClick: () -> Unit) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(12.dp)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.34f), colors.surface)))
-            .border(
-                BorderStroke(
-                    1.5.dp,
-                    Brush.sweepGradient(
-                        listOf(colors.accent, colors.accent.copy(alpha = 0.18f), Color.Transparent, colors.accent),
-                    ),
-                ),
-                shape,
-            )
-            .clickable(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
+    RaisedPanel(
+        Modifier.fillMaxWidth().height(72.dp),
+        elevation = 16.dp,
+        rimWidth = 1.5.dp,
+        rimAlpha = 1f,
+        onClick = onClick,
     ) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(signal?.color() ?: Color.Transparent))
-        Column(Modifier.weight(1f).padding(start = 13.dp, end = 4.dp), verticalArrangement = Arrangement.Center) {
-            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(4.dp))
-            Text(detail, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = signal?.color() ?: colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Box(Modifier.width(44.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.BarChart, null, Modifier.size(24.dp), tint = colors.textMuted)
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            if (signal != null) SignalBar(signal.color()) else Spacer(Modifier.width(5.dp))
+            Column(Modifier.weight(1f).padding(start = 13.dp, end = 4.dp), verticalArrangement = Arrangement.Center) {
+                Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(4.dp))
+                Text(detail, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = signal?.color() ?: colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.width(44.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.BarChart, null, Modifier.size(24.dp), tint = colors.textMuted)
+            }
         }
     }
 }
@@ -648,15 +656,14 @@ private fun competitionSignal(detail: String): SignalState? = when {
 
 @Composable
 private fun EvaluationSummaryCard(title: String, body: String, action: String, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface).clickable(onClick = onClick).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    RaisedPanel(Modifier.fillMaxWidth().height(64.dp), onClick = onClick) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Text(action, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = StackLaborTheme.colors.accent)
         }
-        Text(action, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = StackLaborTheme.colors.accent)
     }
 }
 
@@ -710,7 +717,8 @@ private fun EvaluationStateCard(state: EvaluationState, callbacks: StackLaborCal
             event = StackLaborEvent.RetryEvaluation
         }
     }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface).padding(12.dp)) {
+    RaisedPanel(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().padding(12.dp)) {
         Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
         Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
         if (action != null) {
@@ -720,5 +728,6 @@ private fun EvaluationStateCard(state: EvaluationState, callbacks: StackLaborCal
                 else if (event != null) callbacks.onEvent(event)
             })
         }
+    }
     }
 }
