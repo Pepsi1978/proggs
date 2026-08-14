@@ -17,13 +17,29 @@ Ein grosses, schwebendes Bedienfeld links oben trennt zwei Zustaende:
 
 **Das Bild der App bleibt dabei unveraendert.** Die Auswahlflaeche faerbt nichts ein: sie liegt
 nur da, um den Klick abzufangen, bevor er Android erreicht. Ihre Deckkraft ist 1/255 — unsichtbar,
-aber noch klickbar; bei 0 nimmt ein Fenster keine Maustaste mehr an. Am laufenden Werkzeug
-gemessen, Modus an gegen Modus aus: Farbunterschied 0, auf dunklem (12,12,12) wie auf hellem
-Grund (204,204,204).
+aber noch klickbar; bei 0 nimmt ein Fenster keine Maustaste mehr an. Dass der Modus an ist, zeigt
+die Leiste (der Schalter wechselt auf „AUSWAHL AUS" in Dunkelrot), nicht das Bild der App.
 
-Frueher lag die Toenung bei 28/255 und faerbte gerade im Dunkelmodus alles rot — sie dunkelt
-nicht ab, sie hellt auf. Dass der Modus an ist, zeigt die Leiste (der Schalter wechselt auf
-„AUSWAHL AUS" in Dunkelrot), nicht das Bild der App.
+### Warum die Flaeche frueher alles rot faerbte
+
+Sie wurde per `SetParent` als Kindfenster in das scrcpy-Fenster eingehaengt. Bei einem
+eingehaengten Fenster gilt die Durchsichtigkeit aber **nur fuer das Fenster selbst** — die
+Zeichenflaeche darin ist unter Windows ein eigenes Fenster und wird davon nicht erfasst. Sie malte
+deshalb volles Orange, egal welcher Wert eingestellt war. Sichtbar wird das mit
+`GetLayeredWindowAttributes`:
+
+```
+TkTopLevel : WS_EX_LAYERED True,  Alpha 1/255      <- hier sass die Durchsichtigkeit
+TkChild    : WS_EX_LAYERED False, keine Deckkraft  <- und das malte deckend darueber
+```
+
+**Falsche Faehrte bei der Diagnose:** Ein Bildschirmfoto beweist hier nichts. `ImageGrab` (und
+jede Aufnahme ueber den Bildschirm-DC) nimmt so ein eingehaengtes Fenster **nicht** mit auf — die
+Messung meldete „kein Farbunterschied", waehrend auf dem Schirm alles rot war. Verlaesslich ist
+nur, Windows direkt nach den Fenstereigenschaften zu fragen.
+
+Die Loesung: die Flaeche bleibt ein eigenstaendiges Fenster und wird ueber die Spiegelung gelegt
+statt in sie eingehaengt — so wie der Ziehrahmen, der genau deshalb immer korrekt durchsichtig war.
 
 Start fuer die Experimente-App:
 

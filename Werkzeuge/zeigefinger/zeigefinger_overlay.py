@@ -52,10 +52,9 @@ PANEL = "#17191d"
 TEXT = "#f7f4ee"
 MUTEX_NAME = "Local\\ZeigefingerOverlay"
 ZUG_SCHWELLE = 8  # Fensterpixel; darunter war es ein Zeigen, kein Aufziehen
-# Der Rahmen bekommt ein eigenes Fenster: die Auswahlflaeche liegt mit 11 Prozent
-# Deckkraft ueber der App, dort gezeichnetes Schwarz waere ausgewaschenes Grau.
-# Die Schluesselfarbe wird im Rahmenfenster durchsichtig gestellt, sodass nur die
-# Linie stehen bleibt — und die ist dann wirklich schwarz.
+# Der Ziehrahmen bekommt ein eigenes Fenster, in dem die Schluesselfarbe
+# durchsichtig gestellt ist: so steht dort nur die Linie, und die ist wirklich
+# schwarz statt von einer Flaeche ueberlagert.
 RAHMEN_FARBE = "#000000"
 RAHMEN_STAERKE = 4
 SCHLUESSELFARBE = "#ff00fe"
@@ -66,23 +65,23 @@ SCHLUESSELFARBE = "#ff00fe"
 # Frueher standen hier 28/255; ueber einem dunklen Bildschirm hellte das alles
 # rot auf. Dass der Modus an ist, zeigt die Leiste — nicht das Bild der App.
 TOENUNG = 1  # von 255
+# Groesse der Bedienleiste an einer Stelle. Die Breite richtet sich nach dem
+# laengsten Statustext — deshalb bleiben die Texte kurz, sonst waechst die
+# Leiste beim Anzeigen eines Ergebnisses.
+LEISTE_SCHRIFT = 10
+LEISTE_MINDESTBREITE = 300
+LEISTE_MINDESTHOEHE = 44
 
 SW_HIDE = 0
 SW_MINIMIZE = 6
 SW_RESTORE = 9
 GWL_EXSTYLE = -20
-GWL_STYLE = -16
 WS_EX_TOOLWINDOW = 0x00000080
 WS_EX_TRANSPARENT = 0x00000020
 WS_EX_LAYERED = 0x00080000
-WS_CHILD = 0x40000000
-WS_POPUP = 0x80000000
-HWND_TOP = 0
-SWP_NOACTIVATE = 0x0010
 VK_CONTROL = 0x11
 KEYEVENTF_KEYUP = 0x0002
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-LWA_ALPHA = 0x00000002
 _WIN_API_READY = False
 
 
@@ -119,22 +118,11 @@ def _win_api():
         user32.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
         user32.GetParent.argtypes = [wintypes.HWND]
         user32.GetParent.restype = wintypes.HWND
-        user32.SetParent.argtypes = [wintypes.HWND, wintypes.HWND]
-        user32.SetParent.restype = wintypes.HWND
         user32.SetLayeredWindowAttributes.argtypes = [
             wintypes.HWND,
             wintypes.COLORREF,
             wintypes.BYTE,
             wintypes.DWORD,
-        ]
-        user32.SetWindowPos.argtypes = [
-            wintypes.HWND,
-            wintypes.HWND,
-            ctypes.c_int,
-            ctypes.c_int,
-            ctypes.c_int,
-            ctypes.c_int,
-            wintypes.UINT,
         ]
         kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel32.OpenProcess.restype = wintypes.HANDLE
@@ -529,32 +517,6 @@ def _tk_fenster(widget) -> int:
     return parent or hwnd
 
 
-def _an_fenster_koppeln(hwnd: int, eigentuemer: int) -> None:
-    """Bettet ein Tk-Fenster als echtes Kind in die scrcpy-Clientflaeche ein."""
-    user32, _ = _win_api()
-    stil = user32.GetWindowLongW(wintypes.HWND(hwnd), GWL_STYLE)
-    user32.SetWindowLongW(
-        wintypes.HWND(hwnd),
-        GWL_STYLE,
-        (stil | WS_CHILD) & ~WS_POPUP,
-    )
-    user32.SetParent(wintypes.HWND(hwnd), wintypes.HWND(eigentuemer))
-    user32.SetLayeredWindowAttributes(wintypes.HWND(hwnd), 0, TOENUNG, LWA_ALPHA)
-
-
-def _fenster_platzieren(hwnd: int, x: int, y: int, breite: int, hoehe: int) -> None:
-    user32, _ = _win_api()
-    user32.SetWindowPos(
-        wintypes.HWND(hwnd),
-        wintypes.HWND(HWND_TOP),
-        x,
-        y,
-        breite,
-        hoehe,
-        SWP_NOACTIVATE,
-    )
-
-
 def _in_vordergrund(hwnd: int) -> bool:
     user32, kernel32 = _win_api()
     if user32.IsIconic(wintypes.HWND(hwnd)):
@@ -625,7 +587,6 @@ class AuswahlOverlay:
         self.nummer = 0
         self.video_geometrie = (0, 0, 1, 1)
         self.display: tuple[int, int] | None = display
-        self.fenster_gekoppelt = False
         self.hatte_scrcpy = bool(self.scrcpy_hwnd)
         self.emulator_minimiert = not ist_emulator(serial)
         self.toolbar_sichtbar = False
@@ -646,8 +607,8 @@ class AuswahlOverlay:
             text="AUS",
             bg=PANEL,
             fg=TEXT,
-            padx=18,
-            font=("Segoe UI", 16, "bold"),
+            padx=10,
+            font=("Segoe UI", LEISTE_SCHRIFT, "bold"),
         )
         self.status.pack(side="left", fill="y")
         self.schalter = tk.Button(
@@ -659,11 +620,11 @@ class AuswahlOverlay:
             activebackground="#ff7658",
             activeforeground="white",
             relief="flat",
-            padx=22,
-            pady=14,
-            font=("Segoe UI", 15, "bold"),
+            padx=12,
+            pady=6,
+            font=("Segoe UI", LEISTE_SCHRIFT, "bold"),
         )
-        self.schalter.pack(side="left", padx=(0, 4), pady=4)
+        self.schalter.pack(side="left", padx=(0, 3), pady=3)
         self.schliessen = tk.Button(
             self.root,
             text="×",
@@ -673,14 +634,20 @@ class AuswahlOverlay:
             activebackground="#2b2e35",
             activeforeground="white",
             relief="flat",
-            width=4,
-            font=("Segoe UI", 18, "bold"),
+            width=3,
+            font=("Segoe UI", LEISTE_SCHRIFT + 2, "bold"),
         )
-        self.schliessen.pack(side="left", pady=4, padx=(0, 4))
+        self.schliessen.pack(side="left", pady=3, padx=(0, 3))
 
-        self.overlay = tk.Toplevel(self.root)  # die getoente Auswahlflaeche
+        # Die Auswahlflaeche bleibt ein eigenstaendiges Fenster und wird NICHT per
+        # SetParent in scrcpy eingehaengt. Als eingehaengtes Kindfenster gilt die
+        # Durchsichtigkeit naemlich nur fuer den Rahmen selbst — die Zeichenflaeche
+        # darin ist ein eigenes Fenster, das davon nicht erfasst wird und stur
+        # deckend malt. Genau daran faerbte sich die ganze Spiegelung orange.
+        self.overlay = tk.Toplevel(self.root)
         self.overlay.withdraw()
         self.overlay.overrideredirect(True)
+        self.overlay.attributes("-topmost", True)
         self.overlay.attributes("-alpha", TOENUNG / 255)
         self.canvas = tk.Canvas(
             self.overlay,
@@ -704,6 +671,9 @@ class AuswahlOverlay:
         self.overlay_hwnd = _tk_fenster(self.overlay)
         _fensterstil(self.root_hwnd, False, transparent=False)
         _fensterstil(self.overlay_hwnd, False)
+        # SetWindowLong setzt WS_EX_LAYERED neu und wirft dabei die zuvor
+        # gesetzte Deckkraft weg — sie muss danach noch einmal gesetzt werden.
+        self.overlay.attributes("-alpha", TOENUNG / 255)
         # Klickdurchlaessig: beide Rahmen liegen ueber der Auswahlflaeche, duerfen
         # ihr aber weder Maustaste noch Bewegung wegnehmen.
         _fensterstil(_tk_fenster(self.band), True)
@@ -759,7 +729,6 @@ class AuswahlOverlay:
     def _fenster_verfolgen(self) -> None:
         if not self.scrcpy_hwnd or not ctypes.windll.user32.IsWindow(self.scrcpy_hwnd):
             self.scrcpy_hwnd = None
-            self.fenster_gekoppelt = False
             if self.hatte_scrcpy:
                 if self.beschaeftigt:
                     self.root.after(250, self._fenster_verfolgen)
@@ -779,10 +748,6 @@ class AuswahlOverlay:
                 return
             self.hatte_scrcpy = True
             self.status.configure(text="AUS")
-        if not self.fenster_gekoppelt:
-            _an_fenster_koppeln(self.overlay_hwnd, self.scrcpy_hwnd)
-            self.fenster_gekoppelt = True
-            self.status.configure(text="AUS")
         if not self.emulator_minimiert:
             self.emulator_minimiert = self._emulator_minimieren()
 
@@ -800,12 +765,14 @@ class AuswahlOverlay:
         vx, vy = cx + ox, cy + oy
         self.video_geometrie = (vx, vy, vb, vh)
 
-        overlay_geometrie = f"{vb}x{vh}+{ox}+{oy}"
+        # Bildschirmkoordinaten, nicht Koordinaten innerhalb von scrcpy: die
+        # Auswahlflaeche liegt als eigenstaendiges Fenster darueber.
+        overlay_geometrie = f"{vb}x{vh}+{vx}+{vy}"
         if overlay_geometrie != self.letzte_overlay_geometrie:
-            _fenster_platzieren(self.overlay_hwnd, ox, oy, vb, vh)
+            self.overlay.geometry(overlay_geometrie)
             self.letzte_overlay_geometrie = overlay_geometrie
-        toolbar_breite = max(460, self.root.winfo_reqwidth())
-        toolbar_hoehe = max(78, self.root.winfo_reqheight())
+        toolbar_breite = max(LEISTE_MINDESTBREITE, self.root.winfo_reqwidth())
+        toolbar_hoehe = max(LEISTE_MINDESTHOEHE, self.root.winfo_reqheight())
         tx = 20
         ty = 80
         root_geometrie = f"{toolbar_breite}x{toolbar_hoehe}+{tx}+{ty}"
@@ -916,7 +883,8 @@ class AuswahlOverlay:
 
         self.beschaeftigt = True
         self.schalter.configure(state="disabled")
-        self.status.configure(text="KASTEN WIRD GELESEN ..." if gezogen else "WIRD ÜBERGEBEN ...")
+        # Kurz halten: die Leiste richtet sich nach ihrem laengsten Text.
+        self.status.configure(text="WIRD ÜBERGEBEN ...")
         _, _, vb, vh = self.video_geometrie
         if gezogen:
             # Beim Loslassen bleibt der Rahmen schwarz, wird nur etwas kraeftiger:
@@ -968,12 +936,11 @@ class AuswahlOverlay:
 
     def _auswahl_fertig(self, pfad: Path, inhalt: dict) -> None:
         if inhalt.get("art") == "kasten":
-            beschriftet = sum(1 for e in inhalt.get("elemente_im_kasten", []) if e.get("beschriftet"))
-            name = f"Kasten · {inhalt.get('elemente_im_kasten_anzahl', 0)} Elemente ({beschriftet} benannt)"
+            name = f"Kasten ({inhalt.get('elemente_im_kasten_anzahl', 0)})"
         else:
             element = inhalt.get("direktes_element") or {}
             name = element.get("text") or element.get("desc") or element.get("klasse", "Element")
-        self.status.configure(text=f"#{self.nummer}: {name[:34]}")
+        self.status.configure(text=f"#{self.nummer}: {name[:26]}")
         self.root.clipboard_clear()
         self.root.clipboard_append(befehlstext(pfad, inhalt.get("art", "punkt")))
         self.root.update()
