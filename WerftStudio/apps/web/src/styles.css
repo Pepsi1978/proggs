@@ -22,8 +22,11 @@
 .canvas-viewport{position:relative;overflow:hidden;min-width:0;min-height:0}.canvas-viewport.panning{cursor:grabbing}.canvas-pan-content{transform-origin:0 0;will-change:transform}.frame-scroller.canvas-viewport{overflow:hidden}.frame-content{width:max-content;min-width:100%;min-height:100%}.imported-canvas>.canvas-viewport{width:100%;height:100%}
 /* Buehne: nur das Design, formatfuellend und vollstaendig sichtbar. */
 .stage-viewport{position:absolute;inset:0;width:auto;height:auto}
-.stage-surface{border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(18,32,47,.18)}
-.stage-surface iframe{display:block;border:0;background:#fff}
+/* Ohne eigene Ebene und ohne runde Ecken bleibt beim Skalieren keine Kante uebrig, an der die
+   Flaeche darunter durchscheinen koennte (Chromium-Fehler 600120: gebrochene Massstaebe zeichnen
+   eine helle Linie von einem Pixel). Den Rest deckt der gleichfarbige Saum aus App.tsx ab. */
+.stage-surface{overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(18,32,47,.18);isolation:isolate;backface-visibility:hidden}
+.stage-surface iframe{display:block;border:0;background:transparent}
 .physical-size{animation:physical-size-frame 1.1s ease-out}
 @keyframes physical-size-frame{0%,72%{outline:4px solid #1fa34a;outline-offset:4px}100%{outline:4px solid transparent;outline-offset:4px}}
 /* Zurueck und Start stoeren das Design nicht: sie erscheinen erst, wenn die Maus in die Ecke faehrt. */

@@ -1239,6 +1239,19 @@ function Studio() {
     setDeviceId(device.id);
     setLandscape(device.width === draftFrame.height && device.height === draftFrame.width);
   }, [draftFrame, imported.data?.imported, projectId]);
+  // Die Buehne startet auf dem Geraet, auf dem hier wirklich beurteilt wird: dem zugeklappten
+  // Galaxy Z Fold 8. Vorher stand sie auf der Groesse des Designs, und jedes Oeffnen begann mit
+  // demselben Handgriff in der Geraeteliste. Der Entwurfs-Zweig darueber waehlt sein Geraet aus dem
+  // Rahmenmass — dem wird nicht dazwischengefahren, und eine eigene Wahl bleibt ebenfalls stehen.
+  const initializedStageDevice = useRef<string | null>(null);
+  useEffect(() => {
+    if (initializedStageDevice.current === projectId || !imported.data || imported.data.imported === false) return;
+    const platforms = project.data?.platforms;
+    if (!platforms) return;
+    initializedStageDevice.current = projectId;
+    if (!platforms.some((entry) => entry.toLowerCase() === "android")) return;
+    setDeviceId((current) => current || "fold8-cover");
+  }, [imported.data, project.data, projectId]);
   const referenceDevice = stageDeviceFor(deviceId, landscape);
   const designDevice = imported.data?.imported
     ? stageDeviceForDesign(imported.data.previewWidth, imported.data.previewHeight, landscape)
@@ -1929,6 +1942,11 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   // mit der das Design aufgebaut wurde, und die Geraetewahl bliebe wirkungslos.
   const [measuredSize, setMeasuredSize] = useState({ width: previewWidth, height: previewHeight });
   const size = device ? { width: device.width, height: device.height } : measuredSize;
+  // Die Flaeche unter dem Rahmen traegt die Farbe, die das Design an seinem Rand zeichnet. Lag dort
+  // fest Weiss, blitzte an jeder Kante, die beim Skalieren auf einen Bruchteil eines Pixels faellt,
+  // eine helle Linie durch — und in den abgerundeten Ecken ein heller Zipfel. Beides gehoert nicht
+  // zum Design und sah nach einem Rahmen aus, den niemand gezeichnet hat.
+  const [stageBackground, setStageBackground] = useState("");
   // Die Groesse der Buehne und die des Eingabefensters entscheiden, wohin das Fenster passt. Ohne
   // beide Werte laesst sich nicht garantieren, dass es vollstaendig sichtbar bleibt.
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -2126,6 +2144,8 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       if (data.action === "size" && Number.isFinite(data.width) && Number.isFinite(data.height)) {
         const next = { width: Math.round(data.width!), height: Math.round(data.height!) };
         setMeasuredSize((current) => (current.width === next.width && current.height === next.height ? current : next));
+        const gemeldet = (data as unknown as { background?: string }).background;
+        if (typeof gemeldet === "string") setStageBackground((current) => (current === gemeldet ? current : gemeldet));
         return;
       }
       const frame = frameRef.current;
@@ -2274,7 +2294,20 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
       onDoubleClick={resetView}
       onAuxClick={(event) => { if (event.button === 1) event.preventDefault(); }}
     >
-      <div className={`canvas-pan-content stage-surface${physicalSizeHighlight ? " physical-size" : ""}`} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, width: size.width, height: size.height }} onAnimationEnd={() => setPhysicalSizeHighlight(false)}>
+      {/* Der Saum von einem Pixel traegt DIESELBE Farbe wie das Design. Ein skalierter Rahmen endet
+          fast nie genau auf einer Pixelgrenze; der Rest einer Kante wird halbdurchsichtig gezeichnet
+          und liess bisher die helle Flaeche darunter durchscheinen. Mit dem gleichfarbigen Saum ist
+          dort nichts Fremdes mehr zu sehen — und das Design steht randlos auf der Buehne. */}
+      <div
+        className={`canvas-pan-content stage-surface${physicalSizeHighlight ? " physical-size" : ""}`}
+        style={{
+          transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+          width: size.width,
+          height: size.height,
+          ...(stageBackground ? { background: stageBackground, boxShadow: `0 0 0 1px ${stageBackground}, 0 24px 60px rgba(18, 32, 47, .18)` } : {})
+        }}
+        onAnimationEnd={() => setPhysicalSizeHighlight(false)}
+      >
         <iframe
           ref={frameRef}
           title="Design"

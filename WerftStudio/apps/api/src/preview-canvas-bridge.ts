@@ -116,8 +116,30 @@ const bridgeScript = `<script ${bridgeMarker}>
     measure();
   };
 
+  // Die Buehne faerbt sich in die Farbe, die das Design an seinem Rand wirklich zeichnet. Ohne diese
+  // Meldung liegt unter dem Rahmen Weiss — und weil ein skalierter Rahmen an einer Kante immer einen
+  // Bruchteil eines Pixels frei laesst, sah man dort eine helle Linie, die nicht zum Design gehoert.
+  const edgeBackground = () => {
+    const deckend = (value) => {
+      if (!value) return false;
+      const zahlen = String(value).match(/[\\d.]+/g);
+      if (/^rgba?\\(/i.test(value) && zahlen && zahlen.length > 3) return Number(zahlen[3]) > 0.99;
+      return value !== "transparent";
+    };
+    const kandidaten = [activeScreen(), document.body, document.documentElement];
+    for (const element of kandidaten) {
+      if (!element) continue;
+      try {
+        const farbe = getComputedStyle(element).backgroundColor;
+        if (deckend(farbe)) return farbe;
+      } catch (error) { /* ohne lesbaren Stil bleibt die naechste Ebene zustaendig */ }
+    }
+    return "";
+  };
+
   const measure = () => {
-    if (forcedViewport) { post({ action: "size", width: forcedViewport.width, height: forcedViewport.height, screenId: screenIdOf(activeScreen()) }); return; }
+    const background = edgeBackground();
+    if (forcedViewport) { post({ action: "size", width: forcedViewport.width, height: forcedViewport.height, screenId: screenIdOf(activeScreen()), background }); return; }
     const screen = activeScreen();
     // Gemessen wird der BILDSCHIRM, nicht das Fenster: das Fenster ist immer so breit wie der Rahmen,
     // den das Studio gerade aufspannt. Wer es mitmisst, kann nie wieder schmaler werden — nach einem
@@ -126,7 +148,7 @@ const bridgeScript = `<script ${bridgeMarker}>
       const rect = screen.getBoundingClientRect();
       const width = Math.round(Math.max(rect.width, screen.scrollWidth || 0));
       const height = Math.round(Math.max(rect.height, screen.scrollHeight || 0));
-      if (width && height) post({ action: "size", width, height, screenId: screenIdOf(screen) });
+      if (width && height) post({ action: "size", width, height, screenId: screenIdOf(screen), background });
       return;
     }
     const element = document.body;
@@ -135,7 +157,7 @@ const bridgeScript = `<script ${bridgeMarker}>
     const width = Math.round(Math.max(rect.width, element.scrollWidth || 0, document.documentElement.scrollWidth || 0));
     const height = Math.round(Math.max(rect.height, element.scrollHeight || 0));
     if (!width || !height) return;
-    post({ action: "size", width, height, screenId: "" });
+    post({ action: "size", width, height, screenId: "", background });
   };
 
   // Die Bildschirme heissen intern z. B. "compose:HistoryScreen"; verlinkt wird im Design aber oft
