@@ -3,4 +3,5 @@ node_modules/
 logs/
 *.mp3
 *.teil
+suno-liste*.json
 package-lock.json
