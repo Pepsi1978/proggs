@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var viewModel: StackLaborViewModel
     private var pendingExport: String? = null
     private var pendingTextExport: String? = null
-    private var pendingTts: Pair<String, TtsConfiguration>? = null
+    private var pendingTts: Triple<String, TtsConfiguration, Int>? = null
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-        pendingTts?.let { (text, configuration) -> TtsPlaybackService.play(this, text, configuration) }
+        pendingTts?.let { (text, configuration, start) -> TtsPlaybackService.play(this, text, configuration, start) }
         pendingTts = null
     }
 
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                             textExportLauncher.launch(effect.fileName)
                         }
                         is StackLaborUiEffect.OpenUrl -> openUrl(effect.url)
-                        is StackLaborUiEffect.PlayTts -> playTts(effect.text, effect.configuration)
+                        is StackLaborUiEffect.PlayTts -> playTts(effect.text, effect.configuration, effect.startParagraph)
                         StackLaborUiEffect.PauseTts -> TtsPlaybackService.pause(this@MainActivity)
                         StackLaborUiEffect.ResumeTts -> TtsPlaybackService.resume(this@MainActivity)
                         StackLaborUiEffect.StopTts -> TtsPlaybackService.stop(this@MainActivity)
@@ -122,14 +122,14 @@ class MainActivity : ComponentActivity() {
             .onFailure { showMessage("Für diese Seite ist keine Browser-App verfügbar.") }
     }
 
-    private fun playTts(text: String, configuration: TtsConfiguration) {
+    private fun playTts(text: String, configuration: TtsConfiguration, startParagraph: Int = 0) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            pendingTts = text to configuration
+            pendingTts = Triple(text, configuration, startParagraph)
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            TtsPlaybackService.play(this, text, configuration)
+            TtsPlaybackService.play(this, text, configuration, startParagraph)
         }
     }
 

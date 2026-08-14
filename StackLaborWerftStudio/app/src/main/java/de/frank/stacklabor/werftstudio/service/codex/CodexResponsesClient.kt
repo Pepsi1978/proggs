@@ -225,7 +225,16 @@ internal fun codexPayload(
         append("Nur dieses JSON, kein Text davor oder danach. ")
         append("Nicht genannte Mittel-Ziel-Paare gelten als neutral. ")
         append("Als 'alterniert mit' gekennzeichnete Paare nie als Konkurrenz melden. ")
-        append("Nutze ausschließlich die übergebenen IDs. Gründe sind knapp und auf Deutsch. ")
+        append("Nutze in den ID-Feldern ('nem', 'nem_a', 'nem_b', 'ziel', 'frage') ausschließlich die übergebenen IDs. ")
+        // Ohne diese Ansage schrieb das Modell die internen IDs in den Fliesstext — also
+        // "hyaluronsaeure" und "loewenmaehne" statt "Hyaluronsäure" und "Löwenmähne".
+        append("IM FLIESSTEXT ('gesamt', 'grund', 'hinweise', 'text') gilt dagegen: ")
+        append("Schreibe die Mittel IMMER mit ihrem Anzeigenamen aus dem Feld 'name' der Kontextdaten, NIEMALS mit der ID. ")
+        append("Schreibe durchgehend korrektes Deutsch nach aktueller Rechtschreibung: ")
+        append("echte Umlaute ä, ö, ü und ß — niemals die Ersatzschreibung ae, oe, ue oder ss. ")
+        append("Beachte die deutsche Groß- und Kleinschreibung: Substantive und Satzanfänge groß, ")
+        append("Eigennamen und Präparatenamen so geschrieben wie im Feld 'name'. ")
+        append("Gründe sind knapp. ")
         if (goals.isEmpty()) {
             // Ohne Ziele gibt es nichts zu gewichten — dann zaehlt nur die Zusammenstellung selbst.
             append("Für diesen Stack sind KEINE Ziele hinterlegt. Gib 'zellen' deshalb als leere Liste aus. ")

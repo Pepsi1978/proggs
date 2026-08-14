@@ -161,7 +161,7 @@ sealed interface StackLaborUiEffect {
     /** Legt eine lesbare Textdatei an — für den Stack-Export. */
     data class CreateTextDocument(val fileName: String, val text: String) : StackLaborUiEffect
     data class OpenUrl(val url: String) : StackLaborUiEffect
-    data class PlayTts(val text: String, val configuration: TtsConfiguration) : StackLaborUiEffect
+    data class PlayTts(val text: String, val configuration: TtsConfiguration, val startParagraph: Int = 0) : StackLaborUiEffect
     data object PauseTts : StackLaborUiEffect
     data object ResumeTts : StackLaborUiEffect
     data object StopTts : StackLaborUiEffect
@@ -223,6 +223,8 @@ sealed interface StackLaborEvent {
     data object OpenCodexPage : StackLaborEvent
     data object RetryCodexLogin : StackLaborEvent
     data object Play : StackLaborEvent
+    /** Liest ab dem angetippten Absatz weiter — bei langen Auswertungen der schnellste Weg. */
+    data class PlayFromParagraph(val index: Int) : StackLaborEvent
     data object Pause : StackLaborEvent
     data object Stop : StackLaborEvent
     data class MergeMedicines(val keepId: String, val replaceId: String) : StackLaborEvent

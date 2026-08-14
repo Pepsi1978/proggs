@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -70,7 +73,16 @@ fun EvaluationScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 }
                 Box(Modifier.weight(1f)) {
                     if (state.evaluationState == EvaluationState.Running) {
-                        Column(Modifier.fillMaxSize().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 84.dp)) {
+                        val laufScroll = rememberScrollState()
+                        // Der Text waechst waehrend des Streams — mitlaufen, damit das Neue sichtbar
+                        // bleibt, und scrollbar sein, damit man zurueckblaettern kann.
+                        LaunchedEffect(state.streamedEvaluationText) {
+                            laufScroll.animateScrollTo(laufScroll.maxValue)
+                        }
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(laufScroll)
+                                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 84.dp),
+                        ) {
                             Text(
                                 // Ohne Ziele gibt es nichts zu gewichten — dann sagt die Zeile auch das.
                                 if (state.goals.none { it.selected }) {
@@ -85,35 +97,59 @@ fun EvaluationScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                             Text(state.streamedEvaluationText, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
                         }
                     } else {
+                        val listState = rememberLazyListState()
+                        // Beim Vorlesen wandert die Ansicht zum gerade gesprochenen Absatz mit —
+                        // bei langen Auswertungen sucht man ihn sonst von Hand.
+                        LaunchedEffect(state.spokenParagraphIndex) {
+                            val index = state.spokenParagraphIndex ?: return@LaunchedEffect
+                            if (index in state.evaluationParagraphs.indices) listState.animateScrollToItem(index)
+                        }
                         LazyColumn(
                             Modifier.fillMaxSize(),
+                            state = listState,
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 84.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             itemsIndexed(state.evaluationParagraphs) { index, paragraph ->
+                                val gesprochen = state.spokenParagraphIndex == index
                                 Text(
                                     paragraph,
-                                    Modifier.fillMaxWidth().then(
-                                        if (state.spokenParagraphIndex == index) {
-                                            Modifier.drawBehind {
-                                                drawRect(colors.accent.copy(alpha = 0.08f))
-                                                drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height))
-                                            }.padding(start = 12.dp)
-                                        } else Modifier
-                                    ),
+                                    Modifier.fillMaxWidth()
+                                        // Ein Tipp auf einen Absatz liest ab genau dieser Stelle weiter.
+                                        .clickable { callbacks.onEvent(StackLaborEvent.PlayFromParagraph(index)) }
+                                        .then(
+                                            if (gesprochen) {
+                                                Modifier.drawBehind {
+                                                    drawRect(colors.accent.copy(alpha = 0.08f))
+                                                    drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height))
+                                                }.padding(start = 12.dp)
+                                            } else Modifier,
+                                        ),
                                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                                 )
                             }
                         }
                     }
-                    PlaybackFooter(state.playbackState, callbacks, Modifier.align(Alignment.BottomCenter))
+                    PlaybackFooter(
+                        playback = state.playbackState,
+                        spokenIndex = state.spokenParagraphIndex,
+                        paragraphCount = state.evaluationParagraphs.size,
+                        callbacks = callbacks,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
     }
 }
 
 @Composable
-private fun PlaybackFooter(playback: PlaybackState, callbacks: StackLaborCallbacks, modifier: Modifier = Modifier) {
+private fun PlaybackFooter(
+    playback: PlaybackState,
+    spokenIndex: Int?,
+    paragraphCount: Int,
+    callbacks: StackLaborCallbacks,
+    modifier: Modifier = Modifier,
+) {
     val colors = StackLaborTheme.colors
     Row(
         modifier.fillMaxWidth().height(60.dp).background(colors.glass)
@@ -133,7 +169,19 @@ private fun PlaybackFooter(playback: PlaybackState, callbacks: StackLaborCallbac
         )
         PlaybackAction("Vorlesen stoppen", "Stopp", Icons.Default.Stop, false, playback != PlaybackState.Ready, { callbacks.onEvent(StackLaborEvent.Stop) })
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-            PlaybackLevel(playback, Modifier.padding(horizontal = 8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Bei langen Auswertungen zeigt der Zaehler, wie weit das Vorlesen ist.
+                if (spokenIndex != null && paragraphCount > 0) {
+                    Text(
+                        "Absatz ${spokenIndex + 1} von $paragraphCount",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textMuted,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                PlaybackLevel(playback, Modifier.padding(horizontal = 8.dp))
+            }
         }
     }
 }

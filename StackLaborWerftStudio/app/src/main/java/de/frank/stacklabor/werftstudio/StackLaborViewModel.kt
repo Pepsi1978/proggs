@@ -213,6 +213,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             StackLaborEvent.OpenCodexPage -> sendEffect(StackLaborUiEffect.OpenUrl(mutableState.value.codexVerificationUrl))
             StackLaborEvent.RetryCodexLogin -> startCodexLogin()
             StackLaborEvent.Play -> playTts()
+            is StackLaborEvent.PlayFromParagraph -> playTts(event.index, fortsetzen = false)
             StackLaborEvent.Pause -> sendEffect(StackLaborUiEffect.PauseTts)
             StackLaborEvent.Stop -> sendEffect(StackLaborUiEffect.StopTts)
             is StackLaborEvent.MergeMedicines -> mergeMedicines(event.keepId, event.replaceId)
@@ -1001,7 +1002,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         else -> TtsVoices.byId(voiceId)?.label ?: voiceId.substringAfterLast('-').removeSuffix("Neural")
     }
 
-    private fun playTts() {
+    /**
+     * @param startParagraph ab welchem Absatz gelesen wird — beim Antippen eines Absatzes dessen Nummer.
+     * @param fortsetzen ob eine pausierte Wiedergabe einfach weiterlaufen soll.
+     */
+    private fun playTts(startParagraph: Int = 0, fortsetzen: Boolean = true) {
         val text = mutableState.value.evaluationParagraphs.joinToString("\n\n").trim()
         if (text.isBlank()) return message("Es gibt noch keine Auswertung zum Vorlesen")
         val configuration = TtsConfiguration(
@@ -1015,8 +1020,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             paragraphPauseMillis = when (settings.absatzpause) { Absatzpause.KURZ -> 350L; Absatzpause.MITTEL -> 700L; Absatzpause.LANG -> 1_200L },
             autoStopMillis = settings.abschaltzeitMinuten * 60_000L,
         )
-        if (mutableState.value.playbackState == PlaybackState.Paused) sendEffect(StackLaborUiEffect.ResumeTts)
-        else sendEffect(StackLaborUiEffect.PlayTts(text, configuration))
+        if (fortsetzen && mutableState.value.playbackState == PlaybackState.Paused) sendEffect(StackLaborUiEffect.ResumeTts)
+        else sendEffect(StackLaborUiEffect.PlayTts(text, configuration, startParagraph.coerceAtLeast(0)))
     }
 
     private fun showEvaluation(details: BewertungMitDetails) {

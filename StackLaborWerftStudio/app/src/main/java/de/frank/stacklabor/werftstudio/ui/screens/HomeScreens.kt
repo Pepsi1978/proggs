@@ -43,6 +43,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.window.Dialog
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -302,8 +307,14 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
             AdaptiveSplit(
                 narrow = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, fatFirst = state.solubilityFatFirst, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
-                        EvaluateFooter(callbacks, Modifier.align(Alignment.BottomCenter))
+                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, fatFirst = state.solubilityFatFirst, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = if (state.evaluationState == EvaluationState.Running) 148.dp else 52.dp))
+                        EvaluateFooter(
+                            callbacks = callbacks,
+                            running = state.evaluationState == EvaluationState.Running,
+                            stage = state.streamedEvaluationText.lines().lastOrNull { it.isNotBlank() }.orEmpty(),
+                            animationsEnabled = animationsEnabled,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
                         BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
                     }
                 },
@@ -695,9 +706,91 @@ private fun EvaluationLink(meta: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EvaluateFooter(callbacks: StackLaborCallbacks, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(horizontal = 12.dp, vertical = 4.dp)) {
-        EvaluationAction("Diesen Stack auswerten", { callbacks.onEvent(StackLaborEvent.EvaluateStack) })
+private fun EvaluateFooter(
+    callbacks: StackLaborCallbacks,
+    running: Boolean,
+    stage: String,
+    animationsEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.fillMaxWidth().background(StackLaborTheme.colors.glass)) {
+        // Solange die KI arbeitet, zeigt ein laufendes Band ueber dem Knopf, dass etwas passiert —
+        // ohne das wirkte der Knopf wie tot.
+        AnimatedVisibility(running) {
+            WorkingBand(stage, animationsEnabled)
+        }
+        Box(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            if (running) {
+                EvaluationAction("Auswertung läuft — Abbrechen", { callbacks.onEvent(StackLaborEvent.CancelEvaluation) })
+            } else {
+                EvaluationAction("Diesen Stack auswerten", { callbacks.onEvent(StackLaborEvent.EvaluateStack) })
+            }
+        }
+    }
+}
+
+/**
+ * Das laufende Band ueber dem Auswerten-Knopf: ein wanderndes Goldlicht plus die Stufe, an der
+ * die KI gerade arbeitet. Ohne diese Rueckmeldung sah es aus, als passiere beim Antippen nichts.
+ */
+@Composable
+private fun WorkingBand(stage: String, animationsEnabled: Boolean) {
+    val colors = StackLaborTheme.colors
+    val fortschritt = if (animationsEnabled) {
+        val transition = rememberInfiniteTransition(label = "arbeitsband")
+        val wert by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(1_400, easing = LinearEasing), RepeatMode.Restart),
+            label = "arbeitsbandLauf",
+        )
+        wert
+    } else 0.5f
+    Column(
+        Modifier.fillMaxWidth()
+            .drawBehind {
+                drawLine(colors.border.copy(alpha = 0.6f), Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx())
+            }
+            .padding(start = 12.dp, top = 8.dp, end = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp), tint = colors.accent)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Die KI wertet aus …",
+                style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.accent,
+            )
+        }
+        if (stage.isNotBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                stage,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier.fillMaxWidth().height(4.dp).clip(CircleShape)
+                .background(colors.accent.copy(alpha = 0.16f))
+                .drawBehind {
+                    // Ein Lichtstreifen wandert von links nach rechts durch — unbestimmte Dauer,
+                    // deshalb kein Prozentbalken, der etwas verspricht was niemand weiss.
+                    val breite = size.width * 0.34f
+                    val start = (size.width + breite) * fortschritt - breite
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            listOf(Color.Transparent, colors.accent, Color.Transparent),
+                            startX = start,
+                            endX = start + breite,
+                        ),
+                    )
+                },
+        )
+        Spacer(Modifier.height(8.dp))
     }
 }
 

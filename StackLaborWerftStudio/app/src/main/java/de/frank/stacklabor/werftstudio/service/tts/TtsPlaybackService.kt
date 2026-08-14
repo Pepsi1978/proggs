@@ -25,7 +25,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -153,11 +155,19 @@ class TtsPlaybackService : Service() {
                 val paragraphs = TtsText.paragraphs(text)
                 if (paragraphs.isEmpty()) throw TtsException("Die Auswertung enthält keinen vorlesbaren Fließtext.")
                 paragraphCount = paragraphs.size
+                val start = intent.getIntExtra(EXTRA_START_PARAGRAPH, 0).coerceIn(0, paragraphs.lastIndex)
+                val engine = TtsServiceIntegration.requireEngine()
                 val playAll: suspend () -> Unit = {
-                    paragraphs.forEachIndexed { index, paragraph ->
+                    // Der naechste Absatz wird schon erzeugt, waehrend der aktuelle laeuft. Ohne das
+                    // entsteht vor jedem Absatz eine hoerbare Pause, weil erst dann synthetisiert wird.
+                    var naechster: Deferred<SynthesizedAudio>? = null
+                    for (index in start..paragraphs.lastIndex) {
                         paragraphIndex = index
                         TtsPlaybackStateBus.update(TtsPlaybackState.Preparing(index, paragraphCount))
-                        val audio = TtsServiceIntegration.requireEngine().synthesizeParagraph(paragraph, configuration)
+                        val audio = (naechster ?: async { engine.synthesizeParagraph(paragraphs[index], configuration) }).await()
+                        naechster = if (index < paragraphs.lastIndex) {
+                            async { engine.synthesizeParagraph(paragraphs[index + 1], configuration) }
+                        } else null
                         playAndAwait(Uri.fromFile(audio.file), index, paragraphCount)
                         if (index < paragraphs.lastIndex && configuration.paragraphPauseMillis > 0) {
                             delay(configuration.paragraphPauseMillis)
@@ -293,8 +303,9 @@ class TtsPlaybackService : Service() {
         private const val EXTRA_RATE = "rate"
         private const val EXTRA_PAUSE = "pause"
         private const val EXTRA_AUTO_STOP = "auto_stop"
+        private const val EXTRA_START_PARAGRAPH = "start_paragraph"
 
-        fun play(context: Context, narrative: String, configuration: TtsConfiguration) {
+        fun play(context: Context, narrative: String, configuration: TtsConfiguration, startParagraph: Int = 0) {
             val intent = Intent(context, TtsPlaybackService::class.java)
                 .setAction(ACTION_PLAY)
                 .putExtra(EXTRA_TEXT, narrative)
@@ -303,6 +314,7 @@ class TtsPlaybackService : Service() {
                 .putExtra(EXTRA_RATE, configuration.speechRate)
                 .putExtra(EXTRA_PAUSE, configuration.paragraphPauseMillis)
                 .putExtra(EXTRA_AUTO_STOP, configuration.autoStopMillis)
+                .putExtra(EXTRA_START_PARAGRAPH, startParagraph)
             ContextCompat.startForegroundService(context.applicationContext, intent)
         }
 
