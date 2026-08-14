@@ -31,3 +31,4 @@
 | 17 | Rand laeuft ungleichmaessig aus (vorne hell, hinten dunkel) | Kein `sweepGradient` als Border — `linearGradient` mit nur deckenden Stops | §5.3 |
 | 19 | Umsortieren wirkt wirkungslos, obwohl die Daten neu sortiert ankommen | Schluessel-Verankerung: `LaunchedEffect(sortierung){ listState.scrollToItem(0) }` | §4.2b |
 | 18 | Glanz-/Bevel-Overlay faerbt auch den Text | `drawBehind` nach `background` statt `drawWithContent` | §5.4 |
+| 20 | Helles Rechteck mit harten Kanten in einer Glas-/Milchglas-Flaeche | Kein `Modifier.shadow` auf halbtransparenter Flaeche — Schatten selbst zeichnen und die Flaeche ausstanzen | §5.5 |

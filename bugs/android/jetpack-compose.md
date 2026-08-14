@@ -74,6 +74,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 18 | Endlos-Animation nur fuer EINEN Zustand (Puls/Blink) | `rememberInfiniteTransition` in den Zustands-Zweig verschieben — sonst tickt sie in JEDEM Zustand (Akku) | §9.6 |
 | 19 | Pager-Swipe/Interaktion ruckelt, alle Seiten recomposen | `staticCompositionLocalOf`-Wert stabil remembern (State-backed Holder) — neue Instanz pro Recomposition invalidiert den GESAMTEN Subtree | §1.7 |
 | 20 | Chart-Scrubbing/Drag ruckelt trotz `remember` | `remember`-Key zu breit: hochfrequenter State (selectedX) im Key invalidiert die teure Berechnung pro Frame — Heavy/Finalize-Split (`remember(data)` + `remember(selected, heavy)`) | §10.9 |
+| 21 | Helles Rechteck mit harten Kanten in einer Glas-/Milchglas-Flaeche | Kein `Modifier.shadow` auf halbtransparenter Flaeche — Schatten selbst zeichnen und die Flaeche ausstanzen | §5.5 |
 
 ---
 
@@ -406,6 +407,15 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **FIX:** `Modifier.drawBehind { … }` DIREKT NACH `.background(…)` einhaengen. Draw-Modifier der Kette zeichnen der Reihe nach, erst danach die Kinder — das Overlay liegt so ueber dem Hintergrund, aber unter dem Text. Fuer die Begrenzung auf runde Ecken muss `.clip(shape)` VOR dem `drawBehind` stehen.
 **Erlebt:** StackLaborWerftStudio 08/2026 (`Modifier.bevel()`).
 **Quelle:** developer.android.com/develop/ui/compose/graphics/draw/modifiers
+
+### 5.5 `Modifier.shadow` auf halbdurchsichtiger Flaeche → hartkantiges helles Rechteck IN der Flaeche   ⭐ TÜCKISCH
+**Symptom:** In einer schwebenden Glas-/Milchglas-Leiste (halbtransparenter Hintergrund + `Modifier.shadow`) steht ein scharf begrenztes, helleres Rechteck — meist im unteren Teil, seitlich eingerueckt, mit harten Kanten. Sieht aus wie eine "eingeblendete zweite Leiste"; erscheint auf echtem Geraet UND Emulator, in Hell wie Dunkel.
+**Ursache:** `Modifier.shadow` meldet dem Renderer eine Hoehe (Elevation). HWUI/Skia zeichnet daraus Ambient- + Spot-Schatten und nimmt an, der Occluder sei DECKEND: der Schatten wird also auch unter der Flaeche gezeichnet und scheint durch die halbtransparente Fuellung — waehrend die Kernzone (Umbra), die Skia dabei ausspart, als hartkantiges helles Rechteck stehen bleibt. Je hoeher die Elevation und je durchsichtiger die Fuellung, desto sichtbarer.
+**Versionen:** konzeptionell (HWUI-Schattenmodell), reproduziert mit Compose BOM 2026.x auf Android 16/37.
+**FIX (funktionserhaltend, Schatten bleibt):** Schatten selbst zeichnen und die Flaeche ausstanzen — `drawBehind { clipPath(pfad, ClipOp.Difference); canvas.translate(0f, versatzY); nativeCanvas.drawPath(pfad, Paint().apply { color = schattenfarbe; maskFilter = BlurMaskFilter(radius, NORMAL) }) }`. Radius aus dem CSS-Wert: `sigma = blur/2`, `radius = (sigma - 0.5) / 0.57735`. Rueckfall unter API 28 (dort kein Weichzeichner auf HW-Canvas): `Modifier.shadow` behalten.
+**Nicht der Fix:** `clip = true` im `shadow`, kleinere Elevation, oder den Schatten ersatzlos streichen (= Funktionsverlust).
+**Erlebt:** Experimente 08/2026 (untere Reiterleiste, `UntereLeiste.kt` → `Effekte.kt:glasschatten`).
+**Quelle:** eigener Vorfall; developer.android.com/develop/ui/compose/graphics/draw/modifiers
 
 ---
 
