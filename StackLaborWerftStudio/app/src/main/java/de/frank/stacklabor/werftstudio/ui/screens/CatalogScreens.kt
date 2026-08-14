@@ -88,7 +88,12 @@ fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, call
     WerftScreen(goldDark = true) {
         Column(Modifier.fillMaxSize()) {
             GlassHeader("Ziel-Katalog", onBack = callbacks.onBack)
-            SearchField(state.searchQuery, "", { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) }, Modifier.padding(horizontal = 12.dp))
+            SearchField(
+                state.searchQuery,
+                "Ziel suchen",
+                { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) },
+                Modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp),
+            )
             GoalCatalogList(
                 goals = goals,
                 editorOpen = editorOpen,

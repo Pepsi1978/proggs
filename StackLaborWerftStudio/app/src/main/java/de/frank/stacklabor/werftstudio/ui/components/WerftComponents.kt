@@ -248,8 +248,18 @@ fun AnimatedGradientHeader(
 
 @Composable
 fun PrimaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    GoldSurface(modifier.height(44.dp), onClick = onClick) {
-        Text(label, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2A1B05))
+    GoldSurface(modifier.heightIn(min = 48.dp), onClick = onClick) {
+        Text(
+            label,
+            // Ohne diesen Innenabstand klebt die Schrift am Rand, sobald der Knopf sich
+            // nach seinem Text richtet statt die volle Breite zu nehmen.
+            Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF2A1B05),
+            maxLines = 1,
+        )
     }
 }
 
