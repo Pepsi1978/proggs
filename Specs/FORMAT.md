@@ -99,9 +99,20 @@ Stand: … · Stufe: … · Plattform(en): …
 
 ## 5. Formen und Tiefe
    Eckenradien je Bauteil, Ränder, Schatten, Verläufe (mit exakten Stops), Weichzeichner.
+   **Jeder Effekt nennt das Bauteil, an dem er steht** — als CSS-Selektor (`.karte (shadow)`) oder
+   als Tag mit Klasse (`nav.reiterleiste (gradient)`). Ein Effekt, der nur eine laufende Nummer
+   trägt (`design.html:gradient(7)`), ist beim Nachbauen wertlos: der Wert ist da, aber niemand
+   weiß, wohin er gehört — und was sich nicht zuordnen lässt, fällt lautlos weg.
 
 ## 6. Bildschirme
    Tabelle: Kennung | Bildschirm | Zweck | Startbildschirm? | führt zu (Kennungen)
+   Der maschinelle Export hängt eine Spalte **Dateien je Erscheinung** an — je Erscheinung der
+   Pfad des fertig gebauten Bildschirms (`bildschirme/21dunkelstandard/1-heute.html`). Wird das
+   Paket wieder eingelesen, ist diese Datei die Quelle des Nachbaus: abgeschrieben wird das
+   Original, nicht die Beschreibung. Der Pfad steht deshalb **vollständig** da — eine Abkürzung
+   an Stelle der laufenden Nummer (`…-heute.html`) trifft keine Datei, und der Aufbau fällt
+   stillschweigend auf die Prosa zurück. Zugeordnet wird über die Kopfzeile, nicht über die
+   Spaltenzahl: von Hand geschriebene Specs dürfen die Spalte weglassen.
    Danach je Bildschirm `### B-01 — <Name>`:
    - Aufbau von oben nach unten, in genau der Reihenfolge des Designs
    - Bauteile mit Maßen und Farbrollen

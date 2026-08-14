@@ -62,8 +62,12 @@ Nach dem Schreiben des Uebergabe-ZIP sagst du den Handgriff woertlich:
 > In Werft Studio oben auf **Importieren**. Ist der Designs-Ordner freigegeben, steht
 > `<App>-SPEC-v1.zip` direkt unter „Aus der Inbox" — sonst ueber **ZIP- oder Designdatei
 > auswaehlen**. Werft **erzeugt daraus von selbst das vollstaendige Design**; du gestaltest
-> es um, loeschst und ergaenzt. Danach **Projekt als ZIP herunterladen**, dort **das
-> Zielsystem waehlen** (Android, Windows oder macOS) und **In die Outbox legen**.
+> es um, loeschst und ergaenzt. Zum Aendern einzelner Stellen das **Kommentarwerkzeug**
+> (Taste `c`): Bereich markieren, beschreiben was anders soll, absenden — und **sofort den
+> naechsten** markieren. Bis zu **fuenf Auftraege arbeiten gleichzeitig**; warten musst du auf
+> keinen. Unter **Kommentare** steht je Auftrag, was gerade geschieht. Danach **Projekt als ZIP
+> herunterladen**, dort **das Zielsystem waehlen** (Android, Windows oder macOS) und
+> **In die Outbox legen**.
 
 Dann legst du **eine** Bestaetigung vor (`AskUserQuestion`, erste Option vorausgewaehlt):
 
