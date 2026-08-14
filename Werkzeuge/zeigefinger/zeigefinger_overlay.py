@@ -52,10 +52,13 @@ PANEL = "#17191d"
 TEXT = "#f7f4ee"
 MUTEX_NAME = "Local\\ZeigefingerOverlay"
 ZUG_SCHWELLE = 8  # Fensterpixel; darunter war es ein Zeigen, kein Aufziehen
-# Schwarz haelt sich vor der orange getoenten Flaeche und vor hellen wie dunklen
-# App-Hintergruenden; duenne helle Linien gingen darin unter.
-RAHMEN_FARBE = "black"
-RAHMEN_STAERKE = 6
+# Der Rahmen bekommt ein eigenes Fenster: die Auswahlflaeche liegt mit 11 Prozent
+# Deckkraft ueber der App, dort gezeichnetes Schwarz waere ausgewaschenes Grau.
+# Die Schluesselfarbe wird im Rahmenfenster durchsichtig gestellt, sodass nur die
+# Linie stehen bleibt — und die ist dann wirklich schwarz.
+RAHMEN_FARBE = "#000000"
+RAHMEN_STAERKE = 4
+SCHLUESSELFARBE = "#ff00fe"
 
 SW_HIDE = 0
 SW_MINIMIZE = 6
@@ -622,7 +625,6 @@ class AuswahlOverlay:
         self.letzte_root_geometrie = ""
         self.letzte_overlay_geometrie = ""
         self.zug_start: tuple[int, int] | None = None
-        self.zug_band: int | None = None
 
         self.root = tk.Tk()
         self.root.withdraw()
@@ -685,11 +687,26 @@ class AuswahlOverlay:
         self.canvas.bind("<ButtonRelease-1>", self.zug_beenden)
         self.overlay.bind("<Escape>", lambda _: self.auswahl_abbrechen())
 
+        self.band = tk.Toplevel(self.root)
+        self.band.withdraw()
+        self.band.overrideredirect(True)
+        self.band.attributes("-topmost", True)
+        self.band.configure(bg=SCHLUESSELFARBE)
+        self.band.attributes("-transparentcolor", SCHLUESSELFARBE)
+        self.band_flaeche = tk.Canvas(
+            self.band, bg=SCHLUESSELFARBE, highlightthickness=0
+        )
+        self.band_flaeche.pack(fill="both", expand=True)
+        self.band_sichtbar = False
+
         self.root.update_idletasks()
         self.root_hwnd = _tk_fenster(self.root)
         self.overlay_hwnd = _tk_fenster(self.overlay)
         _fensterstil(self.root_hwnd, False, transparent=False)
         _fensterstil(self.overlay_hwnd, False)
+        # Klickdurchlaessig: der Rahmen liegt ueber der Auswahlflaeche, darf ihr
+        # aber weder Maustaste noch Bewegung wegnehmen.
+        _fensterstil(_tk_fenster(self.band), True)
         self._scrcpy_starten()
         self.root.after(100, self._fenster_verfolgen)
 
@@ -800,6 +817,7 @@ class AuswahlOverlay:
             if self.toolbar_sichtbar:
                 self.root.withdraw()
                 self.overlay.withdraw()
+                self.band_verstecken()
                 self.toolbar_sichtbar = False
         elif not self.toolbar_sichtbar:
             self.root.deiconify()
@@ -816,7 +834,7 @@ class AuswahlOverlay:
         self.status.configure(text="AN · STELLE ANKLICKEN")
         self.schalter.configure(text="AUSWAHL AUS", bg=ACCENT_DARK)
         self.canvas.delete("all")
-        self.zug_band = None
+        self.band_verstecken()
         self.zug_start = None
         _, _, breite, hoehe = self.video_geometrie
         self.canvas.create_rectangle(2, 2, breite - 3, hoehe - 3, outline=ACCENT, width=4)
@@ -834,31 +852,50 @@ class AuswahlOverlay:
     def auswahl_abbrechen(self) -> None:
         self.auswahlmodus = False
         self.zug_start = None
-        self.zug_band = None
+        self.band_verstecken()
         self.overlay.withdraw()
         self.status.configure(text="AUS")
         self.schalter.configure(text="AUSWAHL AN", bg=ACCENT, state="normal")
+
+    def band_zeichnen(self, x1: int, y1: int, x2: int, y2: int, staerke: int) -> None:
+        """Setzt das Rahmenfenster auf den aufgezogenen Kasten.
+
+        Gerechnet wird in Bildschirmkoordinaten: die Auswahlflaeche haengt als
+        Kindfenster in scrcpy, das Rahmenfenster steht frei darueber.
+        """
+        vx, vy, _, _ = self.video_geometrie
+        kx1, ky1, kx2, ky2 = normiere_kasten(x1, y1, x2, y2)
+        rand = staerke + 1
+        breite = max(kx2 - kx1, 1) + 2 * rand
+        hoehe = max(ky2 - ky1, 1) + 2 * rand
+        self.band.geometry(f"{breite}x{hoehe}+{vx + kx1 - rand}+{vy + ky1 - rand}")
+        self.band_flaeche.delete("all")
+        self.band_flaeche.create_rectangle(
+            rand, rand, breite - rand, hoehe - rand,
+            outline=RAHMEN_FARBE,
+            width=staerke,
+        )
+        if not self.band_sichtbar:
+            self.band.deiconify()
+            self.band.lift()
+            self.band_sichtbar = True
+
+    def band_verstecken(self) -> None:
+        if self.band_sichtbar:
+            self.band.withdraw()
+            self.band_sichtbar = False
 
     def zug_beginnen(self, ereignis) -> None:
         if not self.auswahlmodus or self.beschaeftigt:
             return
         self.zug_start = (ereignis.x, ereignis.y)
-        if self.zug_band is not None:
-            self.canvas.delete(self.zug_band)
-            self.zug_band = None
+        self.band_verstecken()
 
     def zug_ziehen(self, ereignis) -> None:
         if self.zug_start is None or self.beschaeftigt:
             return
         x1, y1 = self.zug_start
-        if self.zug_band is None:
-            self.zug_band = self.canvas.create_rectangle(
-                x1, y1, ereignis.x, ereignis.y,
-                outline=RAHMEN_FARBE,
-                width=RAHMEN_STAERKE,
-            )
-        else:
-            self.canvas.coords(self.zug_band, x1, y1, ereignis.x, ereignis.y)
+        self.band_zeichnen(x1, y1, ereignis.x, ereignis.y, RAHMEN_STAERKE)
 
     def zug_beenden(self, ereignis) -> None:
         """Ein Zeigen ist ein Punkt, ein Ziehen ein Kasten — entschieden wird am Weg."""
@@ -874,14 +911,11 @@ class AuswahlOverlay:
         self.status.configure(text="KASTEN WIRD GELESEN ..." if gezogen else "WIRD ÜBERGEBEN ...")
         _, _, vb, vh = self.video_geometrie
         if gezogen:
-            if self.zug_band is not None:
-                # Beim Loslassen bleibt der Rahmen schwarz, wird aber kraeftiger:
-                # das quittiert die Auswahl, ohne sie schlechter sichtbar zu machen.
-                self.canvas.itemconfigure(self.zug_band, width=RAHMEN_STAERKE + 3)
+            # Beim Loslassen bleibt der Rahmen schwarz, wird nur etwas kraeftiger:
+            # das quittiert die Auswahl, ohne sie schlechter sichtbar zu machen.
+            self.band_zeichnen(x1, y1, x2, y2, RAHMEN_STAERKE + 2)
         else:
-            if self.zug_band is not None:
-                self.canvas.delete(self.zug_band)
-                self.zug_band = None
+            self.band_verstecken()
             self.canvas.create_oval(x2 - 12, y2 - 12, x2 + 12, y2 + 12, outline=ACCENT, width=5)
 
         self.nummer += 1
@@ -939,6 +973,7 @@ class AuswahlOverlay:
         self.beschaeftigt = False
         self.schalter.configure(text="Neue Auswahl", bg=ACCENT, state="normal")
         self.root.after(900, self.overlay.withdraw)
+        self.root.after(900, self.band_verstecken)
 
         self.eingabe_hwnd = finde_eingabefenster(self.args.eingabefenster)
         if (

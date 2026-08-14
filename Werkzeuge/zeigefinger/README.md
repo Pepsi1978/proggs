@@ -12,7 +12,9 @@ Ein grosses, schwebendes Bedienfeld links oben trennt zwei Zustaende:
 
 - **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
 - **Auswaehlen:** Die App wird leicht getoent; der naechste Klick oder Zug wird abgefangen und
-  loest keine Aktion in Android aus. Beim Ziehen folgt ein dicker schwarzer Rahmen der Maus.
+  loest keine Aktion in Android aus. Beim Ziehen folgt ein schwarzer Rahmen der Maus. Er liegt in
+  einem eigenen Fenster: die getoente Auswahlflaeche hat nur 11 % Deckkraft, ein dort gezeichneter
+  Strich waere ausgewaschenes Grau statt Schwarz.
 
 Start fuer die Experimente-App:
 
