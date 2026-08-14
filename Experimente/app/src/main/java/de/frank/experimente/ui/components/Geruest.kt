@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -34,6 +36,7 @@ import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
+import de.frank.experimente.ui.theme.Masse
 import de.frank.experimente.ui.theme.dauer
 import de.frank.experimente.ui.theme.filmkorn
 import de.frank.experimente.ui.theme.lichtgrund
@@ -93,7 +96,10 @@ fun Bildschirmgeruest(
                 content = inhalt,
             )
             if (leiste != null && beiLeistenwahl != null) {
-                UntereLeiste(jetzt = leiste, beiWahl = beiLeistenwahl)
+                // Die Leiste selbst zeichnet `Navigation` **über** dem Bildschirmwechsel —
+                // hier bleibt nur ihr Platz frei. Läge sie im Bildschirm, würde sie bei
+                // jedem Wechsel mitskaliert und mitgeblendet: sie sprang beim Wischen.
+                Spacer(Modifier.height(Masse.leiste + Masse.luft))
             }
         }
         Box(

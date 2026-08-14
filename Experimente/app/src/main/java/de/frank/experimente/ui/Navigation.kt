@@ -2,6 +2,7 @@ package de.frank.experimente.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,9 +15,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.experimente.ui.components.UntereLeiste
 import de.frank.experimente.ui.screens.Auswertung
 import de.frank.experimente.ui.screens.Einstellungen
 import de.frank.experimente.ui.screens.Erkenntnisse
@@ -103,6 +106,20 @@ fun Navigation(modell: AppViewModel) {
                 Ziel.EINSTELLUNGEN -> Einstellungen(modell)
                 Ziel.SELBSTBILD -> Selbstbild(modell)
             }
+        }
+
+        // Die untere Leiste liegt **über** dem Bildschirmwechsel und wechselt deshalb nicht
+        // mit: sie steht fest, während der Bildschirm darunter tauscht. Lag sie im
+        // Bildschirm, wurde sie bei jedem Wisch mitskaliert und mitgeblendet — sie sprang.
+        // Sichtbar ist sie auf den sechs Hauptbildschirmen; die Bildschirme lassen ihren
+        // Platz mit einem gleich hohen Abstandhalter frei (`Bildschirmgeruest`).
+        AnimatedVisibility(
+            visible = wischbar,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn(tween(wechsel, easing = Bewegung.ruhig)),
+            exit = fadeOut(tween(wechsel, easing = Bewegung.ruhig)),
+        ) {
+            UntereLeiste(jetzt = ziel, beiWahl = modell::gehe)
         }
     }
 }

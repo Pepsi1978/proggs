@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,18 +21,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import de.frank.experimente.ui.Ziel
 import de.frank.experimente.ui.theme.Bewegung
+import de.frank.experimente.ui.theme.Farben
 import de.frank.experimente.ui.theme.Leistensymbole
 import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.dauer
 import de.frank.experimente.ui.theme.glas
+import de.frank.experimente.ui.theme.glasschatten
 
 /**
  * Die untere Leiste — **sechs** Felder statt fünf, in dieser festen Reihenfolge:
@@ -45,8 +53,12 @@ import de.frank.experimente.ui.theme.glas
  * aktive Feld färbt Symbol **und** Schrift in *Aktion* — die Farbe trägt die Information
  * nicht allein, denn die Beschriftung steht ohnehin da.
  *
+ * Um das aktive Feld liegt zusätzlich ein **Kästchen**, das beim Wechsel sichtbar zum
+ * nächsten Feld hinüberwandert (`zeichneKaestchen`).
+ *
  * Sie ist auf B-10, B-01, B-04, B-05, B-06 und B-07 identisch; F-27 (Wischen) läuft über
- * alle sechs in genau dieser Reihenfolge.
+ * alle sechs in genau dieser Reihenfolge. Gezeichnet wird sie **einmal** von `Navigation`
+ * über dem Bildschirmwechsel — sie steht fest, während der Bildschirm darunter tauscht.
  */
 @Composable
 fun UntereLeiste(
@@ -57,14 +69,28 @@ fun UntereLeiste(
     val farben = LocalFarben.current
     val stufe = LocalEffektstufe.current
     val form = RoundedCornerShape(24.dp)
+
+    // Das Kästchen um das aktive Feld. Es springt nicht, es **wandert**: sein Platz ist eine
+    // Kommazahl zwischen 0 und 5, und die läuft in der Dauer eines Bildschirmwechsels
+    // hinüber. Beim Wischen von *Monitor* nach *Heute* sieht man es also fahren.
+    val platz by animateFloatAsState(
+        targetValue = Ziel.hauptreihe.indexOf(jetzt).coerceAtLeast(0).toFloat(),
+        animationSpec = tween(dauer(Bewegung.WECHSEL, stufe), easing = Bewegung.ruhig),
+        label = "kaestchen",
+    )
+    val kastenform = RoundedCornerShape(18.dp)
+
     Row(
         modifier
             .fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
             .height(64.dp)
-            .shadow(16.dp, form, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
+            // Der Schatten des Entwurfs — außen gezeichnet und unter der Leiste ausgestanzt,
+            // damit er nicht durch das Glas scheint (siehe `glasschatten`).
+            .glasschatten(form, versatzY = 16.dp, weichheit = 32.dp, farbe = Color.Black.copy(alpha = 0.28f))
             .clip(form)
             .glas(farben, stufe)
+            .drawBehind { zeichneKaestchen(platz, farben, kastenform) }
             .border(1.dp, farben.rand.copy(alpha = 0.7f), form),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -72,6 +98,40 @@ fun UntereLeiste(
             Feld(ziel, jetzt, beiWahl, Modifier.weight(1f))
         }
     }
+}
+
+/**
+ * Zeichnet das Kästchen an seinem — auch zwischen zwei Feldern gültigen — Platz.
+ *
+ * Es ist so breit wie ein Feld minus 8 dp Luft und 52 dp hoch, getönt in *Aktion* mit einem
+ * feinen Rand derselben Farbe. Damit trägt nicht mehr die Farbe allein, welches Feld gerade
+ * gilt, sondern auch eine Fläche — das hilft bei Farbsehschwäche.
+ */
+private fun DrawScope.zeichneKaestchen(
+    platz: Float,
+    farben: Farben,
+    form: RoundedCornerShape,
+) {
+    val felder = Ziel.hauptreihe.size
+    val feldbreite = size.width / felder
+    val breite = feldbreite - 8.dp.toPx()
+    val hoehe = 52.dp.toPx()
+    val links = platz * feldbreite + (feldbreite - breite) / 2f
+    val oben = (size.height - hoehe) / 2f
+    val ecke = CornerRadius(form.topStart.toPx(Size(breite, hoehe), this))
+    drawRoundRect(
+        color = farben.aktion.copy(alpha = 0.12f),
+        topLeft = Offset(links, oben),
+        size = Size(breite, hoehe),
+        cornerRadius = ecke,
+    )
+    drawRoundRect(
+        color = farben.aktion.copy(alpha = 0.38f),
+        topLeft = Offset(links, oben),
+        size = Size(breite, hoehe),
+        cornerRadius = ecke,
+        style = Stroke(1.dp.toPx()),
+    )
 }
 
 @Composable

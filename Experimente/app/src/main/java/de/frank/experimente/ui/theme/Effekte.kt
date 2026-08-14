@@ -1,6 +1,7 @@
 package de.frank.experimente.ui.theme
 
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.os.Build
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -20,16 +21,25 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
@@ -176,6 +186,59 @@ fun Modifier.glas(farben: Farben, stufe: Effektstufe): Modifier =
         this.blur(0.dp).background(glasfarbe(farben))
     } else {
         this.background(farben.erhoeht.copy(alpha = 0.88f))
+    }
+
+// ---------------------------------------------------------------------------------------
+// Der Schatten unter einer Glasfläche
+// ---------------------------------------------------------------------------------------
+
+/**
+ * **Der weiche Schatten unter einer Glasfläche** — im Entwurf `0 16px 32px rgba(0,0,0,.28)`.
+ *
+ * `Modifier.shadow` ist dafür untauglich. Es meldet dem Renderer eine Höhe über dem Grund,
+ * und der zeichnet den Schatten dann auch **unter** der Fläche — denn eine Glasfläche ist
+ * nicht deckend, das weiß der Renderer aber nicht. Der Schatten schien durch das Glas
+ * hindurch, und die Kernzone, die Skia dabei ausspart, stand als hartkantiges helles
+ * Rechteck mitten in der unteren Leiste (auf dem Fold 8 wie im Emulator).
+ *
+ * Deshalb wird der Schatten hier selbst gezeichnet und die Fläche vorher **ausgestanzt**:
+ * außen liegt der weiche Schatten, innen bleibt das Glas unberührt. Kein Durchscheinen,
+ * keine harte Kante.
+ *
+ * `weichheit` ist der CSS-Wert (32 dp). Die Streuung dahinter ist halb so groß; daraus
+ * ergibt sich der Radius, den `BlurMaskFilter` erwartet.
+ *
+ * Rückfallebene unterhalb API 28: dort zeichnet die Hardware keinen Weichzeichner, deshalb
+ * bleibt es beim Höhen-Schatten. Sichtbar ist das Artefakt dort ohnehin kaum, weil unter
+ * API 31 keine Glasfläche gezeichnet wird, sondern eine fast deckende Fläche.
+ */
+fun Modifier.glasschatten(
+    form: Shape,
+    versatzY: Dp,
+    weichheit: Dp,
+    farbe: Color,
+): Modifier =
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        this.shadow(weichheit / 2, form, clip = false, ambientColor = farbe, spotColor = farbe)
+    } else {
+        this.drawBehind {
+            val pfad = Path().apply { addOutline(form.createOutline(size, layoutDirection, this@drawBehind)) }
+            val streuung = weichheit.toPx() / 2f
+            val radius = ((streuung - 0.5f) / 0.57735f).coerceAtLeast(0.1f)
+            val stift = android.graphics.Paint().apply {
+                isAntiAlias = true
+                color = farbe.toArgb()
+                maskFilter = BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL)
+            }
+            drawIntoCanvas { leinwand ->
+                leinwand.save()
+                // Ausstanzen: gezeichnet wird nur, was außerhalb der Fläche liegt.
+                leinwand.clipPath(pfad, ClipOp.Difference)
+                leinwand.translate(0f, versatzY.toPx())
+                leinwand.nativeCanvas.drawPath(pfad.asAndroidPath(), stift)
+                leinwand.restore()
+            }
+        }
     }
 
 // ---------------------------------------------------------------------------------------
