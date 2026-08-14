@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">StackLabor</string>
-    <string name="vorlesen_kanal">Vorlesen</string>
-    <string name="vorlesen_laeuft">Auswertung wird vorgelesen</string>
-    <string name="vorlesen_stopp">Stopp</string>
-</resources>
