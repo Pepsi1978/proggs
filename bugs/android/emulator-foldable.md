@@ -546,3 +546,39 @@ erzwingt ihn bei gesetztem `-TonGeraet` selbst.
 Android hängt — es kann schlicht die Bildschirmsperre sein. Und ein per Pipe geholter Screenshot
 (`adb exec-out screencap -p > datei`) ist unter Git Bash/PowerShell verstümmelt (hier konstant
 14 KB statt 1,2 MB); immer `screencap` auf dem Gerät + `adb pull` (siehe #8).
+
+---
+
+## 25. `screencap` stellt dem PNG eine Warnung voran — nur auf echter Foldable-Hardware
+
+**Symptom:** Werkzeuge, die `adb exec-out screencap -p` binär einlesen und auf die PNG-Signatur
+prüfen, funktionieren am Emulator und scheitern am echten Fold 8 mit „Screenshot konnte nicht
+gelesen werden". Die Daten sind da (hier 418 666 Byte), beginnen aber nicht mit `\x89PNG`.
+
+**Ursache:** Das Fold 8 hat zwei physische Displays. Ohne `-d` schreibt `screencap` **347 Byte
+Klartext vor die Bilddaten** — auf **stdout**, nicht auf stderr:
+
+```
+[Warning] Multiple displays were found, but no display id was specified! Defaulting to the
+first display found, however this default is not guaranteed to be consistent across captures.
+A display id should be specified.
+```
+
+Der Emulator hat nur ein Display und gibt die Warnung nie aus. Deshalb fällt das erst auf echter
+Hardware auf. Gemessen am 14.08.2026 auf SM-F971B.
+
+**Fix:** Nicht auf `startswith(b"\x89PNG")` prüfen, sondern die Signatur **suchen** und davor alles
+abschneiden:
+
+```python
+start = roh.find(b"\x89PNG\r\n\x1a\n")
+bild = roh[start:] if start != -1 else None
+```
+
+**Zusatz:** Die Warnung meint es ernst — welches Display „das erste" ist, ist nicht garantiert.
+Sicher wird es erst, wenn man die Maße im IHDR (Byte 16–24 des PNG) gegen `wm size` prüft und bei
+Abweichung die Display-Kennungen aus `dumpsys SurfaceFlinger --display-id` mit `screencap -d <id>`
+durchprobiert. Im Werkzeug `Werkzeuge/zeigefinger` ist das als `screenshot()` umgesetzt.
+
+**Status:** Verhalten von Android 17 / One UI 9 auf Multi-Display-Geräten, kein Fehler im engeren
+Sinn — aber eine sichere Falle für jedes Werkzeug, das nur am Emulator entwickelt wurde.

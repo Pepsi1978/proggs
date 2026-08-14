@@ -39,3 +39,4 @@
 | 22b | "Rotation geht gar nicht" | `accelerometer_rotation 0` macht den Dreh-Knopf wirkungslos → auf 1 lassen, Hochformat über `emu sensor set acceleration 0:9.81:0` |
 | 22c | Eine von vier Lagen bleibt falsch (500×790) | 180°: Emulator-Rahmen hochkant, Android quer → Lage per `emu rotate` überspringen |
 | 23 | Startet aufgeklappt statt zugeklappt | Standard ist `Fold8_Cover`; läuft die falsche AVD, wird gewechselt; im Betrieb `Klappen.ps1 -Auf`/`-Zu` |
+| 25 | Screenshot-Einlesen scheitert NUR am echten Fold 8, nicht am Emulator | Zwei Displays → `screencap` schreibt 347 Byte Warntext **vor** das PNG (auf stdout) → Signatur `\x89PNG` **suchen** statt `startswith`; Maße gegen `wm size` prüfen, sonst `screencap -d <id>` aus `dumpsys SurfaceFlinger --display-id` |

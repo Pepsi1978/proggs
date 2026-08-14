@@ -24,10 +24,13 @@ from zeigefinger import (
     adb,
     element_an_punkt,
     elementkette_an_punkt,
+    ist_emulator,
     log,
+    screenshot,
     suche_quellcode,
     suchbegriffe,
     ui_baum,
+    waehle_geraet,
 )
 
 
@@ -224,6 +227,22 @@ def videobereich(
     return (client_breite - breite) // 2, (client_hoehe - hoehe) // 2, breite, hoehe
 
 
+def fenstergroesse(
+    display_breite: int,
+    display_hoehe: int,
+    max_breite: int = 1200,
+    max_hoehe: int = 1129,
+) -> tuple[int, int]:
+    """Fenstermass fuer scrcpy, massstabsgetreu zum Geraet.
+
+    Feste Masse passten nur zum zugeklappten Fold 8. Am aufgeklappten Geraet
+    (oder an einem beliebigen anderen) entstuenden sonst breite schwarze
+    Raender, in die hinein man nicht zeigen kann.
+    """
+    faktor = min(max_breite / display_breite, max_hoehe / display_hoehe)
+    return max(1, round(display_breite * faktor)), max(1, round(display_hoehe * faktor))
+
+
 def geraetepunkt(
     maus_x: int,
     maus_y: int,
@@ -370,10 +389,8 @@ def auswahl_erfassen(
     begriffe = list(dict.fromkeys(begriffe))
     funde = suche_quellcode(projekt, begriffe, limit=12)
 
-    screenshot = adb(serial, "exec-out", "screencap", "-p", binary=True)
-    if not isinstance(screenshot, bytes) or not screenshot.startswith(b"\x89PNG"):
-        raise RuntimeError("Android-Screenshot konnte nicht gelesen werden.")
-    _atomar_schreiben(bild_pfad, screenshot)
+    bild = screenshot(serial, (breite, hoehe))
+    _atomar_schreiben(bild_pfad, bild)
     _atomar_schreiben(xml_pfad, xml.encode("utf-8"))
 
     inhalt = {
@@ -505,13 +522,19 @@ def _einzelinstanz() -> object:
 
 
 class AuswahlOverlay:
-    def __init__(self, args: argparse.Namespace) -> None:
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        serial: str,
+        display: tuple[int, int],
+    ) -> None:
         import tkinter as tk
         from tkinter import messagebox
 
         self.tk = tk
         self.messagebox = messagebox
         self.args = args
+        self.serial = serial
         self.projekt = Path(args.projekt).expanduser().resolve()
         self.ausgabe = Path(args.ausgabe).expanduser().resolve()
         self.eingabe_hwnd = finde_eingabefenster(args.eingabefenster)
@@ -522,10 +545,10 @@ class AuswahlOverlay:
         self.beschaeftigt = False
         self.nummer = 0
         self.video_geometrie = (0, 0, 1, 1)
-        self.display: tuple[int, int] | None = None
+        self.display: tuple[int, int] | None = display
         self.fenster_gekoppelt = False
         self.hatte_scrcpy = bool(self.scrcpy_hwnd)
-        self.emulator_minimiert = False
+        self.emulator_minimiert = not ist_emulator(serial)
         self.toolbar_sichtbar = False
         self.letzte_root_geometrie = ""
         self.letzte_overlay_geometrie = ""
@@ -595,35 +618,18 @@ class AuswahlOverlay:
         _fensterstil(self.root_hwnd, False, transparent=False)
         _fensterstil(self.overlay_hwnd, False)
         self._scrcpy_starten()
-        threading.Thread(target=self._display_laden, daemon=True).start()
         self.root.after(100, self._fenster_verfolgen)
-
-    def _display_laden(self) -> None:
-        try:
-            display = aktuelle_displaygroesse(self.args.serial)
-            self.root.after(0, self._display_bereit, display)
-        except (Exception, SystemExit) as exc:
-            self.root.after(0, self._display_fehler, str(exc))
-
-    def _display_bereit(self, display: tuple[int, int]) -> None:
-        self.display = display
-
-    def _display_fehler(self, meldung: str) -> None:
-        self.messagebox.showerror(
-            "Zeigefinger",
-            f"Der Emulator ist nicht erreichbar.\n\n{meldung}",
-        )
-        self.beenden()
 
     def _scrcpy_starten(self) -> None:
         if self.scrcpy_hwnd:
             return
+        breite, hoehe = fenstergroesse(*(self.display or (1248, 1972)))
         argumente = [
             "scrcpy",
-            "--serial", self.args.serial,
+            "--serial", self.serial,
             "--window-title", self.args.fenster,
-            "--window-width", "715",
-            "--window-height", "1129",
+            "--window-width", str(breite),
+            "--window-height", str(hoehe),
             "--max-fps", "60",
             "--stay-awake",
             "--no-audio",
@@ -642,7 +648,10 @@ class AuswahlOverlay:
             raise SystemExit(f"scrcpy konnte nicht gestartet werden: {exc}") from exc
 
     def _emulator_minimieren(self) -> bool:
+        """Nur sinnvoll, wenn gespiegelt wird, was der Emulator zeigt."""
         user32, _ = _win_api()
+        if not ist_emulator(self.serial):
+            return True
         if not self.emulator_fenster:
             self.emulator_fenster = [
                 fenster.hwnd
@@ -784,7 +793,7 @@ class AuswahlOverlay:
         nummer: int,
     ) -> None:
         try:
-            display = aktuelle_displaygroesse(self.args.serial)
+            display = aktuelle_displaygroesse(self.serial)
             x, y = geraetepunkt(
                 maus_x,
                 maus_y,
@@ -793,7 +802,7 @@ class AuswahlOverlay:
                 *display,
             )
             pfad, inhalt = auswahl_erfassen(
-                self.args.serial,
+                self.serial,
                 self.projekt,
                 x,
                 y,
@@ -863,7 +872,11 @@ class AuswahlOverlay:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--projekt", default=".", help="Android-Projekt mit dem Quellcode")
-    parser.add_argument("--serial", default="emulator-5554", help="ADB-Seriennummer")
+    parser.add_argument(
+        "--serial",
+        default="",
+        help="ADB-Seriennummer; leer = laufender Emulator, sonst angeschlossenes Geraet",
+    )
     parser.add_argument("--fenster", default="Experimente Live", help="Titel der scrcpy-Spiegelung")
     parser.add_argument("--eingabefenster", default="", help="Titelteil des OpenCode-Fensters")
     parser.add_argument(
@@ -887,6 +900,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _hinweis(meldung: str) -> None:
+    """Unter pythonw.exe gibt es keine Konsole — der Fehler braucht ein Fenster."""
+    print(meldung)
+    ctypes.windll.user32.MessageBoxW(None, meldung, "Zeigefinger", 0x10)
+
+
+def geraet_und_display(wunsch: str) -> tuple[str, tuple[int, int]]:
+    """Ziel bestimmen und gleich vermessen, bevor die Oberflaeche steht."""
+    serial = waehle_geraet(wunsch or None, emulator_zuerst=True)
+    display = aktuelle_displaygroesse(serial)
+    log("info", "Ziel gewaehlt", serial=serial, display=f"{display[0]}x{display[1]}")
+    return serial, display
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     projekt = Path(args.projekt).expanduser().resolve()
@@ -894,7 +921,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Projektordner gibt es nicht: {projekt}")
     if args.einmal:
         pfad, _ = auswahl_erfassen(
-            args.serial,
+            waehle_geraet(args.serial or None, emulator_zuerst=True),
             projekt,
             args.einmal[0],
             args.einmal[1],
@@ -905,7 +932,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     mutex = _einzelinstanz()
     try:
-        return AuswahlOverlay(args).run()
+        try:
+            serial, display = geraet_und_display(args.serial)
+        except SystemExit as exc:
+            _hinweis(str(exc) or "Kein Android-Ziel gefunden.")
+            return 1
+        except Exception as exc:
+            _hinweis(f"Das Android-Ziel ist nicht erreichbar.\n\n{exc}")
+            return 1
+        return AuswahlOverlay(args, serial, display).run()
     finally:
         ctypes.windll.kernel32.CloseHandle(mutex)
 

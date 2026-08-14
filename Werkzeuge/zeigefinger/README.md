@@ -2,9 +2,13 @@
 
 ## Klick-Auswahl fuer OpenCode
 
-Der neue Standardweg spiegelt den laufenden Fold-8-Emulator in ein sauberes
-`scrcpy`-Arbeitsfenster. Das eigentliche Emulatorfenster wird minimiert. Ein grosses, schwebendes
-Bedienfeld links oben trennt zwei Zustaende:
+Der neue Standardweg spiegelt Android in ein sauberes `scrcpy`-Arbeitsfenster. **Das Ziel waehlt
+das Werkzeug selbst:** laeuft der Fold-8-Emulator, wird der gespiegelt (und sein Fenster
+minimiert) — laeuft keiner, nimmt es das per USB angeschlossene Geraet. Ein festes Ziel geht
+weiterhin ueber `-Serial` bzw. `--serial`. Die Fenstergroesse wird aus der gemeldeten
+Displaygroesse berechnet, also passt sie auch am aufgeklappten Fold 8.
+
+Ein grosses, schwebendes Bedienfeld links oben trennt zwei Zustaende:
 
 - **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
 - **Auswaehlen:** Die App wird leicht getoent; der naechste Klick wird abgefangen und loest keine
@@ -89,7 +93,7 @@ python zeigefinger.py --projekt <pfad> --punkt 922 276
 |----------|-----------|----------|
 | `--projekt` | Ordner mit dem Quellcode | aktueller Ordner |
 | `--fenster` | Titel(teil) des scrcpy-Fensters | `Fold8Live` |
-| `--serial` | ADB-Seriennummer | erstes echtes Gerät (Emulatoren werden übersprungen) |
+| `--serial` | ADB-Seriennummer | angeschlossenes Gerät; ohne eins der laufende Emulator |
 | `--punkt X Y` | Einmal-Abfrage statt Maus | — |
 
 ## Warum Zeigen und nicht Klicken
@@ -120,7 +124,14 @@ Koordinaten**.
   auf, stimmen die Koordinaten weiterhin (1248×1972 zugeklappt, 2448×1848 aufgeklappt).
 - **Kein Letterboxing vorausgesetzt.** scrcpy zeigt das Bild maßstabsgetreu; gemessen 714×1129
   Fensterpixel bei 1248×1972 Gerätepixeln (Seitenverhältnis 0,6324 vs. 0,6329). Sollte scrcpy
-  einmal mit schwarzen Rändern zeichnen, verschiebt sich der Treffer.
+  einmal mit schwarzen Rändern zeichnen, verschiebt sich der Treffer. Das Overlay rechnet die
+  Fenstergröße deshalb aus der aktuellen Displaygröße statt fester Zahlen.
+- **`screencap` warnt vor dem Bild.** Ein Foldable hat zwei Displays; ohne `-d` schreibt
+  `screencap` 347 Byte Klartext **vor** die PNG-Daten — auf stdout. Am Emulator (ein Display)
+  passiert das nie, weshalb genau daran die Erfassung am echten Gerät scheiterte. Das Werkzeug
+  sucht die PNG-Signatur, prüft die Maße gegen `wm size` und probiert notfalls die Display-IDs aus
+  `dumpsys SurfaceFlinger --display-id` durch. Ausführlich in
+  `bugs/android/emulator-foldable.md` (#25).
 
 ## Was das Werkzeug nicht kann
 

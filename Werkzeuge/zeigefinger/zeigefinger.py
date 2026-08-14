@@ -19,6 +19,7 @@ import ctypes
 import json
 import os
 import re
+import struct
 import subprocess
 import sys
 import time
@@ -27,8 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, overload
 
-VERSION = "0.0.5"
-VERSION_STAND = "14.08.2026, 21:24 Uhr"
+VERSION = "0.0.6"
+VERSION_STAND = "14.08.2026, 21:32 Uhr"
 
 # Umlaute und Kastenlinien muessen auch durch eine Pipe heil ankommen, und die
 # Ausgabe soll zeilenweise erscheinen statt am Ende im Block.
@@ -104,20 +105,53 @@ def adb(serial: str | None, *args: str, binary: bool = False) -> bytes | str:
     return out.stdout.decode("utf-8", errors="replace")
 
 
-def finde_geraet(wunsch: str | None) -> str:
-    """Pick the physical device; emulators are skipped unless asked for."""
+def ist_emulator(serial: str) -> bool:
+    return serial.startswith("emulator-")
+
+
+def verbundene_geraete() -> list[str]:
+    """Alle betriebsbereiten ADB-Ziele, Emulatoren eingeschlossen."""
     zeilen = adb(None, "devices").splitlines()[1:]
-    geraete = [z.split()[0] for z in zeilen if "\tdevice" in z or re.search(r"\s+device\b", z)]
+    return [z.split()[0] for z in zeilen if re.search(r"\s+device\b", z)]
+
+
+def sortiere_geraete(geraete: list[str], emulator_zuerst: bool) -> list[str]:
+    emulatoren = [g for g in geraete if ist_emulator(g)]
+    echte = [g for g in geraete if not ist_emulator(g)]
+    return emulatoren + echte if emulator_zuerst else echte + emulatoren
+
+
+def waehle_geraet(wunsch: str | None, emulator_zuerst: bool = False) -> str:
+    """Zielgeraet bestimmen — mit Rueckfall auf die jeweils andere Sorte.
+
+    Emulator und angeschlossenes Geraet sind gleichwertige Ziele; nur die
+    Reihenfolge unterscheidet sich. Das Overlay bevorzugt den laufenden
+    Emulator, faellt aber auf das angesteckte Geraet zurueck, sobald keiner
+    laeuft — der Hover-Modus umgekehrt. Ohne Rueckfall waere das Werkzeug an
+    genau eine Betriebsart gebunden.
+    """
+    geraete = verbundene_geraete()
     if wunsch:
         if wunsch not in geraete:
-            raise SystemExit(f"Geraet '{wunsch}' ist nicht verbunden. Gefunden: {geraete or 'keins'}")
+            raise SystemExit(
+                f"Geraet '{wunsch}' ist nicht verbunden. Gefunden: {geraete or 'keins'}"
+            )
         return wunsch
-    echte = [g for g in geraete if not g.startswith("emulator-")]
-    if not echte:
-        raise SystemExit("Kein echtes Geraet angeschlossen (nur Emulatoren oder gar nichts).")
-    if len(echte) > 1:
-        print(f"Mehrere echte Geraete: {echte} — nehme {echte[0]}. Mit --serial festlegen.")
-    return echte[0]
+    reihenfolge = sortiere_geraete(geraete, emulator_zuerst)
+    if not reihenfolge:
+        raise SystemExit(
+            "Kein Android-Ziel gefunden: weder ein laufender Emulator noch ein "
+            "angeschlossenes Geraet. Pruefe 'adb devices' und das USB-Debugging."
+        )
+    if len(reihenfolge) > 1:
+        log("info", "mehrere Geraete", geraete=reihenfolge, gewaehlt=reihenfolge[0])
+        print(f"Mehrere Ziele: {reihenfolge} — nehme {reihenfolge[0]}. Mit --serial festlegen.")
+    return reihenfolge[0]
+
+
+def finde_geraet(wunsch: str | None) -> str:
+    """Hover-Modus: das angeschlossene Geraet gewinnt, der Emulator ist Rueckfall."""
+    return waehle_geraet(wunsch, emulator_zuerst=False)
 
 
 def displaygroesse(serial: str) -> tuple[int, int]:
@@ -129,6 +163,68 @@ def displaygroesse(serial: str) -> tuple[int, int]:
     # "Override size" wins over "Physical size" when both are present.
     b, h = treffer[-1]
     return int(b), int(h)
+
+
+PNG_KENNUNG = b"\x89PNG\r\n\x1a\n"
+
+
+def png_zuschneiden(roh: bytes) -> bytes | None:
+    """Schneidet alles vor der PNG-Signatur weg.
+
+    Ein Foldable hat zwei Displays. Ohne '-d' stellt 'screencap' dem Bild eine
+    mehrzeilige Warnung voran — auf dem Emulator (nur ein Display) fehlt sie.
+    Genau daran ist die Erfassung am echten Geraet gescheitert.
+    """
+    start = roh.find(PNG_KENNUNG)
+    return roh[start:] if start != -1 else None
+
+
+def png_masse(daten: bytes) -> tuple[int, int] | None:
+    """Breite und Hoehe aus dem IHDR direkt hinter der Signatur."""
+    if len(daten) < 24:
+        return None
+    breite, hoehe = struct.unpack(">II", daten[16:24])
+    return int(breite), int(hoehe)
+
+
+def display_kennungen(serial: str) -> list[str]:
+    try:
+        text = adb(serial, "shell", "dumpsys", "SurfaceFlinger", "--display-id")
+    except RuntimeError:
+        return []
+    return re.findall(r"^Display (\d+)", text, re.MULTILINE)
+
+
+def _screencap(serial: str, kennung: str | None) -> bytes | None:
+    args = ["exec-out", "screencap", "-p"]
+    if kennung:
+        args += ["-d", kennung]
+    try:
+        return png_zuschneiden(adb(serial, *args, binary=True))
+    except RuntimeError:
+        return None
+
+
+def screenshot(serial: str, erwartet: tuple[int, int] | None = None) -> bytes:
+    """Bild des *aktiven* Displays.
+
+    Das Standard-Display ist laut screencap-Warnung nicht verlaesslich dasselbe
+    wie das gerade benutzte. Deshalb wird gegen die bekannte Displaygroesse
+    geprueft und notfalls jede Display-Kennung durchprobiert.
+    """
+    bild = _screencap(serial, None)
+    if bild and (erwartet is None or png_masse(bild) in (erwartet, tuple(reversed(erwartet)))):
+        return bild
+    for kennung in display_kennungen(serial):
+        andere = _screencap(serial, kennung)
+        if andere and png_masse(andere) in (erwartet, tuple(reversed(erwartet))):
+            log("info", "Display gezielt gewaehlt", display=kennung)
+            return andere
+    if bild:
+        probe(False, "Screenshot passt nicht zur Displaygroesse", erwartet=erwartet,
+              gemessen=png_masse(bild))
+        return bild
+    raise RuntimeError("Android-Screenshot konnte nicht gelesen werden.")
 
 
 def ui_baum(serial: str) -> str:

@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zeigefinger import element_an_punkt, elementkette_an_punkt
-from zeigefinger_overlay import befehlstext, geraetepunkt, videobereich
+from zeigefinger import element_an_punkt, elementkette_an_punkt, sortiere_geraete
+from zeigefinger_overlay import befehlstext, fenstergroesse, geraetepunkt, videobereich
 
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -39,6 +39,38 @@ class KoordinatenTest(unittest.TestCase):
 
     def test_geraetepunkt_skaliert_in_android_koordinaten(self) -> None:
         self.assertEqual(geraetepunkt(250, 500, 500, 1000, 400, 800), (200, 400))
+
+class GeraetewahlTest(unittest.TestCase):
+    def test_overlay_nimmt_den_emulator_wenn_er_laeuft(self) -> None:
+        self.assertEqual(
+            sortiere_geraete(["R3GL7073MLM", "emulator-5554"], emulator_zuerst=True)[0],
+            "emulator-5554",
+        )
+
+    def test_overlay_faellt_auf_das_angeschlossene_geraet_zurueck(self) -> None:
+        self.assertEqual(
+            sortiere_geraete(["R3GL7073MLM"], emulator_zuerst=True),
+            ["R3GL7073MLM"],
+        )
+
+    def test_hover_modus_bevorzugt_das_echte_geraet(self) -> None:
+        self.assertEqual(
+            sortiere_geraete(["emulator-5554", "R3GL7073MLM"], emulator_zuerst=False)[0],
+            "R3GL7073MLM",
+        )
+
+
+class FenstermassTest(unittest.TestCase):
+    def test_zugeklapptes_fold8_behaelt_das_bisherige_mass(self) -> None:
+        # 714 statt der frueher fest verdrahteten 715: massstabsgetreu, ohne 1-Pixel-Rand.
+        self.assertEqual(fenstergroesse(1248, 1972), (714, 1129))
+
+    def test_aufgeklapptes_fold8_bleibt_massstabsgetreu(self) -> None:
+        breite, hoehe = fenstergroesse(2448, 1848)
+        self.assertLessEqual(breite, 1200)
+        self.assertLessEqual(hoehe, 1129)
+        self.assertAlmostEqual(breite / hoehe, 2448 / 1848, places=2)
+
 
 class UebergabeTest(unittest.TestCase):
     def test_befehl_enthaelt_eindeutigen_absoluten_pfad(self) -> None:
