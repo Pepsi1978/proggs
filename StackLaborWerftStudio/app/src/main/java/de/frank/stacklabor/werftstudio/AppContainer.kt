@@ -18,10 +18,22 @@ import de.frank.stacklabor.werftstudio.service.codex.PersistedCodexEvaluator
 import de.frank.stacklabor.werftstudio.service.tts.EdgeTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.GoogleCloudTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.QwenTtsProvider
+import de.frank.stacklabor.werftstudio.service.tts.QwenVoiceDirectory
 import de.frank.stacklabor.werftstudio.service.tts.TtsAudioCache
 import de.frank.stacklabor.werftstudio.service.tts.TtsCredentials
 import de.frank.stacklabor.werftstudio.service.tts.TtsEngine
 import de.frank.stacklabor.werftstudio.service.tts.TtsUsageStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+/** Die drei Schlüssel, die der Benutzer selbst hinterlegen kann. */
+data class TtsSchluessel(
+    val google: String = "",
+    val qwen: String = "",
+    val qwenStimme: String = "",
+)
 
 class AppContainer(context: Context) {
     val applicationContext: Context = context.applicationContext
@@ -52,12 +64,41 @@ class AppContainer(context: Context) {
 
     val ttsUsage = TtsUsageStore(appContext)
     val ttsEngine: TtsEngine
+    val qwenVoiceDirectory = QwenVoiceDirectory()
+
+    /**
+     * Was der Benutzer in den Einstellungen hinterlegt hat, gewinnt; ist dort nichts eingetragen,
+     * gilt weiter der Schlüssel aus dem SK-Ordner, der beim Bauen eingebacken wurde.
+     *
+     * Die Werte werden hier gespiegelt, weil die TTS-Anbieter sie ohne Coroutine abfragen.
+     */
+    @Volatile private var eigeneSchluessel = TtsSchluessel()
+
+    private val containerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Der zuletzt gelesene Stand — die Einstellungs-Oberfläche zeigt ihn an. */
+    fun schluessel(): TtsSchluessel = eigeneSchluessel
+
+    fun googleSchluesselAktiv(): String = eigeneSchluessel.google.ifBlank { BuildConfig.GOOGLE_TTS_API_KEY }
+
+    fun qwenSchluesselAktiv(): String = eigeneSchluessel.qwen.ifBlank { BuildConfig.QWEN_TTS_API_KEY }
+
+    fun qwenStimmeAktiv(): String = eigeneSchluessel.qwenStimme.ifBlank { BuildConfig.QWEN_TTS_VOICE_ID }
 
     init {
+        containerScope.launch {
+            settings.einstellungen.collect { gespeichert ->
+                eigeneSchluessel = TtsSchluessel(
+                    google = gespeichert.googleApiKey,
+                    qwen = gespeichert.qwenApiKey,
+                    qwenStimme = gespeichert.qwenStimmenId,
+                )
+            }
+        }
         val credentials = object : TtsCredentials {
-            override fun googleApiKey(): String? = BuildConfig.GOOGLE_TTS_API_KEY.takeIf(String::isNotBlank)
-            override fun qwenApiKey(): String? = BuildConfig.QWEN_TTS_API_KEY.takeIf(String::isNotBlank)
-            override fun qwenVoiceId(): String? = BuildConfig.QWEN_TTS_VOICE_ID.takeIf(String::isNotBlank)
+            override fun googleApiKey(): String? = googleSchluesselAktiv().takeIf(String::isNotBlank)
+            override fun qwenApiKey(): String? = qwenSchluesselAktiv().takeIf(String::isNotBlank)
+            override fun qwenVoiceId(): String? = qwenStimmeAktiv().takeIf(String::isNotBlank)
         }
         val cache = TtsAudioCache(appContext)
         ttsEngine = TtsEngine(

@@ -27,9 +27,21 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import de.frank.stacklabor.werftstudio.SPEED_STEPS
+import de.frank.stacklabor.werftstudio.data.preferences.TtsAnbieter
+import de.frank.stacklabor.werftstudio.label
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +95,7 @@ import androidx.compose.ui.graphics.Brush
 fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
     var seedWarning by rememberSaveable { mutableStateOf(false) }
     var selectionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var keyEntryId by rememberSaveable { mutableStateOf<String?>(null) }
     val colors = StackLaborTheme.colors
     WerftScreen {
         Column(Modifier.fillMaxSize()) {
@@ -105,6 +118,22 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         SettingsItem("Automatische Abschaltung", state.ttsTimeoutLabel) { selectionId = "tts-timeout" }
                         SettingsDivider()
                         SettingsItem("Verbrauch", state.ttsUsageLabel) { callbacks.onEvent(StackLaborEvent.SelectSetting("tts-usage")) }
+                    }
+                }
+                item {
+                    SettingsGroup("API-Schlüssel", Icons.Default.Key) {
+                        SettingsItem("Alibaba (eigene Stimme)", state.qwenApiKeyLabel) { keyEntryId = "qwen-api-key" }
+                        SettingsDivider()
+                        SettingsItem("Google Chirp 3 HD", state.googleApiKeyLabel) { keyEntryId = "google-api-key" }
+                        SettingsDivider()
+                        SettingsItem("Microsoft Edge", "Kein Schlüssel nötig") {
+                            callbacks.onEvent(StackLaborEvent.SelectSetting("edge-key-info"))
+                        }
+                        SettingsDivider()
+                        SettingsItem(
+                            "Eigene Stimmen aus dem Konto laden",
+                            if (state.clonedVoicesLoading) "Lädt …" else state.clonedVoicesHint,
+                        ) { callbacks.onEvent(StackLaborEvent.LoadClonedVoices) }
                     }
                 }
                 item {
@@ -199,8 +228,21 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                     ) {
                         Column(Modifier.fillMaxWidth().padding(20.dp)) {
                             Text(selection.title, style = MaterialTheme.typography.titleLarge)
+                            if (selection.hint.isNotEmpty()) {
+                                Text(selection.hint, style = MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+                            }
+                            if (selection.options.isEmpty()) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    "Keine Stimme verfügbar. Bitte zuerst den Schlüssel hinterlegen und die Stimmen laden.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = StackLaborTheme.colors.textMuted,
+                                )
+                            }
                             Spacer(Modifier.height(12.dp))
-                            selection.options.forEach { option ->
+                            // Eine eigene Spalte, damit auch die 30 Google-Stimmen scrollen können.
+                            LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                            items(selection.options) { option ->
                                 val selected = option == selection.value
                                 Row(
                                     Modifier.fillMaxWidth().height(52.dp)
@@ -237,6 +279,8 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                                 }
                                 Spacer(Modifier.height(8.dp))
                             }
+                            }
+                            Spacer(Modifier.height(8.dp))
                             PrimaryAction(
                                 "Fertig",
                                 onClick = { selectionId = null },
@@ -247,24 +291,132 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 }
             }
         }
+        keyEntry(state, keyEntryId)?.let { entry ->
+            ApiKeyDialog(
+                entry = entry,
+                onDismiss = { keyEntryId = null },
+                onSave = { value ->
+                    callbacks.onEvent(StackLaborEvent.SaveApiKey(entry.id, value))
+                    keyEntryId = null
+                },
+            )
+        }
     }
 }
 
-private data class SettingSelection(val id: String, val title: String, val value: String, val options: List<String>)
+private data class ApiKeyEntry(
+    val id: String,
+    val title: String,
+    val current: String,
+    val hint: String,
+)
+
+private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when (id) {
+    "qwen-api-key" -> ApiKeyEntry(
+        id,
+        "Alibaba-Schlüssel",
+        state.qwenApiKeyValue,
+        "Der DashScope-Schlüssel des Model-Studio-Kontos, in dem deine eigene Stimme liegt. " +
+            "Leer lassen heißt: es gilt wieder der Schlüssel aus dem SK-Ordner.",
+    )
+    "google-api-key" -> ApiKeyEntry(
+        id,
+        "Google-Schlüssel",
+        state.googleApiKeyValue,
+        "Der Google-Cloud-Schlüssel mit freigeschalteter Text-to-Speech-API (Chirp 3 HD). " +
+            "Leer lassen heißt: es gilt wieder der Schlüssel aus dem SK-Ordner.",
+    )
+    else -> null
+}
+
+/** Eingabefeld für einen API-Schlüssel — verdeckt, mit Augen-Schalter zum Nachsehen. */
+@Composable
+private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var value by rememberSaveable(entry.id) { mutableStateOf(entry.current) }
+    var visible by rememberSaveable(entry.id) { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
+            shape = RoundedCornerShape(18.dp),
+            color = StackLaborTheme.colors.surface,
+            border = BorderStroke(1.5.dp, metalRim(0.9f)),
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text(entry.title, style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(6.dp))
+                Text(entry.hint, style = MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(StackLaborTheme.colors.background)
+                        .border(1.dp, metalRim(0.6f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BasicTextField(
+                        value = value,
+                        onValueChange = { value = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong),
+                        cursorBrush = SolidColor(StackLaborTheme.colors.accent),
+                        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                        decorationBox = { inner ->
+                            Box {
+                                if (value.isEmpty()) {
+                                    Text(
+                                        "Schlüssel einfügen",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = StackLaborTheme.colors.textMuted,
+                                    )
+                                }
+                                inner()
+                            }
+                        },
+                    )
+                    IconButton(onClick = { visible = !visible }) {
+                        Icon(
+                            if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            if (visible) "Schlüssel verbergen" else "Schlüssel anzeigen",
+                            Modifier.size(22.dp),
+                            tint = StackLaborTheme.colors.textMuted,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Abbrechen") }
+                    PrimaryAction("Speichern", { onSave(value) }, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+private data class SettingSelection(
+    val id: String,
+    val title: String,
+    val value: String,
+    val options: List<String>,
+    val hint: String = "",
+)
 
 private fun settingSelection(state: StackLaborUiState, id: String?): SettingSelection? = when (id) {
-    "tts-provider" -> SettingSelection(id, "Anbieter", state.ttsProviderLabel, listOf("Microsoft Edge", "Google Cloud", "Meine Stimme"))
+    "tts-provider" -> SettingSelection(id, "Anbieter", state.ttsProviderLabel, TtsAnbieter.entries.map { it.label() })
     "tts-voice" -> SettingSelection(
         id,
         "Stimme",
         state.ttsVoiceLabel,
-        when (state.ttsProviderLabel) {
-            "Google Cloud" -> listOf("Kore", "Charon")
-            "Meine Stimme" -> listOf("Meine Stimme")
-            else -> listOf("Seraphina", "Katja", "Conrad")
-        },
+        state.ttsVoiceOptions,
+        hint = if (state.ttsProviderLabel.startsWith("Meine Stimme")) state.clonedVoicesHint else "",
     )
-    "tts-speed" -> SettingSelection(id, "Tempo", state.ttsSpeedLabel, listOf("0,8×", "1,0×", "1,2×"))
+    "tts-speed" -> SettingSelection(
+        id,
+        "Tempo",
+        state.ttsSpeedLabel,
+        SPEED_STEPS.map { String.format(java.util.Locale.GERMANY, "%.2f×", it) },
+    )
     "tts-pause" -> SettingSelection(id, "Pause zwischen Absätzen", state.ttsPauseLabel, listOf("Kurz", "Mittel", "Lang"))
     "tts-timeout" -> SettingSelection(id, "Automatische Abschaltung", state.ttsTimeoutLabel, listOf("15 Min.", "30 Min.", "60 Min."))
     "codex-model" -> SettingSelection(id, "Modell", state.codexModelLabel, listOf("Sol", "Terra", "Luna"))

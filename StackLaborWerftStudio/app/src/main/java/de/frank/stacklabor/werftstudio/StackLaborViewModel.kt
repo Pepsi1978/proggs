@@ -30,7 +30,9 @@ import de.frank.stacklabor.werftstudio.service.auth.CodexAuthState
 import de.frank.stacklabor.werftstudio.service.codex.CodexErrorKind
 import de.frank.stacklabor.werftstudio.service.codex.CodexException
 import de.frank.stacklabor.werftstudio.service.codex.CodexStreamEvent
+import de.frank.stacklabor.werftstudio.service.tts.ClonedVoice
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
+import de.frank.stacklabor.werftstudio.service.tts.TtsVoices
 import de.frank.stacklabor.werftstudio.service.tts.TtsPlaybackState
 import de.frank.stacklabor.werftstudio.service.tts.TtsPlaybackStateBus
 import de.frank.stacklabor.werftstudio.service.tts.TtsProviderId
@@ -69,6 +71,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -111,6 +114,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var currentEvaluation: BewertungMitDetails? = null
     private var tagEvaluation: BewertungMitDetails? = null
     private var evaluationJob: Job? = null
+    private var clonedVoicesJob: Job? = null
+    private var clonedVoices: List<ClonedVoice> = emptyList()
     private val competitionJobs = mutableMapOf<String, Job>()
     private val pendingCompetitionIds = mutableMapOf<String, MutableSet<String>>()
     private var stackDraft = StackDraft()
@@ -156,6 +161,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.SelectHistoryRun -> selectHistory(event.runId)
             is StackLaborEvent.SelectSetting -> selectSetting(event.settingId)
             is StackLaborEvent.SelectSettingValue -> selectSettingValue(event.settingId, event.value)
+            is StackLaborEvent.SaveApiKey -> saveApiKey(event.keyId, event.value)
+            StackLaborEvent.LoadClonedVoices -> loadClonedVoices()
             is StackLaborEvent.RemoveQuestion -> removeQuestion(event.questionId)
             is StackLaborEvent.SaveStack -> saveStack(event.stackId)
             is StackLaborEvent.DeleteStack -> launchAction("Stack gelöscht") { repository.loescheStack(event.stackId) }
@@ -248,8 +255,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 catalogMedicines = catalogUi,
                 dailyDoses = dailyDoses(entries, medicines, stacks, settings.dosisVariante),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
-                ttsVoiceLabel = settings.ttsStimme.voiceLabel(settings.ttsAnbieter),
-                ttsSpeedLabel = String.format(Locale.GERMANY, "%.1f×", settings.ttsTempo),
+                ttsVoiceLabel = voiceLabel(settings.ttsStimme, settings.ttsAnbieter),
+                ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
+                googleApiKeyValue = settings.googleApiKey,
+                qwenApiKeyValue = settings.qwenApiKey,
+                googleApiKeyLabel = keyLabel(settings.googleApiKey, BuildConfig.GOOGLE_TTS_API_KEY),
+                qwenApiKeyLabel = keyLabel(settings.qwenApiKey, BuildConfig.QWEN_TTS_API_KEY),
+                ttsSpeedLabel = speedLabel(settings.ttsTempo),
                 ttsPauseLabel = settings.absatzpause.name.lowercase().replaceFirstChar(Char::uppercase),
                 ttsTimeoutLabel = "${settings.abschaltzeitMinuten} Min.",
                 ttsUsageLabel = "${NumberFormat.getIntegerInstance(Locale.GERMANY).format(snapshot.usage.totalCharacters)} Zeichen",
@@ -413,6 +425,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborRoute.Breakdown -> mutableState.update {
                 it.copy(breakdownItems = buildBreakdownItems(route.subjectId, currentEvaluation, it.goals, it.medicines))
             }
+            // Die eigenen Stimmen kommen aus dem Alibaba-Konto — beim Öffnen einmal nachladen.
+            StackLaborRoute.Settings -> if (clonedVoices.isEmpty() && container.qwenSchluesselAktiv().isNotBlank()) loadClonedVoices()
             else -> Unit
         }
     }
@@ -768,15 +782,18 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private fun selectSetting(id: String) = launchAction {
         when (id) {
             "tts-provider" -> container.settings.setzeTtsAnbieter(settings.ttsAnbieter.next())
-            "tts-voice" -> container.settings.setzeTtsStimme(when (settings.ttsAnbieter) {
-                TtsAnbieter.EDGE -> if (settings.ttsStimme.contains("Seraphina")) "de-DE-ConradNeural" else TtsConfiguration.DEFAULT_EDGE_VOICE
-                TtsAnbieter.GOOGLE_CLOUD -> if (settings.ttsStimme.endsWith("Kore")) "de-DE-Chirp3-HD-Charon" else TtsConfiguration.DEFAULT_GOOGLE_VOICE
-                TtsAnbieter.QWEN_CLONE -> BuildConfig.QWEN_TTS_VOICE_ID
-            })
-            "tts-speed" -> container.settings.setzeTtsTempo(if (settings.ttsTempo >= 1.3f) 0.8f else settings.ttsTempo + 0.1f)
+            "tts-voice" -> {
+                val catalogue = TtsVoices.of(settings.ttsAnbieter.toProviderId())
+                if (catalogue.isNotEmpty()) {
+                    val next = catalogue.indexOfFirst { it.id == settings.ttsStimme }.plus(1) % catalogue.size
+                    container.settings.setzeTtsStimme(catalogue[next].id)
+                }
+            }
+            "tts-speed" -> container.settings.setzeTtsTempo(nextSpeed(settings.ttsTempo))
             "tts-pause" -> container.settings.setzeAbsatzpause(settings.absatzpause.next())
             "tts-timeout" -> container.settings.setzeAbschaltzeitMinuten(when (settings.abschaltzeitMinuten) { 15 -> 30; 30 -> 60; else -> 15 })
             "tts-usage" -> message("Verbrauch ${mutableState.value.ttsUsageLabel}")
+            "edge-key-info" -> message("Microsoft Edge spricht ohne Anmeldung — hier ist kein Schlüssel nötig.")
             "codex-model" -> container.settings.setzeCodexModell(when (settings.codexModell) { "gpt-5.6-sol" -> "gpt-5.6-terra"; "gpt-5.6-terra" -> "gpt-5.6-luna"; else -> "gpt-5.6-sol" })
             "codex-reasoning" -> container.settings.setzeCodexDenkstufe(when (settings.codexDenkstufe) { "low" -> "medium"; "medium" -> "high"; "high" -> "xhigh"; "xhigh" -> "max"; else -> "low" })
             "reduced-motion" -> container.settings.setzeBewegungReduziert(!settings.bewegungReduziert)
@@ -786,26 +803,33 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private fun selectSettingValue(id: String, value: String) = launchAction {
         when (id) {
             "tts-provider" -> {
-                val provider = when (value) {
-                    "Microsoft Edge" -> TtsAnbieter.EDGE
-                    "Google Cloud" -> TtsAnbieter.GOOGLE_CLOUD
-                    else -> TtsAnbieter.QWEN_CLONE
-                }
+                val provider = TtsAnbieter.entries.firstOrNull { it.label() == value } ?: TtsAnbieter.EDGE
                 container.settings.setzeTtsAnbieter(provider)
-                container.settings.setzeTtsStimme(when (provider) {
-                    TtsAnbieter.EDGE -> TtsConfiguration.DEFAULT_EDGE_VOICE
-                    TtsAnbieter.GOOGLE_CLOUD -> TtsConfiguration.DEFAULT_GOOGLE_VOICE
-                    TtsAnbieter.QWEN_CLONE -> BuildConfig.QWEN_TTS_VOICE_ID
-                })
+                // Die bisherige Stimme gehört zum alten Anbieter — auf dessen erste Stimme wechseln.
+                val catalogue = TtsVoices.of(provider.toProviderId())
+                container.settings.setzeTtsStimme(
+                    when {
+                        catalogue.any { it.id == settings.ttsStimme } -> settings.ttsStimme
+                        catalogue.isNotEmpty() -> catalogue.first().id
+                        else -> container.qwenStimmeAktiv()
+                    },
+                )
+                if (provider == TtsAnbieter.GOOGLE_CLOUD && container.googleSchluesselAktiv().isBlank()) {
+                    message("Für Google Chirp 3 HD fehlt noch der API-Schlüssel.")
+                }
+                if (provider == TtsAnbieter.QWEN_CLONE) {
+                    if (container.qwenSchluesselAktiv().isBlank()) message("Für die eigene Stimme fehlt noch der Alibaba-Schlüssel.")
+                    else loadClonedVoices()
+                }
             }
-            "tts-voice" -> container.settings.setzeTtsStimme(when (value) {
-                "Katja" -> "de-DE-KatjaNeural"
-                "Conrad" -> "de-DE-ConradNeural"
-                "Kore" -> TtsConfiguration.DEFAULT_GOOGLE_VOICE
-                "Charon" -> "de-DE-Chirp3-HD-Charon"
-                "Meine Stimme" -> BuildConfig.QWEN_TTS_VOICE_ID
-                else -> TtsConfiguration.DEFAULT_EDGE_VOICE
-            })
+            "tts-voice" -> {
+                val voiceId = TtsVoices.of(settings.ttsAnbieter.toProviderId()).firstOrNull { it.label == value }?.id
+                    ?: clonedVoices.firstOrNull { it.voiceLabel() == value }?.id
+                if (voiceId != null) container.settings.setzeTtsStimme(voiceId)
+                if (settings.ttsAnbieter == TtsAnbieter.QWEN_CLONE && voiceId != null) {
+                    container.settings.setzeQwenStimmenId(voiceId)
+                }
+            }
             "tts-speed" -> container.settings.setzeTtsTempo(value.removeSuffix("×").replace(',', '.').toFloat())
             "tts-pause" -> container.settings.setzeAbsatzpause(when (value) {
                 "Mittel" -> Absatzpause.MITTEL
@@ -822,6 +846,72 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 else -> "high"
             })
         }
+    }
+
+    private fun saveApiKey(keyId: String, value: String) = launchAction {
+        when (keyId) {
+            "google-api-key" -> {
+                container.settings.setzeGoogleApiKey(value)
+                message(if (value.isBlank()) "Google-Schlüssel gelöscht — es gilt wieder der aus dem SK-Ordner." else "Google-Schlüssel gespeichert")
+            }
+            "qwen-api-key" -> {
+                container.settings.setzeQwenApiKey(value)
+                message(if (value.isBlank()) "Alibaba-Schlüssel gelöscht — es gilt wieder der aus dem SK-Ordner." else "Alibaba-Schlüssel gespeichert")
+                if (value.isNotBlank()) loadClonedVoices()
+            }
+            else -> message("Unbekannter Schlüssel: $keyId")
+        }
+    }
+
+    /**
+     * Holt die im Alibaba-Konto hinterlegten geklonten Stimmen. Ohne diesen Schritt müsste die
+     * 46 Zeichen lange Stimm-Kennung von Hand eingetippt werden.
+     */
+    private fun loadClonedVoices() {
+        if (clonedVoicesJob?.isActive == true) return
+        val key = container.qwenSchluesselAktiv()
+        if (key.isBlank()) {
+            mutableState.update { it.copy(clonedVoicesHint = "Zuerst den Alibaba-Schlüssel hinterlegen.") }
+            return
+        }
+        clonedVoicesJob = viewModelScope.launch {
+            mutableState.update { it.copy(clonedVoicesLoading = true, clonedVoicesHint = "Stimmen werden geladen …") }
+            try {
+                clonedVoices = container.qwenVoiceDirectory.list(key)
+                mutableState.update { current ->
+                    current.copy(
+                        clonedVoicesLoading = false,
+                        clonedVoicesHint = if (clonedVoices.isEmpty()) {
+                            "Im Alibaba-Konto ist noch keine eigene Stimme hinterlegt."
+                        } else {
+                            "${clonedVoices.size} eigene Stimmen im Konto"
+                        },
+                        ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
+                        ttsVoiceLabel = voiceLabel(settings.ttsStimme, settings.ttsAnbieter),
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update {
+                    it.copy(clonedVoicesLoading = false, clonedVoicesHint = error.message ?: "Stimmen konnten nicht geladen werden.")
+                }
+            } finally {
+                clonedVoicesJob = null
+            }
+        }
+    }
+
+    private fun voiceOptions(provider: TtsAnbieter): List<String> = when (provider) {
+        TtsAnbieter.QWEN_CLONE -> clonedVoices.map { it.voiceLabel() }
+        else -> TtsVoices.of(provider.toProviderId()).map { it.label }
+    }
+
+    private fun voiceLabel(voiceId: String, provider: TtsAnbieter): String = when (provider) {
+        TtsAnbieter.QWEN_CLONE -> clonedVoices.firstOrNull { it.id == voiceId }?.voiceLabel()
+            ?: container.qwenStimmeAktiv().takeIf(String::isNotBlank)?.let { "Eigene Stimme" }
+            ?: "Keine Stimme gewählt"
+        else -> TtsVoices.byId(voiceId)?.label ?: voiceId.substringAfterLast('-').removeSuffix("Neural")
     }
 
     private fun playTts() {
@@ -1024,14 +1114,36 @@ private fun List<Bewertungszelle>.historySignal(): SignalState = when {
     else -> SignalState.Green
 }
 
-private fun String.voiceLabel(provider: TtsAnbieter): String = when {
-    provider == TtsAnbieter.QWEN_CLONE -> "Meine Stimme"
-    contains("Seraphina", ignoreCase = true) -> "Seraphina"
-    contains("Katja", ignoreCase = true) -> "Katja"
-    contains("Conrad", ignoreCase = true) -> "Conrad"
-    contains("Kore", ignoreCase = true) -> "Kore"
-    contains("Charon", ignoreCase = true) -> "Charon"
-    else -> substringAfterLast('-').removeSuffix("Neural")
+/** Die Beschriftung einer geklonten Stimme, z.B. `Frank HD · 03.08.2026, 23:21`. */
+private fun ClonedVoice.voiceLabel(): String = "$name · $createdAt"
+
+private fun TtsAnbieter.toProviderId(): TtsProviderId = when (this) {
+    TtsAnbieter.EDGE -> TtsProviderId.EDGE
+    TtsAnbieter.GOOGLE_CLOUD -> TtsProviderId.GOOGLE_CLOUD
+    TtsAnbieter.QWEN_CLONE -> TtsProviderId.QWEN
+}
+
+/** Tempo in 0,05er-Schritten zwischen 0,70 und 1,20. */
+val SPEED_STEPS: List<Float> = generateSequence(0.70f) { it + 0.05f }
+    .takeWhile { it < 1.2251f }
+    .map { (it * 100f).roundToInt() / 100f }
+    .toList()
+
+private fun speedLabel(value: Float): String = String.format(Locale.GERMANY, "%.2f×", value)
+
+private fun nextSpeed(current: Float): Float {
+    val index = SPEED_STEPS.indexOfFirst { kotlin.math.abs(it - current) < 0.001f }
+    return SPEED_STEPS[(index + 1).mod(SPEED_STEPS.size)]
+}
+
+/**
+ * Was in der Zeile hinter dem Schlüssel steht: der eigene Eintrag gewinnt, sonst zählt der
+ * beim Bauen aus dem SK-Ordner eingebackene.
+ */
+private fun keyLabel(own: String, baked: String): String = when {
+    own.isNotBlank() -> "Hinterlegt (${own.take(4)}…${own.takeLast(3)})"
+    baked.isNotBlank() -> "Aus dem SK-Ordner"
+    else -> "Nicht hinterlegt"
 }
 
 private fun String.reasoningLabel(): String = when (this) {
@@ -1042,10 +1154,10 @@ private fun String.reasoningLabel(): String = when (this) {
     else -> "Hoch"
 }
 
-private fun TtsAnbieter.label(): String = when (this) {
+fun TtsAnbieter.label(): String = when (this) {
     TtsAnbieter.EDGE -> "Microsoft Edge"
-    TtsAnbieter.GOOGLE_CLOUD -> "Google Cloud"
-    TtsAnbieter.QWEN_CLONE -> "Meine Stimme"
+    TtsAnbieter.GOOGLE_CLOUD -> "Google Chirp 3 HD"
+    TtsAnbieter.QWEN_CLONE -> "Meine Stimme (Alibaba)"
 }
 private fun TtsAnbieter.next(): TtsAnbieter = TtsAnbieter.entries[(ordinal + 1) % TtsAnbieter.entries.size]
 private fun Absatzpause.next(): Absatzpause = Absatzpause.entries[(ordinal + 1) % Absatzpause.entries.size]

@@ -33,6 +33,13 @@ data class AppEinstellungen(
     val absatzpause: Absatzpause = Absatzpause.KURZ,
     val abschaltzeitMinuten: Int = 30,
     val ttsVerbrauchZeichen: Long = 0,
+    /**
+     * Schlüssel, die der Benutzer selbst in den Einstellungen hinterlegt. Leer heißt: es gilt
+     * der Schlüssel aus dem SK-Ordner, der beim Bauen in die App gelegt wurde.
+     */
+    val googleApiKey: String = "",
+    val qwenApiKey: String = "",
+    val qwenStimmenId: String = "",
     val codexModell: String = "gpt-5.6-terra",
     val codexDenkstufe: String = "high",
     val bewegungReduziert: Boolean,
@@ -68,6 +75,11 @@ class EinstellungenStore(
             preferences[TTS_VERBRAUCH] = (preferences[TTS_VERBRAUCH] ?: 0L) + zeichen
         }
     }
+    /** Leerer Wert bedeutet: wieder den Schlüssel aus dem SK-Ordner verwenden. */
+    suspend fun setzeGoogleApiKey(value: String): Unit = schreibe(GOOGLE_API_KEY, value.trim())
+    suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
+    suspend fun setzeQwenStimmenId(value: String): Unit = schreibe(QWEN_STIMMEN_ID, value.filterNot(Char::isWhitespace))
+
     suspend fun setzeCodexModell(value: String) {
         require(value in CODEX_MODELLE) { "Unbekanntes Codex-Modell: $value" }
         schreibe(CODEX_MODELL, value)
@@ -87,6 +99,9 @@ class EinstellungenStore(
         absatzpause = enumMitCode(Absatzpause.entries, preferences[ABSATZPAUSE] ?: Absatzpause.KURZ.code) { it.code },
         abschaltzeitMinuten = preferences[ABSCHALTZEIT_MINUTEN] ?: 30,
         ttsVerbrauchZeichen = preferences[TTS_VERBRAUCH] ?: 0L,
+        googleApiKey = preferences[GOOGLE_API_KEY].orEmpty(),
+        qwenApiKey = preferences[QWEN_API_KEY].orEmpty(),
+        qwenStimmenId = preferences[QWEN_STIMMEN_ID].orEmpty(),
         codexModell = preferences[CODEX_MODELL] ?: "gpt-5.6-terra",
         codexDenkstufe = preferences[CODEX_DENKSTUFE] ?: "high",
         bewegungReduziert = preferences[BEWEGUNG_REDUZIERT] ?: systemBewegungReduziert,
@@ -109,6 +124,9 @@ class EinstellungenStore(
         val ABSATZPAUSE = intPreferencesKey("absatzpause")
         val ABSCHALTZEIT_MINUTEN = intPreferencesKey("abschaltzeit_minuten")
         val TTS_VERBRAUCH = longPreferencesKey("tts_verbrauch_zeichen")
+        val GOOGLE_API_KEY = stringPreferencesKey("google_api_key")
+        val QWEN_API_KEY = stringPreferencesKey("qwen_api_key")
+        val QWEN_STIMMEN_ID = stringPreferencesKey("qwen_stimmen_id")
         val CODEX_MODELL = stringPreferencesKey("codex_modell")
         val CODEX_DENKSTUFE = stringPreferencesKey("codex_denkstufe")
         val BEWEGUNG_REDUZIERT = booleanPreferencesKey("bewegung_reduziert")
