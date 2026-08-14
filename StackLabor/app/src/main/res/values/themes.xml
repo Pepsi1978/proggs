@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Die Farben setzt Compose; dieses Theme haelt nur den Start ruhig
+         (Grundfarbe der hellen Erscheinung, damit beim Start nichts aufblitzt). -->
+    <style name="Theme.StackLabor" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F5F7FA</item>
+        <item name="android:statusBarColor">#F1F5F9</item>
+        <item name="android:navigationBarColor">#F5F7FA</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>
