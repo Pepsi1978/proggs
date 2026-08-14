@@ -1,25 +1,50 @@
 /**
- * Wird im NORMALEN, bereits angemeldeten Chrome in die Entwickler-Konsole eingefuegt.
- * Liest die komplette Suno-Bibliothek aus und speichert sie als suno-liste.json
- * in den Downloads-Ordner. Es wird nichts veraendert und nichts hochgeladen.
+ * Wird im NORMALEN, bereits angemeldeten Chrome in die Entwickler-Konsole eingefügt.
+ * Liest die KOMPLETTE Suno-Bibliothek aus und speichert sie als suno-liste.json.
+ *
+ * Wichtigste Eigenschaft: Suno bremst haeufige Abfragen aus (429 Too Many Requests).
+ * Darum wird zwischen den Abfragen gewartet und eine gebremste Seite so lange
+ * wiederholt, bis sie durchkommt — es geht also keine Seite verloren.
+ *
+ * Jederzeit von Hand moeglich:
+ *   sunoSpeichern()   aktuellen Stand als Datei speichern
+ *   sunoStand()       wie viele Songs sind bisher da
+ *   sunoWeiter(42)    ab Seite 42 weitermachen (nach einem Abbruch)
  */
 (async () => {
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const songs = new Map();
+  const HOST = 'https://studio-api.prod.suno.com';
+  const PFAD = '/api/feed/v2';
+  const PAUSE = 900;        // Millisekunden zwischen zwei Abfragen
+  const SPEICHER = 'suno-download-stand';
 
-  // Durchsucht beliebige JSON-Strukturen nach allem, was wie ein Suno-Song aussieht.
-  const ernte = (n) => {
-    if (!n || typeof n !== 'object') return;
-    if (Array.isArray(n)) return n.forEach(ernte);
+  const songs = new Map();
+  let gesamtLautApi = null;
+
+  const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+  const zeig = (t, f) => console.log('%c' + t, 'font-size:15px;font-weight:bold;color:' + (f || '#0a0'));
+
+  // ---------------------------------------------------------------- einsammeln
+  /** Traegt alle Songs aus einer Antwort ein und liefert zurueck, wie viele darin standen. */
+  const ernte = (n, zaehler) => {
+    zaehler = zaehler || { roh: 0 };
+    if (!n || typeof n !== 'object') return zaehler.roh;
+    if (Array.isArray(n)) { n.forEach((x) => ernte(x, zaehler)); return zaehler.roh; }
+
+    for (const k of ['num_total_results', 'total_results', 'total']) {
+      if (typeof n[k] === 'number' && n[k] > (gesamtLautApi || 0)) gesamtLautApi = n[k];
+    }
 
     if (typeof n.id === 'string' && UUID.test(n.id)) {
       let url = null;
       for (const k of ['audio_url', 'audio_url_mp3', 'mp3_url', 'stream_audio_url']) {
         if (typeof n[k] === 'string' && n[k].startsWith('http')) { url = n[k]; break; }
       }
-      if (!url && typeof n.title === 'string' && n.metadata) url = 'https://cdn1.suno.ai/' + n.id + '.mp3';
-
+      if (!url && typeof n.title === 'string' && (n.metadata || n.audio_url === '')) {
+        url = 'https://cdn1.suno.ai/' + n.id + '.mp3';
+      }
       if (url) {
+        zaehler.roh++;
         const alt = songs.get(n.id) || {};
         songs.set(n.id, {
           id: n.id,
@@ -29,15 +54,19 @@
         });
       }
     }
-    for (const k in n) ernte(n[k]);
+    for (const k in n) ernte(n[k], zaehler);
+    return zaehler.roh;
   };
 
-  const zeig = (text, farbe) =>
-    console.log('%c' + text, 'font-size:15px;font-weight:bold;color:' + (farbe || '#0a0'));
-
-  const holToken = async () => {
-    try { return await window.Clerk.session.getToken(); } catch (e) { return null; }
+  // ---------------------------------------------------------------- sichern
+  const sicherung = () => {
+    try { localStorage.setItem(SPEICHER, JSON.stringify([...songs.values()])); } catch (e) { /* voll */ }
   };
+  try {
+    const alt = JSON.parse(localStorage.getItem(SPEICHER) || '[]');
+    alt.forEach((s) => { if (s && s.id) songs.set(s.id, s); });
+    if (songs.size) zeig('↩️ Frueherer Stand geladen: ' + songs.size + ' Songs', '#666');
+  } catch (e) { /* egal */ }
 
   const speichern = () => {
     const liste = [...songs.values()].sort((a, b) => {
@@ -45,74 +74,91 @@
       const tb = b.created_at ? Date.parse(b.created_at) : 8.64e15;
       return ta === tb ? a.id.localeCompare(b.id) : ta - tb;
     });
-    const blob = new Blob([JSON.stringify(liste, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(liste, null, 2)], { type: 'application/json' }));
     a.download = 'suno-liste.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    zeig('✅ ' + liste.length + ' Songs gefunden — die Datei "suno-liste.json" liegt jetzt in deinem Downloads-Ordner.');
-    zeig('   Aeltester Song: ' + (liste[0] ? liste[0].title : '-'), '#666');
-    zeig('   Neuester Song : ' + (liste.length ? liste[liste.length - 1].title : '-'), '#666');
+    document.body.appendChild(a); a.click(); a.remove();
+
+    zeig('✅ ' + liste.length + ' Songs gespeichert — Datei "suno-liste.json" bitte in den Downloads ablegen.');
+    if (gesamtLautApi) zeig('   Suno nennt insgesamt: ' + gesamtLautApi + ' Songs', '#666');
     return liste.length;
   };
   window.sunoSpeichern = speichern;
+  window.sunoStand = () => songs.size;
 
-  // --- Schritt 1: Anmeldung pruefen -----------------------------------------
+  // ---------------------------------------------------------------- Anmeldung
   if (!window.Clerk || !window.Clerk.session) {
-    zeig('❗ Auf dieser Seite ist keine Suno-Anmeldung sichtbar.', '#c00');
-    zeig('   Bitte zuerst https://suno.com/me oeffnen und dann erneut einfuegen.', '#c00');
+    zeig('❗ Keine Suno-Anmeldung auf dieser Seite. Bitte https://suno.com/me öffnen.', '#c00');
     return;
   }
-  zeig('🔎 Bibliothek wird gelesen — bitte kurz warten …', '#06c');
+  const token = async () => { try { return await window.Clerk.session.getToken(); } catch (e) { return null; } };
 
-  // --- Schritt 2: API Seite fuer Seite durchblaettern ------------------------
-  const hosts = ['https://studio-api.prod.suno.com', 'https://studio-api.suno.ai'];
-  const pfade = ['/api/feed/v2', '/api/feed/', '/api/project/default/clips'];
-
-  for (const host of hosts) {
-    for (const pfad of pfade) {
-      const vorher = songs.size;
-      let leer = 0;
-
-      for (let seite = 0; seite < 500 && leer < 2; seite++) {
-        let antwort;
-        try {
-          antwort = await fetch(host + pfad + (pfad.includes('?') ? '&' : '?') + 'page=' + seite, {
-            headers: { Authorization: 'Bearer ' + (await holToken()), Accept: 'application/json' },
-          });
-        } catch (e) { break; }
-
-        if (!antwort.ok) break;
-        const vor = songs.size;
-        try { ernte(await antwort.json()); } catch (e) { break; }
-
-        if (songs.size === vor) leer++;
-        else { leer = 0; console.log('   … ' + songs.size + ' Songs'); }
-      }
-      if (songs.size > vorher) { speichern(); return; }
-    }
-  }
-
-  // --- Schritt 3: Notweg, falls die API sich geaendert hat -------------------
-  zeig('⚠️ Der direkte Weg hat nicht funktioniert — jetzt der Notweg:', '#c60');
-  zeig('   1. Scrolle deine Bibliothek langsam bis ganz nach unten.', '#c60');
-  zeig('   2. Tippe danach hier in die Konsole:  sunoSpeichern()', '#c60');
-
-  const originalFetch = window.fetch;
-  window.fetch = async function (...args) {
-    const antwort = await originalFetch.apply(this, args);
+  const hol = async (adresse) => {
     try {
-      const kopie = antwort.clone();
-      if ((kopie.headers.get('content-type') || '').includes('json')) {
-        kopie.json().then((daten) => {
-          const vor = songs.size;
-          ernte(daten);
-          if (songs.size > vor) console.log('   … ' + songs.size + ' Songs');
-        }).catch(() => {});
-      }
-    } catch (e) { /* egal */ }
-    return antwort;
+      const r = await fetch(adresse, {
+        headers: { Authorization: 'Bearer ' + (await token()), Accept: 'application/json' },
+      });
+      if (!r.ok) return { fehler: r.status };
+      return { daten: await r.json() };
+    } catch (e) { return { fehler: String(e).slice(0, 60) }; }
   };
+
+  // ---------------------------------------------------------------- Hauptlauf
+  const lauf = async (startSeite) => {
+    let seite = startSeite || 0;
+    let bremsen = 0;
+    let fehler = 0;
+    let leer = 0;
+
+    zeig('🔎 Die Bibliothek wird gelesen. Bitte den Tab offen lassen — das dauert einige Minuten.', '#06c');
+
+    while (seite < 800) {
+      const a = await hol(HOST + PFAD + '?page=' + seite + '&page_size=20');
+
+      // Suno bremst: geduldig warten und DIESELBE Seite erneut holen
+      if (a.fehler === 429) {
+        bremsen++;
+        const sekunden = Math.min(60, 8 * bremsen);
+        zeig('⏳ Suno bremst — warte ' + sekunden + ' s und hole Seite ' + seite + ' erneut …', '#c60');
+        await warte(sekunden * 1000);
+        continue;
+      }
+
+      if (a.fehler) {
+        fehler++;
+        console.log('   Seite ' + seite + ': Fehler ' + a.fehler + ' (Versuch ' + fehler + ' von 5)');
+        if (fehler >= 5) { zeig('⚠️ Seite ' + seite + ' bleibt fehlerhaft — Lauf wird hier beendet.', '#c60'); break; }
+        await warte(4000);
+        continue;
+      }
+
+      bremsen = 0;
+      fehler = 0;
+      const anzahl = ernte(a.daten);
+
+      if (anzahl === 0) {
+        leer++;
+        if (leer >= 2) { zeig('🏁 Ende der Bibliothek erreicht (Seite ' + seite + ').', '#06c'); break; }
+      } else {
+        leer = 0;
+        console.log('   Seite ' + seite + ' → insgesamt ' + songs.size + ' Songs'
+          + (gesamtLautApi ? ' von ' + gesamtLautApi : ''));
+      }
+
+      seite++;
+      if (seite % 10 === 0) sicherung();
+      await warte(PAUSE);
+    }
+
+    sicherung();
+    speichern();
+    if (gesamtLautApi && songs.size < gesamtLautApi) {
+      zeig('⚠️ Es fehlen noch ' + (gesamtLautApi - songs.size) + ' Songs.', '#c60');
+      zeig('   Weitermachen mit:  sunoWeiter(' + seite + ')', '#c60');
+    }
+    return songs.size;
+  };
+  window.sunoWeiter = lauf;
+
+  await lauf(0);
 })();
