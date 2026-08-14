@@ -674,6 +674,43 @@ Verstoss wirft `ForegroundServiceStartNotAllowedException`. Erlaubte Trigger (Au
 
 ---
 
+## 8. Gesten am echten Geraet per adb pruefen (Wischen, langer Druck, Ziehen)
+
+### 8.1 `input swipe` erzeugt KEINEN langen Druck
+`adb shell input swipe x1 y1 x2 y2 dauer` sendet DOWN und bewegt den Zeiger **sofort** weiter.
+`detectDragGesturesAfterLongPress` (Compose) verlangt aber, dass der Finger ~500 ms **still** liegt,
+bevor er sich bewegt — der Wisch wird deshalb als Scrollen gewertet und Drag-and-Drop laesst sich so
+nie verifizieren. `adb shell input draganddrop` haelt in vielen ROMs ebenfalls nicht lange genug.
+
+**Loesung — Geste aus Einzel-Ereignissen bauen** (Android 11+):
+```
+adb shell input motionevent DOWN 400 1327
+# 1,3 s warten, damit der lange Druck ausloest
+adb shell input motionevent MOVE 400 1250
+adb shell input motionevent MOVE 400 1100
+adb shell input motionevent UP   400  991
+```
+Die einzelnen `input motionevent`-Aufrufe gehoeren zur selben Geste, der Zeiger bleibt zwischen den
+Aufrufen unten. Zwischen den MOVE-Schritten ~120-150 ms lassen, sonst springt die Liste.
+
+### 8.2 Wisch-Gesten nicht am Bildschirmrand starten
+Ein `input swipe`, der naeher als ~100 px am rechten/linken Rand beginnt, wird von der
+Gesten-Navigation als **Zurueck** gewertet — die App verlaesst den Bildschirm, statt zu wischen.
+Startpunkt in die Bildschirmmitte legen.
+
+### 8.3 `screencap` auf Foldables braucht die Display-ID
+`adb exec-out screencap -p > datei.png` schreibt auf Mehrschirm-Geraeten eine **Warnung nach stdout**
+und zerstoert damit die PNG-Datei. Stattdessen auf dem Geraet ablegen und ziehen:
+`adb shell screencap -p /sdcard/s.png && adb pull /sdcard/s.png` (oder `-d <display-id>` mitgeben,
+IDs via `dumpsys SurfaceFlinger --display-id`).
+
+### 8.4 Am fremden Datenbestand nur mit Rueckweg testen
+Wer Gesten am Geraet mit echten Daten prueft, aendert echte Daten. Vorher den Ist-Zustand per
+Screenshot festhalten und nach dem Test Schritt fuer Schritt zurueckstellen — oder auf einem
+Testprofil arbeiten.
+
+**Stand:** 14.08.2026 · geprueft an Android 16 (Galaxy Z Fold 8), Compose Foundation 1.9.
+
 ## ✅ Pflicht-Checkliste vor Framework-/Runtime-Arbeit (Best-Practice-Seite)
 
 - [ ] **Architektur:** 3 Layer, Abhaengigkeiten nach unten, UDF, immutable `UiState` via `StateFlow`+`stateIn(WhileSubscribed(5000))`, `collectAsStateWithLifecycle`, kein Context/Logik im ViewModel? (§1)

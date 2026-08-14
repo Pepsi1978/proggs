@@ -27,3 +27,6 @@
 | 13 | Notifications senden | Channel (ab 8) + `POST_NOTIFICATIONS` (ab 13) + kein Trampolin | §5.7, §5.8, §5.9 |
 | 14 | Permission anfragen | `RequestPermission`-Flow, einzeln pruefen, permanently-denied erkennen | §6.1 |
 | 15 | targetSdk-36-Migration | Edge-to-Edge, Predictive Back, adaptive Layouts, 16-KB, FileProvider | §7 |
+| 16 | Langen Druck / Drag-and-Drop per adb pruefen | `input swipe` haelt nicht — Geste aus `input motionevent DOWN/MOVE/UP` bauen | §8.1 |
+| 17 | Wischen per adb wird zu "Zurueck" | Nicht am Bildschirmrand starten, Mitte nehmen | §8.2 |
+| 18 | `screencap` liefert kaputtes PNG (Foldable) | Auf dem Geraet ablegen + `pull`, oder `-d <display-id>` | §8.3 |
