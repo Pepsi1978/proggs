@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,12 +47,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.stacklabor.werftstudio.ui.components.BreathingFab
@@ -60,6 +65,7 @@ import de.frank.stacklabor.werftstudio.ui.components.PrimaryAction
 import de.frank.stacklabor.werftstudio.ui.components.color
 import de.frank.stacklabor.werftstudio.ui.model.GoalUi
 import de.frank.stacklabor.werftstudio.ui.model.SignalState
+import de.frank.stacklabor.werftstudio.ui.model.RelationshipUi
 import de.frank.stacklabor.werftstudio.ui.model.Solubility
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
@@ -78,6 +84,7 @@ fun StackGoalsSheet(
 ) {
     var expandedGoalId by rememberSaveable { mutableStateOf<String?>(state.goals.firstOrNull { it.reason.isNotEmpty() }?.id) }
     GoldDarkContent {
+        val borderColor = StackLaborTheme.colors.border
         BottomSheetFrame(
             onDismiss = callbacks.onBack,
             underlay = underlay,
@@ -85,7 +92,11 @@ fun StackGoalsSheet(
             showGrip = true,
         ) {
             SheetHeader("Ziele — ${state.stackName}", height = 40.dp)
-            LazyColumn(Modifier.weight(1f)) {
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 items(state.goals, key = { it.id }) { goal ->
                     GoalSelectionRow(
                         goal = goal,
@@ -107,11 +118,13 @@ fun StackGoalsSheet(
             }
             Row(
                 Modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 12.dp, vertical = 4.dp),
+                    .drawBehind {
+                        drawLine(borderColor, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx())
+                    }.padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 SecondaryAction("Ordnen", { callbacks.onNavigate(StackLaborRoute.ReorderGoals(stackId)) }, Modifier.weight(1f))
-                PrimaryAction("Fertig", callbacks.onBack, Modifier.weight(1f))
+                SheetButton("Fertig", StackLaborTheme.colors.onAccent, StackLaborTheme.colors.accent, onClick = callbacks.onBack)
             }
         }
     }
@@ -126,9 +139,12 @@ private fun GoalSelectionRow(
     onBreakdown: () -> Unit,
 ) {
     val isExpanded = expanded && goal.reason.isNotEmpty()
+    val shape = RoundedCornerShape(12.dp)
     Box(
         Modifier.fillMaxWidth().height(if (isExpanded) 112.dp else 64.dp)
-            .background(StackLaborTheme.colors.surface),
+            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .clip(shape).background(StackLaborTheme.colors.surface)
+            .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.4f), shape),
     ) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -149,7 +165,7 @@ private fun GoalSelectionRow(
                         goal.text,
                         Modifier.weight(1f),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -167,7 +183,6 @@ private fun GoalSelectionRow(
             }
         }
         Box(Modifier.align(Alignment.CenterEnd).width(3.dp).fillMaxHeight().background(goal.signal.color()))
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
     }
 }
 
@@ -195,9 +210,11 @@ fun MedicineEditSheet(
     var together by rememberSaveable(medicineId) { mutableStateOf(source?.together ?: false) }
     var note by rememberSaveable(medicineId) { mutableStateOf(source?.note.orEmpty()) }
     var alternates by rememberSaveable(medicineId) { mutableStateOf(source?.alternates.orEmpty()) }
+    var saveAttempted by rememberSaveable(medicineId) { mutableStateOf(false) }
     val usage = state.catalogMedicines.firstOrNull { it.id == medicineId }?.catalogMeta
         ?.substringBefore(" · ")?.takeIf { it.startsWith("in ") }?.let { "Gilt $it" }.orEmpty()
     GoldDarkContent {
+        val borderColor = StackLaborTheme.colors.border
         BottomSheetFrame(
             onDismiss = callbacks.onBack,
             underlay = underlay,
@@ -207,7 +224,7 @@ fun MedicineEditSheet(
             SheetHeader(if (medicineId == null) "Mittel anlegen" else "Mittel bearbeiten", height = 56.dp)
             LazyColumn(Modifier.weight(1f)) {
                 item { FormSectionHeader("Stammdaten", usage) }
-                item { CompactField("Name", name, onValueChange = { name = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("name", it)) }) }
+                item { CompactField("Name", name, invalid = saveAttempted && name.isBlank(), onValueChange = { name = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("name", it)) }) }
                 item {
                     Column(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
                         Text("Löslichkeit", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
@@ -230,7 +247,7 @@ fun MedicineEditSheet(
                 }
                 item { CompactField("Darreichungsform", form, selection = true, onValueChange = { form = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("form", it)) }) }
                 item { CompactField("Hersteller", manufacturer, onValueChange = { manufacturer = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("manufacturer", it)) }) }
-                item { CompactToggleRow("Durchfallrisiko", diarrheaRisk) { diarrheaRisk = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("diarrheaRisk", it.toString())) } }
+                item { CompactToggleRow("Durchfallrisiko", diarrheaRisk, smallSwitch = true) { diarrheaRisk = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("diarrheaRisk", it.toString())) } }
                 item { CompactField("Beistoffe", excipients, onValueChange = { excipients = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("excipients", it)) }) }
                 item { FormSectionHeader("In diesem Stack") }
                 item {
@@ -245,7 +262,7 @@ fun MedicineEditSheet(
                     }
                 }
                 item {
-                    CompactToggleRow("Zweite Dosis-Variante", secondDose, height = 72.dp, supportingText = "Frei / Dienst") {
+                    CompactToggleRow("Zweite Dosis-Variante", secondDose, height = 72.dp, supportingText = "Frei / Dienst", smallSwitch = true) {
                         secondDose = it
                         callbacks.onEvent(StackLaborEvent.UpdateMedicineField("secondDose", it.toString()))
                     }
@@ -253,7 +270,7 @@ fun MedicineEditSheet(
                 item { CompactField("Frequenz", frequency, selection = true, onValueChange = { frequency = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("frequency", it)) }) }
                 item { CompactField("alterniert mit", alternates, onValueChange = { alternates = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("alternates", it)) }) }
                 item {
-                    CompactToggleRow("Kombi-Gruppe „zusammen einnehmen“", together) {
+                    CompactToggleRow("Kombi-Gruppe „zusammen einnehmen“", together, smallSwitch = true) {
                         together = it
                         callbacks.onEvent(StackLaborEvent.UpdateMedicineField("together", it.toString()))
                     }
@@ -271,11 +288,19 @@ fun MedicineEditSheet(
             }
             Box(
                 Modifier.fillMaxWidth().height(60.dp).background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 12.dp, vertical = 8.dp),
+                    .drawBehind {
+                        drawLine(borderColor, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx())
+                    }.padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 PrimaryAction(
                     "Sichern",
-                    { callbacks.onEvent(StackLaborEvent.SaveMedicine(medicineId, stackId)); callbacks.onBack() },
+                    {
+                        saveAttempted = true
+                        if (name.isNotBlank()) {
+                            callbacks.onEvent(StackLaborEvent.SaveMedicine(medicineId, stackId))
+                            callbacks.onBack()
+                        }
+                    },
                     Modifier.fillMaxWidth(),
                 )
             }
@@ -306,44 +331,53 @@ fun BreakdownSheet(
             showNeutral = it
         }
         LazyColumn(Modifier.weight(1f)) {
-            items(state.goals.filter { showNeutral || it.signal != SignalState.Gray }, key = { it.id }) { goal ->
-                RelationshipRow(goal)
+            items(state.breakdownItems.filter { showNeutral || it.signal != SignalState.Gray }, key = { it.id }) { item ->
+                RelationshipRow(item)
             }
         }
     }
 }
 
 @Composable
-private fun RelationshipRow(goal: GoalUi) {
-    val verdict = when (goal.signal) {
+private fun RelationshipRow(item: RelationshipUi) {
+    val verdict = when (item.signal) {
         SignalState.Green -> "stützt"
         SignalState.Gray -> "neutral"
         SignalState.Yellow, SignalState.Red -> "stört"
     }
-    val reason = goal.reason.ifEmpty {
-        when (goal.signal) {
+    val reason = item.reason.ifEmpty {
+        when (item.signal) {
             SignalState.Green -> "Unterstützt dieses Ziel in der aktuellen Zusammenstellung."
             SignalState.Gray -> "Keine stützende oder störende Verbindung bewertet."
             SignalState.Yellow, SignalState.Red -> "Beeinträchtigt dieses Ziel in der aktuellen Zusammenstellung."
         }
     }
-    Box(Modifier.fillMaxWidth().height(76.dp).background(StackLaborTheme.colors.surface)) {
+    Box(
+        Modifier.fillMaxWidth().height(76.dp)
+            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .background(StackLaborTheme.colors.surface),
+    ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Box(Modifier.width(29.dp), contentAlignment = Alignment.TopStart) {
                 Box(Modifier.size(20.dp).border(1.dp, StackLaborTheme.colors.border, CircleShape), contentAlignment = Alignment.Center) {
-                    Text(goal.rank.toString(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(item.rank.toString(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Column(Modifier.weight(1f)) {
                 Row(Modifier.fillMaxWidth().height(28.dp), verticalAlignment = Alignment.Top) {
                     Text(
-                        goal.text,
+                        item.title,
                         Modifier.weight(1f).padding(end = 8.dp),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(verdict, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = goal.signal.color(), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        verdict,
+                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(lineHeight = 20.sp),
+                        color = if (verdict == "stört") StackLaborTheme.colors.red else item.signal.color(),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Text(reason, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -363,7 +397,14 @@ fun QuestionsSheet(
     var questionText by rememberSaveable { mutableStateOf("") }
     var editingQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var undoVisible by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(undoVisible) {
+        if (undoVisible) {
+            kotlinx.coroutines.delay(6_000)
+            undoVisible = false
+        }
+    }
     GoldDarkContent {
+        val borderColor = StackLaborTheme.colors.border
         BottomSheetFrame(
             onDismiss = callbacks.onBack,
             underlay = underlay,
@@ -412,10 +453,13 @@ fun QuestionsSheet(
                             } else {
                                 Row(
                                     Modifier.fillMaxWidth().heightIn(min = 60.dp).background(StackLaborTheme.colors.surface)
-                                        .border(1.dp, StackLaborTheme.colors.border).clickable {
+                                        .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+                                        .drawBehind {
+                                            drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                                        }.clickable {
                                             questionText = question.text
                                             editingQuestionId = question.id
-                                        }.padding(horizontal = 16.dp, vertical = 8.dp),
+                                        }.padding(start = 16.dp, end = 68.dp, top = 8.dp, bottom = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(question.text, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
@@ -465,10 +509,13 @@ private const val NewQuestionId = "__new_question__"
 private fun InlineQuestionField(value: String, onValueChange: (String) -> Unit, onCommit: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     var hadFocus by remember { mutableStateOf(false) }
+    val borderColor = StackLaborTheme.colors.border
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Box(
         Modifier.fillMaxWidth().height(60.dp).background(StackLaborTheme.colors.surface)
-            .border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 16.dp, vertical = 8.dp),
+            .drawBehind {
+                drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+            }.padding(start = 16.dp, end = 68.dp, top = 8.dp, bottom = 8.dp),
     ) {
         BasicTextField(
             value = value,
@@ -476,13 +523,13 @@ private fun InlineQuestionField(value: String, onValueChange: (String) -> Unit, 
             modifier = Modifier.fillMaxSize().focusRequester(focusRequester).onFocusChanged {
                 if (it.isFocused) hadFocus = true else if (hadFocus) onCommit()
             },
-            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(color = StackLaborTheme.colors.textStrong),
+            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
             cursorBrush = SolidColor(StackLaborTheme.colors.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onCommit() }),
             decorationBox = { inner ->
                 Box(
-                    Modifier.fillMaxSize().border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp),
+                    Modifier.fillMaxSize().border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) { inner() }
             },
@@ -501,6 +548,7 @@ fun StackEditSheet(
     var time by rememberSaveable(stackId, state.stackTime) { mutableStateOf(if (stackId == null) "" else state.stackTime) }
     var note by rememberSaveable(stackId, state.stackNote) { mutableStateOf(if (stackId == null) "" else state.stackNote) }
     var deleteWarning by rememberSaveable { mutableStateOf(false) }
+    var saveAttempted by rememberSaveable { mutableStateOf(false) }
     GoldDarkContent {
         BottomSheetFrame(
             onDismiss = callbacks.onBack,
@@ -535,7 +583,7 @@ fun StackEditSheet(
                 }
             } else {
                 Column(Modifier.weight(1f)) {
-                    StackField("Name", name) { name = it; callbacks.onEvent(StackLaborEvent.UpdateStackName(it)) }
+                    StackField("Name", name, invalid = saveAttempted && name.isBlank()) { name = it; callbacks.onEvent(StackLaborEvent.UpdateStackName(it)) }
                     StackField("Zeitpunkt", time) { time = it; callbacks.onEvent(StackLaborEvent.UpdateStackTime(it)) }
                     StackField("Einnahme-Hinweis", note) { note = it; callbacks.onEvent(StackLaborEvent.UpdateStackNote(it)) }
                 }
@@ -547,8 +595,11 @@ fun StackEditSheet(
                         enabled = stackId != null,
                     ) { deleteWarning = true }
                     SheetButton("Sichern", StackLaborTheme.colors.onAccent, StackLaborTheme.colors.accent) {
-                        callbacks.onEvent(StackLaborEvent.SaveStack(stackId))
-                        callbacks.onBack()
+                        saveAttempted = true
+                        if (name.isNotBlank()) {
+                            callbacks.onEvent(StackLaborEvent.SaveStack(stackId))
+                            callbacks.onBack()
+                        }
                     }
                 }
             }
@@ -576,6 +627,7 @@ fun HistorySheet(
                 items(state.history, key = { it.id }) { run ->
                     Box(
                         Modifier.fillMaxWidth().height(64.dp)
+                            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
                             .background(if (run.selectedForComparison) StackLaborTheme.colors.elevated else StackLaborTheme.colors.surface),
                     ) {
                         Row(Modifier.fillMaxSize()) {
@@ -620,12 +672,31 @@ fun HistorySheet(
                             Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
                                 Text("Unterschiede", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = StackLaborTheme.colors.textMuted, fontWeight = FontWeight.SemiBold)
                             }
-                            Box(
-                                Modifier.fillMaxWidth().heightIn(min = 56.dp).border(1.dp, StackLaborTheme.colors.border)
-                                    .padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.CenterStart,
-                            ) {
-                                Text(state.historyComparison, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                            if (state.historyChanges.isEmpty()) {
+                                Box(
+                                    Modifier.fillMaxWidth().height(56.dp).border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    Text("Keine Zieländerungen", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                                }
+                            } else {
+                                state.historyChanges.forEach { change ->
+                                    Row(
+                                        Modifier.fillMaxWidth().height(56.dp).border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            change.title,
+                                            Modifier.weight(1f),
+                                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(change.from.historyLabel(), color = change.from.color(), fontWeight = FontWeight.SemiBold)
+                                        Text(" → ", color = StackLaborTheme.colors.textMuted)
+                                        Text(change.to.historyLabel(), color = change.to.color(), fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                             }
                             Spacer(Modifier.height(12.dp))
                         }
@@ -641,7 +712,7 @@ private fun SheetHeader(title: String, height: Dp, showDivider: Boolean = true) 
     Box(Modifier.fillMaxWidth().height(height).background(StackLaborTheme.colors.surface)) {
         Text(
             title,
-            Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 12.dp),
+            Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 16.dp),
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -667,7 +738,7 @@ private fun SelectionMark(selected: Boolean, onClick: () -> Unit, modifier: Modi
         Box(
             Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).then(
                 if (selected) Modifier.background(StackLaborTheme.colors.accent)
-                else Modifier.background(StackLaborTheme.colors.surface).border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(4.dp)),
+                else Modifier.background(StackLaborTheme.colors.surface).border(1.dp, StackLaborTheme.colors.textMuted, RoundedCornerShape(4.dp)),
             ),
             contentAlignment = Alignment.Center,
         ) {
@@ -678,9 +749,12 @@ private fun SelectionMark(selected: Boolean, onClick: () -> Unit, modifier: Modi
 
 @Composable
 private fun FormSectionHeader(title: String, meta: String = "") {
+    val borderColor = StackLaborTheme.colors.border
     Row(
         Modifier.fillMaxWidth().height(32.dp).background(StackLaborTheme.colors.elevated)
-            .border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 12.dp),
+            .drawBehind {
+                drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+            }.padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
@@ -696,12 +770,17 @@ private fun CompactField(
     inputHeight: Dp = 44.dp,
     singleLine: Boolean = true,
     selection: Boolean = false,
+    invalid: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().height(rowHeight).padding(horizontal = 12.dp, vertical = 4.dp)) {
-        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+        Text(
+            if (invalid) "$label fehlt" else label,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            color = if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.textMuted,
+        )
         Spacer(Modifier.height(4.dp))
-        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, selection)
+        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, selection, invalid)
     }
 }
 
@@ -714,14 +793,17 @@ private fun CompactInput(
     height: Dp = 44.dp,
     singleLine: Boolean = true,
     selection: Boolean = false,
+    invalid: Boolean = false,
 ) {
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.height(height).clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-            .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
+        modifier = modifier.height(height)
+            .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
+            .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
         singleLine = singleLine,
-        textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong),
+        textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
         cursorBrush = SolidColor(StackLaborTheme.colors.accent),
         decorationBox = { inner ->
             Row(
@@ -749,11 +831,20 @@ private fun SelectionPill(label: String, selected: Boolean, modifier: Modifier =
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            label,
-            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-            color = if (selected) StackLaborTheme.colors.onAccent else StackLaborTheme.colors.textStrong,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (label == "Fett") {
+                Box(
+                    Modifier.size(8.dp).background(StackLaborTheme.colors.fat, CircleShape)
+                        .border(1.5.dp, StackLaborTheme.colors.fatBorder, CircleShape),
+                )
+            }
+            Text(
+                label,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                color = if (selected) StackLaborTheme.colors.onAccent else StackLaborTheme.colors.textStrong,
+            )
+        }
     }
 }
 
@@ -764,6 +855,7 @@ private fun CompactToggleRow(
     height: Dp = 56.dp,
     supportingText: String = "",
     background: Color = Color.Transparent,
+    smallSwitch: Boolean = false,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -782,20 +874,27 @@ private fun CompactToggleRow(
                 )
             }
         }
-        CompactSwitch(checked)
+        CompactSwitch(checked, smallSwitch)
     }
 }
 
 @Composable
-private fun CompactSwitch(checked: Boolean) {
+private fun CompactSwitch(checked: Boolean, small: Boolean = false) {
+    val trackWidth = if (small) 36.dp else 40.dp
+    val trackHeight = if (small) 20.dp else 24.dp
+    val thumbSize = if (small) 16.dp else 20.dp
+    val thumbOffset by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (checked) 18.dp else 2.dp,
+        animationSpec = androidx.compose.animation.core.tween(if (StackLaborTheme.motionEnabled) 180 else 0),
+        label = "switchThumb",
+    )
     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.width(40.dp).height(24.dp).clip(CircleShape)
+            Modifier.width(trackWidth).height(trackHeight).clip(CircleShape)
                 .background(if (checked) StackLaborTheme.colors.accent else StackLaborTheme.colors.gray)
-                .padding(2.dp),
         ) {
             Box(
-                Modifier.align(if (checked) Alignment.CenterEnd else Alignment.CenterStart).size(20.dp)
+                Modifier.offset { IntOffset(thumbOffset.roundToPx(), 2.dp.roundToPx()) }.size(thumbSize)
                     .clip(CircleShape).background(StackLaborTheme.colors.surface),
             )
         }
@@ -809,14 +908,26 @@ private fun dosePreview(pieces: String, amount: String, unit: String): String {
     return "${pieces.ifBlank { "0" }} × ${amount.ifBlank { "0" }} $unit = $total $unit"
 }
 
+private fun SignalState.historyLabel(): String = when (this) {
+    SignalState.Green -> "grün"
+    SignalState.Yellow -> "gelb"
+    SignalState.Red -> "rot"
+    SignalState.Gray -> "neutral"
+}
+
 @Composable
-private fun StackField(label: String, value: String, onValueChange: (String) -> Unit) {
+private fun StackField(label: String, value: String, invalid: Boolean = false, onValueChange: (String) -> Unit) {
     Box(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 8.dp)) {
         Column(
             Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-                .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 4.dp),
+                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
-            Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+            Text(
+                if (invalid) "Name fehlt" else label,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.textMuted,
+            )
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -831,9 +942,12 @@ private fun StackField(label: String, value: String, onValueChange: (String) -> 
 
 @Composable
 private fun SheetFooter(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    val borderColor = StackLaborTheme.colors.border
     Row(
         Modifier.fillMaxWidth().height(60.dp).background(StackLaborTheme.colors.elevated)
-            .border(1.dp, StackLaborTheme.colors.border).padding(horizontal = 12.dp, vertical = 8.dp),
+            .drawBehind {
+                drawLine(borderColor, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx())
+            }.padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         content = content,
     )

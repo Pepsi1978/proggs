@@ -101,10 +101,10 @@ object StackLaborTheme {
 }
 
 val StackLaborTypography = androidx.compose.material3.Typography(
-    headlineLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.2.sp),
+    headlineLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.2).sp),
     titleLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp),
     titleMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp),
-    bodyLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp),
+    bodyLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp),
     bodyMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 18.sp),
     bodySmall = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.1.sp),
     labelMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.1.sp),
@@ -231,7 +231,7 @@ private fun lightPalette() = StackLaborColors(
     textStrong = LightText,
     textMuted = LightMuted,
     accent = LightAccent,
-    onAccent = LightSurface,
+    onAccent = Color.White,
     green = Color(0xFF047857),
     yellow = Color(0xFFD97706),
     yellowText = Color(0xFFB45309),
@@ -273,7 +273,7 @@ private fun goldDarkPalette() = StackLaborColors(
     textStrong = Color(0xFFF8EED8),
     textMuted = Color(0xFFB9A984),
     accent = Color(0xFFE1B85B),
-    onAccent = Color(0xFF171006),
+    onAccent = Color(0xFF141A24),
     green = Color(0xFF34D399),
     yellow = Color(0xFFFBBF24),
     yellowText = Color(0xFFFBBF24),

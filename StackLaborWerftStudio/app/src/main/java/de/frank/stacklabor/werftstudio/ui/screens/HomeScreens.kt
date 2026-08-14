@@ -49,7 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -88,6 +90,7 @@ import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
 @Composable
 fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
     WerftScreen {
+        val headerContentColor = if (StackLaborTheme.dark) Color(0xFF141A24) else Color.White
         Column(Modifier.fillMaxSize()) {
             AnimatedGradientHeader(animationsEnabled) {
                 Text(
@@ -96,7 +99,7 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 28.sp,
-                    color = Color.White,
+                    color = headerContentColor,
                 )
                 Row(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 12.dp)) {
                     IconTouchButton(
@@ -107,14 +110,14 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                             if (state.appearance.name == "Light") Icons.Default.LightMode else Icons.Default.DarkMode,
                             null,
                             Modifier.size(22.dp),
-                            tint = Color.White,
+                            tint = headerContentColor,
                         )
                     }
                     IconTouchButton("Ziel-Katalog öffnen", { callbacks.onNavigate(StackLaborRoute.GoalCatalog(Origin.Home)) }) {
-                        Icon(Icons.Default.TrackChanges, null, Modifier.size(22.dp), tint = Color.White)
+                        Icon(Icons.Default.TrackChanges, null, Modifier.size(22.dp), tint = headerContentColor)
                     }
                     IconTouchButton("Einstellungen öffnen", { callbacks.onNavigate(StackLaborRoute.Settings) }) {
-                        Icon(Icons.Default.Settings, null, Modifier.size(22.dp), tint = Color.White)
+                        Icon(Icons.Default.Settings, null, Modifier.size(22.dp), tint = headerContentColor)
                     }
                 }
                 DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp))
@@ -522,15 +525,13 @@ private fun MenuItem(label: String, onClick: () -> Unit) {
 @Composable
 fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
     WerftScreen(goldDark = true) {
+        val borderColor = StackLaborTheme.colors.border
         Column(Modifier.fillMaxSize()) {
             GlassHeader("Alle Stacks zusammen", onBack = callbacks.onBack)
-            LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-                if (state.allStacksEvaluationState != EvaluationState.Valid && state.allStacksEvaluationState != EvaluationState.Stale) {
-                    item {
-                        EvaluationStateCard(state.allStacksEvaluationState, callbacks, allStacks = true)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                }
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            ) {
                 item { AllStacksSectionTitle("Tagesgesamtdosis") }
                 item {
                     Column {
@@ -550,8 +551,18 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                     }
                 }
             }
-            Box(Modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                EvaluationAction("Alles prüfen", { callbacks.onEvent(StackLaborEvent.EvaluateAll) })
+            Box(
+                Modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass)
+                    .drawBehind {
+                        drawLine(borderColor.copy(alpha = 0.55f), Offset.Zero, Offset(size.width, 0f), 1.dp.toPx())
+                    }
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                val running = state.allStacksEvaluationState == EvaluationState.Running
+                EvaluationAction(
+                    if (running) "Auswertung läuft — Abbrechen" else "Alles prüfen",
+                    { callbacks.onEvent(if (running) StackLaborEvent.CancelEvaluation else StackLaborEvent.EvaluateAll) },
+                )
             }
         }
     }
@@ -559,7 +570,12 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
 
 @Composable
 private fun DoseRow(name: String, dose: String, meta: String, signal: SignalState? = null) {
-    Box(Modifier.fillMaxWidth().height(44.dp).border(BorderStroke(0.5.dp, StackLaborTheme.colors.border))) {
+    val borderColor = StackLaborTheme.colors.border
+    Box(
+        Modifier.fillMaxWidth().height(44.dp).drawBehind {
+            drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+        },
+    ) {
         if (signal != null && signal != SignalState.Green) {
             Box(Modifier.width(3.dp).fillMaxHeight().background(signal.color()))
         }
@@ -591,12 +607,20 @@ private fun CompetitionCard(title: String, detail: String, signal: SignalState?,
             .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
             .clip(shape)
             .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.34f), colors.surface)))
-            .border(1.5.dp, colors.accent.copy(alpha = 0.66f), shape)
+            .border(
+                BorderStroke(
+                    1.5.dp,
+                    Brush.sweepGradient(
+                        listOf(colors.accent, colors.accent.copy(alpha = 0.18f), Color.Transparent, colors.accent),
+                    ),
+                ),
+                shape,
+            )
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(signal?.color() ?: Color.Transparent))
-        Column(Modifier.weight(1f).padding(start = 10.dp, end = 4.dp), verticalArrangement = Arrangement.Center) {
+        Column(Modifier.weight(1f).padding(start = 13.dp, end = 4.dp), verticalArrangement = Arrangement.Center) {
             Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
             Text(detail, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = signal?.color() ?: colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

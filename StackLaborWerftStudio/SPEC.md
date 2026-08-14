@@ -10,7 +10,7 @@ Stand: 14.08.2026
 - App-Name: `StackLabor Werft Studio`
 - Das parallele Projekt `C:\Users\barwa\proggs\StackLabor` wird weder verändert noch als Ziel verwendet.
 - Verbindliche Designquelle ist ausschließlich
-  `C:\Users\barwa\proggs\Designs\Outbox\StackLabor-SPEC-v1-SPEC-v2`.
+  `C:\Users\barwa\proggs\Designs\Outbox\design.html`.
 - Die Vorführbühne des Werft-Prototyps mit Bildschirm- und Theme-Umschaltern gehört nicht zur App.
 
 ## 2. Ziel und Plattform
@@ -21,8 +21,8 @@ lokal berechnet, sodass Aktivieren, Deaktivieren und Priorisieren offline und so
 
 - Android, Kotlin, Jetpack Compose und Material 3
 - `compileSdk` und `targetSdk` 36, `minSdk` 26, Java 17
-- Leitgröße geschlossenes Galaxy Z Fold 8: 297 x 469 dp, nutzbar etwa 297 x 421 dp
-- Aufgeklapptes Galaxy Z Fold 8: etwa 440 x 583 dp, zweispaltig
+- Verbindliche Designfläche: Pixel 9 mit 412 x 915 px bei Dichte 2,625; CSS-Pixel werden
+  entsprechend dem Werft-Entwurf direkt als Compose-dp beziehungsweise -sp übertragen.
 - Deutsch, einsprachig, echte Umlaute
 - Hell ist Standard; Dunkel ist vollständig gleichwertig
 - Kein Einnahme-Tracker, kein Kalender, keine Cloud-Sicherung, kein Mehrbenutzerbetrieb
@@ -31,17 +31,13 @@ lokal berechnet, sodass Aktivieren, Deaktivieren und Priorisieren offline und so
 
 | Priorität | Quelle | Verbindlich für |
 |---|---|---|
-| 1 | `WERFT-DESIGN/bildschirme/21hell/*.html` und `22dunkel/*.html` | Aufbau, sichtbare Inhalte und Zustände |
-| 2 | `WERFT-DESIGN/bildschirme/design.css` | Exakte Maße, Farben, Schatten, Verläufe, Blur und Selector-Motion |
-| 3 | `WERFT-DESIGN/bauplan/<theme>/*.json` | Elementinventar und gemessene Geometrie |
-| 4 | `01-FUNKTIONS-SPEC.md` | Verhalten, Datenmodell, Fehlerfälle und Geschäftsregeln |
-| 5 | `02-UI-SPEC.md` | Bildschirm-, Theme-, Typografie- und Navigationsinventar |
-| 6 | `03-MOTION-SPEC.md` | Dauer, Verzögerung, Easing und Wiederholung jeder Bewegung |
-| 7 | `STARTBESTAND.md` | Inhalt der zu erzeugenden Asset-Datei `startbestand.json` |
+| 1 | `C:\Users\barwa\proggs\Designs\Outbox\design.html` | Gesamtes Aussehen, alle 15 Screens, Zustände, Navigation, Themes und Motion |
+| 2 | Bestehende App-Logik und dieses SPEC | Persistenz, Datenmodell, Dienste und fachliches Verhalten |
 
-Bei Widersprüchen gewinnt für das Aussehen die konkrete HTML/CSS-Quelle und für das Verhalten
-die Funktions-Spec. Veraltete Gold-Metadaten aus `design.html` werden ignoriert, weil sämtliche
-Bildschirmdateien, Baupläne und Design-Tokens die Indigo/Cyan-Themes verwenden.
+Bei Widersprüchen gewinnt für das Aussehen ausnahmslos die angegebene `design.html`. Die dort am
+Ende der CSS-Kaskade definierten Gold-Themes, Maße, Schatten, Verläufe und Zustände sind verbindlich;
+ältere Indigo/Cyan-Werte im selben Dokument oder in vorherigen Projektunterlagen werden durch die
+späteren Gold-Regeln überschrieben.
 
 ## 4. Design-Tokens
 
@@ -49,13 +45,13 @@ Bildschirmdateien, Baupläne und Design-Tokens die Indigo/Cyan-Themes verwenden.
 
 | Rolle | Wert |
 |---|---|
-| Grund | `#F5F7FA` |
-| Karte | `#FFFFFF` |
-| Erhöhte Fläche | `#F1F5F9` |
-| Rand | `#E2E8F0` |
-| Text stark | `#0F172A` |
-| Text schwach | `#64748B` |
-| Akzent | `#4F46E5` |
+| Grund | `#F8F0DD` |
+| Karte | `#FFFBF1` |
+| Erhöhte Fläche | `#EFE0C3` |
+| Rand | `#D4B979` |
+| Text stark | `#241B0D` |
+| Text schwach | `#756548` |
+| Akzent | `#A8731B` |
 | Ampel grün | `#047857` |
 | Ampel gelb | `#D97706` |
 | Ampel gelber Text | `#B45309` |
@@ -70,13 +66,13 @@ Bildschirmdateien, Baupläne und Design-Tokens die Indigo/Cyan-Themes verwenden.
 
 | Rolle | Wert |
 |---|---|
-| Grund | `#0B0E14` |
-| Karte | `#141A24` |
-| Erhöhte Fläche | `#1B2330` |
-| Rand | `#243040` |
-| Text stark | `#E6EAF2` |
-| Text schwach | `#9AA6B8` |
-| Akzent | `#22D3EE` |
+| Grund | `#0C0905` |
+| Karte | `#1B140A` |
+| Erhöhte Fläche | `#2A1F0F` |
+| Rand | `#654C20` |
+| Text stark | `#F8EED8` |
+| Text schwach | `#B9A984` |
+| Akzent | `#E1B85B` |
 | Ampel grün | `#34D399` |
 | Ampel gelb | `#FBBF24` |
 | Ampel rot | `#F87171` |
@@ -299,9 +295,8 @@ geschrieben.
 
 ## 12. Fold- und Fensterlayout
 
-- Bis 399 dp Breite: exakte einspaltige Werft-Anordnung.
-- Ab 400 dp Breite: zweispaltige Darstellung, damit das spezifizierte Fold-Innendisplay mit
-  etwa 440 dp die breite Fassung erhält.
+- Bis 599 dp Breite: exakte einspaltige Werft-Anordnung der 412-x-915-Referenz.
+- Ab 600 dp Breite: zweispaltige Darstellung für große Fenster und aufgeklappte Geräte.
 - Listen-/Detailkombinationen verwenden links etwa 42 Prozent und rechts 58 Prozent.
 - B-01 zeigt Stack-Liste links und ausgewählte/gesamte Auswertung rechts.
 - B-02 zeigt Mittel und Werkzeuge links, Ziel-/Auswertungsdetails rechts.
@@ -310,9 +305,8 @@ geschrieben.
   Maximalbreite, sofern kein sinnvoller zweiter Bereich vorhanden ist.
 - Scrollposition, ausgewählte IDs, offene Sheets und laufende Vorgänge bleiben beim Falten erhalten.
 
-Da das Werft-Paket keine breite Bildschirmvorlage enthält, ist dies die minimale funktionale
-Übertragung der ausdrücklich geforderten Zweispaltigkeit; Farben, Komponenten und Effekte bleiben
-unverändert aus dem jeweiligen Werft-Screen.
+Da die verbindliche HTML-Datei keine breite Bildschirmvorlage enthält, bleibt die Referenzbreite
+bis 599 dp unverändert. Die breite Darstellung verändert keine Farben, Komponenten oder Effekte.
 
 ## 13. Tests und Abnahme
 

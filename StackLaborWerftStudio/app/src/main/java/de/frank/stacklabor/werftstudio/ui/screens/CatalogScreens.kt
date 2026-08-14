@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -82,7 +83,7 @@ fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, call
     WerftScreen(goldDark = true) {
         Column(Modifier.fillMaxSize()) {
             GlassHeader("Ziel-Katalog", onBack = callbacks.onBack)
-            SearchField(state.searchQuery, "Ziele suchen", { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) }, Modifier.padding(horizontal = 12.dp))
+            SearchField(state.searchQuery, "", { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) }, Modifier.padding(horizontal = 12.dp))
             GoalCatalogList(
                 goals = goals,
                 editorOpen = editorOpen,
@@ -131,7 +132,7 @@ private fun GoalCatalogList(
     } else {
         LazyColumn(
             modifier.padding(horizontal = 12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 80.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 84.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (editorOpen && selectedGoalId == null) {
@@ -185,10 +186,10 @@ private fun GoalCatalogCard(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(76.dp)
+            .heightIn(min = 76.dp)
             .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
             .clip(shape)
-            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface)))
+            .background(colors.surface)
             .border(1.dp, colors.accent.copy(alpha = 0.4f), shape),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -203,7 +204,7 @@ private fun GoalCatalogCard(
                         .focusRequester(focusRequester)
                         .clip(RoundedCornerShape(10.dp))
                         .background(colors.accent.copy(alpha = 0.08f))
-                        .border(BorderStroke(1.dp, colors.accent.copy(alpha = 0.5f)), RoundedCornerShape(10.dp))
+                        .drawBehind { drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height)) }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
                         color = colors.textStrong,
@@ -235,7 +236,7 @@ private fun GoalCatalogCard(
             }
         } else {
             IconTouchButton("$title bearbeiten", onEdit) {
-                Icon(Icons.Default.Edit, null, Modifier.size(20.dp), tint = colors.textMuted)
+                Icon(Icons.Default.Edit, null, Modifier.size(24.dp), tint = colors.textMuted)
             }
         }
     }
@@ -276,7 +277,14 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
     WerftScreen(goldDark = true) {
         Column(Modifier.fillMaxSize()) {
             GlassHeader("Mittel-Katalog", onBack = callbacks.onBack, onOverflow = { menuOpen = !menuOpen })
-            SearchField(state.searchQuery, "Suchen", { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) }, Modifier.padding(horizontal = 12.dp))
+            Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp, vertical = 2.dp)) {
+                SearchField(
+                    state.searchQuery,
+                    "Suchen",
+                    { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) },
+                    fieldHeight = 36.dp,
+                )
+            }
             MedicineCatalogList(
                 stackId = stackId,
                 medicines = medicines,
@@ -348,7 +356,13 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
                 TextButton(onClick = cancelMerge, Modifier.fillMaxWidth()) { Text("Abbrechen", color = StackLaborTheme.colors.textStrong) }
             }
         }
-        AnimatedVisibility(undoVisible, Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
+        LaunchedEffect(undoVisible) {
+            if (undoVisible) {
+                kotlinx.coroutines.delay(6_000)
+                undoVisible = false
+            }
+        }
+        AnimatedVisibility(undoVisible, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = 16.dp)) {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -384,7 +398,7 @@ private fun MedicineCatalogList(
     } else {
         LazyColumn(
             modifier.padding(horizontal = 12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = if (mergeMode) 190.dp else 80.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = if (mergeMode) 190.dp else 84.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(medicines, key = { it.id }) { medicine ->
@@ -420,9 +434,9 @@ private fun MedicineCatalogCard(
             .clip(shape)
             .background(
                 if (selected) Brush.linearGradient(listOf(colors.elevated, colors.elevated))
-                else Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface)),
+                else Brush.linearGradient(listOf(colors.surface, colors.accent.copy(alpha = 0.12f))),
             )
-            .border(1.dp, colors.accent.copy(alpha = if (selected) 0.9f else 0.4f), shape)
+            .then(if (selected) Modifier.border(1.dp, colors.accent.copy(alpha = 0.9f), shape) else Modifier)
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {

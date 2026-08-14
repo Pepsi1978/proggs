@@ -68,6 +68,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -125,6 +126,7 @@ fun GlassHeader(
     onBack: (() -> Unit)? = null,
     onOverflow: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    framedBack: Boolean = false,
 ) {
     val colors = StackLaborTheme.colors
     Row(
@@ -141,7 +143,16 @@ fun GlassHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
-            IconTouchButton("Zurück", onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+            if (framedBack) Spacer(Modifier.width(12.dp))
+            IconTouchButton(
+                "Zurück",
+                onBack,
+                if (framedBack) {
+                    Modifier.shadow(2.dp, CircleShape, ambientColor = colors.textStrong.copy(alpha = 0.1f), spotColor = colors.textStrong.copy(alpha = 0.1f))
+                        .clip(CircleShape).background(colors.surface).border(1.dp, colors.border, CircleShape)
+                } else Modifier,
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(22.dp)) }
+            Spacer(Modifier.width(8.dp))
         } else {
             Spacer(Modifier.width(12.dp))
         }
@@ -150,7 +161,7 @@ fun GlassHeader(
             if (subtitle != null) Text(subtitle, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
         }
         if (onOverflow != null) {
-            IconTouchButton("Weitere Optionen", onOverflow) { Icon(Icons.Default.MoreVert, null) }
+            IconTouchButton("Weitere Optionen", onOverflow) { Icon(Icons.Default.MoreVert, null, Modifier.size(24.dp)) }
         } else {
             Spacer(Modifier.width(12.dp))
         }
@@ -212,34 +223,40 @@ fun PrimaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modif
             .background(GoldActionBrush)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = StackLaborTheme.colors.onAccent) }
+    ) { Text(label, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = StackLaborTheme.colors.onAccent) }
 }
 
 @Composable
-fun SearchField(value: String, placeholder: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+fun SearchField(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    fieldHeight: Dp = 40.dp,
+) {
     val colors = StackLaborTheme.colors
     Row(
         modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(fieldHeight)
             .clip(RoundedCornerShape(12.dp))
             .background(colors.surface)
             .border(1.dp, colors.border, RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.Search, null, Modifier.size(22.dp), tint = colors.textMuted)
+        Icon(Icons.Default.Search, null, Modifier.size(24.dp), tint = colors.textMuted)
         Spacer(Modifier.width(10.dp))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(color = colors.textStrong),
+            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = colors.textStrong),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.accent),
             decorationBox = { inner ->
                 Box {
-                    if (value.isEmpty()) Text(placeholder, color = colors.textMuted, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                    if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, color = colors.textMuted, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
                     inner()
                 }
             },
@@ -323,7 +340,18 @@ fun StackCard(
             .clickable(onClick = onOpen),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.5.dp, colors.accent.copy(alpha = 0.66f)),
+        border = BorderStroke(
+            1.5.dp,
+            Brush.sweepGradient(
+                listOf(
+                    colors.accent,
+                    colors.accent.copy(alpha = 0.18f),
+                    Color.Transparent,
+                    colors.accent.copy(alpha = 0.18f),
+                    colors.accent,
+                ),
+            ),
+        ),
     ) {
         Row(
             Modifier.fillMaxSize().background(
@@ -496,7 +524,7 @@ fun SectionTitle(title: String, modifier: Modifier = Modifier) {
 fun BreathingFab(description: String, animationsEnabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val scale = if (animationsEnabled) {
         val transition = rememberInfiniteTransition(label = "fabBreathing")
-        val value by transition.animateFloat(1f, 1.02f, infiniteRepeatable(tween(1_600), RepeatMode.Reverse), label = "fabScale")
+        val value by transition.animateFloat(1f, 1.02f, infiniteRepeatable(tween(3_200), RepeatMode.Reverse), label = "fabScale")
         value
     } else 1f
     Box(
@@ -518,24 +546,36 @@ fun BottomSheetFrame(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var entered by remember { mutableStateOf(false) }
+    var dismissRequested by remember { mutableStateOf(false) }
+    val motionEnabled = StackLaborTheme.motionEnabled
     LaunchedEffect(Unit) { entered = true }
+    LaunchedEffect(dismissRequested) {
+        if (dismissRequested) {
+            entered = false
+            if (motionEnabled) delay(300)
+            onDismiss()
+        }
+    }
     val progress by animateFloatAsState(
         targetValue = if (entered) 1f else 0f,
         animationSpec = tween(
-            durationMillis = if (StackLaborTheme.motionEnabled) 300 else 0,
+            durationMillis = if (motionEnabled) 300 else 0,
             easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f),
         ),
         label = "sheetProgress",
     )
     Box(Modifier.fillMaxSize()) {
         underlay()
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * progress)).clickable(onClick = onDismiss))
+        Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * progress))
+                .clickable(enabled = !dismissRequested) { dismissRequested = true },
+        )
         Surface(
             Modifier.fillMaxWidth().then(if (fixedHeight != null) Modifier.height(fixedHeight) else Modifier.fillMaxHeight(heightFraction))
                 .align(Alignment.BottomCenter).shadow(18.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), ambientColor = Color(0x52523406), spotColor = Color(0x52523406))
                 .graphicsLayer { translationY = size.height * (1f - progress) },
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            color = StackLaborTheme.colors.surface,
+            color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
             border = BorderStroke(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.38f)),
         ) {
             Column {

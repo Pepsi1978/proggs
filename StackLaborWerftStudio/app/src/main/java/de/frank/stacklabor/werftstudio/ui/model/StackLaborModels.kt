@@ -69,12 +69,26 @@ data class GoalUi(
 
 data class QuestionUi(val id: String, val text: String)
 
+data class RelationshipUi(
+    val id: String,
+    val rank: Int,
+    val title: String,
+    val signal: SignalState,
+    val reason: String,
+)
+
 data class EvaluationRunUi(
     val id: String,
     val date: String,
     val model: String,
     val counts: SignalCounts,
     val selectedForComparison: Boolean = false,
+)
+
+data class HistoryChangeUi(
+    val title: String,
+    val from: SignalState,
+    val to: SignalState,
 )
 
 data class SettingRowUi(val id: String, val label: String, val value: String = "")
@@ -109,8 +123,10 @@ data class StackLaborUiState(
     val medicines: List<MedicineUi> = emptyList(),
     val catalogMedicines: List<MedicineUi> = emptyList(),
     val goals: List<GoalUi> = emptyList(),
+    val breakdownItems: List<RelationshipUi> = emptyList(),
     val history: List<EvaluationRunUi> = emptyList(),
     val historyComparison: String = "",
+    val historyChanges: List<HistoryChangeUi> = emptyList(),
     val dailyDoses: List<DoseSummaryUi> = emptyList(),
     val competitions: List<CompetitionUi> = emptyList(),
     val allStacksEvaluationId: String? = null,
@@ -158,6 +174,7 @@ sealed interface StackLaborEvent {
     data class UpdateMedicineField(val field: String, val value: String) : StackLaborEvent
     data class SelectHistoryRun(val stackId: String, val runId: String) : StackLaborEvent
     data class SelectSetting(val settingId: String) : StackLaborEvent
+    data class SelectSettingValue(val settingId: String, val value: String) : StackLaborEvent
     data class RemoveQuestion(val questionId: String) : StackLaborEvent
     data class SaveStack(val stackId: String?) : StackLaborEvent
     data class DeleteStack(val stackId: String) : StackLaborEvent

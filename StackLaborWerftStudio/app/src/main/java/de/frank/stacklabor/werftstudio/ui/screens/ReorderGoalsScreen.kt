@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Icon
@@ -38,11 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.frank.stacklabor.werftstudio.ui.components.GlassHeader
 import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
 import de.frank.stacklabor.werftstudio.ui.components.color
@@ -62,9 +66,7 @@ fun ReorderGoalsScreen(stackId: String, state: StackLaborUiState, callbacks: Sta
         Column(Modifier.fillMaxSize()) {
             GlassHeader("Ziele ordnen — ${state.stackName}", onBack = callbacks.onBack)
             LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.fillMaxSize().padding(horizontal = 12.dp),
             ) {
                 itemsIndexed(goals, key = { _, goal -> goal.id }) { index, goal ->
                     ReorderGoalRow(
@@ -111,37 +113,32 @@ private fun ReorderGoalRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = StackLaborTheme.colors
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f)),
-    ) {
+    Box(modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(0.dp), clip = false)) {
         Column {
             Row(
                 Modifier.fillMaxWidth().height(40.dp).clickable(enabled = goal.reason.isNotEmpty(), onClick = onClick),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.width(3.dp).fillMaxHeight().background(goal.signal.color()))
-                Box(Modifier.width(34.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    Text(
-                        goal.rank.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.textMuted,
-                    )
+                Box(Modifier.width(38.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.size(20.dp).clip(CircleShape).border(1.dp, colors.border, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(goal.rank.toString(), fontSize = 11.sp, color = colors.textMuted)
+                    }
                 }
                 Text(
                     goal.text,
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    Modifier.weight(1f).height(32.dp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium, lineHeight = 16.sp),
+                    maxLines = 2,
                 )
                 Box(
                     Modifier.width(44.dp).fillMaxHeight().clickable(onClick = onDrag),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.DragHandle, contentDescription = "${goal.text} verschieben", Modifier.size(20.dp), tint = colors.textMuted)
+                    Icon(Icons.Default.DragHandle, contentDescription = "${goal.text} verschieben", Modifier.size(24.dp), tint = colors.textMuted)
                 }
             }
             AnimatedVisibility(
@@ -151,11 +148,10 @@ private fun ReorderGoalRow(
             ) {
                 Text(
                     goal.reason,
-                    Modifier.fillMaxWidth().background(colors.elevated).padding(start = 37.dp, end = 12.dp, top = 5.dp, bottom = 6.dp),
-                    style = MaterialTheme.typography.bodySmall,
+                    Modifier.fillMaxWidth().padding(start = 41.dp, end = 12.dp),
+                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
                     color = colors.textMuted,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

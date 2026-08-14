@@ -12,6 +12,7 @@ import de.frank.stacklabor.werftstudio.data.repository.StackLaborRepository
 import de.frank.stacklabor.werftstudio.domain.model.Ampel
 import de.frank.stacklabor.werftstudio.domain.model.Bewertung
 import de.frank.stacklabor.werftstudio.domain.model.BewertungMitDetails
+import de.frank.stacklabor.werftstudio.domain.model.Bewertungszelle
 import de.frank.stacklabor.werftstudio.domain.model.Darreichungsform
 import de.frank.stacklabor.werftstudio.domain.model.DosisVariante
 import de.frank.stacklabor.werftstudio.domain.model.EigeneFrage
@@ -43,9 +44,11 @@ import de.frank.stacklabor.werftstudio.ui.model.DoseVariant
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationRunUi
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationState
 import de.frank.stacklabor.werftstudio.ui.model.GoalUi
+import de.frank.stacklabor.werftstudio.ui.model.HistoryChangeUi
 import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
 import de.frank.stacklabor.werftstudio.ui.model.PlaybackState
 import de.frank.stacklabor.werftstudio.ui.model.QuestionUi
+import de.frank.stacklabor.werftstudio.ui.model.RelationshipUi
 import de.frank.stacklabor.werftstudio.ui.model.SignalCounts
 import de.frank.stacklabor.werftstudio.ui.model.SignalState
 import de.frank.stacklabor.werftstudio.ui.model.SortMode
@@ -105,6 +108,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var medicines: List<Mittel> = emptyList()
     private var currentEntries: List<StackEintrag> = emptyList()
     private var currentHistory: List<BewertungMitDetails> = emptyList()
+    private var currentEvaluation: BewertungMitDetails? = null
     private var tagEvaluation: BewertungMitDetails? = null
     private var evaluationJob: Job? = null
     private val competitionJobs = mutableMapOf<String, Job>()
@@ -151,6 +155,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.UpdateMedicineField -> medicineDraft = medicineDraft.with(event.field, event.value)
             is StackLaborEvent.SelectHistoryRun -> selectHistory(event.runId)
             is StackLaborEvent.SelectSetting -> selectSetting(event.settingId)
+            is StackLaborEvent.SelectSettingValue -> selectSettingValue(event.settingId, event.value)
             is StackLaborEvent.RemoveQuestion -> removeQuestion(event.questionId)
             is StackLaborEvent.SaveStack -> saveStack(event.stackId)
             is StackLaborEvent.DeleteStack -> launchAction("Stack gelöscht") { repository.loescheStack(event.stackId) }
@@ -243,7 +248,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 catalogMedicines = catalogUi,
                 dailyDoses = dailyDoses(entries, medicines, stacks, settings.dosisVariante),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
-                ttsVoiceLabel = settings.ttsStimme.substringAfterLast('-').removeSuffix("Neural"),
+                ttsVoiceLabel = settings.ttsStimme.voiceLabel(settings.ttsAnbieter),
                 ttsSpeedLabel = String.format(Locale.GERMANY, "%.1f×", settings.ttsTempo),
                 ttsPauseLabel = settings.absatzpause.name.lowercase().replaceFirstChar(Char::uppercase),
                 ttsTimeoutLabel = "${settings.abschaltzeitMinuten} Min.",
@@ -253,7 +258,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     is CodexAuthState.SignedIn -> auth.account.email ?: auth.account.accountId ?: "Angemeldet"
                 },
                 codexModelLabel = settings.codexModell.substringAfterLast('-').replaceFirstChar(Char::uppercase),
-                codexReasoningLabel = settings.codexDenkstufe.replaceFirstChar(Char::uppercase),
+                codexReasoningLabel = settings.codexDenkstufe.reasoningLabel(),
             )
         }
         applyTagEvaluation(tagEvaluation)
@@ -282,6 +287,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private suspend fun applySelected(snapshot: SelectedSnapshot) {
         currentEntries = snapshot.content.first
         currentHistory = snapshot.evaluation.second
+        currentEvaluation = snapshot.evaluation.first
         val stack = stacks.firstOrNull { it.id == snapshot.stackId } ?: return
         val targetById = snapshot.content.second.associateBy { it.zielId }
         val ampeln = repository.berechneAmpeln(snapshot.stackId)
@@ -307,6 +313,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val latest = snapshot.evaluation.first
         val stale = latest?.let { repository.istBewertungVeraltet(snapshot.stackId, snapshot.settings.dosisVariante) } ?: false
         val historyUi = snapshot.evaluation.second.map { it.toHistoryUi(it.bewertung.id in selectedHistoryIds) }
+        val breakdownSubject = (currentRoute as? StackLaborRoute.Breakdown)?.subjectId
         mutableState.update { current ->
             current.copy(
                 selectedStackId = snapshot.stackId,
@@ -316,6 +323,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 sortMode = if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) SortMode.Loeslichkeit else SortMode.Einnahme,
                 medicines = selectedMedicines,
                 goals = goalUi,
+                breakdownItems = breakdownSubject?.let { buildBreakdownItems(it, latest, goalUi, selectedMedicines) }.orEmpty(),
                 questions = snapshot.content.third.map { it.toQuestionUi() },
                 history = historyUi,
                 evaluationState = if (evaluationJob?.isActive == true) EvaluationState.Running else when {
@@ -402,7 +410,50 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 currentHistory.firstOrNull { it.bewertung.id == route.evaluationId }
                     ?: tagEvaluation?.takeIf { it.bewertung.id == route.evaluationId }
                 )?.let { showEvaluation(it) }
+            is StackLaborRoute.Breakdown -> mutableState.update {
+                it.copy(breakdownItems = buildBreakdownItems(route.subjectId, currentEvaluation, it.goals, it.medicines))
+            }
             else -> Unit
+        }
+    }
+
+    private fun buildBreakdownItems(
+        subjectId: String,
+        evaluation: BewertungMitDetails?,
+        goalItems: List<GoalUi>,
+        medicineItems: List<MedicineUi>,
+    ): List<RelationshipUi> {
+        val cells = evaluation?.zellen.orEmpty()
+        return if (medicineItems.any { it.id == subjectId }) {
+            goalItems.filter { it.selected }.map { goal ->
+                val cell = cells.firstOrNull { it.mittelId == subjectId && it.zielId == goal.id }
+                RelationshipUi(
+                    id = goal.id,
+                    rank = goal.rank,
+                    title = goal.text,
+                    signal = when (cell?.wirkung?.name) {
+                        "STUETZT" -> SignalState.Green
+                        "STOERT" -> SignalState.Red
+                        else -> SignalState.Gray
+                    },
+                    reason = cell?.grund.orEmpty(),
+                )
+            }
+        } else {
+            medicineItems.mapIndexed { index, medicine ->
+                val cell = cells.firstOrNull { it.mittelId == medicine.id && it.zielId == subjectId }
+                RelationshipUi(
+                    id = medicine.id,
+                    rank = index + 1,
+                    title = medicine.name,
+                    signal = when (cell?.wirkung?.name) {
+                        "STUETZT" -> SignalState.Green
+                        "STOERT" -> SignalState.Red
+                        else -> SignalState.Gray
+                    },
+                    reason = cell?.grund.orEmpty(),
+                )
+            }
         }
     }
 
@@ -593,13 +644,32 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         mutableState.update { current ->
             val selected = currentHistory.filter { it.bewertung.id in selectedHistoryIds }
             val comparison = if (selected.size == 2) {
-                val changedCells = (selected[0].zellen.toSet() - selected[1].zellen.toSet()).size +
-                    (selected[1].zellen.toSet() - selected[0].zellen.toSet()).size
+                val left = selected[0].zellen.map { listOf(it.mittelId, it.zielId, it.wirkung.name, it.staerke.toString(), it.grund) }.toSet()
+                val right = selected[1].zellen.map { listOf(it.mittelId, it.zielId, it.wirkung.name, it.staerke.toString(), it.grund) }.toSet()
+                val changedCells = (left - right).size + (right - left).size
                 "$changedCells geänderte Bewertungszuordnungen"
             } else ""
+            val changes = if (selected.size == 2) buildHistoryChanges(selected, current.goals) else emptyList()
             current.copy(
                 history = current.history.map { it.copy(selectedForComparison = it.id in selectedHistoryIds) },
                 historyComparison = comparison,
+                historyChanges = changes,
+            )
+        }
+    }
+
+    private fun buildHistoryChanges(selected: List<BewertungMitDetails>, goalItems: List<GoalUi>): List<HistoryChangeUi> {
+        val (older, newer) = selected.sortedBy { it.bewertung.zeitpunktEpochMillis }
+        val goalIds = (older.zellen.map { it.zielId } + newer.zellen.map { it.zielId }).distinct()
+        return goalIds.mapNotNull { goalId ->
+            val from = older.zellen.filter { it.zielId == goalId }.historySignal()
+            val to = newer.zellen.filter { it.zielId == goalId }.historySignal()
+            if (from == to) return@mapNotNull null
+            val goal = goalItems.firstOrNull { it.id == goalId }
+            HistoryChangeUi(
+                title = goal?.let { "Ziel ${it.rank}: ${it.text}" } ?: "Ziel",
+                from = from,
+                to = to,
             )
         }
     }
@@ -710,6 +780,47 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "codex-model" -> container.settings.setzeCodexModell(when (settings.codexModell) { "gpt-5.6-sol" -> "gpt-5.6-terra"; "gpt-5.6-terra" -> "gpt-5.6-luna"; else -> "gpt-5.6-sol" })
             "codex-reasoning" -> container.settings.setzeCodexDenkstufe(when (settings.codexDenkstufe) { "low" -> "medium"; "medium" -> "high"; "high" -> "xhigh"; "xhigh" -> "max"; else -> "low" })
             "reduced-motion" -> container.settings.setzeBewegungReduziert(!settings.bewegungReduziert)
+        }
+    }
+
+    private fun selectSettingValue(id: String, value: String) = launchAction {
+        when (id) {
+            "tts-provider" -> {
+                val provider = when (value) {
+                    "Microsoft Edge" -> TtsAnbieter.EDGE
+                    "Google Cloud" -> TtsAnbieter.GOOGLE_CLOUD
+                    else -> TtsAnbieter.QWEN_CLONE
+                }
+                container.settings.setzeTtsAnbieter(provider)
+                container.settings.setzeTtsStimme(when (provider) {
+                    TtsAnbieter.EDGE -> TtsConfiguration.DEFAULT_EDGE_VOICE
+                    TtsAnbieter.GOOGLE_CLOUD -> TtsConfiguration.DEFAULT_GOOGLE_VOICE
+                    TtsAnbieter.QWEN_CLONE -> BuildConfig.QWEN_TTS_VOICE_ID
+                })
+            }
+            "tts-voice" -> container.settings.setzeTtsStimme(when (value) {
+                "Katja" -> "de-DE-KatjaNeural"
+                "Conrad" -> "de-DE-ConradNeural"
+                "Kore" -> TtsConfiguration.DEFAULT_GOOGLE_VOICE
+                "Charon" -> "de-DE-Chirp3-HD-Charon"
+                "Meine Stimme" -> BuildConfig.QWEN_TTS_VOICE_ID
+                else -> TtsConfiguration.DEFAULT_EDGE_VOICE
+            })
+            "tts-speed" -> container.settings.setzeTtsTempo(value.removeSuffix("×").replace(',', '.').toFloat())
+            "tts-pause" -> container.settings.setzeAbsatzpause(when (value) {
+                "Mittel" -> Absatzpause.MITTEL
+                "Lang" -> Absatzpause.LANG
+                else -> Absatzpause.KURZ
+            })
+            "tts-timeout" -> container.settings.setzeAbschaltzeitMinuten(value.substringBefore(' ').toInt())
+            "codex-model" -> container.settings.setzeCodexModell("gpt-5.6-${value.lowercase()}")
+            "codex-reasoning" -> container.settings.setzeCodexDenkstufe(when (value) {
+                "Niedrig" -> "low"
+                "Mittel" -> "medium"
+                "Sehr hoch" -> "xhigh"
+                "Maximal" -> "max"
+                else -> "high"
+            })
         }
     }
 
@@ -906,6 +1017,35 @@ private fun Bewertung.meta(): String = DateTimeFormatter.ofPattern("dd.MM. HH:mm
 
 private fun String.paragraphs(): List<String> = split(Regex("\\n\\s*\\n")).map(String::trim).filter(String::isNotBlank)
 
-private fun TtsAnbieter.label(): String = when (this) { TtsAnbieter.EDGE -> "Microsoft Edge"; TtsAnbieter.GOOGLE_CLOUD -> "Google Cloud"; TtsAnbieter.QWEN_CLONE -> "Qwen-Stimmklon" }
+private fun List<Bewertungszelle>.historySignal(): SignalState = when {
+    isEmpty() -> SignalState.Gray
+    any { it.wirkung.name == "STOERT" && it.staerke >= 3 } -> SignalState.Red
+    any { it.wirkung.name == "STOERT" } -> SignalState.Yellow
+    else -> SignalState.Green
+}
+
+private fun String.voiceLabel(provider: TtsAnbieter): String = when {
+    provider == TtsAnbieter.QWEN_CLONE -> "Meine Stimme"
+    contains("Seraphina", ignoreCase = true) -> "Seraphina"
+    contains("Katja", ignoreCase = true) -> "Katja"
+    contains("Conrad", ignoreCase = true) -> "Conrad"
+    contains("Kore", ignoreCase = true) -> "Kore"
+    contains("Charon", ignoreCase = true) -> "Charon"
+    else -> substringAfterLast('-').removeSuffix("Neural")
+}
+
+private fun String.reasoningLabel(): String = when (this) {
+    "low" -> "Niedrig"
+    "medium" -> "Mittel"
+    "xhigh" -> "Sehr hoch"
+    "max" -> "Maximal"
+    else -> "Hoch"
+}
+
+private fun TtsAnbieter.label(): String = when (this) {
+    TtsAnbieter.EDGE -> "Microsoft Edge"
+    TtsAnbieter.GOOGLE_CLOUD -> "Google Cloud"
+    TtsAnbieter.QWEN_CLONE -> "Meine Stimme"
+}
 private fun TtsAnbieter.next(): TtsAnbieter = TtsAnbieter.entries[(ordinal + 1) % TtsAnbieter.entries.size]
 private fun Absatzpause.next(): Absatzpause = Absatzpause.entries[(ordinal + 1) % Absatzpause.entries.size]
