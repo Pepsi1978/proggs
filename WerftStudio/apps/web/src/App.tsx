@@ -9,6 +9,7 @@ import { androidStartDevices, aspectRatioLabel, type StageDevice, deviceLabel, r
 import { briefkastenMoeglich, designsOrdner, inboxDatei, inboxListe, inOutboxSchreiben, ordnerWaehlen, type InboxEintrag } from "./briefkasten";
 import { hexColour, tokenTitle } from "./design-colours";
 import { chatStepText, designFileLabel, providerHealth } from "./chat-progress";
+import { type AuftragStatus, istOffen, parallelGrenze, startbereit, warteschlangenText } from "./auftrags-queue";
 import { type ToolMode, useUi } from "./store";
 
 type Project = { id: string; name: string; type: string; fidelity: string; platforms: string[]; activeVersion: number; updatedAt: string; previewPath?: string };
@@ -1288,10 +1289,22 @@ function Studio() {
   const [panelTab, setPanelTab] = useState<"board" | "chat" | "comments">("board");
   const commentStorageKey = `werft-comments-${projectId}`;
   const [comments, setComments] = useState<DesignComment[]>(() => {
-    try { return JSON.parse(localStorage.getItem(`werft-comments-${projectId}`) ?? "[]") as DesignComment[]; }
+    try {
+      const gespeichert = JSON.parse(localStorage.getItem(`werft-comments-${projectId}`) ?? "[]") as DesignComment[];
+      // Ein Auftrag lebt in der SITZUNG. Was beim Schliessen des Fensters noch lief oder wartete,
+      // hat keinen Lauf mehr, an dem es haengt — es duerfte beim Oeffnen nicht von selbst losgehen
+      // und darf auch nicht ewig als „läuft" dastehen.
+      return gespeichert.map((eintrag) => istOffen(eintrag.status) ? { ...eintrag, status: "abgebrochen" as AuftragStatus, detail: eintrag.detail ?? "Beim Schließen des Studios unterbrochen." } : eintrag);
+    }
     catch { return []; }
   });
-  useEffect(() => { try { localStorage.setItem(commentStorageKey, JSON.stringify(comments.slice(-200))); } catch { /* Speicher voll: Kommentare bleiben in der Sitzung */ } }, [comments, commentStorageKey]);
+  // Das markierte Markup und die Fortschrittszeile bleiben in der Sitzung: beide gelten nur fuer den
+  // laufenden Auftrag, und der Markup-Ausschnitt ist gross genug, um den Speicher der Seite zu
+  // sprengen, wenn er zweihundertmal mitgeschrieben wuerde.
+  useEffect(() => {
+    try { localStorage.setItem(commentStorageKey, JSON.stringify(comments.slice(-200).map(({ ziel: _ziel, schritt: _schritt, ...rest }) => rest))); }
+    catch { /* Speicher voll: Kommentare bleiben in der Sitzung */ }
+  }, [comments, commentStorageKey]);
   // Das Design Board links kennt alle Bildschirme des importierten Projekts und hebt den gerade
   // sichtbaren hervor; ein Klick schickt die Bühne rechts auf den gewählten Bildschirm.
   const [boardScreens, setBoardScreens] = useState<PreviewScreen[]>([]);
@@ -1422,13 +1435,9 @@ function Studio() {
       setNaechsteSchritte(data.naechste ?? []);
       if (data.skipped?.length) parts.push(`⚠ Offen geblieben:\n${data.skipped.join("\n")}`);
       setMessages((all) => [...all, { role: "assistant", text: parts.join("\n\n") }]);
-      // Ein laufender Kommentar bekommt sein Ergebnis: „angewendet" nur, wenn wirklich Dateien
-      // geschrieben wurden — sonst stuende dort ein Erfolg, den es nicht gab.
-      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : {
-        ...comment,
-        status: data.changedFiles.length ? "angewendet" : "ohne Änderung",
-        detail: data.changedFiles.length ? [...new Set(data.changedFiles.map(designFileLabel))].join(", ") : data.reply.slice(0, 200)
-      }));
+      // Die markierten Auftraege fuehren ihr Ergebnis SELBST nach (siehe `starteAuftrag`). Frueher
+      // schrieb der Gespraechslauf hier jedem laufenden Kommentar seinen Ausgang zu — bei mehreren
+      // gleichzeitigen Auftraegen bekaeme jeder das Ergebnis eines fremden.
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
       // Die gemessenen Erscheinungen stammen aus dem Dokument, das die KI gerade geaendert hat.
@@ -1445,12 +1454,73 @@ function Studio() {
       // muss sie zeigen — sonst stünde im Studio ein Stand, den es auf dem Server nicht mehr gibt.
       const abgebrochen = error instanceof DOMException && error.name === "AbortError";
       setMessages((all) => [...all, { role: "assistant", text: abgebrochen ? "Abgebrochen. Was bis dahin übernommen wurde, ist gespeichert." : error instanceof ApiError ? `Fehler: ${error.message}` : "Der KI-Lauf ist fehlgeschlagen. Bitte erneut versuchen." }]);
-      setComments((all) => all.map((comment) => comment.status !== "läuft" ? comment : { ...comment, status: abgebrochen ? "ohne Änderung" : "fehlgeschlagen", detail: abgebrochen ? "Abgebrochen." : error instanceof ApiError ? error.message : "Der KI-Lauf ist fehlgeschlagen." }));
       await client.invalidateQueries({ queryKey: ["project-import", projectId] });
       await client.invalidateQueries({ queryKey: ["import-file", projectId] });
       await client.invalidateQueries({ queryKey: ["themes", projectId] });
     }
   });
+  // ---- Warteschlange der markierten Arbeitsaufträge -----------------------------------------
+  // Absetzen geht immer sofort; bis zu fünf Aufträge arbeiten gleichzeitig, der Rest wartet und
+  // rückt nach. Jeder Auftrag hat seinen EIGENEN Abbruch und bekommt SEIN Ergebnis — vorher lief
+  // alles über einen einzigen Lauf, der beim nächsten Auftrag abgebrochen wurde und dessen Ausgang
+  // allen laufenden Kommentaren zugleich zugeschrieben wurde.
+  const auftragsLaeufe = useRef(new Map<string, AbortController>());
+  const setzeAuftrag = (id: string, aenderung: Partial<DesignComment>) =>
+    setComments((all) => all.map((eintrag) => (eintrag.id === id ? { ...eintrag, ...aenderung } : eintrag)));
+
+  const starteAuftrag = async (auftrag: DesignComment) => {
+    const controller = new AbortController();
+    // SYNCHRON vor dem ersten Warten eintragen: nur so kann derselbe Auftrag nicht zweimal starten,
+    // wenn die Oberfläche zwischendurch neu zeichnet.
+    auftragsLaeufe.current.set(auftrag.id, controller);
+    setzeAuftrag(auftrag.id, { status: "läuft", schritt: "Auftrag wird vorbereitet …" });
+    try {
+      const data = await apiEventStream<ChatAntwort>(`/projects/${projectId}/chat`, {
+        message: auftrag.text,
+        ...(runModel ? { provider: runModel.provider, model: runModel.id } : {}),
+        ...(runModel?.efforts.length && runEffort ? { effort: runEffort } : {}),
+        ...(auftrag.ziel?.screenName ? { screen: auftrag.ziel.screenName } : {}),
+        ...(auftrag.ziel ? { target: auftrag.ziel } : {})
+      }, (event, nachricht) => setzeAuftrag(auftrag.id, { schritt: chatStepText(event, nachricht) }), controller.signal);
+      const geaendert = [...new Set(data.changedFiles.map(designFileLabel))].join(", ");
+      setzeAuftrag(auftrag.id, {
+        status: data.changedFiles.length ? "angewendet" : "ohne Änderung",
+        detail: data.changedFiles.length ? geaendert : data.reply.slice(0, 200),
+        schritt: ""
+      });
+      setMessages((all) => [...all, { role: "assistant", text: `„${auftrag.label}“: ${data.reply}${data.changedFiles.length ? `\n\n✓ Geändert: ${geaendert}` : ""}` }]);
+      // Das Design hat sich geändert — die Bühne und die gemessenen Farben müssen den neuen Stand
+      // zeigen, sonst legt die Vorschau den alten wieder darüber.
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+      await client.invalidateQueries({ queryKey: ["import-file", projectId] });
+      await client.invalidateQueries({ queryKey: ["themes", projectId] });
+    } catch (error) {
+      const abgebrochen = error instanceof DOMException && error.name === "AbortError";
+      setzeAuftrag(auftrag.id, {
+        status: abgebrochen ? "abgebrochen" : "fehlgeschlagen",
+        detail: abgebrochen ? "Abgebrochen. Was bis dahin übernommen wurde, ist gespeichert." : error instanceof ApiError ? error.message : "Der KI-Lauf ist fehlgeschlagen.",
+        schritt: ""
+      });
+      if (!abgebrochen) await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+    } finally {
+      auftragsLaeufe.current.delete(auftrag.id);
+    }
+  };
+
+  useEffect(() => {
+    // Ein Auftrag, dessen Lauf schon existiert, zählt als laufend — auch wenn die Liste den neuen
+    // Stand noch nicht trägt. Ohne diesen Abgleich starteten beim schnellen Absetzen mehrere Aufträge
+    // doppelt und die Grenze von fünf wäre nur auf dem Papier eingehalten.
+    const stand = comments.map((eintrag) => (auftragsLaeufe.current.has(eintrag.id) ? { ...eintrag, status: "läuft" as AuftragStatus } : eintrag));
+    for (const auftrag of startbereit(stand, parallelGrenze)) void starteAuftrag(auftrag);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comments]);
+
+  const brichAuftragAb = (id: string) => auftragsLaeufe.current.get(id)?.abort();
+  // Beim Verlassen des Projekts läuft nichts weiter: sonst schriebe ein vergessener Lauf noch in ein
+  // Design, das gar nicht mehr offen ist.
+  useEffect(() => () => { for (const controller of auftragsLaeufe.current.values()) controller.abort(); auftragsLaeufe.current.clear(); }, [projectId]);
+
   // Der Rückweg aus der letzten KI-Änderung. Er macht aus „du hast freie Hand" einen gefahrlosen
   // Versuch: gefällt das Ergebnis nicht, ist der vorherige Stand einen Klick entfernt.
   const undoRun = useMutation({
@@ -1603,19 +1673,25 @@ function Studio() {
             </div>
             {activeTab === "comments" && (
               <div className="comment-list">
+                {/* Wie viel gerade in Arbeit ist, steht ueber der Liste: sonst muesste man die
+                    Eintraege durchzaehlen, um zu sehen, ob noch etwas aussteht. */}
+                {warteschlangenText(comments) && <div className="comment-queue">{warteschlangenText(comments)} · höchstens {parallelGrenze} gleichzeitig</div>}
                 {comments.length === 0 ? (
-                  <div className="empty">Noch keine Kommentare. Wähle oben rechts das Kommentarwerkzeug, markiere einen Bereich und beschreibe die Änderung.</div>
+                  <div className="empty">Noch keine Kommentare. Wähle oben rechts das Kommentarwerkzeug, markiere einen Bereich und beschreibe die Änderung. Du kannst mehrere Aufträge hintereinander absetzen, ohne auf den vorigen zu warten.</div>
                 ) : [...comments].reverse().map((comment) => (
-                  <article className={`comment-entry ${comment.status === "angewendet" ? "done" : comment.status === "fehlgeschlagen" ? "failed" : ""}`} key={comment.id}>
+                  <article className={`comment-entry ${comment.status === "angewendet" ? "done" : comment.status === "fehlgeschlagen" ? "failed" : comment.status === "wartet" ? "queued" : ""}`} key={comment.id}>
                     <header>
                       <strong title={comment.selector}>{comment.label}</strong>
                       {/* Ein laufender Auftrag zeigt das auch hier — sonst wirkt die Liste still. */}
                       <em>{comment.status === "läuft" ? <><span className="working-dots" aria-hidden="true"><i /><i /><i /></span> läuft</> : comment.status}</em>
                     </header>
                     <p>{comment.text}</p>
+                    {comment.status === "läuft" && comment.schritt && <small>{comment.schritt}</small>}
                     {comment.detail && <small>{comment.detail}</small>}
                     <footer>
                       {comment.screenId && <button type="button" onClick={() => setScreenRequest({ screenId: comment.screenId, nonce: naechsterAuftrag() })}>{comment.screenName || "Bildschirm"} zeigen</button>}
+                      {comment.status === "läuft" && <button type="button" onClick={() => brichAuftragAb(comment.id)}>Abbrechen</button>}
+                      {comment.status === "wartet" && <button type="button" onClick={() => setzeAuftrag(comment.id, { status: "abgebrochen", detail: "Vor dem Start zurückgenommen." })}>Zurücknehmen</button>}
                       <span>{new Date(comment.at).toLocaleString("de-DE")}</span>
                     </footer>
                   </article>
@@ -1774,7 +1850,6 @@ function Studio() {
             onScreensChange={setBoardScreens}
             onActiveScreenChange={setActiveScreenId}
             screenRequest={screenRequest}
-            commentPending={chatRun.isPending}
             onTokensChange={setDesignTokens}
             tuneRequest={tuneRequest}
             themeRequest={themeRequest}
@@ -1788,11 +1863,22 @@ function Studio() {
             onTextEdit={(before, after) => textEdit.mutate({ before, after })}
             onComment={(target, text) => {
               // Der Kommentar landet sichtbar im Gespräch UND in der Kommentarliste, damit
-              // nachvollziehbar bleibt, welche Anweisung auf welches Element gewirkt hat.
+              // nachvollziehbar bleibt, welche Anweisung auf welches Element gewirkt hat. Er startet
+              // NICHT mehr sofort einen Lauf, sondern reiht sich ein: so lassen sich mehrere Stellen
+              // hintereinander markieren, ohne auf die vorige Änderung zu warten.
               setMessages((all) => [...all, { role: "user", text: `Markierung „${target.label || target.selector}“: ${text}` }]);
-              setComments((all) => [...all, { id: `${Date.now()}`, label: target.label || target.selector, selector: target.selector, screenId: target.screenId, screenName: target.screenName, text, at: new Date().toISOString(), status: "läuft" }]);
+              setComments((all) => [...all, {
+                id: `${Date.now()}-${naechsterAuftrag()}`,
+                label: target.label || target.selector,
+                selector: target.selector,
+                screenId: target.screenId,
+                screenName: target.screenName,
+                text,
+                at: new Date().toISOString(),
+                status: "wartet",
+                ziel: { selector: target.selector, html: target.html, label: target.label, screenName: target.screenName }
+              }]);
               setPanelTab("comments");
-              chatRun.mutate({ message: text, target });
             }}
           />
         </section>
@@ -1879,7 +1965,10 @@ type MarkTarget = { rect: { x: number; y: number; width: number; height: number 
 // Ein abgeschickter Kommentar bleibt nachvollziehbar: WELCHE Anweisung auf WELCHES Element wirkte
 // und was daraus wurde. Ohne diese Ansicht waere nach dem Absenden nicht mehr erkennbar, was
 // bereits verlangt wurde.
-type DesignComment = { id: string; label: string; selector: string; screenId: string; screenName: string; text: string; at: string; status: "läuft" | "angewendet" | "ohne Änderung" | "fehlgeschlagen"; detail?: string };
+type ChatAntwort = { reply: string; changedFiles: string[]; screens?: string[]; naechste?: string[]; skipped?: string[]; revision: number; rounds?: number; editsApplied?: number; durationMs?: number };
+// Der Auftrag traegt das Ziel MIT: er kann Minuten spaeter starten, wenn die Markierung auf der
+// Buehne laengst weg ist, und muss trotzdem wissen, welche Stelle er verbessern soll.
+type DesignComment = { id: string; label: string; selector: string; screenId: string; screenName: string; text: string; at: string; status: AuftragStatus; detail?: string; ziel?: { selector: string; html: string; label: string; screenName: string }; schritt?: string };
 const entryNamePattern = /^(?:start|home|main|dashboard|launch|overview|onboarding|welcome)/i;
 const gateNamePattern = /(?:lock|locked|permission|error|loading|splash|auth|login|signin|gate)/i;
 
@@ -1901,7 +1990,7 @@ function startScreenOf(list: PreviewScreen[]): PreviewScreen | undefined {
 // wo sie in dieser Rolle gezeichnet wird.
 type ColourEntry = { role: string; kind: string; value: string; hex: string; token: string; exact: boolean };
 type ColourPick = { label: string; selector: string; screenName: string; entries: ColourEntry[]; at: number; rect?: { x: number; y: number; width: number; height: number } };
-function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: {
+function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, device, zoom, setZoom, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: {
   previewOrigin: string;
   previewPath: string;
   previewWidth: number;
@@ -1914,7 +2003,6 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
   onActiveScreenChange(screenId: string | null): void;
   screenRequest: { screenId: string; nonce: number } | null;
   onComment(target: MarkTarget, text: string): void;
-  commentPending: boolean;
   onTokensChange(tokens: Record<string, string>): void;
   tuneRequest: { overrides: Record<string, string>; nonce: number } | null;
   onTextEdit(before: string, after: string): void;
@@ -2369,7 +2457,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           onSubmit={(event) => {
             event.preventDefault();
             const text = commentText.trim();
-            if (!text || commentPending) return;
+            if (!text) return;
             onComment(marker, text);
             setCommentText("");
             setMarker(null);
@@ -2386,7 +2474,7 @@ function DesignStage({ previewOrigin, previewPath, previewWidth, previewHeight, 
           />
           <footer>
             <button type="button" onClick={() => { setMarker(null); setCommentText(""); }}>Verwerfen</button>
-            <button type="submit" className="primary" disabled={!commentText.trim() || commentPending}>{commentPending ? "läuft …" : "Senden"}</button>
+            <button type="submit" className="primary" disabled={!commentText.trim()}>Senden</button>
           </footer>
         </form>
       )}
@@ -2428,7 +2516,7 @@ const tools: [ToolMode, string, ReactNode][] = [
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
 type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
-function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, frame, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, commentPending, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; frame: DesignDocument["frames"][number] | undefined; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; commentPending: boolean; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
+function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, frame, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; frame: DesignDocument["frames"][number] | undefined; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointerPanRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -2526,7 +2614,6 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
             onActiveScreenChange={onActiveScreenChange}
             screenRequest={screenRequest}
             onComment={onComment}
-            commentPending={commentPending}
             onTokensChange={onTokensChange}
             tuneRequest={tuneRequest}
             onTextEdit={onTextEdit}
