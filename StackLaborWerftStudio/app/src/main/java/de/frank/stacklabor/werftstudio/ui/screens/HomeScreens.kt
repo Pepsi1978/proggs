@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -301,14 +302,14 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
             AdaptiveSplit(
                 narrow = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
+                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, fatFirst = state.solubilityFatFirst, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
                         EvaluateFooter(callbacks, Modifier.align(Alignment.BottomCenter))
                         BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
                     }
                 },
                 primary = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId, filtered, state.sortMode, state.latestEvaluationId, state.evaluationMeta, callbacks, { deleteCandidateId = it.id }, Modifier.fillMaxSize().padding(bottom = 68.dp))
+                        MedicineList(stackId, filtered, state.sortMode, state.solubilityFatFirst, state.latestEvaluationId, state.evaluationMeta, callbacks, { deleteCandidateId = it.id }, Modifier.fillMaxSize().padding(bottom = 68.dp))
                         BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(12.dp))
                     }
                 },
@@ -430,6 +431,7 @@ private fun MedicineList(
     stackId: String,
     filtered: List<de.frank.stacklabor.werftstudio.ui.model.MedicineUi>,
     sortMode: SortMode,
+    fatFirst: Boolean,
     evaluationId: String?,
     evaluationMeta: String,
     callbacks: StackLaborCallbacks,
@@ -437,6 +439,10 @@ private fun MedicineList(
     modifier: Modifier,
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // LazyColumn verankert sich am obersten sichtbaren Schlüssel: nach dem Umsortieren würde
+    // es dem alten Element hinterherscrollen, und die neue Reihenfolge sähe aus wie keine
+    // Änderung. Beim Wechsel der Ansicht deshalb an den Anfang springen.
+    LaunchedEffect(sortMode, fatFirst) { listState.scrollToItem(0) }
     val reorder = rememberReorder(
         source = filtered,
         keyOf = { it.id },

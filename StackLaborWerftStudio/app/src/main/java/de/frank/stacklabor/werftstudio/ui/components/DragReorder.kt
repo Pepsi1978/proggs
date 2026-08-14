@@ -37,9 +37,25 @@ class ReorderState<T : Any> internal constructor(
     private val keyOf: (T) -> String,
     private val rowHeightPx: Float,
 ) {
-    /** Die gerade angezeigte Reihenfolge — während des Ziehens die vorläufige. */
-    var items: List<T> by mutableStateOf(emptyList())
-        internal set
+    /**
+     * Die Reihenfolge von aussen. Wird bei jedem Durchlauf frisch gesetzt, damit die Anzeige
+     * nie eine veraltete zweite Kopie zeigt (etwa nach dem Umschalten der Sortierung).
+     */
+    internal var quelle: List<T> by mutableStateOf(emptyList())
+
+    /**
+     * Die vorläufige Reihenfolge in der Hand. Nur während (und kurz nach) dem Ziehen gesetzt —
+     * sonst gilt immer [quelle].
+     */
+    private var handOrdnung: List<T>? by mutableStateOf(null)
+
+    /** Was angezeigt wird: die Hand gewinnt, solange sie etwas hält. */
+    val items: List<T> get() = handOrdnung ?: quelle
+
+    /** Nach dem Loslassen: sobald die neue Reihenfolge von aussen ankommt, gilt wieder [quelle]. */
+    internal fun loesseHandOrdnung() {
+        handOrdnung = null
+    }
 
     /** Welche Zeile gerade in der Hand liegt (null = keine). */
     var draggedKey: String? by mutableStateOf(null)
@@ -72,6 +88,7 @@ class ReorderState<T : Any> internal constructor(
     fun dragModifier(item: T): Modifier = Modifier.pointerInput(keyOf(item), items.size) {
         detectDragGesturesAfterLongPress(
             onDragStart = { position ->
+                handOrdnung = items
                 draggedKey = keyOf(item)
                 offsetY = 0f
                 fingerY = position.y + itemTopInViewport(keyOf(item))
@@ -96,25 +113,32 @@ class ReorderState<T : Any> internal constructor(
     internal fun verschiebeWennNoetig() {
         val key = draggedKey ?: return
         if (rowHeightPx <= 0f) return
-        var index = items.indexOfFirst { keyOf(it) == key }
+        val aktuell = handOrdnung ?: return
+        var index = aktuell.indexOfFirst { keyOf(it) == key }
         if (index < 0) return
-        while (offsetY > rowHeightPx / 2f && index < items.lastIndex) {
-            items = items.toMutableList().apply { add(index + 1, removeAt(index)) }
+        var neu = aktuell
+        while (offsetY > rowHeightPx / 2f && index < neu.lastIndex) {
+            neu = neu.toMutableList().apply { add(index + 1, removeAt(index)) }
             offsetY -= rowHeightPx
             index++
         }
         while (offsetY < -rowHeightPx / 2f && index > 0) {
-            items = items.toMutableList().apply { add(index - 1, removeAt(index)) }
+            neu = neu.toMutableList().apply { add(index - 1, removeAt(index)) }
             offsetY += rowHeightPx
             index--
         }
+        handOrdnung = neu
     }
 
     private fun beenden(uebernehmen: Boolean) {
-        val hatSichBewegt = draggedKey != null
+        val gezogen = draggedKey != null
+        val ergebnis = handOrdnung
         draggedKey = null
         offsetY = 0f
-        if (uebernehmen && hatSichBewegt) onDropped?.invoke(items.map(keyOf))
+        // Die Hand-Reihenfolge bleibt stehen, bis die neue von aussen ankommt — sonst
+        // blitzt fuer einen Moment die alte Reihenfolge auf.
+        if (!uebernehmen) handOrdnung = null
+        if (uebernehmen && gezogen && ergebnis != null) onDropped?.invoke(ergebnis.map(keyOf))
     }
 
     private fun itemTopInViewport(key: String): Float =
@@ -155,14 +179,16 @@ fun <T : Any> rememberReorder(
     onDropped: (List<String>) -> Unit,
 ): ReorderState<T> {
     val rowHeightPx = with(LocalDensity.current) { rowHeight.toPx() }
-    val state = remember(listState, rowHeightPx) {
-        ReorderState(listState, keyOf, rowHeightPx).also { it.items = source }
-    }
+    val state = remember(listState, rowHeightPx) { ReorderState(listState, keyOf, rowHeightPx) }
     state.onDropped = onDropped
     state.onGrabbed = onGrabbed
-    // Nur auf echte Inhaltsaenderungen reagieren — waehrend des Ziehens gewinnt die Hand.
+    // Die Quelle wird bei JEDEM Durchlauf gesetzt, nicht in einem Effekt. Damit kann die
+    // Anzeige gar nicht erst hinter der Wahrheit zurueckbleiben — etwa wenn die Sortierung
+    // umgeschaltet wird, waehrend der Bildschirm offen ist.
+    state.quelle = source
+    // Nach dem Loslassen haelt die Hand-Reihenfolge noch, bis die neue von aussen ankommt.
     LaunchedEffect(source) {
-        if (state.draggedKey == null) state.items = source
+        if (state.draggedKey == null) state.loesseHandOrdnung()
     }
     LaunchedEffect(state.draggedKey) {
         if (state.draggedKey == null) return@LaunchedEffect
