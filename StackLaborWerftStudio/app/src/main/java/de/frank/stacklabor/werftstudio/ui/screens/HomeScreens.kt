@@ -406,7 +406,10 @@ private fun MedicineList(
     callbacks: StackLaborCallbacks,
     modifier: Modifier,
 ) {
-    LazyColumn(modifier.padding(start = 12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)) {
+    LazyColumn(
+        modifier.padding(horizontal = 12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 80.dp),
+    ) {
         if (filtered.isEmpty()) {
             item { de.frank.stacklabor.werftstudio.ui.components.EmptyState("Nichts gefunden", "Neu anlegen") { callbacks.onNavigate(StackLaborRoute.MedicineEdit(null, stackId, Origin.StackDetail)) } }
         }
@@ -543,7 +546,7 @@ private fun EvaluationLink(meta: String, onClick: () -> Unit) {
 
 @Composable
 private fun EvaluateFooter(callbacks: StackLaborCallbacks, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(start = 12.dp, top = 4.dp, bottom = 4.dp)) {
+    Box(modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(horizontal = 12.dp, vertical = 4.dp)) {
         EvaluationAction("Diesen Stack auswerten", { callbacks.onEvent(StackLaborEvent.EvaluateStack) })
     }
 }
