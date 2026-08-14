@@ -59,12 +59,13 @@ ZUG_SCHWELLE = 8  # Fensterpixel; darunter war es ein Zeigen, kein Aufziehen
 RAHMEN_FARBE = "#000000"
 RAHMEN_STAERKE = 4
 SCHLUESSELFARBE = "#ff00fe"
-# Ein Hauch Toenung genuegt als Rueckmeldung. Frueher waren es 28/255: ueber
-# einem dunklen Bildschirm faerbte das die ganze App rot, weil die Toenung dort
-# nicht abdunkelt, sondern aufhellt. Erkennbar bleibt der Modus am Rahmen, der
-# in einem eigenen Fenster ungetoent gezeichnet wird.
-TOENUNG = 10  # von 255
-MODUSRAHMEN_STAERKE = 6
+# Die Auswahlflaeche faerbt das Bild nicht mehr ein. Sie liegt nur da, um den
+# Klick abzufangen, bevor er Android erreicht — dafuer muss man sie nicht sehen.
+# Ganz auf 0 geht nicht: ein Fenster mit Deckkraft 0 nimmt keine Maustaste mehr
+# an. 1/255 ist unsichtbar und faengt trotzdem.
+# Frueher standen hier 28/255; ueber einem dunklen Bildschirm hellte das alles
+# rot auf. Dass der Modus an ist, zeigt die Leiste — nicht das Bild der App.
+TOENUNG = 1  # von 255
 
 SW_HIDE = 0
 SW_MINIMIZE = 6
@@ -693,14 +694,10 @@ class AuswahlOverlay:
         self.canvas.bind("<ButtonRelease-1>", self.zug_beenden)
         self.overlay.bind("<Escape>", lambda _: self.auswahl_abbrechen())
 
-        # Zwei ungetoente Fenster ueber der Auswahlflaeche: der Ziehrahmen und
-        # der Rahmen, der den eingeschalteten Auswahlmodus anzeigt. Beide muessen
-        # ihre Farbe unverfaelscht zeigen, was auf der getoenten Flaeche nicht geht.
+        # Der Ziehrahmen bekommt ein eigenes Fenster: nur so bleibt seine Linie
+        # schwarz, statt von der Auswahlflaeche verwaschen zu werden.
         self.band, self.band_flaeche = self._klarfenster()
         self.band_sichtbar = False
-        self.modusrahmen, self.modusrahmen_flaeche = self._klarfenster()
-        self.modusrahmen_sichtbar = False
-        self.letzte_modusrahmen_geometrie = ""
 
         self.root.update_idletasks()
         self.root_hwnd = _tk_fenster(self.root)
@@ -710,7 +707,6 @@ class AuswahlOverlay:
         # Klickdurchlaessig: beide Rahmen liegen ueber der Auswahlflaeche, duerfen
         # ihr aber weder Maustaste noch Bewegung wegnehmen.
         _fensterstil(_tk_fenster(self.band), True)
-        _fensterstil(_tk_fenster(self.modusrahmen), True)
         self._scrcpy_starten()
         self.root.after(100, self._fenster_verfolgen)
 
@@ -816,16 +812,12 @@ class AuswahlOverlay:
         if root_geometrie != self.letzte_root_geometrie:
             self.root.geometry(root_geometrie)
             self.letzte_root_geometrie = root_geometrie
-        # Wird das scrcpy-Fenster verschoben, muss der Rahmen mitgehen.
-        if self.auswahlmodus and self.modusrahmen_sichtbar:
-            self.modusrahmen_zeigen()
 
         if ctypes.windll.user32.IsIconic(wintypes.HWND(self.scrcpy_hwnd)):
             if self.toolbar_sichtbar:
                 self.root.withdraw()
                 self.overlay.withdraw()
                 self.band_verstecken()
-                self.modusrahmen_verstecken()
                 self.toolbar_sichtbar = False
         elif not self.toolbar_sichtbar:
             self.root.deiconify()
@@ -844,7 +836,6 @@ class AuswahlOverlay:
         self.canvas.delete("all")
         self.band_verstecken()
         self.zug_start = None
-        self.modusrahmen_zeigen()
         self.overlay.deiconify()
         self.overlay.lift()
         self.overlay.focus_force()
@@ -853,7 +844,6 @@ class AuswahlOverlay:
         self.auswahlmodus = False
         self.zug_start = None
         self.band_verstecken()
-        self.modusrahmen_verstecken()
         self.overlay.withdraw()
         self.status.configure(text="AUS")
         self.schalter.configure(text="AUSWAHL AN", bg=ACCENT, state="normal")
@@ -874,33 +864,6 @@ class AuswahlOverlay:
         flaeche = self.tk.Canvas(fenster, bg=SCHLUESSELFARBE, highlightthickness=0)
         flaeche.pack(fill="both", expand=True)
         return fenster, flaeche
-
-    def modusrahmen_zeigen(self) -> None:
-        """Zeichnet den Rahmen um die Spiegelung, solange der Auswahlmodus laeuft."""
-        vx, vy, vb, vh = self.video_geometrie
-        geometrie = f"{vb}x{vh}+{vx}+{vy}"
-        if geometrie != self.letzte_modusrahmen_geometrie:
-            self.modusrahmen.geometry(geometrie)
-            self.letzte_modusrahmen_geometrie = geometrie
-            self.modusrahmen_flaeche.delete("all")
-            s = MODUSRAHMEN_STAERKE
-            self.modusrahmen_flaeche.create_rectangle(
-                s // 2, s // 2, vb - s // 2, vh - s // 2, outline=ACCENT, width=s
-            )
-            self.modusrahmen_flaeche.create_text(
-                vb // 2, s + 12,
-                text="AUSWAHL · klicken = eine Stelle · ziehen = ganzer Kasten",
-                fill=ACCENT,
-                font=("Segoe UI", 10, "bold"),
-            )
-        if not self.modusrahmen_sichtbar:
-            self.modusrahmen.deiconify()
-            self.modusrahmen_sichtbar = True
-
-    def modusrahmen_verstecken(self) -> None:
-        if self.modusrahmen_sichtbar:
-            self.modusrahmen.withdraw()
-            self.modusrahmen_sichtbar = False
 
     def band_zeichnen(self, x1: int, y1: int, x2: int, y2: int, staerke: int) -> None:
         """Setzt das Rahmenfenster auf den aufgezogenen Kasten.
@@ -1019,7 +982,6 @@ class AuswahlOverlay:
         self.schalter.configure(text="Neue Auswahl", bg=ACCENT, state="normal")
         self.root.after(900, self.overlay.withdraw)
         self.root.after(900, self.band_verstecken)
-        self.root.after(900, self.modusrahmen_verstecken)
 
         self.eingabe_hwnd = finde_eingabefenster(self.args.eingabefenster)
         if (
