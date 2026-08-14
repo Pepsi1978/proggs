@@ -228,6 +228,18 @@ def geraetepunkt(
     return x, y
 
 
+def leistenposition(
+    video_x: int,
+    video_y: int,
+    video_breite: int,
+    leisten_breite: int,
+    rand: int = 8,
+) -> tuple[int, int]:
+    """Positioniert die Leiste garantiert innerhalb der sichtbaren Spiegelung."""
+    x = video_x + max(rand, video_breite - leisten_breite - rand)
+    return x, video_y + rand
+
+
 def aktuelle_displaygroesse(serial: str) -> tuple[int, int]:
     fenster = adb(serial, "shell", "dumpsys", "window", "displays")
     treffer = re.findall(r"\bcur=(\d+)x(\d+)", fenster)
@@ -677,11 +689,8 @@ class AuswahlOverlay:
             self.letzte_overlay_geometrie = overlay_geometrie
         toolbar_breite = max(260, self.root.winfo_reqwidth())
         toolbar_hoehe = max(42, self.root.winfo_reqheight())
-        bildschirm_breite = ctypes.windll.user32.GetSystemMetrics(0)
-        tx = vx + vb + 8
-        if tx + toolbar_breite > bildschirm_breite:
-            tx = max(0, vx + vb - toolbar_breite - 8)
-        root_geometrie = f"{toolbar_breite}x{toolbar_hoehe}+{tx}+{vy + 8}"
+        tx, ty = leistenposition(vx, vy, vb, toolbar_breite)
+        root_geometrie = f"{toolbar_breite}x{toolbar_hoehe}+{tx}+{ty}"
         if root_geometrie != self.letzte_root_geometrie:
             self.root.geometry(root_geometrie)
             self.letzte_root_geometrie = root_geometrie

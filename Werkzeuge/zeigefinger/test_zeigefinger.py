@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from zeigefinger import element_an_punkt, elementkette_an_punkt
-from zeigefinger_overlay import befehlstext, geraetepunkt, videobereich
+from zeigefinger_overlay import befehlstext, geraetepunkt, leistenposition, videobereich
 
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -39,6 +39,12 @@ class KoordinatenTest(unittest.TestCase):
 
     def test_geraetepunkt_skaliert_in_android_koordinaten(self) -> None:
         self.assertEqual(geraetepunkt(250, 500, 500, 1000, 400, 800), (200, 400))
+
+    def test_leiste_bleibt_innerhalb_der_spiegelung(self) -> None:
+        x, y = leistenposition(500, 100, 400, 260)
+        self.assertEqual((x, y), (632, 108))
+        self.assertGreaterEqual(x, 500)
+        self.assertLessEqual(x + 260, 900)
 
 
 class UebergabeTest(unittest.TestCase):
