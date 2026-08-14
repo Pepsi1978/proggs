@@ -139,6 +139,15 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         )
                     }
                 }
+                item {
+                    Text(
+                        "StackLabor Werft Studio ${state.versionName}\nStand ${state.versionBumpedAt}",
+                        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StackLaborTheme.colors.textMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
         if (seedWarning) {
