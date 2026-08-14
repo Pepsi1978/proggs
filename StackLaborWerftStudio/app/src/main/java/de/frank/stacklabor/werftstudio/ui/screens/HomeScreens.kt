@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
@@ -35,7 +36,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.window.Dialog
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -274,7 +282,9 @@ private fun StackList(
 fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var deleteCandidateId by rememberSaveable { mutableStateOf<String?>(null) }
     val filtered = state.medicines.filter { it.name.contains(state.searchQuery, ignoreCase = true) }
+    val deleteCandidate = deleteCandidateId?.let { id -> state.medicines.firstOrNull { it.id == id } }
     WerftScreen {
         Column(Modifier.fillMaxSize()) {
             GlassHeader(
@@ -291,14 +301,14 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
             AdaptiveSplit(
                 narrow = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
+                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
                         EvaluateFooter(callbacks, Modifier.align(Alignment.BottomCenter))
                         BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
                     }
                 },
                 primary = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId, filtered, state.sortMode, state.latestEvaluationId, state.evaluationMeta, callbacks, Modifier.fillMaxSize().padding(bottom = 68.dp))
+                        MedicineList(stackId, filtered, state.sortMode, state.latestEvaluationId, state.evaluationMeta, callbacks, { deleteCandidateId = it.id }, Modifier.fillMaxSize().padding(bottom = 68.dp))
                         BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(12.dp))
                     }
                 },
@@ -339,6 +349,16 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                 MenuTrenner()
                 MenuItem("Historie") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.History(stackId, Origin.StackDetail)) }
             }
+        }
+        if (deleteCandidate != null) {
+            DeleteMedicineDialog(
+                name = deleteCandidate.name,
+                onConfirm = {
+                    callbacks.onEvent(StackLaborEvent.RemoveMedicineFromStack(stackId, deleteCandidate.id))
+                    deleteCandidateId = null
+                },
+                onDismiss = { deleteCandidateId = null },
+            )
         }
     }
 }
@@ -404,6 +424,7 @@ private fun MedicineList(
     evaluationId: String?,
     evaluationMeta: String,
     callbacks: StackLaborCallbacks,
+    onRequestDelete: (MedicineUi) -> Unit,
     modifier: Modifier,
 ) {
     LazyColumn(
@@ -417,28 +438,21 @@ private fun MedicineList(
             var horizontalOffset by remember(medicine.id) { mutableFloatStateOf(0f) }
             var verticalDrag by remember(medicine.id) { mutableFloatStateOf(0f) }
             var dragging by remember(medicine.id) { mutableStateOf(false) }
+            var swipeWidth by remember(medicine.id) { mutableFloatStateOf(1f) }
+            var swiping by remember(medicine.id) { mutableStateOf(false) }
+            // Beim Loslassen fährt die Zeile weich zurück, statt zu springen.
+            val restingOffset by animateFloatAsState(
+                targetValue = horizontalOffset,
+                animationSpec = tween(if (StackLaborTheme.motionEnabled) 180 else 0),
+                label = "swipeOffset",
+            )
+            val shownOffset = if (swiping) horizontalOffset else restingOffset
             val gestureModifier = Modifier
                 .graphicsLayer {
-                    translationX = horizontalOffset
                     translationY = if (dragging) verticalDrag else 0f
                     scaleX = if (dragging) 1.02f else 1f
                     scaleY = if (dragging) 1.02f else 1f
                     shadowElevation = if (dragging) 12.dp.toPx() else 0f
-                }
-                .pointerInput(medicine.id) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, amount ->
-                            change.consume()
-                            horizontalOffset = (horizontalOffset + amount).coerceAtMost(0f)
-                        },
-                        onDragEnd = {
-                            if (horizontalOffset < -size.width * 0.32f) {
-                                callbacks.onEvent(StackLaborEvent.RemoveMedicineFromStack(stackId, medicine.id))
-                            }
-                            horizontalOffset = 0f
-                        },
-                        onDragCancel = { horizontalOffset = 0f },
-                    )
                 }
                 .then(
                     if (sortMode == SortMode.Einnahme) Modifier.pointerInput(medicine.id, filtered.size) {
@@ -455,20 +469,142 @@ private fun MedicineList(
                         )
                     } else Modifier,
                 )
-            StackMedicineRow(
-                medicine = medicine,
-                intakePosition = if (sortMode == SortMode.Einnahme) index + 1 else null,
-                onOpen = { callbacks.onNavigate(StackLaborRoute.MedicineEdit(medicine.id, stackId, Origin.StackDetail)) },
-                onSignal = { callbacks.onNavigate(StackLaborRoute.Breakdown(stackId, medicine.id, Origin.StackDetail)) },
-                onToggle = { callbacks.onEvent(StackLaborEvent.ToggleMedicine(stackId, medicine.id)) },
+            SwipeToDeleteRow(
+                offset = shownOffset,
+                width = swipeWidth,
                 modifier = gestureModifier,
-            )
+                onWidth = { swipeWidth = it },
+                onDrag = { amount ->
+                    swiping = true
+                    horizontalOffset = (horizontalOffset + amount).coerceIn(-swipeWidth, 0f)
+                },
+                onDragEnd = {
+                    swiping = false
+                    // Weit genug gewischt: erst fragen, dann löschen.
+                    if (horizontalOffset < -swipeWidth * 0.32f) onRequestDelete(medicine)
+                    horizontalOffset = 0f
+                },
+                onDragCancel = { swiping = false; horizontalOffset = 0f },
+            ) {
+                StackMedicineRow(
+                    medicine = medicine,
+                    intakePosition = if (sortMode == SortMode.Einnahme) index + 1 else null,
+                    onOpen = { callbacks.onNavigate(StackLaborRoute.MedicineEdit(medicine.id, stackId, Origin.StackDetail)) },
+                    onSignal = { callbacks.onNavigate(StackLaborRoute.Breakdown(stackId, medicine.id, Origin.StackDetail)) },
+                    onToggle = { callbacks.onEvent(StackLaborEvent.ToggleMedicine(stackId, medicine.id)) },
+                )
+            }
         }
         item {
             EvaluationLink(evaluationMeta) {
                 evaluationId?.let { callbacks.onNavigate(StackLaborRoute.Evaluation(it, Origin.StackDetail)) }
             }
         }
+    }
+}
+
+/** Rückfrage, bevor ein weggewischtes Mittel wirklich aus dem Stack fliegt. */
+@Composable
+private fun DeleteMedicineDialog(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val colors = StackLaborTheme.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            Modifier.fillMaxWidth()
+                .depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f)
+                .drawBehind {
+                    drawRect(colors.red, size = androidx.compose.ui.geometry.Size(size.width, 4.dp.toPx()))
+                },
+            shape = RoundedCornerShape(18.dp),
+            color = colors.surface,
+            border = BorderStroke(1.5.dp, metalRim(0.9f)),
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Delete, null, Modifier.size(24.dp), tint = colors.red)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Aus dem Stack entfernen?", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "„$name“ wird aus diesem Stack entfernt. Das Mittel selbst bleibt im Katalog erhalten.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    color = colors.textMuted,
+                )
+                Spacer(Modifier.height(18.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Nein") }
+                    PrimaryAction("Ja, entfernen", onConfirm, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Legt hinter die Zeile ein rotes Löschfeld, das beim Wischen nach links zum Vorschein kommt.
+ *
+ * Gelöscht wird hier noch nichts — beim Loslassen wird nur gefragt; das schützt vor einem
+ * Wisch, der aus Versehen passiert.
+ */
+@Composable
+private fun SwipeToDeleteRow(
+    offset: Float,
+    width: Float,
+    modifier: Modifier,
+    onWidth: (Float) -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val colors = StackLaborTheme.colors
+    val shape = RoundedCornerShape(12.dp)
+    // Ab hier ist das Wischen weit genug, damit die Rückfrage kommt.
+    val ausgeloest = width > 1f && offset < -width * 0.32f
+    val anteil = if (width > 1f) (-offset / width).coerceIn(0f, 1f) else 0f
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .onSizeChanged { onWidth(it.width.toFloat()) },
+    ) {
+        if (anteil > 0.01f) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .align(Alignment.TopCenter)
+                    .clip(shape)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(colors.red.copy(alpha = 0.35f * anteil), colors.red.copy(alpha = 0.55f + 0.45f * anteil)),
+                        ),
+                    )
+                    .border(1.dp, colors.red.copy(alpha = 0.75f), shape)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    if (ausgeloest) "Loslassen zum Löschen" else "Löschen",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.width(10.dp))
+                Icon(Icons.Default.Delete, null, Modifier.size(24.dp), tint = Color.White)
+            }
+        }
+        Box(
+            Modifier.graphicsLayer { translationX = offset }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, amount -> change.consume(); onDrag(amount) },
+                        onDragEnd = onDragEnd,
+                        onDragCancel = onDragCancel,
+                    )
+                },
+        ) { content() }
     }
 }
 
