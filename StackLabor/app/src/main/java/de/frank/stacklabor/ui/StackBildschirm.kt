@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,7 +56,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import de.frank.stacklabor.StackLaborApp
 import de.frank.stacklabor.logik.Ampel
+import de.frank.stacklabor.logik.Laufzustand
 import de.frank.stacklabor.ui.bausteine.AmpelBalken
+import de.frank.stacklabor.ui.bausteine.AuswertungsAuszug
+import de.frank.stacklabor.ui.bausteine.HinweisSchnipsel
+import de.frank.stacklabor.ui.bausteine.MittelKontextmenue
+import de.frank.stacklabor.ui.bausteine.RueckgaengigLeiste
+import de.frank.stacklabor.ui.blaetter.AufschluesselungsBlatt
+import de.frank.stacklabor.ui.blaetter.EigeneFragenBlatt
+import de.frank.stacklabor.ui.blaetter.HistorieBlatt
+import de.frank.stacklabor.ui.blaetter.MittelBearbeitenBlatt
+import de.frank.stacklabor.ui.blaetter.Richtung
+import de.frank.stacklabor.ui.blaetter.StackBearbeitenBlatt
+import de.frank.stacklabor.ui.bausteine.zeitpunktKurz
 import de.frank.stacklabor.ui.bausteine.Chip
 import de.frank.stacklabor.ui.bausteine.MittelEintrag
 import de.frank.stacklabor.ui.bausteine.SymbolKnopf
@@ -91,9 +104,20 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val ansicht by app.einstellungen.sortieransicht.collectAsStateWithLifecycle(initialValue = "LOESLICHKEIT")
     val angemeldet by app.codexAnmeldung.istAngemeldet.collectAsStateWithLifecycle(initialValue = false)
+    val laufZustaende by app.auswertung.zustand.collectAsStateWithLifecycle(initialValue = emptyMap())
+    val lauf = laufZustaende[stackId] ?: Laufzustand.Ruhe
+    val laeuft = lauf is Laufzustand.Laeuft
 
     var zieleOffen by remember { mutableStateOf(false) }
     var sucheOffen by remember { mutableStateOf(false) }
+    var kontextFuer by remember { mutableStateOf<String?>(null) }
+    var zuletztEntfernt by remember { mutableStateOf<String?>(null) }
+    var bearbeiteEintrag by remember { mutableStateOf<String?>(null) }
+    var menueOffen by remember { mutableStateOf(false) }
+    var fragenOffen by remember { mutableStateOf(false) }
+    var historieOffen by remember { mutableStateOf(false) }
+    var stackBearbeiten by remember { mutableStateOf(false) }
+    var aufschluesselung by remember { mutableStateOf<Pair<Richtung, String>?>(null) }
 
     val derStack = stack.firstOrNull { it.id == stackId }
     val obenInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -102,6 +126,16 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
     // Höchstens drei Auren gleichzeitig (M-21) — die ranghöchsten roten.
     val mitAura = zeilen.filter { it.ampel == Ampel.ROT && it.eintrag.aktiv }
         .take(3).map { it.eintrag.id }.toSet()
+
+    val bewertung by app.datenbank.bewertungDao().juengsteBewertung(stackId)
+        .collectAsStateWithLifecycle(initialValue = null)
+    var veraltet by remember { mutableStateOf(false) }
+    // F-23: Die gespeicherte Prüfsumme gegen den jetzigen Inhalt halten. Häkchen und
+    // Priorität gehen bewusst NICHT ein — sonst wäre nach jedem Probieren alles „veraltet".
+    LaunchedEffect(bewertung, zeilen, zielZeilen) {
+        val b = bewertung
+        veraltet = b != null && b.pruefsumme != app.repository.pruefsummeFuer(stackId)
+    }
 
     val schlechtesteZielAmpel = zielZeilen.maxByOrNull { it.ampel.gewicht }?.ampel ?: Ampel.GRAU
     val zaehlung = zielZeilen.groupingBy { it.ampel }.eachCount()
@@ -138,7 +172,7 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                SymbolKnopf(Icons.Rounded.MoreVert, "Mehr") { /* Überlaufmenü */ }
+                SymbolKnopf(Icons.Rounded.MoreVert, "Mehr") { menueOffen = true }
             }
 
             // ── Ziel-Streifen 41 dp ─────────────────────────────────────────────
@@ -226,10 +260,36 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                                     app.repository.setzeAktiv(zeile.eintrag.id, !zeile.eintrag.aktiv)
                                 }
                             },
-                            aufKlick = { /* B-05 — Mittel bearbeiten */ },
-                            aufLangesDruecken = { /* F-31 bzw. F-07, je nach Ansicht */ },
+                            aufKlick = { bearbeiteEintrag = zeile.eintrag.id },
+                            aufAmpel = {
+                                aufschluesselung = Richtung.MITTEL_ZU_ZIELEN to zeile.eintrag.mittelId
+                            },
+                            // In der Ansicht „Löslichkeit" kann nicht gezogen werden — dort
+                            // öffnet langes Drücken das Kontextmenü (F-31), damit kein toter
+                            // Zustand entsteht. In „Einnahme" nimmt es den Eintrag auf (F-07).
+                            aufLangesDruecken = {
+                                if (ansicht == "LOESLICHKEIT") kontextFuer = zeile.eintrag.id
+                            },
                         )
                     }
+                }
+
+                // Die Auswertungs-Karte: dreizeiliger Auszug, tippen führt ins Vollbild B-07.
+                if (bewertung != null || laeuft) {
+                    AuswertungsAuszug(
+                        text = when {
+                            laeuft -> (lauf as Laufzustand.Laeuft).text
+                            else -> bewertung?.gesamt.orEmpty()
+                        },
+                        laeuft = laeuft,
+                        veraltet = veraltet,
+                        zeitstempel = bewertung?.let { zeitpunktKurz(it.zeitpunkt) }.orEmpty(),
+                        modell = bewertung?.modell.orEmpty(),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = Masse.randSeitlich, vertical = 8.dp),
+                        aufKlick = { steuerung.navigate(Ziele.auswertung(stackId)) },
+                    )
                 }
 
                 // Die Ziel-Überlagerung legt sich ÜBER die Liste — sie verdrängt sie nicht.
@@ -265,13 +325,32 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    // Der Knopf trägt alle Zustände aus dem Spec: bereit · läuft (dann ist er
+                    // ein Abbruch-Knopf) · veraltet · nicht angemeldet · Fehler.
+                    val knopfFarbe = when {
+                        laeuft -> Farben.gelb
+                        !angemeldet -> Farben.grau
+                        lauf is Laufzustand.Fehler -> Farben.rot
+                        veraltet -> Farben.gelbText
+                        else -> Farben.akzent
+                    }
+                    val knopfText = when {
+                        laeuft -> "Auswertung läuft — Abbrechen"
+                        !angemeldet -> "Erst bei Codex anmelden"
+                        lauf is Laufzustand.Fehler -> (lauf as Laufzustand.Fehler).meldung + " Erneut?"
+                        veraltet -> "Stand veraltet — neu auswerten"
+                        else -> "Diesen Stack auswerten"
+                    }
                     Row(
                         Modifier
                             .weight(1f)
                             .height(44.dp)
                             .clip(Formen.knopf)
-                            .background(if (angemeldet) Farben.akzent else Farben.grau)
-                            .clickable(enabled = angemeldet) { /* F-12 */ },
+                            .background(knopfFarbe)
+                            .clickable {
+                                if (!angemeldet) steuerung.navigate(Ziele.ANMELDUNG)
+                                else app.auswertung.werteStackAus(stackId)
+                            },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                     ) {
@@ -283,9 +362,11 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (angemeldet) "Diesen Stack auswerten" else "Erst bei Codex anmelden",
+                            knopfText,
                             style = Schrift.grundMittel,
                             color = if (Farben.istHell) Color.White else Farben.grund,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     Box(
@@ -293,7 +374,9 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                             .size(44.dp)
                             .clip(Formen.knopf)
                             .background(Farben.erhoeht)
-                            .clickable { /* F-02 — Mittel hinzufügen */ },
+                            // F-02: Der Weg zum Katalog. Das gewählte Mittel steht danach
+                            // sofort in der Liste; die Konkurrenzprüfung läuft nach.
+                            .clickable { steuerung.navigate(Ziele.KATALOG) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -305,6 +388,85 @@ fun StackBildschirm(app: StackLaborApp, steuerung: NavHostController, stackId: S
                     }
                 }
                 Spacer(Modifier.height(untenInset))
+            }
+        }
+
+        // F-31 — Kontextmenü am Mittel (nur in der Ansicht „Löslichkeit")
+        val kontextZeile = zeilen.firstOrNull { it.eintrag.id == kontextFuer }
+        MittelKontextmenue(
+            sichtbar = kontextZeile != null,
+            mittelName = kontextZeile?.mittel?.name.orEmpty(),
+            aufBearbeiten = { bearbeiteEintrag = kontextFuer; kontextFuer = null },
+            aufGruppeBilden = { kontextFuer = null },
+            aufEntfernen = {
+                val id = kontextFuer
+                kontextFuer = null
+                if (id != null) {
+                    bereich.launch { app.repository.entferneEintrag(id) }
+                    zuletztEntfernt = id
+                }
+            },
+            aufSchliessen = { kontextFuer = null },
+        )
+
+        // F-02 — der Hinweis nach der Konkurrenzprüfung, über dem Sockel
+        val mitHinweis = zeilen.firstOrNull { it.eintrag.offenerHinweis.isNotBlank() }
+        HinweisSchnipsel(
+            sichtbar = mitHinweis != null,
+            mittelName = mitHinweis?.mittel?.name.orEmpty(),
+            text = mitHinweis?.eintrag?.offenerHinweis.orEmpty(),
+            aufBehalten = {
+                mitHinweis?.let { bereich.launch { app.datenbank.stackDao().setzeOffenenHinweis(it.eintrag.id, "") } }
+            },
+            aufEntfernen = {
+                mitHinweis?.let { bereich.launch { app.repository.entferneEintrag(it.eintrag.id) } }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = Masse.randSeitlich)
+                .padding(bottom = Masse.sockel + 8.dp + untenInset),
+        )
+
+        // M-24 — die Rückgängig-Leiste, sechs Sekunden lang
+        RueckgaengigLeiste(
+            sichtbar = zuletztEntfernt != null,
+            aufRueckgaengig = { zuletztEntfernt = null },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = Masse.randSeitlich)
+                .padding(bottom = Masse.sockel + 8.dp + untenInset),
+        )
+        // ── Die Blätter ─────────────────────────────────────────────────────────
+        bearbeiteEintrag?.let { id ->
+            MittelBearbeitenBlatt(app, id) { bearbeiteEintrag = null }
+        }
+        if (fragenOffen) EigeneFragenBlatt(app, stackId) { fragenOffen = false }
+        if (historieOffen) {
+            HistorieBlatt(
+                app = app, stackId = stackId,
+                aufOeffnen = { historieOffen = false; steuerung.navigate(Ziele.auswertung(stackId)) },
+                aufSchliessen = { historieOffen = false },
+            )
+        }
+        if (stackBearbeiten) StackBearbeitenBlatt(app, stackId) { stackBearbeiten = false }
+        aufschluesselung?.let { (richtung, id) ->
+            AufschluesselungsBlatt(app, stackId, richtung, id) { aufschluesselung = null }
+        }
+
+        // Das Überlaufmenü des Kopfes
+        MittelKontextmenue(
+            sichtbar = menueOffen,
+            mittelName = "Stack",
+            aufBearbeiten = { menueOffen = false; stackBearbeiten = true },
+            aufGruppeBilden = { menueOffen = false; fragenOffen = true },
+            aufEntfernen = { menueOffen = false; historieOffen = true },
+            aufSchliessen = { menueOffen = false },
+        )
+
+        LaunchedEffect(zuletztEntfernt) {
+            if (zuletztEntfernt != null) {
+                kotlinx.coroutines.delay(Dauer.RUECKGAENGIG_MS)
+                zuletztEntfernt = null
             }
         }
     }

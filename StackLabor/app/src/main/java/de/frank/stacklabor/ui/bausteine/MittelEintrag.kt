@@ -3,6 +3,7 @@ package de.frank.stacklabor.ui.bausteine
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ fun MittelEintrag(
     aufHaekchen: () -> Unit,
     aufKlick: () -> Unit,
     aufLangesDruecken: () -> Unit,
+    aufAmpel: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val aktiv = zeile.eintrag.aktiv
@@ -69,9 +71,14 @@ fun MittelEintrag(
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
 
             // Der Ampel-Kantenbalken, 3 dp, über die volle Höhe.
+            // Tippen auf die Ampel öffnet die Aufschlüsselung (F-15): welches Ziel
+            // dieses Mittel stützt, welches es stört — jeweils mit Begründung.
             AmpelBalken(
                 ampel = if (aktiv) zeile.ampel else Ampel.GRAU,
                 mitAura = mitAura && aktiv,
+                modifier = Modifier
+                    .width(Masse.tippflaeche / 2)
+                    .clickable(onClick = aufAmpel),
             )
 
             Column(

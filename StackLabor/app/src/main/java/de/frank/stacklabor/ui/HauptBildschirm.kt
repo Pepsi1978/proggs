@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TrackChanges
@@ -36,7 +35,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,13 +56,13 @@ import de.frank.stacklabor.ui.bausteine.Karte
 import de.frank.stacklabor.ui.bausteine.PlusKnopf
 import de.frank.stacklabor.ui.bausteine.SymbolKnopf
 import de.frank.stacklabor.ui.bausteine.Zaehlpunkte
+import de.frank.stacklabor.ui.blaetter.StackBearbeitenBlatt
 import de.frank.stacklabor.ui.bausteine.glasflaeche
 import de.frank.stacklabor.ui.bausteine.wandernderVerlauf
 import de.frank.stacklabor.ui.theme.Dauer
 import de.frank.stacklabor.ui.theme.Farben
 import de.frank.stacklabor.ui.theme.Formen
 import de.frank.stacklabor.ui.theme.Kurven
-import de.frank.stacklabor.ui.theme.LocalBewegungReduziert
 import de.frank.stacklabor.ui.theme.Masse
 import de.frank.stacklabor.ui.theme.Schrift
 import kotlinx.coroutines.launch
@@ -74,13 +76,20 @@ import kotlinx.coroutines.launch
  * unten 76 dp frei für den Plus-Knopf · Plus-Knopf 57 dp, 16 dp vom Rand.
  */
 @Composable
-fun HauptBildschirm(app: StackLaborApp, steuerung: NavHostController) {
+fun HauptBildschirm(
+    app: StackLaborApp,
+    steuerung: NavHostController,
+    aufStackAnlegen: () -> Unit = {},
+) {
     val bereich = rememberCoroutineScope()
     val karten by app.repository.stackKarten.collectAsStateWithLifecycle(initialValue = emptyList())
     val dunkel by app.einstellungen.dunkel.collectAsStateWithLifecycle(initialValue = false)
     val variante by app.einstellungen.dosisVariante.collectAsStateWithLifecycle(initialValue = "A")
     val angemeldet by app.codexAnmeldung.istAngemeldet.collectAsStateWithLifecycle(initialValue = false)
-    val reduziert = LocalBewegungReduziert.current
+    val varianteText by app.repository.dosisVariantenText
+        .collectAsStateWithLifecycle(initialValue = "")
+    val laufZustaende by app.auswertung.zustand.collectAsStateWithLifecycle(initialValue = emptyMap())
+    var neuerStack by remember { mutableStateOf(false) }
 
     val obenInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val untenInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -122,11 +131,6 @@ fun HauptBildschirm(app: StackLaborApp, steuerung: NavHostController) {
                             aufKlick = { steuerung.navigate(Ziele.ZIELKATALOG) },
                         )
                         SymbolKnopf(
-                            symbol = Icons.Rounded.Inventory2,
-                            beschreibung = "Mittel-Katalog",
-                            aufKlick = { steuerung.navigate(Ziele.KATALOG) },
-                        )
-                        SymbolKnopf(
                             symbol = Icons.Rounded.Settings,
                             beschreibung = "Einstellungen",
                             aufKlick = { steuerung.navigate(Ziele.EINSTELLUNGEN) },
@@ -149,6 +153,18 @@ fun HauptBildschirm(app: StackLaborApp, steuerung: NavHostController) {
                         Chip("Dienst", variante == "B") {
                             bereich.launch { app.einstellungen.setzeDosisVariante("B") }
                         }
+                        // Der Klartext dazu — im Entwurf steht rechts, welches Mittel die
+                        // Variante betrifft. Bei Frank ist das bisher nur Venlafaxin.
+                        if (varianteText.isNotBlank()) {
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                varianteText,
+                                style = Schrift.klein,
+                                color = Farben.textSchwach,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }
@@ -159,7 +175,10 @@ fun HauptBildschirm(app: StackLaborApp, steuerung: NavHostController) {
                     .fillMaxWidth()
                     .height(Masse.leisteGesamt)
                     .background(Farben.flaeche)
-                    .clickable(enabled = angemeldet) { steuerung.navigate(Ziele.GESAMT) }
+                    .clickable {
+                        if (angemeldet) steuerung.navigate(Ziele.GESAMT)
+                        else steuerung.navigate(Ziele.ANMELDUNG)
+                    }
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -219,7 +238,10 @@ fun HauptBildschirm(app: StackLaborApp, steuerung: NavHostController) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = Masse.plusRand, bottom = Masse.plusRand + untenInset),
-        ) { /* B-13 — Stack anlegen */ }
+        ) { neuerStack = true }
+
+        // B-13 — neuen Stack anlegen (F-01)
+        if (neuerStack) StackBearbeitenBlatt(app, null) { neuerStack = false }
     }
 }
 

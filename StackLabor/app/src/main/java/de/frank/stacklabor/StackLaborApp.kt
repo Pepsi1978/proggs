@@ -6,6 +6,7 @@ import de.frank.stacklabor.codex.CodexDienst
 import de.frank.stacklabor.daten.Einstellungen
 import de.frank.stacklabor.daten.StackLaborDatenbank
 import de.frank.stacklabor.daten.StackRepository
+import de.frank.stacklabor.logik.AuswertungsSteuerung
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,6 +31,8 @@ class StackLaborApp : Application() {
         private set
     lateinit var codexDienst: CodexDienst
         private set
+    lateinit var auswertung: AuswertungsSteuerung
+        private set
 
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -40,6 +43,7 @@ class StackLaborApp : Application() {
         repository = StackRepository(this, datenbank, einstellungen)
         codexAnmeldung = CodexAnmeldung(this)
         codexDienst = CodexDienst(codexAnmeldung)
+        auswertung = AuswertungsSteuerung(bereich, datenbank, repository, codexDienst, einstellungen)
 
         // F-21: Beim allerersten Start kommen die sechs Stacks, 72 Eintraege und
         // zwoelf Ziele aus `assets/startbestand.json` in die Datenbank.

@@ -82,6 +82,23 @@ class StackRepository(
     val alleStacks: Flow<List<StackE>> = stacks.alleStacks()
 
     /**
+     * Der Klartext neben dem Frei/Dienst-Umschalter auf B-01: welches Mittel die gewählte
+     * Dosis-Variante gerade betrifft (F-27). Im Startbestand ist das nur Venlafaxin —
+     * die Anzeige entsteht aber aus den Daten, nicht aus einer festen Zeile.
+     */
+    val dosisVariantenText: Flow<String> = combine(
+        stacks.alleEintraegeMitMittel(),
+        einstellungen.dosisVariante,
+    ) { eintraege, variante ->
+        val mitVariante = eintraege.filter { it.eintrag.dosisVarianteB != null }
+        if (mitVariante.isEmpty()) return@combine ""
+        val erstes = mitVariante.first()
+        val menge = if (variante == "B") erstes.eintrag.dosisVarianteB else erstes.eintrag.mengeJeStueck
+        val weitere = if (mitVariante.size > 1) " +${mitVariante.size - 1}" else ""
+        "${erstes.mittel.name} ${zahl(menge ?: 0.0)} ${erstes.eintrag.einheit.anzeige()}$weitere"
+    }
+
+    /**
      * Die Karten für B-01. Sie hängen an drei Quellen zugleich: den Stacks, allen aktiven
      * Einträgen und den Zellen der jüngsten Bewertungen. Ändert sich eine davon, rechnet
      * `combine` die Ampeln neu — genau das ist der Grund, warum ein Häkchen sofort wirkt.

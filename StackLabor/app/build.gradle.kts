@@ -14,11 +14,11 @@ android {
         applicationId = "de.frank.stacklabor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         // Wird im Einstellungs-Bildschirm angezeigt (Regel: Version immer sichtbar).
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"14.08.2026, 14:35 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"14.08.2026, 16:41 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
