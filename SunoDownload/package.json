@@ -1,10 +1,10 @@
 {
   "name": "suno-download",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Lädt die komplette eigene Suno-Bibliothek als nummerierte MP3-Dateien herunter (älteste zuerst).",
   "type": "module",
   "private": true,
-  "versionBumpedAt": "14.08.2026, 20:17 Uhr",
+  "versionBumpedAt": "14.08.2026, 20:44 Uhr",
   "scripts": {
     "start": "node aktualisieren.ts",
     "download": "node suno-download.ts",

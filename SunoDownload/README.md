@@ -14,9 +14,9 @@ Zielordner: **`C:\Sono Backup`**
 
 ---
 
-## Bedienung: eine Datei genügt
+## Bedienung: ein Doppelklick genügt
 
-Doppelklick auf **`Neue-Songs-holen.cmd`**. Das übernimmt alles:
+Doppelklick auf **„Suno Backup"** auf dem Desktop (oder im Startmenü suchen). Das übernimmt alles:
 
 1. Legt das Auslese-Skript in die Zwischenablage und öffnet Suno im Browser
 2. Du machst **einmal**: `F12` → Reiter **Console** → **Strg+V** → **Enter**
@@ -51,7 +51,8 @@ diese eine Datei wieder — unter demselben Namen.
 
 | Datei | Aufgabe |
 |-------|---------|
-| `Neue-Songs-holen.cmd` | **Der Normalfall.** Erstlauf und Nachladen in einem |
+| `Neue-Songs-holen.cmd` | **Der Normalfall.** Erstlauf und Nachladen in einem — hinter dem Desktop-Symbol „Suno Backup" |
+| `icon-erzeugen.py` | Zeichnet `suno-backup.ico` neu (nur nötig, wenn das Symbol geändert werden soll) |
 | `bibliothek-holen.js` | Das Skript für die Chrome-Konsole (liest die Songliste aus) |
 | `aktualisieren.ts` | Erkennt Neues, lädt es, setzt Cover und Titel, pflegt den Bestand |
 | `gemeinsam.ts` | Geteilte Bausteine — Namen, Download, Cover, Titel |
@@ -111,4 +112,19 @@ einzeln anzufordern, hörbar praktisch kein Unterschied. Lohnend nur zum Weiterb
 
 ---
 
-Version 1.3.0 (14.08.2026, 20:17 Uhr)
+### Desktop-Symbol neu anlegen
+
+Falls die Verknüpfung einmal verloren geht:
+
+```powershell
+$wsh = New-Object -ComObject WScript.Shell
+$lnk = $wsh.CreateShortcut("$env:USERPROFILE\Desktop\Suno Backup.lnk")
+$lnk.TargetPath = "C:\Users\barwa\proggs\SunoDownload\Neue-Songs-holen.cmd"
+$lnk.WorkingDirectory = "C:\Users\barwa\proggs\SunoDownload"
+$lnk.IconLocation = "C:\Users\barwa\proggs\SunoDownload\suno-backup.ico,0"
+$lnk.Save()
+```
+
+---
+
+Version 1.3.1 (14.08.2026, 20:44 Uhr)
