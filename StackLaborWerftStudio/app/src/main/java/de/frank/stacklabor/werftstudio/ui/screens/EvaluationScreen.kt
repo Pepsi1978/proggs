@@ -71,7 +71,16 @@ fun EvaluationScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 Box(Modifier.weight(1f)) {
                     if (state.evaluationState == EvaluationState.Running) {
                         Column(Modifier.fillMaxSize().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 84.dp)) {
-                            Text("Prüfe Wechselwirkungen und gewichte die priorisierten Ziele …", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = StackLaborTheme.colors.accent)
+                            Text(
+                                // Ohne Ziele gibt es nichts zu gewichten — dann sagt die Zeile auch das.
+                                if (state.goals.none { it.selected }) {
+                                    "Prüfe Konkurrenzen, Reihenfolge und Verträglichkeit …"
+                                } else {
+                                    "Prüfe Wechselwirkungen und gewichte die priorisierten Ziele …"
+                                },
+                                style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                                color = StackLaborTheme.colors.accent,
+                            )
                             Spacer(Modifier.height(12.dp))
                             Text(state.streamedEvaluationText, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
                         }

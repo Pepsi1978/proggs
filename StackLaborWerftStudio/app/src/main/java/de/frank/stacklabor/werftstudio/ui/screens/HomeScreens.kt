@@ -316,7 +316,7 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                 secondary = {
                     Column(Modifier.fillMaxSize().padding(12.dp)) {
                         SectionTitle("Auswertungsstatus")
-                        EvaluationStateCard(state.evaluationState, callbacks)
+                        EvaluationStateCard(state.evaluationState, callbacks, withoutGoals = state.goals.none { it.selected })
                         Spacer(Modifier.height(8.dp))
                         EvaluationSummaryCard(
                             "Auswertung im Vollbild",
@@ -877,7 +877,12 @@ private fun EvaluationSummaryCard(title: String, body: String, action: String, o
 }
 
 @Composable
-private fun EvaluationStateCard(state: EvaluationState, callbacks: StackLaborCallbacks, allStacks: Boolean = false) {
+private fun EvaluationStateCard(
+    state: EvaluationState,
+    callbacks: StackLaborCallbacks,
+    allStacks: Boolean = false,
+    withoutGoals: Boolean = false,
+) {
     val title: String
     val body: String
     val action: String?
@@ -897,7 +902,12 @@ private fun EvaluationStateCard(state: EvaluationState, callbacks: StackLaborCal
         }
         EvaluationState.Running -> {
             title = if (allStacks) "Gesamtprüfung läuft" else "Auswertung läuft"
-            body = if (allStacks) "Addiere Tagesdosen und prüfe Konkurrenzen …" else "Prüfe Wechselwirkungen und gewichte die priorisierten Ziele …"
+            body = when {
+                allStacks -> "Addiere Tagesdosen und prüfe Konkurrenzen …"
+                // Ohne Ziele gibt es nichts zu gewichten — dann sagt die Zeile auch das.
+                withoutGoals -> "Prüfe Konkurrenzen, Reihenfolge und Verträglichkeit …"
+                else -> "Prüfe Wechselwirkungen und gewichte die priorisierten Ziele …"
+            }
             action = "Abbrechen"
             event = StackLaborEvent.CancelEvaluation
         }
