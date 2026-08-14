@@ -154,6 +154,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             }
             is StackLaborEvent.RemoveMedicineFromStack -> removeMedicineFromStack(event.stackId, event.medicineId)
             is StackLaborEvent.ReorderMedicine -> reorderMedicine(event.stackId, event.medicineId, event.targetIndex)
+            is StackLaborEvent.ApplyMedicineOrder -> applyMedicineOrder(event.stackId, event.medicineIds)
             is StackLaborEvent.EditGoal -> launchAction { repository.speichereZiel(Ziel(event.goalId, event.text.trim())) }
             is StackLaborEvent.ToggleGoal -> toggleGoal(event.stackId, event.goalId)
             is StackLaborEvent.ReorderGoal -> reorderGoal(event.stackId, event.goalId, event.targetRank)
@@ -641,6 +642,34 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val remaining = orderedEntries.filterNot { candidate -> moving.any { it.id == candidate.id } }.toMutableList()
         remaining.addAll(targetIndex.coerceIn(0, remaining.size), moving)
         repository.sortiereEintraege(stackId, remaining.map { it.id })
+    }
+
+    /**
+     * Übernimmt eine komplett gezogene Reihenfolge.
+     *
+     * Anders als [reorderMedicine] arbeitet das nicht mit einem Zielindex, sondern mit der
+     * ganzen Liste — damit stimmt das Ergebnis auch dann, wenn die Anzeige gerade anders
+     * sortiert ist als die gespeicherte Einnahme-Reihenfolge. Mittel, die zusammen genommen
+     * werden, bleiben dabei als Block beieinander.
+     */
+    private fun applyMedicineOrder(stackId: String, medicineIds: List<String>) = launchAction {
+        val stackEntries = currentEntries.filter { it.stackId == stackId }
+        if (stackEntries.isEmpty()) return@launchAction
+        val byMedicine = stackEntries.associateBy { it.mittelId }
+        val gezogen = medicineIds.mapNotNull { byMedicine[it] }
+        // Was nicht in der Anzeige war (z.B. wegen der Suche) haengt hinten dran.
+        val rest = stackEntries.filterNot { entry -> gezogen.any { it.id == entry.id } }.sortedBy { it.reihenfolge }
+        val roh = gezogen + rest
+
+        val fertig = mutableListOf<StackEintrag>()
+        val schonGesetzt = mutableSetOf<String>()
+        roh.forEach { eintrag ->
+            if (!schonGesetzt.add(eintrag.id)) return@forEach
+            fertig += eintrag
+            val gruppe = eintrag.gruppeId ?: return@forEach
+            roh.filter { it.gruppeId == gruppe && schonGesetzt.add(it.id) }.forEach { fertig += it }
+        }
+        repository.sortiereEintraege(stackId, fertig.map { it.id })
     }
 
     private fun mergeMedicines(keepId: String, replaceId: String) = launchAction("Mittel zusammengeführt") {

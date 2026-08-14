@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,7 +64,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
 import de.frank.stacklabor.werftstudio.ui.components.AdaptiveSplit
 import de.frank.stacklabor.werftstudio.ui.components.AnimatedGradientHeader
 import de.frank.stacklabor.werftstudio.ui.components.BreathingFab
@@ -77,6 +75,8 @@ import de.frank.stacklabor.werftstudio.ui.components.SectionTitle
 import de.frank.stacklabor.werftstudio.ui.components.SelectPill
 import de.frank.stacklabor.werftstudio.ui.components.SignalCountsRow
 import de.frank.stacklabor.werftstudio.ui.components.SolubilityLabel
+import de.frank.stacklabor.werftstudio.ui.components.rememberReorder
+import androidx.compose.ui.zIndex
 import de.frank.stacklabor.werftstudio.ui.components.StackCard
 import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
 import de.frank.stacklabor.werftstudio.ui.components.color
@@ -416,6 +416,9 @@ private fun ToolsRow(state: StackLaborUiState, searchOpen: Boolean, onSearch: ()
     }
 }
 
+/** Höhe einer Mittel-Zeile samt Abstand — Maß für das Umsortieren per Ziehen. */
+private val MedicineRowHeight = 64.dp
+
 @Composable
 private fun MedicineList(
     stackId: String,
@@ -427,19 +430,32 @@ private fun MedicineList(
     onRequestDelete: (MedicineUi) -> Unit,
     modifier: Modifier,
 ) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val reorder = rememberReorder(
+        source = filtered,
+        keyOf = { it.id },
+        listState = listState,
+        rowHeight = MedicineRowHeight,
+        onGrabbed = {
+            // Die Löslichkeits-Ansicht sortiert selbst — eine von Hand gezogene Reihenfolge
+            // wäre dort sofort wieder überschrieben. Deshalb beim Greifen umschalten.
+            if (sortMode == SortMode.Loeslichkeit) callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Einnahme))
+        },
+        onDropped = { ids -> callbacks.onEvent(StackLaborEvent.ApplyMedicineOrder(stackId, ids)) },
+    )
     LazyColumn(
         modifier.padding(horizontal = 12.dp),
+        state = listState,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 80.dp),
     ) {
         if (filtered.isEmpty()) {
             item { de.frank.stacklabor.werftstudio.ui.components.EmptyState("Nichts gefunden", "Neu anlegen") { callbacks.onNavigate(StackLaborRoute.MedicineEdit(null, stackId, Origin.StackDetail)) } }
         }
-        itemsIndexed(filtered, key = { _, medicine -> medicine.id }) { index, medicine ->
+        itemsIndexed(reorder.items, key = { _, medicine -> medicine.id }) { index, medicine ->
             var horizontalOffset by remember(medicine.id) { mutableFloatStateOf(0f) }
-            var verticalDrag by remember(medicine.id) { mutableFloatStateOf(0f) }
-            var dragging by remember(medicine.id) { mutableStateOf(false) }
             var swipeWidth by remember(medicine.id) { mutableFloatStateOf(1f) }
             var swiping by remember(medicine.id) { mutableStateOf(false) }
+            val gezogen = reorder.isDragged(medicine)
             // Beim Loslassen fährt die Zeile weich zurück, statt zu springen.
             val restingOffset by animateFloatAsState(
                 targetValue = horizontalOffset,
@@ -448,27 +464,11 @@ private fun MedicineList(
             )
             val shownOffset = if (swiping) horizontalOffset else restingOffset
             val gestureModifier = Modifier
-                .graphicsLayer {
-                    translationY = if (dragging) verticalDrag else 0f
-                    scaleX = if (dragging) 1.02f else 1f
-                    scaleY = if (dragging) 1.02f else 1f
-                    shadowElevation = if (dragging) 12.dp.toPx() else 0f
-                }
-                .then(
-                    if (sortMode == SortMode.Einnahme) Modifier.pointerInput(medicine.id, filtered.size) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { dragging = true; verticalDrag = 0f },
-                            onDrag = { change, amount -> change.consume(); verticalDrag += amount.y },
-                            onDragCancel = { dragging = false; verticalDrag = 0f },
-                            onDragEnd = {
-                                val target = (index + verticalDrag.div(64.dp.toPx()).roundToInt()).coerceIn(0, filtered.lastIndex)
-                                dragging = false
-                                verticalDrag = 0f
-                                if (target != index) callbacks.onEvent(StackLaborEvent.ReorderMedicine(stackId, medicine.id, target))
-                            },
-                        )
-                    } else Modifier,
-                )
+                // Die Zeile in der Hand liegt über allen anderen und weicht nicht aus.
+                .zIndex(if (gezogen) 1f else 0f)
+                .then(if (StackLaborTheme.motionEnabled && !gezogen) Modifier.animateItem() else Modifier)
+                .then(reorder.liftModifier(medicine))
+                .then(reorder.dragModifier(medicine))
             SwipeToDeleteRow(
                 offset = shownOffset,
                 width = swipeWidth,

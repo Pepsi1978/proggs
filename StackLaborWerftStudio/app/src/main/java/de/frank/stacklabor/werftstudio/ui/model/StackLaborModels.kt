@@ -175,6 +175,11 @@ sealed interface StackLaborEvent {
     data class ToggleMedicine(val stackId: String, val medicineId: String) : StackLaborEvent
     data class RemoveMedicineFromStack(val stackId: String, val medicineId: String) : StackLaborEvent
     data class ReorderMedicine(val stackId: String, val medicineId: String, val targetIndex: Int) : StackLaborEvent
+    /**
+     * Übernimmt eine per Drag and Drop gezogene Reihenfolge vollständig — die Liste enthält
+     * alle sichtbaren Mittel in der neuen Abfolge.
+     */
+    data class ApplyMedicineOrder(val stackId: String, val medicineIds: List<String>) : StackLaborEvent
     data class EditGoal(val goalId: String, val text: String) : StackLaborEvent
     data class ToggleGoal(val stackId: String, val goalId: String) : StackLaborEvent
     data class ReorderGoal(val stackId: String, val goalId: String, val targetRank: Int) : StackLaborEvent
