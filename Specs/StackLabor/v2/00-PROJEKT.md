@@ -26,6 +26,26 @@ bestehende App `NEMS`. StackLabor ist das Werkzeug zum *Komponieren und Prüfen*
 
 ## 2. Zielplattform(en)
 
+> **⚠ Korrektur vom 14.08.2026, nach dem Bau auf dem Gerät nachgemessen.**
+>
+> Der Entwurfskopf nennt „Cover-Display 297 × 469 dp @ 420 dpi". Diese dp-Angabe ist
+> **rechnerisch falsch** und wurde beim Schreiben dieses Spec ungeprüft übernommen.
+> Nachgemessen auf dem Gerät (`wm size`, `wm density`, `dumpsys display`):
+>
+> | | Pixel | Dichte | reale dp |
+> |---|---|---|---|
+> | Cover (zugeklappt) | 1248 × 1972 | 2,625 | **475 × 751 dp** |
+> | Innen (aufgeklappt) | 2448 × 1848 | 2,625 | **932 × 704 dp** |
+>
+> **Alle Maßangaben in diesem Paket bleiben trotzdem gültig** — sie sind im Entwurf
+> gemessen und beziehen sich auf dessen Bezugsbreite von 297 dp. Damit sie auf dem Gerät
+> genauso ankommen, rechnet die App in der Dichte des Entwurfs
+> (`ui/theme/Massstab.kt`: die Dichte wird so gesetzt, dass die Bildschirmbreite exakt der
+> Entwurfsbreite entspricht). Ohne diese Angleichung landet jeder Wert auf einem
+> 1,6-mal breiteren Bildschirm: dasselbe Layout in falscher Größe — flache Karten,
+> zu kleine Schrift, zu weite Abstände.
+
+
 | Plattform | Zielgerät / Auflösung | Technik-Weg | Pflicht oder später |
 |---|---|---|---|
 | Android | **Galaxy Z Fold 8 (SM-F971B), zugeklappt = Leitgröße**: 1248 × 1972 px @ 420 dpi = **297 × 469 dp** | Kotlin + Jetpack Compose | Pflicht |
