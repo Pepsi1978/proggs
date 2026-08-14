@@ -27,8 +27,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, overload
 
-VERSION = "0.0.1"
-VERSION_STAND = "14.08.2026, 11:21 Uhr"
+VERSION = "0.0.2"
+VERSION_STAND = "14.08.2026, 11:41 Uhr"
 
 # Umlaute und Kastenlinien muessen auch durch eine Pipe heil ankommen, und die
 # Ausgabe soll zeilenweise erscheinen statt am Ende im Block.

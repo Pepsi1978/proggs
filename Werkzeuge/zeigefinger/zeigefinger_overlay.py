@@ -491,6 +491,7 @@ class AuswahlOverlay:
         self.display: tuple[int, int] | None = None
         self.fenster_gekoppelt = False
         self.hatte_scrcpy = bool(self.scrcpy_hwnd)
+        self.emulator_minimiert = False
         self.toolbar_sichtbar = False
         self.letzte_root_geometrie = ""
         self.letzte_overlay_geometrie = ""
@@ -609,14 +610,21 @@ class AuswahlOverlay:
         except OSError as exc:
             raise SystemExit(f"scrcpy konnte nicht gestartet werden: {exc}") from exc
 
-    def _emulator_minimieren(self) -> None:
-        if self.emulator_fenster:
-            return
+    def _emulator_minimieren(self) -> bool:
         user32, _ = _win_api()
-        for fenster in fenster_liste():
-            if fenster.title.startswith("Android Emulator -"):
-                self.emulator_fenster.append(fenster.hwnd)
-                user32.ShowWindow(wintypes.HWND(fenster.hwnd), SW_MINIMIZE)
+        if not self.emulator_fenster:
+            self.emulator_fenster = [
+                fenster.hwnd
+                for fenster in fenster_liste()
+                if fenster.title.startswith("Android Emulator -")
+            ]
+        for hwnd in self.emulator_fenster:
+            if user32.IsWindow(wintypes.HWND(hwnd)) and not user32.IsIconic(wintypes.HWND(hwnd)):
+                user32.ShowWindow(wintypes.HWND(hwnd), SW_MINIMIZE)
+        return bool(self.emulator_fenster) and all(
+            not user32.IsWindow(wintypes.HWND(hwnd)) or user32.IsIconic(wintypes.HWND(hwnd))
+            for hwnd in self.emulator_fenster
+        )
 
     def _fenster_verfolgen(self) -> None:
         if not self.scrcpy_hwnd or not ctypes.windll.user32.IsWindow(self.scrcpy_hwnd):
@@ -640,14 +648,14 @@ class AuswahlOverlay:
                 self.root.after(150, self._fenster_verfolgen)
                 return
             self.hatte_scrcpy = True
-            self._emulator_minimieren()
             self.status.configure(text="Bedienen")
         if not self.fenster_gekoppelt:
-            self._emulator_minimieren()
             _an_fenster_koppeln(self.root_hwnd, self.scrcpy_hwnd)
             _an_fenster_koppeln(self.overlay_hwnd, self.scrcpy_hwnd)
             self.fenster_gekoppelt = True
             self.status.configure(text="Bedienen")
+        if not self.emulator_minimiert:
+            self.emulator_minimiert = self._emulator_minimieren()
 
         bereich = client_bereich(self.scrcpy_hwnd)
         if not bereich:
