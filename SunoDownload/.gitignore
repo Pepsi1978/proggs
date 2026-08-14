@@ -1,0 +1,6 @@
+node_modules/
+.browser-profil/
+logs/
+*.mp3
+*.teil
+package-lock.json
