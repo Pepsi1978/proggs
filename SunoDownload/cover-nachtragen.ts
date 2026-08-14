@@ -38,18 +38,48 @@ function probe(condition: boolean, msg: string, ctx: Record<string, unknown> = {
   }
 }
 
-/** Loads the cover image; Suno serves several variants, the large one first. */
+async function loadImage(url: string): Promise<Buffer | null> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(45000),
+      headers: { Referer: 'https://suno.com/', Accept: 'image/*' },
+    });
+    if (!response.ok) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.length > 500 ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Loads the cover image. The fast path derives the URL from the song id; for older
+ * songs the artwork carries a different id, so the public song page is asked for it.
+ */
 async function fetchCover(id: string): Promise<Buffer | null> {
   for (const variant of ['image_large_', 'image_']) {
     for (const ext of ['.jpeg', '.png']) {
-      try {
-        const response = await fetch(`${COVER_BASE}/${variant}${id}${ext}`, { signal: AbortSignal.timeout(45000) });
-        if (!response.ok) continue;
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.length > 500) return buffer;
-      } catch {
-        /* try the next variant */
+      const buffer = await loadImage(`${COVER_BASE}/${variant}${id}${ext}`);
+      if (buffer) return buffer;
+    }
+  }
+
+  // Fallback: the song page names the real artwork URL.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const page = await fetch(`https://suno.com/song/${id}`, { signal: AbortSignal.timeout(30000) });
+      if (page.status === 429) {
+        await new Promise((r) => setTimeout(r, attempt * 6000));
+        continue;
       }
+      if (!page.ok) return null;
+
+      const html = await page.text();
+      const match = /<meta property="og:image" content="([^"]+)"/.exec(html);
+      if (!match?.[1]) return null;
+      return await loadImage(match[1].replace(/&amp;/g, '&'));
+    } catch {
+      await new Promise((r) => setTimeout(r, attempt * 3000));
     }
   }
   return null;
@@ -119,6 +149,13 @@ async function main(): Promise<void> {
     const label = `[${String(i + 1).padStart(String(files.length).length, ' ')}/${files.length}] ${fileName}`;
 
     const existing = NodeID3.read(fullPath);
+
+    // Already complete — nothing to do, keeps repeat runs fast.
+    if (existing.image && existing.title === (song.title || existing.title)) {
+      hadCover++;
+      continue;
+    }
+
     const tags: Record<string, unknown> = {};
 
     if (song.title) tags.title = song.title;
