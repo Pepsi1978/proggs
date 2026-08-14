@@ -1,0 +1,21 @@
+297×469dp @(0,0) | disp=block | dir=row | bg=rgb(245, 247, 250) | r=24px | fs=16px | fw=400 | col=rgb(15, 23, 42) | pos=relative | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+  297×469dp @(0,0) | disp=block | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=relative | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+    297×24dp @(0,0) | disp=flex | dir=row | pad=0px 14px | fs=11px | fw=600 | col=rgb(15, 23, 42) | pos=absolute | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+      24×13dp @(14,6) | disp=block | dir=row | fs=11px | fw=600 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42) | TEXT="7:42"
+      30×13dp @(253,6) | disp=flex | dir=row | gap=4px | fs=11px | fw=600 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+        13×13dp @(253,6) | disp=block | dir=row | fs=13px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+          13×16dp @(253,4) | disp=inline | dir=row | fs=13px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42) | TEXT="signal_cellular_alt"
+        13×13dp @(270,6) | disp=block | dir=row | fs=13px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42) | TEXT="battery_full"
+    297×421dp @(0,24) | disp=block | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=absolute | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+      297×421dp @(0,24) | disp=flex | dir=column | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=absolute | anim=0.3s cubic-bezier(0.2, 0, 0, 1) vor | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+        297×57dp @(0,24) | disp=flex | dir=row | gap=4px | bg=rgba(241, 245, 249, 0.72) | pad=0px 6px | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | blur=blur(24px) | bl=0px none rgb(15, 23, 42)
+          44×44dp @(6,30) | disp=flex | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+          186×20dp @(54,42) | disp=block | dir=row | fs=17px | fw=600 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42) | TEXT="Alle Stacks zusammen"
+        297×311dp @(0,81) | disp=flex | dir=column | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+          297×3112dp @(0,81) | disp=block | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+          297×560dp @(0,3193) | disp=block | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+        297×53dp @(0,392) | disp=flex | dir=row | bg=rgba(241, 245, 249, 0.72) | pad=0px 12px | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | blur=blur(24px) | bl=0px none rgb(15, 23, 42)
+          221×46dp @(12,396) | disp=flex | dir=row | gap=8px | bg=rgb(79, 70, 229) | r=12px | fs=14px | fw=400 | col=rgb(255, 255, 255) | pos=static | bl=1px solid rgba(0, 0, 0, 0) | bd=1px solid rgba(0, 0, 0, 0)
+          46×46dp @(239,396) | disp=flex | dir=row | r=12px | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=1px solid rgb(226, 232, 240) | bd=1px solid rgb(226, 232, 240)
+    297×24dp @(0,445) | disp=flex | dir=row | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=absolute | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
+      96×4dp @(100,455) | disp=block | dir=row | bg=rgb(15, 23, 42) | r=2px | fs=14px | fw=400 | col=rgb(15, 23, 42) | pos=static | bl=0px none rgb(15, 23, 42) | bd=0px none rgb(15, 23, 42)
