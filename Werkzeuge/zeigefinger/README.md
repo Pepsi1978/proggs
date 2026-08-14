@@ -16,7 +16,10 @@ Start fuer die Experimente-App:
 .\Start-Zeigefinger.ps1
 ```
 
-Alternativ `Start-Zeigefinger.vbs` im Explorer doppelt anklicken. Dieser Starter oeffnet kein
+Alternativ das Symbol **„Zeigefinger"** auf dem Desktop (oder im Startmenue) doppelt anklicken -
+es zeigt auf `Start-Zeigefinger.vbs`. Das Symbol selbst liegt als `zeigefinger.ico` im Ordner und
+laesst sich mit `python icon-erzeugen.py` neu erzeugen. Ebenso geht `Start-Zeigefinger.vbs` im
+Explorer direkt. Dieser Starter oeffnet kein
 zusaetzliches Konsolenfenster. Das Werkzeug erkennt sowohl OpenCode als auch Claude Code im
 Windows-Terminal; damit funktioniert derselbe Ablauf auch nach einem Start von Opus ueber den
 OpenLauncher. Gibt es mehrere echte Terminalfenster und ist das Ziel nicht eindeutig, wird die
