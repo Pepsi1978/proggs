@@ -76,7 +76,7 @@ import de.frank.stacklabor.werftstudio.ui.components.SearchField
 import de.frank.stacklabor.werftstudio.ui.components.SectionTitle
 import de.frank.stacklabor.werftstudio.ui.components.SelectPill
 import de.frank.stacklabor.werftstudio.ui.components.SignalCountsRow
-import de.frank.stacklabor.werftstudio.ui.components.SolubilityMarks
+import de.frank.stacklabor.werftstudio.ui.components.SolubilityLabel
 import de.frank.stacklabor.werftstudio.ui.components.StackCard
 import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
 import de.frank.stacklabor.werftstudio.ui.components.color
@@ -646,9 +646,15 @@ private fun StackMedicineRow(
                                 }
                                 Spacer(Modifier.width(6.dp))
                             }
-                            SolubilityMarks(medicine.solubility)
-                            Spacer(Modifier.width(6.dp))
-                            Text(medicine.name, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                medicine.name,
+                                Modifier.weight(1f),
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            SolubilityLabel(medicine.solubility)
                         }
                         Row(Modifier.fillMaxWidth()) {
                             Text(medicine.dose, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -781,6 +781,36 @@ val SignalState.label: String
         SignalState.Gray -> "nicht bedient"
     }
 
+/**
+ * Die Löslichkeit als Wort statt als Punkt — wasserlöslich grün, fettlöslich orange.
+ *
+ * „Beides“ steht in beiden Farben nebeneinander, damit die Farbzuordnung überall dieselbe
+ * bleibt und man nicht raten muss, wofür eine dritte Farbe stünde.
+ */
+@Composable
+fun SolubilityLabel(solubility: Solubility, modifier: Modifier = Modifier) {
+    val style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        when (solubility) {
+            Solubility.Water -> Text("wasserlöslich", style = style, color = waterColor(), maxLines = 1)
+            Solubility.Fat -> Text("fettlöslich", style = style, color = fatColor(), maxLines = 1)
+            Solubility.Both -> {
+                Text("wasser", style = style, color = waterColor(), maxLines = 1)
+                Text(" + ", style = style, color = StackLaborTheme.colors.textMuted, maxLines = 1)
+                Text("fettlöslich", style = style, color = fatColor(), maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Grün für wasserlöslich — im dunklen Thema aufgehellt, damit es lesbar bleibt. */
+@Composable
+private fun waterColor(): Color = if (StackLaborTheme.dark) Color(0xFF4ADE80) else Color(0xFF15803D)
+
+/** Orange für fettlöslich. */
+@Composable
+private fun fatColor(): Color = if (StackLaborTheme.dark) Color(0xFFFB923C) else Color(0xFFC2410C)
+
 @Composable
 fun SolubilityMarks(solubility: Solubility) {
     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
