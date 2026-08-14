@@ -409,7 +409,13 @@ private fun ToolsRow(state: StackLaborUiState, searchOpen: Boolean, onSearch: ()
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SelectPill("Löslichkeit", state.sortMode == SortMode.Loeslichkeit) { callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Loeslichkeit)) }
+        // Ist die Ansicht aktiv, sagt die Beschriftung auch, welche Richtung gerade gilt.
+        SelectPill(
+            if (state.sortMode == SortMode.Loeslichkeit) {
+                if (state.solubilityFatFirst) "Fett zuerst" else "Wasser zuerst"
+            } else "Löslichkeit",
+            state.sortMode == SortMode.Loeslichkeit,
+        ) { callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Loeslichkeit)) }
         SelectPill("Einnahme", state.sortMode == SortMode.Einnahme) { callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Einnahme)) }
         Spacer(Modifier.weight(1f))
         IconTouchButton("Mittel suchen", onSearch) { Icon(Icons.Default.Search, null, tint = if (searchOpen) StackLaborTheme.colors.accent else StackLaborTheme.colors.textStrong) }

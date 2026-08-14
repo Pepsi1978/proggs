@@ -40,6 +40,8 @@ data class AppEinstellungen(
     val googleApiKey: String = "",
     val qwenApiKey: String = "",
     val qwenStimmenId: String = "",
+    /** Löslichkeits-Ansicht: fettlösliche zuerst (Standard) oder wasserlösliche zuerst. */
+    val loeslichkeitFettZuerst: Boolean = true,
     val codexModell: String = "gpt-5.6-terra",
     val codexDenkstufe: String = "high",
     val bewegungReduziert: Boolean,
@@ -75,6 +77,8 @@ class EinstellungenStore(
             preferences[TTS_VERBRAUCH] = (preferences[TTS_VERBRAUCH] ?: 0L) + zeichen
         }
     }
+    suspend fun setzeLoeslichkeitFettZuerst(value: Boolean): Unit = schreibe(LOESLICHKEIT_FETT_ZUERST, value)
+
     /** Leerer Wert bedeutet: wieder den Schlüssel aus dem SK-Ordner verwenden. */
     suspend fun setzeGoogleApiKey(value: String): Unit = schreibe(GOOGLE_API_KEY, value.trim())
     suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
@@ -102,6 +106,7 @@ class EinstellungenStore(
         googleApiKey = preferences[GOOGLE_API_KEY].orEmpty(),
         qwenApiKey = preferences[QWEN_API_KEY].orEmpty(),
         qwenStimmenId = preferences[QWEN_STIMMEN_ID].orEmpty(),
+        loeslichkeitFettZuerst = preferences[LOESLICHKEIT_FETT_ZUERST] ?: true,
         codexModell = preferences[CODEX_MODELL] ?: "gpt-5.6-terra",
         codexDenkstufe = preferences[CODEX_DENKSTUFE] ?: "high",
         bewegungReduziert = preferences[BEWEGUNG_REDUZIERT] ?: systemBewegungReduziert,
@@ -127,6 +132,7 @@ class EinstellungenStore(
         val GOOGLE_API_KEY = stringPreferencesKey("google_api_key")
         val QWEN_API_KEY = stringPreferencesKey("qwen_api_key")
         val QWEN_STIMMEN_ID = stringPreferencesKey("qwen_stimmen_id")
+        val LOESLICHKEIT_FETT_ZUERST = booleanPreferencesKey("loeslichkeit_fett_zuerst")
         val CODEX_MODELL = stringPreferencesKey("codex_modell")
         val CODEX_DENKSTUFE = stringPreferencesKey("codex_denkstufe")
         val BEWEGUNG_REDUZIERT = booleanPreferencesKey("bewegung_reduziert")

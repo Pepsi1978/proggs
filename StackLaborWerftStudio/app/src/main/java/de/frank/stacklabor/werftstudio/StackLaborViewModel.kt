@@ -61,6 +61,7 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiEffect
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.model.StackSummaryUi
+import de.frank.stacklabor.werftstudio.ui.model.sortiereNachLoeslichkeit
 import de.frank.stacklabor.werftstudio.ui.model.toCatalogMedicineUi
 import de.frank.stacklabor.werftstudio.ui.model.toQuestionUi
 import de.frank.stacklabor.werftstudio.ui.model.toSignalState
@@ -144,7 +145,15 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             }
             is StackLaborEvent.ChangeSortMode -> launchAction {
                 val stackId = selectedStackId.value ?: return@launchAction
-                repository.setzeSortieransicht(stackId, if (event.mode == SortMode.Loeslichkeit) Sortieransicht.LOESLICHKEIT else Sortieransicht.EINNAHME)
+                // Nochmal auf die bereits aktive Löslichkeit tippen dreht die Richtung um,
+                // statt nichts zu tun.
+                if (event.mode == SortMode.Loeslichkeit && mutableState.value.sortMode == SortMode.Loeslichkeit) {
+                    val fettZuerst = !settings.loeslichkeitFettZuerst
+                    container.settings.setzeLoeslichkeitFettZuerst(fettZuerst)
+                    message(if (fettZuerst) "Fettlösliche zuerst" else "Wasserlösliche zuerst")
+                } else {
+                    repository.setzeSortieransicht(stackId, if (event.mode == SortMode.Loeslichkeit) Sortieransicht.LOESLICHKEIT else Sortieransicht.EINNAHME)
+                }
             }
             is StackLaborEvent.ChangeSearch -> mutableState.update { it.copy(searchQuery = event.query) }
             is StackLaborEvent.ToggleMedicine -> launchAction {
@@ -313,7 +322,9 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val selectedMedicines = snapshot.content.first.mapNotNull { entry ->
             medicineById[entry.mittelId]?.let { medicine -> medicine.toUi(entry, ampeln.mittelAmpeln[medicine.id] ?: Ampel.GRAU, snapshot.settings.dosisVariante) }
         }.let { list ->
-            if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) list.sortedWith(compareBy({ it.solubility.ordinal }, { it.name })) else list
+            if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) {
+                sortiereNachLoeslichkeit(list, snapshot.settings.loeslichkeitFettZuerst)
+            } else list
         }
         val usageByGoal = stackGoals.groupingBy { it.zielId }.eachCount()
         val goalUi = goals.map { goal ->
@@ -339,6 +350,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackTime = stack.zeitpunkt,
                 stackNote = stack.einnahmeHinweis,
                 sortMode = if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) SortMode.Loeslichkeit else SortMode.Einnahme,
+                solubilityFatFirst = snapshot.settings.loeslichkeitFettZuerst,
                 medicines = selectedMedicines,
                 goals = goalUi,
                 breakdownItems = breakdownSubject?.let { buildBreakdownItems(it, latest, goalUi, selectedMedicines) }.orEmpty(),
