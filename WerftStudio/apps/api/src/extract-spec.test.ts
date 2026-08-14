@@ -79,4 +79,29 @@ describe("Spec-Extraktor", () => {
     expect(animation[0]?.css).toContain("infinite");
     expect(animation[0]?.name).toBe("M-01 Atmen des Startknopfs");
   });
+
+  // Ohne diese Spalte kannte der Aufbau als Quelle nur das Spec und musste jeden Bildschirm aus der
+  // Beschreibung neu erfinden — die fertigen Bildschirmdateien lagen ungenutzt daneben.
+  it("nimmt die im Spec genannten Bildschirmdateien als Quellen des Bildschirms", () => {
+    const mitDateien = ui.replace(
+      "| Kennung | Bildschirm | Zweck | Startbildschirm? | führt zu |\n|---------|------------|-------|------------------|----------|\n| B-01 | Start | Sitzung beginnen | ja | B-02, B-03 |",
+      "| Kennung | Bildschirm | Zweck | Startbildschirm? | führt zu | Dateien je Erscheinung |\n|---------|------------|-------|------------------|----------|------------------------|\n| B-01 | Start | Sitzung beginnen | ja | B-02, B-03 | `bildschirme/dunkel/1-start.html`<br>`bildschirme/hell/1-start.html` |"
+    );
+    const facts = extractSpecFacts([{ path: "02-UI-SPEC.md", text: mitDateien }]);
+    expect(facts.screens?.[0]?.files).toEqual(["bildschirme/dunkel/1-start.html", "bildschirme/hell/1-start.html", "02-UI-SPEC.md"]);
+    // Bildschirme ohne eigene Dateien behalten das Spec als einzige Quelle — kein Rueckschritt.
+    expect(facts.screens?.[1]?.files).toEqual(["02-UI-SPEC.md"]);
+  });
+
+  it("versteht auch abgekürzte Dateinamen aus älteren Spec-Paketen", () => {
+    const mitDateien = ui.replace(
+      "| B-02 | Verlauf | Vergangene Sitzungen | — | B-01 |",
+      "| B-02 | Verlauf | Vergangene Sitzungen | — | B-01 |"
+    ).replace(
+      "| Kennung | Bildschirm | Zweck | Startbildschirm? | führt zu |\n|---------|------------|-------|------------------|----------|",
+      "| Kennung | Bildschirm | Zweck | Startbildschirm? | führt zu | Dateien |\n|---------|------------|-------|------------------|----------|---------|"
+    ).replace("| B-01 | Start | Sitzung beginnen | ja | B-02, B-03 |", "| B-01 | Start | Sitzung beginnen | ja | B-02, B-03 | `bildschirme/dunkel/…-start.html` |");
+    const facts = extractSpecFacts([{ path: "02-UI-SPEC.md", text: mitDateien }]);
+    expect(facts.screens?.[0]?.files?.[0]).toBe("bildschirme/dunkel/…-start.html");
+  });
 });

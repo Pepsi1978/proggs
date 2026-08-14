@@ -34,6 +34,7 @@ import { analysisBudget, buildSourceBatches, canRestartReconstructionJob, estima
 import { isOverloadError, maxModelAttempts, retryDelayMs, UpstreamThrottle } from "./model-retry.js";
 import { analysisKey, checkpointIsUseful, checkpointPrefix, checkpointRoot, checkpointSummary, describeCheckpoint, emptyCheckpoint, evidenceKey, mergeCheckpointPart, parseCheckpointObject, resumableAnalyses, resumableScreens, screenKey, type CheckpointParts, type CheckpointScope, type CheckpointSummary } from "./reconstruction-checkpoint.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
+import { checkShellConsistency, renderShellInstructions, shellReference, type ShellIssue } from "./shell-consistency.js";
 import { themeOverrideCss } from "./theme-override.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
@@ -543,7 +544,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.34.2-20260814.1029" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.35.0-20260814.1042" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1650,6 +1651,12 @@ function buildScreenInstructions(platform: ImportPlatform, profile: PreviewProfi
     "Die DESIGN-FAKTEN sind gemessene Quellwerte und damit verbindlich: übernimm Farben, Maße, Abstände, Radien, Schriftgrößen und Effekte ZEICHENGENAU aus ihnen. Nichts runden, nichts „verschönern“, nichts erfinden.",
     "Die ORIGINALQUELLEN dieses Bildschirms schlagen im Zweifel jede verdichtete Evidenz.",
     "Positioniere so, wie es das Original tut: Constraint-/absolut-basierte Oberflächen absolut, Stack-/Flow-Layouts als Flex/Grid mit exakt denselben Gaps und Insets. Kein zusätzliches Zentrieren, kein Skalieren, keine eigenen Außenabstände.",
+    // Jeder Bildschirm entsteht in einem EIGENEN Aufruf, der die anderen nicht sieht. Ohne diese
+    // Auflage erfindet jeder Aufruf die wiederkehrenden Leisten neu — mit anderer Hoehe, anderen
+    // Symbolen und anderen Schriftgroessen. Im Studio wirkt die App dann bei jedem Reiterwechsel wie
+    // eine andere Anwendung, obwohl alle Bildschirme aus derselben Beschreibung stammen.
+    "WIEDERKEHRENDE LEISTEN SIND AUF ALLEN BILDSCHIRMEN IDENTISCH. Reiterleiste, Kopfleiste, Navigationsleiste und jedes andere Element, das die App auf mehreren Bildschirmen zeigt, werden ZEICHENGLEICH aufgebaut: dieselbe Höhe, dieselben Innenabstände, dieselben Symbole in derselben Größe, dieselben Schriftgrößen und -gewichte, derselbe Hintergrund, dieselben Radien und Effekte. Unterscheiden darf sich AUSSCHLIESSLICH, welcher Eintrag als aktiv markiert ist.",
+    "Steht die Leiste in den Originalquellen dieses Bildschirms, wird sie von dort ABGESCHRIEBEN — nicht nach der Beschreibung neu entworfen. Wähle für ihre Maße niemals einen eigenen Wert, wenn ein gemessener vorliegt.",
     "Original-Icons aus der Icon-Bibliothek inline als <svg> einsetzen; niemals Ersatzsymbole, Emoji oder Fremd-Icons. Bitmap-Assets als /<exakter Manifestpfad> referenzieren.",
     effectGuidance,
     `Verlinke Navigationsziele über data-werft-navigate="ZIEL-ID"; gültige IDs sind: ${screenIds.join("; ") || "keine"}.`,
@@ -1679,9 +1686,24 @@ const fidelityRepairInstructions = [
 
 // Beim screenweisen Aufbau bekommt jeder Bildschirm seinen eigenen, UNVERDICHTETEN Quelltext —
 // genau das rettet die Details, die eine Evidenz-Verdichtung sonst wegkuerzt.
+// Ein Spec nennt die Bildschirmdatei mitunter abgekuerzt (`bildschirme/hell/…-heute.html`), weil die
+// laufende Nummer erst beim Export entsteht. Ohne Platzhalter traf so ein Eintrag keine Datei — der
+// Aufbau bekam sein fertiges Original nie zu sehen und musste den Bildschirm frei nacherfinden.
+function screenSourceMatcher(entry: string): RegExp {
+  const escaped = entry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|/)${escaped.replace(/…|\\\.\\\.\\\./g, "[^/]*")}(?:\\.xml)?$`, "i");
+}
+
 async function readScreenSources(objectPrefix: string, manifest: ImportManifestFile[], wanted: string[]): Promise<string> {
   if (!wanted.length) return "";
-  const files = manifest.filter((file) => wanted.some((entry) => file.path === entry || file.path.endsWith(`/${entry}`) || file.path.endsWith(`/${entry}.xml`)));
+  // In der Reihenfolge der Wunschliste, nicht in der des Archivs: reicht das Zeichenbudget nicht fuer
+  // alles, wird zuerst gelesen, was diesen einen Bildschirm wirklich beschreibt.
+  const files: ImportManifestFile[] = [];
+  const gesehen = new Set<string>();
+  for (const entry of wanted) {
+    const matcher = screenSourceMatcher(entry);
+    for (const file of manifest) if (!gesehen.has(file.path) && matcher.test(file.path)) { gesehen.add(file.path); files.push(file); }
+  }
   const parts: string[] = [];
   let budget = maxScreenSourceChars;
   for (const file of files) {
@@ -1981,21 +2003,35 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     const composeAll = (parts: typeof fragments) => composeScreens(parts.map(({ screen, markup }) => ({ id: screen.id, name: screen.name, markup, isStart: screen.isStart, navigatesTo: screen.navigatesTo })), { title: row.name, platform, width: profile.width, height: profile.height, device: profile.device, density: profile.density, facts, sharedCss: parts.map((part) => part.css).filter(Boolean).join("\n") });
     let html = composeAll(fragments);
     let report = checkFidelity(html, facts);
+    // Die Nachmessung prueft jeden Bildschirm gegen die QUELLEN — sie kann nicht sehen, dass die
+    // Bildschirme UNTEREINANDER auseinanderlaufen. Genau das passiert aber, weil jeder in einem
+    // eigenen Aufruf entsteht: die Reiterleiste faellt auf jedem Bildschirm etwas anders aus. Dieser
+    // zweite, programmatische Blick vergleicht sie miteinander und schickt die Abweichungen in
+    // denselben Korrekturlauf.
+    const shellScreensOf = (parts: typeof fragments) => parts.map(({ screen, markup }) => ({ id: screen.id, name: screen.name, markup, isStart: screen.isStart }));
+    const sharedCssOf = (parts: typeof fragments) => parts.map((part) => part.css).filter(Boolean).join("\n");
+    const measureShell = (parts: typeof fragments) => checkShellConsistency(shellScreensOf(parts), sharedCssOf(parts));
+    let shellIssues = measureShell(fragments);
+    const shellReferenceName = shellReference(shellScreensOf(fragments), sharedCssOf(fragments))?.name ?? "";
+    if (shellIssues.length) app.log.info({ event: "reconstruction.shell_drift", jobId, projectId, issues: shellIssues.length, screens: new Set(shellIssues.map((issue) => issue.screenId)).size }, "Wiederkehrende Leisten laufen auseinander");
     app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 0, score: report.score, checked: report.checked, matched: report.matched, issues: report.issues.length }, "Fidelity gemessen");
-    await publishMilestone(88, reconstructionState("verify", `Nachmessung: ${report.score} % der gemessenen Quellwerte stimmen exakt (${report.matched} von ${report.checked}).`, 5, processedFiles, sources.length, processedBytes, totalBytes), 1, 0);
-    if (!fidelityAcceptable(report)) {
+    await publishMilestone(88, reconstructionState("verify", `Nachmessung: ${report.score} % der gemessenen Quellwerte stimmen exakt (${report.matched} von ${report.checked})${shellIssues.length ? `; ${shellIssues.length} Abweichung(en) an den wiederkehrenden Leisten` : ""}.`, 5, processedFiles, sources.length, processedBytes, totalBytes), 1, 0);
+    const shellByScreen = new Map<string, ShellIssue[]>();
+    for (const issue of shellIssues) shellByScreen.set(issue.screenId, [...(shellByScreen.get(issue.screenId) ?? []), issue]);
+    if (!fidelityAcceptable(report) || shellIssues.length) {
       // Nur Bildschirme nachbessern, die wirklich betroffen sind — und jeder bekommt AUSSCHLIESSLICH
       // die Abweichungen aus seinen eigenen Quelldateien. Sonst baut Bildschirm B Werte ein, die zu
       // Bildschirm A gehoeren, und die Rekonstruktion wird schlechter statt besser.
-      const affected = fragments.filter((fragment) => hasIssuesForSources(report, fragment.screen.files));
+      const affected = fragments.filter((fragment) => hasIssuesForSources(report, fragment.screen.files) || shellByScreen.has(fragment.screen.id));
       totalOperations += affected.length;
       let correctedScreens = 0;
-      app.log.info({ event: "reconstruction.repair_planned", jobId, projectId, affected: affected.length, total: fragments.length, issues: report.issues.length }, "Gezielter Korrekturlauf geplant");
+      app.log.info({ event: "reconstruction.repair_planned", jobId, projectId, affected: affected.length, total: fragments.length, issues: report.issues.length, shellIssues: shellIssues.length }, "Gezielter Korrekturlauf geplant");
       const repairedByScreen = new Map((await mapWithConcurrency(affected, reconstructionConcurrency, async (fragment) => {
         const corrections = renderFidelityInstructions(report, { sources: fragment.screen.files });
+        const shellCorrections = renderShellInstructions(shellByScreen.get(fragment.screen.id) ?? [], shellReferenceName);
         const result = await runModelStep({
           operation: `Bildschirm „${fragment.screen.name}“ nachmessen`, phase: "verify", kind: "verification",
-          instructions: fidelityRepairInstructions, input: [`Bildschirm: „${fragment.screen.name}“ (id=${fragment.screen.id}).`, factSheet, `\n# GEMESSENE ABWEICHUNGEN DIESES BILDSCHIRMS\n${corrections}`, `\n# ZU KORRIGIERENDES MARKUP DIESES BILDSCHIRMS\n<style>${fragment.css}</style>\n${fragment.markup}`].join("\n"),
+          instructions: fidelityRepairInstructions, input: [`Bildschirm: „${fragment.screen.name}“ (id=${fragment.screen.id}).`, factSheet, `\n# GEMESSENE ABWEICHUNGEN DIESES BILDSCHIRMS\n${corrections}`, shellCorrections ? `\n# ABWEICHUNGEN DER WIEDERKEHRENDEN LEISTE (gegen „${shellReferenceName}“ gemessen)\n${shellCorrections}` : "", `\n# ZU KORRIGIERENDES MARKUP DIESES BILDSCHIRMS\n<style>${fragment.css}</style>\n${fragment.markup}`].filter(Boolean).join("\n"),
           progress: 88 + (correctedScreens / Math.max(1, affected.length)) * 8, remainingWeight: 0,
           state: () => reconstructionState("verify", `${correctedScreens} von ${affected.length} betroffenen Bildschirmen gegen die gemessenen Quellwerte korrigiert.`, 5, processedFiles, sources.length, processedBytes, totalBytes),
           validate: (value) => { if (!extractScreenFragment(value.text).markup) fail("RECONSTRUCT_INVALID", 502, `Die Nachmessung von „${fragment.screen.name}“ lieferte kein verwertbares Markup.`, true); }
@@ -2011,9 +2047,12 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       const repaired = fragments.map((fragment) => repairedByScreen.get(fragment.screen.id) ?? fragment);
       const repairedHtml = composeAll(repaired);
       const repairedReport = checkFidelity(repairedHtml, facts);
-      app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 1, score: repairedReport.score, before: report.score, issues: repairedReport.issues.length }, "Fidelity nach Korrekturlauf gemessen");
+      const repairedShell = measureShell(repaired);
+      app.log.info({ event: "reconstruction.fidelity", jobId, projectId, round: 1, score: repairedReport.score, before: report.score, issues: repairedReport.issues.length, shellIssues: repairedShell.length, shellBefore: shellIssues.length }, "Fidelity nach Korrekturlauf gemessen");
       // Nur uebernehmen, wenn die Korrektur messbar besser ist — sonst bleibt der bessere Stand.
-      if (repairedReport.score >= report.score) { html = repairedHtml; report = repairedReport; }
+      // Beides zaehlt: die Treue zu den Quellen UND die Einheitlichkeit der Bildschirme untereinander.
+      // Ein Lauf, der die Leisten angleicht, aber die gemessenen Werte verschlechtert, wird verworfen.
+      if (repairedReport.score >= report.score && repairedShell.length <= shellIssues.length) { html = repairedHtml; report = repairedReport; shellIssues = repairedShell; }
     }
     const fidelityScore = report.score;
     const designFile = designFileName(targetViewport);

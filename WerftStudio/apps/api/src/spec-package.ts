@@ -506,7 +506,11 @@ export function uiSpec(input: SpecInput, bauweg: Bauweg, stand: string, bewegung
   const screensById = new Map(facts.screens.map((screen) => [screen.id, screen] as const));
   for (const [index, section] of document.sections.entries()) {
     const ziele = screensById.get(section.id)?.navigatesTo ?? [];
-    const dateien = variants.length ? variants.map((variant) => `\`bildschirme/${variant.id}/…-${section.slug}.html\``).join("<br>") : "`design.html`";
+    // VOLLER Pfad, nicht abgekuerzt: diese Spalte ist nicht nur zum Lesen da — beim Wiedereinlesen
+    // wird daraus die Quelle, aus der genau dieser Bildschirm neu aufgebaut wird. Ein „…" an Stelle
+    // der laufenden Nummer traf keine Datei, und der Aufbau fiel auf die blosse Beschreibung zurueck.
+    const nummer = String(index + 1).padStart(String(document.sections.length).length, "0");
+    const dateien = variants.length ? variants.map((variant) => `\`bildschirme/${variant.id}/${nummer}-${section.slug}.html\``).join("<br>") : "`design.html`";
     zeilen.push(`| ${bildschirmId(section, index)} | ${section.name} (\`${section.id}\`) | ${section.isStart ? "ja" : "—"} | ${ziele.join(", ") || "—"} | ${dateien} |`);
   }
   zeilen.push("");

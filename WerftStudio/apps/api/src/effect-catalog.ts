@@ -85,6 +85,12 @@ export const stateLayerOpacity = { hovered: 0.08, focused: 0.1, pressed: 0.1, dr
 // eigene Schattenwerte und die Rekonstruktion weicht sichtbar ab.
 export const effectGuidance = [
   "EFFEKT-REGELN (verbindlich, keine eigenen Werte erfinden):",
+  // Effekte gingen bisher am haeufigsten dadurch verloren, dass sie im Faktenblatt zwar standen, aber
+  // ohne erkennbares Ziel — und was man nicht zuordnen kann, laesst man weg. Der Name eines Effekts
+  // traegt jetzt den Ort, an dem er im Original steht (`.karte (shadow)`); wo er das nicht tut, wird
+  // er trotzdem gesetzt, nur eben an der Stelle, die die Originalquelle nennt.
+  "- KEIN gelieferter Effekt darf fehlen. Der Name eines Effekts nennt seinen Ort im Original (z. B. `.karte (shadow)`, `nav.reiterleiste (gradient)`): setze ihn GENAU dort. Nennt der Name keinen Ort, entnimm ihn den Originalquellen dieses Bildschirms. Weglassen ist keine Option — ein Effekt, der im Original sichtbar ist, muss auch hier sichtbar sein.",
+  "- Glaseffekte (`backdrop-filter`) brauchen eine halbdurchsichtige eigene Fläche; setze KEIN `filter`, `opacity` unter 1, `mix-blend-mode` oder `will-change` auf ein Elternelement des Glaselements, sonst bleibt der Effekt im Browser wirkungslos. Schreibe zusätzlich `-webkit-backdrop-filter` mit demselben Wert.",
   "- Android-Elevation/`shadow(Xdp)`/`cardElevation` NUR über die im Faktenblatt gelieferte box-shadow-Zeile abbilden.",
   "- WPF-`DropShadowEffect` und SwiftUI-`.shadow(...)` ebenso: exakt die gelieferte CSS-Zeile verwenden.",
   "- Klickbare Flächen bekommen die Original-Zustandsschichten: hover 8 %, focus 10 %, pressed 10 %, dragged 16 % der Vordergrundfarbe als overlay — nicht heller/dunkler „schätzen“.",

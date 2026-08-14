@@ -176,6 +176,17 @@ function formenUndEffekte(uiSpec: string, quelle: string): { shapes: FactShape[]
 const zielListe = (roh: string): string[] =>
   roh.split(/[,;]/).map((teil) => rein(teil)).filter((teil) => teil && teil !== "—" && teil !== "-");
 
+// Ein Spec-Paket aus dem Designer bringt die fertig gebauten Bildschirme MIT — je Erscheinung eine
+// HTML-Datei. Ohne diese Spalte kannte der Aufbau als Quelle nur das Spec selbst und musste jeden
+// Bildschirm aus der Beschreibung neu erfinden: die wiederkehrenden Leisten fielen dabei auf jedem
+// Bildschirm anders aus, und Effekte, die im Spec nur als Wert ohne Ort stehen, gingen verloren.
+// Steht die Datei dagegen daneben, wird abgeschrieben statt geraten.
+const dateiListe = (roh: string): string[] => {
+  const teile = roh.split(/<br\s*\/?>|[,;]/i).map((teil) => rein(teil)).filter(Boolean);
+  const gesehen = new Set<string>();
+  return teile.filter((teil) => /\.[a-z0-9]{2,5}$/i.test(teil) && !gesehen.has(teil) && gesehen.add(teil));
+};
+
 function bildschirme(uiSpec: string, quelle: string): FactScreen[] {
   const tabelle = ersteTabelle(findeAbschnitt(uiSpec, "Bildschirme"), "bildschirm");
   if (!tabelle) return [];
@@ -194,7 +205,9 @@ function bildschirme(uiSpec: string, quelle: string): FactScreen[] {
       source: quelle,
       navigatesTo: zielListe(wert(zeile, "fuhrtzu", "fuhrtzukennungen", "ziel", "navigiertzu")),
       isStart: /^(ja|yes|x|start)$/i.test(wert(zeile, "start", "startbildschirm")),
-      files: [quelle]
+      // Die eigenen Bildschirmdateien stehen VORNE: reicht das Zeichenbudget nicht fuer alles, wird
+      // lieber das fertige Original dieses Bildschirms gelesen als die Beschreibung aller anderen.
+      files: [...dateiListe(wert(zeile, "dateienjeerscheinung", "dateien", "datei", "dateijeerscheinung")), quelle]
     }];
   });
 }
