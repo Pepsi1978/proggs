@@ -7,13 +7,23 @@ class CodexEvaluationService(private val client: CodexResponsesClient) {
         onEvent: suspend (CodexStreamEvent) -> Unit = {},
     ): CodexEvaluationOutcome {
         require(request.evaluationId.isNotBlank())
-        require(request.goals.isNotEmpty()) { "Mindestens ein Ziel ist erforderlich." }
         require(request.contextJson.isNotBlank()) { "Kontextdaten fehlen." }
         onEvent(CodexStreamEvent.Stage("Prüfe Wechselwirkungen …"))
         val partials = mutableListOf<CodexEvaluation>()
         val narratives = mutableListOf<String>()
-        for ((chunkIndex, goals) in request.goals.chunked(MAX_GOALS_PER_REQUEST).withIndex()) {
-            onEvent(CodexStreamEvent.Stage("Gewichte Ziele ${chunkIndex * MAX_GOALS_PER_REQUEST + 1}–${chunkIndex * MAX_GOALS_PER_REQUEST + goals.size} …"))
+        // Ohne Ziele laeuft genau eine Anfrage: dann wird die Zusammenstellung selbst
+        // beurteilt statt gegen Ziele gewichtet. Ein leeres chunked() wuerde gar nichts fragen.
+        val chunks = if (request.goals.isEmpty()) listOf(emptyList()) else request.goals.chunked(MAX_GOALS_PER_REQUEST)
+        for ((chunkIndex, goals) in chunks.withIndex()) {
+            onEvent(
+                CodexStreamEvent.Stage(
+                    if (goals.isEmpty()) {
+                        "Prüfe Konkurrenzen, Reihenfolge und Verträglichkeit …"
+                    } else {
+                        "Gewichte Ziele ${chunkIndex * MAX_GOALS_PER_REQUEST + 1}–${chunkIndex * MAX_GOALS_PER_REQUEST + goals.size} …"
+                    },
+                ),
+            )
             val raw = client.request(
                 payload = codexPayload(request, goals),
                 operationId = "${request.evaluationId}:$chunkIndex",

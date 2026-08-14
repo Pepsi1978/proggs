@@ -106,7 +106,6 @@ class PersistedCodexEvaluator(
                 }
             }
             .sortedBy { it.rank }
-        require(goals.isNotEmpty()) { "Mindestens ein Ziel in den Stacks ist erforderlich." }
         val checksumInput = stacks.map {
             repository.berechnePruefsumme(it.id, appSettings.dosisVariante)
         }.sorted().joinToString("\u0000")

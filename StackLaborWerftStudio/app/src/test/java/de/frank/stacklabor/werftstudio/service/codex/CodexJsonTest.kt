@@ -22,6 +22,31 @@ class CodexJsonTest {
     }
 
     @Test
+    fun `nimmt eine zielfreie Auswertung ohne Zellen an`() {
+        // So sieht die Antwort aus, wenn fuer den Stack keine Ziele festgelegt sind.
+        val raw = """
+            {"zellen":[],
+             "konkurrenzen":[{"nem_a":"nem-1","nem_b":"nem-2","art":"aufnahme","schwere":2,"grund":"Beide binden Eisen."}],
+             "antworten":[{"frage":"frage-1","text":"Antwort"}],
+             "gesamt":"Die Zusammenstellung wurde ohne Ziele geprueft.",
+             "hinweise":[]}
+        """.trimIndent()
+
+        val result = CodexJson.parse(raw, supplements, goalIds = emptySet(), questionIds = questions)
+
+        assertTrue(result.cells.isEmpty())
+        assertEquals(1, result.competitions.size)
+        assertEquals("Die Zusammenstellung wurde ohne Ziele geprueft.", result.narrative)
+    }
+
+    @Test
+    fun `weist Zellen ab wenn gar keine Ziele festgelegt sind`() {
+        assertFailsWith<InvalidCodexJsonException> {
+            CodexJson.parse(validJson(), supplements, goalIds = emptySet(), questionIds = questions)
+        }
+    }
+
+    @Test
     fun `weist unbekannte Felder strikt ab`() {
         val raw = validJson().replace("\"hinweise\":[]", "\"hinweise\":[],\"extra\":true")
 

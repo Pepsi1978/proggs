@@ -226,6 +226,13 @@ internal fun codexPayload(
         append("Nicht genannte Mittel-Ziel-Paare gelten als neutral. ")
         append("Als 'alterniert mit' gekennzeichnete Paare nie als Konkurrenz melden. ")
         append("Nutze ausschließlich die übergebenen IDs. Gründe sind knapp und auf Deutsch. ")
+        if (goals.isEmpty()) {
+            // Ohne Ziele gibt es nichts zu gewichten — dann zaehlt nur die Zusammenstellung selbst.
+            append("Für diesen Stack sind KEINE Ziele hinterlegt. Gib 'zellen' deshalb als leere Liste aus. ")
+            append("Beurteile stattdessen die Zusammenstellung selbst: Konkurrenzen um Aufnahmewege, ")
+            append("Wechselwirkungen, sinnvolle Einnahme-Reihenfolge, Abstände, Dosishöhen und Verträglichkeit. ")
+            append("Schreibe das ausführlich in 'gesamt'. ")
+        }
         if (repairRawOutput != null) {
             append("Der erste Ausgabeversuch war ungültig. Repariere ihn strikt nach dem Schema; ")
             append("gib erneut nur vollständiges JSON aus.")
@@ -234,8 +241,12 @@ internal fun codexPayload(
     val input = buildString {
         append("Kontextdaten:\n")
         append(request.contextJson)
-        append("\n\nIn dieser Teilanfrage zu bewertende Ziele:\n")
-        append(JSONArray(goals.map { JSONObject().put("id", it.id).put("rang", it.rank).put("text", it.text) }))
+        if (goals.isEmpty()) {
+            append("\n\nZu diesem Stack sind keine Ziele festgelegt — 'zellen' bleibt leer.")
+        } else {
+            append("\n\nIn dieser Teilanfrage zu bewertende Ziele:\n")
+            append(JSONArray(goals.map { JSONObject().put("id", it.id).put("rang", it.rank).put("text", it.text) }))
+        }
         if (repairRawOutput != null) {
             append("\n\nZu reparierender Ausgabeversuch:\n")
             append(repairRawOutput.take(MAX_REPAIR_CHARS))

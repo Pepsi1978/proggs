@@ -736,7 +736,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun evaluate(stackId: String?) {
         if (stackId == null) return message("Kein Stack ausgewählt")
-        if (stackGoals.none { it.stackId == stackId }) return message("Lege zuerst mindestens ein Ziel für diesen Stack fest")
+        // Ohne Ziele wird trotzdem geprüft — dann eben die Zusammenstellung selbst.
         evaluationJob?.cancel()
         evaluationJob = viewModelScope.launch {
             mutableState.update { it.copy(evaluationState = EvaluationState.Running, streamedEvaluationText = "") }
