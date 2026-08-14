@@ -35,6 +35,7 @@ import { isOverloadError, maxModelAttempts, retryDelayMs, UpstreamThrottle } fro
 import { analysisKey, checkpointIsUseful, checkpointPrefix, checkpointRoot, checkpointSummary, describeCheckpoint, emptyCheckpoint, evidenceKey, mergeCheckpointPart, parseCheckpointObject, resumableAnalyses, resumableScreens, screenKey, type CheckpointParts, type CheckpointScope, type CheckpointSummary } from "./reconstruction-checkpoint.js";
 import { composeScreens, extractScreenFragment, screenPlanFrom, themeStyles, themeVariants } from "./screen-composer.js";
 import { checkShellConsistency, renderShellInstructions, shellReference, type ShellIssue } from "./shell-consistency.js";
+import { abortReconstruction, cancelledCode, cancelMessage, endsRun, isCancelled, registerReconstruction, releaseReconstruction } from "./reconstruction-cancel.js";
 import { themeOverrideCss } from "./theme-override.js";
 import { chooseEntryPath, expandZip, importLimits, isFrontendFile, isGeneratedArtifact, mimeForPath, normalizeImportPath, scoreEntryPath, validateImportFiles } from "./import-project.js";
 import { paginatedObjects, type ObjectListPage } from "./paginated-objects.js";
@@ -544,7 +545,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.36.1-20260814.1051" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.37.0-20260814.1203" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1623,8 +1624,20 @@ const reconstructionState = (phase: string, message: string, completedTodos: num
   ...extra
 });
 async function updateReconstructionJob(jobId: string, runAttempt: number, status: "queued" | "running" | "completed" | "failed", progress: number, result: ReconstructionState, errorCode?: string) {
-  const updated = await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`)).returning({ id: jobs.id });
+  const updated = await db.update(jobs).set({ status, progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: errorCode ?? null, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`)).returning({ id: jobs.id, cancelRequested: jobs.cancelRequested });
   if (!updated[0]) fail("RECONSTRUCT_LEASE_LOST", 409, "Dieser Rekonstruktionslauf wurde durch einen neueren Versuch ersetzt.");
+  // Der Abbruchwunsch faellt genau hier auf: der Lauf kommt ohnehin alle zwei Sekunden vorbei, um
+  // seinen Fortschritt zu schreiben. Das wirkt auch dann, wenn der Wunsch aus einem anderen
+  // Prozess kommt — die Datenbank ist die Wahrheit, der Abbruch im Prozess nur der schnellere Weg.
+  if (updated[0].cancelRequested && status !== "completed" && status !== "failed") fail(cancelledCode, 409, "Der Aufbau wurde abgebrochen.");
+}
+
+// Der Schlussvermerk eines abgebrochenen Laufs darf NICHT an derselben Pruefung scheitern, die den
+// Abbruch ausgeloest hat — sonst bliebe der Lauf fuer immer auf „laeuft" stehen und der naechste
+// Start liefe in die Lease-Sperre.
+async function finalizeCancelledReconstruction(jobId: string, runAttempt: number, progress: number, result: ReconstructionState) {
+  await db.update(jobs).set({ status: "failed", progress: Math.max(0, Math.min(100, Math.round(progress))), result, errorCode: cancelledCode, heartbeatAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(jobs.id, jobId), eq(jobs.attempts, runAttempt), sql`${jobs.status} in ('queued', 'running')`));
 }
 // Grenzen der deterministischen Messung: sie soll Sekunden dauern und darf den Speicher nicht sprengen.
 // Der Bildschirm-Deckel schuetzt vor endlosen Laeufen — bei 24 fielen aber echte Bildschirme grosser
@@ -1736,6 +1749,9 @@ async function compactReconstructionEvidence(summaries: string[], run: Reconstru
   return current;
 }
 async function runReconstructionJob(jobId: string, runAttempt: number, actor: Actor, projectId: string, correlationId: string, selection: ModelSelection, previousProbes: ReconstructionProbe[] = [], targetViewport?: { width: number; height: number; device: string }, resume = true) {
+  // Solange dieser Lauf hier liegt, erreicht ihn ein Abbruch SOFORT — er muss nicht bis zum
+  // naechsten Fortschrittsschritt warten und bezahlt den offenen Modellaufruf nicht zu Ende.
+  const jobAbort = registerReconstruction(jobId);
   const jobStartedAt = Date.now();
   const startedAt = new Date(jobStartedAt).toISOString();
   const probes: ReconstructionProbe[] = previousProbes.map((probe) => ({ ...probe }));
@@ -1796,7 +1812,8 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       operation,
       jobId,
       selection,
-      signal: controller.signal,
+      // Der Schritt endet, wenn ER abgebrochen wird ODER der ganze Lauf.
+      signal: AbortSignal.any([controller.signal, jobAbort.signal]),
       onAttempt: (attempt) => {
         if (attempts > 0 && attempt > attempts) retryCount += attempt - attempts;
         attempts = attempt;
@@ -1816,9 +1833,11 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
         await publish("running", progress, runtimeState(base, timing.phaseProgress, showEta === false ? null : timing.estimatedRemainingMs, operation));
       } catch (heartbeatError) {
         const heartbeatDetails = heartbeatError && typeof heartbeatError === "object" ? heartbeatError as Record<string, unknown> : {};
-        if (heartbeatDetails.code === "RECONSTRUCT_LEASE_LOST") {
+        // Abbruch und verlorene Berechtigung enden beide sofort: der laufende Modellaufruf wird
+        // beendet, statt ihn noch zu Ende bezahlen zu lassen.
+        if (endsRun(heartbeatDetails.code)) {
           controller.abort(heartbeatError);
-          await tracked;
+          await tracked.catch(() => { /* der Abbruch ist der Grund, kein zweiter Fehler */ });
           throw heartbeatError;
         }
         app.log.warn({ err: heartbeatError, event: "reconstruction.heartbeat.persist_failed", jobId, projectId, operation, runAttempt }, "Rekonstruktions-Heartbeat konnte nicht gespeichert werden");
@@ -2124,6 +2143,19 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       app.log.warn({ event: "reconstruction.lease_lost", jobId, projectId, runAttempt, elapsedMs: Date.now() - jobStartedAt }, "Veralteter Rekonstruktionslauf wurde beendet");
       return;
     }
+    // Ein Abbruch ist kein Fehler, sondern eine Entscheidung. Er wird als solcher vermerkt — mit
+    // dem Hinweis, was gesichert ist —, damit der naechste Start dort weitermacht statt von vorn.
+    if (isCancelled(code)) {
+      const gesichert = checkpointIsUseful(savedCheckpoint) ? `${describeCheckpoint(savedCheckpoint)} Der nächste Lauf setzt an dieser Stelle auf.` : "";
+      const abgebrochen = runtimeState({ ...latestState, phase: "cancelled", message: cancelMessage(gesichert) }, null, null, latestState.currentOperation);
+      try { await finalizeCancelledReconstruction(jobId, runAttempt, Math.min(99, latestProgress), abgebrochen); }
+      catch (persistError) { app.log.error({ err: persistError, jobId, projectId, runAttempt }, "Abbruch der Rekonstruktion konnte nicht vermerkt werden"); }
+      try {
+        await db.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "design.reconstruction.cancelled", targetType: "project", targetId: projectId, result: "success", metadata: { selection, elapsedMs: Date.now() - jobStartedAt, progress: latestProgress, checkpoint: savedCheckpoint }, correlationId });
+      } catch (auditError) { app.log.warn({ err: auditError, jobId, projectId }, "Abbruch-Audit der Rekonstruktion konnte nicht gespeichert werden"); }
+      app.log.info({ event: "reconstruction.cancelled", jobId, projectId, runAttempt, progress: latestProgress, elapsedMs: Date.now() - jobStartedAt, checkpoint: savedCheckpoint }, "Design-Rekonstruktion abgebrochen");
+      return;
+    }
     // Der Benutzer soll am Fehler ablesen koennen, dass seine bisherige Arbeit NICHT verloren ist.
     const resumeHint = checkpointIsUseful(savedCheckpoint) ? ` ${describeCheckpoint(savedCheckpoint)} Der Lauf kann an dieser Stelle fortgesetzt werden.` : "";
     const failedState = runtimeState({ ...latestState, phase: "failed", message: `${message}${resumeHint}` }, null, null, latestState.currentOperation);
@@ -2140,6 +2172,8 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
     } catch (auditError) { app.log.warn({ err: auditError, jobId, projectId }, "Fehler-Audit der Rekonstruktion konnte nicht gespeichert werden"); }
     const memory = process.memoryUsage();
     app.log.error({ err: error, event: "reconstruction.failed", jobId, projectId, code, progress: latestProgress, elapsedMs: Date.now() - jobStartedAt, retryCount, probes, rssBytes: memory.rss, heapUsedBytes: memory.heapUsed }, "Design-Rekonstruktion fehlgeschlagen");
+  } finally {
+    releaseReconstruction(jobId, jobAbort);
   }
 }
 // In-Process-Laeufe koennen einen API-Neustart nicht ueberleben. Persistierte Zwischenzustaende
@@ -2198,13 +2232,32 @@ app.post("/api/v1/projects/:projectId/design/reconstruct", { config: { rateLimit
   const existing = (await db.select().from(jobs).where(and(eq(jobs.organizationId, actor.organizationId), eq(jobs.kind, "design-reconstruction"), eq(jobs.idempotencyKey, idempotencyKey))).limit(1))[0];
   if (!existing) fail("JOB_CLAIM_FAILED", 409, "Der Verarbeitungslauf konnte nicht übernommen werden. Bitte erneut versuchen.", true);
   if (existing.status === "queued" || existing.status === "running") return reply.status(202).send({ jobId: existing.id, status: existing.status });
-  if (!canRestartReconstructionJob(existing.status, retryFailed, force)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
+  if (!canRestartReconstructionJob(existing.status, retryFailed, force, existing.errorCode)) return reply.status(202).send({ jobId: existing.id, status: existing.status });
   const existingResult = existing.result && typeof existing.result === "object" ? existing.result as Partial<ReconstructionState> : null;
   const previousProbes = Array.isArray(existingResult?.probes) ? existingResult.probes : [];
   const retryQueuedState = { ...queuedState, probes: previousProbes.map((probe) => ({ ...probe })) };
-  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
+  // `cancelRequested` wird beim Neustart zurueckgenommen — sonst braeche der neue Lauf sofort
+  // wieder ab, weil er den Wunsch des alten vorfindet.
+  const claimed = await db.update(jobs).set({ status: "queued", progress: 0, result: retryQueuedState, errorCode: null, cancelRequested: false, attempts: sql`${jobs.attempts} + 1`, heartbeatAt: new Date(), updatedAt: new Date() }).where(and(eq(jobs.id, existing.id), eq(jobs.status, existing.status))).returning({ id: jobs.id, attempts: jobs.attempts });
   if (claimed[0]) setTimeout(() => { void runReconstructionJob(existing.id, claimed[0]!.attempts, actor, projectId, request.id, selection, previousProbes, viewport, resumeFromCheckpoint).catch((error) => app.log.error({ err: error, jobId: existing.id, projectId }, "Unbehandelter Rekonstruktionsfehler")); }, 0);
   return reply.status(202).send({ jobId: existing.id, status: claimed[0] ? "queued" : "running" });
+});
+// Ein Aufbau laeuft Minuten und kostet je Bildschirm einen teuren KI-Aufruf. Wer erkennt, dass er
+// das falsche Paket erwischt hat, muss ihn beenden koennen — bisher lief er unaufhaltsam durch.
+app.post("/api/v1/jobs/:jobId/cancel", async (request) => {
+  const actor = requireActorPermission(request, "design.edit");
+  const { jobId } = z.object({ jobId: z.string().uuid() }).parse(request.params);
+  const row = (await db.select({ id: jobs.id, status: jobs.status, projectId: jobs.projectId }).from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, actor.organizationId))).limit(1))[0];
+  if (!row) fail("JOB_NOT_FOUND", 404, "Verarbeitungslauf nicht gefunden.");
+  // Der Wunsch wird IMMER zuerst vermerkt: er wirkt auch dann, wenn der Lauf in einem anderen
+  // Prozess haengt. Der Abbruch im Prozess ist nur der schnellere zweite Weg.
+  const marked = await db.update(jobs).set({ cancelRequested: true, updatedAt: new Date() })
+    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, actor.organizationId), sql`${jobs.status} in ('queued', 'running')`))
+    .returning({ id: jobs.id });
+  const hitHere = abortReconstruction(jobId);
+  if (!marked[0]) return { cancelled: false, status: row.status, message: "Dieser Lauf ist bereits beendet." };
+  app.log.info({ event: "reconstruction.cancel_requested", jobId, projectId: row.projectId, hitHere }, "Abbruch eines Aufbaus angefordert");
+  return { cancelled: true, status: "cancelling", message: "Der Aufbau wird abgebrochen. Was bereits gesichert ist, bleibt erhalten." };
 });
 app.get("/api/v1/jobs/:jobId", async (request) => {
   const actor = requireActorPermission(request, "project.read");

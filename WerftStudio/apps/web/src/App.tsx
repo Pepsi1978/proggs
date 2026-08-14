@@ -77,16 +77,31 @@ function ProgressMeters({ percent, phaseProgress, elapsedMs, estimatedRemainingM
   );
 }
 type RebuildViewport = { width: number; height: number; device: string };
-async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false, viewport?: RebuildViewport, resume = true): Promise<ReconstructionJob> {
+// Der Aufbau laeuft Minuten und kostet je Bildschirm einen teuren KI-Aufruf. `signal` ist der Weg
+// zurueck: er meldet dem Server den Abbruch und beendet danach das Nachfragen. Ohne ihn lief der
+// Lauf unaufhaltsam zu Ende, auch wenn schon nach dem ersten Bildschirm klar war, dass es das
+// falsche Paket war.
+async function reconstructProject(projectId: string, onProgress: (job: ReconstructionJob) => void, retryFailed = false, force = false, viewport?: RebuildViewport, resume = true, signal?: AbortSignal): Promise<ReconstructionJob> {
   let started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed, force, resume, ...(viewport ? { viewport } : {}) }) });
   let networkRetries = 0;
   let interruptedRestarts = 0;
+  let cancelSent = false;
+  const requestCancel = async (jobId: string) => {
+    if (cancelSent) return;
+    cancelSent = true;
+    // Der Abbruch geht ohne das Signal hinaus: er soll gerade dann ankommen, wenn der Benutzer
+    // aufgehoert hat zu warten.
+    try { await api(`/jobs/${jobId}/cancel`, { method: "POST", body: JSON.stringify({}) }); }
+    catch { /* Der Wunsch ist unterwegs oder der Lauf schon beendet — beides ist kein Fehler. */ }
+  };
   for (;;) {
+    if (signal?.aborted) { await requestCancel(started.jobId); throw new ApiError("RECONSTRUCT_CANCELLED", "Der Aufbau wurde abgebrochen.", 0); }
     let job: ReconstructionJob;
     try {
       job = await api<ReconstructionJob>(`/jobs/${started.jobId}`);
       networkRetries = 0;
     } catch (error) {
+      if (signal?.aborted) { await requestCancel(started.jobId); throw new ApiError("RECONSTRUCT_CANCELLED", "Der Aufbau wurde abgebrochen.", 0); }
       if (networkRetries >= 75) throw error;
       networkRetries += 1;
       await pause(800);
@@ -94,6 +109,8 @@ async function reconstructProject(projectId: string, onProgress: (job: Reconstru
     }
     onProgress(job);
     if (job.status === "completed") return job;
+    // Ein Abbruch ist kein Fehlschlag: er war gewollt, und was gesichert ist, bleibt liegen.
+    if (job.status === "failed" && job.errorCode === "RECONSTRUCT_CANCELLED") throw new ApiError("RECONSTRUCT_CANCELLED", job.result?.message ?? "Der Aufbau wurde abgebrochen.", 0);
     if (job.status === "failed" && job.errorCode === "RECONSTRUCT_INTERRUPTED" && interruptedRestarts < 1) {
       interruptedRestarts += 1;
       started = await api<{ jobId: string }>(`/projects/${projectId}/design/reconstruct`, { method: "POST", body: JSON.stringify({ retryFailed: true, ...(viewport ? { viewport } : {}) }) });
@@ -521,8 +538,15 @@ function ImportProject({ onClose }: { onClose(): void }) {
     const inferred = root || first.name.replace(/\.(zip|html?|json|werft)$/i, "");
     if (inferred) setName(inferred.slice(0, 120));
   };
+  // Ein Import laeuft vom Hochladen bis zum fertigen Design ueber Minuten. Bisher war der einzige
+  // Knopf des Fensters waehrenddessen gesperrt: einmal gestartet, blieb nur Zusehen. Ein Abbruch
+  // beendet beides — den Upload und den Aufbau, der danach auf dem Server laeuft.
+  const importAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => importAbort.current?.abort(), []);
   const upload = useMutation({
     mutationFn: async () => {
+      const controller = new AbortController();
+      importAbort.current = controller;
       const uploadStartedAt = Date.now();
       const form = new FormData();
       form.append("name", name);
@@ -538,7 +562,7 @@ function ImportProject({ onClose }: { onClose(): void }) {
         const knownTotal = total || files.reduce((sum, file) => sum + file.size, 0);
         const elapsedMs = Date.now() - uploadStartedAt;
         setProgress({ percent: knownTotal ? Math.min(35, loaded / knownTotal * 35) : 5, phaseProgress: knownTotal ? Math.min(100, loaded / knownTotal * 100) : null, message: "Projektdateien werden vollständig eingelesen.", loaded, total: knownTotal, elapsedMs, estimatedRemainingMs: loaded > 0 && knownTotal > loaded ? elapsedMs / loaded * (knownTotal - loaded) : null, currentOperation: "Projektdateien hochladen", todos: [] });
-      });
+      }, controller.signal);
       let reconstructionCompleted = true;
       if (imported.requiresReconstruction) {
         try {
@@ -555,8 +579,12 @@ function ImportProject({ onClose }: { onClose(): void }) {
             totalOperations: job.result?.totalOperations,
             retryCount: job.result?.retryCount,
             todos: job.result?.todos ?? []
-          }));
-        } catch {
+          }), false, false, undefined, true, controller.signal);
+        } catch (error) {
+          // Ein Abbruch ist kein halber Import: das Projekt liegt bereits an, der Aufbau wurde
+          // bewusst beendet. Er wird nach oben gereicht, damit das Fenster ihn ruhig meldet
+          // statt „importiert, Rekonstruktion erneut starten" vorzuschlagen.
+          if (error instanceof ApiError && error.code === "RECONSTRUCT_CANCELLED") throw Object.assign(error, { projectId: imported.projectId });
           reconstructionCompleted = false;
           setProgress((current) => ({ percent: current?.percent ?? 35, phaseProgress: current?.phaseProgress ?? null, message: "Projekt importiert; die HTML-Rekonstruktion kann im Studio erneut gestartet werden.", loaded: current?.loaded ?? 0, total: current?.total ?? 0, elapsedMs: current?.elapsedMs ?? 0, estimatedRemainingMs: null, currentOperation: current?.currentOperation, completedOperations: current?.completedOperations, totalOperations: current?.totalOperations, retryCount: current?.retryCount, todos: current?.todos ?? [] }));
         }
@@ -681,10 +709,15 @@ function ImportProject({ onClose }: { onClose(): void }) {
             {progress.todos.length > 0 && <div className="import-todos">{progress.todos.map((todo) => <span className={todo.status} key={todo.label}>{todo.status === "completed" ? <Check /> : <i />}{todo.label}</span>)}</div>}
           </section>
         )}
-        {upload.error && <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>}
+        {/* Ein Abbruch war gewollt — er gehoert nicht in die Fehlerzeile. */}
+        {upload.error && (upload.error instanceof ApiError && (upload.error.code === "RECONSTRUCT_CANCELLED" || upload.error.code === "UPLOAD_CANCELLED")
+          ? <p className="subtle">{upload.error.code === "UPLOAD_CANCELLED" ? "Der Upload wurde abgebrochen." : upload.error.message}</p>
+          : <p className="field-error">{upload.error instanceof ApiError ? upload.error.message : "Das Projekt konnte nicht importiert werden."}</p>)}
       </div>
       <div className="modal-actions">
-        <Button disabled={upload.isPending} onClick={onClose}>Abbrechen</Button>
+        {/* Solange etwas laeuft, beendet dieser Knopf den Lauf, statt nur das Fenster zu schliessen —
+            vorher war er gesperrt, und ein einmal gestarteter Import lief unaufhaltsam durch. */}
+        <Button onClick={() => { if (upload.isPending) importAbort.current?.abort(); else onClose(); }}>{upload.isPending ? "Import abbrechen" : "Abbrechen"}</Button>
         <Button variant="primary" disabled={!files.length || !name.trim() || upload.isPending} onClick={() => upload.mutate()}>
           {upload.isPending ? `${Math.round(progress?.percent ?? 0)} % · Design wird aufgebaut …` : "Importieren & öffnen"}
         </Button>
@@ -1261,10 +1294,30 @@ function Studio() {
   // Der Neuaufbau wird OBEN bedient, laeuft aber unten auf der Buehne. Deshalb liegt er hier und
   // wird nach unten gereicht — sonst gaebe es zwei Auftraege, die nichts voneinander wissen.
   const [rebuildProgress, setRebuildProgress] = useState<ReconstructionJob | null>(null);
+  // Ein laufender Aufbau muss zu beenden sein. Der Abbruch geht an den Server (dort endet der
+  // teure Modellaufruf sofort) und beendet hier das Nachfragen.
+  const rebuildAbort = useRef<AbortController | null>(null);
+  const [rebuildCancelled, setRebuildCancelled] = useState<string>("");
   const rebuild = useMutation({
-    mutationFn: ({ retryFailed, force, viewport, resume }: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }) => reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false, viewport, resume ?? true),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] })
+    mutationFn: ({ retryFailed, force, viewport, resume }: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }) => {
+      rebuildAbort.current?.abort();
+      const controller = new AbortController();
+      rebuildAbort.current = controller;
+      setRebuildCancelled("");
+      return reconstructProject(projectId, setRebuildProgress, retryFailed, force ?? false, viewport, resume ?? true, controller.signal);
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ["project-import", projectId] }),
+    onError: async (error) => {
+      if (!(error instanceof ApiError) || error.code !== "RECONSTRUCT_CANCELLED") return;
+      // Der Abbruch war gewollt — er gehoert nicht in die Fehleranzeige, sondern als ruhiger
+      // Hinweis an die Buehne, samt dem, was gesichert wurde.
+      setRebuildCancelled(error.message || "Der Aufbau wurde abgebrochen.");
+      await client.invalidateQueries({ queryKey: ["project-import", projectId] });
+    },
+    onSettled: () => { rebuildAbort.current = null; }
   });
+  // Beim Verlassen des Projekts wird nicht weiter nachgefragt.
+  useEffect(() => () => rebuildAbort.current?.abort(), [projectId]);
   // Welcher Bildschirm gerade zu sehen ist, entscheidet meist, was ein Änderungswunsch meint.
   const [visibleScreen, setVisibleScreen] = useState<string | null>(null);
   const [chat, setChat] = useState("");
@@ -1845,7 +1898,7 @@ function Studio() {
             device={stageDevice}
             frame={draftFrame}
             deviceVariant={deviceVariant}
-            rebuild={{ start: (options) => rebuild.mutate(options), pending: rebuild.isPending, error: rebuild.error, progress: rebuildProgress }}
+            rebuild={{ start: (options) => rebuild.mutate(options), cancel: () => rebuildAbort.current?.abort(), pending: rebuild.isPending, error: rebuild.error, cancelled: rebuildCancelled, progress: rebuildProgress }}
             onScreenChange={setVisibleScreen}
             onScreensChange={setBoardScreens}
             onActiveScreenChange={setActiveScreenId}
@@ -2515,7 +2568,7 @@ const tools: [ToolMode, string, ReactNode][] = [
   ["draw", "Zeichnen", <WandSparkles />],
 ];
 // Der Neuaufbau wird oben in der Kopfleiste bedient; die Buehne zeigt nur noch seinen Fortschritt.
-type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }): void; pending: boolean; error: Error | null; progress: ReconstructionJob | null };
+type RebuildControl = { start(options: { retryFailed: boolean; force?: boolean; viewport?: RebuildViewport; resume?: boolean }): void; cancel(): void; pending: boolean; error: Error | null; cancelled: string; progress: ReconstructionJob | null };
 function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode, imported, device, frame, deviceVariant, rebuild, onScreenChange, onScreensChange, onActiveScreenChange, screenRequest, onComment, onTokensChange, tuneRequest, onTextEdit, onThemesChange, themeRequest, themeCss, onColourPick, tokens, overrides, onTuneToken, onResetToken }: { projectId: string; accent: string; radius: number; dark: boolean; zoom: number; setZoom(v: number): void; mode: ToolMode; setMode(v: ToolMode): void; imported: ProjectImport | undefined; device: StageDevice; frame: DesignDocument["frames"][number] | undefined; deviceVariant: DesignVariant | undefined; rebuild: RebuildControl; onScreenChange(name: string | null): void; onScreensChange(list: PreviewScreen[]): void; onActiveScreenChange(screenId: string | null): void; screenRequest: { screenId: string; nonce: number } | null; onComment(target: MarkTarget, text: string): void; onTokensChange(tokens: Record<string, string>): void; tuneRequest: { overrides: Record<string, string>; nonce: number } | null; onTextEdit(before: string, after: string): void; onThemesChange(themes: DesignTheme[], activeThemeId: string, effective?: boolean): void; themeRequest: { themeId: string; nonce: number } | null; themeCss: string | undefined; onColourPick(pick: ColourPick): void; tokens: Record<string, string>; overrides: Record<string, string>; onTuneToken(name: string, value: string): void; onResetToken(name: string): void }) {
   const previewOrigin = `${window.location.protocol}//${window.location.hostname}:8444`;
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -2653,11 +2706,22 @@ function Canvas({ projectId, accent, radius, dark, zoom, setZoom, mode, setMode,
           <div className="stage-progress">
             <span>{reconstructionProgress?.result?.message ?? "Design wird aus den Quellen aufgebaut."}</span>
             <ProgressMeters percent={reconstructionProgress?.progress ?? 0} phaseProgress={reconstructionProgress?.result?.phaseProgress} elapsedMs={reconstructionProgress?.result?.elapsedMs} estimatedRemainingMs={reconstructionProgress?.result?.estimatedRemainingMs} currentOperation={reconstructionProgress?.result?.currentOperation} />
+            {/* Ein Lauf ueber Minuten muss zu beenden sein — sonst bleibt nur Zusehen. */}
+            <button type="button" className="working-cancel" onClick={() => rebuild.cancel()}>Abbrechen</button>
+          </div>
+        )}
+        {/* Der Abbruch war gewollt: er wird ruhig gemeldet, nicht als Fehler — samt dem, was
+            gesichert wurde und woran der naechste Lauf ansetzt. */}
+        {imported.previewPath && !rebuild.pending && rebuild.cancelled && (
+          <div className="stage-progress">
+            <strong>Der Aufbau wurde abgebrochen.</strong>
+            <span>{rebuild.cancelled}</span>
+            <Button variant="primary" onClick={() => rebuild.start({ retryFailed: false, resume: true })}>Wieder aufnehmen</Button>
           </div>
         )}
         {/* Scheitert der Neuaufbau, waehrend schon ein Design steht, blieb das bisher still: der
             Knopf oben ging aus, und nichts sagte warum. Der Grund gehoert an die Buehne. */}
-        {imported.previewPath && !rebuild.pending && rebuild.error && (
+        {imported.previewPath && !rebuild.pending && !rebuild.cancelled && rebuild.error && (
           <div className="stage-progress stage-error">
             <strong>Der Neuaufbau ist fehlgeschlagen — das bisherige Design bleibt unverändert.</strong>
             <span>{rebuild.error instanceof ApiError ? rebuild.error.message : "Der Aufbau aus den Quellen konnte nicht abgeschlossen werden."}</span>

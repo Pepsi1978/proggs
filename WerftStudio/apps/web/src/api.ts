@@ -42,9 +42,15 @@ export async function apiEventStream<T>(path: string, body: unknown, onEvent: (e
   return result;
 }
 
-export function apiFormProgress<T>(path: string, body: FormData, onProgress: (loaded: number, total: number) => void): Promise<T> {
+// Der Upload eines Projekts dauert bei grossen Paketen Minuten. Er behandelte einen Abbruch schon
+// immer sauber — es fehlte nur der Weg dorthin: ohne `signal` konnte ihn niemand von aussen beenden.
+export function apiFormProgress<T>(path: string, body: FormData, onProgress: (loaded: number, total: number) => void, signal?: AbortSignal): Promise<T> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new ApiError("UPLOAD_CANCELLED", "Der Upload wurde abgebrochen.", 0)); return; }
     const request = new XMLHttpRequest();
+    const stop = () => request.abort();
+    signal?.addEventListener("abort", stop, { once: true });
+    request.addEventListener("loadend", () => signal?.removeEventListener("abort", stop));
     request.open("POST", `/api/v1${path}`);
     request.withCredentials = true;
     request.upload.addEventListener("progress", (event) => onProgress(event.loaded, event.lengthComputable ? event.total : 0));

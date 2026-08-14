@@ -240,9 +240,12 @@ export const reconstructionTodos = [
 
 // `force` ist der bewusste Neuaufbau eines bereits fertigen Designs — sonst bliebe ein Projekt fuer
 // immer auf dem Stand seines ersten Laufs, auch wenn die Quellenauswertung inzwischen besser ist.
-export function canRestartReconstructionJob(status: string, retryFailed: boolean, force = false): boolean {
+export function canRestartReconstructionJob(status: string, retryFailed: boolean, force = false, errorCode?: string | null): boolean {
   if (status === "queued" || status === "running") return false;
   if (force) return status === "completed" || status === "failed";
+  // Ein Abbruch ist kein Fehlversuch, sondern eine Entscheidung. Der naechste Start soll deshalb
+  // einfach wieder loslaufen — ohne dass man ihn als „Wiederholung eines Fehlers" ausweisen muss.
+  if (status === "failed" && errorCode === "RECONSTRUCT_CANCELLED") return true;
   return status === "failed" && retryFailed;
 }
 
