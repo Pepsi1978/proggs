@@ -544,7 +544,7 @@ async function readImportParts(request: FastifyRequest, objectPrefix: string, st
   }
 }
 
-app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.36.0-20260814.1048" }));
+app.get("/api/v1/health/live", async () => ({ status: "ok", version: "0.36.1-20260814.1051" }));
 app.get("/api/v1/health/ready", async () => { await client`select 1`; return { status: "ready", database: "ok" }; });
 app.get("/api/v1/previews/:projectId/:token/*", { config: { rateLimit: false } }, async (request, reply) => {
   const params = z.object({ projectId: z.string().uuid(), token: z.string().min(40), "*": z.string() }).parse(request.params);
@@ -1976,14 +1976,21 @@ async function runReconstructionJob(jobId: string, runAttempt: number, actor: Ac
       if (reused) return { screen, markup: reused.markup, css: reused.css };
       const screenSources = await readScreenSources(row.imported.objectPrefix, row.imported.manifest, screen.files);
       const navigation = screen.navigatesTo.filter((target) => screenIndex.has(target));
+      // Die Reihenfolge ist nicht beliebig: was fuer ALLE Bildschirme gleich ist (Faktenblatt,
+      // Bibliothek, Gesamt-Evidenz), steht ZUERST und Wort fuer Wort identisch. Nur dann erkennt der
+      // Anbieter beim zweiten bis neunten Bildschirm denselben Anfang wieder und liest ihn aus seinem
+      // Zwischenspeicher, statt ihn jedes Mal neu zu verarbeiten — das ist bei einem Projekt mit
+      // vielen Bildschirmen der groesste einzelne Zeitposten. Der Auftrag dieses einen Bildschirms
+      // steht dafuer am ENDE, wo er ohnehin am staerksten wirkt.
       const input = [
+        factSheet,
+        assetLibrary,
+        `\n# GESAMT-EVIDENZ DES PROJEKTS (Kontext)\n${evidence}`,
+        `\n# AUFTRAG`,
         `Projekt: ${row.name}`,
         `Aufzubauender Bildschirm ${index + 1} von ${screenPlan.length}: „${screen.name}“ (id=${screen.id}, Art=${screen.kind}${screen.isStart ? ", STARTBILDSCHIRM" : ""}${screen.route ? `, route=${screen.route}` : ""}), Quelle ${screen.source}.`,
         navigation.length ? `Von hier aus erreichbar (als data-werft-navigate="ZIEL-ID" verlinken): ${navigation.join(", ")}` : "",
-        factSheet,
-        assetLibrary,
-        screenSources ? `\n# ORIGINALQUELLEN GENAU DIESES BILDSCHIRMS (verbindlich, unverdichtet)\n${screenSources}` : "",
-        `\n# GESAMT-EVIDENZ DES PROJEKTS (Kontext)\n${evidence}`
+        screenSources ? `\n# ORIGINALQUELLEN GENAU DIESES BILDSCHIRMS (verbindlich, unverdichtet)\n${screenSources}` : ""
       ].filter(Boolean).join("\n");
       const result = await runModelStep({
         operation: `Bildschirm „${screen.name}“ aufbauen`, phase: "build", kind: "build", instructions: screenInstructions, input,

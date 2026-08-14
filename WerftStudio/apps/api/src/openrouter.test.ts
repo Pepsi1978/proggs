@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertOpenRouterContext, normalizeOpenRouterModelDetails, normalizeOpenRouterModels, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream } from "./openrouter.js";
+import { assertOpenRouterContext, cacheableSystemContent, normalizeOpenRouterModelDetails, normalizeOpenRouterModels, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream } from "./openrouter.js";
 
 describe("OpenRouter adapter", () => {
   it("normalizes text models and their supported reasoning efforts", () => {
@@ -101,5 +101,22 @@ describe("Anbieterausfall", () => {
   it("merkt sich, welcher Anbieter den Lauf wirklich bedient hat", () => {
     const raw = 'data: {"provider":"Novita","choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\ndata: [DONE]';
     expect(parseOpenRouterEventStream(raw)).toMatchObject({ text: "ok", servedBy: "Novita" });
+  });
+});
+
+describe("Zwischenspeicher des Anfangs", () => {
+  it("markiert den Systemteil bei Anthropic-Modellen", () => {
+    expect(cacheableSystemContent("anthropic/claude-sonnet-5", "Regeln")).toEqual([{ type: "text", text: "Regeln", cache_control: { type: "ephemeral" } }]);
+  });
+
+  it("laesst den Systemteil bei Anbietern unangetastet, die von selbst zwischenspeichern", () => {
+    expect(cacheableSystemContent("openai/gpt-5", "Regeln")).toBe("Regeln");
+    expect(cacheableSystemContent("deepseek/deepseek-chat", "Regeln")).toBe("Regeln");
+  });
+
+  it("traegt die Markierung in die fertige Anfrage", () => {
+    const anfrage = openRouterRequest("anthropic/claude-opus-5", "Regeln", "Auftrag") as { messages: Array<{ role: string; content: unknown }> };
+    expect(anfrage.messages[0]).toMatchObject({ role: "system", content: [{ cache_control: { type: "ephemeral" } }] });
+    expect(anfrage.messages[1]).toMatchObject({ role: "user", content: "Auftrag" });
   });
 });

@@ -140,10 +140,25 @@ export function normalizeOpenRouterModels(data: unknown): OpenRouterModel[] {
 // gespeicherten Anbieter liegt bei 82 % Verfügbarkeit — scheitern alle drei Versuche an derselben
 // kaputten Gegenstelle. Der gewählte Anbieter bleibt deshalb erste Wahl, aber ab dem zweiten Versuch
 // darf OpenRouter auf einen anderen ausweichen, statt den Lauf verloren zu geben.
+// Anthropic-Modelle legen einen einmal gelesenen Anfang nur dann in ihren Zwischenspeicher, wenn man
+// die Stelle ausdruecklich markiert; bei OpenAI und DeepSeek geschieht das von selbst. Ohne die
+// Markierung wird bei jedem Bildschirm eines Projekts dasselbe Faktenblatt neu verarbeitet — bezahlt
+// und abgewartet. Der Zwischenspeicher kostet einen Bruchteil und antwortet deutlich schneller.
+// Andere Anbieter ignorieren das Feld, deshalb wird es nur dort gesetzt, wo es wirklich wirkt.
+const cachesExplicitly = (model: string) => /^anthropic\//i.test(model) || /claude/i.test(model);
+
+/**
+ * Der Systemteil ist der stabile Anfang jeder Anfrage einer Aufgabe — genau die Stelle, an der der
+ * Zwischenspeicher ansetzt. Er wird als Block mit Markierung geschickt, sobald das Modell das braucht.
+ */
+export function cacheableSystemContent(model: string, instructions: string): unknown {
+  return cachesExplicitly(model) ? [{ type: "text", text: instructions, cache_control: { type: "ephemeral" } }] : instructions;
+}
+
 export function openRouterRequest(model: string, instructions: string, input: string, effort?: string, selectedProvider?: string, maxTokens?: number, allowFallbacks = false) {
   return {
     model,
-    messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
+    messages: [{ role: "system", content: cacheableSystemContent(model, instructions) }, { role: "user", content: input }],
     stream: true,
     ...(maxTokens && maxTokens > 0 ? { max_tokens: Math.floor(maxTokens) } : {}),
     ...(effort ? { reasoning: { effort } } : {}),
