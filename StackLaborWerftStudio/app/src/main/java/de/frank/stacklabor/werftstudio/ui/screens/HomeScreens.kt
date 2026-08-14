@@ -509,11 +509,7 @@ private fun DeleteMedicineDialog(name: String, onConfirm: () -> Unit, onDismiss:
     val colors = StackLaborTheme.colors
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            Modifier.fillMaxWidth()
-                .depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f)
-                .drawBehind {
-                    drawRect(colors.red, size = androidx.compose.ui.geometry.Size(size.width, 4.dp.toPx()))
-                },
+            Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
             shape = RoundedCornerShape(18.dp),
             color = colors.surface,
             border = BorderStroke(1.5.dp, metalRim(0.9f)),
