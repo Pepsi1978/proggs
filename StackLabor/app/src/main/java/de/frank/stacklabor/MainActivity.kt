@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.stacklabor.ui.StackLaborNavigation
 import de.frank.stacklabor.ui.theme.Farben
+import de.frank.stacklabor.ui.theme.ImMassstabDesEntwurfs
 import de.frank.stacklabor.ui.theme.StackLaborTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,9 +28,13 @@ class MainActivity : ComponentActivity() {
             val reduziert by app.einstellungen.bewegungReduziert
                 .collectAsStateWithLifecycle(initialValue = false)
 
-            StackLaborTheme(dunkel = dunkel, bewegungReduziert = reduziert) {
-                Box(Modifier.fillMaxSize().background(Farben.grund)) {
-                    StackLaborNavigation(app = app)
+            // Der Maßstab des Entwurfs zuerst — sonst kommen alle gemessenen Werte
+            // auf einem 475 dp breiten Bildschirm an, obwohl sie für 297 dp gemacht sind.
+            ImMassstabDesEntwurfs {
+                StackLaborTheme(dunkel = dunkel, bewegungReduziert = reduziert) {
+                    Box(Modifier.fillMaxSize().background(Farben.grund)) {
+                        StackLaborNavigation(app = app)
+                    }
                 }
             }
         }
