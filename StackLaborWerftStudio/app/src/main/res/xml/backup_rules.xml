@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="database" path="stacklabor.db" />
+    <exclude domain="database" path="stacklabor.db-wal" />
+    <exclude domain="database" path="stacklabor.db-shm" />
+    <exclude domain="sharedpref" path="codex_oauth.xml" />
+</full-backup-content>

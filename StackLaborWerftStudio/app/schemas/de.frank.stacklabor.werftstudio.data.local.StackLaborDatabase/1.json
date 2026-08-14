@@ -1,0 +1,1064 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "161c558ede7244c81c2ab7b86474502e",
+    "entities": [
+      {
+        "tableName": "mittel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `loeslichkeit` INTEGER NOT NULL, `darreichungsform` INTEGER NOT NULL, `hersteller` TEXT NOT NULL, `durchfallrisiko` INTEGER NOT NULL, `beistoffe` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loeslichkeit",
+            "columnName": "loeslichkeit",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "darreichungsform",
+            "columnName": "darreichungsform",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hersteller",
+            "columnName": "hersteller",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durchfallrisiko",
+            "columnName": "durchfallrisiko",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "beistoffe",
+            "columnName": "beistoffe",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "wirkstoffkomponente",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `mittelId` TEXT NOT NULL, `name` TEXT NOT NULL, `menge` TEXT, `einheit` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`mittelId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mittelId",
+            "columnName": "mittelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "menge",
+            "columnName": "menge",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "einheit",
+            "columnName": "einheit",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_wirkstoffkomponente_mittelId",
+            "unique": false,
+            "columnNames": [
+              "mittelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wirkstoffkomponente_mittelId` ON `${TABLE_NAME}` (`mittelId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "mittelId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "stack",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `zeitpunkt` TEXT NOT NULL, `einnahmeHinweis` TEXT NOT NULL, `sortierung` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zeitpunkt",
+            "columnName": "zeitpunkt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "einnahmeHinweis",
+            "columnName": "einnahmeHinweis",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortierung",
+            "columnName": "sortierung",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "stack_eintrag",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `stackId` TEXT NOT NULL, `mittelId` TEXT NOT NULL, `frequenzTyp` INTEGER NOT NULL, `alleNTage` INTEGER, `aktiv` INTEGER NOT NULL, `reihenfolge` INTEGER NOT NULL, `gruppeId` TEXT, `zusatztext` TEXT NOT NULL, `offenerHinweis` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`stackId`) REFERENCES `stack`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`mittelId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stackId",
+            "columnName": "stackId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mittelId",
+            "columnName": "mittelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frequenzTyp",
+            "columnName": "frequenzTyp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alleNTage",
+            "columnName": "alleNTage",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "aktiv",
+            "columnName": "aktiv",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reihenfolge",
+            "columnName": "reihenfolge",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gruppeId",
+            "columnName": "gruppeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "zusatztext",
+            "columnName": "zusatztext",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offenerHinweis",
+            "columnName": "offenerHinweis",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_stack_eintrag_stackId",
+            "unique": false,
+            "columnNames": [
+              "stackId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_eintrag_stackId` ON `${TABLE_NAME}` (`stackId`)"
+          },
+          {
+            "name": "index_stack_eintrag_mittelId",
+            "unique": false,
+            "columnNames": [
+              "mittelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_eintrag_mittelId` ON `${TABLE_NAME}` (`mittelId`)"
+          },
+          {
+            "name": "index_stack_eintrag_stackId_mittelId",
+            "unique": true,
+            "columnNames": [
+              "stackId",
+              "mittelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_stack_eintrag_stackId_mittelId` ON `${TABLE_NAME}` (`stackId`, `mittelId`)"
+          },
+          {
+            "name": "index_stack_eintrag_stackId_reihenfolge",
+            "unique": false,
+            "columnNames": [
+              "stackId",
+              "reihenfolge"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_eintrag_stackId_reihenfolge` ON `${TABLE_NAME}` (`stackId`, `reihenfolge`)"
+          },
+          {
+            "name": "index_stack_eintrag_gruppeId",
+            "unique": false,
+            "columnNames": [
+              "gruppeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_eintrag_gruppeId` ON `${TABLE_NAME}` (`gruppeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "mittelId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "stack_eintrag_dosis",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stackEintragId` TEXT NOT NULL, `variante` INTEGER NOT NULL, `stueckzahl` TEXT NOT NULL, `mengeJeStueck` TEXT, `einheit` INTEGER, PRIMARY KEY(`stackEintragId`, `variante`), FOREIGN KEY(`stackEintragId`) REFERENCES `stack_eintrag`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "stackEintragId",
+            "columnName": "stackEintragId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "variante",
+            "columnName": "variante",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stueckzahl",
+            "columnName": "stueckzahl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mengeJeStueck",
+            "columnName": "mengeJeStueck",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "einheit",
+            "columnName": "einheit",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stackEintragId",
+            "variante"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_stack_eintrag_dosis_stackEintragId",
+            "unique": false,
+            "columnNames": [
+              "stackEintragId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_eintrag_dosis_stackEintragId` ON `${TABLE_NAME}` (`stackEintragId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack_eintrag",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackEintragId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "alternations_partner",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stackEintragId` TEXT NOT NULL, `partnerMittelId` TEXT NOT NULL, PRIMARY KEY(`stackEintragId`, `partnerMittelId`), FOREIGN KEY(`stackEintragId`) REFERENCES `stack_eintrag`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`partnerMittelId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "stackEintragId",
+            "columnName": "stackEintragId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "partnerMittelId",
+            "columnName": "partnerMittelId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stackEintragId",
+            "partnerMittelId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_alternations_partner_stackEintragId",
+            "unique": false,
+            "columnNames": [
+              "stackEintragId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_alternations_partner_stackEintragId` ON `${TABLE_NAME}` (`stackEintragId`)"
+          },
+          {
+            "name": "index_alternations_partner_partnerMittelId",
+            "unique": false,
+            "columnNames": [
+              "partnerMittelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_alternations_partner_partnerMittelId` ON `${TABLE_NAME}` (`partnerMittelId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack_eintrag",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackEintragId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "partnerMittelId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "ziel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ziel_text",
+            "unique": true,
+            "columnNames": [
+              "text"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_ziel_text` ON `${TABLE_NAME}` (`text`)"
+          }
+        ]
+      },
+      {
+        "tableName": "stack_ziel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stackId` TEXT NOT NULL, `zielId` TEXT NOT NULL, `rang` INTEGER NOT NULL, PRIMARY KEY(`stackId`, `zielId`), FOREIGN KEY(`stackId`) REFERENCES `stack`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`zielId`) REFERENCES `ziel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "stackId",
+            "columnName": "stackId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zielId",
+            "columnName": "zielId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rang",
+            "columnName": "rang",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stackId",
+            "zielId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_stack_ziel_stackId",
+            "unique": false,
+            "columnNames": [
+              "stackId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_ziel_stackId` ON `${TABLE_NAME}` (`stackId`)"
+          },
+          {
+            "name": "index_stack_ziel_zielId",
+            "unique": false,
+            "columnNames": [
+              "zielId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_ziel_zielId` ON `${TABLE_NAME}` (`zielId`)"
+          },
+          {
+            "name": "index_stack_ziel_stackId_rang",
+            "unique": false,
+            "columnNames": [
+              "stackId",
+              "rang"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stack_ziel_stackId_rang` ON `${TABLE_NAME}` (`stackId`, `rang`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "ziel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "zielId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "eigene_frage",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `stackId` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`stackId`) REFERENCES `stack`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stackId",
+            "columnName": "stackId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_eigene_frage_stackId",
+            "unique": false,
+            "columnNames": [
+              "stackId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_eigene_frage_stackId` ON `${TABLE_NAME}` (`stackId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "bewertung",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bereich` INTEGER NOT NULL, `stackId` TEXT, `zeitpunktEpochMillis` INTEGER NOT NULL, `modell` TEXT NOT NULL, `denkstufe` TEXT NOT NULL, `pruefsumme` TEXT NOT NULL, `gesamt` TEXT NOT NULL, `hinweise` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`stackId`) REFERENCES `stack`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bereich",
+            "columnName": "bereich",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stackId",
+            "columnName": "stackId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "zeitpunktEpochMillis",
+            "columnName": "zeitpunktEpochMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modell",
+            "columnName": "modell",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "denkstufe",
+            "columnName": "denkstufe",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pruefsumme",
+            "columnName": "pruefsumme",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gesamt",
+            "columnName": "gesamt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hinweise",
+            "columnName": "hinweise",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_bewertung_stackId",
+            "unique": false,
+            "columnNames": [
+              "stackId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bewertung_stackId` ON `${TABLE_NAME}` (`stackId`)"
+          },
+          {
+            "name": "index_bewertung_bereich_stackId_zeitpunktEpochMillis",
+            "unique": false,
+            "columnNames": [
+              "bereich",
+              "stackId",
+              "zeitpunktEpochMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bewertung_bereich_stackId_zeitpunktEpochMillis` ON `${TABLE_NAME}` (`bereich`, `stackId`, `zeitpunktEpochMillis`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stack",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "bewertungszelle",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bewertungId` TEXT NOT NULL, `mittelId` TEXT NOT NULL, `zielId` TEXT NOT NULL, `wirkung` INTEGER NOT NULL, `staerke` INTEGER NOT NULL, `grund` TEXT NOT NULL, PRIMARY KEY(`bewertungId`, `mittelId`, `zielId`), FOREIGN KEY(`bewertungId`) REFERENCES `bewertung`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`mittelId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`zielId`) REFERENCES `ziel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "bewertungId",
+            "columnName": "bewertungId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mittelId",
+            "columnName": "mittelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zielId",
+            "columnName": "zielId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wirkung",
+            "columnName": "wirkung",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "staerke",
+            "columnName": "staerke",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grund",
+            "columnName": "grund",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bewertungId",
+            "mittelId",
+            "zielId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_bewertungszelle_bewertungId",
+            "unique": false,
+            "columnNames": [
+              "bewertungId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bewertungszelle_bewertungId` ON `${TABLE_NAME}` (`bewertungId`)"
+          },
+          {
+            "name": "index_bewertungszelle_mittelId",
+            "unique": false,
+            "columnNames": [
+              "mittelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bewertungszelle_mittelId` ON `${TABLE_NAME}` (`mittelId`)"
+          },
+          {
+            "name": "index_bewertungszelle_zielId",
+            "unique": false,
+            "columnNames": [
+              "zielId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bewertungszelle_zielId` ON `${TABLE_NAME}` (`zielId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "bewertung",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "bewertungId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "mittelId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "ziel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "zielId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "konkurrenz",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bewertungId` TEXT NOT NULL, `mittelAId` TEXT NOT NULL, `mittelBId` TEXT NOT NULL, `art` INTEGER NOT NULL, `schwere` INTEGER NOT NULL, `grund` TEXT NOT NULL, PRIMARY KEY(`bewertungId`, `mittelAId`, `mittelBId`, `art`), FOREIGN KEY(`bewertungId`) REFERENCES `bewertung`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`mittelAId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`mittelBId`) REFERENCES `mittel`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "bewertungId",
+            "columnName": "bewertungId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mittelAId",
+            "columnName": "mittelAId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mittelBId",
+            "columnName": "mittelBId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "art",
+            "columnName": "art",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schwere",
+            "columnName": "schwere",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grund",
+            "columnName": "grund",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bewertungId",
+            "mittelAId",
+            "mittelBId",
+            "art"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_konkurrenz_bewertungId",
+            "unique": false,
+            "columnNames": [
+              "bewertungId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_konkurrenz_bewertungId` ON `${TABLE_NAME}` (`bewertungId`)"
+          },
+          {
+            "name": "index_konkurrenz_mittelAId",
+            "unique": false,
+            "columnNames": [
+              "mittelAId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_konkurrenz_mittelAId` ON `${TABLE_NAME}` (`mittelAId`)"
+          },
+          {
+            "name": "index_konkurrenz_mittelBId",
+            "unique": false,
+            "columnNames": [
+              "mittelBId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_konkurrenz_mittelBId` ON `${TABLE_NAME}` (`mittelBId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "bewertung",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "bewertungId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "mittelAId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "mittel",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "mittelBId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "frage_antwort",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bewertungId` TEXT NOT NULL, `frageId` TEXT NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`bewertungId`, `frageId`), FOREIGN KEY(`bewertungId`) REFERENCES `bewertung`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`frageId`) REFERENCES `eigene_frage`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "bewertungId",
+            "columnName": "bewertungId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frageId",
+            "columnName": "frageId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bewertungId",
+            "frageId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_frage_antwort_bewertungId",
+            "unique": false,
+            "columnNames": [
+              "bewertungId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_frage_antwort_bewertungId` ON `${TABLE_NAME}` (`bewertungId`)"
+          },
+          {
+            "name": "index_frage_antwort_frageId",
+            "unique": false,
+            "columnNames": [
+              "frageId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_frage_antwort_frageId` ON `${TABLE_NAME}` (`frageId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "bewertung",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "bewertungId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "eigene_frage",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "frageId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "stack_sortieransicht",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stackId` TEXT NOT NULL, `sortieransicht` INTEGER NOT NULL, PRIMARY KEY(`stackId`), FOREIGN KEY(`stackId`) REFERENCES `stack`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "stackId",
+            "columnName": "stackId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortieransicht",
+            "columnName": "sortieransicht",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stackId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "stack",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "stackId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '161c558ede7244c81c2ab7b86474502e')"
+    ]
+  }
+}

@@ -1,0 +1,700 @@
+package de.frank.stacklabor.werftstudio.ui.screens
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+import de.frank.stacklabor.werftstudio.ui.components.AdaptiveSplit
+import de.frank.stacklabor.werftstudio.ui.components.AnimatedGradientHeader
+import de.frank.stacklabor.werftstudio.ui.components.BreathingFab
+import de.frank.stacklabor.werftstudio.ui.components.GlassHeader
+import de.frank.stacklabor.werftstudio.ui.components.IconTouchButton
+import de.frank.stacklabor.werftstudio.ui.components.PrimaryAction
+import de.frank.stacklabor.werftstudio.ui.components.SearchField
+import de.frank.stacklabor.werftstudio.ui.components.SectionTitle
+import de.frank.stacklabor.werftstudio.ui.components.SelectPill
+import de.frank.stacklabor.werftstudio.ui.components.SignalCountsRow
+import de.frank.stacklabor.werftstudio.ui.components.SolubilityMarks
+import de.frank.stacklabor.werftstudio.ui.components.StackCard
+import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
+import de.frank.stacklabor.werftstudio.ui.components.color
+import de.frank.stacklabor.werftstudio.ui.model.DoseVariant
+import de.frank.stacklabor.werftstudio.ui.model.EvaluationState
+import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
+import de.frank.stacklabor.werftstudio.ui.model.SignalState
+import de.frank.stacklabor.werftstudio.ui.model.SortMode
+import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
+import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
+import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
+import de.frank.stacklabor.werftstudio.ui.navigation.Origin
+import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
+import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+
+@Composable
+fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
+    WerftScreen {
+        Column(Modifier.fillMaxSize()) {
+            AnimatedGradientHeader(animationsEnabled) {
+                Text(
+                    "StackLabor",
+                    Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 12.dp),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 28.sp,
+                    color = Color.White,
+                )
+                Row(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 12.dp)) {
+                    IconTouchButton(
+                        if (state.appearance.name == "Light") "Dunkle Darstellung einschalten" else "Helle Darstellung einschalten",
+                        { callbacks.onEvent(StackLaborEvent.ToggleAppearance) },
+                    ) {
+                        Icon(
+                            if (state.appearance.name == "Light") Icons.Default.LightMode else Icons.Default.DarkMode,
+                            null,
+                            Modifier.size(22.dp),
+                            tint = Color.White,
+                        )
+                    }
+                    IconTouchButton("Ziel-Katalog öffnen", { callbacks.onNavigate(StackLaborRoute.GoalCatalog(Origin.Home)) }) {
+                        Icon(Icons.Default.TrackChanges, null, Modifier.size(22.dp), tint = Color.White)
+                    }
+                    IconTouchButton("Einstellungen öffnen", { callbacks.onNavigate(StackLaborRoute.Settings) }) {
+                        Icon(Icons.Default.Settings, null, Modifier.size(22.dp), tint = Color.White)
+                    }
+                }
+                DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp))
+            }
+            Row(
+                Modifier.fillMaxWidth().height(48.dp).background(StackLaborTheme.colors.elevated).clickable {
+                    callbacks.onNavigate(StackLaborRoute.AllStacks)
+                }.padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Alle Stacks zusammen prüfen", Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                Text(state.evaluationMeta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+            }
+            Box(Modifier.weight(1f)) {
+                AdaptiveSplit(
+                    narrow = {
+                        StackList(state, animationsEnabled, callbacks, Modifier.fillMaxSize())
+                    },
+                    primary = {
+                        StackList(state, animationsEnabled, callbacks, Modifier.fillMaxSize())
+                    },
+                    secondary = {
+                        Column(Modifier.fillMaxSize().padding(12.dp)) {
+                            SectionTitle("Gesamtauswertung")
+                            EvaluationSummaryCard(
+                                title = "Alle Stacks im Blick",
+                                body = state.evaluationMeta,
+                                action = "Gesamtauswertung öffnen",
+                            ) { callbacks.onNavigate(StackLaborRoute.AllStacks) }
+                        }
+                    },
+                )
+                BreathingFab(
+                    description = "Stack anlegen",
+                    animationsEnabled = animationsEnabled,
+                    onClick = { callbacks.onNavigate(StackLaborRoute.StackEdit(null, Origin.Home)) },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoseVariantSwitch(variant: DoseVariant, callbacks: StackLaborCallbacks, modifier: Modifier = Modifier) {
+    val colors = StackLaborTheme.colors
+    Row(
+        modifier
+            .width(112.dp)
+            .height(28.dp)
+            .shadow(4.dp, CircleShape, ambientColor = Color(0x335A3508), spotColor = Color(0x335A3508))
+            .clip(CircleShape)
+            .background(colors.elevated)
+            .border(1.dp, colors.border, CircleShape),
+    ) {
+        DoseVariantOption("Frei", variant == DoseVariant.Frei, Modifier.weight(1f)) {
+            callbacks.onEvent(StackLaborEvent.ChangeDoseVariant(DoseVariant.Frei))
+        }
+        DoseVariantOption("Dienst", variant == DoseVariant.Dienst, Modifier.weight(1f)) {
+            callbacks.onEvent(StackLaborEvent.ChangeDoseVariant(DoseVariant.Dienst))
+        }
+    }
+}
+
+@Composable
+private fun DoseVariantOption(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .fillMaxHeight()
+            .clip(CircleShape)
+            .background(if (selected) StackLaborTheme.colors.surface else Color.Transparent)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (selected) StackLaborTheme.colors.accent else StackLaborTheme.colors.textMuted,
+        )
+    }
+}
+
+@Composable
+private fun StackList(
+    state: StackLaborUiState,
+    animationsEnabled: Boolean,
+    callbacks: StackLaborCallbacks,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier.padding(horizontal = 12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(state.stacks, key = { it.id }) { stack ->
+            StackCard(
+                stack = stack,
+                animationsEnabled = animationsEnabled,
+                onOpen = { callbacks.onNavigate(StackLaborRoute.StackDetail(stack.id)) },
+                onCatalog = { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stack.id, Origin.Home)) },
+            )
+        }
+    }
+}
+
+@Composable
+fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    val filtered = state.medicines.filter { it.name.contains(state.searchQuery, ignoreCase = true) }
+    WerftScreen {
+        Column(Modifier.fillMaxSize()) {
+            GlassHeader(
+                title = state.stackName,
+                subtitle = state.stackTime,
+                onBack = callbacks.onBack,
+                onOverflow = { menuOpen = !menuOpen },
+            )
+            TargetStrip(state) { callbacks.onNavigate(StackLaborRoute.StackGoals(stackId, Origin.StackDetail)) }
+            ToolsRow(state, searchOpen, { searchOpen = !searchOpen }, callbacks)
+            AnimatedVisibility(searchOpen) {
+                SearchField(state.searchQuery, "Mittel suchen", { callbacks.onEvent(StackLaborEvent.ChangeSearch(it)) }, Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
+            }
+            AdaptiveSplit(
+                narrow = {
+                    Box(Modifier.fillMaxSize()) {
+                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, modifier = Modifier.fillMaxSize().padding(bottom = 52.dp))
+                        EvaluateFooter(callbacks, Modifier.align(Alignment.BottomCenter))
+                        BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
+                    }
+                },
+                primary = {
+                    Box(Modifier.fillMaxSize()) {
+                        MedicineList(stackId, filtered, state.sortMode, state.latestEvaluationId, state.evaluationMeta, callbacks, Modifier.fillMaxSize().padding(bottom = 68.dp))
+                        BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(12.dp))
+                    }
+                },
+                secondary = {
+                    Column(Modifier.fillMaxSize().padding(12.dp)) {
+                        SectionTitle("Auswertungsstatus")
+                        EvaluationStateCard(state.evaluationState, callbacks)
+                        Spacer(Modifier.height(8.dp))
+                        EvaluationSummaryCard(
+                            "Auswertung im Vollbild",
+                            state.evaluationMeta,
+                            "Öffnen",
+                        ) { state.latestEvaluationId?.let { callbacks.onNavigate(StackLaborRoute.Evaluation(it, Origin.StackDetail)) } }
+                        Spacer(Modifier.weight(1f))
+                        PrimaryAction("Diesen Stack auswerten", { callbacks.onEvent(StackLaborEvent.EvaluateStack) }, Modifier.fillMaxWidth())
+                    }
+                },
+            )
+        }
+        if (menuOpen) {
+            val menuShape = RoundedCornerShape(12.dp)
+            Column(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 8.dp)
+                    .width(224.dp)
+                    .shadow(22.dp, menuShape, ambientColor = Color(0x52361604), spotColor = Color(0x52361604))
+                    .clip(menuShape)
+                    .background(Brush.linearGradient(listOf(StackLaborTheme.colors.elevated, StackLaborTheme.colors.surface)))
+                    .border(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.58f), menuShape),
+            ) {
+                MenuItem("Stack bearbeiten") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.StackEdit(stackId, Origin.StackDetail)) }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
+                MenuItem("Eigene Fragen") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.Questions(stackId, Origin.StackDetail)) }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
+                MenuItem("Historie") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.History(stackId, Origin.StackDetail)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TargetStrip(state: StackLaborUiState, onClick: () -> Unit) {
+    val selectedGoals = state.goals.filter { it.selected }
+    Row(
+        Modifier.fillMaxWidth().height(40.dp).background(StackLaborTheme.colors.surface).clickable(onClick = onClick).padding(start = 13.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(StackLaborTheme.colors.red))
+        Spacer(Modifier.width(10.dp))
+        Text("Ziele ${selectedGoals.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.width(8.dp))
+        SignalCountsRow(
+            de.frank.stacklabor.werftstudio.ui.model.SignalCounts(
+                selectedGoals.count { it.signal == de.frank.stacklabor.werftstudio.ui.model.SignalState.Green },
+                selectedGoals.count { it.signal == de.frank.stacklabor.werftstudio.ui.model.SignalState.Yellow },
+                selectedGoals.count { it.signal == de.frank.stacklabor.werftstudio.ui.model.SignalState.Red },
+            ),
+        )
+        Spacer(Modifier.weight(1f))
+        Icon(Icons.Default.ExpandMore, null, Modifier.size(24.dp), tint = StackLaborTheme.colors.textMuted)
+    }
+}
+
+@Composable
+private fun ToolsRow(state: StackLaborUiState, searchOpen: Boolean, onSearch: () -> Unit, callbacks: StackLaborCallbacks) {
+    Row(
+        Modifier.fillMaxWidth().height(36.dp).background(StackLaborTheme.colors.elevated).padding(start = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SelectPill("Löslichkeit", state.sortMode == SortMode.Loeslichkeit) { callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Loeslichkeit)) }
+        SelectPill("Einnahme", state.sortMode == SortMode.Einnahme) { callbacks.onEvent(StackLaborEvent.ChangeSortMode(SortMode.Einnahme)) }
+        Spacer(Modifier.weight(1f))
+        IconTouchButton("Mittel suchen", onSearch) { Icon(Icons.Default.Search, null, tint = if (searchOpen) StackLaborTheme.colors.accent else StackLaborTheme.colors.textStrong) }
+    }
+}
+
+@Composable
+private fun MedicineList(
+    stackId: String,
+    filtered: List<de.frank.stacklabor.werftstudio.ui.model.MedicineUi>,
+    sortMode: SortMode,
+    evaluationId: String?,
+    evaluationMeta: String,
+    callbacks: StackLaborCallbacks,
+    modifier: Modifier,
+) {
+    LazyColumn(modifier.padding(start = 12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)) {
+        if (filtered.isEmpty()) {
+            item { de.frank.stacklabor.werftstudio.ui.components.EmptyState("Nichts gefunden", "Neu anlegen") { callbacks.onNavigate(StackLaborRoute.MedicineEdit(null, stackId, Origin.StackDetail)) } }
+        }
+        itemsIndexed(filtered, key = { _, medicine -> medicine.id }) { index, medicine ->
+            var horizontalOffset by remember(medicine.id) { mutableFloatStateOf(0f) }
+            var verticalDrag by remember(medicine.id) { mutableFloatStateOf(0f) }
+            var dragging by remember(medicine.id) { mutableStateOf(false) }
+            val gestureModifier = Modifier
+                .graphicsLayer {
+                    translationX = horizontalOffset
+                    translationY = if (dragging) verticalDrag else 0f
+                    scaleX = if (dragging) 1.02f else 1f
+                    scaleY = if (dragging) 1.02f else 1f
+                    shadowElevation = if (dragging) 12.dp.toPx() else 0f
+                }
+                .pointerInput(medicine.id) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, amount ->
+                            change.consume()
+                            horizontalOffset = (horizontalOffset + amount).coerceAtMost(0f)
+                        },
+                        onDragEnd = {
+                            if (horizontalOffset < -size.width * 0.32f) {
+                                callbacks.onEvent(StackLaborEvent.RemoveMedicineFromStack(stackId, medicine.id))
+                            }
+                            horizontalOffset = 0f
+                        },
+                        onDragCancel = { horizontalOffset = 0f },
+                    )
+                }
+                .then(
+                    if (sortMode == SortMode.Einnahme) Modifier.pointerInput(medicine.id, filtered.size) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { dragging = true; verticalDrag = 0f },
+                            onDrag = { change, amount -> change.consume(); verticalDrag += amount.y },
+                            onDragCancel = { dragging = false; verticalDrag = 0f },
+                            onDragEnd = {
+                                val target = (index + verticalDrag.div(64.dp.toPx()).roundToInt()).coerceIn(0, filtered.lastIndex)
+                                dragging = false
+                                verticalDrag = 0f
+                                if (target != index) callbacks.onEvent(StackLaborEvent.ReorderMedicine(stackId, medicine.id, target))
+                            },
+                        )
+                    } else Modifier,
+                )
+            StackMedicineRow(
+                medicine = medicine,
+                intakePosition = if (sortMode == SortMode.Einnahme) index + 1 else null,
+                onOpen = { callbacks.onNavigate(StackLaborRoute.MedicineEdit(medicine.id, stackId, Origin.StackDetail)) },
+                onSignal = { callbacks.onNavigate(StackLaborRoute.Breakdown(stackId, medicine.id, Origin.StackDetail)) },
+                onToggle = { callbacks.onEvent(StackLaborEvent.ToggleMedicine(stackId, medicine.id)) },
+                modifier = gestureModifier,
+            )
+        }
+        item {
+            EvaluationLink(evaluationMeta) {
+                evaluationId?.let { callbacks.onNavigate(StackLaborRoute.Evaluation(it, Origin.StackDetail)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StackMedicineRow(
+    medicine: MedicineUi,
+    intakePosition: Int?,
+    onOpen: () -> Unit,
+    onSignal: () -> Unit,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = StackLaborTheme.colors
+    val opacity = if (medicine.active) 1f else 0.38f
+    Box(modifier.fillMaxWidth().height(64.dp)) {
+        Card(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508)),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f)),
+        ) {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface, colors.surface)))) {
+                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.width(3.dp).fillMaxHeight().background(if (medicine.active) medicine.signal.color() else colors.disabled))
+                    Column(Modifier.weight(1f).clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp).alpha(opacity)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (intakePosition != null) {
+                                Box(
+                                    Modifier.size(20.dp).clip(CircleShape)
+                                        .background(colors.accent.copy(alpha = 0.1f))
+                                        .border(1.dp, colors.accent.copy(alpha = 0.62f), CircleShape),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(intakePosition.toString(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = colors.accent)
+                                }
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            SolubilityMarks(medicine.solubility)
+                            Spacer(Modifier.width(6.dp))
+                            Text(medicine.name, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(medicine.dose, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (medicine.reason.isNotEmpty()) Text(medicine.reason, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = medicine.signal.color(), maxLines = 1)
+                        }
+                    }
+                    IconTouchButton(if (medicine.active) "${medicine.name} deaktivieren" else "${medicine.name} aktivieren", onToggle) {
+                        Box(
+                            Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).then(
+                                if (medicine.active) Modifier.background(colors.accent) else Modifier.border(1.dp, colors.disabled, RoundedCornerShape(5.dp)),
+                            ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (medicine.active) Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = colors.onAccent)
+                        }
+                    }
+                }
+                Box(Modifier.width(44.dp).fillMaxHeight().clickable(onClick = onSignal))
+            }
+        }
+    }
+}
+
+@Composable
+private fun EvaluationLink(meta: String, onClick: () -> Unit) {
+    val colors = StackLaborTheme.colors
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .shadow(12.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.36f), colors.surface)))
+            .border(1.dp, colors.accent.copy(alpha = 0.58f), shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = colors.accent)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Auswertung im Vollbild", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun EvaluateFooter(callbacks: StackLaborCallbacks, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(start = 12.dp, top = 4.dp, bottom = 4.dp)) {
+        EvaluationAction("Diesen Stack auswerten", { callbacks.onEvent(StackLaborEvent.EvaluateStack) })
+    }
+}
+
+@Composable
+private fun EvaluationAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .shadow(12.dp, shape, ambientColor = Color(0x525B390B), spotColor = Color(0x525B390B))
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(Color(0xFFE7C879), Color(0xFFA87523), Color(0xFF704511))))
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = StackLaborTheme.colors.onAccent)
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = StackLaborTheme.colors.onAccent)
+    }
+}
+
+@Composable
+private fun MenuItem(label: String, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
+    WerftScreen(goldDark = true) {
+        Column(Modifier.fillMaxSize()) {
+            GlassHeader("Alle Stacks zusammen", onBack = callbacks.onBack)
+            LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+                if (state.allStacksEvaluationState != EvaluationState.Valid && state.allStacksEvaluationState != EvaluationState.Stale) {
+                    item {
+                        EvaluationStateCard(state.allStacksEvaluationState, callbacks, allStacks = true)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                item { AllStacksSectionTitle("Tagesgesamtdosis") }
+                item {
+                    Column {
+                        state.dailyDoses.forEach { row ->
+                            DoseRow(row.name, row.dose, row.meta, doseSignal(row.name, state))
+                        }
+                    }
+                }
+                item { AllStacksSectionTitle("Konkurrenzen über Stacks hinweg") }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.competitions.forEach { row ->
+                            CompetitionCard(row.title, row.detail, competitionSignal(row.detail)) {
+                                state.allStacksEvaluationId?.let { callbacks.onNavigate(StackLaborRoute.Evaluation(it, Origin.AllStacks)) }
+                            }
+                        }
+                    }
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(52.dp).background(StackLaborTheme.colors.glass).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                EvaluationAction("Alles prüfen", { callbacks.onEvent(StackLaborEvent.EvaluateAll) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoseRow(name: String, dose: String, meta: String, signal: SignalState? = null) {
+    Box(Modifier.fillMaxWidth().height(44.dp).border(BorderStroke(0.5.dp, StackLaborTheme.colors.border))) {
+        if (signal != null && signal != SignalState.Green) {
+            Box(Modifier.width(3.dp).fillMaxHeight().background(signal.color()))
+        }
+        Row(Modifier.fillMaxSize().padding(start = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(name, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(dose, Modifier.width(88.dp).padding(end = 1.dp), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun AllStacksSectionTitle(title: String) {
+    Box(Modifier.fillMaxWidth().height(32.dp), contentAlignment = Alignment.CenterStart) {
+        Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+    }
+}
+
+@Composable
+private fun CompetitionCard(title: String, detail: String, signal: SignalState?, onClick: () -> Unit) {
+    val colors = StackLaborTheme.colors
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .shadow(16.dp, shape, ambientColor = Color(0x295A3508), spotColor = Color(0x245A3508))
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(colors.elevated.copy(alpha = 0.34f), colors.surface)))
+            .border(1.5.dp, colors.accent.copy(alpha = 0.66f), shape)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(signal?.color() ?: Color.Transparent))
+        Column(Modifier.weight(1f).padding(start = 10.dp, end = 4.dp), verticalArrangement = Arrangement.Center) {
+            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            Text(detail, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = signal?.color() ?: colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(Modifier.width(44.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.BarChart, null, Modifier.size(24.dp), tint = colors.textMuted)
+        }
+    }
+}
+
+private fun doseSignal(name: String, state: StackLaborUiState): SignalState? = state.medicines
+    .firstOrNull { medicine ->
+        medicine.name.equals(name, ignoreCase = true) ||
+            medicine.name.contains(name, ignoreCase = true) ||
+            name.contains(medicine.name, ignoreCase = true)
+    }
+    ?.signal
+
+private fun competitionSignal(detail: String): SignalState? = when {
+    detail.contains("nicht bedient", ignoreCase = true) -> SignalState.Gray
+    detail.contains(",") && detail.contains("stört", ignoreCase = true) -> SignalState.Red
+    detail.contains("stört", ignoreCase = true) -> SignalState.Yellow
+    else -> null
+}
+
+@Composable
+private fun EvaluationSummaryCard(title: String, body: String, action: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface).clickable(onClick = onClick).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Text(action, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = StackLaborTheme.colors.accent)
+    }
+}
+
+@Composable
+private fun EvaluationStateCard(state: EvaluationState, callbacks: StackLaborCallbacks, allStacks: Boolean = false) {
+    val title: String
+    val body: String
+    val action: String?
+    val event: StackLaborEvent?
+    when (state) {
+        EvaluationState.Valid -> {
+            title = if (allStacks) "Gesamtprüfung aktuell" else "Auswertung aktuell"
+            body = "Gespeicherter Auswertungsstand"
+            action = null
+            event = null
+        }
+        EvaluationState.Stale -> {
+            title = "Stand veraltet"
+            body = "Die zuletzt gültigen Ampeln bleiben sichtbar."
+            action = "Neu auswerten"
+            event = if (allStacks) StackLaborEvent.EvaluateAll else StackLaborEvent.EvaluateStack
+        }
+        EvaluationState.Running -> {
+            title = if (allStacks) "Gesamtprüfung läuft" else "Auswertung läuft"
+            body = if (allStacks) "Addiere Tagesdosen und prüfe Konkurrenzen …" else "Prüfe Wechselwirkungen und gewichte die priorisierten Ziele …"
+            action = "Abbrechen"
+            event = StackLaborEvent.CancelEvaluation
+        }
+        EvaluationState.Offline -> {
+            title = "Ohne Netz"
+            body = "Ampeln und Häkchen funktionieren weiter."
+            action = null
+            event = null
+        }
+        EvaluationState.Reauth -> {
+            title = "Anmeldung abgelaufen."
+            body = "Die zuletzt gültigen Ampeln bleiben sichtbar."
+            action = "Neu anmelden"
+            event = null
+        }
+        EvaluationState.Quota -> {
+            title = "Kontingent erschöpft."
+            body = "Wieder verfügbar in 2 Std. 18 Min."
+            action = "Später erneut"
+            event = StackLaborEvent.ScheduleRetry
+        }
+        EvaluationState.NetworkError -> {
+            title = "Keine Verbindung."
+            body = "Der vorherige Auswertungsstand bleibt erhalten."
+            action = "Erneut versuchen"
+            event = StackLaborEvent.RetryEvaluation
+        }
+    }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface).padding(12.dp)) {
+        Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+        if (action != null) {
+            Spacer(Modifier.height(8.dp))
+            PrimaryAction(action, {
+                if (state == EvaluationState.Reauth) callbacks.onNavigate(StackLaborRoute.CodexLogin(if (allStacks) Origin.AllStacks else Origin.StackDetail))
+                else if (event != null) callbacks.onEvent(event)
+            })
+        }
+    }
+}
