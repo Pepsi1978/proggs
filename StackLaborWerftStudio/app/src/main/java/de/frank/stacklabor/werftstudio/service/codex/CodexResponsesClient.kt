@@ -235,6 +235,16 @@ internal fun codexPayload(
         append("Beachte die deutsche Groß- und Kleinschreibung: Substantive und Satzanfänge groß, ")
         append("Eigennamen und Präparatenamen so geschrieben wie im Feld 'name'. ")
         append("Gründe sind knapp. ")
+        // Bei diesen Mitteln kennt Frank die Einnahme selbst — allgemeine Hinweise dazu sind
+        // nur Rauschen. Genannt werden sie deshalb ausschliesslich bei einem echten Konflikt.
+        append(
+            BEKANNTE_MITTEL.joinToString(", ") + ": " +
+                "Erwähne diese Mittel im Fließtext NUR dann, wenn sie mit einem anderen Mittel dieses Stacks " +
+                "nicht zusammen eingenommen werden sollten — also bei einer echten Wechselwirkung, " +
+                "Aufnahmekonkurrenz oder einem nötigen zeitlichen Abstand. Gibt es keinen solchen Konflikt, " +
+                "erwähne sie überhaupt nicht: keine allgemeinen Einnahme-, Dosis-, Verordnungs- oder " +
+                "Sicherheitshinweise, keine Einordnung, keine Nennung in der Einnahme-Reihenfolge. ",
+        )
         if (goals.isEmpty()) {
             // Ohne Ziele gibt es nichts zu gewichten — dann zaehlt nur die Zusammenstellung selbst.
             append("Für diesen Stack sind KEINE Ziele hinterlegt. Gib 'zellen' deshalb als leere Liste aus. ")
@@ -285,3 +295,11 @@ internal fun codexPayload(
 }
 
 private const val MAX_REPAIR_CHARS = 120_000
+
+/**
+ * Mittel, deren Einnahme Frank selbst sicher beherrscht.
+ *
+ * Sie sollen in der Auswertung nur auftauchen, wenn sie mit dem Stack kollidieren — allgemeine
+ * Hinweise dazu sind für ihn Rauschen. Weitere Mittel lassen sich hier einfach ergänzen.
+ */
+private val BEKANNTE_MITTEL = listOf("Venlafaxin")
