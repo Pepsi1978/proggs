@@ -17,6 +17,11 @@ Gegenseite: `best-practices/design/design-zu-code-treue.md`
 | B-06 | Absolute Koordinaten als App-Layout | Hierarchie bauen, Koordinaten nur als Nachweis |
 | **B-07** | **`@import` steht nach anderen Regeln → Browser verwirft ihn STILL → Design rendert in Systemschrift** | **Schriften als `<link rel="stylesheet">` in den Kopf, nie als `@import`** |
 | **B-08** | **Layout-Ableitung liest nur `.klasse`-Selektoren → verliert die gewinnende CSS-Schicht und alle Inline-Stile** | **Wie der Browser abgleichen: Vorfahren-Kette, Attribut-/Tag-Selektoren, Spezifität, `style`-Attribut** |
+| **B-09** | **Skalierte Vorschau zeigt am Rand eine helle Linie von einem Pixel** | **Fläche unter dem Rahmen in der Farbe des Designs färben und einen gleichfarbigen 1px-Saum legen (Chromium 600120)** |
+| **B-10** | **Runde Ecken der Bühne lassen die Fläche darunter durchscheinen** | **Bei skaliertem Kind clippt `border-radius`+`overflow:hidden` nicht zuverlässig — Rundung weglassen oder `isolation:isolate` setzen (WebKit 98538/77572/72619)** |
+| **B-11** | **`backdrop-filter` bleibt wirkungslos, obwohl es im CSS steht** | **Kein `filter`, `opacity<1`, `mask`, `mix-blend-mode` oder `will-change` auf einem VORFAHREN; `-webkit-`-Präfix mitschreiben** |
+| **B-12** | **Effekt steht im Faktenblatt, taucht im Aufbau aber nicht auf** | **Effekt-Namen müssen ihren ORT tragen (`.karte (shadow)`); ein Wert ohne Ort wird weggelassen statt geraten** |
+| **B-13** | **Jeder Bildschirm baut die Reiterleiste anders** | **Bildschirme entstehen in getrennten Aufrufen — gemeinsame Leisten festschreiben UND nach dem Zusammensetzen programmatisch vergleichen** |
 
 ---
 
@@ -204,3 +209,116 @@ ohne Inline-Stile ist dort vollständig leer — und niemand merkt es, weil kein
   Hover-Anordnung im Bauplan als die gewöhnliche.
 - Geschwister-Kombinatoren (`+`, `~`) brauchen eine Reihenfolge-Information, die ein reiner
   Elternbaum nicht mitführt: überspringen statt falsch raten.
+
+---
+
+## B-09 — Die skalierte Vorschau zeigt eine helle Linie am Rand
+
+**Symptom:** Ein Design steht in einem iframe fester Größe auf einer Bühne, die per
+`transform: scale()` zoomt. An einer oder zwei Kanten — mal links, mal rechts, mal unten — liegt eine
+dünne helle Linie, die nicht zum Design gehört. Welche Kante es trifft, wechselt mit dem Zoomfaktor.
+
+**Ursache:** Belegt als Chromium-Fehler **600120**. Bei einem gebrochenen Maßstab fällt die Kante des
+Rahmens zwischen zwei Bildschirmpunkte. Der Rand der Ebene wird halbdurchsichtig gezeichnet, und die
+Fläche darunter scheint durch. Ist diese Fläche weiß, sieht man eine weiße Linie.
+
+**Real getroffen:** Werft Studio, 14.08.2026. Die Bühne trug fest `background: #fff`; bei jedem
+Referenzgerät lag an einer anderen Kante ein heller Strich.
+
+**Funktionserhaltender Fix (zwei Schichten):**
+1. Die Fläche unter dem Rahmen bekommt die Farbe, die das Design an seinem Rand wirklich zeichnet
+   (aus der Vorschau melden lassen: `getComputedStyle(...).backgroundColor` von Bildschirm, `body`,
+   `documentElement` — die erste deckende gewinnt). Dann ist der halbdurchsichtige Rand unsichtbar.
+2. Zusätzlich ein `box-shadow: 0 0 0 1px <dieselbe Farbe>` als Saum. Er verlängert die Fläche um
+   einen Punkt nach außen, ohne das Layout zu verändern, und deckt jeden Rest zu.
+
+Ergänzend helfen `isolation: isolate` und `backface-visibility: hidden` am Rahmen (eigene Ebene).
+Die Größe zu runden hilft nur, wenn man den Zoomfaktor selbst bestimmt.
+
+**Quellen:** https://bugs.chromium.org/p/chromium/issues/detail?id=600120 ·
+https://bugs.webkit.org/show_bug.cgi?id=133801 (scale + iframe: unscharfes Rendering)
+
+---
+
+## B-10 — Runde Ecken lassen die Fläche darunter durchscheinen
+
+**Symptom:** Der Vorschau-Rahmen hat `border-radius` und `overflow: hidden`. In den Ecken sieht man
+trotzdem helle Zipfel — das Design wird dort nicht sauber beschnitten.
+
+**Ursache:** Ein Kind mit eigener Zeichenebene (ein iframe, ein transformiertes Element) wird vom
+gerundeten Beschnitt des Elternteils nicht zuverlässig erfasst. Vier WebKit-Fehler beschreiben das:
+**98538**, **231360** (gefixt, bestätigt 09.03.2023), **77572**, **72619**.
+
+**Fix, nach Wirksamkeit geordnet:** `isolation: isolate` am Rahmen (browserübergreifend, ohne
+GPU-Kosten) · `border-radius: inherit` am Kind · `mask-image` statt `overflow` · bei einer Vorschau,
+die das Design ohnehin randlos zeigen soll, die Rundung ganz weglassen — dann gibt es keine Ecke, an
+der etwas durchscheinen könnte.
+
+**Quellen:** https://bugs.webkit.org/show_bug.cgi?id=98538 · .../231360 · .../77572 · .../72619
+
+---
+
+## B-11 — `backdrop-filter` steht im CSS und wirkt trotzdem nicht
+
+**Symptom:** Eine Glasleiste hat `backdrop-filter: blur(12px)`, bleibt aber vollkommen klar.
+
+**Ursache:** Der Effekt sammelt seinen Hintergrund bis zum sogenannten Backdrop-Root. Setzt ein
+**Vorfahre** `filter`, `opacity` unter 1, `mask`, `mix-blend-mode`, `will-change` oder selbst
+`backdrop-filter`, endet die Sammlung dort — und es bleibt nichts zu verwischen. `transform` auf einem
+Vorfahren erzeugt zusätzlich einen neuen Bezugsrahmen und schneidet den Hintergrund ab.
+
+**Weitere belegte Fallen:**
+- Chromium ignoriert **verschachtelte** `backdrop-filter` im Kind-Element (Firefox und Safari nicht).
+- Firefox-Fehler **1797051**: `filter` auf einem Vorfahren macht das Kind ganz unsichtbar.
+- Chromium **380416865**: fehlerhafter Blur bei nicht-ganzzahlig transformierten Vorfahren.
+- Safari braucht 2026 weiterhin `-webkit-backdrop-filter`; **lightningcss #537** entfernt das Präfix
+  fälschlich beim Bündeln.
+
+**Fix:** Das Glaselement braucht eine eigene halbdurchsichtige Fläche; die genannten Eigenschaften
+dürfen auf keinem Vorfahren stehen (notfalls auf ein Geschwisterelement auslagern). Präfix
+mitschreiben und nach dem Bündeln nachprüfen, dass es noch da ist.
+
+**Quellen:** https://bugzilla.mozilla.org/show_bug.cgi?id=1797051 ·
+https://issues.chromium.org/issues/380416865 · https://havn.blog/2024/03/14/chromium-and-nested.html ·
+https://github.com/parcel-bundler/lightningcss/issues/537
+
+---
+
+## B-12 — Der Effekt steht in den Fakten und kommt im Aufbau nicht an
+
+**Symptom:** Das Spec führt Schatten und Verläufe sauber auf. Im nachgebauten Design fehlen sie.
+
+**Ursache:** Der Effekt wurde mit einem laufenden Zähler benannt (`design.html:gradient(7)`). Der
+Wert ist da, aber niemand weiß, an welches Element er gehört. Was sich nicht zuordnen lässt, wird
+weggelassen — lautlos, ohne Fehlermeldung.
+
+**Real getroffen:** Werft Studio, 14.08.2026 (Experimente-Spec).
+
+**Fix:** Beim Auslesen den Ort mitschreiben: den CSS-Selektor, in dessen Block der Effekt steht, oder
+bei einer Angabe am Element dessen Tag und Klasse (`div.karte.gross (shadow)`). Die Bau-Anweisung
+verpflichtet zusätzlich darauf, dass kein gelieferter Effekt fehlen darf.
+
+---
+
+## B-13 — Jeder Bildschirm baut die gemeinsame Leiste anders
+
+**Symptom:** Nach dem Einlesen unterscheidet sich die Reiterleiste von Bildschirm zu Bildschirm:
+andere Höhe, andere Symbolgrößen, andere Schriftgrößen, andere Effekte. Beim Reiterwechsel wirkt
+es wie eine andere Anwendung.
+
+**Ursache:** Jeder Bildschirm entsteht in einem eigenen KI-Aufruf, der die anderen nicht sieht. Ohne
+ausdrückliche Auflage erfindet jeder Aufruf die wiederkehrenden Teile neu. Das MobileForge-Paper
+benennt Cross-Page-Consistency als größte Schwachstelle solcher Verfahren.
+
+**Fix (drei Schichten):**
+1. Die gemeinsamen Teile werden EINMAL festgelegt und in jeden Aufruf wörtlich mitgegeben — nicht
+   pro Bildschirm neu beschrieben.
+2. Die Bau-Anweisung verpflichtet ausdrücklich auf zeichengleiche Leisten; unterscheiden darf sich
+   nur, welcher Eintrag aktiv ist.
+3. Nach dem Zusammensetzen vergleicht ein **programmatischer** Prüfer die Leisten aller Bildschirme
+   (Höhe, Innenabstand, Hintergrund, Radius, Schrift- und Symbolgrößen, Beschriftungen) gegen den
+   Startbildschirm. Die Abweichungen gehen in den vorhandenen Korrekturlauf. Eine Anweisung allein
+   genügt nicht — kein Aufruf kann prüfen, was die anderen getan haben.
+
+**Quellen:** MobileForge/„Looks Right, Works Right" (arXiv 2607.28645) ·
+https://christinevallaure.substack.com/p/design-system-contracts-the-component

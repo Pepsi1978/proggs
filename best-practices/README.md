@@ -58,7 +58,7 @@ best-practices/
 | `agents/` | 3 | Orchestrator-Agent, Loop Engineering, Anti-Halluzinations-Regeln (konzeptionell, ungepaart) | `bugs/agents/` |
 | `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |
 | `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
-| `design/` | 1 | Design-zu-Code-Treue: Handoff-Formate, Responsivität, Verifikation | `bugs/design/` |
+| `design/` | 2 | Design-zu-Code-Treue: Handoff-Formate, Responsivität, Verifikation · KI-Designstudio: Spec→Design-Konsistenz, Effekt-Rendering, parallele Aufträge, Geschwindigkeit | `bugs/design/` |
 
 ---
 
