@@ -29,4 +29,5 @@
 | 15 | type-safe Nav crasht (custom Typ) | Eigenen `NavType` per `typeMap` registrieren | §7.4 |
 | 16 | Gespeicherte Aenderung (DataStore/Room) erscheint erst beim naechsten Tap | Flow per `remember(context){…}` / ViewModel-`stateIn` stabil halten — NIE roh im Composable-Body neu bauen | §2.14 |
 | 17 | Rand laeuft ungleichmaessig aus (vorne hell, hinten dunkel) | Kein `sweepGradient` als Border — `linearGradient` mit nur deckenden Stops | §5.3 |
+| 19 | Umsortieren wirkt wirkungslos, obwohl die Daten neu sortiert ankommen | Schluessel-Verankerung: `LaunchedEffect(sortierung){ listState.scrollToItem(0) }` | §4.2b |
 | 18 | Glanz-/Bevel-Overlay faerbt auch den Text | `drawBehind` nach `background` statt `drawWithContent` | §5.4 |

@@ -324,6 +324,15 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **FIX:** Keys garantiert eindeutig — Daten `distinctBy { it.id }` deduplizieren, zusammengesetzten Key `key = { "${it.id}-${it.name}" }`, mehreren Listen ein Praefix `key = { "section_a_${it.id}" }`. Nie potentiell mehrfach vorkommende/leere Werte als Key.
 **Quelle:** github.com/wordpress-mobile/WordPress-Android/issues/17702
 
+### 4.2b Umsortieren einer Lazy-Liste sieht aus, als passiere nichts (Schluessel-Verankerung)   ⭐ TÜCKISCH
+**Symptom:** Die Sortierung wird umgeschaltet, State und Daten sind nachweislich neu sortiert (Log zeigt die neue Reihenfolge im Composable ankommen), aber der Bildschirm zeigt oben weiter dieselben Eintraege. Nach Verlassen und Neubetreten des Bildschirms stimmt alles. Fuehrt sehr leicht zu tagelanger Fehlersuche an der falschen Stelle (State-Holder, `remember`, Recomposition), weil alles davon in Ordnung ist.
+**Ursache:** `LazyColumn`/`LazyRow` mit `key = {…}` verankern die Scroll-Position am Schluessel des ersten sichtbaren Elements (`LazyListState` merkt sich `firstVisibleItemKey`). Wandert dieses Element beim Umsortieren nach hinten, scrollt die Liste automatisch mit — der Inhalt IST neu sortiert, das Sichtfenster ist nur mitgewandert. Bei Sortierwechseln, die genau die Reihenfolge umdrehen, wirkt das wie „nichts passiert".
+**Versionen:** konzeptionell (Foundation 1.x, alle mit Item-Keys).
+**FIX:** Bei einem Wechsel der Sortier-/Filterordnung (nicht bei Drag-and-Drop!) ausdruecklich an den Anfang springen: `LaunchedEffect(sortMode, richtung) { listState.scrollToItem(0) }`. Alternativ die Verankerung aufgeben (Keys weglassen) — kostet aber Item-Animationen und State-Erhalt, ist also die schlechtere Wahl.
+**Diagnose-Tipp:** Zwei Sonden setzen — eine im State-Holder, eine im Composable, beide mit den ersten 3 Namen. Zeigen BEIDE die neue Reihenfolge und der Bildschirm nicht, ist es die Verankerung und kein State-Problem.
+**Erlebt:** StackLaborWerftStudio 08/2026 — Umschalten fett-/wasserloeslich.
+**Quelle:** developer.android.com/develop/ui/compose/lists (Item-Keys und Scroll-Position)
+
 ### 4.3 Verschachteltes gleichachsiges Scrollen → Crash „infinity constraints"
 **Symptom:** `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints, which is disallowed.` — siehe ausfuehrlich **§6.1** (Crash-Sektion).
 **FIX (Kurz):** Kein zweites Scroll-Element gleicher Richtung verschachteln — alles in EINE LazyColumn (Header als `item {}`), oder dem inneren Container endliche Hoehe geben. Details + Custom-`layout{}`-Workaround in §6.1.
