@@ -9,6 +9,9 @@ import de.frank.stacklabor.werftstudio.data.preferences.Erscheinung
 import de.frank.stacklabor.werftstudio.data.preferences.TtsAnbieter
 import de.frank.stacklabor.werftstudio.data.repository.ImportModus
 import de.frank.stacklabor.werftstudio.data.repository.StackLaborRepository
+import de.frank.stacklabor.werftstudio.data.transfer.StackExportDaten
+import de.frank.stacklabor.werftstudio.data.transfer.StackTextExport
+import de.frank.stacklabor.werftstudio.data.transfer.StackZielText
 import de.frank.stacklabor.werftstudio.domain.model.Ampel
 import de.frank.stacklabor.werftstudio.domain.model.Bewertung
 import de.frank.stacklabor.werftstudio.domain.model.BewertungMitDetails
@@ -191,6 +194,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 message("Erneute Auswertung ist eingeplant")
             }
             StackLaborEvent.ExportData -> launchAction { effectChannel.send(StackLaborUiEffect.CreateExportDocument(repository.exportiere())) }
+            is StackLaborEvent.ExportStack -> exportStack(event.stackId)
+            StackLaborEvent.ExportAllStacks -> exportAllStacks()
             StackLaborEvent.ImportData -> sendEffect(StackLaborUiEffect.OpenImportDocument)
             is StackLaborEvent.ImportDocument -> launchAction("Daten importiert") { repository.importiere(event.json, ImportModus.ERSETZEN) }
             StackLaborEvent.ImportSeedData -> launchAction("Startbestand eingelesen") { repository.importiereStartbestand() }
@@ -846,6 +851,47 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 else -> "high"
             })
         }
+    }
+
+    private fun exportStack(stackId: String) = launchAction {
+        val stack = stacks.firstOrNull { it.id == stackId } ?: return@launchAction message("Der Stack wurde nicht gefunden.")
+        val jetzt = System.currentTimeMillis()
+        val text = StackTextExport.einzelnerStack(
+            daten = exportDaten(stack),
+            variante = settings.dosisVariante,
+            versionName = BuildConfig.VERSION_NAME,
+            zeitpunktEpochMillis = jetzt,
+        )
+        effectChannel.send(
+            StackLaborUiEffect.CreateTextDocument(StackTextExport.dateiname(stack.name, jetzt), text),
+        )
+    }
+
+    private fun exportAllStacks() = launchAction {
+        if (stacks.isEmpty()) return@launchAction message("Es gibt noch keine Stacks zum Exportieren.")
+        val jetzt = System.currentTimeMillis()
+        val text = StackTextExport.alleStacks(
+            daten = stacks.sortedBy { it.sortierung }.map(::exportDaten),
+            variante = settings.dosisVariante,
+            versionName = BuildConfig.VERSION_NAME,
+            zeitpunktEpochMillis = jetzt,
+        )
+        effectChannel.send(
+            StackLaborUiEffect.CreateTextDocument(StackTextExport.dateiname("alle-stacks", jetzt), text),
+        )
+    }
+
+    /** Sammelt Einträge, Mittel und Ziele eines Stacks aus dem laufenden Datenbestand. */
+    private fun exportDaten(stack: Stack): StackExportDaten {
+        val zielTexte = goals.associate { it.id to it.text }
+        return StackExportDaten(
+            stack = stack,
+            eintraege = entries.filter { it.stackId == stack.id }.sortedBy { it.reihenfolge },
+            mittelNachId = medicines.associateBy { it.id },
+            ziele = stackGoals.filter { it.stackId == stack.id }
+                .sortedBy { it.rang }
+                .mapNotNull { ziel -> zielTexte[ziel.zielId]?.let { StackZielText(ziel.rang, it) } },
+        )
     }
 
     private fun saveApiKey(keyId: String, value: String) = launchAction {

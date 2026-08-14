@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrackChanges
@@ -94,6 +95,7 @@ import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 
 @Composable
 fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
+    var homeMenuOpen by rememberSaveable { mutableStateOf(false) }
     WerftScreen {
         val headerContentColor = if (StackLaborTheme.dark) Color(0xFF141A24) else Color.White
         Column(Modifier.fillMaxSize()) {
@@ -123,6 +125,9 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                     }
                     IconTouchButton("Einstellungen öffnen", { callbacks.onNavigate(StackLaborRoute.Settings) }) {
                         Icon(Icons.Default.Settings, null, Modifier.size(22.dp), tint = headerContentColor)
+                    }
+                    IconTouchButton("Weitere Optionen", { homeMenuOpen = !homeMenuOpen }) {
+                        Icon(Icons.Default.MoreVert, null, Modifier.size(24.dp), tint = headerContentColor)
                     }
                 }
                 DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp))
@@ -174,6 +179,24 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                     onClick = { callbacks.onNavigate(StackLaborRoute.StackEdit(null, Origin.Home)) },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
+            }
+        }
+        if (homeMenuOpen) {
+            OverflowMenu(Modifier.align(Alignment.TopEnd).padding(top = 96.dp, end = 8.dp)) {
+                MenuItem("Alle Stacks exportieren") {
+                    homeMenuOpen = false
+                    callbacks.onEvent(StackLaborEvent.ExportAllStacks)
+                }
+                MenuTrenner()
+                MenuItem("Alle Stacks zusammen prüfen") {
+                    homeMenuOpen = false
+                    callbacks.onNavigate(StackLaborRoute.AllStacks)
+                }
+                MenuTrenner()
+                MenuItem("Daten als JSON sichern") {
+                    homeMenuOpen = false
+                    callbacks.onEvent(StackLaborEvent.ExportData)
+                }
             }
         }
     }
@@ -309,9 +332,11 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                     .border(1.5.dp, metalRim(0.95f), menuShape),
             ) {
                 MenuItem("Stack bearbeiten") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.StackEdit(stackId, Origin.StackDetail)) }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
+                MenuTrenner()
+                MenuItem("Stack exportieren") { menuOpen = false; callbacks.onEvent(StackLaborEvent.ExportStack(stackId)) }
+                MenuTrenner()
                 MenuItem("Eigene Fragen") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.Questions(stackId, Origin.StackDetail)) }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(StackLaborTheme.colors.border))
+                MenuTrenner()
                 MenuItem("Historie") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.History(stackId, Origin.StackDetail)) }
             }
         }
@@ -539,6 +564,37 @@ private fun MenuItem(label: String, onClick: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
         Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
     }
+}
+
+/** Eingravierte Trennlinie zwischen zwei Menüeinträgen. */
+@Composable
+private fun MenuTrenner() {
+    Box(
+        Modifier.fillMaxWidth().height(1.dp)
+            .background(StackLaborTheme.colors.border.copy(alpha = 0.7f)),
+    )
+}
+
+/**
+ * Das Drei-Punkte-Menü, das über den Bildschirmen aufklappt — gleiche Optik wie das im Stack.
+ */
+@Composable
+private fun OverflowMenu(modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val menuShape = RoundedCornerShape(12.dp)
+    Column(
+        modifier
+            .width(232.dp)
+            .depthShadow(menuShape, 28.dp, strength = 1.5f)
+            .clip(menuShape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(StackLaborTheme.colors.surface.lightenBy(0.20f), StackLaborTheme.colors.elevated),
+                ),
+            )
+            .bevel()
+            .border(1.5.dp, metalRim(0.95f), menuShape),
+        content = content,
+    )
 }
 
 @Composable

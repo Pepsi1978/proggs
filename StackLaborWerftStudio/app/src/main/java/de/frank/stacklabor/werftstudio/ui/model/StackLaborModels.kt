@@ -156,6 +156,8 @@ data class StackLaborUiState(
 sealed interface StackLaborUiEffect {
     data object OpenImportDocument : StackLaborUiEffect
     data class CreateExportDocument(val json: String) : StackLaborUiEffect
+    /** Legt eine lesbare Textdatei an — für den Stack-Export. */
+    data class CreateTextDocument(val fileName: String, val text: String) : StackLaborUiEffect
     data class OpenUrl(val url: String) : StackLaborUiEffect
     data class PlayTts(val text: String, val configuration: TtsConfiguration) : StackLaborUiEffect
     data object PauseTts : StackLaborUiEffect
@@ -203,6 +205,10 @@ sealed interface StackLaborEvent {
     data object CancelEvaluation : StackLaborEvent
     data object ScheduleRetry : StackLaborEvent
     data object ExportData : StackLaborEvent
+    /** Schreibt einen einzelnen Stack als Textdatei mit allen Angaben heraus. */
+    data class ExportStack(val stackId: String) : StackLaborEvent
+    /** Schreibt alle Stacks nacheinander in eine Textdatei. */
+    data object ExportAllStacks : StackLaborEvent
     data object ImportData : StackLaborEvent
     data class ImportDocument(val json: String) : StackLaborEvent
     data object ImportSeedData : StackLaborEvent

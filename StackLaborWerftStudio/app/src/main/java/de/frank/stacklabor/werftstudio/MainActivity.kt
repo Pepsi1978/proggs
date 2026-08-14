@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     private lateinit var viewModel: StackLaborViewModel
     private var pendingExport: String? = null
+    private var pendingTextExport: String? = null
     private var pendingTts: Pair<String, TtsConfiguration>? = null
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -55,6 +56,20 @@ class MainActivity : ComponentActivity() {
                         ?: throw IOException("Die Exportdatei konnte nicht angelegt werden.")
                 }
             }.onSuccess { showMessage("Daten exportiert") }
+                .onFailure { showMessage(it.message ?: "Export fehlgeschlagen") }
+        }
+    }
+
+    private val textExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        val text = pendingTextExport.also { pendingTextExport = null } ?: return@registerForActivityResult
+        if (uri == null) return@registerForActivityResult
+        lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use { it.write(text) }
+                        ?: throw IOException("Die Exportdatei konnte nicht angelegt werden.")
+                }
+            }.onSuccess { showMessage("Stack exportiert") }
                 .onFailure { showMessage(it.message ?: "Export fehlgeschlagen") }
         }
     }
@@ -85,6 +100,10 @@ class MainActivity : ComponentActivity() {
                         is StackLaborUiEffect.CreateExportDocument -> {
                             pendingExport = effect.json
                             exportLauncher.launch("stacklabor-export.json")
+                        }
+                        is StackLaborUiEffect.CreateTextDocument -> {
+                            pendingTextExport = effect.text
+                            textExportLauncher.launch(effect.fileName)
                         }
                         is StackLaborUiEffect.OpenUrl -> openUrl(effect.url)
                         is StackLaborUiEffect.PlayTts -> playTts(effect.text, effect.configuration)
