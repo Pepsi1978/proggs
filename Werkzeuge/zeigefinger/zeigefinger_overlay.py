@@ -22,9 +22,12 @@ from zeigefinger import (
     VERSION,
     VERSION_STAND,
     adb,
+    ausschnitt,
     element_an_punkt,
+    elemente_im_bereich,
     elementkette_an_punkt,
     ist_emulator,
+    normiere_kasten,
     log,
     screenshot,
     suche_quellcode,
@@ -48,6 +51,11 @@ ACCENT_DARK = "#9f2c16"
 PANEL = "#17191d"
 TEXT = "#f7f4ee"
 MUTEX_NAME = "Local\\ZeigefingerOverlay"
+ZUG_SCHWELLE = 8  # Fensterpixel; darunter war es ein Zeigen, kein Aufziehen
+# Schwarz haelt sich vor der orange getoenten Flaeche und vor hellen wie dunklen
+# App-Hintergruenden; duenne helle Linien gingen darin unter.
+RAHMEN_FARBE = "black"
+RAHMEN_STAERKE = 6
 
 SW_HIDE = 0
 SW_MINIMIZE = 6
@@ -227,6 +235,16 @@ def videobereich(
     return (client_breite - breite) // 2, (client_hoehe - hoehe) // 2, breite, hoehe
 
 
+def ist_kasten(x1: int, y1: int, x2: int, y2: int, schwelle: int = ZUG_SCHWELLE) -> bool:
+    """Gezogen oder nur gezeigt?
+
+    Eine Achse reicht: eine flache Textzeile zu umfahren ist genauso ein
+    Aufziehen wie ein grosses Rechteck. Verlangte man Weg auf beiden Achsen,
+    kippte so ein Zug faelschlich in eine Punktauswahl.
+    """
+    return abs(x2 - x1) >= schwelle or abs(y2 - y1) >= schwelle
+
+
 def fenstergroesse(
     display_breite: int,
     display_hoehe: int,
@@ -360,6 +378,20 @@ def _quelle_als_dict(projekt: Path, fund: tuple[Path, int, str]) -> dict:
     }
 
 
+ANWEISUNG_PUNKT = (
+    "Beziehe Woerter wie 'dort', 'da' oder 'diese Stelle' in derselben "
+    "Benutzernachricht auf diese Auswahl. Pruefe Screenshot, UI-Kontext und "
+    "Quellcodekandidaten, bevor du Code aenderst."
+)
+ANWEISUNG_KASTEN = (
+    "Beziehe Woerter wie 'dort', 'das', 'dieser Bereich' oder 'diese Karte' in "
+    "derselben Benutzernachricht auf den aufgezogenen Kasten — gemeint ist alles "
+    "darin, nicht ein einzelnes Element. 'elemente_im_kasten' listet den Inhalt in "
+    "Leserichtung; 'screenshot_ausschnitt' zeigt genau diesen Bereich. Pruefe beides "
+    "und die Quellcodekandidaten, bevor du Code aenderst."
+)
+
+
 def auswahl_erfassen(
     serial: str,
     projekt: Path,
@@ -367,8 +399,15 @@ def auswahl_erfassen(
     y: int,
     ausgabe: Path,
     nummer: int,
+    kasten: tuple[int, int, int, int] | None = None,
 ) -> tuple[Path, dict]:
-    """Friert den vollstaendigen Kontext des Auswahlklicks unveraenderlich ein."""
+    """Friert den vollstaendigen Kontext einer Auswahl unveraenderlich ein.
+
+    Zwei Arten teilen sich denselben Weg: der Punkt und der aufgezogene Kasten.
+    Auch beim Kasten wird die Mitte als Punkt mit ausgewertet — so bleibt jedes
+    Feld des Schemas belegt, und ein Kasten um ein einzelnes Bedienelement
+    liefert weiterhin dessen Kette und klickbaren Rahmen.
+    """
     zeit = datetime.now().astimezone()
     kennung = f"auswahl-{zeit:%Y%m%d-%H%M%S}-{zeit.microsecond // 1000:03d}"
     json_pfad = ausgabe / f"{kennung}.json"
@@ -381,29 +420,34 @@ def auswahl_erfassen(
     kette = elementkette_an_punkt(xml, x, y)
     direkt, klickbar = gefunden if gefunden else ({}, None)
     nahe = _nahe_elemente(xml, x, y)
+    im_kasten = elemente_im_bereich(xml, *kasten) if kasten else []
 
+    # Beim Kasten fuehrt sein Inhalt; der Punkt in der Mitte ergaenzt nur.
+    # Nur beschriftete Elemente taugen als Suchbegriff, und was ganz im Kasten
+    # liegt, ist eher gemeint als ein Rahmen, der bloss hineinragt.
+    ergiebig = sorted(
+        (e for e in im_kasten if e.get("beschriftet")),
+        key=lambda e: not e["vollstaendig_im_kasten"],
+    )
     begriffe: list[str] = []
-    for element in [direkt, klickbar, *kette[:5], *nahe[:5]]:
+    for element in [*ergiebig[:14], direkt, klickbar, *kette[:5], *nahe[:5]]:
         if element:
             begriffe.extend(suchbegriffe(element))
     begriffe = list(dict.fromkeys(begriffe))
-    funde = suche_quellcode(projekt, begriffe, limit=12)
+    funde = suche_quellcode(projekt, begriffe, limit=20 if kasten else 12)
 
     bild = screenshot(serial, (breite, hoehe))
     _atomar_schreiben(bild_pfad, bild)
     _atomar_schreiben(xml_pfad, xml.encode("utf-8"))
 
     inhalt = {
-        "schema": 1,
+        "schema": 2,
         "werkzeug": "Zeigefinger",
         "werkzeug_version": VERSION,
         "auswahl_nummer": nummer,
+        "art": "kasten" if kasten else "punkt",
         "erfasst_am": zeit.isoformat(timespec="milliseconds"),
-        "anweisung_an_opencode": (
-            "Beziehe Woerter wie 'dort', 'da' oder 'diese Stelle' in derselben "
-            "Benutzernachricht auf diese Auswahl. Pruefe Screenshot, UI-Kontext und "
-            "Quellcodekandidaten, bevor du Code aenderst."
-        ),
+        "anweisung_an_opencode": ANWEISUNG_KASTEN if kasten else ANWEISUNG_PUNKT,
         "geraet": serial,
         "projekt": str(projekt),
         "screen": _aktiver_screen(serial),
@@ -417,13 +461,38 @@ def auswahl_erfassen(
         "screenshot": str(bild_pfad),
         "ui_hierarchie": str(xml_pfad),
     }
+
+    if kasten:
+        kx1, ky1, kx2, ky2 = kasten
+        schnipsel = ausschnitt(bild, kasten)
+        if schnipsel:
+            schnipsel_pfad = ausgabe / f"{kennung}-kasten.png"
+            _atomar_schreiben(schnipsel_pfad, schnipsel)
+            inhalt["screenshot_ausschnitt"] = str(schnipsel_pfad)
+        inhalt["kasten"] = {
+            "x1": kx1, "y1": ky1, "x2": kx2, "y2": ky2,
+            "breite": kx2 - kx1, "hoehe": ky2 - ky1,
+        }
+        inhalt["elemente_im_kasten"] = im_kasten
+        inhalt["elemente_im_kasten_anzahl"] = len(im_kasten)
+        # Kurzfassung zum Lesen: was im Kasten steht, in Leserichtung.
+        inhalt["text_im_kasten"] = [
+            e["text"] or e["desc"] for e in im_kasten if e["text"] or e["desc"]
+        ]
+
     _atomar_json(json_pfad, inhalt)
     _atomar_json(ausgabe / "letzte-auswahl.json", inhalt)
-    log("info", "Klick-Auswahl gespeichert", auswahl=str(json_pfad), x=x, y=y)
+    log("info", "Auswahl gespeichert", auswahl=str(json_pfad), art=inhalt["art"],
+        x=x, y=y, kasten=kasten, elemente=len(im_kasten))
     return json_pfad, inhalt
 
 
-def befehlstext(auswahl_pfad: Path) -> str:
+def befehlstext(auswahl_pfad: Path, art: str = "punkt") -> str:
+    if art == "kasten":
+        return (
+            'Lies zuerst dieses Zeigefinger-Ziel und beziehe "dort" auf den ganzen '
+            f'darin aufgezogenen Kasten: "{auswahl_pfad}". '
+        )
     return f'Lies zuerst dieses Zeigefinger-Ziel und beziehe "dort" darauf: "{auswahl_pfad}". '
 
 
@@ -552,6 +621,8 @@ class AuswahlOverlay:
         self.toolbar_sichtbar = False
         self.letzte_root_geometrie = ""
         self.letzte_overlay_geometrie = ""
+        self.zug_start: tuple[int, int] | None = None
+        self.zug_band: int | None = None
 
         self.root = tk.Tk()
         self.root.withdraw()
@@ -609,7 +680,9 @@ class AuswahlOverlay:
             cursor="crosshair",
         )
         self.canvas.pack(fill="both", expand=True)
-        self.canvas.bind("<Button-1>", self.auswahl_klick)
+        self.canvas.bind("<Button-1>", self.zug_beginnen)
+        self.canvas.bind("<B1-Motion>", self.zug_ziehen)
+        self.canvas.bind("<ButtonRelease-1>", self.zug_beenden)
         self.overlay.bind("<Escape>", lambda _: self.auswahl_abbrechen())
 
         self.root.update_idletasks()
@@ -743,12 +816,14 @@ class AuswahlOverlay:
         self.status.configure(text="AN · STELLE ANKLICKEN")
         self.schalter.configure(text="AUSWAHL AUS", bg=ACCENT_DARK)
         self.canvas.delete("all")
+        self.zug_band = None
+        self.zug_start = None
         _, _, breite, hoehe = self.video_geometrie
         self.canvas.create_rectangle(2, 2, breite - 3, hoehe - 3, outline=ACCENT, width=4)
         self.canvas.create_text(
             breite // 2,
             24,
-            text="AUSWAHLMODUS · ein Klick wird nicht an Android gesendet",
+            text="AUSWAHLMODUS · klicken = eine Stelle · ziehen = ganzer Kasten",
             fill="white",
             font=("Segoe UI", 10, "bold"),
         )
@@ -758,49 +833,83 @@ class AuswahlOverlay:
 
     def auswahl_abbrechen(self) -> None:
         self.auswahlmodus = False
+        self.zug_start = None
+        self.zug_band = None
         self.overlay.withdraw()
         self.status.configure(text="AUS")
         self.schalter.configure(text="AUSWAHL AN", bg=ACCENT, state="normal")
 
-    def auswahl_klick(self, ereignis) -> None:
+    def zug_beginnen(self, ereignis) -> None:
         if not self.auswahlmodus or self.beschaeftigt:
             return
+        self.zug_start = (ereignis.x, ereignis.y)
+        if self.zug_band is not None:
+            self.canvas.delete(self.zug_band)
+            self.zug_band = None
+
+    def zug_ziehen(self, ereignis) -> None:
+        if self.zug_start is None or self.beschaeftigt:
+            return
+        x1, y1 = self.zug_start
+        if self.zug_band is None:
+            self.zug_band = self.canvas.create_rectangle(
+                x1, y1, ereignis.x, ereignis.y,
+                outline=RAHMEN_FARBE,
+                width=RAHMEN_STAERKE,
+            )
+        else:
+            self.canvas.coords(self.zug_band, x1, y1, ereignis.x, ereignis.y)
+
+    def zug_beenden(self, ereignis) -> None:
+        """Ein Zeigen ist ein Punkt, ein Ziehen ein Kasten — entschieden wird am Weg."""
+        if self.zug_start is None or not self.auswahlmodus or self.beschaeftigt:
+            return
+        x1, y1 = self.zug_start
+        self.zug_start = None
+        x2, y2 = ereignis.x, ereignis.y
+        gezogen = ist_kasten(x1, y1, x2, y2)
+
         self.beschaeftigt = True
         self.schalter.configure(state="disabled")
-        self.status.configure(text="WIRD ÜBERGEBEN ...")
+        self.status.configure(text="KASTEN WIRD GELESEN ..." if gezogen else "WIRD ÜBERGEBEN ...")
         _, _, vb, vh = self.video_geometrie
-        self.canvas.create_oval(
-            ereignis.x - 12,
-            ereignis.y - 12,
-            ereignis.x + 12,
-            ereignis.y + 12,
-            outline=ACCENT,
-            width=5,
-        )
+        if gezogen:
+            if self.zug_band is not None:
+                # Beim Loslassen bleibt der Rahmen schwarz, wird aber kraeftiger:
+                # das quittiert die Auswahl, ohne sie schlechter sichtbar zu machen.
+                self.canvas.itemconfigure(self.zug_band, width=RAHMEN_STAERKE + 3)
+        else:
+            if self.zug_band is not None:
+                self.canvas.delete(self.zug_band)
+                self.zug_band = None
+            self.canvas.create_oval(x2 - 12, y2 - 12, x2 + 12, y2 + 12, outline=ACCENT, width=5)
+
         self.nummer += 1
         threading.Thread(
             target=self._auswahl_worker,
-            args=(ereignis.x, ereignis.y, vb, vh, self.nummer),
+            args=((x2, y2), (x1, y1, x2, y2) if gezogen else None, vb, vh, self.nummer),
             daemon=True,
         ).start()
 
     def _auswahl_worker(
         self,
-        maus_x: int,
-        maus_y: int,
+        punkt: tuple[int, int],
+        kasten_fenster: tuple[int, int, int, int] | None,
         video_breite: int,
         video_hoehe: int,
         nummer: int,
     ) -> None:
         try:
             display = aktuelle_displaygroesse(self.serial)
-            x, y = geraetepunkt(
-                maus_x,
-                maus_y,
-                video_breite,
-                video_hoehe,
-                *display,
-            )
+            x, y = geraetepunkt(*punkt, video_breite, video_hoehe, *display)
+            kasten = None
+            if kasten_fenster:
+                fx1, fy1, fx2, fy2 = kasten_fenster
+                gx1, gy1 = geraetepunkt(fx1, fy1, video_breite, video_hoehe, *display)
+                gx2, gy2 = geraetepunkt(fx2, fy2, video_breite, video_hoehe, *display)
+                kasten = normiere_kasten(gx1, gy1, gx2, gy2)
+                # Die Mitte des Kastens vertritt ihn als Punkt.
+                x, y = (kasten[0] + kasten[2]) // 2, (kasten[1] + kasten[3]) // 2
             pfad, inhalt = auswahl_erfassen(
                 self.serial,
                 self.projekt,
@@ -808,18 +917,23 @@ class AuswahlOverlay:
                 y,
                 self.ausgabe,
                 nummer,
+                kasten=kasten,
             )
             self.root.after(0, self._auswahl_fertig, pfad, inhalt)
         except (Exception, SystemExit) as exc:
-            log("error", "Klick-Auswahl fehlgeschlagen", error=str(exc))
+            log("error", "Auswahl fehlgeschlagen", error=str(exc))
             self.root.after(0, self._auswahl_fehler, str(exc))
 
     def _auswahl_fertig(self, pfad: Path, inhalt: dict) -> None:
-        element = inhalt.get("direktes_element") or {}
-        name = element.get("text") or element.get("desc") or element.get("klasse", "Element")
-        self.status.configure(text=f"#{self.nummer}: {name[:26]}")
+        if inhalt.get("art") == "kasten":
+            beschriftet = sum(1 for e in inhalt.get("elemente_im_kasten", []) if e.get("beschriftet"))
+            name = f"Kasten · {inhalt.get('elemente_im_kasten_anzahl', 0)} Elemente ({beschriftet} benannt)"
+        else:
+            element = inhalt.get("direktes_element") or {}
+            name = element.get("text") or element.get("desc") or element.get("klasse", "Element")
+        self.status.configure(text=f"#{self.nummer}: {name[:34]}")
         self.root.clipboard_clear()
-        self.root.clipboard_append(befehlstext(pfad))
+        self.root.clipboard_append(befehlstext(pfad, inhalt.get("art", "punkt")))
         self.root.update()
         self.auswahlmodus = False
         self.beschaeftigt = False
@@ -896,6 +1010,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar=("X", "Y"),
         help="Kontext einmalig an einer Android-Koordinate erfassen (ohne Overlay)",
     )
+    parser.add_argument(
+        "--kasten",
+        nargs=4,
+        type=int,
+        metavar=("X1", "Y1", "X2", "Y2"),
+        help="Kontext einmalig fuer einen Android-Bereich erfassen (ohne Overlay)",
+    )
     parser.add_argument("--version", action="version", version=f"Zeigefinger {VERSION} ({VERSION_STAND})")
     return parser.parse_args(argv)
 
@@ -919,14 +1040,20 @@ def main(argv: list[str] | None = None) -> int:
     projekt = Path(args.projekt).expanduser().resolve()
     if not projekt.is_dir():
         raise SystemExit(f"Projektordner gibt es nicht: {projekt}")
-    if args.einmal:
+    if args.einmal or args.kasten:
+        kasten = normiere_kasten(*args.kasten) if args.kasten else None
+        if kasten:
+            punkt = ((kasten[0] + kasten[2]) // 2, (kasten[1] + kasten[3]) // 2)
+        else:
+            punkt = (args.einmal[0], args.einmal[1])
         pfad, _ = auswahl_erfassen(
             waehle_geraet(args.serial or None, emulator_zuerst=True),
             projekt,
-            args.einmal[0],
-            args.einmal[1],
+            punkt[0],
+            punkt[1],
             Path(args.ausgabe).expanduser().resolve(),
             1,
+            kasten=kasten,
         )
         print(pfad)
         return 0

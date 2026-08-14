@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import io
 import json
 import os
 import re
@@ -28,8 +29,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, overload
 
-VERSION = "0.0.6"
-VERSION_STAND = "14.08.2026, 21:32 Uhr"
+VERSION = "0.0.7"
+VERSION_STAND = "14.08.2026, 21:44 Uhr"
 
 # Umlaute und Kastenlinien muessen auch durch eine Pipe heil ankommen, und die
 # Ausgabe soll zeilenweise erscheinen statt am Ende im Block.
@@ -227,6 +228,32 @@ def screenshot(serial: str, erwartet: tuple[int, int] | None = None) -> bytes:
     raise RuntimeError("Android-Screenshot konnte nicht gelesen werden.")
 
 
+def ausschnitt(bild: bytes, kasten: tuple[int, int, int, int]) -> bytes | None:
+    """Schneidet den aufgezogenen Kasten aus dem Screenshot.
+
+    Braucht Pillow. Fehlt es, bleibt es beim Vollbild — die Auswahl selbst
+    haengt nicht daran, nur das zusaetzliche Ausschnittsbild entfaellt.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        log("warn", "Pillow fehlt — Auswahl ohne Ausschnittsbild")
+        return None
+    kx1, ky1, kx2, ky2 = kasten
+    try:
+        with Image.open(io.BytesIO(bild)) as offen:
+            breite, hoehe = offen.size
+            gekappt = (max(0, kx1), max(0, ky1), min(breite, kx2), min(hoehe, ky2))
+            if gekappt[2] - gekappt[0] < 2 or gekappt[3] - gekappt[1] < 2:
+                return None
+            puffer = io.BytesIO()
+            offen.crop(gekappt).save(puffer, format="PNG")
+            return puffer.getvalue()
+    except OSError as exc:
+        log("warn", "Ausschnitt nicht erzeugbar", error=str(exc))
+        return None
+
+
 def ui_baum(serial: str) -> str:
     try:
         roh = adb(serial, "exec-out", "uiautomator", "dump", "/dev/tty", binary=True)
@@ -283,6 +310,59 @@ def elementkette_an_punkt(xml: str, x: int, y: int) -> list[dict]:
 
     kette.sort(key=lambda p: p[0])
     return [_als_dict(knoten) for _, knoten in kette]
+
+
+def _knoten_bounds(knoten) -> tuple[int, int, int, int] | None:
+    m = BOUNDS_RE.fullmatch(knoten.get("bounds", ""))
+    if not m:
+        return None
+    l, t, r, b = (int(v) for v in m.groups())
+    return (l, t, r, b) if r > l and b > t else None
+
+
+def normiere_kasten(x1: int, y1: int, x2: int, y2: int) -> tuple[int, int, int, int]:
+    """Ecken sortieren — gezogen wird in jede der vier Richtungen."""
+    return min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)
+
+
+def elemente_im_bereich(xml: str, x1: int, y1: int, x2: int, y2: int) -> list[dict]:
+    """Alle Elemente, die der aufgezogene Kasten beruehrt.
+
+    Ausgegeben wird in Leserichtung (oben nach unten, dann links nach rechts),
+    denn der Kasten umfasst meist eine Karte oder Zeilengruppe — deren
+    Reihenfolge auf dem Schirm ist die verstaendlichste. Ob ein Element ganz
+    im Kasten liegt oder nur hineinragt, steht als Merkmal dabei: der Rahmen
+    einer Liste ragt fast immer heraus, ihre Eintraege nicht.
+    """
+    import xml.etree.ElementTree as ET
+
+    kx1, ky1, kx2, ky2 = normiere_kasten(x1, y1, x2, y2)
+    try:
+        wurzel = ET.fromstring(xml)
+    except ET.ParseError as exc:
+        log("error", "UI-XML nicht parsebar", error=str(exc))
+        return []
+
+    treffer: list[tuple[int, int, dict]] = []
+    gesehen: set[tuple[str, str, str]] = set()
+    for knoten in wurzel.iter("node"):
+        werte = _knoten_bounds(knoten)
+        if not werte:
+            continue
+        l, t, r, b = werte
+        if r < kx1 or l > kx2 or b < ky1 or t > ky2:
+            continue
+        eintrag = _als_dict(knoten)
+        schluessel = (eintrag["text"], eintrag["desc"], eintrag["bounds"])
+        if schluessel in gesehen:
+            continue
+        gesehen.add(schluessel)
+        eintrag["vollstaendig_im_kasten"] = l >= kx1 and t >= ky1 and r <= kx2 and b <= ky2
+        eintrag["beschriftet"] = bool(eintrag["text"] or eintrag["desc"] or eintrag["res_id"])
+        treffer.append((t, l, eintrag))
+
+    treffer.sort(key=lambda p: (p[0], p[1]))
+    return [eintrag for _, _, eintrag in treffer]
 
 
 def element_an_punkt(xml: str, x: int, y: int) -> tuple[dict, dict | None] | None:

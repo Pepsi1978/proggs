@@ -11,8 +11,8 @@ Displaygroesse berechnet, also passt sie auch am aufgeklappten Fold 8.
 Ein grosses, schwebendes Bedienfeld links oben trennt zwei Zustaende:
 
 - **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
-- **Auswaehlen:** Die App wird leicht getoent; der naechste Klick wird abgefangen und loest keine
-  Aktion in Android aus.
+- **Auswaehlen:** Die App wird leicht getoent; der naechste Klick oder Zug wird abgefangen und
+  loest keine Aktion in Android aus. Beim Ziehen folgt ein dicker schwarzer Rahmen der Maus.
 
 Start fuer die Experimente-App:
 
@@ -29,10 +29,21 @@ Windows-Terminal; damit funktioniert derselbe Ablauf auch nach einem Start von O
 OpenLauncher. Gibt es mehrere echte Terminalfenster und ist das Ziel nicht eindeutig, wird die
 Referenz sicher in die Zwischenablage gelegt statt in das falsche Fenster geschrieben.
 
-Nach **Auswaehlen** und einem Klick friert das Werkzeug den genauen Kontext ein: Android-Koordinate,
-aktueller Screen, UI-Baum, Screenshot, Element unter dem Zeiger, umgebende Elemente und moegliche
-Kotlin-Codestellen. Die Daten landen als eindeutige JSON-Datei unter
-`%TEMP%\opencode\zeigefinger\`.
+Im Auswahlmodus gibt es **zwei Griffe**:
+
+- **Klicken** — eine Stelle. Das Werkzeug friert den genauen Kontext ein: Android-Koordinate,
+  aktueller Screen, UI-Baum, Screenshot, Element unter dem Zeiger, umgebende Elemente und moegliche
+  Kotlin-Codestellen.
+- **Ziehen** (Maustaste halten und einen Kasten aufziehen) — der **ganze Bereich**. Zusaetzlich zu
+  allem oben wird erfasst, was im Kasten liegt: `elemente_im_kasten` in Leserichtung (mit dem
+  Merkmal, ob ein Element ganz drin liegt oder nur hineinragt), `text_im_kasten` als Kurzfassung
+  zum Lesen und ein **Ausschnittsbild** genau dieses Bereichs (`…-kasten.png`). Die Richtung ist
+  egal, und eine flache Textzeile zaehlt genauso als Kasten wie ein grosses Rechteck. Erst unter
+  8 Pixeln Weg gilt es als Zeigen — Wackeln beim Klicken bleibt also eine Punktauswahl.
+
+Beides landet als eindeutige JSON-Datei unter `%TEMP%\opencode\zeigefinger\`; das Feld `art` sagt,
+was es ist (`punkt` oder `kasten`). Das Ausschnittsbild braucht Pillow — fehlt es, bleibt es beim
+Vollbild, die Auswahl selbst funktioniert weiter.
 
 Danach wechselt der Fokus zu OpenCode und folgende Referenz steht bereits in der Eingabe:
 
@@ -95,6 +106,9 @@ python zeigefinger.py --projekt <pfad> --punkt 922 276
 | `--fenster` | Titel(teil) des scrcpy-Fensters | `Fold8Live` |
 | `--serial` | ADB-Seriennummer | angeschlossenes Gerät; ohne eins der laufende Emulator |
 | `--punkt X Y` | Einmal-Abfrage statt Maus | — |
+
+Fuer die Klick-Auswahl (`zeigefinger_overlay.py`) gibt es dieselben Griffe auch ohne Oberflaeche:
+`--einmal X Y` fuer eine Stelle, `--kasten X1 Y1 X2 Y2` fuer einen Bereich.
 
 ## Warum Zeigen und nicht Klicken
 
