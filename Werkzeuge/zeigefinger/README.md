@@ -3,17 +3,24 @@
 ## Klick-Auswahl fuer OpenCode
 
 Der neue Standardweg spiegelt den laufenden Fold-8-Emulator in ein sauberes
-`scrcpy`-Arbeitsfenster. Das eigentliche Emulatorfenster wird minimiert. Eine kleine Leiste am Rand
-der Spiegelung trennt zwei Zustaende:
+`scrcpy`-Arbeitsfenster. Das eigentliche Emulatorfenster wird minimiert. Ein grosses, schwebendes
+Bedienfeld links oben trennt zwei Zustaende:
 
 - **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
-- **Auswaehlen:** Der naechste Klick wird abgefangen und loest keine Aktion in Android aus.
+- **Auswaehlen:** Die App wird leicht getoent; der naechste Klick wird abgefangen und loest keine
+  Aktion in Android aus.
 
 Start fuer die Experimente-App:
 
 ```powershell
 .\Start-Zeigefinger.ps1
 ```
+
+Alternativ `Start-Zeigefinger.vbs` im Explorer doppelt anklicken. Dieser Starter oeffnet kein
+zusaetzliches Konsolenfenster. Das Werkzeug erkennt sowohl OpenCode als auch Claude Code im
+Windows-Terminal; damit funktioniert derselbe Ablauf auch nach einem Start von Opus ueber den
+OpenLauncher. Gibt es mehrere echte Terminalfenster und ist das Ziel nicht eindeutig, wird die
+Referenz sicher in die Zwischenablage gelegt statt in das falsche Fenster geschrieben.
 
 Nach **Auswaehlen** und einem Klick friert das Werkzeug den genauen Kontext ein: Android-Koordinate,
 aktueller Screen, UI-Baum, Screenshot, Element unter dem Zeiger, umgebende Elemente und moegliche

@@ -40,7 +40,6 @@ except (AttributeError, OSError):
     pass
 
 
-TRANSPARENT = "#010203"
 ACCENT = "#ff5a36"
 ACCENT_DARK = "#9f2c16"
 PANEL = "#17191d"
@@ -51,13 +50,18 @@ SW_HIDE = 0
 SW_MINIMIZE = 6
 SW_RESTORE = 9
 GWL_EXSTYLE = -20
-GWLP_HWNDPARENT = -8
+GWL_STYLE = -16
 WS_EX_TOOLWINDOW = 0x00000080
 WS_EX_TRANSPARENT = 0x00000020
 WS_EX_LAYERED = 0x00080000
+WS_CHILD = 0x40000000
+WS_POPUP = 0x80000000
+HWND_TOP = 0
+SWP_NOACTIVATE = 0x0010
 VK_CONTROL = 0x11
 KEYEVENTF_KEYUP = 0x0002
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+LWA_ALPHA = 0x00000002
 _WIN_API_READY = False
 
 
@@ -94,8 +98,23 @@ def _win_api():
         user32.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
         user32.GetParent.argtypes = [wintypes.HWND]
         user32.GetParent.restype = wintypes.HWND
-        user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
-        user32.SetWindowLongPtrW.restype = ctypes.c_void_p
+        user32.SetParent.argtypes = [wintypes.HWND, wintypes.HWND]
+        user32.SetParent.restype = wintypes.HWND
+        user32.SetLayeredWindowAttributes.argtypes = [
+            wintypes.HWND,
+            wintypes.COLORREF,
+            wintypes.BYTE,
+            wintypes.DWORD,
+        ]
+        user32.SetWindowPos.argtypes = [
+            wintypes.HWND,
+            wintypes.HWND,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.UINT,
+        ]
         kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel32.OpenProcess.restype = wintypes.HANDLE
         kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
@@ -156,23 +175,13 @@ def finde_fenster(titel: str) -> int | None:
     return None
 
 
-def fenster_titel(hwnd: int | None) -> str:
-    if not hwnd:
-        return ""
-    user32, _ = _win_api()
-    laenge = user32.GetWindowTextLengthW(wintypes.HWND(hwnd))
-    if laenge <= 0:
-        return ""
-    buffer = ctypes.create_unicode_buffer(laenge + 1)
-    user32.GetWindowTextW(wintypes.HWND(hwnd), buffer, laenge + 1)
-    return buffer.value
-
-
 def finde_eingabefenster(titel: str = "") -> int | None:
     fenster = fenster_liste()
     terminals = [
         f for f in fenster
         if f.process.casefold() in {"windowsterminal.exe", "opencode.exe"}
+        and "emulator.exe" not in f.title.casefold()
+        and "android\\sdk\\emulator" not in f.title.casefold()
     ]
     if titel:
         passende = [f for f in terminals if titel.casefold() in f.title.casefold()]
@@ -226,18 +235,6 @@ def geraetepunkt(
     x = max(0, min(display_breite - 1, int(maus_x / video_breite * display_breite)))
     y = max(0, min(display_hoehe - 1, int(maus_y / video_hoehe * display_hoehe)))
     return x, y
-
-
-def leistenposition(
-    video_x: int,
-    video_y: int,
-    video_breite: int,
-    leisten_breite: int,
-    rand: int = 8,
-) -> tuple[int, int]:
-    """Positioniert die Leiste garantiert innerhalb der sichtbaren Spiegelung."""
-    x = video_x + max(rand, video_breite - leisten_breite - rand)
-    return x, video_y + rand
 
 
 def aktuelle_displaygroesse(serial: str) -> tuple[int, int]:
@@ -413,10 +410,14 @@ def befehlstext(auswahl_pfad: Path) -> str:
     return f'Lies zuerst dieses Zeigefinger-Ziel und beziehe "dort" darauf: "{auswahl_pfad}". '
 
 
-def _fensterstil(hwnd: int, klickdurchlaessig: bool) -> None:
+def _fensterstil(hwnd: int, klickdurchlaessig: bool, transparent: bool = True) -> None:
     user32, _ = _win_api()
     stil = user32.GetWindowLongW(wintypes.HWND(hwnd), GWL_EXSTYLE)
-    stil |= WS_EX_LAYERED | WS_EX_TOOLWINDOW
+    stil |= WS_EX_TOOLWINDOW
+    if transparent:
+        stil |= WS_EX_LAYERED
+    else:
+        stil &= ~WS_EX_LAYERED
     if klickdurchlaessig:
         stil |= WS_EX_TRANSPARENT
     else:
@@ -433,12 +434,28 @@ def _tk_fenster(widget) -> int:
 
 
 def _an_fenster_koppeln(hwnd: int, eigentuemer: int) -> None:
-    """Haelt die Leiste ueber scrcpy, aber nicht global ueber anderen Programmen."""
+    """Bettet ein Tk-Fenster als echtes Kind in die scrcpy-Clientflaeche ein."""
     user32, _ = _win_api()
-    user32.SetWindowLongPtrW(
+    stil = user32.GetWindowLongW(wintypes.HWND(hwnd), GWL_STYLE)
+    user32.SetWindowLongW(
         wintypes.HWND(hwnd),
-        GWLP_HWNDPARENT,
-        ctypes.c_void_p(eigentuemer),
+        GWL_STYLE,
+        (stil | WS_CHILD) & ~WS_POPUP,
+    )
+    user32.SetParent(wintypes.HWND(hwnd), wintypes.HWND(eigentuemer))
+    user32.SetLayeredWindowAttributes(wintypes.HWND(hwnd), 0, 28, LWA_ALPHA)
+
+
+def _fenster_platzieren(hwnd: int, x: int, y: int, breite: int, hoehe: int) -> None:
+    user32, _ = _win_api()
+    user32.SetWindowPos(
+        wintypes.HWND(hwnd),
+        wintypes.HWND(HWND_TOP),
+        x,
+        y,
+        breite,
+        hoehe,
+        SWP_NOACTIVATE,
     )
 
 
@@ -447,16 +464,22 @@ def _in_vordergrund(hwnd: int) -> bool:
     if user32.IsIconic(wintypes.HWND(hwnd)):
         user32.ShowWindow(wintypes.HWND(hwnd), SW_RESTORE)
     ziel_thread = user32.GetWindowThreadProcessId(wintypes.HWND(hwnd), None)
+    vordergrund = user32.GetForegroundWindow()
+    vordergrund_thread = user32.GetWindowThreadProcessId(vordergrund, None)
     aktuell_thread = kernel32.GetCurrentThreadId()
-    verbunden = False
+    verbindungen: list[int] = []
+    if vordergrund_thread and vordergrund_thread != aktuell_thread:
+        if user32.AttachThreadInput(aktuell_thread, vordergrund_thread, True):
+            verbindungen.append(vordergrund_thread)
     if ziel_thread and ziel_thread != aktuell_thread:
-        verbunden = bool(user32.AttachThreadInput(aktuell_thread, ziel_thread, True))
+        if user32.AttachThreadInput(aktuell_thread, ziel_thread, True):
+            verbindungen.append(ziel_thread)
     try:
         user32.BringWindowToTop(wintypes.HWND(hwnd))
         return bool(user32.SetForegroundWindow(wintypes.HWND(hwnd)))
     finally:
-        if verbunden:
-            user32.AttachThreadInput(aktuell_thread, ziel_thread, False)
+        for thread in reversed(verbindungen):
+            user32.AttachThreadInput(aktuell_thread, thread, False)
 
 
 def _steuerung_v_einfuegen() -> None:
@@ -492,7 +515,6 @@ class AuswahlOverlay:
         self.projekt = Path(args.projekt).expanduser().resolve()
         self.ausgabe = Path(args.ausgabe).expanduser().resolve()
         self.eingabe_hwnd = finde_eingabefenster(args.eingabefenster)
-        self.eingabe_titel = ""
         self.scrcpy_hwnd: int | None = finde_fenster(args.fenster)
         self.scrcpy_prozess: subprocess.Popen | None = None
         self.emulator_fenster: list[int] = []
@@ -511,30 +533,32 @@ class AuswahlOverlay:
         self.root = tk.Tk()
         self.root.withdraw()
         self.root.overrideredirect(True)
+        self.root.resizable(False, False)
+        self.root.attributes("-topmost", True)
         self.root.configure(bg=PANEL)
         self.root.protocol("WM_DELETE_WINDOW", self.beenden)
 
         self.status = tk.Label(
             self.root,
-            text="Spiegelung wird gestartet ...",
+            text="AUS",
             bg=PANEL,
             fg=TEXT,
-            padx=10,
-            font=("Segoe UI", 10, "bold"),
+            padx=18,
+            font=("Segoe UI", 16, "bold"),
         )
         self.status.pack(side="left", fill="y")
         self.schalter = tk.Button(
             self.root,
-            text="Auswählen",
+            text="AUSWAHL AN",
             command=self.auswahl_umschalten,
             bg=ACCENT,
             fg="white",
             activebackground="#ff7658",
             activeforeground="white",
             relief="flat",
-            padx=14,
-            pady=7,
-            font=("Segoe UI", 10, "bold"),
+            padx=22,
+            pady=14,
+            font=("Segoe UI", 15, "bold"),
         )
         self.schalter.pack(side="left", padx=(0, 4), pady=4)
         self.schliessen = tk.Button(
@@ -546,18 +570,18 @@ class AuswahlOverlay:
             activebackground="#2b2e35",
             activeforeground="white",
             relief="flat",
-            width=3,
-            font=("Segoe UI", 12),
+            width=4,
+            font=("Segoe UI", 18, "bold"),
         )
         self.schliessen.pack(side="left", pady=4, padx=(0, 4))
 
         self.overlay = tk.Toplevel(self.root)
         self.overlay.withdraw()
         self.overlay.overrideredirect(True)
-        self.overlay.attributes("-transparentcolor", TRANSPARENT)
+        self.overlay.attributes("-alpha", 0.16)
         self.canvas = tk.Canvas(
             self.overlay,
-            bg=TRANSPARENT,
+            bg=ACCENT,
             highlightthickness=0,
             cursor="crosshair",
         )
@@ -568,11 +592,10 @@ class AuswahlOverlay:
         self.root.update_idletasks()
         self.root_hwnd = _tk_fenster(self.root)
         self.overlay_hwnd = _tk_fenster(self.overlay)
-        _fensterstil(self.root_hwnd, False)
+        _fensterstil(self.root_hwnd, False, transparent=False)
         _fensterstil(self.overlay_hwnd, False)
         self._scrcpy_starten()
         threading.Thread(target=self._display_laden, daemon=True).start()
-        self.root.after(2000, self._eingabetitel_merken)
         self.root.after(100, self._fenster_verfolgen)
 
     def _display_laden(self) -> None:
@@ -591,10 +614,6 @@ class AuswahlOverlay:
             f"Der Emulator ist nicht erreichbar.\n\n{meldung}",
         )
         self.beenden()
-
-    def _eingabetitel_merken(self) -> None:
-        if self.eingabe_hwnd:
-            self.eingabe_titel = fenster_titel(self.eingabe_hwnd)
 
     def _scrcpy_starten(self) -> None:
         if self.scrcpy_hwnd:
@@ -660,12 +679,11 @@ class AuswahlOverlay:
                 self.root.after(150, self._fenster_verfolgen)
                 return
             self.hatte_scrcpy = True
-            self.status.configure(text="Bedienen")
+            self.status.configure(text="AUS")
         if not self.fenster_gekoppelt:
-            _an_fenster_koppeln(self.root_hwnd, self.scrcpy_hwnd)
             _an_fenster_koppeln(self.overlay_hwnd, self.scrcpy_hwnd)
             self.fenster_gekoppelt = True
-            self.status.configure(text="Bedienen")
+            self.status.configure(text="AUS")
         if not self.emulator_minimiert:
             self.emulator_minimiert = self._emulator_minimieren()
 
@@ -683,13 +701,14 @@ class AuswahlOverlay:
         vx, vy = cx + ox, cy + oy
         self.video_geometrie = (vx, vy, vb, vh)
 
-        overlay_geometrie = f"{vb}x{vh}+{vx}+{vy}"
+        overlay_geometrie = f"{vb}x{vh}+{ox}+{oy}"
         if overlay_geometrie != self.letzte_overlay_geometrie:
-            self.overlay.geometry(overlay_geometrie)
+            _fenster_platzieren(self.overlay_hwnd, ox, oy, vb, vh)
             self.letzte_overlay_geometrie = overlay_geometrie
-        toolbar_breite = max(260, self.root.winfo_reqwidth())
-        toolbar_hoehe = max(42, self.root.winfo_reqheight())
-        tx, ty = leistenposition(vx, vy, vb, toolbar_breite)
+        toolbar_breite = max(460, self.root.winfo_reqwidth())
+        toolbar_hoehe = max(78, self.root.winfo_reqheight())
+        tx = 20
+        ty = 80
         root_geometrie = f"{toolbar_breite}x{toolbar_hoehe}+{tx}+{ty}"
         if root_geometrie != self.letzte_root_geometrie:
             self.root.geometry(root_geometrie)
@@ -712,8 +731,8 @@ class AuswahlOverlay:
             self.auswahl_abbrechen()
             return
         self.auswahlmodus = True
-        self.status.configure(text="Klicke auf die Stelle")
-        self.schalter.configure(text="Abbrechen", bg=ACCENT_DARK)
+        self.status.configure(text="AN · STELLE ANKLICKEN")
+        self.schalter.configure(text="AUSWAHL AUS", bg=ACCENT_DARK)
         self.canvas.delete("all")
         _, _, breite, hoehe = self.video_geometrie
         self.canvas.create_rectangle(2, 2, breite - 3, hoehe - 3, outline=ACCENT, width=4)
@@ -731,15 +750,15 @@ class AuswahlOverlay:
     def auswahl_abbrechen(self) -> None:
         self.auswahlmodus = False
         self.overlay.withdraw()
-        self.status.configure(text="Bedienen")
-        self.schalter.configure(text="Auswählen", bg=ACCENT, state="normal")
+        self.status.configure(text="AUS")
+        self.schalter.configure(text="AUSWAHL AN", bg=ACCENT, state="normal")
 
     def auswahl_klick(self, ereignis) -> None:
         if not self.auswahlmodus or self.beschaeftigt:
             return
         self.beschaeftigt = True
         self.schalter.configure(state="disabled")
-        self.status.configure(text="Stelle wird zugeordnet ...")
+        self.status.configure(text="WIRD ÜBERGEBEN ...")
         _, _, vb, vh = self.video_geometrie
         self.canvas.create_oval(
             ereignis.x - 12,
@@ -798,11 +817,10 @@ class AuswahlOverlay:
         self.schalter.configure(text="Neue Auswahl", bg=ACCENT, state="normal")
         self.root.after(900, self.overlay.withdraw)
 
+        self.eingabe_hwnd = finde_eingabefenster(self.args.eingabefenster)
         if (
             self.args.nur_zwischenablage
             or not self.eingabe_hwnd
-            or not self.eingabe_titel
-            or fenster_titel(self.eingabe_hwnd) != self.eingabe_titel
         ):
             self.status.configure(text=f"#{self.nummer} kopiert · Strg+V")
             return
@@ -815,7 +833,6 @@ class AuswahlOverlay:
         user32, _ = _win_api()
         if (
             int(user32.GetForegroundWindow()) != self.eingabe_hwnd
-            or fenster_titel(self.eingabe_hwnd) != self.eingabe_titel
         ):
             self.status.configure(text=f"#{self.nummer} kopiert · Strg+V")
             return
