@@ -1,5 +1,42 @@
 # Zeigefinger
 
+## Klick-Auswahl fuer OpenCode
+
+Der neue Standardweg spiegelt den laufenden Fold-8-Emulator in ein sauberes
+`scrcpy`-Arbeitsfenster. Das eigentliche Emulatorfenster wird minimiert. Eine kleine Leiste am Rand
+der Spiegelung trennt zwei Zustaende:
+
+- **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
+- **Auswaehlen:** Der naechste Klick wird abgefangen und loest keine Aktion in Android aus.
+
+Start fuer die Experimente-App:
+
+```powershell
+.\Start-Zeigefinger.ps1
+```
+
+Nach **Auswaehlen** und einem Klick friert das Werkzeug den genauen Kontext ein: Android-Koordinate,
+aktueller Screen, UI-Baum, Screenshot, Element unter dem Zeiger, umgebende Elemente und moegliche
+Kotlin-Codestellen. Die Daten landen als eindeutige JSON-Datei unter
+`%TEMP%\opencode\zeigefinger\`.
+
+Danach wechselt der Fokus zu OpenCode und folgende Referenz steht bereits in der Eingabe:
+
+```text
+Lies zuerst dieses Zeigefinger-Ziel und beziehe "dort" darauf: "...\auswahl-....json".
+```
+
+Nur noch die eigentliche Aenderung ergaenzen, beispielsweise `Mach dort die Schrift groesser.`,
+und absenden. Falls kein OpenCode-Fenster eindeutig gefunden wird, liegt derselbe Text in der
+Zwischenablage und kann mit `Strg+V` eingefuegt werden.
+
+Das Schliessen der Leiste beendet die von ihr gestartete Spiegelung und stellt das Emulatorfenster
+wieder her.
+
+---
+
+## Klassischer Hover-Modus
+
 Zeigt im scrcpy-Spiegelbild auf ein Bedienelement und sagt dir, **wo im Quellcode** es steht.
 Damit wird aus „der Knopf da oben rechts" eine konkrete Datei mit Zeilennummer — ohne Screenshot,
 ohne Suchen, ohne Raten.

@@ -25,15 +25,16 @@ import time
 from ctypes import wintypes
 from datetime import datetime
 from pathlib import Path
+from typing import Literal, overload
 
-VERSION = "1.0.0"
-VERSION_STAND = "12.08.2026, 13:47 Uhr"
+VERSION = "0.0.1"
+VERSION_STAND = "14.08.2026, 11:21 Uhr"
 
 # Umlaute und Kastenlinien muessen auch durch eine Pipe heil ankommen, und die
 # Ausgabe soll zeilenweise erscheinen statt am Ende im Block.
 try:
-    sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
-    sys.stderr.reconfigure(encoding="utf-8")
+    getattr(sys.stdout, "reconfigure")(encoding="utf-8", line_buffering=True)
+    getattr(sys.stderr, "reconfigure")(encoding="utf-8")
 except (AttributeError, OSError):
     pass
 
@@ -41,6 +42,8 @@ LOG_PATH = Path(os.environ.get("TEMP", "/tmp")) / "zeigefinger.jsonl"
 HOVER_MS = 700          # how long the mouse must hold still
 POLL_MS = 80            # mouse polling interval
 DUMP_MIN_GAP_S = 1.0    # never dump the UI tree more often than this
+_sdk_adb = Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk" / "platform-tools" / "adb.exe"
+ADB_COMMAND = str(_sdk_adb) if _sdk_adb.is_file() else "adb"
 
 SOURCE_SUFFIXES = (".kt", ".java", ".xml")
 SKIP_DIRS = {"build", ".gradle", ".git", ".idea", "node_modules", "__pycache__"}
@@ -70,16 +73,32 @@ def probe(condition: bool, msg: str, **ctx) -> bool:
 
 
 # --------------------------------------------------------------------------- adb
-def adb(serial: str | None, *args: str, binary: bool = False):
-    cmd = ["adb"]
+@overload
+def adb(serial: str | None, *args: str, binary: Literal[True]) -> bytes: ...
+
+
+@overload
+def adb(serial: str | None, *args: str, binary: Literal[False] = False) -> str: ...
+
+
+def adb(serial: str | None, *args: str, binary: bool = False) -> bytes | str:
+    cmd = [ADB_COMMAND]
     if serial:
         cmd += ["-s", serial]
     cmd += list(args)
     try:
-        out = subprocess.run(cmd, capture_output=True, timeout=25)
+        out = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=25,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         log("error", "adb call failed", cmd=" ".join(args), error=str(exc))
         raise SystemExit(f"adb-Aufruf fehlgeschlagen: {exc}")
+    if out.returncode != 0:
+        fehler = out.stderr.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"adb-Aufruf fehlgeschlagen ({out.returncode}): {fehler or 'ohne Meldung'}")
     if binary:
         return out.stdout
     return out.stdout.decode("utf-8", errors="replace")
@@ -113,7 +132,10 @@ def displaygroesse(serial: str) -> tuple[int, int]:
 
 
 def ui_baum(serial: str) -> str:
-    roh = adb(serial, "exec-out", "uiautomator", "dump", "/dev/tty", binary=True)
+    try:
+        roh = adb(serial, "exec-out", "uiautomator", "dump", "/dev/tty", binary=True)
+    except RuntimeError:
+        roh = b""
     text = roh.decode("utf-8", errors="replace")
     ende = text.rfind("</hierarchy>")
     if ende != -1:
@@ -141,21 +163,15 @@ def _als_dict(knoten) -> dict:
     }
 
 
-def element_an_punkt(xml: str, x: int, y: int) -> tuple[dict, dict | None] | None:
-    """Innermost node under the point, plus the nearest clickable ancestor.
-
-    Both matter: the innermost node carries the look (colour, icon, label), the
-    clickable ancestor carries the behaviour (onClick). Sorting every containing
-    node by area gives us the ancestor chain without building a parent map —
-    ancestors are always larger than what they contain.
-    """
+def elementkette_an_punkt(xml: str, x: int, y: int) -> list[dict]:
+    """Return all UI nodes under a point, ordered from smallest to largest."""
     import xml.etree.ElementTree as ET
 
     try:
         wurzel = ET.fromstring(xml)
     except ET.ParseError as exc:
         log("error", "UI-XML nicht parsebar", error=str(exc))
-        return None
+        return []
 
     kette: list[tuple[int, object]] = []
     for knoten in wurzel.iter("node"):
@@ -169,15 +185,25 @@ def element_an_punkt(xml: str, x: int, y: int) -> tuple[dict, dict | None] | Non
         if flaeche > 0:
             kette.append((flaeche, knoten))
 
+    kette.sort(key=lambda p: p[0])
+    return [_als_dict(knoten) for _, knoten in kette]
+
+
+def element_an_punkt(xml: str, x: int, y: int) -> tuple[dict, dict | None] | None:
+    """Innermost node under the point, plus the nearest clickable container.
+
+    Both matter: the innermost node carries the look (colour, icon, label), the
+    clickable ancestor carries the behaviour (onClick). Sorting every containing
+    node by area gives us the ancestor chain without building a parent map —
+    ancestors are always larger than what they contain.
+    """
+    kette = elementkette_an_punkt(xml, x, y)
     if not kette:
         return None
-    kette.sort(key=lambda p: p[0])
-
-    innerstes = _als_dict(kette[0][1])
+    innerstes = kette[0]
     klickbar = None
-    for _, knoten in kette:
-        if knoten.get("clickable", "false") == "true":
-            kandidat = _als_dict(knoten)
+    for kandidat in kette:
+        if kandidat["klickbar"]:
             if kandidat["bounds"] != innerstes["bounds"]:
                 klickbar = kandidat
             break
