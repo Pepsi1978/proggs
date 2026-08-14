@@ -11,10 +11,15 @@ Displaygroesse berechnet, also passt sie auch am aufgeklappten Fold 8.
 Ein grosses, schwebendes Bedienfeld links oben trennt zwei Zustaende:
 
 - **Bedienen:** Klicks, Scrollrad und Tastatur gehen unveraendert an Android.
-- **Auswaehlen:** Die App wird leicht getoent; der naechste Klick oder Zug wird abgefangen und
-  loest keine Aktion in Android aus. Beim Ziehen folgt ein schwarzer Rahmen der Maus. Er liegt in
-  einem eigenen Fenster: die getoente Auswahlflaeche hat nur 11 % Deckkraft, ein dort gezeichneter
-  Strich waere ausgewaschenes Grau statt Schwarz.
+- **Auswaehlen:** Ein oranger Rahmen umschliesst die Spiegelung; der naechste Klick oder Zug wird
+  abgefangen und loest keine Aktion in Android aus. Beim Ziehen folgt ein schwarzer Rahmen der
+  Maus. Beide Rahmen liegen in eigenen, ungetoenten Fenstern — auf der Auswahlflaeche selbst
+  gezeichnet waeren sie ausgewaschen.
+
+Die Auswahlflaeche liegt nur mit 10/255 Deckkraft ueber der App. Vorher waren es 28/255, was im
+Dunkelmodus alles rot einfaerbte: die Toenung dunkelt nicht ab, sie hellt auf. Gemessen ueber
+`#101216` hob die alte Einstellung den Rotwert von 16 auf 42, die neue auf 25. Erkennbar bleibt
+der Modus am Rahmen, nicht an der Flaeche.
 
 Start fuer die Experimente-App:
 
