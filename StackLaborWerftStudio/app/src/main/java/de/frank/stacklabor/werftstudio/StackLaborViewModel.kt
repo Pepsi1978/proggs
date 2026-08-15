@@ -910,6 +910,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val free = entry?.dosen?.firstOrNull { it.variante == DosisVariante.FREI }
         val duty = entry?.dosen?.firstOrNull { it.variante == DosisVariante.DIENST }
         medicineDraft = MedicineDraft(
+            medicineId = medicine?.id,
             name = medicine?.name.orEmpty(),
             solubility = medicine?.loeslichkeit ?: Loeslichkeit.WASSER,
             form = medicine?.darreichungsform ?: Darreichungsform.KAPSEL,
@@ -959,6 +960,14 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 val result = container.solubilityClassifier.determine(name)
                 if (generation != solubilityGeneration || currentRoute !is StackLaborRoute.MedicineEdit || medicineDraft.name.trim() != name) return@launch
                 medicineDraft = medicineDraft.copy(solubility = result, solubilityAiDetermined = true)
+                val existing = medicineDraft.medicineId
+                    ?.let { id -> medicines.firstOrNull { it.id == id } }
+                    ?.takeIf { it.name.trim() == name }
+                if (existing != null) {
+                    val updated = existing.copy(loeslichkeit = result, loeslichkeitKiErmittelt = true)
+                    repository.speichereMittel(updated)
+                    medicines = medicines.map { if (it.id == updated.id) updated else it }
+                }
                 mutableState.update {
                     it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Success(name, result.toSolubility()))
                 }
@@ -1555,6 +1564,7 @@ class StackLaborViewModelFactory(private val container: AppContainer) : ViewMode
 private data class StackDraft(val name: String = "", val time: String = "", val note: String = "")
 
 private data class MedicineDraft(
+    val medicineId: String? = null,
     val name: String = "",
     val solubility: Loeslichkeit = Loeslichkeit.WASSER,
     val form: Darreichungsform = Darreichungsform.KAPSEL,
