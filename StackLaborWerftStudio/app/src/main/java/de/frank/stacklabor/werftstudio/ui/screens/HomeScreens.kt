@@ -674,12 +674,12 @@ private fun StackMedicineRow(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Spacer(Modifier.width(8.dp))
+                            if (medicine.warningReason.isNotEmpty()) {
+                                Text("!", color = colors.red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            }
                             SolubilityLabel(medicine.solubility)
                         }
-                        Row(Modifier.fillMaxWidth()) {
-                            Text(medicine.dose, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (medicine.reason.isNotEmpty()) Text(medicine.reason, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = medicine.signal.color(), maxLines = 1)
-                        }
+                        Text(medicine.dose, Modifier.fillMaxWidth(), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     IconTouchButton(if (medicine.active) "${medicine.name} deaktivieren" else "${medicine.name} aktivieren", onToggle) {
                         WerftCheckbox(medicine.active)

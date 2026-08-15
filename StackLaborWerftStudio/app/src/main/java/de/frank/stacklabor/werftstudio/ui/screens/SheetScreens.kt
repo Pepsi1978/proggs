@@ -221,6 +221,7 @@ fun MedicineEditSheet(
     var note by rememberSaveable(medicineId) { mutableStateOf(source?.note.orEmpty()) }
     var alternates by rememberSaveable(medicineId) { mutableStateOf(source?.alternates.orEmpty()) }
     var saveAttempted by rememberSaveable(medicineId) { mutableStateOf(false) }
+    val warning = source?.warningReason.orEmpty()
     val usage = state.catalogMedicines.firstOrNull { it.id == medicineId }?.catalogMeta
         ?.substringBefore(" · ")?.takeIf { it.startsWith("in ") }?.let { "Gilt $it" }.orEmpty()
     GoldDarkContent {
@@ -231,6 +232,24 @@ fun MedicineEditSheet(
             heightFraction = 0.90f,
             showGrip = false,
         ) {
+            if (warning.isNotEmpty()) {
+                Column(
+                    Modifier.fillMaxWidth().background(StackLaborTheme.colors.red.copy(alpha = 0.10f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        "Auswertung",
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = StackLaborTheme.colors.red,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        warning,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        color = StackLaborTheme.colors.textStrong,
+                    )
+                }
+            }
             SheetHeader(if (medicineId == null) "Mittel anlegen" else "Mittel bearbeiten", height = 56.dp)
             LazyColumn(Modifier.weight(1f)) {
                 item { FormSectionHeader("Stammdaten", usage) }

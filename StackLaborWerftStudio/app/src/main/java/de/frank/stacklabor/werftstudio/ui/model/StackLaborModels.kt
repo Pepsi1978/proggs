@@ -55,7 +55,18 @@ data class MedicineUi(
     val together: Boolean = false,
     val note: String = "",
     val alternates: String = "",
-)
+) {
+    val warningReason: String
+        get() = reason.takeIf {
+            it.split(" · ").map(String::trim).any { part ->
+                part.isNotEmpty() &&
+                    !part.startsWith("stützt Ziel") &&
+                    !part.startsWith("Keine Konkurrenz") &&
+                    !part.startsWith("Konkurrenzprüfung läuft") &&
+                    !part.startsWith("Konkurrenzprüfung nicht möglich")
+            }
+        }.orEmpty()
+}
 
 data class GoalUi(
     val id: String,
