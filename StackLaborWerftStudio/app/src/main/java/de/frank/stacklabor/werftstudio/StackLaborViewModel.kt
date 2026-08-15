@@ -30,6 +30,13 @@ import de.frank.stacklabor.werftstudio.domain.model.StackEintrag
 import de.frank.stacklabor.werftstudio.domain.model.StackEintragDosis
 import de.frank.stacklabor.werftstudio.domain.model.StackZiel
 import de.frank.stacklabor.werftstudio.domain.model.Ziel
+import de.frank.stacklabor.werftstudio.domain.model.anzeige
+import de.frank.stacklabor.werftstudio.domain.model.darreichungsformAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.einheitAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.frequenzAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.mitDeutschenUmlauten
+import de.frank.stacklabor.werftstudio.domain.model.toDarreichungsformOrNull
+import de.frank.stacklabor.werftstudio.domain.model.toEinheitOrNull
 import de.frank.stacklabor.werftstudio.service.auth.CodexAuthState
 import de.frank.stacklabor.werftstudio.service.codex.CodexErrorKind
 import de.frank.stacklabor.werftstudio.service.codex.CodexException
@@ -340,7 +347,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 text = goal.text,
                 signal = (ampeln.zielAmpeln[goal.id] ?: Ampel.GRAU).toSignalState(),
                 selected = target != null,
-                reason = snapshot.evaluation.first?.zellen?.firstOrNull { it.zielId == goal.id }?.grund.orEmpty(),
+                reason = snapshot.evaluation.first?.zellen?.firstOrNull { it.zielId == goal.id }?.grund.orEmpty().mitDeutschenUmlauten(),
                 usage = "in ${usageByGoal[goal.id] ?: 0} Stacks verwendet",
             )
         }.sortedWith(compareBy<GoalUi> { if (it.selected) 0 else 1 }.thenBy { if (it.selected) it.rank else Int.MAX_VALUE }.thenBy { it.text })
@@ -401,7 +408,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                             medicineById[competition.mittelAId]?.name,
                             medicineById[competition.mittelBId]?.name,
                         ).joinToString(" · "),
-                        detail = competition.grund,
+                        detail = competition.grund.mitDeutschenUmlauten(),
                     )
                 },
             )
@@ -474,7 +481,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                         "STOERT" -> SignalState.Red
                         else -> SignalState.Gray
                     },
-                    reason = cell?.grund.orEmpty(),
+                    reason = cell?.grund.orEmpty().mitDeutschenUmlauten(),
                 )
             }
         } else {
@@ -551,7 +558,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 name = medicineDraft.name.trim(),
                 loeslichkeit = medicineDraft.solubility,
                 darreichungsform = medicineDraft.form,
-                darreichungsformText = medicineDraft.formText.trim().takeIf(String::isNotBlank),
+                darreichungsformText = medicineDraft.formText.toDarreichungsformOrNull()?.anzeige()
+                    ?: medicineDraft.formText.trim().mitDeutschenUmlauten().takeIf(String::isNotBlank),
                 hersteller = medicineDraft.manufacturer.trim(),
                 durchfallrisiko = medicineDraft.diarrheaRisk,
                 beistoffe = medicineDraft.excipients.trim(),
@@ -755,8 +763,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 val details = container.evaluator.evaluateStack(stackId) { event ->
                     when (event) {
-                        is CodexStreamEvent.Stage -> mutableState.update { it.copy(streamedEvaluationText = event.text) }
-                        is CodexStreamEvent.NarrativeDelta -> mutableState.update { it.copy(streamedEvaluationText = it.streamedEvaluationText + event.text) }
+                        is CodexStreamEvent.Stage -> mutableState.update { it.copy(streamedEvaluationText = event.text.mitDeutschenUmlauten()) }
+                        is CodexStreamEvent.NarrativeDelta -> mutableState.update {
+                            it.copy(streamedEvaluationText = (it.streamedEvaluationText + event.text).mitDeutschenUmlauten())
+                        }
                         CodexStreamEvent.NetworkRetry -> mutableState.update { it.copy(streamedEvaluationText = "Netzwerk unterbrochen, neuer Versuch …") }
                         is CodexStreamEvent.RawDelta -> Unit
                     }
@@ -792,8 +802,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 val details = container.evaluator.evaluateAllStacks { event ->
                     when (event) {
-                        is CodexStreamEvent.Stage -> mutableState.update { it.copy(streamedEvaluationText = event.text) }
-                        is CodexStreamEvent.NarrativeDelta -> mutableState.update { it.copy(streamedEvaluationText = it.streamedEvaluationText + event.text) }
+                        is CodexStreamEvent.Stage -> mutableState.update { it.copy(streamedEvaluationText = event.text.mitDeutschenUmlauten()) }
+                        is CodexStreamEvent.NarrativeDelta -> mutableState.update {
+                            it.copy(streamedEvaluationText = (it.streamedEvaluationText + event.text).mitDeutschenUmlauten())
+                        }
                         CodexStreamEvent.NetworkRetry -> mutableState.update { it.copy(streamedEvaluationText = "Netzwerk unterbrochen, neuer Versuch …") }
                         is CodexStreamEvent.RawDelta -> Unit
                     }
@@ -1113,7 +1125,8 @@ private data class MedicineDraft(
     fun with(field: String, value: String): MedicineDraft = when (field) {
         "name" -> copy(name = value)
         "solubility" -> copy(solubility = when (value) { "fat" -> Loeslichkeit.FETT; "both" -> Loeslichkeit.BEIDES; else -> Loeslichkeit.WASSER })
-        "form" -> copy(form = value.toDarreichungsformOrNull() ?: form, formText = value)
+        "form" -> value.toDarreichungsformOrNull()?.let { copy(form = it, formText = it.anzeige()) }
+            ?: copy(formText = value.mitDeutschenUmlauten())
         "manufacturer" -> copy(manufacturer = value)
         "diarrheaRisk" -> copy(diarrheaRisk = value.toBoolean())
         "excipients" -> copy(excipients = value)
@@ -1206,45 +1219,6 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
     }.sortedBy { it.name }
 }
 
-private fun Einheit.label(): String = when (this) { Einheit.UG -> "µg"; Einheit.STUECK -> "Stück"; else -> name.lowercase() }
-
-private fun StackEintragDosis.einheitAnzeige(): String = einheitText?.trim().orEmpty().ifBlank { einheit?.label().orEmpty() }
-
-private fun Darreichungsform.label(): String = when (this) {
-    Darreichungsform.KAPSEL -> "Kapsel"
-    Darreichungsform.TABLETTE -> "Tablette"
-    Darreichungsform.LOEFFEL -> "Löffel"
-    Darreichungsform.TASSE -> "Tasse"
-    Darreichungsform.PULVER -> "Pulver"
-    Darreichungsform.TROPFEN -> "Tropfen"
-    Darreichungsform.SONSTIGE -> "Sonstige"
-}
-
-private fun Mittel.darreichungsformAnzeige(): String = darreichungsformText?.trim().orEmpty().ifBlank { darreichungsform.label() }
-
-private fun Mittel.darreichungsformAnzeige(stueckzahl: BigDecimal): String {
-    val form = darreichungsformAnzeige()
-    if (stueckzahl.compareTo(BigDecimal.ONE) == 0) return form
-    return when (form.lowercase(Locale.GERMANY)) {
-        "kapsel" -> "Kapseln"
-        "tablette" -> "Tabletten"
-        else -> form
-    }
-}
-
-private fun StackEintrag.frequenzAnzeige(): String = frequenzText?.trim().orEmpty().ifBlank {
-    if (frequenzTyp == FrequenzTyp.TAEGLICH) "Täglich" else "Alle ${alleNTage ?: 2} Tage"
-}
-
-private fun String.toDarreichungsformOrNull(): Darreichungsform? = Darreichungsform.entries.firstOrNull {
-    it.name.equals(trim().replace("ö", "oe").replace("ü", "ue"), true) || it.label().equals(trim(), true)
-}
-
-private fun String.toEinheitOrNull(): Einheit? {
-    val normalized = trim().replace("µ", "U").replace("ü", "ue")
-    return Einheit.entries.firstOrNull { it.name.equals(normalized, true) || it.label().equals(this.trim(), true) }
-}
-
 private fun BewertungMitDetails.toHistoryUi(selected: Boolean): EvaluationRunUi = EvaluationRunUi(
     id = bewertung.id,
     date = DateTimeFormatter.ofPattern("dd.MM. · HH:mm", Locale.GERMANY).withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(bewertung.zeitpunktEpochMillis)),
@@ -1257,7 +1231,7 @@ private fun Bewertung.meta(): String = DateTimeFormatter.ofPattern("dd.MM. HH:mm
     .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(zeitpunktEpochMillis)) +
     " · ${modell.substringAfterLast('-').replaceFirstChar(Char::uppercase)} · $denkstufe"
 
-private fun String.paragraphs(): List<String> = split(Regex("\\n\\s*\\n")).map(String::trim).filter(String::isNotBlank)
+private fun String.paragraphs(): List<String> = mitDeutschenUmlauten().split(Regex("\\n\\s*\\n")).map(String::trim).filter(String::isNotBlank)
 
 private fun List<Bewertungszelle>.historySignal(): SignalState = when {
     isEmpty() -> SignalState.Gray

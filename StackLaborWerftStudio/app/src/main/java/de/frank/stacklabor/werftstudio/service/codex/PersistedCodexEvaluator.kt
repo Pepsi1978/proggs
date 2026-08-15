@@ -1,5 +1,11 @@
 package de.frank.stacklabor.werftstudio.service.codex
 
+import de.frank.stacklabor.werftstudio.domain.model.darreichungsformAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.einheitAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.frequenzAnzeige
+import de.frank.stacklabor.werftstudio.domain.model.anzeige
+import de.frank.stacklabor.werftstudio.domain.model.mitDeutschenUmlauten
+
 import de.frank.stacklabor.werftstudio.data.preferences.EinstellungenStore
 import de.frank.stacklabor.werftstudio.data.repository.StackLaborRepository
 import de.frank.stacklabor.werftstudio.domain.model.Bewertung
@@ -76,7 +82,7 @@ class PersistedCodexEvaluator(
                     modell = model.apiId,
                     denkstufe = reasoning.apiValue,
                     pruefsumme = checksum,
-                    gesamt = outcome.preservedNarrative,
+                    gesamt = outcome.preservedNarrative.mitDeutschenUmlauten(),
                     hinweise = listOf("Antwortformat ungültig: ${outcome.reason}"),
                 ),
                 zellen = emptyList(),
@@ -176,9 +182,9 @@ class PersistedCodexEvaluator(
                         .put("id", katalog.id)
                         .put("name", katalog.name)
                         .put("aktiv", eintrag.aktiv)
-                        .put("loeslichkeit", katalog.loeslichkeit.name)
-                        .put("darreichungsform", katalog.darreichungsformText ?: katalog.darreichungsform.name)
-                        .put("frequenz", eintrag.frequenzText ?: eintrag.frequenzTyp.name)
+                        .put("loeslichkeit", katalog.loeslichkeit.anzeige())
+                        .put("darreichungsform", katalog.darreichungsformAnzeige())
+                        .put("frequenz", eintrag.frequenzAnzeige())
                         .put("alle_n_tage", eintrag.alleNTage)
                         .put("zusatztext", eintrag.zusatztext)
                         .put("dosen", JSONArray(eintrag.dosen.map { dosis ->
@@ -186,7 +192,7 @@ class PersistedCodexEvaluator(
                                 .put("variante", dosis.variante.name)
                                 .put("stueckzahl", dosis.stueckzahl.toPlainString())
                                 .put("menge_je_stueck", dosis.mengeJeStueck?.toPlainString())
-                                .put("einheit", dosis.einheitText ?: dosis.einheit?.name)
+                                .put("einheit", dosis.einheitAnzeige())
                         }))
                         .put("alterniert_mit", JSONArray(eintrag.alternationsPartnerMittelIds))
                 }),
@@ -211,8 +217,8 @@ class PersistedCodexEvaluator(
             modell = model,
             denkstufe = reasoning,
             pruefsumme = checksum,
-            gesamt = narrative,
-            hinweise = notices,
+            gesamt = narrative.mitDeutschenUmlauten(),
+            hinweise = notices.map { it.mitDeutschenUmlauten() },
         ),
         zellen = cells.map {
             Bewertungszelle(
@@ -221,7 +227,7 @@ class PersistedCodexEvaluator(
                 it.goalId,
                 if (it.effect == CellEffect.SUPPORTS) Wirkung.STUETZT else Wirkung.STOERT,
                 it.strength,
-                it.reason,
+                it.reason.mitDeutschenUmlauten(),
             )
         },
         konkurrenzen = competitions.map {
@@ -235,9 +241,9 @@ class PersistedCodexEvaluator(
                     CompetitionType.TIMING -> KonkurrenzArt.ZEITPUNKT
                 },
                 it.severity,
-                it.reason,
+                it.reason.mitDeutschenUmlauten(),
             )
         },
-        antworten = answers.map { FrageAntwort(evaluationId, it.questionId, it.text) },
+        antworten = answers.map { FrageAntwort(evaluationId, it.questionId, it.text.mitDeutschenUmlauten()) },
     )
 }

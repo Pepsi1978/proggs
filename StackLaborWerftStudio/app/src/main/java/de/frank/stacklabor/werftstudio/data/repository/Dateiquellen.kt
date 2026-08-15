@@ -38,7 +38,7 @@ class DateiRueckfallsicherungStore(
         val temporaer = File(datei.parentFile, "$DATEINAME.tmp")
         temporaer.writeText(json, Charsets.UTF_8)
         check(temporaer.renameTo(datei) || temporaer.copyTo(datei, overwrite = true).let { temporaer.delete() }) {
-            "Rueckfallsicherung konnte nicht atomar geschrieben werden."
+            "Rückfallsicherung konnte nicht atomar geschrieben werden."
         }
     }
 

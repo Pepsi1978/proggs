@@ -6,6 +6,7 @@ import de.frank.stacklabor.werftstudio.domain.model.Loeslichkeit
 import de.frank.stacklabor.werftstudio.domain.model.Mittel
 import de.frank.stacklabor.werftstudio.domain.model.Stack
 import de.frank.stacklabor.werftstudio.domain.model.Ziel
+import de.frank.stacklabor.werftstudio.domain.model.darreichungsformAnzeige
 
 fun Ampel.toSignalState(): SignalState = when (this) {
     Ampel.GRUEN -> SignalState.Green
@@ -45,14 +46,6 @@ fun Mittel.toCatalogMedicineUi(usageCount: Int): MedicineUi = MedicineUi(
     diarrheaRisk = durchfallrisiko,
     excipients = beistoffe,
 )
-
-private fun Mittel.darreichungsformAnzeige(): String = darreichungsformText?.trim().orEmpty().ifBlank {
-    when (darreichungsform.name) {
-        "LOEFFEL" -> "Löffel"
-        "SONSTIGE" -> "Sonstige"
-        else -> darreichungsform.name.lowercase().replaceFirstChar(Char::uppercase)
-    }
-}
 
 fun Ziel.toGoalUi(rank: Int, signal: Ampel, selected: Boolean, usageCount: Int): GoalUi = GoalUi(
     id = id,

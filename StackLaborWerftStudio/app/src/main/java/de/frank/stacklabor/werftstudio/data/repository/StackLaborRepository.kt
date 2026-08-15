@@ -191,7 +191,7 @@ class RoomStackLaborRepository(
     }
 
     override suspend fun fuehreMittelZusammen(behalteneMittelId: String, zuErsetzendeMittelId: String) {
-        require(behalteneMittelId != zuErsetzendeMittelId) { "Ein Mittel kann nicht mit sich selbst zusammengefuehrt werden." }
+        require(behalteneMittelId != zuErsetzendeMittelId) { "Ein Mittel kann nicht mit sich selbst zusammengeführt werden." }
         database.withTransaction {
             checkNotNull(katalogDao.hole(behalteneMittelId)) { "Das Zielmittel fehlt." }
             val quelle = checkNotNull(katalogDao.hole(zuErsetzendeMittelId)) { "Das zu ersetzende Mittel fehlt." }
@@ -237,7 +237,7 @@ class RoomStackLaborRepository(
 
     override suspend fun speichereStack(stack: Stack) {
         require(stack.name.isNotBlank() && stack.name.length <= 60) { "Der Stackname muss 1 bis 60 Zeichen haben." }
-        require(stack.zeitpunkt.length <= 120 && stack.einnahmeHinweis.length <= 120) { "Stacktexte duerfen hoechstens 120 Zeichen haben." }
+        require(stack.zeitpunkt.length <= 120 && stack.einnahmeHinweis.length <= 120) { "Stacktexte dürfen höchstens 120 Zeichen haben." }
         require(stack.sortierung >= 1) { "Die Stacksortierung muss mindestens 1 sein." }
         stackDao.speichereStack(stack.toEntity())
     }
@@ -318,7 +318,7 @@ class RoomStackLaborRepository(
     override suspend fun sortiereEintraege(stackId: String, eintragIds: List<String>) {
         database.withTransaction {
             val vorhanden = stackDao.holeEintraege(stackId).map { it.eintrag.id }
-            requirePermutation(vorhanden, eintragIds, "Stack-Eintraege")
+            requirePermutation(vorhanden, eintragIds, "Stack-Einträge")
             eintragIds.forEachIndexed { index, id -> stackDao.setzeEintragPosition(id, index + 1) }
             val bisher = stackDao.holeSortieransicht(stackId)
             stackDao.speichereSortieransicht(
@@ -397,7 +397,7 @@ class RoomStackLaborRepository(
 
     override suspend fun importiere(json: String, modus: ImportModus) {
         val dokument = this.json.dekodieren(json)
-        require(dokument.format == StackLaborJson.EXPORT_FORMAT) { "Nur StackLabor-Exporte koennen hier importiert werden." }
+        require(dokument.format == StackLaborJson.EXPORT_FORMAT) { "Nur StackLabor-Exporte können hier importiert werden." }
         val sicherung = exportiere()
         rueckfallsicherungStore.schreiben(sicherung)
         val importBestand = dokument.toBestand()
@@ -414,7 +414,7 @@ class RoomStackLaborRepository(
     }
 
     override suspend fun stelleRueckfallsicherungWiederHer() {
-        val sicherung = checkNotNull(rueckfallsicherungStore.lesen()) { "Es gibt keine Rueckfallsicherung." }
+        val sicherung = checkNotNull(rueckfallsicherungStore.lesen()) { "Es gibt keine Rückfallsicherung." }
         val dokument = json.dekodieren(sicherung)
         database.withTransaction {
             loescheGesamtenBestand()
@@ -427,7 +427,7 @@ class RoomStackLaborRepository(
         val dokument = json.dekodieren(startbestandQuelle.lesen())
         require(dokument.format == StackLaborJson.SEED_FORMAT) { "Das Asset ist kein StackLabor-Startbestand." }
         require(dokument.stacks.size == 6 && dokument.eintraege.size == 72 && dokument.mittel.size == 63) {
-            "Startbestand muss exakt 6 Stacks, 72 Eintraege und 63 Mittel enthalten."
+            "Startbestand muss exakt 6 Stacks, 72 Einträge und 63 Mittel enthalten."
         }
         val seed = dokument.toBestand()
         rueckfallsicherungStore.schreiben(exportiere())
@@ -647,36 +647,36 @@ class RoomStackLaborRepository(
         require(mittel.name.isNotBlank() && mittel.name.length <= 80) { "Der Mittelname muss 1 bis 80 Zeichen haben." }
         require(mittel.hersteller.length <= 80 && mittel.beistoffe.length <= 200) { "Mittel-Stammdaten sind zu lang." }
         require(mittel.darreichungsformText == null || mittel.darreichungsformText.isNotBlank() && mittel.darreichungsformText.length <= 60) { "Die Darreichungsform ist ungültig." }
-        require(mittel.wirkstoffkomponenten.all { it.mittelId == mittel.id && it.name.isNotBlank() }) { "Ungueltige Wirkstoffkomponente." }
-        require(mittel.wirkstoffkomponenten.all { it.menge == null || it.menge.signum() > 0 }) { "Wirkstoffmengen muessen positiv sein." }
+        require(mittel.wirkstoffkomponenten.all { it.mittelId == mittel.id && it.name.isNotBlank() }) { "Ungültige Wirkstoffkomponente." }
+        require(mittel.wirkstoffkomponenten.all { it.menge == null || it.menge.signum() > 0 }) { "Wirkstoffmengen müssen positiv sein." }
     }
 
     private fun validiereEintrag(eintrag: StackEintrag) {
         require(eintrag.id.isNotBlank() && eintrag.stackId.isNotBlank() && eintrag.mittelId.isNotBlank()) { "Eintrags-IDs fehlen." }
         require(eintrag.reihenfolge >= 1) { "Die Eintragsposition muss mindestens 1 sein." }
-        require(eintrag.zusatztext.length <= 300) { "Der Zusatztext darf hoechstens 300 Zeichen haben." }
+        require(eintrag.zusatztext.length <= 300) { "Der Zusatztext darf höchstens 300 Zeichen haben." }
         require(eintrag.frequenzText == null || eintrag.frequenzText.isNotBlank() && eintrag.frequenzText.length <= 60) { "Die Frequenz ist ungültig." }
         require(eintrag.frequenzTyp.name != "ALLE_N_TAGE" || (eintrag.alleNTage ?: 0) >= 2) { "Das Frequenzintervall muss mindestens 2 Tage sein." }
         require(eintrag.dosen.count { it.variante == DosisVariante.FREI } == 1) { "Genau eine freie Dosis ist erforderlich." }
-        require(eintrag.dosen.distinctBy { it.variante }.size == eintrag.dosen.size) { "Dosisvarianten duerfen nicht doppelt sein." }
-        require(eintrag.dosen.all { it.stackEintragId == eintrag.id && it.stueckzahl.signum() > 0 }) { "Ungueltige Stueckzahl." }
+        require(eintrag.dosen.distinctBy { it.variante }.size == eintrag.dosen.size) { "Dosisvarianten dürfen nicht doppelt sein." }
+        require(eintrag.dosen.all { it.stackEintragId == eintrag.id && it.stueckzahl.signum() > 0 }) { "Ungültige Stückzahl." }
         require(eintrag.dosen.all { it.mengeJeStueck == null || it.einheit != null || !it.einheitText.isNullOrBlank() }) { "Zu einer Menge gehört eine Einheit." }
         require(eintrag.dosen.all { it.einheitText == null || it.einheitText.isNotBlank() && it.einheitText.length <= 30 }) { "Der Einheitentext ist ungültig." }
-        require(eintrag.dosen.all { it.mengeJeStueck == null || it.mengeJeStueck.signum() > 0 }) { "Dosen muessen positiv sein." }
+        require(eintrag.dosen.all { it.mengeJeStueck == null || it.mengeJeStueck.signum() > 0 }) { "Dosen müssen positiv sein." }
         require(eintrag.mittelId !in eintrag.alternationsPartnerMittelIds) { "Ein Mittel kann nicht mit sich selbst alternieren." }
     }
 
     private fun validiereBewertung(details: BewertungMitDetails) {
         val bewertung = details.bewertung
         require((bewertung.bereich == BewertungsBereich.STACK) == (bewertung.stackId != null)) { "Bewertungsbereich und Stack passen nicht." }
-        require(details.zellen.all { it.bewertungId == bewertung.id && it.staerke in 1..3 && it.grund.length <= 140 }) { "Ungueltige Bewertungszelle." }
-        require(details.konkurrenzen.all { it.bewertungId == bewertung.id && it.mittelAId != it.mittelBId && it.schwere in 1..3 }) { "Ungueltige Konkurrenz." }
-        require(details.antworten.all { it.bewertungId == bewertung.id }) { "Ungueltige Frage-Antwort." }
+        require(details.zellen.all { it.bewertungId == bewertung.id && it.staerke in 1..3 && it.grund.length <= 140 }) { "Ungültige Bewertungszelle." }
+        require(details.konkurrenzen.all { it.bewertungId == bewertung.id && it.mittelAId != it.mittelBId && it.schwere in 1..3 }) { "Ungültige Konkurrenz." }
+        require(details.antworten.all { it.bewertungId == bewertung.id }) { "Ungültige Frage-Antwort." }
     }
 
     private fun requirePermutation(vorhanden: List<String>, neu: List<String>, bezeichnung: String) {
         require(neu.size == neu.toSet().size && vorhanden.toSet() == neu.toSet()) {
-            "$bezeichnung muessen vollstaendig und ohne Duplikate sortiert werden."
+            "$bezeichnung müssen vollständig und ohne Duplikate sortiert werden."
         }
     }
 

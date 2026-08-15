@@ -88,6 +88,10 @@ object CodexJson {
             .put("required", JSONArray(keys))
             .put("properties", properties)
         fun array(items: JSONObject): JSONObject = JSONObject().put("type", "array").put("items", items)
+        fun deutscherText(maxLength: Int? = null): JSONObject = JSONObject()
+            .put("type", "string")
+            .put("description", "Korrektes Deutsch mit echten Umlauten ä, ö, ü und ß; keine Ersatzschreibungen ae, oe, ue oder ss.")
+            .apply { maxLength?.let { put("maxLength", it) } }
         val cell = objectSchema(
             cellKeys.toList(),
             JSONObject()
@@ -95,7 +99,7 @@ object CodexJson {
                 .put("ziel", JSONObject().put("type", "string"))
                 .put("wirkung", stringEnum("stuetzt", "stoert"))
                 .put("staerke", JSONObject().put("type", "integer").put("minimum", 1).put("maximum", 3))
-                .put("grund", JSONObject().put("type", "string").put("maxLength", 140)),
+                .put("grund", deutscherText(maxLength = 140)),
         )
         val competition = objectSchema(
             competitionKeys.toList(),
@@ -104,13 +108,13 @@ object CodexJson {
                 .put("nem_b", JSONObject().put("type", "string"))
                 .put("art", stringEnum("aufnahme", "wirkung", "zeitpunkt"))
                 .put("schwere", JSONObject().put("type", "integer").put("minimum", 1).put("maximum", 3))
-                .put("grund", JSONObject().put("type", "string")),
+                .put("grund", deutscherText()),
         )
         val answer = objectSchema(
             answerKeys.toList(),
             JSONObject()
                 .put("frage", JSONObject().put("type", "string"))
-                .put("text", JSONObject().put("type", "string")),
+                .put("text", deutscherText()),
         )
         return objectSchema(
             topLevelKeys.toList(),
@@ -118,8 +122,8 @@ object CodexJson {
                 .put("zellen", array(cell))
                 .put("konkurrenzen", array(competition))
                 .put("antworten", array(answer))
-                .put("gesamt", JSONObject().put("type", "string"))
-                .put("hinweise", array(JSONObject().put("type", "string"))),
+                .put("gesamt", deutscherText())
+                .put("hinweise", array(deutscherText())),
         )
     }
 

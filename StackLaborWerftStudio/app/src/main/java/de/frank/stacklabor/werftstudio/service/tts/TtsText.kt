@@ -1,9 +1,10 @@
 package de.frank.stacklabor.werftstudio.service.tts
 
+import de.frank.stacklabor.werftstudio.domain.model.mitDeutschenUmlauten
 import java.nio.charset.StandardCharsets
 
 object TtsText {
-    fun paragraphs(markdown: String, maxUtf8Bytes: Int = 3_800): List<String> = markdown
+    fun paragraphs(markdown: String, maxUtf8Bytes: Int = 3_800): List<String> = markdown.mitDeutschenUmlauten()
         .replace(Regex("```[\\s\\S]*?```"), " ")
         .replace(Regex("!\\[[^]]*]\\([^)]*\\)"), " ")
         .replace(Regex("\\[([^]]+)]\\([^)]*\\)"), "\$1")

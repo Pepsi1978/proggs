@@ -226,9 +226,9 @@ internal fun codexPayload(
         append("Nicht genannte Mittel-Ziel-Paare gelten als neutral. ")
         append("Als 'alterniert mit' gekennzeichnete Paare nie als Konkurrenz melden. ")
         append("Nutze in den ID-Feldern ('nem', 'nem_a', 'nem_b', 'ziel', 'frage') ausschließlich die übergebenen IDs. ")
-        // Ohne diese Ansage schrieb das Modell die internen IDs in den Fliesstext — also
+        // Ohne diese Ansage schrieb das Modell die internen IDs in den Fließtext — also
         // "hyaluronsaeure" und "loewenmaehne" statt "Hyaluronsäure" und "Löwenmähne".
-        append("IM FLIESSTEXT ('gesamt', 'grund', 'hinweise', 'text') gilt dagegen: ")
+        append("IM FLIEßTEXT ('gesamt', 'grund', 'hinweise', 'text') gilt dagegen: ")
         append("Schreibe die Mittel IMMER mit ihrem Anzeigenamen aus dem Feld 'name' der Kontextdaten, NIEMALS mit der ID. ")
         append("Schreibe durchgehend korrektes Deutsch nach aktueller Rechtschreibung: ")
         append("echte Umlaute ä, ö, ü und ß — niemals die Ersatzschreibung ae, oe, ue oder ss. ")
@@ -236,7 +236,7 @@ internal fun codexPayload(
         append("Eigennamen und Präparatenamen so geschrieben wie im Feld 'name'. ")
         append("Gründe sind knapp. ")
         // Bei diesen Mitteln kennt Frank die Einnahme selbst — allgemeine Hinweise dazu sind
-        // nur Rauschen. Genannt werden sie deshalb ausschliesslich bei einem echten Konflikt.
+        // nur Rauschen. Genannt werden sie deshalb ausschließlich bei einem echten Konflikt.
         append(
             BEKANNTE_MITTEL.joinToString(", ") + ": " +
                 "Erwähne diese Mittel im Fließtext NUR dann, wenn sie mit einem anderen Mittel dieses Stacks " +
@@ -246,7 +246,7 @@ internal fun codexPayload(
                 "Sicherheitshinweise, keine Einordnung, keine Nennung in der Einnahme-Reihenfolge. ",
         )
         if (goals.isEmpty()) {
-            // Ohne Ziele gibt es nichts zu gewichten — dann zaehlt nur die Zusammenstellung selbst.
+            // Ohne Ziele gibt es nichts zu gewichten — dann zählt nur die Zusammenstellung selbst.
             append("Für diesen Stack sind KEINE Ziele hinterlegt. Gib 'zellen' deshalb als leere Liste aus. ")
             append("Beurteile stattdessen die Zusammenstellung selbst: Konkurrenzen um Aufnahmewege, ")
             append("Wechselwirkungen, sinnvolle Einnahme-Reihenfolge, Abstände, Dosishöhen und Verträglichkeit. ")
