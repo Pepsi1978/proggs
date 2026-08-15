@@ -153,13 +153,13 @@ private fun GoalSelectionRow(
     val isExpanded = expanded && goal.reason.isNotEmpty()
     val shape = RoundedCornerShape(12.dp)
     Box(
-        Modifier.fillMaxWidth().height(if (isExpanded) 112.dp else 64.dp)
+        Modifier.fillMaxWidth().heightIn(min = 64.dp)
             .depthShadow(shape, 14.dp)
             .clip(shape).background(StackLaborTheme.colors.surface)
             .border(1.dp, metalRim(0.7f), shape),
     ) {
-        Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
                 SelectionMark(goal.selected, onToggle, Modifier.width(44.dp).fillMaxHeight())
                 Row(
                     Modifier.weight(1f).fillMaxHeight().clickable(onClick = onExpand),
@@ -175,10 +175,8 @@ private fun GoalSelectionRow(
                     }
                     Text(
                         goal.text,
-                        Modifier.weight(1f),
+                        Modifier.weight(1f).padding(vertical = 12.dp),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Box(Modifier.width(44.dp).fillMaxHeight().clickable(onClick = onBreakdown))
