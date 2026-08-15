@@ -972,7 +972,7 @@ private fun CompactInput(
 }
 
 private val MedicineFormOptions = listOf("Kapsel", "Tablette", "Löffel", "Tasse", "Pulver", "Tropfen", "Sonstige")
-private val MedicineUnitOptions = listOf("mg", "µg", "g", "ml", "IE", "Stück", "Tasse")
+private val MedicineUnitOptions = listOf("mg", "µg", "g", "ml", "Liter", "IE", "Stück", "Tasse")
 private val MedicineFrequencyOptions = listOf("Täglich", "Alle 2 Tage", "Alle 3 Tage", "Alle 7 Tage")
 
 @Composable
