@@ -21,6 +21,7 @@ data class PruefsummenMittel(
     val loeslichkeit: Loeslichkeit,
     val darreichungsform: Darreichungsform,
     val komponenten: List<PruefsummenKomponente>,
+    val darreichungsformText: String? = null,
 )
 
 data class PruefsummenDosis(
@@ -40,6 +41,7 @@ data class PruefsummenEintrag(
     val zusatztext: String,
     val dosen: List<PruefsummenDosis>,
     val alternationsPartnerMittelIds: List<String>,
+    val frequenzText: String? = null,
 )
 
 data class PruefsummenFrage(
@@ -71,8 +73,8 @@ object Pruefsumme {
                 token(eintrag.id)
                 token(eintrag.mittel.id)
                 token(eintrag.mittel.loeslichkeit.code.toString())
-                token(eintrag.mittel.darreichungsform.code.toString())
-                token(eintrag.frequenzTyp.code.toString())
+                token(eintrag.mittel.darreichungsformText?.trim()?.takeIf(String::isNotBlank) ?: eintrag.mittel.darreichungsform.code.toString())
+                token(eintrag.frequenzText?.trim()?.takeIf(String::isNotBlank) ?: eintrag.frequenzTyp.code.toString())
                 token(eintrag.alleNTage?.toString().orEmpty())
                 token(eintrag.gruppeId.orEmpty())
                 token(eintrag.zusatztext)

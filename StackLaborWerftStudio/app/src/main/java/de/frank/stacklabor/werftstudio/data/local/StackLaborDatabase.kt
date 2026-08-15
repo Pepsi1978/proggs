@@ -44,7 +44,7 @@ import de.frank.stacklabor.werftstudio.data.local.entity.ZielEntity
         FrageAntwortEntity::class,
         StackSortieransichtEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(RoomConverters::class)
@@ -74,6 +74,13 @@ abstract class StackLaborDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE mittel ADD COLUMN darreichungsformText TEXT")
+                database.execSQL("ALTER TABLE stack_eintrag ADD COLUMN frequenzText TEXT")
+            }
+        }
+
         @Volatile
         private var instance: StackLaborDatabase? = null
 
@@ -82,7 +89,7 @@ abstract class StackLaborDatabase : RoomDatabase() {
                 context.applicationContext,
                 StackLaborDatabase::class.java,
                 DATEINAME,
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
         }
     }
 }

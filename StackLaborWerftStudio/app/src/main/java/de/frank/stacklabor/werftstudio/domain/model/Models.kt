@@ -83,6 +83,7 @@ data class Mittel(
     val durchfallrisiko: Boolean = false,
     val beistoffe: String = "",
     val wirkstoffkomponenten: List<Wirkstoffkomponente> = emptyList(),
+    val darreichungsformText: String? = null,
 )
 
 data class Stack(
@@ -115,6 +116,7 @@ data class StackEintrag(
     val offenerHinweis: String? = null,
     val dosen: List<StackEintragDosis>,
     val alternationsPartnerMittelIds: List<String> = emptyList(),
+    val frequenzText: String? = null,
 )
 
 data class Ziel(

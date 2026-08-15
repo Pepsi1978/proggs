@@ -68,6 +68,7 @@ class StackLaborJson(
             requireImport(it.name.length <= 80, "Mittelname ist laenger als 80 Zeichen: ${it.id}")
             requireImport(it.loeslichkeit in LOESLICHKEITEN, "Ungueltige Loeslichkeit: ${it.loeslichkeit}")
             requireImport(it.darreichungsform in DARREICHUNGSFORMEN, "Ungueltige Darreichungsform: ${it.darreichungsform}")
+            requireImport(it.darreichungsformText == null || it.darreichungsformText.isNotBlank() && it.darreichungsformText.length <= 60, "Ungueltiger Darreichungsformtext: ${it.id}")
         }
         dokument.stacks.forEach {
             requireImport(it.id.isNotBlank() && it.name.isNotBlank(), "Stacks brauchen ID und Name.")
@@ -86,6 +87,7 @@ class StackLaborJson(
             requireImport(it.reihenfolge >= 1, "Eintragsposition muss mindestens 1 sein: ${it.id}")
             requireImport(it.zusatztext.length <= 300, "Zusatztext ist zu lang: ${it.id}")
             requireImport(it.frequenzTyp in FREQUENZTYPEN, "Ungueltiger Frequenztyp: ${it.frequenzTyp}")
+            requireImport(it.frequenzText == null || it.frequenzText.isNotBlank() && it.frequenzText.length <= 60, "Ungueltiger Frequenztext: ${it.id}")
             if (it.frequenzTyp == "ALLE_N_TAGE") {
                 requireImport((it.alleNTage ?: 0) >= 2, "alle_n_tage muss mindestens 2 sein: ${it.id}")
             }
@@ -158,6 +160,7 @@ class StackLaborJson(
             current = when (currentVersion) {
                 0 -> migriereV0NachV1(current)
                 1 -> migriereV1NachV2(current)
+                2 -> migriereV2NachV3(current)
                 else -> throw ImportFormatException("Kein Migrationspfad ab schema_version $currentVersion.")
             }
             currentVersion++
@@ -179,6 +182,10 @@ class StackLaborJson(
         root.toMutableMap().apply { put("schema_version", JsonPrimitive(2)) },
     )
 
+    private fun migriereV2NachV3(root: JsonObject): JsonObject = JsonObject(
+        root.toMutableMap().apply { put("schema_version", JsonPrimitive(3)) },
+    )
+
     private fun requireUnique(values: List<Any>, feld: String) {
         requireImport(values.size == values.toSet().size, "Doppelte Werte in $feld.")
     }
@@ -194,7 +201,7 @@ class StackLaborJson(
     }
 
     companion object {
-        const val AKTUELLE_SCHEMA_VERSION: Int = 2
+        const val AKTUELLE_SCHEMA_VERSION: Int = 3
         const val EXPORT_FORMAT: String = "stacklabor_export"
         const val SEED_FORMAT: String = "stacklabor_startbestand"
         private val ERLAUBTE_FORMATE = setOf(EXPORT_FORMAT, SEED_FORMAT)

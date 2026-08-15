@@ -54,10 +54,14 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
     format = StackLaborJson.EXPORT_FORMAT,
     schemaVersion = StackLaborJson.AKTUELLE_SCHEMA_VERSION,
     exportiertAmEpochMillis = exportiertAm,
-    mittel = mittel.map { MittelTransfer(it.id, it.name, it.loeslichkeit.name, it.darreichungsform.name, it.hersteller, it.durchfallrisiko, it.beistoffe) },
+    mittel = mittel.map {
+        MittelTransfer(it.id, it.name, it.loeslichkeit.name, it.darreichungsform.name, it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText)
+    },
     wirkstoffkomponenten = komponenten.map { WirkstoffkomponenteTransfer(it.id, it.mittelId, it.name, it.menge?.toPlainString(), it.einheit?.name) },
     stacks = stacks.map { StackTransfer(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
-    eintraege = eintraege.map { StackEintragTransfer(it.id, it.stackId, it.mittelId, it.frequenzTyp.name, it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis) },
+    eintraege = eintraege.map {
+        StackEintragTransfer(it.id, it.stackId, it.mittelId, it.frequenzTyp.name, it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis, it.frequenzText)
+    },
     dosen = dosen.map { DosisTransfer(it.stackEintragId, it.variante.name, it.stueckzahl.toPlainString(), it.mengeJeStueck?.toPlainString(), it.einheit?.name, it.einheitText) },
     alternationsPartner = alternationsPartner.map { AlternationsPartnerTransfer(it.stackEintragId, it.partnerMittelId) },
     ziele = ziele.map { ZielTransfer(it.id, it.text) },
@@ -72,14 +76,14 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
 
 internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
     mittel = mittel.map {
-        MittelEntity(it.id, it.name, enumValue(it.loeslichkeit), enumValue(it.darreichungsform), it.hersteller, it.durchfallrisiko, it.beistoffe)
+        MittelEntity(it.id, it.name, enumValue(it.loeslichkeit), enumValue(it.darreichungsform), it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText)
     },
     komponenten = wirkstoffkomponenten.map {
         WirkstoffkomponenteEntity(it.id, it.mittelId, it.name, it.menge?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) })
     },
     stacks = stacks.map { StackEntity(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
     eintraege = eintraege.map {
-        StackEintragEntity(it.id, it.stackId, it.mittelId, enumValue(it.frequenzTyp), it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis)
+        StackEintragEntity(it.id, it.stackId, it.mittelId, enumValue(it.frequenzTyp), it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis, it.frequenzText)
     },
     dosen = dosen.map {
         StackEintragDosisEntity(it.stackEintragId, enumValue(it.variante), BigDecimal(it.stueckzahl), it.mengeJeStueck?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) }, it.einheitText)

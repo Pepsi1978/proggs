@@ -33,6 +33,7 @@ data class MittelTransfer(
     val hersteller: String = "",
     val durchfallrisiko: Boolean = false,
     val beistoffe: String = "",
+    @SerialName("darreichungsform_text") val darreichungsformText: String? = null,
 )
 
 @Serializable
@@ -65,6 +66,7 @@ data class StackEintragTransfer(
     @SerialName("gruppe_id") val gruppeId: String? = null,
     val zusatztext: String = "",
     @SerialName("offener_hinweis") val offenerHinweis: String? = null,
+    @SerialName("frequenz_text") val frequenzText: String? = null,
 )
 
 @Serializable

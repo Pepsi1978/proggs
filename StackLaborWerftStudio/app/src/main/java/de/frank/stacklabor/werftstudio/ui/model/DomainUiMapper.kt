@@ -38,13 +38,21 @@ fun Mittel.toCatalogMedicineUi(usageCount: Int): MedicineUi = MedicineUi(
     name = name,
     dose = "",
     solubility = loeslichkeit.toSolubility(),
-    catalogMeta = "in $usageCount ${if (usageCount == 1) "Stack" else "Stacks"} · ${darreichungsform.name.lowercase().replaceFirstChar(Char::uppercase)}" +
+    catalogMeta = "in $usageCount ${if (usageCount == 1) "Stack" else "Stacks"} · ${darreichungsformAnzeige()}" +
         hersteller.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty(),
     manufacturer = hersteller,
-    form = darreichungsform.name.lowercase().replaceFirstChar(Char::uppercase),
+    form = darreichungsformAnzeige(),
     diarrheaRisk = durchfallrisiko,
     excipients = beistoffe,
 )
+
+private fun Mittel.darreichungsformAnzeige(): String = darreichungsformText?.trim().orEmpty().ifBlank {
+    when (darreichungsform.name) {
+        "LOEFFEL" -> "Löffel"
+        "SONSTIGE" -> "Sonstige"
+        else -> darreichungsform.name.lowercase().replaceFirstChar(Char::uppercase)
+    }
+}
 
 fun Ziel.toGoalUi(rank: Int, signal: Ampel, selected: Boolean, usageCount: Int): GoalUi = GoalUi(
     id = id,

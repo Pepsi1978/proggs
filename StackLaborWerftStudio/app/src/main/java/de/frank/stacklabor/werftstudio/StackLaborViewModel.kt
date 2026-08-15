@@ -524,6 +524,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             name = medicine?.name.orEmpty(),
             solubility = medicine?.loeslichkeit ?: Loeslichkeit.WASSER,
             form = medicine?.darreichungsform ?: Darreichungsform.KAPSEL,
+            formText = medicine?.darreichungsformAnzeige() ?: "Kapsel",
             manufacturer = medicine?.hersteller.orEmpty(),
             diarrheaRisk = medicine?.durchfallrisiko ?: false,
             excipients = medicine?.beistoffe.orEmpty(),
@@ -533,6 +534,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             secondDose = duty != null,
             frequencyType = entry?.frequenzTyp ?: FrequenzTyp.TAEGLICH,
             everyDays = entry?.alleNTage,
+            frequencyText = entry?.frequenzAnzeige() ?: "Täglich",
             together = entry?.gruppeId != null,
             note = entry?.zusatztext.orEmpty(),
             alternates = entry?.alternationsPartnerMittelIds?.joinToString(", ") { id -> medicines.firstOrNull { it.id == id }?.name ?: id }.orEmpty(),
@@ -548,6 +550,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 name = medicineDraft.name.trim(),
                 loeslichkeit = medicineDraft.solubility,
                 darreichungsform = medicineDraft.form,
+                darreichungsformText = medicineDraft.formText.trim().takeIf(String::isNotBlank),
                 hersteller = medicineDraft.manufacturer.trim(),
                 durchfallrisiko = medicineDraft.diarrheaRisk,
                 beistoffe = medicineDraft.excipients.trim(),
@@ -573,6 +576,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     mittelId = id,
                     frequenzTyp = medicineDraft.frequencyType,
                     alleNTage = medicineDraft.everyDays,
+                    frequenzText = medicineDraft.frequencyText.trim().takeIf(String::isNotBlank),
                     aktiv = existing?.aktiv ?: true,
                     reihenfolge = existing?.reihenfolge ?: ((currentEntries.maxOfOrNull { it.reihenfolge } ?: 0) + 1),
                     gruppeId = if (medicineDraft.together) existing?.gruppeId ?: UUID.randomUUID().toString() else null,
@@ -1090,6 +1094,7 @@ private data class MedicineDraft(
     val name: String = "",
     val solubility: Loeslichkeit = Loeslichkeit.WASSER,
     val form: Darreichungsform = Darreichungsform.KAPSEL,
+    val formText: String = "Kapsel",
     val manufacturer: String = "",
     val diarrheaRisk: Boolean = false,
     val excipients: String = "",
@@ -1099,6 +1104,7 @@ private data class MedicineDraft(
     val secondDose: Boolean = false,
     val frequencyType: FrequenzTyp = FrequenzTyp.TAEGLICH,
     val everyDays: Int? = null,
+    val frequencyText: String = "Täglich",
     val together: Boolean = false,
     val note: String = "",
     val alternates: String = "",
@@ -1106,7 +1112,7 @@ private data class MedicineDraft(
     fun with(field: String, value: String): MedicineDraft = when (field) {
         "name" -> copy(name = value)
         "solubility" -> copy(solubility = when (value) { "fat" -> Loeslichkeit.FETT; "both" -> Loeslichkeit.BEIDES; else -> Loeslichkeit.WASSER })
-        "form" -> copy(form = Darreichungsform.entries.firstOrNull { it.name.equals(value.replace("ö", "oe").replace("ü", "ue"), true) } ?: form)
+        "form" -> copy(form = value.toDarreichungsformOrNull() ?: form, formText = value)
         "manufacturer" -> copy(manufacturer = value)
         "diarrheaRisk" -> copy(diarrheaRisk = value.toBoolean())
         "excipients" -> copy(excipients = value)
@@ -1114,7 +1120,14 @@ private data class MedicineDraft(
         "amount" -> copy(amount = value.toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO })
         "unit" -> copy(unit = value)
         "secondDose" -> copy(secondDose = value.toBoolean())
-        "frequency" -> if (value.contains("alle", true)) copy(frequencyType = FrequenzTyp.ALLE_N_TAGE, everyDays = Regex("\\d+").find(value)?.value?.toIntOrNull() ?: 2) else copy(frequencyType = FrequenzTyp.TAEGLICH, everyDays = null)
+        "frequency" -> {
+            val tage = Regex("\\d+").find(value)?.value?.toIntOrNull()
+            when {
+                value.contains("alle", true) && tage != null -> copy(frequencyType = FrequenzTyp.ALLE_N_TAGE, everyDays = tage.coerceAtLeast(2), frequencyText = value)
+                value.equals("Täglich", true) -> copy(frequencyType = FrequenzTyp.TAEGLICH, everyDays = null, frequencyText = value)
+                else -> copy(frequencyText = value)
+            }
+        }
         "alternates" -> copy(alternates = value)
         "together" -> copy(together = value.toBoolean())
         "ai-note" -> copy(note = value)
@@ -1153,13 +1166,13 @@ private fun Mittel.toUi(entry: StackEintrag, signal: Ampel, variant: DosisVarian
         signal = signal.toSignalState(),
         active = entry.aktiv,
         manufacturer = hersteller,
-        form = darreichungsform.name.lowercase().replaceFirstChar(Char::uppercase),
+        form = darreichungsformAnzeige(),
         diarrheaRisk = durchfallrisiko,
         excipients = beistoffe,
         pieces = dose?.stueckzahl?.stripTrailingZeros()?.toPlainString() ?: "1",
         amount = dose?.mengeJeStueck?.stripTrailingZeros()?.toPlainString().orEmpty(),
         unit = dose?.einheitAnzeige().orEmpty(),
-        frequency = if (entry.frequenzTyp == FrequenzTyp.TAEGLICH) "Täglich" else "Alle ${entry.alleNTage ?: 2} Tage",
+        frequency = entry.frequenzAnzeige(),
         secondDose = entry.dosen.any { it.variante == DosisVariante.DIENST },
         together = entry.gruppeId != null,
         note = entry.zusatztext,
@@ -1193,6 +1206,26 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
 private fun Einheit.label(): String = when (this) { Einheit.UG -> "µg"; Einheit.STUECK -> "Stück"; else -> name.lowercase() }
 
 private fun StackEintragDosis.einheitAnzeige(): String = einheitText?.trim().orEmpty().ifBlank { einheit?.label().orEmpty() }
+
+private fun Darreichungsform.label(): String = when (this) {
+    Darreichungsform.KAPSEL -> "Kapsel"
+    Darreichungsform.TABLETTE -> "Tablette"
+    Darreichungsform.LOEFFEL -> "Löffel"
+    Darreichungsform.TASSE -> "Tasse"
+    Darreichungsform.PULVER -> "Pulver"
+    Darreichungsform.TROPFEN -> "Tropfen"
+    Darreichungsform.SONSTIGE -> "Sonstige"
+}
+
+private fun Mittel.darreichungsformAnzeige(): String = darreichungsformText?.trim().orEmpty().ifBlank { darreichungsform.label() }
+
+private fun StackEintrag.frequenzAnzeige(): String = frequenzText?.trim().orEmpty().ifBlank {
+    if (frequenzTyp == FrequenzTyp.TAEGLICH) "Täglich" else "Alle ${alleNTage ?: 2} Tage"
+}
+
+private fun String.toDarreichungsformOrNull(): Darreichungsform? = Darreichungsform.entries.firstOrNull {
+    it.name.equals(trim().replace("ö", "oe").replace("ü", "ue"), true) || it.label().equals(trim(), true)
+}
 
 private fun String.toEinheitOrNull(): Einheit? {
     val normalized = trim().replace("µ", "U").replace("ü", "ue")

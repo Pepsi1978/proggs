@@ -177,7 +177,8 @@ class PersistedCodexEvaluator(
                         .put("name", katalog.name)
                         .put("aktiv", eintrag.aktiv)
                         .put("loeslichkeit", katalog.loeslichkeit.name)
-                        .put("frequenz", eintrag.frequenzTyp.name)
+                        .put("darreichungsform", katalog.darreichungsformText ?: katalog.darreichungsform.name)
+                        .put("frequenz", eintrag.frequenzText ?: eintrag.frequenzTyp.name)
                         .put("alle_n_tage", eintrag.alleNTage)
                         .put("zusatztext", eintrag.zusatztext)
                         .put("dosen", JSONArray(eintrag.dosen.map { dosis ->

@@ -468,7 +468,7 @@ private fun MedicineList(
         if (reorder.draggedKey == null) listState.scrollToItem(0)
     }
     LazyColumn(
-        modifier.padding(horizontal = 12.dp),
+        modifier.padding(horizontal = 12.dp).then(reorder.dragModifier()),
         state = listState,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 80.dp),
     ) {
@@ -492,7 +492,6 @@ private fun MedicineList(
                 .zIndex(if (gezogen) 1f else 0f)
                 .then(if (StackLaborTheme.motionEnabled && !gezogen) Modifier.animateItem() else Modifier)
                 .then(reorder.liftModifier(medicine))
-                .then(reorder.dragModifier(medicine))
             SwipeToDeleteRow(
                 offset = shownOffset,
                 width = swipeWidth,

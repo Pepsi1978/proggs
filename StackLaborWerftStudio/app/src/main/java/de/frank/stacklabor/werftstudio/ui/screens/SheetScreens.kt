@@ -2,6 +2,7 @@ package de.frank.stacklabor.werftstudio.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -274,7 +275,7 @@ fun MedicineEditSheet(
                         }
                     }
                 }
-                item { CompactField("Darreichungsform", form, options = MedicineFormOptions, onValueChange = { form = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("form", it)) }) }
+                item { CompactField("Darreichungsform", form, options = MedicineFormOptions, editableOptions = true, onValueChange = { form = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("form", it)) }) }
                 item { CompactField("Hersteller", manufacturer, onValueChange = { manufacturer = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("manufacturer", it)) }) }
                 item { CompactToggleRow("Durchfallrisiko", diarrheaRisk, smallSwitch = true) { diarrheaRisk = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("diarrheaRisk", it.toString())) } }
                 item { CompactField("Beistoffe", excipients, onValueChange = { excipients = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("excipients", it)) }) }
@@ -284,7 +285,14 @@ fun MedicineEditSheet(
                         Row(Modifier.height(44.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CompactInput(pieces, "Stückzahl", { pieces = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("pieces", it)) }, Modifier.width(88.dp))
                             CompactInput(amount, "Menge", { amount = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("amount", it)) }, Modifier.width(88.dp))
-                            CompactInput(unit, "Einheit", { unit = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("unit", it)) }, Modifier.width(88.dp), options = MedicineUnitOptions)
+                            CompactInput(
+                                unit,
+                                "Einheit",
+                                { unit = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("unit", it)) },
+                                Modifier.width(88.dp),
+                                options = MedicineUnitOptions,
+                                editableOptions = true,
+                            )
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(dosePreview(pieces, amount, unit), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
@@ -296,7 +304,7 @@ fun MedicineEditSheet(
                         callbacks.onEvent(StackLaborEvent.UpdateMedicineField("secondDose", it.toString()))
                     }
                 }
-                item { CompactField("Frequenz", frequency, options = MedicineFrequencyOptions, onValueChange = { frequency = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("frequency", it)) }) }
+                item { CompactField("Frequenz", frequency, options = MedicineFrequencyOptions, editableOptions = true, onValueChange = { frequency = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("frequency", it)) }) }
                 item { CompactField("alterniert mit", alternates, onValueChange = { alternates = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("alternates", it)) }) }
                 item {
                     CompactToggleRow("Kombi-Gruppe „zusammen einnehmen“", together, smallSwitch = true) {
@@ -800,6 +808,7 @@ private fun CompactField(
     singleLine: Boolean = true,
     options: List<String> = emptyList(),
     invalid: Boolean = false,
+    editableOptions: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().height(rowHeight).padding(horizontal = 12.dp, vertical = 4.dp)) {
@@ -809,7 +818,7 @@ private fun CompactField(
             color = if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.textMuted,
         )
         Spacer(Modifier.height(4.dp))
-        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, options, invalid)
+        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, options, invalid, editableOptions)
     }
 }
 
@@ -823,8 +832,9 @@ private fun CompactInput(
     singleLine: Boolean = true,
     options: List<String> = emptyList(),
     invalid: Boolean = false,
+    editableOptions: Boolean = false,
 ) {
-    if (options.isNotEmpty()) {
+    if (options.isNotEmpty() && !editableOptions) {
         var expanded by remember { mutableStateOf(false) }
         Box(modifier.height(height)) {
             Row(
@@ -845,10 +855,17 @@ private fun CompactInput(
                 )
                 Text("⌄", color = StackLaborTheme.colors.textMuted, fontSize = 16.sp)
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                shape = RoundedCornerShape(12.dp),
+                containerColor = StackLaborTheme.colors.surface,
+                tonalElevation = 0.dp,
+                border = BorderStroke(1.dp, StackLaborTheme.colors.border),
+            ) {
                 options.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(option) },
+                        text = { Text(option, color = StackLaborTheme.colors.textStrong) },
                         onClick = {
                             onValueChange(option)
                             expanded = false
@@ -861,38 +878,75 @@ private fun CompactInput(
     }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     var focused by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
     LaunchedEffect(focused) {
         if (focused) {
             delay(250L)
             bringIntoViewRequester.bringIntoView()
         }
     }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.height(height)
-            .bringIntoViewRequester(bringIntoViewRequester)
-            .onFocusChanged { focused = it.isFocused }
-            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
-            .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-            .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
-        singleLine = singleLine,
-        textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
-        cursorBrush = SolidColor(StackLaborTheme.colors.accent),
-        decorationBox = { inner ->
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = if (singleLine) 0.dp else 10.dp),
-                verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
-            ) {
-                Box(Modifier.weight(1f)) {
-                    if (value.isEmpty() && placeholder.isNotEmpty()) {
-                        Text(placeholder, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+    Box(modifier.height(height)) {
+        BasicTextField(
+            value = value,
+            onValueChange = {
+                onValueChange(it)
+                if (editableOptions) expanded = true
+            },
+            modifier = Modifier.fillMaxSize()
+                .bringIntoViewRequester(bringIntoViewRequester)
+                .onFocusChanged {
+                    focused = it.isFocused
+                    if (!it.isFocused) expanded = false
+                }
+                .depthShadow(RoundedCornerShape(12.dp), 14.dp)
+                .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
+                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
+            singleLine = singleLine,
+            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
+            cursorBrush = SolidColor(StackLaborTheme.colors.accent),
+            decorationBox = { inner ->
+                Row(
+                    Modifier.fillMaxSize().padding(start = 12.dp, end = if (editableOptions) 4.dp else 12.dp, top = if (singleLine) 0.dp else 10.dp, bottom = if (singleLine) 0.dp else 10.dp),
+                    verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        if (value.isEmpty() && placeholder.isNotEmpty()) {
+                            Text(placeholder, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+                        }
+                        inner()
                     }
-                    inner()
+                    if (editableOptions) {
+                        Box(
+                            Modifier.size(36.dp).clip(CircleShape).clickable { expanded = !expanded },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("⌄", color = StackLaborTheme.colors.textMuted, fontSize = 16.sp)
+                        }
+                    }
+                }
+            },
+        )
+        if (editableOptions) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                shape = RoundedCornerShape(12.dp),
+                containerColor = StackLaborTheme.colors.surface,
+                tonalElevation = 0.dp,
+                border = BorderStroke(1.dp, StackLaborTheme.colors.border),
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option, color = StackLaborTheme.colors.textStrong) },
+                        onClick = {
+                            onValueChange(option)
+                            expanded = false
+                        },
+                    )
                 }
             }
-        },
-    )
+        }
+    }
 }
 
 private val MedicineFormOptions = listOf("Kapsel", "Tablette", "Löffel", "Tasse", "Pulver", "Tropfen", "Sonstige")

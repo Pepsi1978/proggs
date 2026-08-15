@@ -136,7 +136,7 @@ object StackTextExport {
             }
             zeile("Einnahme", frequenzText(eintrag))
             zeile("Löslichkeit", mittel?.loeslichkeit?.anzeige())
-            zeile("Darreichung", mittel?.darreichungsform?.anzeige())
+            zeile("Darreichung", mittel?.darreichungsformText?.trim().orEmpty().ifBlank { mittel?.darreichungsform?.anzeige().orEmpty() })
             zeile("Hersteller", mittel?.hersteller)
             zeile("Durchfallrisiko", if (mittel?.durchfallrisiko == true) "ja" else null)
             zeile("Beistoffe", mittel?.beistoffe)
@@ -180,9 +180,11 @@ object StackTextExport {
         return "$stueck × ${menge.schoen()} $einheit = ${gesamt.schoen()} $einheit".trim()
     }
 
-    private fun frequenzText(eintrag: StackEintrag): String = when (eintrag.frequenzTyp) {
-        FrequenzTyp.TAEGLICH -> "täglich"
-        FrequenzTyp.ALLE_N_TAGE -> "alle ${eintrag.alleNTage ?: 2} Tage"
+    private fun frequenzText(eintrag: StackEintrag): String = eintrag.frequenzText?.trim().orEmpty().ifBlank {
+        when (eintrag.frequenzTyp) {
+            FrequenzTyp.TAEGLICH -> "täglich"
+            FrequenzTyp.ALLE_N_TAGE -> "alle ${eintrag.alleNTage ?: 2} Tage"
+        }
     }
 
     private fun BigDecimal.schoen(): String = stripTrailingZeros().toPlainString()

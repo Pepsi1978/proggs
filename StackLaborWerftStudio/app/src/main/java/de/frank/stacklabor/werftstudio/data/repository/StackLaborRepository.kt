@@ -470,12 +470,14 @@ class RoomStackLaborRepository(
                     id = katalogMittel.mittel.id,
                     loeslichkeit = katalogMittel.mittel.loeslichkeit,
                     darreichungsform = katalogMittel.mittel.darreichungsform,
+                    darreichungsformText = katalogMittel.mittel.darreichungsformText,
                     komponenten = katalogMittel.komponenten.map {
                         PruefsummenKomponente(it.id, it.name, it.menge, it.einheit)
                     },
                 ),
                 frequenzTyp = eintrag.frequenzTyp,
                 alleNTage = eintrag.alleNTage,
+                frequenzText = eintrag.frequenzText,
                 gruppeId = eintrag.gruppeId,
                 zusatztext = eintrag.zusatztext,
                 dosen = eintrag.dosen.map {
@@ -644,6 +646,7 @@ class RoomStackLaborRepository(
         require(mittel.id.isNotBlank()) { "Mittel-ID fehlt." }
         require(mittel.name.isNotBlank() && mittel.name.length <= 80) { "Der Mittelname muss 1 bis 80 Zeichen haben." }
         require(mittel.hersteller.length <= 80 && mittel.beistoffe.length <= 200) { "Mittel-Stammdaten sind zu lang." }
+        require(mittel.darreichungsformText == null || mittel.darreichungsformText.isNotBlank() && mittel.darreichungsformText.length <= 60) { "Die Darreichungsform ist ungültig." }
         require(mittel.wirkstoffkomponenten.all { it.mittelId == mittel.id && it.name.isNotBlank() }) { "Ungueltige Wirkstoffkomponente." }
         require(mittel.wirkstoffkomponenten.all { it.menge == null || it.menge.signum() > 0 }) { "Wirkstoffmengen muessen positiv sein." }
     }
@@ -652,11 +655,13 @@ class RoomStackLaborRepository(
         require(eintrag.id.isNotBlank() && eintrag.stackId.isNotBlank() && eintrag.mittelId.isNotBlank()) { "Eintrags-IDs fehlen." }
         require(eintrag.reihenfolge >= 1) { "Die Eintragsposition muss mindestens 1 sein." }
         require(eintrag.zusatztext.length <= 300) { "Der Zusatztext darf hoechstens 300 Zeichen haben." }
+        require(eintrag.frequenzText == null || eintrag.frequenzText.isNotBlank() && eintrag.frequenzText.length <= 60) { "Die Frequenz ist ungültig." }
         require(eintrag.frequenzTyp.name != "ALLE_N_TAGE" || (eintrag.alleNTage ?: 0) >= 2) { "Das Frequenzintervall muss mindestens 2 Tage sein." }
         require(eintrag.dosen.count { it.variante == DosisVariante.FREI } == 1) { "Genau eine freie Dosis ist erforderlich." }
         require(eintrag.dosen.distinctBy { it.variante }.size == eintrag.dosen.size) { "Dosisvarianten duerfen nicht doppelt sein." }
         require(eintrag.dosen.all { it.stackEintragId == eintrag.id && it.stueckzahl.signum() > 0 }) { "Ungueltige Stueckzahl." }
-        require(eintrag.dosen.all { (it.mengeJeStueck == null) == (it.einheit == null) }) { "Menge und Einheit muessen gemeinsam gesetzt sein." }
+        require(eintrag.dosen.all { it.mengeJeStueck == null || it.einheit != null || !it.einheitText.isNullOrBlank() }) { "Zu einer Menge gehört eine Einheit." }
+        require(eintrag.dosen.all { it.einheitText == null || it.einheitText.isNotBlank() && it.einheitText.length <= 30 }) { "Der Einheitentext ist ungültig." }
         require(eintrag.dosen.all { it.mengeJeStueck == null || it.mengeJeStueck.signum() > 0 }) { "Dosen muessen positiv sein." }
         require(eintrag.mittelId !in eintrag.alternationsPartnerMittelIds) { "Ein Mittel kann nicht mit sich selbst alternieren." }
     }

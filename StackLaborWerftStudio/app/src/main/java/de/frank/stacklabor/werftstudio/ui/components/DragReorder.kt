@@ -103,14 +103,19 @@ class ReorderState<T : Any> internal constructor(
         }
     }
 
-    /** Der lange Druck, der die Zeile greift. */
-    fun dragModifier(item: T): Modifier = Modifier.pointerInput(keyOf(item), items.size) {
+    /** Der lange Druck bleibt an der Liste verankert, auch wenn die gezogene Zeile umsortiert wird. */
+    fun dragModifier(): Modifier = Modifier.pointerInput(items.size) {
         detectDragGesturesAfterLongPress(
             onDragStart = { position ->
+                val visibleItem = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                    position.y >= info.offset && position.y < info.offset + info.size
+                }
+                val key = visibleItem?.key as? String ?: return@detectDragGesturesAfterLongPress
+                if (items.none { keyOf(it) == key }) return@detectDragGesturesAfterLongPress
                 handOrdnung = items
-                draggedKey = keyOf(item)
+                draggedKey = key
                 offsetY = 0f
-                fingerY = position.y + itemTopInViewport(keyOf(item))
+                fingerY = position.y
                 onGrabbed?.invoke()
             },
             onDrag = { change, amount ->
@@ -170,9 +175,6 @@ class ReorderState<T : Any> internal constructor(
         if (index > 0) handOrdnung = aktuell.toMutableList().apply { add(0, removeAt(index)) }
         offsetY = offsetY.coerceAtLeast(0f)
     }
-
-    private fun itemTopInViewport(key: String): Float =
-        listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.offset?.toFloat() ?: 0f
 
     /** Wie schnell am Rand weitergerollt wird — 0 heißt: stehen bleiben. */
     internal fun autoScrollSchritt(): Float {

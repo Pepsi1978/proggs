@@ -23,6 +23,7 @@ data class MittelEntity(
     val hersteller: String,
     val durchfallrisiko: Boolean,
     val beistoffe: String,
+    val darreichungsformText: String? = null,
 )
 
 @Entity(
@@ -92,6 +93,7 @@ data class StackEintragEntity(
     val gruppeId: String?,
     val zusatztext: String,
     val offenerHinweis: String?,
+    val frequenzText: String? = null,
 )
 
 @Entity(
