@@ -136,6 +136,9 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private val micRecorder = MicRecorder(container.applicationContext)
     private var goalDraftBeforeImprovement: String? = null
     private val improvedGoalVersions = mutableListOf<String>()
+    private var allStacksDraftBeforeImprovement: String? = null
+    private val improvedAllStacksVersions = mutableListOf<String>()
+    private var pendingSpeechTarget: SpeechInputTarget? = null
     private var clonedVoices: List<ClonedVoice> = emptyList()
     private val competitionJobs = mutableMapOf<String, Job>()
     private val pendingCompetitionIds = mutableMapOf<String, MutableSet<String>>()
@@ -219,12 +222,24 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             }
             StackLaborEvent.Undo -> undo()
             StackLaborEvent.EvaluateStack -> evaluate(selectedStackId.value)
-            StackLaborEvent.EvaluateAll -> evaluateAll()
+            StackLaborEvent.EvaluateAll -> openAllStacksSetup(reset = true)
+            is StackLaborEvent.ToggleAllStackSelection -> toggleAllStackSelection(event.stackId)
+            is StackLaborEvent.UpdateAllStacksAdditionalInfo -> updateAllStacksAdditionalInfo(event.text)
+            StackLaborEvent.ToggleAllStacksRecording -> toggleAllStacksRecording()
+            StackLaborEvent.ImproveAllStacksAdditionalInfo -> improveAllStacksAdditionalInfo()
+            StackLaborEvent.UndoAllStacksImprovement -> undoAllStacksImprovement()
+            StackLaborEvent.ConfirmEvaluateAll -> confirmEvaluateAll()
+            StackLaborEvent.DismissAllStacksSetup -> dismissAllStacksSetup()
             StackLaborEvent.RetryEvaluation -> evaluate(selectedStackId.value)
             StackLaborEvent.CancelEvaluation -> {
                 evaluationJob?.cancel()
                 evaluationJob = null
-                mutableState.update { it.copy(evaluationState = EvaluationState.Stale) }
+                mutableState.update {
+                    it.copy(
+                        evaluationState = if (it.evaluationState == EvaluationState.Running) EvaluationState.Stale else it.evaluationState,
+                        allStacksEvaluationState = if (it.allStacksEvaluationState == EvaluationState.Running) EvaluationState.Stale else it.allStacksEvaluationState,
+                    )
+                }
                 message("Auswertung abgebrochen")
             }
             StackLaborEvent.ScheduleRetry -> selectedStackId.value?.let { stackId ->
@@ -318,7 +333,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackNote = selectedStack?.einnahmeHinweis ?: current.stackNote,
                 catalogMedicines = catalogUi,
                 goals = goalCatalogUi,
-                dailyDoses = dailyDoses(entries, medicines, stacks, settings.dosisVariante),
+                dailyDoses = dailyDoses(
+                    entries.filter { entry -> current.selectedAllStackIds.isEmpty() || entry.stackId in current.selectedAllStackIds },
+                    medicines,
+                    stacks.filter { stack -> current.selectedAllStackIds.isEmpty() || stack.id in current.selectedAllStackIds },
+                    settings.dosisVariante,
+                ),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
                 ttsVoiceLabel = voiceLabel(settings.ttsStimme, settings.ttsAnbieter),
                 ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
@@ -484,6 +504,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         if (route != currentRoute) mutableState.update { it.copy(searchQuery = "") }
         if (currentRoute is StackLaborRoute.GoalCatalog && route !is StackLaborRoute.GoalCatalog) cancelGoalDraft()
         if (currentRoute is StackLaborRoute.MedicineEdit && route !is StackLaborRoute.MedicineEdit) cancelSolubilityDetermination()
+        if (currentRoute == StackLaborRoute.AllStacks && route != StackLaborRoute.AllStacks) dismissAllStacksSetup()
         currentRoute = route
         val stackId = route.stackIdOrNull()
         if (stackId != null) selectedStackId.value = stackId
@@ -493,6 +514,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             } ?: StackDraft()
             is StackLaborRoute.MedicineEdit -> prepareMedicineDraft(route.medicineId, route.stackId)
             is StackLaborRoute.CodexLogin -> if (container.oauth.state.value is CodexAuthState.SignedOut && mutableState.value.codexDeviceCode.isBlank()) startCodexLogin()
+            StackLaborRoute.AllStacks -> openAllStacksSetup(reset = true)
             is StackLaborRoute.Evaluation -> (
                 currentHistory.firstOrNull { it.bewertung.id == route.evaluationId }
                     ?: tagEvaluation?.takeIf { it.bewertung.id == route.evaluationId }
@@ -535,6 +557,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 if (container.groqSchluesselAktiv().isBlank()) {
                     message("Bitte zuerst unter Einstellungen einen Groq-API-Schlüssel hinterlegen.")
                 } else {
+                    pendingSpeechTarget = SpeechInputTarget.Goal
                     sendEffect(StackLaborUiEffect.RequestMicrophonePermission)
                 }
             }
@@ -544,12 +567,27 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun microphonePermissionResult(granted: Boolean) {
-        if (!granted) return message("Ohne Mikrofonberechtigung kann kein Ziel aufgenommen werden.")
-        if (!mutableState.value.goalDraftActive || mutableState.value.goalInputState != GoalInputState.Idle) return
-        if (micRecorder.start(viewModelScope)) {
-            mutableState.update { it.copy(goalInputState = GoalInputState.Recording) }
-        } else {
+        val target = pendingSpeechTarget.also { pendingSpeechTarget = null } ?: return
+        if (!granted) {
+            return message(
+                if (target == SpeechInputTarget.Goal) "Ohne Mikrofonberechtigung kann kein Ziel aufgenommen werden."
+                else "Ohne Mikrofonberechtigung können keine Zusatzinformationen aufgenommen werden.",
+            )
+        }
+        val canStart = when (target) {
+            SpeechInputTarget.Goal -> mutableState.value.goalDraftActive && mutableState.value.goalInputState == GoalInputState.Idle
+            SpeechInputTarget.AllStacks -> mutableState.value.allStacksSetupOpen && mutableState.value.allStacksInputState == GoalInputState.Idle
+        }
+        if (!canStart) return
+        if (!micRecorder.start(viewModelScope)) {
             message("Die Mikrofonaufnahme konnte nicht gestartet werden.")
+            return
+        }
+        mutableState.update {
+            when (target) {
+                SpeechInputTarget.Goal -> it.copy(goalInputState = GoalInputState.Recording)
+                SpeechInputTarget.AllStacks -> it.copy(allStacksInputState = GoalInputState.Recording)
+            }
         }
     }
 
@@ -628,6 +666,162 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         goalDraftBeforeImprovement = null
         improvedGoalVersions.clear()
         mutableState.update { it.copy(canUndoGoalImprovement = false) }
+    }
+
+    private fun openAllStacksSetup(reset: Boolean) {
+        if (stacks.isEmpty()) return message("Keine Stacks vorhanden")
+        if (reset) {
+            goalInputJob?.cancel()
+            micRecorder.release()
+            pendingSpeechTarget = null
+            allStacksDraftBeforeImprovement = null
+            improvedAllStacksVersions.clear()
+        }
+        mutableState.update {
+            it.copy(
+                allStacksSetupOpen = true,
+                selectedAllStackIds = if (reset) stacks.mapTo(linkedSetOf()) { stack -> stack.id } else it.selectedAllStackIds,
+                allStacksAdditionalInfo = if (reset) "" else it.allStacksAdditionalInfo,
+                allStacksInputState = GoalInputState.Idle,
+                canUndoAllStacksImprovement = false,
+            )
+        }
+    }
+
+    private fun dismissAllStacksSetup() {
+        if (!mutableState.value.allStacksSetupOpen) return
+        goalInputJob?.cancel()
+        goalInputJob = null
+        micRecorder.release()
+        if (pendingSpeechTarget == SpeechInputTarget.AllStacks) pendingSpeechTarget = null
+        clearAllStacksImprovementHistory()
+        mutableState.update { it.copy(allStacksSetupOpen = false, allStacksInputState = GoalInputState.Idle) }
+    }
+
+    private fun toggleAllStackSelection(stackId: String) {
+        mutableState.update { current ->
+            val selected = current.selectedAllStackIds.toMutableSet()
+            if (!selected.add(stackId)) selected.remove(stackId)
+            current.copy(selectedAllStackIds = selected)
+        }
+    }
+
+    private fun updateAllStacksAdditionalInfo(text: String) {
+        clearAllStacksImprovementHistory()
+        mutableState.update { it.copy(allStacksAdditionalInfo = text) }
+    }
+
+    private fun toggleAllStacksRecording() {
+        if (!mutableState.value.allStacksSetupOpen) return
+        when (mutableState.value.allStacksInputState) {
+            GoalInputState.Idle -> {
+                if (container.groqSchluesselAktiv().isBlank()) {
+                    message("Bitte zuerst unter Einstellungen einen Groq-API-Schlüssel hinterlegen.")
+                } else {
+                    pendingSpeechTarget = SpeechInputTarget.AllStacks
+                    sendEffect(StackLaborUiEffect.RequestMicrophonePermission)
+                }
+            }
+            GoalInputState.Recording -> stopAndTranscribeAllStacksInfo()
+            GoalInputState.Transcribing, GoalInputState.Improving -> Unit
+        }
+    }
+
+    private fun stopAndTranscribeAllStacksInfo() {
+        if (goalInputJob?.isActive == true) return
+        goalInputJob = viewModelScope.launch {
+            mutableState.update { it.copy(allStacksInputState = GoalInputState.Transcribing) }
+            try {
+                val wav = micRecorder.stop()
+                if (wav == null) {
+                    message("Ich habe nichts verstanden.")
+                    return@launch
+                }
+                val transcript = container.groqTranscriber.transcribe(container.groqSchluesselAktiv(), wav).trim()
+                if (transcript.isBlank()) {
+                    message("Ich habe nichts verstanden.")
+                } else if (mutableState.value.allStacksSetupOpen) {
+                    clearAllStacksImprovementHistory()
+                    mutableState.update { current ->
+                        current.copy(
+                            allStacksAdditionalInfo = listOf(current.allStacksAdditionalInfo.trim(), transcript)
+                                .filter(String::isNotBlank)
+                                .joinToString(" "),
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                message(error.message ?: "Die Transkription ist fehlgeschlagen.")
+            } finally {
+                goalInputJob = null
+                mutableState.update { it.copy(allStacksInputState = GoalInputState.Idle) }
+            }
+        }
+    }
+
+    private fun improveAllStacksAdditionalInfo() {
+        val displayedAtStart = mutableState.value.allStacksAdditionalInfo
+        val source = allStacksDraftBeforeImprovement ?: displayedAtStart.trim()
+        if (source.isBlank() || mutableState.value.allStacksInputState != GoalInputState.Idle) return
+        if (container.oauth.state.value is CodexAuthState.SignedOut) {
+            return message("Bitte zuerst unter Einstellungen bei Codex anmelden.")
+        }
+        goalInputJob = viewModelScope.launch {
+            mutableState.update { it.copy(allStacksInputState = GoalInputState.Improving) }
+            try {
+                val improved = container.goalTextImprover.improveAdditionalInformation(source, improvedAllStacksVersions)
+                if (mutableState.value.allStacksSetupOpen && mutableState.value.allStacksAdditionalInfo == displayedAtStart) {
+                    if (allStacksDraftBeforeImprovement == null) allStacksDraftBeforeImprovement = source
+                    improvedAllStacksVersions += improved
+                    mutableState.update { current ->
+                        if (current.allStacksSetupOpen && current.allStacksAdditionalInfo == displayedAtStart) {
+                            current.copy(allStacksAdditionalInfo = improved, canUndoAllStacksImprovement = true)
+                        } else current
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                message(error.message ?: "Die Zusatzinformationen konnten nicht verbessert werden.")
+            } finally {
+                goalInputJob = null
+                mutableState.update { it.copy(allStacksInputState = GoalInputState.Idle) }
+            }
+        }
+    }
+
+    private fun undoAllStacksImprovement() {
+        val original = allStacksDraftBeforeImprovement ?: return
+        allStacksDraftBeforeImprovement = null
+        mutableState.update { it.copy(allStacksAdditionalInfo = original, canUndoAllStacksImprovement = false) }
+    }
+
+    private fun clearAllStacksImprovementHistory() {
+        allStacksDraftBeforeImprovement = null
+        improvedAllStacksVersions.clear()
+        mutableState.update { it.copy(canUndoAllStacksImprovement = false) }
+    }
+
+    private fun confirmEvaluateAll() {
+        val selectedIds = mutableState.value.selectedAllStackIds
+        if (selectedIds.isEmpty()) return message("Bitte mindestens einen Stack auswählen.")
+        val additionalInformation = mutableState.value.allStacksAdditionalInfo.trim()
+        dismissAllStacksSetup()
+        mutableState.update {
+            it.copy(
+                selectedAllStackIds = selectedIds,
+                allStacksAdditionalInfo = additionalInformation,
+                dailyDoses = dailyDoses(
+                    entries.filter { entry -> entry.stackId in selectedIds },
+                    medicines,
+                    stacks.filter { stack -> stack.id in selectedIds },
+                    settings.dosisVariante,
+                ),
+            )
+        }
+        evaluateAll(selectedIds, additionalInformation)
     }
 
     private fun buildBreakdownItems(
@@ -1008,13 +1202,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun evaluateAll() {
-        if (stacks.isEmpty()) return message("Keine Stacks vorhanden")
+    private fun evaluateAll(stackIds: Set<String>, additionalInformation: String) {
+        if (stackIds.isEmpty()) return message("Keine Stacks ausgewählt")
         evaluationJob?.cancel()
         evaluationJob = viewModelScope.launch {
             mutableState.update { it.copy(allStacksEvaluationState = EvaluationState.Running, streamedEvaluationText = "") }
             try {
-                val details = container.evaluator.evaluateAllStacks { event ->
+                val details = container.evaluator.evaluateAllStacks(stackIds, additionalInformation) { event ->
                     when (event) {
                         is CodexStreamEvent.Stage -> mutableState.update { it.copy(streamedEvaluationText = event.text.mitDeutschenUmlauten()) }
                         is CodexStreamEvent.NarrativeDelta -> mutableState.update {
@@ -1314,6 +1508,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val settings: AppEinstellungen,
         val medicines: List<Mittel>,
     )
+
+    private enum class SpeechInputTarget { Goal, AllStacks }
 }
 
 class StackLaborViewModelFactory(private val container: AppContainer) : ViewModelProvider.Factory {

@@ -180,6 +180,11 @@ data class StackLaborUiState(
     val goalDraftText: String = "",
     val goalInputState: GoalInputState = GoalInputState.Idle,
     val canUndoGoalImprovement: Boolean = false,
+    val allStacksSetupOpen: Boolean = false,
+    val selectedAllStackIds: Set<String> = emptySet(),
+    val allStacksAdditionalInfo: String = "",
+    val allStacksInputState: GoalInputState = GoalInputState.Idle,
+    val canUndoAllStacksImprovement: Boolean = false,
 )
 
 sealed interface StackLaborUiEffect {
@@ -244,6 +249,13 @@ sealed interface StackLaborEvent {
     data object Undo : StackLaborEvent
     data object EvaluateStack : StackLaborEvent
     data object EvaluateAll : StackLaborEvent
+    data class ToggleAllStackSelection(val stackId: String) : StackLaborEvent
+    data class UpdateAllStacksAdditionalInfo(val text: String) : StackLaborEvent
+    data object ToggleAllStacksRecording : StackLaborEvent
+    data object ImproveAllStacksAdditionalInfo : StackLaborEvent
+    data object UndoAllStacksImprovement : StackLaborEvent
+    data object ConfirmEvaluateAll : StackLaborEvent
+    data object DismissAllStacksSetup : StackLaborEvent
     data object RetryEvaluation : StackLaborEvent
     data object CancelEvaluation : StackLaborEvent
     data object ScheduleRetry : StackLaborEvent

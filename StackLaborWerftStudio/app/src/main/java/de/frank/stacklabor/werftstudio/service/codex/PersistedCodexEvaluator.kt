@@ -53,7 +53,7 @@ class PersistedCodexEvaluator(
         val reasoning = ReasoningEffort.entries.first { it.apiValue == appSettings.codexDenkstufe }
         val request = CodexEvaluationRequest(
             evaluationId = evaluationId,
-            contextJson = contextJson(inhalt),
+            contextJson = contextJson(inhalt, appSettings.dosisVariante),
             goals = inhalt.ziele.mapNotNull { stackZiel ->
                 zielKatalog[stackZiel.zielId]?.let { CodexGoal(it.id, stackZiel.rang, it.text) }
             },
@@ -95,10 +95,13 @@ class PersistedCodexEvaluator(
     }
 
     suspend fun evaluateAllStacks(
+        stackIds: Set<String>,
+        additionalInformation: String,
         evaluationId: String = UUID.randomUUID().toString(),
         onEvent: suspend (CodexStreamEvent) -> Unit = {},
     ): BewertungMitDetails {
-        val stacks = repository.beobachteStacks().first()
+        val stacks = repository.beobachteStacks().first().filter { it.id in stackIds }
+        require(stacks.isNotEmpty()) { "Keine Stacks für die Gesamtauswertung ausgewählt." }
         val inhalte = stacks.map { repository.ladeStackInhalt(it.id) }
         val zielKatalog = repository.beobachteZiele().first().associateBy { it.id }
         val appSettings = settings.einstellungen.first()
@@ -114,7 +117,7 @@ class PersistedCodexEvaluator(
             .sortedBy { it.rank }
         val checksumInput = stacks.map {
             repository.berechnePruefsumme(it.id, appSettings.dosisVariante)
-        }.sorted().joinToString("\u0000")
+        }.sorted().plus(additionalInformation.trim()).joinToString("\u0000")
         val checksum = MessageDigest.getInstance("SHA-256")
             .digest(checksumInput.toByteArray())
             .joinToString("") { "%02x".format(it) }
@@ -122,7 +125,9 @@ class PersistedCodexEvaluator(
             evaluationId = evaluationId,
             contextJson = JSONObject()
                 .put("bereich", "TAG")
-                .put("stacks", JSONArray(inhalte.map { JSONObject(contextJson(it)) }))
+                .put("ausgewählte_stack_ids", JSONArray(stacks.map { it.id }))
+                .put("zusätzliche_informationen", additionalInformation.trim())
+                .put("stacks", JSONArray(inhalte.map { JSONObject(contextJson(it, appSettings.dosisVariante)) }))
                 .toString(),
             goals = goals,
             supplementIds = inhalte.flatMap { it.eintraege }
@@ -163,7 +168,10 @@ class PersistedCodexEvaluator(
         return details
     }
 
-    private fun contextJson(inhalt: de.frank.stacklabor.werftstudio.domain.model.StackInhalt): String {
+    private fun contextJson(
+        inhalt: de.frank.stacklabor.werftstudio.domain.model.StackInhalt,
+        dosisVariante: de.frank.stacklabor.werftstudio.domain.model.DosisVariante,
+    ): String {
         val mittel = inhalt.mittel.associateBy { it.id }
         return JSONObject()
             .put(
@@ -172,24 +180,39 @@ class PersistedCodexEvaluator(
                     .put("id", inhalt.stack.id)
                     .put("name", inhalt.stack.name)
                     .put("zeitpunkt", inhalt.stack.zeitpunkt)
-                    .put("einnahme_hinweis", inhalt.stack.einnahmeHinweis),
+                    .put("einnahme_hinweis", inhalt.stack.einnahmeHinweis)
+                    .put("ausgewertete_dosisvariante", dosisVariante.name),
             )
             .put(
                 "mittel",
-                JSONArray(inhalt.eintraege.filter { it.aktiv }.map { eintrag ->
+                JSONArray(inhalt.eintraege.sortedBy { it.reihenfolge }.map { eintrag ->
                     val katalog = mittel.getValue(eintrag.mittelId)
                     JSONObject()
                         .put("id", katalog.id)
                         .put("name", katalog.name)
                         .put("aktiv", eintrag.aktiv)
                         .put("loeslichkeit", katalog.loeslichkeit.anzeige())
-                        .put("darreichungsform", katalog.darreichungsformAnzeige())
+                        .put("darreichungsform", katalog.darreichungsformText?.trim().orEmpty().ifBlank { katalog.darreichungsformAnzeige() })
+                        .put("hersteller", katalog.hersteller)
+                        .put("durchfallrisiko", katalog.durchfallrisiko)
+                        .put("beistoffe", katalog.beistoffe)
+                        .put("wirkstoffkomponenten", JSONArray(katalog.wirkstoffkomponenten.map { komponente ->
+                            JSONObject()
+                                .put("name", komponente.name)
+                                .put("menge", komponente.menge?.toPlainString())
+                                .put("einheit", komponente.einheit?.anzeige())
+                        }))
                         .put("frequenz", eintrag.frequenzAnzeige())
+                        .put("frequenz_typ", eintrag.frequenzTyp.name)
                         .put("alle_n_tage", eintrag.alleNTage)
+                        .put("reihenfolge", eintrag.reihenfolge)
+                        .put("gruppe_id", eintrag.gruppeId)
                         .put("zusatztext", eintrag.zusatztext)
+                        .put("offener_hinweis", eintrag.offenerHinweis)
                         .put("dosen", JSONArray(eintrag.dosen.map { dosis ->
                             JSONObject()
                                 .put("variante", dosis.variante.name)
+                                .put("aktiv_für_auswertung", dosis.variante == dosisVariante)
                                 .put("stueckzahl", dosis.stueckzahl.toPlainString())
                                 .put("menge_je_stueck", dosis.mengeJeStueck?.toPlainString())
                                 .put("einheit", dosis.einheitAnzeige())

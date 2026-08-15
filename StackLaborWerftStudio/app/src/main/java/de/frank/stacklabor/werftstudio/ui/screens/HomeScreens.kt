@@ -14,14 +14,20 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
@@ -31,16 +37,20 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
@@ -64,7 +74,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +100,7 @@ import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
 import de.frank.stacklabor.werftstudio.ui.components.color
 import de.frank.stacklabor.werftstudio.ui.model.DoseVariant
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationState
+import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
 import de.frank.stacklabor.werftstudio.ui.model.SignalState
 import de.frank.stacklabor.werftstudio.ui.model.SortMode
@@ -871,6 +884,16 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
             ) {
+                state.allStacksEvaluationId?.let { evaluationId ->
+                    item {
+                        Spacer(Modifier.height(10.dp))
+                        EvaluationSummaryCard(
+                            title = "Gesamtauswertung im Vollbild",
+                            body = "Vollständige gemeinsame Auswertung der ausgewählten Stacks",
+                            action = "Öffnen",
+                        ) { callbacks.onNavigate(StackLaborRoute.Evaluation(evaluationId, Origin.AllStacks)) }
+                    }
+                }
                 item { AllStacksSectionTitle("Tagesgesamtdosis") }
                 item {
                     Column {
@@ -902,6 +925,198 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                     if (running) "Auswertung läuft — Abbrechen" else "Alles prüfen",
                     { callbacks.onEvent(if (running) StackLaborEvent.CancelEvaluation else StackLaborEvent.EvaluateAll) },
                 )
+            }
+        }
+    }
+    if (state.allStacksSetupOpen) AllStacksSetupDialog(state, callbacks)
+}
+
+@Composable
+private fun AllStacksSetupDialog(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
+    val colors = StackLaborTheme.colors
+    val busy = state.allStacksInputState == GoalInputState.Transcribing || state.allStacksInputState == GoalInputState.Improving
+    Dialog(
+        onDismissRequest = { callbacks.onEvent(StackLaborEvent.DismissAllStacksSetup) },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Surface(
+            Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.90f)
+                .imePadding()
+                .depthShadow(RoundedCornerShape(18.dp), 30.dp, strength = 1.6f),
+            shape = RoundedCornerShape(18.dp),
+            color = colors.surface,
+            border = BorderStroke(1.5.dp, metalRim(0.95f)),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                Column(Modifier.padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 8.dp)) {
+                    Text("Gesamtauswertung vorbereiten", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Nur Stacks mit Häkchen werden gemeinsam ausgewertet.",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = colors.textMuted,
+                    )
+                }
+                LazyColumn(
+                    Modifier.weight(1f).padding(horizontal = 12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(state.stacks, key = { it.id }) { stack ->
+                        val selected = stack.id in state.selectedAllStackIds
+                        RaisedPanel(
+                            Modifier.fillMaxWidth().height(58.dp),
+                            elevation = if (selected) 12.dp else 5.dp,
+                            onClick = { callbacks.onEvent(StackLaborEvent.ToggleAllStackSelection(stack.id)) },
+                        ) {
+                            Row(
+                                Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                WerftCheckbox(selected)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        stack.name,
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        stack.meta.ifBlank { "Keine Zeit- oder Einnahmeangabe" },
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                        color = colors.textMuted,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Zusätzliche Informationen",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                    item { AllStacksAdditionalInfoEditor(state, callbacks) }
+                }
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = { callbacks.onEvent(StackLaborEvent.DismissAllStacksSetup) },
+                        modifier = Modifier.weight(0.36f),
+                    ) { Text("Abbrechen") }
+                    PrimaryAction(
+                        "${state.selectedAllStackIds.size} Stacks auswerten",
+                        { if (!busy) callbacks.onEvent(StackLaborEvent.ConfirmEvaluateAll) },
+                        Modifier.weight(0.64f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllStacksAdditionalInfoEditor(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
+    val colors = StackLaborTheme.colors
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val busy = state.allStacksInputState == GoalInputState.Transcribing || state.allStacksInputState == GoalInputState.Improving
+    LaunchedEffect(focused) {
+        if (focused) {
+            kotlinx.coroutines.delay(250L)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+    Column(
+        Modifier.fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .depthShadow(RoundedCornerShape(12.dp), 12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.elevated)
+            .border(1.dp, colors.border, RoundedCornerShape(12.dp)),
+    ) {
+        BasicTextField(
+            value = state.allStacksAdditionalInfo,
+            onValueChange = { callbacks.onEvent(StackLaborEvent.UpdateAllStacksAdditionalInfo(it)) },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 128.dp)
+                .onFocusChanged { focused = it.isFocused }
+                .padding(12.dp),
+            textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = colors.textStrong),
+            cursorBrush = SolidColor(colors.accent),
+            decorationBox = { inner ->
+                Box(Modifier.fillMaxSize()) {
+                    if (state.allStacksAdditionalInfo.isBlank()) {
+                        Text(
+                            "Zum Beispiel Einnahme rund um Sport, Mahlzeiten, Wasserflasche oder persönliche Beobachtungen …",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                            color = colors.textMuted,
+                        )
+                    }
+                    inner()
+                }
+            },
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                when (state.allStacksInputState) {
+                    GoalInputState.Recording -> "Aufnahme läuft · zum Stoppen tippen"
+                    GoalInputState.Transcribing -> "Groq transkribiert …"
+                    GoalInputState.Improving -> "Codex verbessert …"
+                    GoalInputState.Idle -> "Spracheingabe oder KI-Verbesserung"
+                },
+                Modifier.weight(1f),
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = if (state.allStacksInputState == GoalInputState.Recording) colors.red else colors.textMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            IconTouchButton(
+                if (state.allStacksInputState == GoalInputState.Recording) "Aufnahme stoppen" else "Zusatzinformationen einsprechen",
+                { if (!busy) callbacks.onEvent(StackLaborEvent.ToggleAllStacksRecording) },
+            ) {
+                if (state.allStacksInputState == GoalInputState.Transcribing) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.accent)
+                } else {
+                    Icon(
+                        if (state.allStacksInputState == GoalInputState.Recording) Icons.Default.Stop else Icons.Default.Mic,
+                        null,
+                        Modifier.size(22.dp),
+                        tint = if (state.allStacksInputState == GoalInputState.Recording) colors.red else if (busy) colors.disabled else colors.accent,
+                    )
+                }
+            }
+            IconTouchButton(
+                "Zusatzinformationen mit Codex verbessern",
+                { if (!busy && state.allStacksAdditionalInfo.isNotBlank()) callbacks.onEvent(StackLaborEvent.ImproveAllStacksAdditionalInfo) },
+            ) {
+                if (state.allStacksInputState == GoalInputState.Improving) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.accent)
+                } else {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        null,
+                        Modifier.size(22.dp),
+                        tint = if (!busy && state.allStacksAdditionalInfo.isNotBlank()) colors.accent else colors.disabled,
+                    )
+                }
+            }
+            if (state.canUndoAllStacksImprovement) {
+                IconTouchButton("KI-Verbesserung rückgängig machen", { callbacks.onEvent(StackLaborEvent.UndoAllStacksImprovement) }) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(22.dp), tint = colors.accent)
+                }
             }
         }
     }

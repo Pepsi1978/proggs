@@ -225,6 +225,8 @@ internal fun codexPayload(
         append("Nur dieses JSON, kein Text davor oder danach. ")
         append("Nicht genannte Mittel-Ziel-Paare gelten als neutral. ")
         append("Als 'alterniert mit' gekennzeichnete Paare nie als Konkurrenz melden. ")
+        append("Berücksichtige bei einer Tagesauswertung ausschließlich die unter 'ausgewählte_stack_ids' aufgeführten Stacks und die 'zusätzliche_informationen' vollständig. ")
+        append("Einträge mit 'aktiv=false' gehören nicht zur aktuellen Einnahme und dürfen nicht bewertet werden. ")
         append("Nutze in den ID-Feldern ('nem', 'nem_a', 'nem_b', 'ziel', 'frage') ausschließlich die übergebenen IDs. ")
         // Ohne diese Ansage schrieb das Modell die internen IDs in den Fließtext — also
         // "hyaluronsaeure" und "loewenmaehne" statt "Hyaluronsäure" und "Löwenmähne".
