@@ -290,6 +290,22 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val usageByMedicine = entries.groupingBy { it.mittelId }.eachCount()
         val catalogUi = medicines.map { it.toCatalogMedicineUi(usageByMedicine[it.id] ?: 0) }
         val selectedStack = stacks.firstOrNull { it.id == selectedStackId.value }
+        val selectedTargets = stackGoals.filter { it.stackId == selectedStack?.id }.associateBy { it.zielId }
+        val usageByGoal = stackGoals.groupingBy { it.zielId }.eachCount()
+        val selectedGoalSignals = selectedStack?.let { ampeln[it.id]?.zielAmpeln }.orEmpty()
+        val selectedEvaluation = currentEvaluation?.takeIf { it.bewertung.stackId == selectedStack?.id }
+        val goalCatalogUi = goals.map { goal ->
+            val target = selectedTargets[goal.id]
+            GoalUi(
+                id = goal.id,
+                rank = target?.rang ?: 0,
+                text = goal.text,
+                signal = (selectedGoalSignals[goal.id] ?: Ampel.GRAU).toSignalState(),
+                selected = target != null,
+                reason = selectedEvaluation?.zellen?.firstOrNull { it.zielId == goal.id }?.grund.orEmpty().mitDeutschenUmlauten(),
+                usage = "in ${usageByGoal[goal.id] ?: 0} Stacks verwendet",
+            )
+        }.sortedWith(compareBy<GoalUi> { if (it.selected) 0 else 1 }.thenBy { if (it.selected) it.rank else Int.MAX_VALUE }.thenBy { it.text })
         mutableState.update { current ->
             current.copy(
                 loading = false,
@@ -301,6 +317,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackTime = selectedStack?.zeitpunkt ?: current.stackTime,
                 stackNote = selectedStack?.einnahmeHinweis ?: current.stackNote,
                 catalogMedicines = catalogUi,
+                goals = goalCatalogUi,
                 dailyDoses = dailyDoses(entries, medicines, stacks, settings.dosisVariante),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
                 ttsVoiceLabel = voiceLabel(settings.ttsStimme, settings.ttsAnbieter),
