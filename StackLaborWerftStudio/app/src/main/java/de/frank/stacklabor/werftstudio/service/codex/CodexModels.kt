@@ -26,12 +26,15 @@ class CodexException(
 
 data class CodexGoal(val id: String, val rank: Int, val text: String)
 
+enum class CodexEvaluationScope { STACK, DAY }
+
 data class CodexEvaluationRequest(
     val evaluationId: String,
     val contextJson: String,
     val goals: List<CodexGoal>,
     val supplementIds: Set<String>,
     val questionIds: Set<String>,
+    val scope: CodexEvaluationScope,
     val model: CodexModel = CodexModel.TERRA,
     val reasoningEffort: ReasoningEffort = ReasoningEffort.HIGH,
 )

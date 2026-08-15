@@ -219,6 +219,7 @@ internal fun codexPayload(
     request: CodexEvaluationRequest,
     goals: List<CodexGoal>,
     repairRawOutput: String? = null,
+    includeStackConclusion: Boolean = false,
 ): JSONObject {
     val instructions = buildString {
         append("Bewerte Nahrungsergänzungsmittel evidenzorientiert und vorsichtig. ")
@@ -243,6 +244,11 @@ internal fun codexPayload(
         append("Beachte die deutsche Groß- und Kleinschreibung: Substantive und Satzanfänge groß, ")
         append("Eigennamen und Präparatenamen so geschrieben wie im Feld 'name'. ")
         append("Gründe sind knapp. ")
+        if (request.scope == CodexEvaluationScope.STACK) {
+            append("Der einzelne Stack ist eine gemeinsame Einnahmeeinheit: Gehe davon aus, dass alle aktiven Mittel gleichzeitig eingenommen werden, sofern die Kontextdaten nicht ausdrücklich etwas anderes sagen. ")
+            append("Vergleiche JEDES aktive Mittel mit JEDEM anderen aktiven Mittel auf gegenseitige Behinderung oder Verstärkung der Wirkung, Aufnahme und Bioverfügbarkeit, auf antagonistische Mechanismen, konkurrierende Transport- oder Stoffwechselwege sowie nötige zeitliche Abstände. ")
+            append("Trage jede belastbare problematische Paarung vollständig in 'konkurrenzen' ein und erkläre in 'gesamt', ob der Gesamtstack bei gleichzeitiger Einnahme stimmig ist. ")
+        }
         // Bei diesen Mitteln kennt Frank die Einnahme selbst — allgemeine Hinweise dazu sind
         // nur Rauschen. Genannt werden sie deshalb ausschließlich bei einem echten Konflikt.
         append(
@@ -260,6 +266,16 @@ internal fun codexPayload(
             append("Wechselwirkungen, sinnvolle Einnahme-Reihenfolge, Abstände, Dosishöhen und Verträglichkeit. ")
             append("Schreibe das ausführlich in 'gesamt'. ")
         }
+        if (includeStackConclusion) {
+            append("Beende 'gesamt' nach allen anderen Inhalten mit der eigenen Überschrift 'Zusätzliche Vorschläge'. ")
+            if (request.goals.isEmpty()) {
+                append("Da keine Ziele hinterlegt sind, schreibe unter dieser Überschrift, dass keine zielbezogenen Ergänzungsvorschläge möglich sind. ")
+            } else {
+                append("Schlage darunter nur zusätzliche Nahrungsergänzungsmittel vor, die noch NICHT im Stack enthalten sind, mindestens eines der hinterlegten Ziele plausibel unterstützen und nach Prüfung des VOLLSTÄNDIGEN aktuellen Stacks keine vorhandene Wirkung, Aufnahme oder Bioverfügbarkeit behindern. ")
+                append("Nenne pro Vorschlag den Namen, das unterstützte Ziel, den knappen evidenzorientierten Grund und eine konkrete Verträglichkeitsprüfung gegenüber dem Gesamtstack einschließlich sinnvoller Einnahmezeit oder Abstand. ")
+                append("Empfiehl nichts nur der Vollständigkeit halber. Wenn kein ausreichend sicherer und kompatibler Zusatz erkennbar ist, sage das ausdrücklich. ")
+            }
+        }
         if (repairRawOutput != null) {
             append("Der erste Ausgabeversuch war ungültig. Repariere ihn strikt nach dem Schema; ")
             append("gib erneut nur vollständiges JSON aus.")
@@ -273,6 +289,11 @@ internal fun codexPayload(
         } else {
             append("\n\nIn dieser Teilanfrage zu bewertende Ziele:\n")
             append(JSONArray(goals.map { JSONObject().put("id", it.id).put("rang", it.rank).put("text", it.text) }))
+        }
+        if (includeStackConclusion && request.goals.isNotEmpty()) {
+            append("\n\nAlle Ziele des Stacks nur für die abschließenden Ergänzungsvorschläge in 'gesamt':\n")
+            append(JSONArray(request.goals.map { JSONObject().put("rang", it.rank).put("text", it.text) }))
+            append("\nDiese Gesamtliste darf keine zusätzlichen Einträge in 'zellen' erzeugen; dort gelten weiterhin nur die Ziele der Teilanfrage.")
         }
         if (repairRawOutput != null) {
             append("\n\nZu reparierender Ausgabeversuch:\n")

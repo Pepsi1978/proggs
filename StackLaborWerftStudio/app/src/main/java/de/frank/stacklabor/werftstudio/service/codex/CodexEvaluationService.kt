@@ -15,6 +15,7 @@ class CodexEvaluationService(private val client: CodexResponsesClient) {
         // beurteilt statt gegen Ziele gewichtet. Ein leeres chunked() wuerde gar nichts fragen.
         val chunks = if (request.goals.isEmpty()) listOf(emptyList()) else request.goals.chunked(MAX_GOALS_PER_REQUEST)
         for ((chunkIndex, goals) in chunks.withIndex()) {
+            val includeStackConclusion = request.scope == CodexEvaluationScope.STACK && chunkIndex == chunks.lastIndex
             onEvent(
                 CodexStreamEvent.Stage(
                     if (goals.isEmpty()) {
@@ -25,7 +26,7 @@ class CodexEvaluationService(private val client: CodexResponsesClient) {
                 ),
             )
             val raw = client.request(
-                payload = codexPayload(request, goals),
+                payload = codexPayload(request, goals, includeStackConclusion = includeStackConclusion),
                 operationId = "${request.evaluationId}:$chunkIndex",
                 allowNetworkRetry = allowNetworkRetry,
                 onEvent = onEvent,
@@ -40,7 +41,12 @@ class CodexEvaluationService(private val client: CodexResponsesClient) {
             onEvent(CodexStreamEvent.Stage("Repariere Antwortformat …"))
             val repairedRaw = runCatching {
                 client.request(
-                    payload = codexPayload(request, goals, repairRawOutput = raw),
+                    payload = codexPayload(
+                        request,
+                        goals,
+                        repairRawOutput = raw,
+                        includeStackConclusion = includeStackConclusion,
+                    ),
                     operationId = "${request.evaluationId}:$chunkIndex:repair",
                     allowNetworkRetry = false,
                     onEvent = onEvent,

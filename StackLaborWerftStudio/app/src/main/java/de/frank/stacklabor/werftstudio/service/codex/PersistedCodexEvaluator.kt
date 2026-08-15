@@ -59,6 +59,7 @@ class PersistedCodexEvaluator(
             },
             supplementIds = inhalt.eintraege.filter { it.aktiv }.mapTo(linkedSetOf()) { it.mittelId },
             questionIds = inhalt.fragen.mapTo(linkedSetOf()) { it.id },
+            scope = CodexEvaluationScope.STACK,
             model = model,
             reasoningEffort = reasoning,
         )
@@ -144,6 +145,7 @@ class PersistedCodexEvaluator(
                 .filter { it.aktiv }
                 .mapTo(linkedSetOf()) { it.mittelId },
             questionIds = inhalte.flatMap { it.fragen }.mapTo(linkedSetOf()) { it.id },
+            scope = CodexEvaluationScope.DAY,
             model = model,
             reasoningEffort = reasoning,
         )
