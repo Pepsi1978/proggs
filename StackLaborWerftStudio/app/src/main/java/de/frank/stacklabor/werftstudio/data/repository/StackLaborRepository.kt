@@ -274,7 +274,7 @@ class RoomStackLaborRepository(
     override suspend fun setzeOffenenHinweis(eintragId: String, hinweis: String?): Unit = stackDao.setzeOffenenHinweis(eintragId, hinweis)
 
     override suspend fun speichereZiel(ziel: Ziel) {
-        require(ziel.text.isNotBlank() && ziel.text.length <= 200) { "Der Zieltext muss 1 bis 200 Zeichen haben." }
+        require(ziel.text.isNotBlank()) { "Der Zieltext darf nicht leer sein." }
         zielDao.speichereZiel(ziel.toEntity())
     }
 

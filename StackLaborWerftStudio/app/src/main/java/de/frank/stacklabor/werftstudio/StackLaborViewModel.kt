@@ -131,6 +131,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var clonedVoicesJob: Job? = null
     private var goalInputJob: Job? = null
     private val micRecorder = MicRecorder(container.applicationContext)
+    private var goalDraftBeforeImprovement: String? = null
+    private val improvedGoalVersions = mutableListOf<String>()
     private var clonedVoices: List<ClonedVoice> = emptyList()
     private val competitionJobs = mutableMapOf<String, Job>()
     private val pendingCompetitionIds = mutableMapOf<String, MutableSet<String>>()
@@ -179,11 +181,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.ApplyStackOrder -> launchAction { repository.sortiereStacks(event.stackIds) }
             is StackLaborEvent.EditGoal -> launchAction { repository.speichereZiel(Ziel(event.goalId, event.text.trim())) }
             is StackLaborEvent.BeginGoalDraft -> beginGoalDraft(event.text)
-            is StackLaborEvent.UpdateGoalDraft -> mutableState.update { it.copy(goalDraftText = event.text.take(MAX_GOAL_LENGTH)) }
+            is StackLaborEvent.UpdateGoalDraft -> updateGoalDraft(event.text)
             StackLaborEvent.CancelGoalDraft -> cancelGoalDraft()
             StackLaborEvent.ToggleGoalRecording -> toggleGoalRecording()
             is StackLaborEvent.MicrophonePermissionResult -> microphonePermissionResult(event.granted)
             StackLaborEvent.ImproveGoalDraft -> improveGoalDraft()
+            StackLaborEvent.UndoGoalImprovement -> undoGoalImprovement()
             is StackLaborEvent.ToggleGoal -> toggleGoal(event.stackId, event.goalId)
             is StackLaborEvent.ReorderGoal -> reorderGoal(event.stackId, event.goalId, event.targetRank)
             is StackLaborEvent.UpdateStackName -> stackDraft = stackDraft.copy(name = event.value)
@@ -482,15 +485,22 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private fun beginGoalDraft(text: String) {
         goalInputJob?.cancel()
         micRecorder.release()
+        clearGoalImprovementHistory()
         mutableState.update {
-            it.copy(goalDraftActive = true, goalDraftText = text.take(MAX_GOAL_LENGTH), goalInputState = GoalInputState.Idle)
+            it.copy(goalDraftActive = true, goalDraftText = text, goalInputState = GoalInputState.Idle)
         }
+    }
+
+    private fun updateGoalDraft(text: String) {
+        clearGoalImprovementHistory()
+        mutableState.update { it.copy(goalDraftText = text) }
     }
 
     private fun cancelGoalDraft() {
         goalInputJob?.cancel()
         goalInputJob = null
         micRecorder.release()
+        clearGoalImprovementHistory()
         mutableState.update { it.copy(goalDraftActive = false, goalDraftText = "", goalInputState = GoalInputState.Idle) }
     }
 
@@ -533,12 +543,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 if (transcript.isBlank()) {
                     message("Ich habe nichts verstanden.")
                 } else if (mutableState.value.goalDraftActive) {
+                    clearGoalImprovementHistory()
                     mutableState.update { current ->
                         current.copy(
                             goalDraftText = listOf(current.goalDraftText.trim(), transcript)
                                 .filter(String::isNotBlank)
-                                .joinToString(" ")
-                                .take(MAX_GOAL_LENGTH),
+                                .joinToString(" "),
                         )
                     }
                 }
@@ -554,7 +564,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun improveGoalDraft() {
-        val source = mutableState.value.goalDraftText.trim()
+        val displayedAtStart = mutableState.value.goalDraftText
+        val source = goalDraftBeforeImprovement ?: displayedAtStart.trim()
         if (source.isBlank() || mutableState.value.goalInputState != GoalInputState.Idle) return
         if (container.oauth.state.value is CodexAuthState.SignedOut) {
             return message("Bitte zuerst unter Einstellungen bei Codex anmelden.")
@@ -562,12 +573,14 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         goalInputJob = viewModelScope.launch {
             mutableState.update { it.copy(goalInputState = GoalInputState.Improving) }
             try {
-                val improved = container.goalTextImprover.improve(source)
-                mutableState.update { current ->
-                    if (current.goalDraftActive && current.goalDraftText.trim() == source) {
-                        current.copy(goalDraftText = improved)
-                    } else {
-                        current
+                val improved = container.goalTextImprover.improve(source, improvedGoalVersions)
+                if (mutableState.value.goalDraftActive && mutableState.value.goalDraftText == displayedAtStart) {
+                    if (goalDraftBeforeImprovement == null) goalDraftBeforeImprovement = source
+                    improvedGoalVersions += improved
+                    mutableState.update { current ->
+                        if (current.goalDraftActive && current.goalDraftText == displayedAtStart) {
+                            current.copy(goalDraftText = improved, canUndoGoalImprovement = true)
+                        } else current
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -579,6 +592,18 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 mutableState.update { it.copy(goalInputState = GoalInputState.Idle) }
             }
         }
+    }
+
+    private fun undoGoalImprovement() {
+        val original = goalDraftBeforeImprovement ?: return
+        goalDraftBeforeImprovement = null
+        mutableState.update { it.copy(goalDraftText = original, canUndoGoalImprovement = false) }
+    }
+
+    private fun clearGoalImprovementHistory() {
+        goalDraftBeforeImprovement = null
+        improvedGoalVersions.clear()
+        mutableState.update { it.copy(canUndoGoalImprovement = false) }
     }
 
     private fun buildBreakdownItems(
@@ -1219,8 +1244,6 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val settings: AppEinstellungen,
     )
 }
-
-private const val MAX_GOAL_LENGTH = 200
 
 class StackLaborViewModelFactory(private val container: AppContainer) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
@@ -107,6 +108,8 @@ fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, call
                 onEditorTextChange = { callbacks.onEvent(StackLaborEvent.UpdateGoalDraft(it)) },
                 onMicrophone = { callbacks.onEvent(StackLaborEvent.ToggleGoalRecording) },
                 onImprove = { callbacks.onEvent(StackLaborEvent.ImproveGoalDraft) },
+                canUndoImprovement = state.canUndoGoalImprovement,
+                onUndoImprovement = { callbacks.onEvent(StackLaborEvent.UndoGoalImprovement) },
                 onEdit = { openEditor(it.id, it.text) },
                 onAdd = { openEditor(null, "") },
                 onSave = {
@@ -140,6 +143,8 @@ private fun GoalCatalogList(
     onEditorTextChange: (String) -> Unit,
     onMicrophone: () -> Unit,
     onImprove: () -> Unit,
+    canUndoImprovement: Boolean,
+    onUndoImprovement: () -> Unit,
     onEdit: (de.frank.stacklabor.werftstudio.ui.model.GoalUi) -> Unit,
     onAdd: () -> Unit,
     onSave: () -> Unit,
@@ -166,6 +171,8 @@ private fun GoalCatalogList(
                         inputState = inputState,
                         onMicrophone = onMicrophone,
                         onImprove = onImprove,
+                        canUndoImprovement = canUndoImprovement,
+                        onUndoImprovement = onUndoImprovement,
                         onEdit = {},
                         onSave = onSave,
                         onDelete = onCancel,
@@ -183,6 +190,8 @@ private fun GoalCatalogList(
                     inputState = inputState,
                     onMicrophone = onMicrophone,
                     onImprove = onImprove,
+                    canUndoImprovement = canUndoImprovement,
+                    onUndoImprovement = onUndoImprovement,
                     onEdit = { onEdit(goal) },
                     onSave = onSave,
                     onDelete = onDelete,
@@ -202,6 +211,8 @@ private fun GoalCatalogCard(
     inputState: GoalInputState,
     onMicrophone: () -> Unit,
     onImprove: () -> Unit,
+    canUndoImprovement: Boolean,
+    onUndoImprovement: () -> Unit,
     onEdit: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -248,8 +259,6 @@ private fun GoalCatalogCard(
                     Text(
                         title,
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
@@ -310,6 +319,11 @@ private fun GoalCatalogCard(
                         CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.accent)
                     } else {
                         Icon(Icons.Default.AutoAwesome, null, Modifier.size(22.dp), tint = if (!busy && title.isNotBlank()) colors.accent else colors.disabled)
+                    }
+                }
+                if (canUndoImprovement) {
+                    IconTouchButton("KI-Verbesserung rückgängig machen", { if (!busy) onUndoImprovement() }) {
+                        Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(22.dp), tint = if (busy) colors.disabled else colors.accent)
                     }
                 }
             }

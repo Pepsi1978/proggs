@@ -171,6 +171,7 @@ data class StackLaborUiState(
     val goalDraftActive: Boolean = false,
     val goalDraftText: String = "",
     val goalInputState: GoalInputState = GoalInputState.Idle,
+    val canUndoGoalImprovement: Boolean = false,
 )
 
 sealed interface StackLaborUiEffect {
@@ -209,6 +210,7 @@ sealed interface StackLaborEvent {
     data object ToggleGoalRecording : StackLaborEvent
     data class MicrophonePermissionResult(val granted: Boolean) : StackLaborEvent
     data object ImproveGoalDraft : StackLaborEvent
+    data object UndoGoalImprovement : StackLaborEvent
     data class ToggleGoal(val stackId: String, val goalId: String) : StackLaborEvent
     data class ReorderGoal(val stackId: String, val goalId: String, val targetRank: Int) : StackLaborEvent
     data class UpdateStackName(val value: String) : StackLaborEvent
