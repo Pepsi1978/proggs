@@ -110,6 +110,13 @@ data class DoseSummaryUi(val name: String, val dose: String, val meta: String)
 
 data class CompetitionUi(val title: String, val detail: String)
 
+sealed interface MedicineSolubilityAiState {
+    data object Idle : MedicineSolubilityAiState
+    data class Loading(val name: String) : MedicineSolubilityAiState
+    data class Success(val name: String, val solubility: Solubility) : MedicineSolubilityAiState
+    data class Error(val name: String, val message: String) : MedicineSolubilityAiState
+}
+
 data class StackLaborUiState(
     val loading: Boolean = true,
     val appearance: Appearance = Appearance.Light,
@@ -128,6 +135,7 @@ data class StackLaborUiState(
     val stackTime: String = "",
     val stackNote: String = "",
     val medicineName: String = "",
+    val medicineSolubilityAiState: MedicineSolubilityAiState = MedicineSolubilityAiState.Idle,
     val evaluationParagraphs: List<String> = emptyList(),
     val streamedEvaluationText: String = "",
     val evaluationMeta: String = "Noch nicht ausgewertet",

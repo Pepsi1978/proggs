@@ -38,9 +38,9 @@ android {
         applicationId = "de.frank.stacklabor.werftstudio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "0.3.14"
-        buildConfigField("String", "VERSION_BUMPED_AT", quoted("15.08.2026, 12:30 Uhr"))
+        versionCode = 33
+        versionName = "0.3.15"
+        buildConfigField("String", "VERSION_BUMPED_AT", quoted("15.08.2026, 12:31 Uhr"))
         buildConfigField("String", "GOOGLE_TTS_API_KEY", quoted(googleTtsKey))
         buildConfigField("String", "QWEN_TTS_API_KEY", quoted(qwenTtsKey))
         buildConfigField("String", "QWEN_TTS_VOICE_ID", quoted(qwenVoiceId))

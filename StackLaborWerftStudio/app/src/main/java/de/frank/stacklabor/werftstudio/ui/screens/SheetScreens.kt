@@ -69,6 +69,7 @@ import de.frank.stacklabor.werftstudio.ui.components.BottomSheetFrame
 import de.frank.stacklabor.werftstudio.ui.components.PrimaryAction
 import de.frank.stacklabor.werftstudio.ui.components.color
 import de.frank.stacklabor.werftstudio.ui.model.GoalUi
+import de.frank.stacklabor.werftstudio.ui.model.MedicineSolubilityAiState
 import de.frank.stacklabor.werftstudio.ui.model.SignalState
 import de.frank.stacklabor.werftstudio.ui.model.RelationshipUi
 import de.frank.stacklabor.werftstudio.ui.model.Solubility
@@ -222,6 +223,11 @@ fun MedicineEditSheet(
     var note by rememberSaveable(medicineId) { mutableStateOf(source?.note.orEmpty()) }
     var alternates by rememberSaveable(medicineId) { mutableStateOf(source?.alternates.orEmpty()) }
     var saveAttempted by rememberSaveable(medicineId) { mutableStateOf(false) }
+    val solubilityAiState = state.medicineSolubilityAiState
+    LaunchedEffect(solubilityAiState, name) {
+        val result = solubilityAiState as? MedicineSolubilityAiState.Success
+        if (result != null && result.name == name.trim()) solubility = result.solubility
+    }
     val warning = source?.warningReason.orEmpty()
     val usage = state.catalogMedicines.firstOrNull { it.id == medicineId }?.catalogMeta
         ?.substringBefore(" · ")?.takeIf { it.startsWith("in ") }?.let { "Gilt $it" }.orEmpty()
@@ -256,7 +262,20 @@ fun MedicineEditSheet(
                 item { FormSectionHeader("Stammdaten", usage) }
                 item { CompactField("Name", name, invalid = saveAttempted && name.isBlank(), onValueChange = { name = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("name", it)) }) }
                 item {
-                    Column(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    val aiMessage = when (val ai = solubilityAiState) {
+                        MedicineSolubilityAiState.Idle -> ""
+                        is MedicineSolubilityAiState.Loading -> if (ai.name == name.trim()) "Löslichkeit wird durch KI ermittelt …" else ""
+                        is MedicineSolubilityAiState.Success -> if (ai.name == name.trim()) {
+                            val result = when (ai.solubility) {
+                                Solubility.Water -> "wasserlöslich"
+                                Solubility.Fat -> "fettlöslich"
+                                Solubility.Both -> "wasser- und fettlöslich"
+                            }
+                            "Laut KI ist ${ai.name} $result."
+                        } else ""
+                        is MedicineSolubilityAiState.Error -> if (ai.name == name.trim()) "KI-Bestimmung fehlgeschlagen: ${ai.message}" else ""
+                    }
+                    Column(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
                         Text("Löslichkeit", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
                         Spacer(Modifier.height(4.dp))
                         Row(Modifier.height(44.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -272,6 +291,14 @@ fun MedicineEditSheet(
                                 solubility = Solubility.Both
                                 callbacks.onEvent(StackLaborEvent.UpdateMedicineField("solubility", "both"))
                             }
+                        }
+                        if (aiMessage.isNotEmpty()) {
+                            Spacer(Modifier.height(5.dp))
+                            Text(
+                                aiMessage,
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = if (solubilityAiState is MedicineSolubilityAiState.Error) StackLaborTheme.colors.red else StackLaborTheme.colors.textMuted,
+                            )
                         }
                     }
                 }
@@ -330,10 +357,10 @@ fun MedicineEditSheet(
                     }.padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 PrimaryAction(
-                    "Sichern",
+                    if (solubilityAiState is MedicineSolubilityAiState.Loading) "Löslichkeit wird bestimmt …" else "Sichern",
                     {
                         saveAttempted = true
-                        if (name.isNotBlank()) {
+                        if (name.isNotBlank() && solubilityAiState !is MedicineSolubilityAiState.Loading) {
                             callbacks.onEvent(StackLaborEvent.SaveMedicine(medicineId, stackId))
                             callbacks.onBack()
                         }

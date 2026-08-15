@@ -61,6 +61,7 @@ import de.frank.stacklabor.werftstudio.ui.model.GoalUi
 import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.HistoryChangeUi
 import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
+import de.frank.stacklabor.werftstudio.ui.model.MedicineSolubilityAiState
 import de.frank.stacklabor.werftstudio.ui.model.PlaybackState
 import de.frank.stacklabor.werftstudio.ui.model.QuestionUi
 import de.frank.stacklabor.werftstudio.ui.model.RelationshipUi
@@ -130,6 +131,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var evaluationJob: Job? = null
     private var clonedVoicesJob: Job? = null
     private var goalInputJob: Job? = null
+    private var solubilityJob: Job? = null
+    private var solubilityGeneration: Long = 0L
     private val micRecorder = MicRecorder(container.applicationContext)
     private var goalDraftBeforeImprovement: String? = null
     private val improvedGoalVersions = mutableListOf<String>()
@@ -192,7 +195,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.UpdateStackName -> stackDraft = stackDraft.copy(name = event.value)
             is StackLaborEvent.UpdateStackTime -> stackDraft = stackDraft.copy(time = event.value)
             is StackLaborEvent.UpdateStackNote -> stackDraft = stackDraft.copy(note = event.value)
-            is StackLaborEvent.UpdateMedicineField -> medicineDraft = medicineDraft.with(event.field, event.value)
+            is StackLaborEvent.UpdateMedicineField -> {
+                medicineDraft = medicineDraft.with(event.field, event.value)
+                if (event.field == "name") scheduleSolubilityDetermination(event.value)
+            }
             is StackLaborEvent.SelectHistoryRun -> selectHistory(event.runId)
             is StackLaborEvent.SelectSetting -> selectSetting(event.settingId)
             is StackLaborEvent.SelectSettingValue -> selectSettingValue(event.settingId, event.value)
@@ -333,8 +339,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     repository.beobachteHistorie(stackId),
                     repository.beobachteSortieransicht(stackId),
                 ) { latest, history, sorting -> Triple(latest, history, sorting) }
-                combine(content, evaluation, container.settings.einstellungen) { current, evaluated, appSettings ->
-                    SelectedSnapshot(stackId, current, evaluated, appSettings)
+                combine(content, evaluation, container.settings.einstellungen, repository.beobachteMittel()) { current, evaluated, appSettings, medicineList ->
+                    SelectedSnapshot(stackId, current, evaluated, appSettings, medicineList)
                 }
             }.collect { applySelected(it) }
         }
@@ -347,7 +353,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val stack = stacks.firstOrNull { it.id == snapshot.stackId } ?: return
         val targetById = snapshot.content.second.associateBy { it.zielId }
         val ampeln = repository.berechneAmpeln(snapshot.stackId)
-        val medicineById = medicines.associateBy { it.id }
+        val medicineById = snapshot.medicines.associateBy { it.id }
         val selectedMedicines = snapshot.content.first.mapNotNull { entry ->
             medicineById[entry.mittelId]?.let { medicine -> medicine.toUi(entry, ampeln.mittelAmpeln[medicine.id] ?: Ampel.GRAU, snapshot.settings.dosisVariante) }
         }.let { list ->
@@ -460,6 +466,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private fun routeChanged(route: StackLaborRoute) {
         if (route != currentRoute) mutableState.update { it.copy(searchQuery = "") }
         if (currentRoute is StackLaborRoute.GoalCatalog && route !is StackLaborRoute.GoalCatalog) cancelGoalDraft()
+        if (currentRoute is StackLaborRoute.MedicineEdit && route !is StackLaborRoute.MedicineEdit) cancelSolubilityDetermination()
         currentRoute = route
         val stackId = route.stackIdOrNull()
         if (stackId != null) selectedStackId.value = stackId
@@ -692,6 +699,52 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             alternates = entry?.alternationsPartnerMittelIds?.joinToString(", ") { id -> medicines.firstOrNull { it.id == id }?.name ?: id }.orEmpty(),
         )
         mutableState.update { it.copy(medicineName = medicineDraft.name) }
+        scheduleSolubilityDetermination(medicineDraft.name)
+    }
+
+    private fun scheduleSolubilityDetermination(value: String) {
+        val name = value.trim()
+        solubilityJob?.cancel()
+        val generation = ++solubilityGeneration
+        if (name.isBlank()) {
+            mutableState.update { it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Idle) }
+            return
+        }
+        mutableState.update { it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Loading(name)) }
+        solubilityJob = viewModelScope.launch {
+            delay(700L)
+            try {
+                val result = container.solubilityClassifier.determine(name)
+                if (generation != solubilityGeneration || currentRoute !is StackLaborRoute.MedicineEdit || medicineDraft.name.trim() != name) return@launch
+                medicineDraft = medicineDraft.copy(solubility = result)
+                mutableState.update {
+                    it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Success(name, result.toSolubility()))
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: CodexException) {
+                if (generation != solubilityGeneration) return@launch
+                val message = when (error.kind) {
+                    CodexErrorKind.REAUTH -> "Bitte zuerst bei Codex anmelden."
+                    CodexErrorKind.QUOTA -> "Das Codex-Kontingent ist aktuell erschöpft."
+                    CodexErrorKind.NETWORK -> error.message ?: "Codex ist aktuell nicht erreichbar."
+                }
+                mutableState.update { it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Error(name, message)) }
+            } catch (_: Exception) {
+                if (generation == solubilityGeneration) {
+                    mutableState.update {
+                        it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Error(name, "Die KI-Bestimmung ist aktuell nicht möglich."))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun cancelSolubilityDetermination() {
+        solubilityGeneration++
+        solubilityJob?.cancel()
+        solubilityJob = null
+        mutableState.update { it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Idle) }
     }
 
     private fun saveMedicine(medicineId: String?, stackId: String?) = launchAction("Mittel gespeichert") {
@@ -1242,6 +1295,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val content: Triple<List<StackEintrag>, List<StackZiel>, List<EigeneFrage>>,
         val evaluation: Triple<BewertungMitDetails?, List<BewertungMitDetails>, StackSortierstatus>,
         val settings: AppEinstellungen,
+        val medicines: List<Mittel>,
     )
 }
 

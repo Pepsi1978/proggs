@@ -15,6 +15,7 @@ import de.frank.stacklabor.werftstudio.service.auth.KeystoreCodexTokenStore
 import de.frank.stacklabor.werftstudio.service.codex.CodexEvaluationService
 import de.frank.stacklabor.werftstudio.service.codex.CodexGoalTextImprover
 import de.frank.stacklabor.werftstudio.service.codex.CodexResponsesClient
+import de.frank.stacklabor.werftstudio.service.codex.CodexSolubilityClassifier
 import de.frank.stacklabor.werftstudio.service.codex.PersistedCodexEvaluator
 import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
 import de.frank.stacklabor.werftstudio.service.tts.EdgeTtsProvider
@@ -66,6 +67,7 @@ class AppContainer(context: Context) {
         service = CodexEvaluationService(codexResponsesClient),
     )
     val goalTextImprover = CodexGoalTextImprover(settings, codexResponsesClient)
+    val solubilityClassifier = CodexSolubilityClassifier(settings, codexResponsesClient)
     val groqTranscriber = GroqTranscriber()
 
     val ttsUsage = TtsUsageStore(appContext)
