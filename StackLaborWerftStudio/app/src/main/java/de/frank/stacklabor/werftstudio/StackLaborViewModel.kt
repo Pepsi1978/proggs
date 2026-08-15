@@ -41,6 +41,7 @@ import de.frank.stacklabor.werftstudio.service.auth.CodexAuthState
 import de.frank.stacklabor.werftstudio.service.codex.CodexErrorKind
 import de.frank.stacklabor.werftstudio.service.codex.CodexException
 import de.frank.stacklabor.werftstudio.service.codex.CodexStreamEvent
+import de.frank.stacklabor.werftstudio.service.speech.MicRecorder
 import de.frank.stacklabor.werftstudio.service.tts.ClonedVoice
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
 import de.frank.stacklabor.werftstudio.service.tts.TtsVoices
@@ -57,6 +58,7 @@ import de.frank.stacklabor.werftstudio.ui.model.DoseVariant
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationRunUi
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationState
 import de.frank.stacklabor.werftstudio.ui.model.GoalUi
+import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.HistoryChangeUi
 import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
 import de.frank.stacklabor.werftstudio.ui.model.PlaybackState
@@ -127,6 +129,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var tagEvaluation: BewertungMitDetails? = null
     private var evaluationJob: Job? = null
     private var clonedVoicesJob: Job? = null
+    private var goalInputJob: Job? = null
+    private val micRecorder = MicRecorder(container.applicationContext)
     private var clonedVoices: List<ClonedVoice> = emptyList()
     private val competitionJobs = mutableMapOf<String, Job>()
     private val pendingCompetitionIds = mutableMapOf<String, MutableSet<String>>()
@@ -174,6 +178,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.ApplyMedicineOrder -> applyMedicineOrder(event.stackId, event.medicineIds)
             is StackLaborEvent.ApplyStackOrder -> launchAction { repository.sortiereStacks(event.stackIds) }
             is StackLaborEvent.EditGoal -> launchAction { repository.speichereZiel(Ziel(event.goalId, event.text.trim())) }
+            is StackLaborEvent.BeginGoalDraft -> beginGoalDraft(event.text)
+            is StackLaborEvent.UpdateGoalDraft -> mutableState.update { it.copy(goalDraftText = event.text.take(MAX_GOAL_LENGTH)) }
+            StackLaborEvent.CancelGoalDraft -> cancelGoalDraft()
+            StackLaborEvent.ToggleGoalRecording -> toggleGoalRecording()
+            is StackLaborEvent.MicrophonePermissionResult -> microphonePermissionResult(event.granted)
+            StackLaborEvent.ImproveGoalDraft -> improveGoalDraft()
             is StackLaborEvent.ToggleGoal -> toggleGoal(event.stackId, event.goalId)
             is StackLaborEvent.ReorderGoal -> reorderGoal(event.stackId, event.goalId, event.targetRank)
             is StackLaborEvent.UpdateStackName -> stackDraft = stackDraft.copy(name = event.value)
@@ -284,8 +294,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
                 googleApiKeyValue = settings.googleApiKey,
                 qwenApiKeyValue = settings.qwenApiKey,
+                groqApiKeyValue = settings.groqApiKey,
                 googleApiKeyLabel = keyLabel(settings.googleApiKey, BuildConfig.GOOGLE_TTS_API_KEY),
                 qwenApiKeyLabel = keyLabel(settings.qwenApiKey, BuildConfig.QWEN_TTS_API_KEY),
+                groqApiKeyLabel = keyLabel(settings.groqApiKey, ""),
                 ttsSpeedLabel = speedLabel(settings.ttsTempo),
                 ttsPauseLabel = settings.absatzpause.name.lowercase().replaceFirstChar(Char::uppercase),
                 ttsTimeoutLabel = "${settings.abschaltzeitMinuten} Min.",
@@ -440,6 +452,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun routeChanged(route: StackLaborRoute) {
         if (route != currentRoute) mutableState.update { it.copy(searchQuery = "") }
+        if (currentRoute is StackLaborRoute.GoalCatalog && route !is StackLaborRoute.GoalCatalog) cancelGoalDraft()
         currentRoute = route
         val stackId = route.stackIdOrNull()
         if (stackId != null) selectedStackId.value = stackId
@@ -459,6 +472,108 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             // Die eigenen Stimmen kommen aus dem Alibaba-Konto — beim Öffnen einmal nachladen.
             StackLaborRoute.Settings -> if (clonedVoices.isEmpty() && container.qwenSchluesselAktiv().isNotBlank()) loadClonedVoices()
             else -> Unit
+        }
+    }
+
+    private fun beginGoalDraft(text: String) {
+        goalInputJob?.cancel()
+        micRecorder.release()
+        mutableState.update {
+            it.copy(goalDraftActive = true, goalDraftText = text.take(MAX_GOAL_LENGTH), goalInputState = GoalInputState.Idle)
+        }
+    }
+
+    private fun cancelGoalDraft() {
+        goalInputJob?.cancel()
+        goalInputJob = null
+        micRecorder.release()
+        mutableState.update { it.copy(goalDraftActive = false, goalDraftText = "", goalInputState = GoalInputState.Idle) }
+    }
+
+    private fun toggleGoalRecording() {
+        if (!mutableState.value.goalDraftActive) return
+        when (mutableState.value.goalInputState) {
+            GoalInputState.Idle -> {
+                if (container.groqSchluesselAktiv().isBlank()) {
+                    message("Bitte zuerst unter Einstellungen einen Groq-API-Schlüssel hinterlegen.")
+                } else {
+                    sendEffect(StackLaborUiEffect.RequestMicrophonePermission)
+                }
+            }
+            GoalInputState.Recording -> stopAndTranscribeGoal()
+            GoalInputState.Transcribing, GoalInputState.Improving -> Unit
+        }
+    }
+
+    private fun microphonePermissionResult(granted: Boolean) {
+        if (!granted) return message("Ohne Mikrofonberechtigung kann kein Ziel aufgenommen werden.")
+        if (!mutableState.value.goalDraftActive || mutableState.value.goalInputState != GoalInputState.Idle) return
+        if (micRecorder.start(viewModelScope)) {
+            mutableState.update { it.copy(goalInputState = GoalInputState.Recording) }
+        } else {
+            message("Die Mikrofonaufnahme konnte nicht gestartet werden.")
+        }
+    }
+
+    private fun stopAndTranscribeGoal() {
+        if (goalInputJob?.isActive == true) return
+        goalInputJob = viewModelScope.launch {
+            mutableState.update { it.copy(goalInputState = GoalInputState.Transcribing) }
+            try {
+                val wav = micRecorder.stop()
+                if (wav == null) {
+                    message("Ich habe nichts verstanden.")
+                    return@launch
+                }
+                val transcript = container.groqTranscriber.transcribe(container.groqSchluesselAktiv(), wav).trim()
+                if (transcript.isBlank()) {
+                    message("Ich habe nichts verstanden.")
+                } else if (mutableState.value.goalDraftActive) {
+                    mutableState.update { current ->
+                        current.copy(
+                            goalDraftText = listOf(current.goalDraftText.trim(), transcript)
+                                .filter(String::isNotBlank)
+                                .joinToString(" ")
+                                .take(MAX_GOAL_LENGTH),
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                message(error.message ?: "Die Transkription ist fehlgeschlagen.")
+            } finally {
+                goalInputJob = null
+                mutableState.update { it.copy(goalInputState = GoalInputState.Idle) }
+            }
+        }
+    }
+
+    private fun improveGoalDraft() {
+        val source = mutableState.value.goalDraftText.trim()
+        if (source.isBlank() || mutableState.value.goalInputState != GoalInputState.Idle) return
+        if (container.oauth.state.value is CodexAuthState.SignedOut) {
+            return message("Bitte zuerst unter Einstellungen bei Codex anmelden.")
+        }
+        goalInputJob = viewModelScope.launch {
+            mutableState.update { it.copy(goalInputState = GoalInputState.Improving) }
+            try {
+                val improved = container.goalTextImprover.improve(source)
+                mutableState.update { current ->
+                    if (current.goalDraftActive && current.goalDraftText.trim() == source) {
+                        current.copy(goalDraftText = improved)
+                    } else {
+                        current
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                message(error.message ?: "Der Zieltext konnte nicht verbessert werden.")
+            } finally {
+                goalInputJob = null
+                mutableState.update { it.copy(goalInputState = GoalInputState.Idle) }
+            }
         }
     }
 
@@ -863,7 +978,6 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "tts-pause" -> container.settings.setzeAbsatzpause(settings.absatzpause.next())
             "tts-timeout" -> container.settings.setzeAbschaltzeitMinuten(when (settings.abschaltzeitMinuten) { 15 -> 30; 30 -> 60; else -> 15 })
             "tts-usage" -> message("Verbrauch ${mutableState.value.ttsUsageLabel}")
-            "edge-key-info" -> message("Microsoft Edge spricht ohne Anmeldung — hier ist kein Schlüssel nötig.")
             "codex-model" -> container.settings.setzeCodexModell(when (settings.codexModell) { "gpt-5.6-sol" -> "gpt-5.6-terra"; "gpt-5.6-terra" -> "gpt-5.6-luna"; else -> "gpt-5.6-sol" })
             "codex-reasoning" -> container.settings.setzeCodexDenkstufe(when (settings.codexDenkstufe) { "low" -> "medium"; "medium" -> "high"; "high" -> "xhigh"; "xhigh" -> "max"; else -> "low" })
             "reduced-motion" -> container.settings.setzeBewegungReduziert(!settings.bewegungReduziert)
@@ -969,6 +1083,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 container.settings.setzeQwenApiKey(value)
                 message(if (value.isBlank()) "Alibaba-Schlüssel gelöscht — es gilt wieder der aus dem SK-Ordner." else "Alibaba-Schlüssel gespeichert")
                 if (value.isNotBlank()) loadClonedVoices()
+            }
+            "groq-api-key" -> {
+                container.settings.setzeGroqApiKey(value)
+                message(if (value.isBlank()) "Groq-Schlüssel gelöscht" else "Groq-Schlüssel gespeichert")
             }
             else -> message("Unbekannter Schlüssel: $keyId")
         }
@@ -1078,6 +1196,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun containerContext(): android.content.Context = container.applicationContext
 
+    override fun onCleared() {
+        micRecorder.release()
+        super.onCleared()
+    }
+
     private data class GlobalSnapshot(
         val database: Triple<List<Stack>, List<StackEintrag>, List<StackZiel>>,
         val catalog: Triple<List<Ziel>, List<Mittel>, AppEinstellungen>,
@@ -1092,6 +1215,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val settings: AppEinstellungen,
     )
 }
+
+private const val MAX_GOAL_LENGTH = 200
 
 class StackLaborViewModelFactory(private val container: AppContainer) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

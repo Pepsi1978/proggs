@@ -24,9 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +62,7 @@ import de.frank.stacklabor.werftstudio.ui.components.SearchField
 import de.frank.stacklabor.werftstudio.ui.components.SolubilityMarks
 import de.frank.stacklabor.werftstudio.ui.components.WerftScreen
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
+import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.navigation.Origin
@@ -73,16 +78,15 @@ import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
     var selectedGoalId by rememberSaveable { mutableStateOf<String?>(null) }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
-    var goalText by rememberSaveable { mutableStateOf("") }
     val goals = state.goals.filter { it.text.contains(state.searchQuery, ignoreCase = true) }
     val openEditor: (String?, String) -> Unit = { id, text ->
         selectedGoalId = id
-        goalText = text
+        callbacks.onEvent(StackLaborEvent.BeginGoalDraft(text))
         editorOpen = true
     }
     val closeEditor = {
         selectedGoalId = null
-        goalText = ""
+        callbacks.onEvent(StackLaborEvent.CancelGoalDraft)
         editorOpen = false
     }
     WerftScreen(goldDark = true) {
@@ -98,15 +102,18 @@ fun GoalCatalogScreen(state: StackLaborUiState, animationsEnabled: Boolean, call
                 goals = goals,
                 editorOpen = editorOpen,
                 selectedGoalId = selectedGoalId,
-                editorText = goalText,
-                onEditorTextChange = { goalText = it.take(200) },
+                editorText = state.goalDraftText,
+                inputState = state.goalInputState,
+                onEditorTextChange = { callbacks.onEvent(StackLaborEvent.UpdateGoalDraft(it)) },
+                onMicrophone = { callbacks.onEvent(StackLaborEvent.ToggleGoalRecording) },
+                onImprove = { callbacks.onEvent(StackLaborEvent.ImproveGoalDraft) },
                 onEdit = { openEditor(it.id, it.text) },
                 onAdd = { openEditor(null, "") },
                 onSave = {
-                    if (goalText.isNotBlank()) {
+                    if (state.goalDraftText.isNotBlank() && state.goalInputState == GoalInputState.Idle) {
                         callbacks.onEvent(
-                            selectedGoalId?.let { StackLaborEvent.EditGoal(it, goalText) }
-                                ?: StackLaborEvent.AddGoal(goalText),
+                            selectedGoalId?.let { StackLaborEvent.EditGoal(it, state.goalDraftText) }
+                                ?: StackLaborEvent.AddGoal(state.goalDraftText),
                         )
                         closeEditor()
                     }
@@ -129,7 +136,10 @@ private fun GoalCatalogList(
     editorOpen: Boolean,
     selectedGoalId: String?,
     editorText: String,
+    inputState: GoalInputState,
     onEditorTextChange: (String) -> Unit,
+    onMicrophone: () -> Unit,
+    onImprove: () -> Unit,
     onEdit: (de.frank.stacklabor.werftstudio.ui.model.GoalUi) -> Unit,
     onAdd: () -> Unit,
     onSave: () -> Unit,
@@ -153,6 +163,9 @@ private fun GoalCatalogList(
                         editing = true,
                         adding = true,
                         onTitleChange = onEditorTextChange,
+                        inputState = inputState,
+                        onMicrophone = onMicrophone,
+                        onImprove = onImprove,
                         onEdit = {},
                         onSave = onSave,
                         onDelete = onCancel,
@@ -167,6 +180,9 @@ private fun GoalCatalogList(
                     editing = editing,
                     adding = false,
                     onTitleChange = onEditorTextChange,
+                    inputState = inputState,
+                    onMicrophone = onMicrophone,
+                    onImprove = onImprove,
                     onEdit = { onEdit(goal) },
                     onSave = onSave,
                     onDelete = onDelete,
@@ -183,6 +199,9 @@ private fun GoalCatalogCard(
     editing: Boolean,
     adding: Boolean,
     onTitleChange: (String) -> Unit,
+    inputState: GoalInputState,
+    onMicrophone: () -> Unit,
+    onImprove: () -> Unit,
     onEdit: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -193,7 +212,9 @@ private fun GoalCatalogCard(
     LaunchedEffect(editing) {
         if (editing) focusRequester.requestFocus()
     }
-    Row(
+    val busy = inputState == GoalInputState.Transcribing || inputState == GoalInputState.Improving
+    val canSave = title.isNotBlank() && inputState == GoalInputState.Idle
+    Column(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 76.dp)
@@ -201,52 +222,96 @@ private fun GoalCatalogCard(
             .clip(shape)
             .background(colors.surface)
             .border(1.dp, metalRim(0.7f), shape),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp), verticalArrangement = Arrangement.Center) {
-            if (editing) {
-                BasicTextField(
-                    value = title,
-                    onValueChange = onTitleChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 40.dp)
-                        .focusRequester(focusRequester)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(colors.accent.copy(alpha = 0.08f))
-                        .drawBehind { drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height)) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
-                        color = colors.textStrong,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.accent),
-                )
-            } else {
-                Text(
-                    title,
-                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        Row(Modifier.fillMaxWidth().heightIn(min = 76.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp), verticalArrangement = Arrangement.Center) {
+                if (editing) {
+                    BasicTextField(
+                        value = title,
+                        onValueChange = onTitleChange,
+                        enabled = !busy,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 40.dp)
+                            .focusRequester(focusRequester)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.accent.copy(alpha = 0.08f))
+                            .drawBehind { drawRect(colors.accent, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height)) }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
+                            color = colors.textStrong,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.accent),
+                    )
+                } else {
+                    Text(
+                        title,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
             }
-            Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
+            if (editing) {
+                IconTouchButton(if (adding) "Hinzufügen abbrechen" else "Ziel löschen", onDelete) {
+                    Icon(
+                        if (adding) Icons.Default.Close else Icons.Default.Delete,
+                        null,
+                        Modifier.size(20.dp),
+                        tint = if (adding) colors.textMuted else colors.red,
+                    )
+                }
+                IconTouchButton("Ziel sichern", { if (canSave) onSave() }) {
+                    Icon(Icons.Default.Check, null, Modifier.size(20.dp), tint = if (canSave) colors.accent else colors.disabled)
+                }
+            } else {
+                IconTouchButton("$title bearbeiten", onEdit) {
+                    Icon(Icons.Default.Edit, null, Modifier.size(24.dp), tint = colors.textMuted)
+                }
+            }
         }
         if (editing) {
-            IconTouchButton(if (adding) "Hinzufügen abbrechen" else "Ziel löschen", onDelete) {
-                Icon(
-                    if (adding) Icons.Default.Close else Icons.Default.Delete,
-                    null,
-                    Modifier.size(20.dp),
-                    tint = if (adding) colors.textMuted else colors.red,
+            Row(
+                Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    when (inputState) {
+                        GoalInputState.Recording -> "Aufnahme läuft · zum Stoppen tippen"
+                        GoalInputState.Transcribing -> "Groq transkribiert …"
+                        GoalInputState.Improving -> "Codex verbessert …"
+                        GoalInputState.Idle -> "Spracheingabe oder KI-Verbesserung"
+                    },
+                    Modifier.weight(1f),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = if (inputState == GoalInputState.Recording) colors.red else colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
-            IconTouchButton("Ziel sichern", { if (title.isNotBlank()) onSave() }) {
-                Icon(Icons.Default.Check, null, Modifier.size(20.dp), tint = if (title.isNotBlank()) colors.accent else colors.disabled)
-            }
-        } else {
-            IconTouchButton("$title bearbeiten", onEdit) {
-                Icon(Icons.Default.Edit, null, Modifier.size(24.dp), tint = colors.textMuted)
+                IconTouchButton(
+                    if (inputState == GoalInputState.Recording) "Aufnahme stoppen" else "Ziel einsprechen",
+                    { if (!busy) onMicrophone() },
+                ) {
+                    if (inputState == GoalInputState.Transcribing) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.accent)
+                    } else {
+                        Icon(
+                            if (inputState == GoalInputState.Recording) Icons.Default.Stop else Icons.Default.Mic,
+                            null,
+                            Modifier.size(22.dp),
+                            tint = if (inputState == GoalInputState.Recording) colors.red else if (busy) colors.disabled else colors.accent,
+                        )
+                    }
+                }
+                IconTouchButton("Zieltext mit Codex verbessern", { if (!busy && title.isNotBlank()) onImprove() }) {
+                    if (inputState == GoalInputState.Improving) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.accent)
+                    } else {
+                        Icon(Icons.Default.AutoAwesome, null, Modifier.size(22.dp), tint = if (!busy && title.isNotBlank()) colors.accent else colors.disabled)
+                    }
+                }
             }
         }
     }

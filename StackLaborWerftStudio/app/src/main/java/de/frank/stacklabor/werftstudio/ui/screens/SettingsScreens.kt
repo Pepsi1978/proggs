@@ -126,9 +126,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         SettingsDivider()
                         SettingsItem("Google Chirp 3 HD", state.googleApiKeyLabel) { keyEntryId = "google-api-key" }
                         SettingsDivider()
-                        SettingsItem("Microsoft Edge", "Kein Schlüssel nötig") {
-                            callbacks.onEvent(StackLaborEvent.SelectSetting("edge-key-info"))
-                        }
+                        SettingsItem("Groq Whisper", state.groqApiKeyLabel) { keyEntryId = "groq-api-key" }
                         SettingsDivider()
                         SettingsItem(
                             "Eigene Stimmen aus dem Konto laden",
@@ -325,6 +323,12 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
         state.googleApiKeyValue,
         "Der Google-Cloud-Schlüssel mit freigeschalteter Text-to-Speech-API (Chirp 3 HD). " +
             "Leer lassen heißt: es gilt wieder der Schlüssel aus dem SK-Ordner.",
+    )
+    "groq-api-key" -> ApiKeyEntry(
+        id,
+        "Groq-API-Schlüssel",
+        state.groqApiKeyValue,
+        "Der Groq-Schlüssel für die deutsche Spracheingabe mit Whisper Large v3 Turbo.",
     )
     else -> null
 }

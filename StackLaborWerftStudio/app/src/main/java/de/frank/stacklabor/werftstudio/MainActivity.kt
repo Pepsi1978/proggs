@@ -79,6 +79,10 @@ class MainActivity : ComponentActivity() {
         pendingTts = null
     }
 
+    private val microphonePermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        viewModel.onEvent(StackLaborEvent.MicrophonePermissionResult(granted))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -110,6 +114,7 @@ class MainActivity : ComponentActivity() {
                         StackLaborUiEffect.PauseTts -> TtsPlaybackService.pause(this@MainActivity)
                         StackLaborUiEffect.ResumeTts -> TtsPlaybackService.resume(this@MainActivity)
                         StackLaborUiEffect.StopTts -> TtsPlaybackService.stop(this@MainActivity)
+                        StackLaborUiEffect.RequestMicrophonePermission -> requestMicrophonePermission()
                         is StackLaborUiEffect.Message -> showMessage(effect.text)
                     }
                 }
@@ -130,6 +135,14 @@ class MainActivity : ComponentActivity() {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             TtsPlaybackService.play(this, text, configuration, startParagraph)
+        }
+    }
+
+    private fun requestMicrophonePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.onEvent(StackLaborEvent.MicrophonePermissionResult(true))
+        } else {
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 

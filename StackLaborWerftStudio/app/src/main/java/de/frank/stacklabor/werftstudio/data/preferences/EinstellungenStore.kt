@@ -40,6 +40,7 @@ data class AppEinstellungen(
     val googleApiKey: String = "",
     val qwenApiKey: String = "",
     val qwenStimmenId: String = "",
+    val groqApiKey: String = "",
     /** Löslichkeits-Ansicht: fettlösliche zuerst (Standard) oder wasserlösliche zuerst. */
     val loeslichkeitFettZuerst: Boolean = true,
     val codexModell: String = "gpt-5.6-terra",
@@ -83,6 +84,7 @@ class EinstellungenStore(
     suspend fun setzeGoogleApiKey(value: String): Unit = schreibe(GOOGLE_API_KEY, value.trim())
     suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
     suspend fun setzeQwenStimmenId(value: String): Unit = schreibe(QWEN_STIMMEN_ID, value.filterNot(Char::isWhitespace))
+    suspend fun setzeGroqApiKey(value: String): Unit = schreibe(GROQ_API_KEY, value.filterNot(Char::isWhitespace))
 
     suspend fun setzeCodexModell(value: String) {
         require(value in CODEX_MODELLE) { "Unbekanntes Codex-Modell: $value" }
@@ -106,6 +108,7 @@ class EinstellungenStore(
         googleApiKey = preferences[GOOGLE_API_KEY].orEmpty(),
         qwenApiKey = preferences[QWEN_API_KEY].orEmpty(),
         qwenStimmenId = preferences[QWEN_STIMMEN_ID].orEmpty(),
+        groqApiKey = preferences[GROQ_API_KEY].orEmpty(),
         loeslichkeitFettZuerst = preferences[LOESLICHKEIT_FETT_ZUERST] ?: true,
         codexModell = preferences[CODEX_MODELL] ?: "gpt-5.6-terra",
         codexDenkstufe = preferences[CODEX_DENKSTUFE] ?: "high",
@@ -132,6 +135,7 @@ class EinstellungenStore(
         val GOOGLE_API_KEY = stringPreferencesKey("google_api_key")
         val QWEN_API_KEY = stringPreferencesKey("qwen_api_key")
         val QWEN_STIMMEN_ID = stringPreferencesKey("qwen_stimmen_id")
+        val GROQ_API_KEY = stringPreferencesKey("groq_api_key")
         val LOESLICHKEIT_FETT_ZUERST = booleanPreferencesKey("loeslichkeit_fett_zuerst")
         val CODEX_MODELL = stringPreferencesKey("codex_modell")
         val CODEX_DENKSTUFE = stringPreferencesKey("codex_denkstufe")

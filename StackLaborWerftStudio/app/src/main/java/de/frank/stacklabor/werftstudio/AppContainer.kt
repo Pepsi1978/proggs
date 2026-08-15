@@ -13,8 +13,10 @@ import de.frank.stacklabor.werftstudio.data.transfer.StackLaborJson
 import de.frank.stacklabor.werftstudio.service.auth.CodexOAuthClient
 import de.frank.stacklabor.werftstudio.service.auth.KeystoreCodexTokenStore
 import de.frank.stacklabor.werftstudio.service.codex.CodexEvaluationService
+import de.frank.stacklabor.werftstudio.service.codex.CodexGoalTextImprover
 import de.frank.stacklabor.werftstudio.service.codex.CodexResponsesClient
 import de.frank.stacklabor.werftstudio.service.codex.PersistedCodexEvaluator
+import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
 import de.frank.stacklabor.werftstudio.service.tts.EdgeTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.GoogleCloudTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.QwenTtsProvider
@@ -28,11 +30,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Die drei Schlüssel, die der Benutzer selbst hinterlegen kann. */
+/** Die Schlüssel, die der Benutzer selbst hinterlegen kann. */
 data class TtsSchluessel(
     val google: String = "",
     val qwen: String = "",
     val qwenStimme: String = "",
+    val groq: String = "",
 )
 
 class AppContainer(context: Context) {
@@ -55,12 +58,15 @@ class AppContainer(context: Context) {
     )
 
     val oauth = CodexOAuthClient(KeystoreCodexTokenStore(appContext))
+    private val codexResponsesClient = CodexResponsesClient(oauth)
     val evaluator = PersistedCodexEvaluator(
         repository = repository,
         settings = settings,
         oauth = oauth,
-        service = CodexEvaluationService(CodexResponsesClient(oauth)),
+        service = CodexEvaluationService(codexResponsesClient),
     )
+    val goalTextImprover = CodexGoalTextImprover(settings, codexResponsesClient)
+    val groqTranscriber = GroqTranscriber()
 
     val ttsUsage = TtsUsageStore(appContext)
     val ttsEngine: TtsEngine
@@ -85,6 +91,8 @@ class AppContainer(context: Context) {
 
     fun qwenStimmeAktiv(): String = eigeneSchluessel.qwenStimme.ifBlank { BuildConfig.QWEN_TTS_VOICE_ID }
 
+    fun groqSchluesselAktiv(): String = eigeneSchluessel.groq
+
     init {
         containerScope.launch {
             settings.einstellungen.collect { gespeichert ->
@@ -92,6 +100,7 @@ class AppContainer(context: Context) {
                     google = gespeichert.googleApiKey,
                     qwen = gespeichert.qwenApiKey,
                     qwenStimme = gespeichert.qwenStimmenId,
+                    groq = gespeichert.groqApiKey,
                 )
             }
         }

@@ -17,6 +17,8 @@ enum class EvaluationState { Valid, Stale, Running, Offline, Reauth, Quota, Netw
 
 enum class PlaybackState { Ready, Playing, Paused }
 
+enum class GoalInputState { Idle, Recording, Transcribing, Improving }
+
 enum class CodexLoginState { Waiting, Success, Expired, Denied, NetworkError }
 
 data class SignalCounts(
@@ -151,8 +153,10 @@ data class StackLaborUiState(
     val clonedVoicesHint: String = "",
     val googleApiKeyValue: String = "",
     val qwenApiKeyValue: String = "",
+    val groqApiKeyValue: String = "",
     val googleApiKeyLabel: String = "Nicht hinterlegt",
     val qwenApiKeyLabel: String = "Nicht hinterlegt",
+    val groqApiKeyLabel: String = "Nicht hinterlegt",
     val ttsSpeedLabel: String = "1,00×",
     val ttsPauseLabel: String = "Kurz",
     val ttsTimeoutLabel: String = "30 Min.",
@@ -164,6 +168,9 @@ data class StackLaborUiState(
     val codexVerificationUrl: String = "https://auth.openai.com/codex/device",
     val versionName: String = "",
     val versionBumpedAt: String = "",
+    val goalDraftActive: Boolean = false,
+    val goalDraftText: String = "",
+    val goalInputState: GoalInputState = GoalInputState.Idle,
 )
 
 sealed interface StackLaborUiEffect {
@@ -176,6 +183,7 @@ sealed interface StackLaborUiEffect {
     data object PauseTts : StackLaborUiEffect
     data object ResumeTts : StackLaborUiEffect
     data object StopTts : StackLaborUiEffect
+    data object RequestMicrophonePermission : StackLaborUiEffect
     data class Message(val text: String) : StackLaborUiEffect
 }
 
@@ -195,6 +203,12 @@ sealed interface StackLaborEvent {
     data class ApplyMedicineOrder(val stackId: String, val medicineIds: List<String>) : StackLaborEvent
     data class ApplyStackOrder(val stackIds: List<String>) : StackLaborEvent
     data class EditGoal(val goalId: String, val text: String) : StackLaborEvent
+    data class BeginGoalDraft(val text: String) : StackLaborEvent
+    data class UpdateGoalDraft(val text: String) : StackLaborEvent
+    data object CancelGoalDraft : StackLaborEvent
+    data object ToggleGoalRecording : StackLaborEvent
+    data class MicrophonePermissionResult(val granted: Boolean) : StackLaborEvent
+    data object ImproveGoalDraft : StackLaborEvent
     data class ToggleGoal(val stackId: String, val goalId: String) : StackLaborEvent
     data class ReorderGoal(val stackId: String, val goalId: String, val targetRank: Int) : StackLaborEvent
     data class UpdateStackName(val value: String) : StackLaborEvent
