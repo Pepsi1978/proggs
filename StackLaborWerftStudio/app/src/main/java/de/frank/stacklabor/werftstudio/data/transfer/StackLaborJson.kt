@@ -161,6 +161,7 @@ class StackLaborJson(
                 0 -> migriereV0NachV1(current)
                 1 -> migriereV1NachV2(current)
                 2 -> migriereV2NachV3(current)
+                3 -> migriereV3NachV4(current)
                 else -> throw ImportFormatException("Kein Migrationspfad ab schema_version $currentVersion.")
             }
             currentVersion++
@@ -186,6 +187,10 @@ class StackLaborJson(
         root.toMutableMap().apply { put("schema_version", JsonPrimitive(3)) },
     )
 
+    private fun migriereV3NachV4(root: JsonObject): JsonObject = JsonObject(
+        root.toMutableMap().apply { put("schema_version", JsonPrimitive(4)) },
+    )
+
     private fun requireUnique(values: List<Any>, feld: String) {
         requireImport(values.size == values.toSet().size, "Doppelte Werte in $feld.")
     }
@@ -201,7 +206,7 @@ class StackLaborJson(
     }
 
     companion object {
-        const val AKTUELLE_SCHEMA_VERSION: Int = 3
+        const val AKTUELLE_SCHEMA_VERSION: Int = 4
         const val EXPORT_FORMAT: String = "stacklabor_export"
         const val SEED_FORMAT: String = "stacklabor_startbestand"
         private val ERLAUBTE_FORMATE = setOf(EXPORT_FORMAT, SEED_FORMAT)

@@ -55,7 +55,7 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
     schemaVersion = StackLaborJson.AKTUELLE_SCHEMA_VERSION,
     exportiertAmEpochMillis = exportiertAm,
     mittel = mittel.map {
-        MittelTransfer(it.id, it.name, it.loeslichkeit.name, it.darreichungsform.name, it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText)
+        MittelTransfer(it.id, it.name, it.loeslichkeit.name, it.darreichungsform.name, it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText, it.loeslichkeitKiErmittelt)
     },
     wirkstoffkomponenten = komponenten.map { WirkstoffkomponenteTransfer(it.id, it.mittelId, it.name, it.menge?.toPlainString(), it.einheit?.name) },
     stacks = stacks.map { StackTransfer(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
@@ -76,7 +76,7 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
 
 internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
     mittel = mittel.map {
-        MittelEntity(it.id, it.name, enumValue(it.loeslichkeit), enumValue(it.darreichungsform), it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText)
+        MittelEntity(it.id, it.name, enumValue(it.loeslichkeit), enumValue(it.darreichungsform), it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText, it.loeslichkeitKiErmittelt)
     },
     komponenten = wirkstoffkomponenten.map {
         WirkstoffkomponenteEntity(it.id, it.mittelId, it.name, it.menge?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) })

@@ -199,8 +199,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.UpdateStackTime -> stackDraft = stackDraft.copy(time = event.value)
             is StackLaborEvent.UpdateStackNote -> stackDraft = stackDraft.copy(note = event.value)
             is StackLaborEvent.UpdateMedicineField -> {
+                val bisherigerName = medicineDraft.name.trim()
                 medicineDraft = medicineDraft.with(event.field, event.value)
-                if (event.field == "name") scheduleSolubilityDetermination(event.value)
+                if (event.field == "name" && bisherigerName != event.value.trim()) {
+                    medicineDraft = medicineDraft.copy(solubilityAiDetermined = false)
+                    scheduleSolubilityDetermination(event.value)
+                }
             }
             is StackLaborEvent.SelectHistoryRun -> selectHistory(event.runId)
             is StackLaborEvent.SelectSetting -> selectSetting(event.settingId)
@@ -908,9 +912,21 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             together = entry?.gruppeId != null,
             note = entry?.zusatztext.orEmpty(),
             alternates = entry?.alternationsPartnerMittelIds?.joinToString(", ") { id -> medicines.firstOrNull { it.id == id }?.name ?: id }.orEmpty(),
+            solubilityAiDetermined = medicine?.loeslichkeitKiErmittelt ?: false,
         )
         mutableState.update { it.copy(medicineName = medicineDraft.name) }
-        scheduleSolubilityDetermination(medicineDraft.name)
+        if (medicineDraft.solubilityAiDetermined && medicineDraft.name.isNotBlank()) {
+            mutableState.update {
+                it.copy(
+                    medicineSolubilityAiState = MedicineSolubilityAiState.Success(
+                        medicineDraft.name.trim(),
+                        medicineDraft.solubility.toSolubility(),
+                    ),
+                )
+            }
+        } else {
+            scheduleSolubilityDetermination(medicineDraft.name)
+        }
     }
 
     private fun scheduleSolubilityDetermination(value: String) {
@@ -927,7 +943,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 val result = container.solubilityClassifier.determine(name)
                 if (generation != solubilityGeneration || currentRoute !is StackLaborRoute.MedicineEdit || medicineDraft.name.trim() != name) return@launch
-                medicineDraft = medicineDraft.copy(solubility = result)
+                medicineDraft = medicineDraft.copy(solubility = result, solubilityAiDetermined = true)
                 mutableState.update {
                     it.copy(medicineSolubilityAiState = MedicineSolubilityAiState.Success(name, result.toSolubility()))
                 }
@@ -971,6 +987,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 hersteller = medicineDraft.manufacturer.trim(),
                 durchfallrisiko = medicineDraft.diarrheaRisk,
                 beistoffe = medicineDraft.excipients.trim(),
+                loeslichkeitKiErmittelt = medicineDraft.solubilityAiDetermined,
             ),
         )
         if (stackId != null) {
@@ -1540,6 +1557,7 @@ private data class MedicineDraft(
     val together: Boolean = false,
     val note: String = "",
     val alternates: String = "",
+    val solubilityAiDetermined: Boolean = false,
 ) {
     fun with(field: String, value: String): MedicineDraft = when (field) {
         "name" -> copy(name = value)

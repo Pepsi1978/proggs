@@ -34,6 +34,7 @@ data class MittelTransfer(
     val durchfallrisiko: Boolean = false,
     val beistoffe: String = "",
     @SerialName("darreichungsform_text") val darreichungsformText: String? = null,
+    @SerialName("loeslichkeit_ki_ermittelt") val loeslichkeitKiErmittelt: Boolean = false,
 )
 
 @Serializable

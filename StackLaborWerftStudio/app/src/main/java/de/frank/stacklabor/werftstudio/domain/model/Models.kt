@@ -84,6 +84,7 @@ data class Mittel(
     val beistoffe: String = "",
     val wirkstoffkomponenten: List<Wirkstoffkomponente> = emptyList(),
     val darreichungsformText: String? = null,
+    val loeslichkeitKiErmittelt: Boolean = false,
 )
 
 data class Stack(

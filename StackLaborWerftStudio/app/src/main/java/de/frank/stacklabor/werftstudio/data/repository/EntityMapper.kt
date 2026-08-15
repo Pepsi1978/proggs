@@ -40,6 +40,7 @@ internal fun MittelMitKomponenten.toDomain(): Mittel = Mittel(
     durchfallrisiko = mittel.durchfallrisiko,
     beistoffe = mittel.beistoffe,
     wirkstoffkomponenten = komponenten.map(WirkstoffkomponenteEntity::toDomain),
+    loeslichkeitKiErmittelt = mittel.loeslichkeitKiErmittelt,
 )
 
 internal fun Mittel.toEntity(): MittelEntity = MittelEntity(
@@ -51,6 +52,7 @@ internal fun Mittel.toEntity(): MittelEntity = MittelEntity(
     hersteller = hersteller,
     durchfallrisiko = durchfallrisiko,
     beistoffe = beistoffe,
+    loeslichkeitKiErmittelt = loeslichkeitKiErmittelt,
 )
 
 internal fun WirkstoffkomponenteEntity.toDomain(): Wirkstoffkomponente = Wirkstoffkomponente(

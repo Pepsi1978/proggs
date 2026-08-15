@@ -24,6 +24,7 @@ data class MittelEntity(
     val durchfallrisiko: Boolean,
     val beistoffe: String,
     val darreichungsformText: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0") val loeslichkeitKiErmittelt: Boolean = false,
 )
 
 @Entity(
