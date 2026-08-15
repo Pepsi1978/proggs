@@ -1153,9 +1153,11 @@ private fun Collection<Ampel>.toCounts(): SignalCounts = SignalCounts(count { it
 private fun Mittel.toUi(entry: StackEintrag, signal: Ampel, variant: DosisVariante): MedicineUi {
     val dose = entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull()
     val doseText = dose?.let {
+        val pieces = it.stueckzahl.stripTrailingZeros().toPlainString()
+        val form = darreichungsformAnzeige(it.stueckzahl)
         val amount = it.mengeJeStueck?.multiply(it.stueckzahl)?.stripTrailingZeros()?.toPlainString()
         val unit = it.einheitAnzeige().ifBlank { "Stück" }
-        if (amount == null) "${it.stueckzahl.stripTrailingZeros().toPlainString()} $unit" else "$amount $unit"
+        if (amount == null) "$pieces $form" else "$amount $unit · $pieces $form"
     }.orEmpty()
     return MedicineUi(
         id = id,
@@ -1218,6 +1220,16 @@ private fun Darreichungsform.label(): String = when (this) {
 }
 
 private fun Mittel.darreichungsformAnzeige(): String = darreichungsformText?.trim().orEmpty().ifBlank { darreichungsform.label() }
+
+private fun Mittel.darreichungsformAnzeige(stueckzahl: BigDecimal): String {
+    val form = darreichungsformAnzeige()
+    if (stueckzahl.compareTo(BigDecimal.ONE) == 0) return form
+    return when (form.lowercase(Locale.GERMANY)) {
+        "kapsel" -> "Kapseln"
+        "tablette" -> "Tabletten"
+        else -> form
+    }
+}
 
 private fun StackEintrag.frequenzAnzeige(): String = frequenzText?.trim().orEmpty().ifBlank {
     if (frequenzTyp == FrequenzTyp.TAEGLICH) "Täglich" else "Alle ${alleNTage ?: 2} Tage"
