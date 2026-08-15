@@ -174,7 +174,7 @@ object StackTextExport {
         if (dosis == null) return null
         val stueck = dosis.stueckzahl.schoen()
         val menge = dosis.mengeJeStueck
-        val einheit = dosis.einheit?.anzeige().orEmpty()
+        val einheit = dosis.einheitText ?: dosis.einheit?.anzeige().orEmpty()
         if (menge == null) return "$stueck ${einheit.ifBlank { "Stück" }}"
         val gesamt = menge.multiply(dosis.stueckzahl)
         return "$stueck × ${menge.schoen()} $einheit = ${gesamt.schoen()} $einheit".trim()

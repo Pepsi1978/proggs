@@ -185,7 +185,7 @@ class PersistedCodexEvaluator(
                                 .put("variante", dosis.variante.name)
                                 .put("stueckzahl", dosis.stueckzahl.toPlainString())
                                 .put("menge_je_stueck", dosis.mengeJeStueck?.toPlainString())
-                                .put("einheit", dosis.einheit?.name)
+                                .put("einheit", dosis.einheitText ?: dosis.einheit?.name)
                         }))
                         .put("alterniert_mit", JSONArray(eintrag.alternationsPartnerMittelIds))
                 }),

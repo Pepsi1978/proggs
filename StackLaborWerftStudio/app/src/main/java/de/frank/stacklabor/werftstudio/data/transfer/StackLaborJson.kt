@@ -95,7 +95,9 @@ class StackLaborJson(
             requireImport(it.stackEintragId in eintragIds, "Dosis verweist auf unbekannten Eintrag: ${it.stackEintragId}")
             requireImport(decimal(it.stueckzahl) > BigDecimal.ZERO, "Stueckzahl muss positiv sein: ${it.stackEintragId}")
             it.mengeJeStueck?.let { menge -> requireImport(decimal(menge) > BigDecimal.ZERO, "Dosis muss positiv sein: ${it.stackEintragId}") }
-            requireImport((it.mengeJeStueck == null) == (it.einheit == null), "Menge und Einheit muessen gemeinsam gesetzt sein: ${it.stackEintragId}")
+            val hatEinheit = !it.einheitText.isNullOrBlank() || it.einheit != null
+            requireImport(it.mengeJeStueck == null || hatEinheit, "Zu einer Menge gehoert eine Einheit: ${it.stackEintragId}")
+            requireImport(it.einheitText == null || it.einheitText.isNotBlank() && it.einheitText.length <= 30, "Ungueltiger Einheitentext: ${it.stackEintragId}")
             requireImport(it.variante in DOSIS_VARIANTEN, "Ungueltige Dosisvariante: ${it.variante}")
             requireImport(it.einheit == null || it.einheit in EINHEITEN, "Ungueltige Einheit: ${it.einheit}")
         }
@@ -155,6 +157,7 @@ class StackLaborJson(
         while (currentVersion < AKTUELLE_SCHEMA_VERSION) {
             current = when (currentVersion) {
                 0 -> migriereV0NachV1(current)
+                1 -> migriereV1NachV2(current)
                 else -> throw ImportFormatException("Kein Migrationspfad ab schema_version $currentVersion.")
             }
             currentVersion++
@@ -172,6 +175,10 @@ class StackLaborJson(
         },
     )
 
+    private fun migriereV1NachV2(root: JsonObject): JsonObject = JsonObject(
+        root.toMutableMap().apply { put("schema_version", JsonPrimitive(2)) },
+    )
+
     private fun requireUnique(values: List<Any>, feld: String) {
         requireImport(values.size == values.toSet().size, "Doppelte Werte in $feld.")
     }
@@ -187,7 +194,7 @@ class StackLaborJson(
     }
 
     companion object {
-        const val AKTUELLE_SCHEMA_VERSION: Int = 1
+        const val AKTUELLE_SCHEMA_VERSION: Int = 2
         const val EXPORT_FORMAT: String = "stacklabor_export"
         const val SEED_FORMAT: String = "stacklabor_startbestand"
         private val ERLAUBTE_FORMATE = setOf(EXPORT_FORMAT, SEED_FORMAT)

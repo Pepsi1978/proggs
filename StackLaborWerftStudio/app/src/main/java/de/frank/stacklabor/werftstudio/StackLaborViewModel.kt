@@ -431,6 +431,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun routeChanged(route: StackLaborRoute) {
+        if (route != currentRoute) mutableState.update { it.copy(searchQuery = "") }
         currentRoute = route
         val stackId = route.stackIdOrNull()
         if (stackId != null) selectedStackId.value = stackId
@@ -528,7 +529,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             excipients = medicine?.beistoffe.orEmpty(),
             pieces = free?.stueckzahl ?: BigDecimal.ONE,
             amount = free?.mengeJeStueck,
-            unit = free?.einheit,
+            unit = free?.einheitAnzeige().orEmpty(),
             secondDose = duty != null,
             frequencyType = entry?.frequenzTyp ?: FrequenzTyp.TAEGLICH,
             everyDays = entry?.alleNTage,
@@ -555,9 +556,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         if (stackId != null) {
             val existing = currentEntries.firstOrNull { it.stackId == stackId && it.mittelId == id }
             val entryId = existing?.id ?: UUID.randomUUID().toString()
+            val unitText = medicineDraft.unit.trim().takeIf(String::isNotBlank)
+            val unit = unitText?.toEinheitOrNull()
             val doses = buildList {
-                add(StackEintragDosis(entryId, DosisVariante.FREI, medicineDraft.pieces, medicineDraft.amount, medicineDraft.unit))
-                if (medicineDraft.secondDose) add(StackEintragDosis(entryId, DosisVariante.DIENST, medicineDraft.pieces, medicineDraft.amount, medicineDraft.unit))
+                add(StackEintragDosis(entryId, DosisVariante.FREI, medicineDraft.pieces, medicineDraft.amount, unit, unitText))
+                if (medicineDraft.secondDose) add(StackEintragDosis(entryId, DosisVariante.DIENST, medicineDraft.pieces, medicineDraft.amount, unit, unitText))
             }
             val alternationIds = medicineDraft.alternates.split(',').map(String::trim).filter(String::isNotBlank).map { token ->
                 medicines.firstOrNull { it.id.equals(token, true) || it.name.equals(token, true) }?.id
@@ -1092,7 +1095,7 @@ private data class MedicineDraft(
     val excipients: String = "",
     val pieces: BigDecimal = BigDecimal.ONE,
     val amount: BigDecimal? = null,
-    val unit: Einheit? = null,
+    val unit: String = "",
     val secondDose: Boolean = false,
     val frequencyType: FrequenzTyp = FrequenzTyp.TAEGLICH,
     val everyDays: Int? = null,
@@ -1109,7 +1112,7 @@ private data class MedicineDraft(
         "excipients" -> copy(excipients = value)
         "pieces" -> copy(pieces = value.toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO } ?: pieces)
         "amount" -> copy(amount = value.toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO })
-        "unit" -> copy(unit = Einheit.entries.firstOrNull { it.name.equals(value.replace("µ", "U").replace("ü", "ue"), true) })
+        "unit" -> copy(unit = value)
         "secondDose" -> copy(secondDose = value.toBoolean())
         "frequency" -> if (value.contains("alle", true)) copy(frequencyType = FrequenzTyp.ALLE_N_TAGE, everyDays = Regex("\\d+").find(value)?.value?.toIntOrNull() ?: 2) else copy(frequencyType = FrequenzTyp.TAEGLICH, everyDays = null)
         "alternates" -> copy(alternates = value)
@@ -1138,7 +1141,8 @@ private fun Mittel.toUi(entry: StackEintrag, signal: Ampel, variant: DosisVarian
     val dose = entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull()
     val doseText = dose?.let {
         val amount = it.mengeJeStueck?.multiply(it.stueckzahl)?.stripTrailingZeros()?.toPlainString()
-        if (amount == null) "${it.stueckzahl.stripTrailingZeros().toPlainString()} Stück" else "$amount ${it.einheit?.label().orEmpty()}"
+        val unit = it.einheitAnzeige().ifBlank { "Stück" }
+        if (amount == null) "${it.stueckzahl.stripTrailingZeros().toPlainString()} $unit" else "$amount $unit"
     }.orEmpty()
     return MedicineUi(
         id = id,
@@ -1154,7 +1158,7 @@ private fun Mittel.toUi(entry: StackEintrag, signal: Ampel, variant: DosisVarian
         excipients = beistoffe,
         pieces = dose?.stueckzahl?.stripTrailingZeros()?.toPlainString() ?: "1",
         amount = dose?.mengeJeStueck?.stripTrailingZeros()?.toPlainString().orEmpty(),
-        unit = dose?.einheit?.label().orEmpty(),
+        unit = dose?.einheitAnzeige().orEmpty(),
         frequency = if (entry.frequenzTyp == FrequenzTyp.TAEGLICH) "Täglich" else "Alle ${entry.alleNTage ?: 2} Tage",
         secondDose = entry.dosen.any { it.variante == DosisVariante.DIENST },
         together = entry.gruppeId != null,
@@ -1169,8 +1173,8 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
     return entries.filter { it.aktiv }.groupBy { it.mittelId }.mapNotNull { (medicineId, grouped) ->
         val medicine = medicineById[medicineId] ?: return@mapNotNull null
         val doses = grouped.mapNotNull { entry -> entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull() }
-        val unit = doses.mapNotNull { it.einheit }.distinct().singleOrNull()
-        val total = if (unit == null) null else grouped.sumOf { entry ->
+        val unit = doses.map { it.einheitAnzeige() }.filter(String::isNotBlank).distinct().singleOrNull()
+        val total = if (unit == null || doses.any { it.mengeJeStueck == null }) null else grouped.sumOf { entry ->
             val dose = entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull()
             val amount = dose?.mengeJeStueck?.multiply(dose.stueckzahl) ?: BigDecimal.ZERO
             if (entry.frequenzTyp == FrequenzTyp.ALLE_N_TAGE) {
@@ -1179,14 +1183,21 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
         }
         DoseSummaryUi(
             medicine.name,
-            if (total != null && unit != null) "${total.stripTrailingZeros().toPlainString()} ${unit.label()}"
-            else "${doses.sumOf { it.stueckzahl }.stripTrailingZeros().toPlainString()} Stück",
+            if (total != null && unit != null) "${total.stripTrailingZeros().toPlainString()} $unit"
+            else "${doses.sumOf { it.stueckzahl }.stripTrailingZeros().toPlainString()} ${unit ?: "Stück"}",
             grouped.mapNotNull { stackById[it.stackId]?.name }.distinct().joinToString(" · "),
         )
     }.sortedBy { it.name }
 }
 
 private fun Einheit.label(): String = when (this) { Einheit.UG -> "µg"; Einheit.STUECK -> "Stück"; else -> name.lowercase() }
+
+private fun StackEintragDosis.einheitAnzeige(): String = einheitText?.trim().orEmpty().ifBlank { einheit?.label().orEmpty() }
+
+private fun String.toEinheitOrNull(): Einheit? {
+    val normalized = trim().replace("µ", "U").replace("ü", "ue")
+    return Einheit.entries.firstOrNull { it.name.equals(normalized, true) || it.label().equals(this.trim(), true) }
+}
 
 private fun BewertungMitDetails.toHistoryUi(selected: Boolean): EvaluationRunUi = EvaluationRunUi(
     id = bewertung.id,

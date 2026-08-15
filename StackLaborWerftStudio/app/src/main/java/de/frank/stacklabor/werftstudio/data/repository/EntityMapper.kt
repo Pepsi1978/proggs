@@ -99,11 +99,11 @@ internal fun StackEintrag.toEntity(): StackEintragEntity = StackEintragEntity(
 )
 
 internal fun StackEintragDosisEntity.toDomain(): StackEintragDosis = StackEintragDosis(
-    stackEintragId, variante, stueckzahl, mengeJeStueck, einheit,
+    stackEintragId, variante, stueckzahl, mengeJeStueck, einheit, einheitText,
 )
 
 internal fun StackEintragDosis.toEntity(): StackEintragDosisEntity = StackEintragDosisEntity(
-    stackEintragId, variante, stueckzahl, mengeJeStueck, einheit,
+    stackEintragId, variante, stueckzahl, mengeJeStueck, einheit, einheitText,
 )
 
 internal fun StackEintrag.alternationsPartnerEntities(): List<AlternationsPartnerEntity> =

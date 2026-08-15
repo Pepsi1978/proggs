@@ -28,6 +28,7 @@ data class PruefsummenDosis(
     val stueckzahl: BigDecimal,
     val mengeJeStueck: BigDecimal?,
     val einheit: Einheit?,
+    val einheitText: String? = null,
 )
 
 data class PruefsummenEintrag(
@@ -80,7 +81,7 @@ object Pruefsumme {
                 checkNotNull(gewaehlt) { "Eintrag ${eintrag.id} hat keine freie Dosis." }
                 token(decimal(gewaehlt.stueckzahl))
                 token(gewaehlt.mengeJeStueck?.let(::decimal).orEmpty())
-                token(gewaehlt.einheit?.code?.toString().orEmpty())
+                token(gewaehlt.einheitText?.trim() ?: gewaehlt.einheit?.code?.toString().orEmpty())
                 eintrag.alternationsPartnerMittelIds.sorted().forEach { token(it) }
                 eintrag.mittel.komponenten.sortedBy { it.id }.forEach { komponente ->
                     token(komponente.id)

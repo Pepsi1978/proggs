@@ -99,6 +99,7 @@ data class StackEintragDosis(
     val stueckzahl: BigDecimal,
     val mengeJeStueck: BigDecimal?,
     val einheit: Einheit?,
+    val einheitText: String? = null,
 )
 
 data class StackEintrag(
