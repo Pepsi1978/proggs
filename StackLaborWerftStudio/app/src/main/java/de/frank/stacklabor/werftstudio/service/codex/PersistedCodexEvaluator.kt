@@ -100,7 +100,7 @@ class PersistedCodexEvaluator(
         evaluationId: String = UUID.randomUUID().toString(),
         onEvent: suspend (CodexStreamEvent) -> Unit = {},
     ): BewertungMitDetails {
-        val stacks = repository.beobachteStacks().first().filter { it.id in stackIds }
+        val stacks = repository.beobachteStacks().first().filter { it.id in stackIds }.sortedBy { it.sortierung }
         require(stacks.isNotEmpty()) { "Keine Stacks für die Gesamtauswertung ausgewählt." }
         val inhalte = stacks.map { repository.ladeStackInhalt(it.id) }
         val zielKatalog = repository.beobachteZiele().first().associateBy { it.id }
@@ -116,8 +116,8 @@ class PersistedCodexEvaluator(
             }
             .sortedBy { it.rank }
         val checksumInput = stacks.map {
-            repository.berechnePruefsumme(it.id, appSettings.dosisVariante)
-        }.sorted().plus(additionalInformation.trim()).joinToString("\u0000")
+            "${it.sortierung}:${it.id}:${repository.berechnePruefsumme(it.id, appSettings.dosisVariante)}"
+        }.plus(additionalInformation.trim()).joinToString("\u0000")
         val checksum = MessageDigest.getInstance("SHA-256")
             .digest(checksumInput.toByteArray())
             .joinToString("") { "%02x".format(it) }
@@ -126,8 +126,18 @@ class PersistedCodexEvaluator(
             contextJson = JSONObject()
                 .put("bereich", "TAG")
                 .put("ausgewählte_stack_ids", JSONArray(stacks.map { it.id }))
+                .put("stack_abfolge", JSONArray(stacks.mapIndexed { index, stack ->
+                    JSONObject()
+                        .put("position", index + 1)
+                        .put("stack_id", stack.id)
+                        .put("name", stack.name)
+                        .put("zeitpunkt", stack.zeitpunkt)
+                        .put("einnahme_hinweis", stack.einnahmeHinweis)
+                }))
                 .put("zusätzliche_informationen", additionalInformation.trim())
-                .put("stacks", JSONArray(inhalte.map { JSONObject(contextJson(it, appSettings.dosisVariante)) }))
+                .put("stacks", JSONArray(inhalte.mapIndexed { index, inhalt ->
+                    JSONObject(contextJson(inhalt, appSettings.dosisVariante, index + 1))
+                }))
                 .toString(),
             goals = goals,
             supplementIds = inhalte.flatMap { it.eintraege }
@@ -171,6 +181,7 @@ class PersistedCodexEvaluator(
     private fun contextJson(
         inhalt: de.frank.stacklabor.werftstudio.domain.model.StackInhalt,
         dosisVariante: de.frank.stacklabor.werftstudio.domain.model.DosisVariante,
+        position: Int = 1,
     ): String {
         val mittel = inhalt.mittel.associateBy { it.id }
         return JSONObject()
@@ -179,6 +190,8 @@ class PersistedCodexEvaluator(
                 JSONObject()
                     .put("id", inhalt.stack.id)
                     .put("name", inhalt.stack.name)
+                    .put("position_in_abfolge", position)
+                    .put("gespeicherte_sortierung", inhalt.stack.sortierung)
                     .put("zeitpunkt", inhalt.stack.zeitpunkt)
                     .put("einnahme_hinweis", inhalt.stack.einnahmeHinweis)
                     .put("ausgewertete_dosisvariante", dosisVariante.name),
@@ -189,6 +202,9 @@ class PersistedCodexEvaluator(
                     val katalog = mittel.getValue(eintrag.mittelId)
                     JSONObject()
                         .put("id", katalog.id)
+                        .put("stack_id", inhalt.stack.id)
+                        .put("stack_name", inhalt.stack.name)
+                        .put("stack_position", position)
                         .put("name", katalog.name)
                         .put("aktiv", eintrag.aktiv)
                         .put("loeslichkeit", katalog.loeslichkeit.anzeige())

@@ -110,6 +110,21 @@ data class DoseSummaryUi(val name: String, val dose: String, val meta: String)
 
 data class CompetitionUi(val title: String, val detail: String)
 
+data class StackEvaluationEntryUi(
+    val name: String,
+    val dose: String,
+    val details: String,
+    val active: Boolean,
+)
+
+data class StackEvaluationGroupUi(
+    val id: String,
+    val sequence: Int,
+    val name: String,
+    val meta: String,
+    val entries: List<StackEvaluationEntryUi>,
+)
+
 sealed interface MedicineSolubilityAiState {
     data object Idle : MedicineSolubilityAiState
     data class Loading(val name: String) : MedicineSolubilityAiState
@@ -151,6 +166,7 @@ data class StackLaborUiState(
     val historyComparison: String = "",
     val historyChanges: List<HistoryChangeUi> = emptyList(),
     val dailyDoses: List<DoseSummaryUi> = emptyList(),
+    val allStackGroups: List<StackEvaluationGroupUi> = emptyList(),
     val competitions: List<CompetitionUi> = emptyList(),
     val allStacksEvaluationId: String? = null,
     val ttsProviderLabel: String = "Microsoft Edge",

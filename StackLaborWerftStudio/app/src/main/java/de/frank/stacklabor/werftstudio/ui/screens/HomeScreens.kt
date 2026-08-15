@@ -104,6 +104,7 @@ import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.MedicineUi
 import de.frank.stacklabor.werftstudio.ui.model.SignalState
 import de.frank.stacklabor.werftstudio.ui.model.SortMode
+import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationGroupUi
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
@@ -894,13 +895,10 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         ) { callbacks.onNavigate(StackLaborRoute.Evaluation(evaluationId, Origin.AllStacks)) }
                     }
                 }
-                item { AllStacksSectionTitle("Tagesgesamtdosis") }
-                item {
-                    Column {
-                        state.dailyDoses.forEach { row ->
-                            DoseRow(row.name, row.dose, row.meta, doseSignal(row.name, state))
-                        }
-                    }
+                item { AllStacksSectionTitle("Ausgewählte Stacks in Einnahmereihenfolge") }
+                items(state.allStackGroups, key = { it.id }) { group ->
+                    StackEvaluationGroupCard(group)
+                    Spacer(Modifier.height(10.dp))
                 }
                 item { AllStacksSectionTitle("Konkurrenzen über Stacks hinweg") }
                 item {
@@ -929,6 +927,68 @@ fun AllStacksScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
         }
     }
     if (state.allStacksSetupOpen) AllStacksSetupDialog(state, callbacks)
+}
+
+@Composable
+private fun StackEvaluationGroupCard(group: StackEvaluationGroupUi) {
+    val colors = StackLaborTheme.colors
+    RaisedPanel(Modifier.fillMaxWidth(), elevation = 14.dp, rimAlpha = 0.9f) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(28.dp).clip(CircleShape)
+                        .background(colors.accent.copy(alpha = 0.18f))
+                        .border(1.dp, colors.accent.copy(alpha = 0.7f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(group.sequence.toString(), fontWeight = FontWeight.Bold, color = colors.accent)
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        group.name,
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    )
+                    Text(
+                        group.meta.ifBlank { "Keine Zeit- oder Einnahmeangabe" },
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = colors.textMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            if (group.entries.isEmpty()) {
+                Text("Keine Mittel in diesem Stack", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
+            } else {
+                group.entries.forEachIndexed { index, entry ->
+                    if (index > 0) Spacer(Modifier.fillMaxWidth().height(1.dp).background(colors.border.copy(alpha = 0.55f)))
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 8.dp).alpha(if (entry.active) 1f else 0.45f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                entry.name + if (entry.active) "" else " · ausgeschaltet",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                            )
+                            Text(
+                                entry.details,
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = colors.textMuted,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            entry.dose,
+                            Modifier.width(104.dp),
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

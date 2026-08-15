@@ -71,6 +71,8 @@ import de.frank.stacklabor.werftstudio.ui.model.SortMode
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiEffect
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
+import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationEntryUi
+import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationGroupUi
 import de.frank.stacklabor.werftstudio.ui.model.StackSummaryUi
 import de.frank.stacklabor.werftstudio.ui.model.sortiereNachLoeslichkeit
 import de.frank.stacklabor.werftstudio.ui.model.toCatalogMedicineUi
@@ -341,6 +343,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     entries.filter { entry -> current.selectedAllStackIds.isEmpty() || entry.stackId in current.selectedAllStackIds },
                     medicines,
                     stacks.filter { stack -> current.selectedAllStackIds.isEmpty() || stack.id in current.selectedAllStackIds },
+                    settings.dosisVariante,
+                ),
+                allStackGroups = stackEvaluationGroups(
+                    current.selectedAllStackIds,
+                    stacks,
+                    entries,
+                    medicines,
                     settings.dosisVariante,
                 ),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
@@ -681,13 +690,15 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             allStacksDraftBeforeImprovement = null
             improvedAllStacksVersions.clear()
         }
-        mutableState.update {
-            it.copy(
+        mutableState.update { current ->
+            val selectedIds = if (reset) stacks.mapTo(linkedSetOf()) { stack -> stack.id } else current.selectedAllStackIds
+            current.copy(
                 allStacksSetupOpen = true,
-                selectedAllStackIds = if (reset) stacks.mapTo(linkedSetOf()) { stack -> stack.id } else it.selectedAllStackIds,
-                allStacksAdditionalInfo = if (reset) "" else it.allStacksAdditionalInfo,
+                selectedAllStackIds = selectedIds,
+                allStacksAdditionalInfo = if (reset) "" else current.allStacksAdditionalInfo,
                 allStacksInputState = GoalInputState.Idle,
                 canUndoAllStacksImprovement = false,
+                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, settings.dosisVariante),
             )
         }
     }
@@ -706,7 +717,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         mutableState.update { current ->
             val selected = current.selectedAllStackIds.toMutableSet()
             if (!selected.add(stackId)) selected.remove(stackId)
-            current.copy(selectedAllStackIds = selected)
+            current.copy(
+                selectedAllStackIds = selected,
+                allStackGroups = stackEvaluationGroups(selected, stacks, entries, medicines, settings.dosisVariante),
+            )
         }
     }
 
@@ -823,6 +837,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     stacks.filter { stack -> stack.id in selectedIds },
                     settings.dosisVariante,
                 ),
+                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, settings.dosisVariante),
             )
         }
         evaluateAll(selectedIds, additionalInformation)
@@ -1654,6 +1669,40 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
             grouped.mapNotNull { stackById[it.stackId]?.name }.distinct().joinToString(" · "),
         )
     }.sortedBy { it.name }
+}
+
+private fun stackEvaluationGroups(
+    selectedStackIds: Set<String>,
+    stacks: List<Stack>,
+    entries: List<StackEintrag>,
+    medicines: List<Mittel>,
+    variant: DosisVariante,
+): List<StackEvaluationGroupUi> {
+    val includedIds = selectedStackIds.ifEmpty { stacks.mapTo(linkedSetOf()) { it.id } }
+    val medicineById = medicines.associateBy { it.id }
+    return stacks.filter { it.id in includedIds }.sortedBy { it.sortierung }.mapIndexed { index, stack ->
+        StackEvaluationGroupUi(
+            id = stack.id,
+            sequence = index + 1,
+            name = stack.name,
+            meta = listOf(stack.zeitpunkt, stack.einnahmeHinweis).filter(String::isNotBlank).joinToString(" · "),
+            entries = entries.filter { it.stackId == stack.id }.sortedBy { it.reihenfolge }.mapNotNull { entry ->
+                val medicine = medicineById[entry.mittelId] ?: return@mapNotNull null
+                val medicineUi = medicine.toUi(entry, Ampel.GRAU, variant)
+                StackEvaluationEntryUi(
+                    name = medicine.name,
+                    dose = medicineUi.dose,
+                    details = buildList {
+                        add(entry.frequenzAnzeige())
+                        add(medicine.darreichungsformText?.trim().orEmpty().ifBlank { medicine.darreichungsformAnzeige() })
+                        if (entry.gruppeId != null) add("gemeinsam im Stack")
+                        if (entry.zusatztext.isNotBlank()) add(entry.zusatztext)
+                    }.filter(String::isNotBlank).joinToString(" · "),
+                    active = entry.aktiv,
+                )
+            },
+        )
+    }
 }
 
 private fun BewertungMitDetails.toHistoryUi(selected: Boolean): EvaluationRunUi = EvaluationRunUi(

@@ -226,6 +226,12 @@ internal fun codexPayload(
         append("Nicht genannte Mittel-Ziel-Paare gelten als neutral. ")
         append("Als 'alterniert mit' gekennzeichnete Paare nie als Konkurrenz melden. ")
         append("Berücksichtige bei einer Tagesauswertung ausschließlich die unter 'ausgewählte_stack_ids' aufgeführten Stacks und die 'zusätzliche_informationen' vollständig. ")
+        append("Wenn der Kontext 'bereich=TAG' enthält, behandle JEDEN Eintrag im Array 'stacks' als eigene, in sich geschlossene Einnahmeeinheit. ")
+        append("Vermische die Mittel verschiedener Stacks niemals zu einer gemeinsamen Mittel-Liste und addiere sie nicht zu einem fiktiven Stack. ")
+        append("Die chronologische Einnahmereihenfolge steht in 'stack_abfolge' und 'position_in_abfolge'; beachte Namen, Zeitpunkt und Einnahmehinweis jedes Stacks. ")
+        append("Analysiere in 'gesamt' zuerst jeden Stack einzeln und klar mit seinem Stack-Namen, seinen eigenen Mitteln und seiner Einnahmesituation. ")
+        append("Bewerte danach gesondert die Zusammenhänge zwischen den Stacks, insbesondere Abstände, Reihenfolge, Aufnahme und Wechselwirkungen über die Zeit. ")
+        append("Die 'zusätzliche_informationen' ergänzen diese gespeicherte Stack-Struktur, ersetzen oder vermischen sie aber nicht. ")
         append("Einträge mit 'aktiv=false' gehören nicht zur aktuellen Einnahme und dürfen nicht bewertet werden. ")
         append("Nutze in den ID-Feldern ('nem', 'nem_a', 'nem_b', 'ziel', 'frage') ausschließlich die übergebenen IDs. ")
         // Ohne diese Ansage schrieb das Modell die internen IDs in den Fließtext — also
