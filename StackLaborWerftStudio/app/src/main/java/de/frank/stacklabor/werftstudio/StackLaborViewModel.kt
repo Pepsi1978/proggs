@@ -280,6 +280,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
         val usageByMedicine = entries.groupingBy { it.mittelId }.eachCount()
         val catalogUi = medicines.map { it.toCatalogMedicineUi(usageByMedicine[it.id] ?: 0) }
+        val selectedStack = stacks.firstOrNull { it.id == selectedStackId.value }
         mutableState.update { current ->
             current.copy(
                 loading = false,
@@ -287,6 +288,9 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 reducedMotion = settings.bewegungReduziert,
                 doseVariant = if (settings.dosisVariante == DosisVariante.FREI) DoseVariant.Frei else DoseVariant.Dienst,
                 stacks = summaries,
+                stackName = selectedStack?.name ?: current.stackName,
+                stackTime = selectedStack?.zeitpunkt ?: current.stackTime,
+                stackNote = selectedStack?.einnahmeHinweis ?: current.stackNote,
                 catalogMedicines = catalogUi,
                 dailyDoses = dailyDoses(entries, medicines, stacks, settings.dosisVariante),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
