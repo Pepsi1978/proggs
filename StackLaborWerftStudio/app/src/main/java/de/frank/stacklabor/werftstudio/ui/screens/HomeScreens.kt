@@ -957,6 +957,21 @@ private fun StackEvaluationGroupCard(group: StackEvaluationGroupUi) {
                 }
             }
             Spacer(Modifier.height(10.dp))
+            if (group.goals.isNotEmpty()) {
+                Text(
+                    "Ziele dieses Stacks",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = colors.accent,
+                )
+                Spacer(Modifier.height(4.dp))
+                group.goals.forEach { goal ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
+                        Text("${goal.rank}.", Modifier.width(24.dp), fontWeight = FontWeight.SemiBold, color = colors.accent)
+                        Text(goal.text, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             if (group.entries.isEmpty()) {
                 Text("Keine Mittel in diesem Stack", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
             } else {

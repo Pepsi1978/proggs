@@ -72,6 +72,7 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiEffect
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationEntryUi
+import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationGoalUi
 import de.frank.stacklabor.werftstudio.ui.model.StackEvaluationGroupUi
 import de.frank.stacklabor.werftstudio.ui.model.StackSummaryUi
 import de.frank.stacklabor.werftstudio.ui.model.sortiereNachLoeslichkeit
@@ -350,6 +351,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     stacks,
                     entries,
                     medicines,
+                    stackGoals,
+                    goals,
                     settings.dosisVariante,
                 ),
                 ttsProviderLabel = settings.ttsAnbieter.label(),
@@ -698,7 +701,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 allStacksAdditionalInfo = if (reset) "" else current.allStacksAdditionalInfo,
                 allStacksInputState = GoalInputState.Idle,
                 canUndoAllStacksImprovement = false,
-                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, settings.dosisVariante),
+                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, stackGoals, goals, settings.dosisVariante),
             )
         }
     }
@@ -719,7 +722,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             if (!selected.add(stackId)) selected.remove(stackId)
             current.copy(
                 selectedAllStackIds = selected,
-                allStackGroups = stackEvaluationGroups(selected, stacks, entries, medicines, settings.dosisVariante),
+                allStackGroups = stackEvaluationGroups(selected, stacks, entries, medicines, stackGoals, goals, settings.dosisVariante),
             )
         }
     }
@@ -837,7 +840,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     stacks.filter { stack -> stack.id in selectedIds },
                     settings.dosisVariante,
                 ),
-                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, settings.dosisVariante),
+                allStackGroups = stackEvaluationGroups(selectedIds, stacks, entries, medicines, stackGoals, goals, settings.dosisVariante),
             )
         }
         evaluateAll(selectedIds, additionalInformation)
@@ -1686,16 +1689,22 @@ private fun stackEvaluationGroups(
     stacks: List<Stack>,
     entries: List<StackEintrag>,
     medicines: List<Mittel>,
+    stackGoals: List<StackZiel>,
+    goals: List<Ziel>,
     variant: DosisVariante,
 ): List<StackEvaluationGroupUi> {
     val includedIds = selectedStackIds.ifEmpty { stacks.mapTo(linkedSetOf()) { it.id } }
     val medicineById = medicines.associateBy { it.id }
+    val goalById = goals.associateBy { it.id }
     return stacks.filter { it.id in includedIds }.sortedBy { it.sortierung }.mapIndexed { index, stack ->
         StackEvaluationGroupUi(
             id = stack.id,
             sequence = index + 1,
             name = stack.name,
             meta = listOf(stack.zeitpunkt, stack.einnahmeHinweis).filter(String::isNotBlank).joinToString(" · "),
+            goals = stackGoals.filter { it.stackId == stack.id }.sortedBy { it.rang }.mapNotNull { assignment ->
+                goalById[assignment.zielId]?.let { StackEvaluationGoalUi(assignment.rang, it.text) }
+            },
             entries = entries.filter { it.stackId == stack.id }.sortedBy { it.reihenfolge }.mapNotNull { entry ->
                 val medicine = medicineById[entry.mittelId] ?: return@mapNotNull null
                 val medicineUi = medicine.toUi(entry, Ampel.GRAU, variant)

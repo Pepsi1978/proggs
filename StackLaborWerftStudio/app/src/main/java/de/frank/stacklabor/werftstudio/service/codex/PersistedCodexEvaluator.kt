@@ -16,6 +16,7 @@ import de.frank.stacklabor.werftstudio.domain.model.FrageAntwort
 import de.frank.stacklabor.werftstudio.domain.model.Konkurrenz
 import de.frank.stacklabor.werftstudio.domain.model.KonkurrenzArt
 import de.frank.stacklabor.werftstudio.domain.model.Wirkung
+import de.frank.stacklabor.werftstudio.domain.model.Ziel
 import de.frank.stacklabor.werftstudio.service.auth.CodexOAuthClient
 import de.frank.stacklabor.werftstudio.service.work.DeferredCodexEvaluationRunner
 import java.util.UUID
@@ -53,7 +54,7 @@ class PersistedCodexEvaluator(
         val reasoning = ReasoningEffort.entries.first { it.apiValue == appSettings.codexDenkstufe }
         val request = CodexEvaluationRequest(
             evaluationId = evaluationId,
-            contextJson = contextJson(inhalt, appSettings.dosisVariante),
+            contextJson = contextJson(inhalt, appSettings.dosisVariante, zielKatalog),
             goals = inhalt.ziele.mapNotNull { stackZiel ->
                 zielKatalog[stackZiel.zielId]?.let { CodexGoal(it.id, stackZiel.rang, it.text) }
             },
@@ -135,9 +136,22 @@ class PersistedCodexEvaluator(
                         .put("zeitpunkt", stack.zeitpunkt)
                         .put("einnahme_hinweis", stack.einnahmeHinweis)
                 }))
+                .put("ziel_zuordnungen", JSONArray(inhalte.flatMapIndexed { index, inhalt ->
+                    inhalt.ziele.sortedBy { it.rang }.mapNotNull { assignment ->
+                        zielKatalog[assignment.zielId]?.let { ziel ->
+                            JSONObject()
+                                .put("stack_position", index + 1)
+                                .put("stack_id", inhalt.stack.id)
+                                .put("stack_name", inhalt.stack.name)
+                                .put("ziel_id", ziel.id)
+                                .put("rang_im_stack", assignment.rang)
+                                .put("ziel", ziel.text)
+                        }
+                    }
+                }))
                 .put("zusätzliche_informationen", additionalInformation.trim())
                 .put("stacks", JSONArray(inhalte.mapIndexed { index, inhalt ->
-                    JSONObject(contextJson(inhalt, appSettings.dosisVariante, index + 1))
+                    JSONObject(contextJson(inhalt, appSettings.dosisVariante, zielKatalog, index + 1))
                 }))
                 .toString(),
             goals = goals,
@@ -183,6 +197,7 @@ class PersistedCodexEvaluator(
     private fun contextJson(
         inhalt: de.frank.stacklabor.werftstudio.domain.model.StackInhalt,
         dosisVariante: de.frank.stacklabor.werftstudio.domain.model.DosisVariante,
+        zielKatalog: Map<String, Ziel>,
         position: Int = 1,
     ): String {
         val mittel = inhalt.mittel.associateBy { it.id }
@@ -197,6 +212,17 @@ class PersistedCodexEvaluator(
                     .put("zeitpunkt", inhalt.stack.zeitpunkt)
                     .put("einnahme_hinweis", inhalt.stack.einnahmeHinweis)
                     .put("ausgewertete_dosisvariante", dosisVariante.name),
+            )
+            .put(
+                "ziele",
+                JSONArray(inhalt.ziele.sortedBy { it.rang }.mapNotNull { assignment ->
+                    zielKatalog[assignment.zielId]?.let { ziel ->
+                        JSONObject()
+                            .put("id", ziel.id)
+                            .put("rang", assignment.rang)
+                            .put("text", ziel.text)
+                    }
+                }),
             )
             .put(
                 "mittel",

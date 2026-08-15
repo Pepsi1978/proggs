@@ -233,6 +233,14 @@ internal fun codexPayload(
         append("Analysiere in 'gesamt' zuerst jeden Stack einzeln und klar mit seinem Stack-Namen, seinen eigenen Mitteln und seiner Einnahmesituation. ")
         append("Bewerte danach gesondert die Zusammenhänge zwischen den Stacks, insbesondere Abstände, Reihenfolge, Aufnahme und Wechselwirkungen über die Zeit. ")
         append("Die 'zusätzliche_informationen' ergänzen diese gespeicherte Stack-Struktur, ersetzen oder vermischen sie aber nicht. ")
+        if (request.scope == CodexEvaluationScope.DAY) {
+            append("Jeder Stack enthält unter 'ziele' ausschließlich seine eigenen Ziele mit der Priorität 'rang'; dieselbe eindeutige Zuordnung steht zusätzlich in 'ziel_zuordnungen'. ")
+            append("Bewerte in 'gesamt' für JEDEN ausgewählten Stack und JEDES dort zugeordnete Ziel ausdrücklich, ob dieser Stack das Ziel erreicht, teilweise unterstützt, neutral bleibt oder behindert. ")
+            append("Prüfe danach für jedes Ziel, ob Mittel aus einem anderen ausgewählten Stack es zusätzlich unterstützen oder behindern, auch wenn die Stacks zeitlich verschieden eingenommen werden. ")
+            append("Berücksichtige einen zeitlichen Abstand nur entsprechend den tatsächlichen Zeit- und Zusatzangaben; unterstelle niemals pauschal, dass zeitlich getrennte Stacks unabhängig sind. ")
+            append("Ordne kein Ziel einem Stack zu, in dessen 'ziele'-Array es nicht steht. Stacks ohne Ziele werden nur auf Verträglichkeit und ihren Einfluss auf Ziele anderer Stacks geprüft. ")
+            append("Erzeuge 'zellen' in jeder Teilanfrage ausschließlich für die unter 'In dieser Teilanfrage zu bewertende Ziele' aufgeführten Ziel-IDs. ")
+        }
         append("Einträge mit 'aktiv=false' gehören nicht zur aktuellen Einnahme und dürfen nicht bewertet werden. ")
         append("Nutze in den ID-Feldern ('nem', 'nem_a', 'nem_b', 'ziel', 'frage') ausschließlich die übergebenen IDs. ")
         // Ohne diese Ansage schrieb das Modell die internen IDs in den Fließtext — also

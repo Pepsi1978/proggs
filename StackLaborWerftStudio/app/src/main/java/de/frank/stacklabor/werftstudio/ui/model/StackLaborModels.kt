@@ -117,11 +117,17 @@ data class StackEvaluationEntryUi(
     val active: Boolean,
 )
 
+data class StackEvaluationGoalUi(
+    val rank: Int,
+    val text: String,
+)
+
 data class StackEvaluationGroupUi(
     val id: String,
     val sequence: Int,
     val name: String,
     val meta: String,
+    val goals: List<StackEvaluationGoalUi>,
     val entries: List<StackEvaluationEntryUi>,
 )
 
