@@ -272,13 +272,31 @@ private fun StackList(
     callbacks: StackLaborCallbacks,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(state.stacks, key = { it.id }) { stack ->
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val reorder = rememberReorder(
+        source = state.stacks,
+        keyOf = { it.id },
+        listState = listState,
+        rowHeight = StackLaborTheme.dimens.stackHeight + 8.dp,
+        onDropped = { ids -> callbacks.onEvent(StackLaborEvent.ApplyStackOrder(ids)) },
+    )
+    LazyColumn(
+        modifier.padding(horizontal = 12.dp).then(reorder.dragModifier()),
+        state = listState,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 16.dp, bottom = 88.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(reorder.items, key = { it.id }) { stack ->
+            val gezogen = reorder.isDragged(stack)
             StackCard(
                 stack = stack,
                 animationsEnabled = animationsEnabled,
                 onOpen = { callbacks.onNavigate(StackLaborRoute.StackDetail(stack.id)) },
                 onCatalog = { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stack.id, Origin.Home)) },
+                modifier = Modifier
+                    .zIndex(if (gezogen) 1f else 0f)
+                    .then(if (animationsEnabled && !gezogen) Modifier.animateItem() else Modifier)
+                    .then(reorder.liftModifier(stack)),
             )
         }
     }

@@ -165,6 +165,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.RemoveMedicineFromStack -> removeMedicineFromStack(event.stackId, event.medicineId)
             is StackLaborEvent.ReorderMedicine -> reorderMedicine(event.stackId, event.medicineId, event.targetIndex)
             is StackLaborEvent.ApplyMedicineOrder -> applyMedicineOrder(event.stackId, event.medicineIds)
+            is StackLaborEvent.ApplyStackOrder -> launchAction { repository.sortiereStacks(event.stackIds) }
             is StackLaborEvent.EditGoal -> launchAction { repository.speichereZiel(Ziel(event.goalId, event.text.trim())) }
             is StackLaborEvent.ToggleGoal -> toggleGoal(event.stackId, event.goalId)
             is StackLaborEvent.ReorderGoal -> reorderGoal(event.stackId, event.goalId, event.targetRank)

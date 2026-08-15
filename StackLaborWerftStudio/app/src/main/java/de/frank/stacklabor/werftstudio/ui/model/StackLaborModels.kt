@@ -193,6 +193,7 @@ sealed interface StackLaborEvent {
      * alle sichtbaren Mittel in der neuen Abfolge.
      */
     data class ApplyMedicineOrder(val stackId: String, val medicineIds: List<String>) : StackLaborEvent
+    data class ApplyStackOrder(val stackIds: List<String>) : StackLaborEvent
     data class EditGoal(val goalId: String, val text: String) : StackLaborEvent
     data class ToggleGoal(val stackId: String, val goalId: String) : StackLaborEvent
     data class ReorderGoal(val stackId: String, val goalId: String, val targetRank: Int) : StackLaborEvent
