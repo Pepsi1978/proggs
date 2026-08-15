@@ -107,5 +107,8 @@ interface StackDao {
     suspend fun holeAlleSortieransichten(): List<StackSortieransichtEntity>
 
     @Query("SELECT * FROM stack_sortieransicht WHERE stackId = :stackId")
+    suspend fun holeSortieransicht(stackId: String): StackSortieransichtEntity?
+
+    @Query("SELECT * FROM stack_sortieransicht WHERE stackId = :stackId")
     fun beobachteSortieransicht(stackId: String): Flow<StackSortieransichtEntity?>
 }

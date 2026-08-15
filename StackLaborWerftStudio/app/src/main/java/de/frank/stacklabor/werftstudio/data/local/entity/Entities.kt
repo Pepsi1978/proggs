@@ -114,6 +114,7 @@ data class StackEintragDosisEntity(
     val stueckzahl: BigDecimal,
     val mengeJeStueck: BigDecimal?,
     val einheit: Einheit?,
+    val einheitText: String? = null,
 )
 
 @Entity(
@@ -335,4 +336,5 @@ data class FrageAntwortEntity(
 data class StackSortieransichtEntity(
     @androidx.room.PrimaryKey val stackId: String,
     val sortieransicht: Sortieransicht,
+    @androidx.room.ColumnInfo(defaultValue = "0") val manuelleReihenfolge: Boolean = false,
 )

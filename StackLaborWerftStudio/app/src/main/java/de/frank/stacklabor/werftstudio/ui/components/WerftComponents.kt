@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -723,7 +724,7 @@ fun BottomSheetFrame(
             color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
             border = BorderStroke(1.5.dp, metalRim(0.9f)),
         ) {
-            Column {
+            Column(Modifier.imePadding()) {
                 if (showGrip) {
                     Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
                         Box(Modifier.width(32.dp).height(4.dp).clip(CircleShape).background(StackLaborTheme.colors.textMuted.copy(alpha = 0.6f)))

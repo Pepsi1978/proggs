@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import de.frank.stacklabor.werftstudio.data.local.dao.BestandDao
 import de.frank.stacklabor.werftstudio.data.local.dao.BewertungDao
 import de.frank.stacklabor.werftstudio.data.local.dao.KatalogDao
@@ -42,7 +44,7 @@ import de.frank.stacklabor.werftstudio.data.local.entity.ZielEntity
         FrageAntwortEntity::class,
         StackSortieransichtEntity::class,
     ],
-    version = 1,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(RoomConverters::class)
@@ -56,6 +58,22 @@ abstract class StackLaborDatabase : RoomDatabase() {
     companion object {
         const val DATEINAME: String = "stacklabor.db"
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE stack_sortieransicht ADD COLUMN manuelleReihenfolge INTEGER NOT NULL DEFAULT 0",
+                )
+                // Vorhandene Einnahmereihenfolgen stammen aus der bisherigen Drag-and-Drop-Funktion.
+                database.execSQL("UPDATE stack_sortieransicht SET manuelleReihenfolge = 1")
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE stack_eintrag_dosis ADD COLUMN einheitText TEXT")
+            }
+        }
+
         @Volatile
         private var instance: StackLaborDatabase? = null
 
@@ -64,7 +82,7 @@ abstract class StackLaborDatabase : RoomDatabase() {
                 context.applicationContext,
                 StackLaborDatabase::class.java,
                 DATEINAME,
-            ).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
         }
     }
 }

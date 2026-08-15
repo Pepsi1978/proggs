@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -28,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -79,6 +83,7 @@ import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
 import de.frank.stacklabor.werftstudio.ui.theme.depthShadow
 import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
 import de.frank.stacklabor.werftstudio.ui.theme.metalRim
+import kotlinx.coroutines.delay
 
 @Composable
 fun StackGoalsSheet(
@@ -250,7 +255,7 @@ fun MedicineEditSheet(
                         }
                     }
                 }
-                item { CompactField("Darreichungsform", form, selection = true, onValueChange = { form = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("form", it)) }) }
+                item { CompactField("Darreichungsform", form, options = MedicineFormOptions, onValueChange = { form = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("form", it)) }) }
                 item { CompactField("Hersteller", manufacturer, onValueChange = { manufacturer = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("manufacturer", it)) }) }
                 item { CompactToggleRow("Durchfallrisiko", diarrheaRisk, smallSwitch = true) { diarrheaRisk = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("diarrheaRisk", it.toString())) } }
                 item { CompactField("Beistoffe", excipients, onValueChange = { excipients = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("excipients", it)) }) }
@@ -260,7 +265,7 @@ fun MedicineEditSheet(
                         Row(Modifier.height(44.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CompactInput(pieces, "Stückzahl", { pieces = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("pieces", it)) }, Modifier.width(88.dp))
                             CompactInput(amount, "Menge", { amount = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("amount", it)) }, Modifier.width(88.dp))
-                            CompactInput(unit, "Einheit", { unit = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("unit", it)) }, Modifier.width(88.dp), selection = true)
+                            CompactInput(unit, "Einheit", { unit = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("unit", it)) }, Modifier.width(88.dp), options = MedicineUnitOptions)
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(dosePreview(pieces, amount, unit), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
@@ -272,7 +277,7 @@ fun MedicineEditSheet(
                         callbacks.onEvent(StackLaborEvent.UpdateMedicineField("secondDose", it.toString()))
                     }
                 }
-                item { CompactField("Frequenz", frequency, selection = true, onValueChange = { frequency = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("frequency", it)) }) }
+                item { CompactField("Frequenz", frequency, options = MedicineFrequencyOptions, onValueChange = { frequency = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("frequency", it)) }) }
                 item { CompactField("alterniert mit", alternates, onValueChange = { alternates = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("alternates", it)) }) }
                 item {
                     CompactToggleRow("Kombi-Gruppe „zusammen einnehmen“", together, smallSwitch = true) {
@@ -774,7 +779,7 @@ private fun CompactField(
     rowHeight: Dp = 72.dp,
     inputHeight: Dp = 44.dp,
     singleLine: Boolean = true,
-    selection: Boolean = false,
+    options: List<String> = emptyList(),
     invalid: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
@@ -785,7 +790,7 @@ private fun CompactField(
             color = if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.textMuted,
         )
         Spacer(Modifier.height(4.dp))
-        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, selection, invalid)
+        CompactInput(value, "", onValueChange, Modifier.fillMaxWidth(), inputHeight, singleLine, options, invalid)
     }
 }
 
@@ -797,13 +802,58 @@ private fun CompactInput(
     modifier: Modifier = Modifier,
     height: Dp = 44.dp,
     singleLine: Boolean = true,
-    selection: Boolean = false,
+    options: List<String> = emptyList(),
     invalid: Boolean = false,
 ) {
+    if (options.isNotEmpty()) {
+        var expanded by remember { mutableStateOf(false) }
+        Box(modifier.height(height)) {
+            Row(
+                Modifier.fillMaxSize()
+                    .depthShadow(RoundedCornerShape(12.dp), 14.dp)
+                    .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
+                    .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    value.ifEmpty { placeholder },
+                    Modifier.weight(1f),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                    color = if (value.isEmpty()) StackLaborTheme.colors.textMuted else StackLaborTheme.colors.textStrong,
+                    fontSize = 16.sp,
+                )
+                Text("⌄", color = StackLaborTheme.colors.textMuted, fontSize = 16.sp)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onValueChange(option)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+        return
+    }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) {
+        if (focused) {
+            delay(250L)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.height(height)
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .onFocusChanged { focused = it.isFocused }
             .depthShadow(RoundedCornerShape(12.dp), 14.dp)
             .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
             .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
@@ -821,11 +871,14 @@ private fun CompactInput(
                     }
                     inner()
                 }
-                if (selection) Text("⌄", color = StackLaborTheme.colors.textMuted, fontSize = 16.sp)
             }
         },
     )
 }
+
+private val MedicineFormOptions = listOf("Kapsel", "Tablette", "Löffel", "Tasse", "Pulver", "Tropfen", "Sonstige")
+private val MedicineUnitOptions = listOf("mg", "µg", "g", "ml", "IE", "Stück", "Tasse")
+private val MedicineFrequencyOptions = listOf("Täglich", "Alle 2 Tage", "Alle 3 Tage", "Alle 7 Tage")
 
 @Composable
 private fun SelectionPill(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -909,7 +962,8 @@ private fun CompactSwitch(checked: Boolean, small: Boolean = false) {
 private fun dosePreview(pieces: String, amount: String, unit: String): String {
     val count = pieces.replace(',', '.').toBigDecimalOrNull()
     val quantity = amount.replace(',', '.').toBigDecimalOrNull()
-    val total = if (count != null && quantity != null) count.multiply(quantity).stripTrailingZeros().toPlainString() else "0"
+    if (quantity == null) return "${pieces.ifBlank { "0" }} ${unit.ifBlank { "Stück" }}"
+    val total = if (count != null) count.multiply(quantity).stripTrailingZeros().toPlainString() else "0"
     return "${pieces.ifBlank { "0" }} × ${amount.ifBlank { "0" }} $unit = $total $unit"
 }
 

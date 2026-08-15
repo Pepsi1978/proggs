@@ -450,10 +450,6 @@ private fun MedicineList(
     modifier: Modifier,
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    // LazyColumn verankert sich am obersten sichtbaren Schlüssel: nach dem Umsortieren würde
-    // es dem alten Element hinterherscrollen, und die neue Reihenfolge sähe aus wie keine
-    // Änderung. Beim Wechsel der Ansicht deshalb an den Anfang springen.
-    LaunchedEffect(sortMode, fatFirst) { listState.scrollToItem(0) }
     val reorder = rememberReorder(
         source = filtered,
         keyOf = { it.id },
@@ -466,6 +462,11 @@ private fun MedicineList(
         },
         onDropped = { ids -> callbacks.onEvent(StackLaborEvent.ApplyMedicineOrder(stackId, ids)) },
     )
+    // LazyColumn verankert sich am obersten sichtbaren Schlüssel. Während eines Griffs darf
+    // ein Sortierwechsel die Geometrie der laufenden Geste jedoch nicht teleportieren.
+    LaunchedEffect(sortMode, fatFirst) {
+        if (reorder.draggedKey == null) listState.scrollToItem(0)
+    }
     LazyColumn(
         modifier.padding(horizontal = 12.dp),
         state = listState,

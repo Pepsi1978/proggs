@@ -52,6 +52,11 @@ data class SeedImportErgebnis(
     val mittel: Int,
 )
 
+data class StackSortierstatus(
+    val ansicht: Sortieransicht = Sortieransicht.EINNAHME,
+    val manuelleReihenfolge: Boolean = false,
+)
+
 interface StackLaborRepository {
     fun beobachteMittel(): Flow<List<Mittel>>
     fun beobachteStacks(): Flow<List<Stack>>
@@ -64,7 +69,7 @@ interface StackLaborRepository {
     fun beobachteNeuesteBewertung(stackId: String): Flow<BewertungMitDetails?>
     fun beobachteNeuesteTagBewertung(): Flow<BewertungMitDetails?>
     fun beobachteHistorie(stackId: String): Flow<List<BewertungMitDetails>>
-    fun beobachteSortieransicht(stackId: String): Flow<Sortieransicht>
+    fun beobachteSortieransicht(stackId: String): Flow<StackSortierstatus>
 
     suspend fun speichereMittel(mittel: Mittel)
     suspend fun loescheMittel(mittelId: String, bestaetigt: Boolean = false): Int
@@ -158,9 +163,12 @@ class RoomStackLaborRepository(
             .map { liste -> liste.map { it.toDomain() } }
             .distinctUntilChanged()
 
-    override fun beobachteSortieransicht(stackId: String): Flow<Sortieransicht> =
+    override fun beobachteSortieransicht(stackId: String): Flow<StackSortierstatus> =
         stackDao.beobachteSortieransicht(stackId)
-            .map { it?.sortieransicht ?: Sortieransicht.LOESLICHKEIT }
+            .map { entity ->
+                if (entity == null) StackSortierstatus()
+                else StackSortierstatus(entity.sortieransicht, entity.manuelleReihenfolge)
+            }
             .distinctUntilChanged()
 
     override suspend fun speichereMittel(mittel: Mittel) {
@@ -291,8 +299,13 @@ class RoomStackLaborRepository(
         zielDao.holeFrage(frageId)?.let { zielDao.loescheFrage(it) }
     }
 
-    override suspend fun setzeSortieransicht(stackId: String, sortieransicht: Sortieransicht): Unit =
-        stackDao.speichereSortieransicht(StackSortieransichtEntity(stackId, sortieransicht))
+    override suspend fun setzeSortieransicht(stackId: String, sortieransicht: Sortieransicht) {
+        val bisher = stackDao.holeSortieransicht(stackId)
+        stackDao.speichereSortieransicht(
+            bisher?.copy(sortieransicht = sortieransicht)
+                ?: StackSortieransichtEntity(stackId, sortieransicht),
+        )
+    }
 
     override suspend fun sortiereStacks(stackIds: List<String>) {
         database.withTransaction {
@@ -307,6 +320,11 @@ class RoomStackLaborRepository(
             val vorhanden = stackDao.holeEintraege(stackId).map { it.eintrag.id }
             requirePermutation(vorhanden, eintragIds, "Stack-Eintraege")
             eintragIds.forEachIndexed { index, id -> stackDao.setzeEintragPosition(id, index + 1) }
+            val bisher = stackDao.holeSortieransicht(stackId)
+            stackDao.speichereSortieransicht(
+                bisher?.copy(manuelleReihenfolge = true)
+                    ?: StackSortieransichtEntity(stackId, Sortieransicht.EINNAHME, manuelleReihenfolge = true),
+            )
         }
     }
 
@@ -461,7 +479,7 @@ class RoomStackLaborRepository(
                 gruppeId = eintrag.gruppeId,
                 zusatztext = eintrag.zusatztext,
                 dosen = eintrag.dosen.map {
-                    PruefsummenDosis(it.variante, it.stueckzahl, it.mengeJeStueck, it.einheit)
+                    PruefsummenDosis(it.variante, it.stueckzahl, it.mengeJeStueck, it.einheit, it.einheitText)
                 },
                 alternationsPartnerMittelIds = eintrag.alternationsPartnerMittelIds,
             )

@@ -9,6 +9,7 @@ import de.frank.stacklabor.werftstudio.data.preferences.Erscheinung
 import de.frank.stacklabor.werftstudio.data.preferences.TtsAnbieter
 import de.frank.stacklabor.werftstudio.data.repository.ImportModus
 import de.frank.stacklabor.werftstudio.data.repository.StackLaborRepository
+import de.frank.stacklabor.werftstudio.data.repository.StackSortierstatus
 import de.frank.stacklabor.werftstudio.data.transfer.StackExportDaten
 import de.frank.stacklabor.werftstudio.data.transfer.StackTextExport
 import de.frank.stacklabor.werftstudio.data.transfer.StackZielText
@@ -323,8 +324,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val selectedMedicines = snapshot.content.first.mapNotNull { entry ->
             medicineById[entry.mittelId]?.let { medicine -> medicine.toUi(entry, ampeln.mittelAmpeln[medicine.id] ?: Ampel.GRAU, snapshot.settings.dosisVariante) }
         }.let { list ->
-            if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) {
+            if (snapshot.evaluation.third.ansicht == Sortieransicht.LOESLICHKEIT) {
                 sortiereNachLoeslichkeit(list, snapshot.settings.loeslichkeitFettZuerst)
+            } else if (!snapshot.evaluation.third.manuelleReihenfolge) {
+                list.sortedBy { it.name.lowercase(Locale.GERMAN) }
             } else list
         }
         val usageByGoal = stackGoals.groupingBy { it.zielId }.eachCount()
@@ -350,7 +353,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackName = stack.name,
                 stackTime = stack.zeitpunkt,
                 stackNote = stack.einnahmeHinweis,
-                sortMode = if (snapshot.evaluation.third == Sortieransicht.LOESLICHKEIT) SortMode.Loeslichkeit else SortMode.Einnahme,
+                sortMode = if (snapshot.evaluation.third.ansicht == Sortieransicht.LOESLICHKEIT) SortMode.Loeslichkeit else SortMode.Einnahme,
                 solubilityFatFirst = snapshot.settings.loeslichkeitFettZuerst,
                 medicines = selectedMedicines,
                 goals = goalUi,
@@ -1065,7 +1068,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private data class SelectedSnapshot(
         val stackId: String,
         val content: Triple<List<StackEintrag>, List<StackZiel>, List<EigeneFrage>>,
-        val evaluation: Triple<BewertungMitDetails?, List<BewertungMitDetails>, Sortieransicht>,
+        val evaluation: Triple<BewertungMitDetails?, List<BewertungMitDetails>, StackSortierstatus>,
         val settings: AppEinstellungen,
     )
 }

@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 /**
@@ -49,12 +50,25 @@ class ReorderState<T : Any> internal constructor(
      */
     private var handOrdnung: List<T>? by mutableStateOf(null)
 
+    internal var ausstehendeReihenfolge: List<String>? by mutableStateOf(null)
+        private set
+
     /** Was angezeigt wird: die Hand gewinnt, solange sie etwas hält. */
     val items: List<T> get() = handOrdnung ?: quelle
 
     /** Nach dem Loslassen: sobald die neue Reihenfolge von aussen ankommt, gilt wieder [quelle]. */
     internal fun loesseHandOrdnung() {
         handOrdnung = null
+        ausstehendeReihenfolge = null
+    }
+
+    internal fun setzeQuelle(neueQuelle: List<T>) {
+        quelle = neueQuelle
+    }
+
+    internal fun bestaetigeQuelle() {
+        val erwartet = ausstehendeReihenfolge ?: return
+        if (quelle.map(keyOf) == erwartet) loesseHandOrdnung()
     }
 
     /** Welche Zeile gerade in der Hand liegt (null = keine). */
@@ -77,7 +91,12 @@ class ReorderState<T : Any> internal constructor(
         Modifier
     } else {
         Modifier.graphicsLayer {
-            translationY = offsetY
+            val index = items.indexOfFirst { keyOf(it) == draggedKey }
+            translationY = when (index) {
+                0 -> offsetY.coerceAtLeast(0f)
+                items.lastIndex -> offsetY.coerceAtMost(0f)
+                else -> offsetY
+            }
             scaleX = 1.03f
             scaleY = 1.03f
             shadowElevation = 18.dp.toPx()
@@ -138,7 +157,18 @@ class ReorderState<T : Any> internal constructor(
         // Die Hand-Reihenfolge bleibt stehen, bis die neue von aussen ankommt — sonst
         // blitzt fuer einen Moment die alte Reihenfolge auf.
         if (!uebernehmen) handOrdnung = null
-        if (uebernehmen && gezogen && ergebnis != null) onDropped?.invoke(ergebnis.map(keyOf))
+        if (uebernehmen && gezogen && ergebnis != null) {
+            ausstehendeReihenfolge = ergebnis.map(keyOf)
+            onDropped?.invoke(ausstehendeReihenfolge!!)
+        }
+    }
+
+    internal fun verschiebeAnListenanfang() {
+        val key = draggedKey ?: return
+        val aktuell = handOrdnung ?: return
+        val index = aktuell.indexOfFirst { keyOf(it) == key }
+        if (index > 0) handOrdnung = aktuell.toMutableList().apply { add(0, removeAt(index)) }
+        offsetY = offsetY.coerceAtLeast(0f)
     }
 
     private fun itemTopInViewport(key: String): Float =
@@ -185,10 +215,17 @@ fun <T : Any> rememberReorder(
     // Die Quelle wird bei JEDEM Durchlauf gesetzt, nicht in einem Effekt. Damit kann die
     // Anzeige gar nicht erst hinter der Wahrheit zurueckbleiben — etwa wenn die Sortierung
     // umgeschaltet wird, waehrend der Bildschirm offen ist.
-    state.quelle = source
+    state.setzeQuelle(source)
     // Nach dem Loslassen haelt die Hand-Reihenfolge noch, bis die neue von aussen ankommt.
     LaunchedEffect(source) {
-        if (state.draggedKey == null) state.loesseHandOrdnung()
+        state.bestaetigeQuelle()
+        if (state.draggedKey == null && state.ausstehendeReihenfolge == null) state.loesseHandOrdnung()
+    }
+    LaunchedEffect(state.ausstehendeReihenfolge) {
+        if (state.ausstehendeReihenfolge != null) {
+            delay(2_000L)
+            state.loesseHandOrdnung()
+        }
     }
     LaunchedEffect(state.draggedKey) {
         if (state.draggedKey == null) return@LaunchedEffect
@@ -200,6 +237,7 @@ fun <T : Any> rememberReorder(
                 // damit die Zeile am Finger bleibt und weiter Plaetze tauscht.
                 state.offsetY += gerollt
                 state.verschiebeWennNoetig()
+                if (schritt < 0f && !listState.canScrollBackward) state.verschiebeAnListenanfang()
             }
             withFrameNanos { }
         }

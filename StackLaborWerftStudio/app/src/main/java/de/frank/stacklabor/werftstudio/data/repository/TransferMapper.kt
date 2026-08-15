@@ -58,7 +58,7 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
     wirkstoffkomponenten = komponenten.map { WirkstoffkomponenteTransfer(it.id, it.mittelId, it.name, it.menge?.toPlainString(), it.einheit?.name) },
     stacks = stacks.map { StackTransfer(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
     eintraege = eintraege.map { StackEintragTransfer(it.id, it.stackId, it.mittelId, it.frequenzTyp.name, it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis) },
-    dosen = dosen.map { DosisTransfer(it.stackEintragId, it.variante.name, it.stueckzahl.toPlainString(), it.mengeJeStueck?.toPlainString(), it.einheit?.name) },
+    dosen = dosen.map { DosisTransfer(it.stackEintragId, it.variante.name, it.stueckzahl.toPlainString(), it.mengeJeStueck?.toPlainString(), it.einheit?.name, it.einheitText) },
     alternationsPartner = alternationsPartner.map { AlternationsPartnerTransfer(it.stackEintragId, it.partnerMittelId) },
     ziele = ziele.map { ZielTransfer(it.id, it.text) },
     stackZiele = stackZiele.map { StackZielTransfer(it.stackId, it.zielId, it.rang) },
@@ -67,7 +67,7 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
     bewertungszellen = zellen.map { BewertungszelleTransfer(it.bewertungId, it.mittelId, it.zielId, it.wirkung.name, it.staerke, it.grund) },
     konkurrenzen = konkurrenzen.map { KonkurrenzTransfer(it.bewertungId, it.mittelAId, it.mittelBId, it.art.name, it.schwere, it.grund) },
     antworten = antworten.map { AntwortTransfer(it.bewertungId, it.frageId, it.text) },
-    sortieransichten = sortieransichten.map { SortieransichtTransfer(it.stackId, it.sortieransicht.name) },
+    sortieransichten = sortieransichten.map { SortieransichtTransfer(it.stackId, it.sortieransicht.name, it.manuelleReihenfolge) },
 )
 
 internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
@@ -82,7 +82,7 @@ internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
         StackEintragEntity(it.id, it.stackId, it.mittelId, enumValue(it.frequenzTyp), it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis)
     },
     dosen = dosen.map {
-        StackEintragDosisEntity(it.stackEintragId, enumValue(it.variante), BigDecimal(it.stueckzahl), it.mengeJeStueck?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) })
+        StackEintragDosisEntity(it.stackEintragId, enumValue(it.variante), BigDecimal(it.stueckzahl), it.mengeJeStueck?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) }, it.einheitText)
     },
     alternationsPartner = alternationsPartner.map { AlternationsPartnerEntity(it.stackEintragId, it.partnerMittelId) },
     ziele = ziele.map { ZielEntity(it.id, it.text) },
@@ -98,7 +98,7 @@ internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
         KonkurrenzEntity(it.bewertungId, it.mittelAId, it.mittelBId, enumValue(it.art), it.schwere, it.grund)
     },
     antworten = antworten.map { FrageAntwortEntity(it.bewertungId, it.frageId, it.text) },
-    sortieransichten = sortieransichten.map { StackSortieransichtEntity(it.stackId, enumValue(it.ansicht)) },
+    sortieransichten = sortieransichten.map { StackSortieransichtEntity(it.stackId, enumValue(it.ansicht), it.manuelleReihenfolge) },
 )
 
 private inline fun <reified T : Enum<T>> enumValue(name: String): T = enumValueOf(name)

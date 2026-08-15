@@ -102,7 +102,7 @@ data class StackLaborUiState(
     val appearance: Appearance = Appearance.Light,
     val reducedMotion: Boolean = false,
     val doseVariant: DoseVariant = DoseVariant.Frei,
-    val sortMode: SortMode = SortMode.Loeslichkeit,
+    val sortMode: SortMode = SortMode.Einnahme,
     /** In der Löslichkeits-Ansicht: stehen die fettlöslichen oben? */
     val solubilityFatFirst: Boolean = true,
     val searchQuery: String = "",

@@ -74,6 +74,7 @@ data class DosisTransfer(
     val stueckzahl: String,
     @SerialName("menge_je_stueck") val mengeJeStueck: String? = null,
     val einheit: String? = null,
+    @SerialName("einheit_text") val einheitText: String? = null,
 )
 
 @Serializable
@@ -143,4 +144,5 @@ data class AntwortTransfer(
 data class SortieransichtTransfer(
     @SerialName("stack_id") val stackId: String,
     val ansicht: String,
+    @SerialName("manuelle_reihenfolge") val manuelleReihenfolge: Boolean = true,
 )
