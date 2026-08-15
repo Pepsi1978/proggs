@@ -715,22 +715,27 @@ fun BottomSheetFrame(
             Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * progress))
                 .clickable(enabled = !dismissRequested) { dismissRequested = true },
         )
-        Surface(
-            Modifier.fillMaxWidth().then(if (fixedHeight != null) Modifier.height(fixedHeight) else Modifier.fillMaxHeight(heightFraction))
+        Box(
+            Modifier.fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
-                .graphicsLayer { translationY = size.height * (1f - progress) },
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
-            border = BorderStroke(1.5.dp, metalRim(0.9f)),
+                .imePadding(),
         ) {
-            Column(Modifier.imePadding()) {
-                if (showGrip) {
-                    Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-                        Box(Modifier.width(32.dp).height(4.dp).clip(CircleShape).background(StackLaborTheme.colors.textMuted.copy(alpha = 0.6f)))
+            Surface(
+                Modifier.fillMaxWidth().then(if (fixedHeight != null) Modifier.height(fixedHeight) else Modifier.fillMaxHeight(heightFraction))
+                    .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
+                    .graphicsLayer { translationY = size.height * (1f - progress) },
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
+                border = BorderStroke(1.5.dp, metalRim(0.9f)),
+            ) {
+                Column {
+                    if (showGrip) {
+                        Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.width(32.dp).height(4.dp).clip(CircleShape).background(StackLaborTheme.colors.textMuted.copy(alpha = 0.6f)))
+                        }
                     }
+                    content()
                 }
-                content()
             }
         }
     }
