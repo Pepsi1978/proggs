@@ -1596,7 +1596,7 @@ private data class MedicineDraft(
         "diarrheaRisk" -> copy(diarrheaRisk = value.toBoolean())
         "excipients" -> copy(excipients = value)
         "pieces" -> copy(pieces = value.toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO } ?: pieces)
-        "amount" -> copy(amount = value.toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO })
+        "amount" -> copy(amount = value.replace(',', '.').toBigDecimalOrNull()?.takeIf { it > BigDecimal.ZERO })
         "unit" -> copy(unit = value)
         "secondDose" -> copy(secondDose = value.toBoolean())
         "frequency" -> {

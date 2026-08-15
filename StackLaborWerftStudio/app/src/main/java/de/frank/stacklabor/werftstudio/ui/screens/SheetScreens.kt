@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -309,7 +310,13 @@ fun MedicineEditSheet(
                     Column(Modifier.fillMaxWidth().height(72.dp).padding(start = 12.dp, top = 4.dp, end = 12.dp)) {
                         Row(Modifier.height(44.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CompactInput(pieces, "Stückzahl", { pieces = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("pieces", it)) }, Modifier.width(88.dp))
-                            CompactInput(amount, "Menge", { amount = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("amount", it)) }, Modifier.width(88.dp))
+                            CompactInput(
+                                amount,
+                                "Menge",
+                                { amount = it; callbacks.onEvent(StackLaborEvent.UpdateMedicineField("amount", it)) },
+                                Modifier.width(88.dp),
+                                keyboardType = KeyboardType.Decimal,
+                            )
                             CompactInput(
                                 unit,
                                 "Einheit",
@@ -858,6 +865,7 @@ private fun CompactInput(
     options: List<String> = emptyList(),
     invalid: Boolean = false,
     editableOptions: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     if (options.isNotEmpty() && !editableOptions) {
         var expanded by remember { mutableStateOf(false) }
@@ -926,6 +934,7 @@ private fun CompactInput(
             singleLine = singleLine,
             textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
             cursorBrush = SolidColor(StackLaborTheme.colors.accent),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             decorationBox = { inner ->
                 Row(
                     Modifier.fillMaxSize().padding(start = 12.dp, end = if (editableOptions) 4.dp else 12.dp, top = if (singleLine) 0.dp else 10.dp, bottom = if (singleLine) 0.dp else 10.dp),
