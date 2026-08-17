@@ -51,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class AppScreen {
     START,
@@ -1008,33 +1009,40 @@ class AppViewModel(
     /**
      * Fetches questions in the app's own style for Frank to read aloud. Without a reachable
      * ChatGPT the proven reference questions appear instead, so recording is never blocked.
+     *
+     * Der Vorlesetext steht sofort da: die Erzeugung lief vorher mit dem eingestellten
+     * Denkaufwand und hielt den Bildschirm bis zu einer Minute leer. Jetzt ersetzen erzeugte
+     * Fragen den bewährten Text nur, wenn sie rechtzeitig kommen.
      */
     private fun loadVoiceSampleQuestions() {
-        voiceRecorderQuestionsLoading = true
+        voiceRecorderQuestions = VoiceSampleScript.fallback
+        voiceRecorderQuestionsLoading = chatGptState == ChatGptState.CONNECTED
+        if (!voiceRecorderQuestionsLoading) return
         viewModelScope.launch {
             val generated = try {
-                if (chatGptState != ChatGptState.CONNECTED) {
-                    emptyList()
-                } else {
+                withTimeoutOrNull(VOICE_SAMPLE_QUESTION_TIMEOUT_MS) {
                     authManager.generateQuestions(
                         CodexQuestionRequest(
                             topic = VOICE_SAMPLE_TOPIC,
                             skillText = activeSkill?.text.orEmpty(),
                             operatingModeText = operatingModeText,
                             perspective = QuestionPerspective.FIRST_PERSON,
-                            model = model,
-                            reasoningEffort = reasoning,
+                            // Für einen Vorlesetext zählt Tempo, nicht Tiefe.
+                            model = CodexModel.LUNA,
+                            reasoningEffort = ReasoningEffort.LOW,
                         ),
                     )
-                }
+                }.orEmpty()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
                 emptyList()
             }
-            voiceRecorderQuestions = VoiceSampleScript.script(
-                generated.map { EmojiParser.parse(it).text },
-            )
+            if (generated.isNotEmpty()) {
+                voiceRecorderQuestions = VoiceSampleScript.script(
+                    generated.map { EmojiParser.parse(it).text },
+                )
+            }
             voiceRecorderQuestionsLoading = false
         }
     }
@@ -2005,6 +2013,9 @@ class AppViewModel(
         private const val VOICE_SAMPLE_TOPIC =
             "Eine Sprachprobe: ruhige, warme Fragen, die ich mir selbst laut vorlese, " +
                 "damit meine Stimme aufgenommen werden kann."
+
+        /** Danach bleibt es beim bewährten Vorlesetext, statt die Aufnahme länger warten zu lassen. */
+        private const val VOICE_SAMPLE_QUESTION_TIMEOUT_MS = 20_000L
 
         fun factory(context: Context, container: AppContainer): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {

@@ -249,7 +249,7 @@ fun VoiceRecorderScreen(
             SectionLabel("Das liest du vor")
             Text(
                 if (viewModel.voiceRecorderQuestionsLoading) {
-                    "Die Fragen werden gerade erzeugt …"
+                    "Du kannst sofort loslegen — passendere Fragen kommen noch nach."
                 } else {
                     "Ruhig und warm, gleichmäßig bis zum Schluss — etwa 50 Sekunden."
                 },
