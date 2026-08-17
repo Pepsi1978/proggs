@@ -169,6 +169,59 @@ class QwenTtsPlayer(context: Context) {
         }
     }
 
+    /**
+     * **Nur synthetisieren, nicht abspielen** — für die Absatz-Pipeline im [Vorleser].
+     * Zwei Schritte wie beim Abspielweg: erst den Auftrag, dann die fertige Datei holen.
+     */
+    suspend fun synthetisiere(text: String, rawApiKey: String, rawVoiceId: String): File {
+        val apiKey = rawApiKey.filterNot(Char::isWhitespace)
+        val voiceId = rawVoiceId.filterNot(Char::isWhitespace)
+        if (apiKey.isBlank() || voiceId.isBlank()) {
+            throw IllegalStateException("Die eigene Stimme ist nicht konfiguriert.")
+        }
+        val body = JSONObject().apply {
+            put("model", MODEL)
+            put(
+                "input",
+                JSONObject()
+                    .put("text", text)
+                    .put("voice", voiceId)
+                    .put("language_type", "German"),
+            )
+        }
+        val request = Request.Builder()
+            .url(SYNTHESIS_URL)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        val audioUrl = client.newCall(request).warteAufAntwort().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw TtsPlaybackException(
+                    "Qwen TTS error ${response.code}: ${responseBody.take(500)}",
+                )
+            }
+            val url = JSONObject(responseBody)
+                .optJSONObject("output")
+                ?.optJSONObject("audio")
+                ?.optString("url")
+                .orEmpty()
+            if (url.isBlank()) throw TtsPlaybackException("Qwen TTS returned no audio link.")
+            // Der Link kommt als http — das blockiert Android von sich aus.
+            if (url.startsWith("http://")) "https://" + url.removePrefix("http://") else url
+        }
+        val audioBytes = client.newCall(Request.Builder().url(audioUrl).build())
+            .warteAufAntwort().use { response ->
+                if (!response.isSuccessful) {
+                    throw TtsPlaybackException("Qwen TTS download failed: ${response.code}")
+                }
+                response.body?.bytes() ?: throw TtsPlaybackException("Qwen TTS audio was empty.")
+            }
+        val file = File(appContext.cacheDir, "qwen_tts_absatz_${UUID.randomUUID()}.wav")
+        file.writeBytes(audioBytes)
+        return file
+    }
+
     private fun playFile(
         file: File,
         requestGeneration: Long,

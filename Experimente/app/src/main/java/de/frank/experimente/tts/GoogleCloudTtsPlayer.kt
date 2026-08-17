@@ -153,6 +153,64 @@ class GoogleCloudTtsPlayer(context: Context) {
         }
     }
 
+    /**
+     * **Nur synthetisieren, nicht abspielen** — die Hälfte, die die Absatz-Pipeline im
+     * [Vorleser] braucht: sie kann damit den nächsten Absatz vorbereiten, während der
+     * laufende noch gesprochen wird. Die Wiedergabe übernimmt der `Absatzabspieler`.
+     */
+    suspend fun synthetisiere(
+        text: String,
+        apiKey: String,
+        voiceName: String,
+        speechRate: Float = 1f,
+        pitchSemitones: Double = 0.0,
+    ): File {
+        if (apiKey.isBlank()) {
+            throw IllegalStateException("Google Cloud TTS ist nicht konfiguriert.")
+        }
+        val body = JSONObject().apply {
+            put("input", JSONObject().put("text", text))
+            put(
+                "voice",
+                JSONObject().put("languageCode", "de-DE").put("name", voiceName),
+            )
+            put(
+                "audioConfig",
+                JSONObject()
+                    .put("audioEncoding", "MP3")
+                    .put("speakingRate", speechRate.coerceIn(0.7f, 1.3f).toDouble())
+                    .apply {
+                        if (pitchSemitones != 0.0 && !voiceName.contains("Chirp")) {
+                            put("pitch", pitchSemitones.coerceIn(-20.0, 20.0))
+                        }
+                    },
+            )
+        }
+        val url = GOOGLE_TTS_URL.toHttpUrl().newBuilder()
+            .addQueryParameter("key", apiKey)
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        val audioBytes = client.newCall(request).warteAufAntwort().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw TtsPlaybackException(
+                    "Google TTS error ${response.code}: ${responseBody.take(500)}",
+                )
+            }
+            val audioContent = JSONObject(responseBody).optString("audioContent")
+            if (audioContent.isBlank()) {
+                throw TtsPlaybackException("Google TTS returned no audio data.")
+            }
+            Base64.decode(audioContent, Base64.DEFAULT)
+        }
+        val file = File(appContext.cacheDir, "google_tts_absatz_${UUID.randomUUID()}.mp3")
+        file.writeBytes(audioBytes)
+        return file
+    }
+
     private fun playFile(
         file: File,
         requestGeneration: Long,

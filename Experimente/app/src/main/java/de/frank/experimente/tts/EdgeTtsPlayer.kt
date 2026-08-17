@@ -18,8 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -216,6 +219,132 @@ class EdgeTtsPlayer(context: Context) {
             } else {
                 socket.cancel()
             }
+        }
+    }
+
+    /**
+     * **Nur synthetisieren, nicht abspielen** — für die Absatz-Pipeline im [Vorleser].
+     *
+     * Der Weg ist derselbe wie in [speak]: eine eigene Verbindung je Absatz, die mit
+     * `turn.end` sauber endet. Wird das Vorlesen abgebrochen, fällt die Verbindung mit dem
+     * Warten weg — deshalb hängt hier kein Wachhund mehr daran.
+     */
+    suspend fun synthetisiere(
+        text: String,
+        voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
+        speechRate: Float = 1f,
+        pitchPercent: Int = 0,
+    ): File = suspendCancellableCoroutine { fortsetzung ->
+        val requestId = UUID.randomUUID().toString().replace("-", "")
+        val connectionId = UUID.randomUUID().toString().replace("-", "")
+        val url = EDGE_TTS_URL +
+            "?TrustedClientToken=$TRUSTED_CLIENT_TOKEN" +
+            "&Sec-MS-GEC=${generateSecMsGec()}" +
+            "&Sec-MS-GEC-Version=1-$CHROMIUM_FULL_VERSION" +
+            "&ConnectionId=$connectionId"
+        val request = Request.Builder()
+            .url(url)
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/$CHROMIUM_MAJOR_VERSION.0.0.0 " +
+                    "Safari/537.36 Edg/$CHROMIUM_MAJOR_VERSION.0.0.0",
+            )
+            .header("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
+            .header("Pragma", "no-cache")
+            .header("Cache-Control", "no-cache")
+            .header("Cookie", "muid=${generateMuid()};")
+            .build()
+
+        val datei = File(appContext.cacheDir, "edge_tts_absatz_${UUID.randomUUID()}.mp3")
+        val strom = try {
+            FileOutputStream(datei)
+        } catch (fehler: Exception) {
+            fortsetzung.resumeWithException(fehler)
+            return@suspendCancellableCoroutine
+        }
+        val erledigt = AtomicBoolean(false)
+        val eigenerLock = Any()
+
+        fun scheitere(fehler: Exception) {
+            if (!erledigt.compareAndSet(false, true)) return
+            synchronized(eigenerLock) { runCatching { strom.close() } }
+            datei.delete()
+            fortsetzung.resumeWithException(fehler)
+        }
+
+        val listener = object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                val config = "Content-Type:application/json; charset=utf-8\r\n" +
+                    "Path:speech.config\r\n\r\n" +
+                    """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
+                val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                val ratePercent = ((speechRate.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
+                val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
+                val boundedPitch = pitchPercent.coerceIn(-20, 20)
+                val formattedPitch = if (boundedPitch >= 0) "+$boundedPitch%" else "$boundedPitch%"
+                val ssml = "X-RequestId:$requestId\r\n" +
+                    "Content-Type:application/ssml+xml\r\n" +
+                    "Path:ssml\r\n\r\n" +
+                    "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
+                    "xml:lang='de-DE'><voice name='$voice'>" +
+                    "<prosody rate='$formattedRate' pitch='$formattedPitch'>" +
+                    "$escaped</prosody></voice></speak>"
+                if (!webSocket.send(config) || !webSocket.send(ssml)) {
+                    scheitere(TtsPlaybackException("Edge TTS request could not be sent."))
+                }
+            }
+
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                if (erledigt.get()) return
+                val data = bytes.toByteArray()
+                if (data.size <= 2) return
+                val headerLength = ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
+                val audioStart = headerLength + 2
+                if (audioStart >= data.size) return
+                try {
+                    synchronized(eigenerLock) { strom.write(data, audioStart, data.size - audioStart) }
+                } catch (fehler: Exception) {
+                    scheitere(fehler)
+                }
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                if (!text.contains("Path:turn.end") || erledigt.get()) return
+                synchronized(eigenerLock) { runCatching { strom.close() } }
+                if (datei.length() == 0L) {
+                    scheitere(TtsPlaybackException("Edge TTS returned no audio data."))
+                    return
+                }
+                if (erledigt.compareAndSet(false, true)) {
+                    webSocket.close(1000, null)
+                    fortsetzung.resume(datei)
+                }
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                logger.warning("Edge TTS WebSocket failed: ${t.message}")
+                scheitere(TtsPlaybackException("Edge TTS connection failed.", t))
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                scheitere(
+                    TtsPlaybackException("Edge TTS connection closed before audio completed."),
+                )
+            }
+        }
+
+        val socket = try {
+            client.newWebSocket(request, listener)
+        } catch (fehler: Exception) {
+            scheitere(fehler)
+            return@suspendCancellableCoroutine
+        }
+        fortsetzung.invokeOnCancellation {
+            erledigt.set(true)
+            socket.cancel()
+            synchronized(eigenerLock) { runCatching { strom.close() } }
+            datei.delete()
         }
     }
 
