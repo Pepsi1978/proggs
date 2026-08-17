@@ -1,7 +1,9 @@
 package de.frank.perfectmoment.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,20 +25,28 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import de.frank.perfectmoment.tts.ClonedVoice
 import de.frank.perfectmoment.ui.theme.Inter
 import de.frank.perfectmoment.ui.theme.JetBrainsMono
@@ -46,6 +56,7 @@ import de.frank.perfectmoment.ui.theme.LocalPmColors
 @Composable
 fun MyVoicesScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
+    var draggedVoiceId by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Meine Stimmen",
@@ -85,8 +96,25 @@ fun MyVoicesScreen(viewModel: AppViewModel) {
             items(viewModel.qwenVoices, key = ClonedVoice::id) { voice ->
                 val selected = viewModel.qwenVoiceId == voice.id
                 val shape = RoundedCornerShape(20.dp)
+                var dragY by remember(voice.id) { mutableStateOf(0f) }
+                val isDragging = draggedVoiceId == voice.id
+                val cardAlpha by animateFloatAsState(
+                    if (draggedVoiceId == null || isDragging) 1f else 0.45f,
+                    label = "Stimme Deckkraft",
+                )
+                val cardScale by animateFloatAsState(
+                    if (isDragging) 1.035f else 1f,
+                    label = "Stimme Größe",
+                )
                 PmCard(
                     Modifier.fillMaxWidth().height(72.dp)
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = if (isDragging) dragY else 0f
+                            alpha = cardAlpha
+                            scaleX = cardScale
+                            scaleY = cardScale
+                        }
                         .pmClickable(shape = shape, lift = true) { viewModel.selectQwenVoice(voice) }
                         .then(
                             if (selected) {
@@ -137,6 +165,41 @@ fun MyVoicesScreen(viewModel: AppViewModel) {
                             tint = colors.warning,
                             modifier = Modifier.size(34.dp).pmClickable(enabled = !viewModel.voiceBusy) {
                                 viewModel.askToDeleteVoice(voice)
+                            }.padding(6.dp),
+                        )
+                        Icon(
+                            Icons.Outlined.DragIndicator,
+                            "Zum Sortieren halten und ziehen",
+                            tint = colors.text3,
+                            modifier = Modifier.size(34.dp).pointerInput(voice.id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { draggedVoiceId = voice.id },
+                                    onDragEnd = {
+                                        dragY = 0f
+                                        draggedVoiceId = null
+                                        viewModel.persistVoiceOrder()
+                                    },
+                                    onDragCancel = {
+                                        dragY = 0f
+                                        draggedVoiceId = null
+                                        viewModel.persistVoiceOrder()
+                                    },
+                                ) { change, amount ->
+                                    change.consume()
+                                    dragY += amount.y
+                                    val itemStep = 82.dp.toPx()
+                                    var currentIndex = viewModel.qwenVoices.indexOfFirst { it.id == voice.id }
+                                    while (dragY > itemStep / 2f && currentIndex < viewModel.qwenVoices.lastIndex) {
+                                        viewModel.moveVoice(currentIndex, currentIndex + 1)
+                                        dragY -= itemStep
+                                        currentIndex++
+                                    }
+                                    while (dragY < -itemStep / 2f && currentIndex > 0) {
+                                        viewModel.moveVoice(currentIndex, currentIndex - 1)
+                                        dragY += itemStep
+                                        currentIndex--
+                                    }
+                                }
                             }.padding(6.dp),
                         )
                         Spacer(Modifier.width(4.dp))

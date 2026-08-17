@@ -910,9 +910,29 @@ class AppViewModel(
     private fun refreshQwenVoices() {
         qwenVoicesLoading = true
         viewModelScope.launch {
-            qwenVoices = qwenVoiceDirectory.list(qwenApiKey)
+            qwenVoices = inSavedOrder(qwenVoiceDirectory.list(qwenApiKey))
             qwenVoicesLoading = false
         }
+    }
+
+    /** Puts the voices into the dragged order; ones without a saved place follow after them. */
+    private fun inSavedOrder(voices: List<ClonedVoice>): List<ClonedVoice> {
+        val order = settings.qwenVoiceOrder
+        if (order.isEmpty()) return voices
+        return voices.sortedBy { voice ->
+            order.indexOf(voice.id).takeIf { it >= 0 } ?: Int.MAX_VALUE
+        }
+    }
+
+    /** Moves an own voice while it is being dragged. */
+    fun moveVoice(from: Int, to: Int) {
+        if (from !in qwenVoices.indices || to !in qwenVoices.indices || from == to) return
+        qwenVoices = qwenVoices.toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    /** Keeps the dragged order for the next start. */
+    fun persistVoiceOrder() {
+        settings.qwenVoiceOrder = qwenVoices.map(ClonedVoice::id)
     }
 
     fun selectQwenVoice(voice: ClonedVoice) {

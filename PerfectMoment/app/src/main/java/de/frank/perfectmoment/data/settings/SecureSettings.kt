@@ -95,6 +95,16 @@ class SecureSettings(context: Context) : Closeable {
         }
         set(value) = writeString(Keys.QWEN_VOICE_NAMES, JSONObject(value.toMap<String, Any>()).toString())
 
+    /**
+     * The order the own voices appear in, as voice ids.
+     *
+     * Alibaba returns its own order, so the order the list is dragged into lives here. Ids that
+     * are not in this list yet keep following after the known ones.
+     */
+    var qwenVoiceOrder: List<String>
+        get() = readString(Keys.QWEN_VOICE_ORDER, "").split('\n').filter(String::isNotBlank)
+        set(value) = writeString(Keys.QWEN_VOICE_ORDER, value.filter(String::isNotBlank).joinToString("\n"))
+
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
             ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE
@@ -231,6 +241,7 @@ class SecureSettings(context: Context) : Closeable {
         const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
         const val QWEN_VOICE_NAMES = "qwen_voice_names"
+        const val QWEN_VOICE_ORDER = "qwen_voice_order"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
