@@ -572,9 +572,36 @@ class AppViewModel(
     val sortedSessions: List<SessionEntity>
         get() = sortHistorySessions(sessions.filterNot(SessionEntity::custom), historySort)
 
-    /** Die selbst angelegten Vorlese-Verläufe, ältester zuerst — so wie sie entstanden sind. */
+    /** Die gezogene Reihenfolge der eigenen Sessions; leer heißt: so, wie sie entstanden sind. */
+    private var readingOrder by mutableStateOf(settings.readingSessionOrder)
+
+    /**
+     * Die selbst angelegten Sessions in der gezogenen Reihenfolge. Wer noch keinen Platz hat —
+     * eine gerade erst angelegte Session — folgt hinter den bekannten, ältester zuerst.
+     */
     val readingSessions: List<SessionEntity>
-        get() = sessions.filter(SessionEntity::custom).sortedBy(SessionEntity::startedAt)
+        get() {
+            val order = readingOrder
+            return sessions.filter(SessionEntity::custom).sortedWith(
+                compareBy(
+                    { order.indexOf(it.id).takeIf { place -> place >= 0 } ?: Int.MAX_VALUE },
+                    SessionEntity::startedAt,
+                ),
+            )
+        }
+
+    /** Schiebt eine eigene Session während des Ziehens an ihren neuen Platz. */
+    fun moveReadingSession(from: Int, to: Int) {
+        val current = readingSessions
+        if (from !in current.indices || to !in current.indices || from == to) return
+        readingOrder = current.map(SessionEntity::id).toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    /** Hält die gezogene Reihenfolge der eigenen Sessions für den nächsten Start fest. */
+    fun persistReadingSessionOrder() {
+        if (readingOrder.isEmpty()) return
+        settings.readingSessionOrder = readingOrder
+    }
 
     init {
         if (ttsProvider == TtsProvider.GOOGLE_CLOUD.id && googleApiKey.isBlank()) {

@@ -62,6 +62,9 @@ import de.frank.perfectmoment.ui.theme.PmTextStyles
 @Composable
 fun ReadingSection(viewModel: AppViewModel, onDeleteRequest: (SessionEntity) -> Unit) {
     val colors = LocalPmColors.current
+    var draggedSessionId by remember { mutableStateOf<Long?>(null) }
+    // Die Zeilen sind verschieden hoch, darum merkt sich der Bereich jede Höhe für das Ziehen.
+    val rowHeights = remember { mutableStateMapOf<Long, Float>() }
     Column(Modifier.fillMaxWidth().padding(top = 26.dp)) {
         SectionLabel("Eigene Sessions", Modifier.padding(start = 8.dp, bottom = 6.dp), decorated = true)
         Text(
@@ -72,19 +75,81 @@ fun ReadingSection(viewModel: AppViewModel, onDeleteRequest: (SessionEntity) -> 
             modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
         )
         viewModel.readingSessions.forEach { session ->
-            ReadingRow(
-                session = session,
-                onClick = { viewModel.openReadingDetail(session.id) },
-                onDelete = { onDeleteRequest(session) },
+            var dragY by remember(session.id) { mutableStateOf(0f) }
+            val isDragging = draggedSessionId == session.id
+            val rowAlpha by animateFloatAsState(
+                if (draggedSessionId == null || isDragging) 1f else 0.45f,
+                label = "Session Deckkraft",
             )
-            Spacer(Modifier.height(12.dp))
+            val rowScale by animateFloatAsState(
+                if (isDragging) 1.035f else 1f,
+                label = "Session Größe",
+            )
+            Box(
+                Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    .onGloballyPositioned { rowHeights[session.id] = it.size.height.toFloat() }
+                    .zIndex(if (isDragging) 1f else 0f)
+                    .graphicsLayer {
+                        translationY = if (isDragging) dragY else 0f
+                        alpha = rowAlpha
+                        scaleX = rowScale
+                        scaleY = rowScale
+                    },
+            ) {
+                ReadingRow(
+                    session = session,
+                    onClick = { viewModel.openReadingDetail(session.id) },
+                    onDelete = { onDeleteRequest(session) },
+                    dragModifier = Modifier.pointerInput(session.id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { draggedSessionId = session.id },
+                            onDragEnd = {
+                                dragY = 0f
+                                draggedSessionId = null
+                                viewModel.persistReadingSessionOrder()
+                            },
+                            onDragCancel = {
+                                dragY = 0f
+                                draggedSessionId = null
+                                viewModel.persistReadingSessionOrder()
+                            },
+                        ) { change, amount ->
+                            change.consume()
+                            dragY += amount.y
+                            var index = viewModel.readingSessions.indexOfFirst { it.id == session.id }
+                            if (index < 0) return@detectDragGesturesAfterLongPress
+                            while (index < viewModel.readingSessions.lastIndex) {
+                                val below = viewModel.readingSessions[index + 1].id
+                                val step = rowHeights[below] ?: 0f
+                                if (step <= 0f || dragY <= step / 2f) break
+                                viewModel.moveReadingSession(index, index + 1)
+                                dragY -= step
+                                index++
+                            }
+                            while (index > 0) {
+                                val above = viewModel.readingSessions[index - 1].id
+                                val step = rowHeights[above] ?: 0f
+                                if (step <= 0f || dragY >= -step / 2f) break
+                                viewModel.moveReadingSession(index, index - 1)
+                                dragY += step
+                                index--
+                            }
+                        }
+                    },
+                )
+            }
         }
         AddCard("Neuer Vorlese-Verlauf", viewModel::createReadingSession)
     }
 }
 
 @Composable
-private fun ReadingRow(session: SessionEntity, onClick: () -> Unit, onDelete: () -> Unit) {
+private fun ReadingRow(
+    session: SessionEntity,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    dragModifier: Modifier,
+) {
     val colors = LocalPmColors.current
     PmCard(
         Modifier.fillMaxWidth()
@@ -120,6 +185,13 @@ private fun ReadingRow(session: SessionEntity, onClick: () -> Unit, onDelete: ()
                     modifier = Modifier.padding(top = 5.dp),
                 )
             }
+            Icon(
+                Icons.Outlined.DragIndicator,
+                "Zum Sortieren halten und ziehen",
+                tint = colors.text3,
+                modifier = dragModifier.size(22.dp),
+            )
+            Spacer(Modifier.width(10.dp))
             Icon(
                 Icons.Outlined.Delete,
                 "Vorlese-Verlauf löschen",

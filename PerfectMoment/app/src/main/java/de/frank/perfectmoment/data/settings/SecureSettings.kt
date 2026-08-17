@@ -105,6 +105,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.QWEN_VOICE_ORDER, "").split('\n').filter(String::isNotBlank)
         set(value) = writeString(Keys.QWEN_VOICE_ORDER, value.filter(String::isNotBlank).joinToString("\n"))
 
+    /**
+     * Die Reihenfolge der eigenen Sessions, als Kennungen.
+     *
+     * Die Datenbank kennt nur den Zeitpunkt der Anlage, darum lebt die gezogene Reihenfolge hier.
+     * Sessions, die noch nicht in der Liste stehen, folgen hinter den bekannten.
+     */
+    var readingSessionOrder: List<Long>
+        get() = readString(Keys.READING_SESSION_ORDER, "").split('\n').mapNotNull(String::toLongOrNull)
+        set(value) = writeString(Keys.READING_SESSION_ORDER, value.joinToString("\n"))
+
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
             ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE
@@ -242,6 +252,7 @@ class SecureSettings(context: Context) : Closeable {
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
         const val QWEN_VOICE_NAMES = "qwen_voice_names"
         const val QWEN_VOICE_ORDER = "qwen_voice_order"
+        const val READING_SESSION_ORDER = "reading_session_order"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
