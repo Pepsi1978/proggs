@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,6 +45,7 @@ import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -372,6 +375,29 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, decorated: Boolean
             )
         }
     }
+}
+
+/**
+ * Eine Liste, die ihren Platz behält.
+ *
+ * Beim Wechsel auf einen anderen Bildschirm verschwindet die Liste aus der Anzeige und mit ihr
+ * ihre Blickhöhe. Hier wird sie beim Verlassen im Modell abgelegt und beim Zurückkommen wieder
+ * eingesetzt — man landet also genau dort, wo man hineingegangen ist.
+ */
+@Composable
+fun rememberKeptLazyListState(viewModel: AppViewModel, key: String): LazyListState {
+    val start = remember(key) { viewModel.listPosition(key) }
+    val state = rememberLazyListState(start.first, start.second)
+    DisposableEffect(key, state) {
+        onDispose {
+            viewModel.rememberListPosition(
+                key,
+                state.firstVisibleItemIndex,
+                state.firstVisibleItemScrollOffset,
+            )
+        }
+    }
+    return state
 }
 
 @Composable

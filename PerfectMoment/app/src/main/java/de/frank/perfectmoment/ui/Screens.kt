@@ -974,7 +974,9 @@ fun HistoryScreen(viewModel: AppViewModel) {
     var pendingDelete by remember { mutableStateOf<SessionEntity?>(null) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     val readingReorder = rememberReorderState()
-    val historyListState = rememberLazyListState()
+    // Der Verlauf behält seine Blickhöhe: Wer unten bei den eigenen Sessions war, landet dort
+    // auch wieder, statt oben bei den Top 3.
+    val historyListState = rememberKeptLazyListState(viewModel, "history")
     ReorderAutoScroll(readingReorder, historyListState)
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(

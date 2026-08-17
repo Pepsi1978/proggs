@@ -691,6 +691,20 @@ class AppViewModel(
         }
     }
 
+    /**
+     * Wo eine Liste zuletzt stand — Eintrag und Feinversatz, je Bildschirm.
+     *
+     * Beim Wechsel des Bildschirms verschwindet die Liste samt ihrem Zustand aus der Anzeige.
+     * Damit das Zurückgehen wieder dort landet, wo man losgegangen ist, überlebt der Platz hier.
+     */
+    private val listPositions = mutableMapOf<String, Pair<Int, Int>>()
+
+    fun listPosition(key: String): Pair<Int, Int> = listPositions[key] ?: (0 to 0)
+
+    fun rememberListPosition(key: String, index: Int, offset: Int) {
+        listPositions[key] = index to offset
+    }
+
     fun back() {
         cancelVoiceInput()
         if (screen == AppScreen.VOICE) stopVoicePreview()
