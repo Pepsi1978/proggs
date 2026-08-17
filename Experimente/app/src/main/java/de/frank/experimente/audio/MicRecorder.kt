@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
+import android.media.AudioRecordingConfiguration
 import android.media.MediaRecorder
+import android.os.Build
 import androidx.core.content.ContextCompat
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -34,6 +37,34 @@ class MicRecorder(context: Context) {
 
     /** The rate the running capture actually got, which the WAV header has to match. */
     private var activeSampleRate = SAMPLE_RATE
+
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+    /**
+     * Did the system hand this capture silence instead of the microphone?
+     *
+     * Android does not fail such a capture — it delivers zeroed frames, so every layer above
+     * sees a perfectly valid but silent recording and reports "nothing to hear". That is what
+     * a stuck recorder in another app (or the privacy toggle) looks like from in here, and the
+     * user needs to be told the difference. Read after [stop].
+     */
+    @Volatile
+    var wasSilenced = false
+        private set
+
+    private inner class SilenceWatch : AudioManager.AudioRecordingCallback() {
+        override fun onRecordingConfigChanged(configs: MutableList<AudioRecordingConfiguration>) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+            val session = recorder?.audioSessionId ?: return
+            val mine = configs.firstOrNull { it.clientAudioSessionId == session } ?: return
+            if (mine.isClientSilenced) {
+                wasSilenced = true
+                logger.warning("The system silenced this capture — another app holds the microphone")
+            }
+        }
+    }
+
+    private val silenceWatch: AudioManager.AudioRecordingCallback = SilenceWatch()
 
     /**
      * Starts capturing.
@@ -104,6 +135,10 @@ class MicRecorder(context: Context) {
 
         synchronized(bufferLock) { pcmBuffer.reset() }
         recorder = activeRecorder
+        wasSilenced = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching { audioManager?.registerAudioRecordingCallback(silenceWatch, null) }
+        }
         startedAtMs = System.currentTimeMillis()
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(minBufferSize)
@@ -173,12 +208,23 @@ class MicRecorder(context: Context) {
         } ?: false
         if (!joined) logger.warning("AudioRecord read job did not stop within timeout")
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching { audioManager?.unregisterAudioRecordingCallback(silenceWatch) }
+        }
+
         val pcm = synchronized(bufferLock) {
             pcmBuffer.toByteArray().also { pcmBuffer.reset() }
         }
+        // A working microphone always delivers some noise. Frames that are digitally flat mean
+        // the system handed over silence — on devices below API 29 this is the only signal there
+        // is, and above it, it catches the cases the callback never fires for.
+        if (pcm.isNotEmpty() && isFlat(pcm)) {
+            wasSilenced = true
+            logger.warning("Recording contains only digital silence — the microphone was muted")
+        }
         logger.info(
             "Recording stopped: ${pcm.size} PCM bytes, " +
-                "${System.currentTimeMillis() - startedAtMs} ms",
+                "${System.currentTimeMillis() - startedAtMs} ms, silenced=$wasSilenced",
         )
         return pcm.takeIf { it.isNotEmpty() }?.let(::pcmToWav)
     }
@@ -210,6 +256,17 @@ class MicRecorder(context: Context) {
         } catch (_: Exception) {
             // Release is best-effort during lifecycle cleanup.
         }
+    }
+
+    /** Is every sample within a hair of zero? Then nothing reached the microphone at all. */
+    private fun isFlat(pcm: ByteArray): Boolean {
+        var index = 0
+        while (index + 1 < pcm.size) {
+            val sample = ((pcm[index].toInt() and 0xFF) or (pcm[index + 1].toInt() shl 8)).toShort()
+            if (sample > FLAT_SAMPLE_LIMIT || sample < -FLAT_SAMPLE_LIMIT) return false
+            index += 2
+        }
+        return true
     }
 
     private fun pcmToWav(pcm: ByteArray): ByteArray {
@@ -246,6 +303,9 @@ class MicRecorder(context: Context) {
         private const val WAV_HEADER_BYTES = 44
         private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
         private const val STOP_JOIN_TIMEOUT_MS = 1_500L
+
+        /** Below this, a 16-bit sample is indistinguishable from a zeroed frame. */
+        private const val FLAT_SAMPLE_LIMIT = 8
         private val logger = Logger.getLogger(MicRecorder::class.java.name)
     }
 }

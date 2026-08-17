@@ -755,6 +755,19 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         ruettleDoppelt() // M-03: doppelte Vibration bei Aufnahmebeginn
     }
 
+    /**
+     * Warum kam nichts an? „Nichts zu hören" stimmt nur, wenn das Mikrofon wirklich zugehört
+     * hat. Schaltet das System die Aufnahme stumm — eine andere App hält das Mikrofon fest oder
+     * der Datenschutz-Schalter steht auf zu —, liefert Android **stille** Bilder statt eines
+     * Fehlers. Genau das sah aus wie ein Fehler der App, obwohl kein Ton je das Gerät verließ.
+     */
+    private fun nichtsGehoert(): String = if (aufnahme.wasSilenced) {
+        "Das Mikrofon war stummgeschaltet. Schalte den Mikrofonzugriff in den " +
+            "Schnelleinstellungen ein oder beende die App, die es gerade festhält."
+    } else {
+        "Da war nichts zu hören."
+    }
+
     private fun beendeAufnahme() {
         _nimmtAuf.value = false
         uhr?.cancel()
@@ -765,7 +778,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         viewModelScope.launch {
             val wav = aufnahme.stop()
             if (wav == null || wav.isEmpty()) {
-                _stoerung.value = "Da war nichts zu hören."
+                _stoerung.value = nichtsGehoert()
                 bestimmeZustand()
                 return@launch
             }
@@ -775,7 +788,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 val text = schreiber.transcribe(wav)
                 schreiber.shutdown()
                 if (text.isBlank()) {
-                    _stoerung.value = "Da war nichts zu hören."
+                    _stoerung.value = nichtsGehoert()
                 } else {
                     feld?.value = Feld(text = text)
                     nachher?.invoke(text)
@@ -1640,8 +1653,8 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             ruettleDoppelt()
             viewModelScope.launch {
                 val wav = aufnahme.stop()
-                if (wav == null || wav.isEmpty()) {
-                    _stoerung.value = "Da war nichts zu hören."
+                if (wav == null || wav.isEmpty() || aufnahme.wasSilenced) {
+                    _stoerung.value = nichtsGehoert()
                     return@launch
                 }
                 val schluessel = einstellungen.qwenSchluessel
