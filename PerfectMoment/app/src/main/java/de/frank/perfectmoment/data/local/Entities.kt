@@ -37,6 +37,11 @@ data class SessionEntity(
     /** The voice this entry always plays with. Empty means the one from the settings. */
     @ColumnInfo(defaultValue = "") val voiceProviderOverride: String = "",
     @ColumnInfo(defaultValue = "") val voiceOverride: String = "",
+    /**
+     * True for a reading flow whose questions were typed by hand instead of written by the AI.
+     * Such an entry lives in its own section of the history and never asks OpenAI for refills.
+     */
+    @ColumnInfo(defaultValue = "0") val custom: Boolean = false,
 )
 
 @Entity(

@@ -297,6 +297,67 @@ internal fun codexSummaryPayload(
 /** How many characters fit in the four lines the history row offers. */
 internal const val SUMMARY_MAX_CHARS = 150
 
+/**
+ * Sucht das Symbol, das vor einer von Hand geschriebenen Vorlese-Frage steht.
+ *
+ * Die KI-Fragen tragen ihr Emoji bereits im Text; eine selbst getippte Frage bekommt es hier
+ * nachträglich, damit beide Fragenlisten gleich aussehen.
+ */
+internal fun codexEmojiPayload(
+    question: String,
+    model: CodexModel,
+    reasoningEffort: ReasoningEffort,
+): JSONObject {
+    val schema = JSONObject()
+        .put("type", "object")
+        .put("additionalProperties", false)
+        .put("required", JSONArray().put("emoji"))
+        .put("properties", JSONObject().put("emoji", JSONObject().put("type", "string")))
+    return JSONObject()
+        .put("model", model.apiId)
+        .put("service_tier", "priority")
+        .put("stream", true)
+        .put("store", false)
+        .put(
+            "instructions",
+            "Wähle genau ein Emoji, das inhaltlich zu der Frage passt. Antworte ausschließlich " +
+                "mit diesem einen Emoji, ohne Text, ohne Erklärung, ohne Anführungszeichen. " +
+                "Nimm ein gebräuchliches, gut erkennbares Emoji.",
+        )
+        .put(
+            "input",
+            JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", "Frage:\n${question.trim()}"),
+            ),
+        )
+        .put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))
+        .put(
+            "text",
+            JSONObject().put(
+                "format",
+                JSONObject()
+                    .put("type", "json_schema")
+                    .put("name", "perfect_moment_fragensymbol")
+                    .put("strict", true)
+                    .put("schema", schema),
+            ),
+        )
+}
+
+/** Liefert das erkannte Emoji oder einen leeren Text, wenn keines brauchbar zurückkam. */
+internal fun parseQuestionEmoji(rawOutput: String): String {
+    val output = rawOutput.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+    val json = runCatching { JSONObject(output) }.getOrNull() ?: return ""
+    val value = json.optString("emoji").trim()
+    if (value.isEmpty()) return ""
+    val parsed = de.frank.perfectmoment.session.EmojiParser.parse(value)
+    // Ohne führendes Emoji liefert der Parser den Ersatz zurück — dann stünde ein Textbrocken
+    // als Symbol vor der Frage. In dem Fall lieber gar nichts nachtragen.
+    return if (value.startsWith(parsed.emoji)) parsed.emoji else ""
+}
+
 internal fun codexImproveWishPayload(
     wish: String,
     previousVersions: List<String>,
@@ -611,6 +672,26 @@ class CodexAuthManager(context: Context) {
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Der Verlaufstitel konnte nicht empfangen werden.", error)
+        }
+    }
+
+    /**
+     * Sucht das Symbol zu einer selbst geschriebenen Vorlese-Frage. Kommt keines zurück, bleibt
+     * es beim Ersatzsymbol — die Frage steht deswegen nie ohne Symbol da.
+     */
+    suspend fun chooseQuestionEmoji(
+        question: String,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+    ): String = withContext(Dispatchers.IO) {
+        if (question.isBlank()) return@withContext ""
+        try {
+            parseQuestionEmoji(
+                requestCodexResponse(codexEmojiPayload(question, model, reasoningEffort), false),
+            )
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Das Symbol konnte nicht empfangen werden.", error)
         }
     }
 

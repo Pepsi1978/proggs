@@ -100,6 +100,7 @@ data class BackupPayload(
                             put("summaryManual", session.summaryManual)
                             put("voiceProviderOverride", session.voiceProviderOverride)
                             put("voiceOverride", session.voiceOverride)
+                            put("custom", session.custom)
                             put(
                                 "questions",
                                 JSONArray().apply {
@@ -173,6 +174,7 @@ data class BackupPayload(
                     summaryManual = item.optBoolean("summaryManual"),
                     voiceProviderOverride = item.optString("voiceProviderOverride"),
                     voiceOverride = item.optString("voiceOverride"),
+                    custom = item.optBoolean("custom"),
                 )
                 val questions = item.optJSONArray("questions").map { entry ->
                     QuestionEntity(

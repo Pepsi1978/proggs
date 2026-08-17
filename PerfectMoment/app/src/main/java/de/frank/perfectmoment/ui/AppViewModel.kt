@@ -57,6 +57,7 @@ enum class AppScreen {
     SESSION,
     HISTORY,
     HISTORY_DETAIL,
+    READING_DETAIL,
     SETTINGS,
     HOOKS,
     HOOK_EDITOR,
@@ -84,7 +85,7 @@ enum class RecordingState { IDLE, RECORDING, PROCESSING }
 
 /** Where the recording of a voice sample stands: waiting, running, or being registered. */
 enum class VoiceRecorderState { IDLE, RECORDING, SAVING }
-enum class RecordingTarget { START, INTRO, HOOK }
+enum class RecordingTarget { START, INTRO, HOOK, READING_QUESTION }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
 enum class HistorySort(val label: String) {
     MOST_USED("Am häufigsten"),
@@ -127,6 +128,7 @@ internal fun sortHistorySessions(
 private sealed interface SessionStart {
     data object New : SessionStart
     data class Replay(val sessionId: Long, val shuffle: Boolean) : SessionStart
+    data class Reading(val sessionId: Long, val shuffle: Boolean) : SessionStart
     data class Resume(
         val sessionId: Long,
         val useChangedSettings: Boolean,
@@ -316,6 +318,16 @@ class AppViewModel(
 
     /** The title of the open history entry while it is being typed. */
     var historyTitleDraft by mutableStateOf("")
+        private set
+
+    /** Offen, während eine Vorlese-Frage geschrieben oder diktiert wird. */
+    var readingQuestionOpen by mutableStateOf(false)
+        private set
+
+    /** Die Kennung der bearbeiteten Frage; null steht für eine neue Frage. */
+    var readingQuestionId by mutableStateOf<Long?>(null)
+        private set
+    var readingQuestionText by mutableStateOf("")
         private set
 
     var hookEditorId by mutableStateOf<Long?>(null)
@@ -548,7 +560,11 @@ class AppViewModel(
     val selectedVoice: String
         get() = if (ttsProvider == TtsProvider.EDGE.id) edgeVoice else googleVoice
     val sortedSessions: List<SessionEntity>
-        get() = sortHistorySessions(sessions, historySort)
+        get() = sortHistorySessions(sessions.filterNot(SessionEntity::custom), historySort)
+
+    /** Die selbst angelegten Vorlese-Verläufe, ältester zuerst — so wie sie entstanden sind. */
+    val readingSessions: List<SessionEntity>
+        get() = sessions.filter(SessionEntity::custom).sortedBy(SessionEntity::startedAt)
 
     init {
         if (ttsProvider == TtsProvider.GOOGLE_CLOUD.id && googleApiKey.isBlank()) {
@@ -594,6 +610,10 @@ class AppViewModel(
         if (screen == AppScreen.HISTORY_DETAIL && target != AppScreen.HISTORY_DETAIL) {
             commitHistoryTitle()
         }
+        if (screen == AppScreen.READING_DETAIL && target != AppScreen.READING_DETAIL) {
+            commitHistoryTitle()
+            persistReadingSettings()
+        }
         cancelVoiceInput()
         if (target != AppScreen.VOICE) stopVoicePreview()
         sheet = null
@@ -615,7 +635,7 @@ class AppViewModel(
         if (summaryJob?.isActive == true) return
         if (chatGptState != ChatGptState.CONNECTED) return
         val missing = sessions.filter {
-            it.summary.isBlank() && !it.summaryManual && it.topic.isNotBlank()
+            !it.custom && it.summary.isBlank() && !it.summaryManual && it.topic.isNotBlank()
         }
         if (missing.isEmpty()) return
         summaryJob = viewModelScope.launch {
@@ -643,8 +663,12 @@ class AppViewModel(
         }
         // Leaving the detail view saves the title even when the field still has the focus.
         if (screen == AppScreen.HISTORY_DETAIL) commitHistoryTitle()
+        if (screen == AppScreen.READING_DETAIL) {
+            commitHistoryTitle()
+            persistReadingSettings()
+        }
         screen = when (screen) {
-            AppScreen.HISTORY_DETAIL -> AppScreen.HISTORY
+            AppScreen.HISTORY_DETAIL, AppScreen.READING_DETAIL -> AppScreen.HISTORY
             AppScreen.HOOKS, AppScreen.SKILLS, AppScreen.VOICE, AppScreen.CHAT_GPT,
             AppScreen.RAW_DATA, AppScreen.MY_VOICES,
             -> AppScreen.SETTINGS
@@ -1216,6 +1240,7 @@ class AppViewModel(
     fun retrySession() {
         when (val start = lastSessionStart) {
             is SessionStart.Replay -> startReplay(start.sessionId, start.shuffle)
+            is SessionStart.Reading -> startReading(start.sessionId, start.shuffle)
             is SessionStart.Resume -> startResume(start.sessionId, start.useChangedSettings, start.shuffle)
             SessionStart.New -> when {
                 pendingSessionTopic.isBlank() -> {
@@ -1304,7 +1329,11 @@ class AppViewModel(
      */
     fun commitHistoryTitle() {
         val session = historyDetail?.session ?: return
-        val title = historyTitleDraft.trim()
+        // Ein Vorlese-Verlauf hat keinen Wunschtext, auf den er zurückfallen könnte — ein leer
+        // geräumtes Feld bekäme sonst gar keinen Namen mehr.
+        val title = historyTitleDraft.trim().ifBlank {
+            if (session.custom) NEW_READING_TITLE else ""
+        }
         historyTitleDraft = title
         if (title == session.summary) return
         viewModelScope.launch {
@@ -1364,6 +1393,179 @@ class AppViewModel(
             }
             return "$name · ${provider.label}"
         }
+
+    // --- Vorlese-Verläufe: eigene Fragen statt KI-Fragen ---------------------------------------
+
+    /** Legt einen leeren Vorlese-Verlauf an und öffnet ihn gleich zum Befüllen. */
+    fun createReadingSession() {
+        viewModelScope.launch {
+            val provider = TtsProvider.entries.firstOrNull { it.id == ttsProvider }
+                ?: TtsCatalog.DEFAULT_PROVIDER
+            val id = sessionRepository.createSession(
+                SessionEntity(
+                    topic = "",
+                    startedAt = System.currentTimeMillis(),
+                    durationMin = durationMinutes,
+                    voiceName = if (provider == TtsProvider.EDGE) edgeVoice else googleVoice,
+                    providerId = provider.id,
+                    pauseRep = pauseRep,
+                    pauseNext = pauseNext,
+                    reps = repetitions,
+                    // Von Hand gesetzt, damit die KI diesen Namen nie überschreibt.
+                    summary = NEW_READING_TITLE,
+                    summaryManual = true,
+                    custom = true,
+                ),
+            )
+            openReadingDetail(id)
+        }
+    }
+
+    fun openReadingDetail(id: Long) {
+        viewModelScope.launch {
+            historyDetail = sessionRepository.getSession(id)
+            historyTitleDraft = historyDetail?.session?.summary.orEmpty()
+            historyDetail?.session?.let { session ->
+                pauseRep = session.pauseRep
+                pauseNext = session.pauseNext
+                repetitions = session.reps
+                durationMinutes = session.durationMin
+                settings.pauseRepSeconds = pauseRep
+                settings.pauseNextSeconds = pauseNext
+                settings.repsPerQuestion = repetitions
+                settings.sessionDurationMin = durationMinutes
+            }
+            randomReplay = false
+            closeReadingQuestionEditor()
+            screen = AppScreen.READING_DETAIL
+        }
+    }
+
+    /**
+     * Schreibt Pause, Wiederholungen und Dauer an den offenen Vorlese-Verlauf zurück, damit er
+     * beim nächsten Öffnen wieder mit seiner eigenen Taktung dasteht.
+     */
+    private fun persistReadingSettings() {
+        val session = historyDetail?.session ?: return
+        if (!session.custom) return
+        val sessionId = session.id
+        val values = listOf(pauseRep, pauseNext, repetitions, durationMinutes)
+        if (values == listOf(session.pauseRep, session.pauseNext, session.reps, session.durationMin)) return
+        viewModelScope.launch {
+            sessionRepository.setSessionSettings(
+                sessionId = sessionId,
+                pauseRep = pauseRep,
+                pauseNext = pauseNext,
+                reps = repetitions,
+                durationMin = durationMinutes,
+            )
+            if (historyDetail?.session?.id == sessionId) {
+                historyDetail = sessionRepository.getSession(sessionId)
+            }
+        }
+    }
+
+    fun openReadingQuestionEditor(questionId: Long?, text: String = "") {
+        cancelVoiceInput()
+        readingQuestionId = questionId
+        readingQuestionText = text
+        readingQuestionOpen = true
+    }
+
+    fun updateReadingQuestionText(value: String) {
+        readingQuestionText = value
+        recordingMessage = null
+    }
+
+    fun closeReadingQuestionEditor() {
+        cancelVoiceInput()
+        readingQuestionOpen = false
+        readingQuestionId = null
+        readingQuestionText = ""
+    }
+
+    /**
+     * Übernimmt die getippte oder diktierte Frage und lässt die KI danach das passende Symbol
+     * nachtragen. Ohne KI-Verbindung bleibt es beim Ersatzsymbol.
+     */
+    fun saveReadingQuestion() {
+        val sessionId = historyDetail?.session?.id ?: return
+        val text = readingQuestionText.trim().replace(Regex("\\s*\\R\\s*"), " ")
+        if (text.isBlank()) {
+            message = "Die Frage darf nicht leer sein."
+            return
+        }
+        val existingId = readingQuestionId
+        closeReadingQuestionEditor()
+        viewModelScope.launch {
+            val questionId = if (existingId == null) {
+                sessionRepository.appendQuestion(sessionId, EmojiParser.FALLBACK_EMOJI, text)
+            } else {
+                sessionRepository.setQuestionText(existingId, text)
+                existingId
+            }
+            reloadReadingDetail(sessionId)
+            assignQuestionEmoji(sessionId, questionId, text)
+        }
+    }
+
+    fun deleteReadingQuestion(questionId: Long) {
+        val sessionId = historyDetail?.session?.id ?: return
+        closeReadingQuestionEditor()
+        viewModelScope.launch {
+            sessionRepository.removeQuestion(sessionId, questionId)
+            reloadReadingDetail(sessionId)
+        }
+    }
+
+    private suspend fun reloadReadingDetail(sessionId: Long) {
+        if (historyDetail?.session?.id != sessionId) return
+        historyDetail = sessionRepository.getSession(sessionId)
+    }
+
+    private fun assignQuestionEmoji(sessionId: Long, questionId: Long, text: String) {
+        if (chatGptState != ChatGptState.CONNECTED) return
+        viewModelScope.launch {
+            val emoji = try {
+                authManager.chooseQuestionEmoji(text, model, reasoning)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                // Ein fehlendes Symbol darf die Frage nicht kosten — sie steht bereits.
+                ""
+            }
+            if (emoji.isBlank()) return@launch
+            sessionRepository.setQuestionEmoji(questionId, emoji)
+            reloadReadingDetail(sessionId)
+        }
+    }
+
+    fun playReadingSession() {
+        val detail = historyDetail ?: return
+        if (detail.questions.isEmpty()) {
+            message = "Füge zuerst mindestens eine Frage hinzu."
+            return
+        }
+        commitHistoryTitle()
+        persistReadingSettings()
+        startReading(detail.session.id, randomReplay)
+    }
+
+    private fun startReading(sessionId: Long, shuffle: Boolean) {
+        lastSessionStart = SessionStart.Reading(sessionId, shuffle)
+        val generation = beginSessionStart()
+        sessionStartJob = viewModelScope.launch {
+            try {
+                sessionController.playReadingSession(sessionId, shuffle)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                if (generation == sessionStartGeneration) handleSessionFailure(error)
+            } finally {
+                if (generation == sessionStartGeneration) sessionStartJob = null
+            }
+        }
+    }
 
     fun replayHistory() {
         val id = historyDetail?.session?.id ?: return
@@ -1676,6 +1878,8 @@ class AppViewModel(
                     RecordingTarget.START -> updateTopic(appendDictation(topic, transcript))
                     RecordingTarget.INTRO -> updateIntroText(appendDictation(introText, transcript))
                     RecordingTarget.HOOK -> updateHookText(appendDictation(hookEditorText, transcript))
+                    RecordingTarget.READING_QUESTION ->
+                        updateReadingQuestionText(appendDictation(readingQuestionText, transcript))
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -1698,6 +1902,8 @@ class AppViewModel(
         RecordingTarget.START -> screen == AppScreen.START && sheet == null
         RecordingTarget.INTRO -> screen == AppScreen.SESSION && introVisible && sheet == AppSheet.INTRO
         RecordingTarget.HOOK -> screen == AppScreen.HOOK_EDITOR && sheet == null
+        RecordingTarget.READING_QUESTION ->
+            screen == AppScreen.READING_DETAIL && readingQuestionOpen && sheet == null
     }
 
     private fun cancelVoiceInput() {
@@ -1793,6 +1999,9 @@ class AppViewModel(
         private const val MAX_SAMPLE_SECONDS = 58
         private const val MIN_SAMPLE_SECONDS = 10
         const val WITH_SETTINGS_VOICE = "Wie in den Einstellungen"
+
+        /** Der Name, unter dem ein frisch angelegter Vorlese-Verlauf in der Liste steht. */
+        const val NEW_READING_TITLE = "Neuer Vorlese-Verlauf"
         private const val VOICE_SAMPLE_TOPIC =
             "Eine Sprachprobe: ruhige, warme Fragen, die ich mir selbst laut vorlese, " +
                 "damit meine Stimme aufgenommen werden kann."

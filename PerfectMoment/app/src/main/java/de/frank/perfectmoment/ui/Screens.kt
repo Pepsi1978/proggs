@@ -1042,26 +1042,27 @@ fun HistoryScreen(viewModel: AppViewModel) {
                 }
             },
         )
-        if (viewModel.sessions.isEmpty()) {
-            Column(
-                Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                OrbitRing(
-                    Modifier.size(88.dp).border(1.5.dp, colors.goldDim.copy(alpha = 0.30f), CircleShape),
-                ) {
-                    Box(Modifier.size(12.dp).background(colors.goldDim, CircleShape))
+        val sortedSessions = viewModel.sortedSessions
+        val topSessions = sortedSessions.take(3)
+        LazyColumn(
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (sortedSessions.isEmpty()) {
+                item(key = "empty") {
+                    Column(
+                        Modifier.fillMaxWidth().padding(top = 40.dp, bottom = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        OrbitRing(
+                            Modifier.size(88.dp).border(1.5.dp, colors.goldDim.copy(alpha = 0.30f), CircleShape),
+                        ) {
+                            Box(Modifier.size(12.dp).background(colors.goldDim, CircleShape))
+                        }
+                        Text("Noch keine Sitzungen.", color = colors.text3, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.padding(top = 20.dp))
+                    }
                 }
-                Text("Noch keine Sitzungen.", color = colors.text3, fontFamily = Inter, fontSize = 15.sp, modifier = Modifier.padding(top = 20.dp))
-            }
-        } else {
-            val sortedSessions = viewModel.sortedSessions
-            val topSessions = sortedSessions.take(3)
-            LazyColumn(
-                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+            } else {
                 item(key = "top-three") {
                     val topShape = RoundedCornerShape(24.dp)
                     Column(
@@ -1133,6 +1134,10 @@ fun HistoryScreen(viewModel: AppViewModel) {
                     )
                 }
             }
+            // Der Vorlese-Bereich steht immer ganz unten — als letzter Verlauf im Verlauf.
+            item(key = "reading-section") {
+                ReadingSection(viewModel) { pendingDelete = it }
+            }
         }
     }
     pendingDelete?.let { session ->
@@ -1173,7 +1178,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
 
 // The swipe background and the row on top of it share this radius. Different radii would let the
 // red background peek out of the corners of the row.
-private const val HISTORY_ROW_RADIUS = 32
+internal const val HISTORY_ROW_RADIUS = 32
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1383,7 +1388,7 @@ fun HistoryDetailScreen(viewModel: AppViewModel) {
  * greyed out beginning of the wish shows what would stand there in the meantime.
  */
 @Composable
-private fun HistoryTitleCard(
+internal fun HistoryTitleCard(
     title: String,
     fallback: String,
     onTitleChange: (String) -> Unit,
@@ -1469,7 +1474,7 @@ private fun HistoryTitleCard(
 private fun formatSessionDate(timestamp: Long): String =
     SimpleDateFormat("dd. MMM, HH:mm", Locale.GERMAN).format(Date(timestamp))
 
-private fun formatSessionDuration(minutes: Int): String = if (minutes == 0) "Endlos" else "$minutes min"
+internal fun formatSessionDuration(minutes: Int): String = if (minutes == 0) "Endlos" else "$minutes min"
 
 private fun voiceDisplayName(id: String): String = id.substringAfterLast('-').removeSuffix("Neural")
 

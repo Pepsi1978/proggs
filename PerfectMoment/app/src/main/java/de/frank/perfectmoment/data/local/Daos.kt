@@ -40,6 +40,55 @@ abstract class SessionDao {
     @Insert
     abstract suspend fun insertQuestions(questions: List<QuestionEntity>): List<Long>
 
+    @Insert
+    abstract suspend fun insertQuestion(question: QuestionEntity): Long
+
+    @Query("UPDATE questions SET text = :text WHERE id = :questionId")
+    abstract suspend fun updateQuestionText(questionId: Long, text: String)
+
+    @Query("UPDATE questions SET emoji = :emoji WHERE id = :questionId")
+    abstract suspend fun updateQuestionEmoji(questionId: Long, emoji: String)
+
+    @Query("DELETE FROM questions WHERE id = :questionId")
+    abstract suspend fun deleteQuestion(questionId: Long)
+
+    /**
+     * Hängt eine von Hand geschriebene Frage an den Vorlese-Verlauf an und gibt ihre Kennung
+     * zurück, damit die KI gleich danach das passende Symbol nachtragen kann.
+     */
+    @Transaction
+    open suspend fun appendQuestion(sessionId: Long, emoji: String, text: String): Long {
+        val id = insertQuestion(
+            QuestionEntity(
+                sessionId = sessionId,
+                orderIndex = nextQuestionIndex(sessionId),
+                emoji = emoji,
+                text = text,
+            ),
+        )
+        updateQuestionCount(sessionId, questionCount(sessionId))
+        return id
+    }
+
+    @Transaction
+    open suspend fun removeQuestion(sessionId: Long, questionId: Long) {
+        deleteQuestion(questionId)
+        updateQuestionCount(sessionId, questionCount(sessionId))
+    }
+
+    /** Merkt sich Pause, Wiederholungen und Dauer an genau diesem Vorlese-Verlauf. */
+    @Query(
+        "UPDATE sessions SET pauseRep = :pauseRep, pauseNext = :pauseNext, reps = :reps, " +
+            "durationMin = :durationMin WHERE id = :sessionId",
+    )
+    abstract suspend fun updateSessionSettings(
+        sessionId: Long,
+        pauseRep: Int,
+        pauseNext: Int,
+        reps: Int,
+        durationMin: Int,
+    )
+
     @Query("SELECT COALESCE(MAX(orderIndex) + 1, 0) FROM questions WHERE sessionId = :sessionId")
     abstract suspend fun nextQuestionIndex(sessionId: Long): Int
 

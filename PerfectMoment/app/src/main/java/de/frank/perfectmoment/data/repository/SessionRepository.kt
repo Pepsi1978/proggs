@@ -27,6 +27,19 @@ interface SessionRepository {
     suspend fun setManualSummary(sessionId: Long, summary: String)
     suspend fun setVoiceOverride(sessionId: Long, providerId: String, voiceId: String)
     suspend fun deleteSession(sessionId: Long): Boolean
+
+    /** Hängt eine von Hand geschriebene Frage an und liefert deren Kennung zurück. */
+    suspend fun appendQuestion(sessionId: Long, emoji: String, text: String): Long
+    suspend fun setQuestionText(questionId: Long, text: String)
+    suspend fun setQuestionEmoji(questionId: Long, emoji: String)
+    suspend fun removeQuestion(sessionId: Long, questionId: Long)
+    suspend fun setSessionSettings(
+        sessionId: Long,
+        pauseRep: Int,
+        pauseNext: Int,
+        reps: Int,
+        durationMin: Int,
+    )
 }
 
 class RoomSessionRepository(
@@ -110,4 +123,24 @@ class RoomSessionRepository(
 
     override suspend fun deleteSession(sessionId: Long): Boolean =
         sessionDao.deleteSession(sessionId) > 0
+
+    override suspend fun appendQuestion(sessionId: Long, emoji: String, text: String): Long =
+        sessionDao.appendQuestion(sessionId, emoji, text)
+
+    override suspend fun setQuestionText(questionId: Long, text: String) =
+        sessionDao.updateQuestionText(questionId, text)
+
+    override suspend fun setQuestionEmoji(questionId: Long, emoji: String) =
+        sessionDao.updateQuestionEmoji(questionId, emoji)
+
+    override suspend fun removeQuestion(sessionId: Long, questionId: Long) =
+        sessionDao.removeQuestion(sessionId, questionId)
+
+    override suspend fun setSessionSettings(
+        sessionId: Long,
+        pauseRep: Int,
+        pauseNext: Int,
+        reps: Int,
+        durationMin: Int,
+    ) = sessionDao.updateSessionSettings(sessionId, pauseRep, pauseNext, reps, durationMin)
 }

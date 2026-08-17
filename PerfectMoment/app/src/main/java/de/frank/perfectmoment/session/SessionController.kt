@@ -44,6 +44,8 @@ data class SessionRuntime(
     val sessionId: Long? = null,
     val config: SessionConfig,
     val generating: Boolean = false,
+    /** Ein Vorlese-Verlauf: eigene Fragen, kein Nachschub, kein Fortsetzungspunkt. */
+    val reading: Boolean = false,
 )
 
 class SessionController(
@@ -198,6 +200,45 @@ class SessionController(
     }
 
     /**
+     * Liest einen Vorlese-Verlauf vor: ausschließlich die selbst geschriebenen Fragen, in der
+     * eingestellten Taktung und mit der für diesen Verlauf gewählten Stimme.
+     *
+     * Es wird nichts nachgeladen. Ist der Vorrat durch, fängt die Liste wieder von vorne an —
+     * beendet wird erst, wenn die gewählte Dauer abgelaufen ist oder von Hand gestoppt wird.
+     */
+    suspend fun playReadingSession(sourceSessionId: Long, shuffle: Boolean) = operationMutex.withLock {
+        releaseEngine()
+        val source = requireNotNull(sessionRepository.getSession(sourceSessionId)) {
+            "Der Vorlese-Verlauf wurde nicht gefunden."
+        }
+        require(source.questions.isNotEmpty()) {
+            "Dieser Vorlese-Verlauf hat noch keine Fragen."
+        }
+        val config = currentConfig()
+        val questions = source.questions
+            .map { Question(id = it.id, emoji = it.emoji, text = it.text) }
+            .let { if (shuffle) it.shuffled() else it }
+        sessionRepository.markPlayed(sourceSessionId)
+        createEngine(
+            runtime = SessionRuntime(
+                topic = historyTitle(source.session),
+                sessionId = sourceSessionId,
+                config = config,
+                reading = true,
+            ),
+            questions = questions,
+            refillPort = null,
+            persistencePort = QuestionPersistencePort { },
+            voice = SessionVoice.of(source.session),
+            loopQuestions = true,
+        )
+        startForegroundSessionService()
+    }
+
+    private fun historyTitle(session: SessionEntity): String =
+        session.summary.ifBlank { session.topic }
+
+    /**
      * Setzt eine Sitzung genau am gespeicherten Punkt fort. Bereits vorgelesene Fragen bleiben
      * hinter dem Fortsetzungspunkt liegen und kommen nie ein zweites Mal.
      *
@@ -281,7 +322,9 @@ class SessionController(
         val runtime = requireNotNull(_runtime.value)
         val sessionId = requireNotNull(runtime.sessionId)
         val state = requireNotNull(_state.value)
-        sessionRepository.saveProgress(sessionId, state, runtime.config)
+        // Ein Vorlese-Verlauf kennt keinen Fortsetzungspunkt: Das Speichern würde die von Hand
+        // geschriebenen Fragen in der zufälligen Abspielreihenfolge zurückschreiben.
+        if (!runtime.reading) sessionRepository.saveProgress(sessionId, state, runtime.config)
         releaseEngine()
         appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
     }
@@ -302,6 +345,7 @@ class SessionController(
         checkpoint: SessionCheckpoint? = null,
         voice: SessionVoice? = null,
         refillWhenStockIsLow: Boolean = false,
+        loopQuestions: Boolean = false,
     ) {
         val generation = engineGeneration.incrementAndGet()
         val created = SessionEngine(
@@ -315,6 +359,7 @@ class SessionController(
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
             refillWhenStockIsLow = refillWhenStockIsLow,
+            loopQuestions = loopQuestions,
         )
         engine = created
         _runtime.value = runtime.copy(generating = initialGenerationInFlight)

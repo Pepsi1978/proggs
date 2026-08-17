@@ -29,6 +29,11 @@ class SessionEngine(
     private var initialGenerationInFlight: Boolean = false,
     private val checkpoint: SessionCheckpoint? = null,
     private val refillWhenStockIsLow: Boolean = false,
+    /**
+     * Fängt nach der letzten Frage wieder bei der ersten an, statt auf Nachschub zu warten.
+     * Ein Vorlese-Verlauf hat keinen Nachschub — er läuft, bis die Dauer abgelaufen ist.
+     */
+    private val loopQuestions: Boolean = false,
     private val refillRetryMs: Long = REFILL_RETRY_MS,
     private val refillStallMs: Long = REFILL_STALL_MS,
     private val offlineThresholdMs: Long = OFFLINE_THRESHOLD_MS,
@@ -371,6 +376,16 @@ class SessionEngine(
 
     private fun advanceToNextQuestion() {
         val nextIndex = _state.value.currentIndex + 1
+        if (loopQuestions && _state.value.questions.isNotEmpty() &&
+            nextIndex >= _state.value.questions.size
+        ) {
+            schedulePause(Phase.PAUSE_NEXT, config.pauseNextMs) {
+                _state.value = _state.value.copy(currentIndex = 0, currentRep = 1)
+                ttsErrorsForCurrentQuestion = 0
+                afterOfflineNotice(::speakCurrentQuestion)
+            }
+            return
+        }
         if (nextIndex >= _state.value.questions.size) {
             _state.value = _state.value.copy(
                 currentIndex = nextIndex,
@@ -532,6 +547,16 @@ class SessionEngine(
     }
 
     private fun handleQuestionsExhausted() {
+        if (loopQuestions && _state.value.questions.isNotEmpty()) {
+            _state.value = _state.value.copy(currentIndex = 0, currentRep = 1)
+            ttsErrorsForCurrentQuestion = 0
+            if (_state.value.speakerOn && !_state.value.paused) {
+                speakCurrentQuestion()
+            } else {
+                _state.value = _state.value.copy(phase = Phase.IDLE_MUTED)
+            }
+            return
+        }
         _state.value = _state.value.copy(phase = Phase.WAITING_NETWORK)
         if (!initialGenerationInFlight) requestRefill()
     }
