@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -115,6 +116,12 @@ fun Monitor(modell: AppViewModel) {
     val hinweis by modell.hinweis.collectAsStateWithLifecycle()
     val stoerung by modell.stoerung.collectAsStateWithLifecycle()
     val anlegenOffen by modell.anlegenOffen.collectAsStateWithLifecycle()
+
+    // F-38 — der Ziehstand liegt beim Abschnitt, nicht bei der einzelnen Karte: nur so
+    // wissen die **anderen** Karten, dass sie ausweichen müssen. Jeder Abschnitt hat seinen
+    // eigenen, denn beide zählen ihre Plätze getrennt.
+    val ziehenLaeuft = remember { Ziehstand() }
+    val ziehenAnstehend = remember { Ziehstand() }
 
     Bildschirmgeruest(
         mitUnterkante = true,
@@ -198,6 +205,7 @@ fun Monitor(modell: AppViewModel) {
                     funkelt = funkelt == experiment.id,
                     nr = laufende.indexOf(experiment),
                     anzahl = laufende.size,
+                    zieh = ziehenLaeuft,
                 )
                 }
             }
@@ -231,9 +239,67 @@ fun Monitor(modell: AppViewModel) {
                     gesperrt = istVoll,
                     nr = anstehende.indexOf(experiment),
                     anzahl = anstehende.size,
+                    zieh = ziehenAnstehend,
                 )
                 }
             }
+        }
+    }
+}
+
+/**
+ * **F-38 — der Ziehstand eines Abschnitts.**
+ *
+ * Er merkt sich, welche Karte gerade am Finger hängt, von welchem Platz sie kam und wie weit
+ * sie schon gezogen wurde. Daraus rechnet jede **andere** Karte aus, ob sie ausweichen muss:
+ * wandert die gezogene Karte nach oben, rutschen die übersprungenen um einen Platz nach
+ * unten — und umgekehrt. Vorher blieb alles stehen und die Liste sprang erst beim Loslassen;
+ * man sah bis zuletzt nicht, wo die Karte landen würde.
+ */
+private class Ziehstand {
+    /** Die Karte am Finger — `null`, solange nichts gezogen wird. */
+    var id: Long? by mutableStateOf(null)
+        private set
+
+    /** Ihr Platz beim Aufnehmen. */
+    var von: Int by mutableIntStateOf(-1)
+        private set
+
+    /** Die bisher gezogene Weite in Pixeln. */
+    var weg: Float by mutableFloatStateOf(0f)
+
+    /** Ein Platz in Pixeln: Kartenhöhe plus der Abstand der Liste. */
+    private var schritt: Float by mutableFloatStateOf(1f)
+
+    /** Wie viele Karten der Abschnitt hat — weiter als bis ans Ende geht es nicht. */
+    private var anzahl: Int by mutableIntStateOf(0)
+
+    /** Der Platz, auf dem die Karte beim Loslassen landen würde. */
+    val ziel: Int
+        get() = (von + Math.round(weg / schritt)).coerceIn(0, (anzahl - 1).coerceAtLeast(0))
+
+    fun nimmAuf(kartenId: Long, platz: Int, schrittweite: Float, gesamt: Int) {
+        id = kartenId
+        von = platz
+        schritt = schrittweite.coerceAtLeast(1f)
+        anzahl = gesamt
+        weg = 0f
+    }
+
+    fun legAb() {
+        id = null
+        von = -1
+        weg = 0f
+    }
+
+    /** Um wie viel eine ruhende Karte ausweicht — ein Platz hoch, ein Platz runter oder gar nicht. */
+    fun versatzFuer(platz: Int): Float {
+        if (id == null || platz == von) return 0f
+        val nach = ziel
+        return when {
+            nach > von && platz in (von + 1)..nach -> -schritt
+            nach < von && platz in nach until von -> schritt
+            else -> 0f
         }
     }
 }
@@ -254,6 +320,7 @@ private fun Laufkarte(
     funkelt: Boolean,
     nr: Int,
     anzahl: Int,
+    zieh: Ziehstand,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
@@ -265,13 +332,18 @@ private fun Laufkarte(
     // F-38 — auch laufende Karten lassen sich umsortieren: langer Druck auf den Griff, dann
     // ziehen. Die Schrittweite ist die gemessene Höhe der Karte plus der Abstand der Liste —
     // eine feste Weite ginge daneben, sobald eine Karte aufgeklappt ist.
-    var ziehweg by remember { mutableFloatStateOf(0f) }
     var kartenhoehe by remember { mutableIntStateOf(0) }
-    val zieht = ziehweg != 0f
+    val zieht = zieh.id == experiment.id
     val hebung by animateFloatAsState(
         targetValue = if (zieht) 1.02f else 1f,
         animationSpec = tween(dauer(Bewegung.ABHEBEN, stufe), easing = Bewegung.ruhig),
         label = "abheben-lauf",
+    )
+    // Die ruhenden Karten machen Platz — sie **fahren** hinüber, sie springen nicht.
+    val ausweichen by animateFloatAsState(
+        targetValue = zieh.versatzFuer(nr),
+        animationSpec = tween(dauer(Bewegung.ABHEBEN, stufe), easing = Bewegung.ruhig),
+        label = "ausweichen-lauf",
     )
 
     val heutige = modell.heutigeAufgaben(experiment)
@@ -304,11 +376,13 @@ private fun Laufkarte(
         Modifier
             .fillMaxWidth()
             .onSizeChanged { kartenhoehe = it.height }
+            // Die gezogene Karte liegt über den anderen, sonst schöbe sie sich unter sie.
+            .zIndex(if (zieht) 1f else 0f)
             .graphicsLayer {
                 rotationX = kippung.umX
                 rotationY = kippung.umY
                 cameraDistance = 12f * density
-                translationY = ziehweg
+                translationY = if (zieht) zieh.weg else ausweichen
                 scaleX = hebung
                 scaleY = hebung
             }
@@ -346,17 +420,23 @@ private fun Laufkarte(
                     modifier = Modifier
                         .padding(top = 3.dp)
                         .size(20.dp)
-                        .pointerInput(experiment.id, anzahl) {
+                        .pointerInput(experiment.id, nr, anzahl) {
                             detectDragGesturesAfterLongPress(
-                                onDragEnd = {
-                                    val schrittweite = (kartenhoehe + with(dichte) { 12.dp.toPx() })
-                                        .coerceAtLeast(1f)
-                                    val schritte = Math.round(ziehweg / schrittweite)
-                                    ziehweg = 0f
-                                    if (schritte != 0) modell.sortiereLaufende(experiment, nr + schritte)
+                                onDragStart = {
+                                    zieh.nimmAuf(
+                                        kartenId = experiment.id,
+                                        platz = nr,
+                                        schrittweite = kartenhoehe + with(dichte) { 12.dp.toPx() },
+                                        gesamt = anzahl,
+                                    )
                                 },
-                                onDragCancel = { ziehweg = 0f },
-                            ) { _, weite -> ziehweg += weite.y }
+                                onDragEnd = {
+                                    val nach = zieh.ziel
+                                    zieh.legAb()
+                                    if (nach != nr) modell.sortiereLaufende(experiment, nach)
+                                },
+                                onDragCancel = { zieh.legAb() },
+                            ) { _, weite -> zieh.weg += weite.y }
                         },
                 )
                 Column(Modifier.weight(1f)) {
@@ -460,6 +540,7 @@ private fun Anstehendkarte(
     gesperrt: Boolean,
     nr: Int,
     anzahl: Int,
+    zieh: Ziehstand,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
@@ -467,8 +548,8 @@ private fun Anstehendkarte(
     val dichte = LocalDensity.current
 
     var wischweg by remember { mutableFloatStateOf(0f) }
-    var ziehweg by remember { mutableFloatStateOf(0f) }
-    val zieht = ziehweg != 0f
+    var kartenhoehe by remember { mutableIntStateOf(0) }
+    val zieht = zieh.id == experiment.id
 
     var dauerOffen by remember(experiment.id) { mutableStateOf(false) }
     if (dauerOffen) {
@@ -490,13 +571,21 @@ private fun Anstehendkarte(
         animationSpec = tween(dauer(Bewegung.ABHEBEN, stufe), easing = Bewegung.ruhig),
         label = "abheben",
     )
+    // Die ruhenden Karten machen Platz — sie fahren hinüber, sie springen nicht.
+    val ausweichen by animateFloatAsState(
+        targetValue = zieh.versatzFuer(nr),
+        animationSpec = tween(dauer(Bewegung.ABHEBEN, stufe), easing = Bewegung.ruhig),
+        label = "ausweichen",
+    )
 
     Box(
         Modifier
             .fillMaxWidth()
+            .onSizeChanged { kartenhoehe = it.height }
+            .zIndex(if (zieht) 1f else 0f)
             .graphicsLayer {
                 translationX = wischweg
-                translationY = ziehweg
+                translationY = if (zieht) zieh.weg else ausweichen
                 scaleX = hebung
                 scaleY = hebung
             }
@@ -541,15 +630,23 @@ private fun Anstehendkarte(
                     modifier = Modifier
                         .padding(top = 2.dp)
                         .size(20.dp)
-                        .pointerInput(experiment.id, anzahl) {
+                        .pointerInput(experiment.id, nr, anzahl) {
                             detectDragGesturesAfterLongPress(
-                                onDragEnd = {
-                                    val schritte = Math.round(ziehweg / with(dichte) { 96.dp.toPx() })
-                                    ziehweg = 0f
-                                    if (schritte != 0) modell.sortiere(experiment, nr + schritte)
+                                onDragStart = {
+                                    zieh.nimmAuf(
+                                        kartenId = experiment.id,
+                                        platz = nr,
+                                        schrittweite = kartenhoehe + with(dichte) { 12.dp.toPx() },
+                                        gesamt = anzahl,
+                                    )
                                 },
-                                onDragCancel = { ziehweg = 0f },
-                            ) { _, weite -> ziehweg += weite.y }
+                                onDragEnd = {
+                                    val nach = zieh.ziel
+                                    zieh.legAb()
+                                    if (nach != nr) modell.sortiere(experiment, nach)
+                                },
+                                onDragCancel = { zieh.legAb() },
+                            ) { _, weite -> zieh.weg += weite.y }
                         },
                 )
                 Column(
