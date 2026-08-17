@@ -918,20 +918,17 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         if (text.isBlank()) return
         viewModelScope.launch {
             ablage.speichereLage(text, heute)
-            // Laufen bereits drei, wird VORSCHLAEGE übersprungen: B-01 nennt den Grund und
-            // verweist auf den Monitor (Funktions-Spec §4). Gezählt wird in der Ablage — der
-            // beobachtete Strom kann beim Start noch leer sein und hätte dann drei laufende
-            // Experimente übersehen.
-            if (ablage.anzahlLaufende() >= Ablage.MAX_LAUFEND) {
-                melde(DREI_LAUFEN)
-                _tagZustand.value = TagZustand.LAGE_STEHT
-                return@launch
-            }
+            // Laufen bereits drei, kommen die Vorschläge **trotzdem**: die Grenze gilt fürs
+            // Starten, nicht fürs Vorschlagen. Was gefällt, geht in den Monitor und wartet
+            // dort unter „Steht an“ — so wie eine Merkliste für später. Gezählt wird in der
+            // Ablage; der beobachtete Strom kann beim Start noch leer sein.
+            val voll = ablage.anzahlLaufende() >= Ablage.MAX_LAUFEND
             _tagZustand.value = TagZustand.WARTET
             _wartet.value = "Ich sehe mir an, was ich über dich weiß …"
             try {
                 if (ablage.erzeugeVorschlaege(heute)) {
                     _tagZustand.value = TagZustand.VORSCHLAEGE
+                    if (voll) melde(DREI_LAUFEN_VORMERKEN)
                 } else {
                     _tagZustand.value = TagZustand.LAGE_STEHT
                 }
@@ -1811,6 +1808,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         /** Der Satz aus UI-Spec §8 — wörtlich, an jeder Stelle gleich. */
         const val DREI_LAUFEN =
             "Drei Experimente laufen schon. Schließ eines ab, bevor du ein neues beginnst."
+
+        /**
+         * Derselbe Sachverhalt auf B-01, wo die Vorschläge trotzdem kommen: hier ist es kein
+         * Riegel, sondern ein Hinweis, wohin das Ausgewählte geht.
+         */
+        const val DREI_LAUFEN_VORMERKEN =
+            "Drei Experimente laufen schon. Was dir gefällt, kannst du trotzdem in den " +
+                "Monitor legen — es wartet dort unter „Steht an“."
 
         /** Diese Bildschirme merken sich, von wo aus sie geöffnet wurden. */
         val MERKT_HERKUNFT = setOf(Ziel.GESPRAECH, Ziel.AUSWERTUNG, Ziel.EINSTELLUNGEN, Ziel.SELBSTBILD)

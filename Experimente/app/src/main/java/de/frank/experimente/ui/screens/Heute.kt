@@ -162,8 +162,9 @@ fun Heute(modell: AppViewModel) {
                 if (istVoll) {
                     item("voll") {
                         Text(
-                            text = "Drei Experimente laufen schon. Schließ eines ab, bevor du ein " +
-                                "neues beginnst. Im Monitor siehst du sie.",
+                            text = "Drei Experimente laufen schon. Vorschläge bekommst du " +
+                                "trotzdem — was dir gefällt, wartet im Monitor unter " +
+                                "„Steht an“, bis wieder Platz ist.",
                             style = schriften.fliesstextKlein,
                             color = farben.gedaempft,
                         )
@@ -177,6 +178,19 @@ fun Heute(modell: AppViewModel) {
 
             TagZustand.VORSCHLAEGE -> {
                 item("kopf-vorschlaege") { Zwischenueberschrift("Fünf Vorschläge für heute") }
+                // Der Grund, warum „Jetzt starten" grau ist — und wohin das Ausgewählte
+                // stattdessen geht.
+                if (istVoll) {
+                    item("voll-vorschlaege") {
+                        Text(
+                            text = "Drei Experimente laufen schon. „Jetzt starten“ geht erst " +
+                                "wieder, wenn eines abgeschlossen ist — „In den Monitor“ legt " +
+                                "den Vorschlag so lange unter „Steht an“.",
+                            style = schriften.fliesstextKlein,
+                            color = farben.gedaempft,
+                        )
+                    }
+                }
                 items(vorschlaege, key = { "v${it.id}" }) { vorschlag ->
                     Einflug(vorschlaege.indexOf(vorschlag)) {
                         Vorschlagskarte(vorschlag, modell, istVoll)

@@ -148,13 +148,17 @@ class Ablage(
     // --- F-03 / F-04 --------------------------------------------------------------------
 
     /**
-     * F-03 — fünf Vorschläge erzeugen. Sind bereits drei Experimente offen, wird nicht
-     * ausgeführt (dann geht B-01 von `LAGE_STEHT` direkt nach `LAEUFT`).
+     * F-03 — fünf Vorschläge erzeugen.
+     *
+     * Sie kommen **immer**, auch wenn schon drei Experimente laufen. Die Grenze von drei gilt
+     * fürs Starten, nicht fürs Vorschlagen: ein Vorschlag lässt sich in den Monitor legen und
+     * wartet dort unter „Steht an“, bis wieder Platz ist. Vorher brach B-01 an dieser Stelle
+     * ab — der eingesprochene Text war weg und man bekam nichts als den Satz, dass drei
+     * laufen.
      *
      * @return true wenn Vorschläge entstanden sind
      */
     suspend fun erzeugeVorschlaege(tag: LocalDate = LocalDate.now()): Boolean {
-        if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return false
         val roh = aufgabenKi.fuenfVorschlaege(
             kontext = kontext(tag, mitMerkliste = true),
             verworfeneTitel = db.vorschlaege().verworfeneTitel(tag),
