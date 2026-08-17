@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="de" data-werft-theme="22hell" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="werft-render-width" content="412">
+<title>Experimente-SPEC-v1 — Erkenntnisse — 2.2 Hell</title>
+<!--
+  Die Schriften des Entwurfs — als Kopf-Verweis, nicht als @import im Stil. Ein @import ist laut
+  CSS-Spezifikation nur gueltig, wenn er VOR allen anderen Regeln steht; beim Zusammenfuehren der
+  Style-Bloecke zu design.css rutscht er dahinter und wird von jedem Browser STILL verworfen.
+  Genau so ist ein Entwurf mit drei eigenen Schriften komplett in der Systemschrift gerendert
+  worden, ohne dass irgendwo ein Fehler auftauchte.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap">
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+<!--
+  Die breitenbezogenen Media Queries aus design.css, ausgewertet fuer 412 dp — die Breite,
+  fuer die dieser Bildschirm entworfen wurde. Ohne diesen Block haengt das Aussehen am Fenster
+  des Betrachters: eine Regel wie "max-width: 480px" greift im Studio-Geraeterahmen, im breiten
+  Browserfenster aber nicht — und die Datei zeigt eine Anordnung, die es im Entwurf nie gab.
+  design.css bleibt unveraendert; hier gewinnt nur, was bei 412 dp wirklich gilt.
+-->
+<style data-werft-aufgeloest="412">
+
+  .werft-theme-switcher {
+    display: none !important;
+  }
+
+
+  .werft-b01__topbar,
+  .werft-b03__topbar,
+  .werft-b08__topbar,
+  .b09-topbar,
+  .b06-topbar,
+  .b07-topbar,
+  .b05-topbar,
+  .b04-topbar {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .b02-back {
+    left: 8px;
+  }
+
+  .werft-b01__content {
+    padding: 16px 16px 32px;
+  }
+
+  .werft-b01__date {
+    margin-bottom: 20px;
+  }
+
+  .werft-b01__voice-area {
+    margin-top: 20px;
+  }
+
+  .werft-b01__proposal,
+  .werft-b01__experiment-card,
+  .werft-b03__answer-card,
+  .werft-b03__loading-card,
+  .werft-b03__error-card,    .b02-bubble,
+  .b05-card,
+  .b04-goal-card {
+    padding: 16px;
+  }
+
+  .b02-experiment-header {
+    padding: 16px 16px 0;
+  }
+
+  .b02-thread {
+    padding: 20px 16px 16px;
+  }
+
+  .b02-bubble {
+    max-width: calc(100% - 20px);
+  }
+
+  .b02-composer {
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .werft-b03__title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .werft-b03__main {
+    padding: 20px 16px 112px;
+  }
+
+  .werft-b08__scroll {
+    padding: 16px 16px max(112px, env(safe-area-inset-bottom));
+  }
+
+  .werft-b08__field,
+  .werft-b08__secret-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    row-gap: 6px;
+  }
+
+  .werft-b08__access-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+
+  .werft-b08__access-name,
+  .werft-b08__access-state {
+    grid-column: 1;
+  }
+
+  .werft-b08__access-state {
+    grid-row: 2;
+  }
+
+  .werft-b08__access-row .werft-b08__action {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .werft-b08__reminder-row {
+    min-height: 112px;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: 48px 48px;
+    column-gap: 12px;
+    padding: 8px 12px;
+  }
+
+  .werft-b08__reminder-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .werft-b08__reminder-row .werft-b08__switch {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .werft-b08__reminder-row input.werft-b08__time {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border-top: 1px solid var(--rand-weich);
+  }
+
+  .werft-b08__appearance {
+    width: 100%;
+  }
+
+  .werft-b08__choice span {
+    padding: 4px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .werft-b08__button-row,
+  .werft-b03__actions,
+  .b05-editor-actions,
+  .b04-editor-actions {
+    flex-wrap: wrap;
+  }
+
+  .b09-intro {
+    right: 16px;
+    left: 16px;
+  }
+
+  .b09-editor {
+    right: 16px;
+    left: 16px;
+    width: calc(100% - 32px);
+    padding: 16px;
+  }
+
+  .b09-controls {
+    right: 16px;
+    left: 16px;
+    grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .b09-improve {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 8px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .b09-improve-label {
+    white-space: normal;
+  }
+
+  .b06-content,
+  .b07-content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .b05-content,
+  .b05-create-surface,
+  .b04-content,
+  .b04-create-layer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .werft-b01__nav-item,
+  .b06-nav-item,
+  .b07-nav-item,
+  .b05-nav-item,
+  .b04-nav-label {
+    gap: 2px;
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+  }
+
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-06" data-screen-name="Erkenntnisse" style="width: 1440px; min-height: 900px;">
+<section class="b06-screen" aria-labelledby="b06-title">
+  <header class="b06-topbar">
+    <h1 class="b06-title" id="b06-title">Erkenntnisse</h1>
+  </header>
+
+  <main class="b06-content">
+    <div class="b06-content-flow">
+      <p class="b06-intro">Was sich aus deinen Auswertungen ergeben hat.</p>
+      <p class="b06-empty">Noch nichts. Das wächst mit deinen Auswertungen.</p>
+    </div>
+  </main>
+
+  <nav class="b06-bottom-nav werft-primary-nav" aria-label="Hauptnavigation">
+    <button class="b06-nav-item" type="button" data-werft-navigate="B-01" aria-label="Heute">
+      <svg class="b06-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-heute"></use></svg>
+      <span class="b06-nav-label">Heute</span>
+    </button>
+
+    <button class="b06-nav-item" type="button" data-werft-navigate="B-04" aria-label="Ziele">
+      <svg class="b06-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-ziele"></use></svg>
+      <span class="b06-nav-label">Ziele</span>
+    </button>
+
+    <button class="b06-nav-item" type="button" data-werft-navigate="B-05" aria-label="Merkliste">
+      <svg class="b06-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-merkliste"></use></svg>
+      <span class="b06-nav-label">Merkliste</span>
+    </button>
+
+    <button class="b06-nav-item" type="button" data-werft-navigate="B-06" aria-label="Erkenntnisse" aria-current="page">
+      <svg class="b06-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-erkenntnisse"></use></svg>
+      <span class="b06-nav-label">Erkenntnisse</span>
+    </button>
+
+    <button class="b06-nav-item" type="button" data-werft-navigate="B-07" aria-label="Logbuch">
+      <svg class="b06-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-logbuch"></use></svg>
+      <span class="b06-nav-label">Logbuch</span>
+    </button>
+  </nav>
+</section>
+</section>
+</div>
+</body>
+</html>

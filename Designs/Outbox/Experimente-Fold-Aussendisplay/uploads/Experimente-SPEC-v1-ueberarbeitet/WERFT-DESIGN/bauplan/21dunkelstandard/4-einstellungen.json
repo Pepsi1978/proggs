@@ -1,0 +1,1455 @@
+{
+  "bildschirm": "B-08",
+  "name": "Einstellungen",
+  "breite": 412,
+  "erscheinung": "21dunkelstandard",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "werft-b08",
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "werft-b08__topbar",
+              "anordnung": {
+                "art": "zeile",
+                "quer": "center",
+                "innen": "0 20px"
+              },
+              "kinder": [
+                {
+                  "tag": "h1",
+                  "klassen": "werft-b08__title",
+                  "anordnung": {
+                    "art": "zeile",
+                    "quer": "center",
+                    "innen": "0 20px"
+                  },
+                  "text": "Einstellungen"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "werft-b08__scroll",
+              "anordnung": {
+                "art": "fluss",
+                "innen": "16px 16px calc(112px + env(safe-area-inset-bottom, 0px))"
+              },
+              "kinder": [
+                {
+                  "tag": "div",
+                  "klassen": "werft-b08__content",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "32px",
+                    "innen": "16px 16px calc(112px + env(safe-area-inset-bottom, 0px))"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "beschriftung": "KI",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__subgroup",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__fields",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Modell"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-22",
+                                          "beschriftung": "Modell für Experimente",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "GPT 5.6 Sol",
+                                            "GPT 5.6 Terra",
+                                            "GPT 5.6 Luna"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Effort"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-22",
+                                          "beschriftung": "Effort für Experimente",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "Niedrig",
+                                            "Mittel",
+                                            "Hoch",
+                                            "Sehr hoch",
+                                            "Maximal"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__subgroup",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "h3",
+                              "klassen": "werft-b08__subgroup-title",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "innen": "20px"
+                              },
+                              "text": "Logbuch"
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__fields",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Modell"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-22",
+                                          "beschriftung": "Modell für das Logbuch",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "GPT 5.6 Sol",
+                                            "GPT 5.6 Terra",
+                                            "GPT 5.6 Luna"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Effort"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-22",
+                                          "beschriftung": "Effort für das Logbuch",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "Niedrig",
+                                            "Mittel",
+                                            "Hoch",
+                                            "Sehr hoch",
+                                            "Maximal"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "p",
+                          "klassen": "werft-b08__hint",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Das Logbuch darf ein anderes Modell benutzen als die Experimente."
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b08__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Stimme"
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__fields",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__field",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "start",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__label",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Anbieter"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__control-shell",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "select",
+                                      "klassen": "werft-b08__select",
+                                      "funktion": "F-23",
+                                      "beschriftung": "Stimmenanbieter",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "eintraege": [
+                                        "Google Chirp 3 HD",
+                                        "Meine Stimme",
+                                        "Microsoft Edge"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__voice-panel",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Stimme"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-23",
+                                          "beschriftung": "Google-Stimme",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "de-DE-Chirp3-HD-Kore"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__voice-panel",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "div",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Stimme"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "klassen": "werft-b08__action",
+                                      "funktion": "F-23",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "span",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "text": "Stimme aufnehmen"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__voice-panel",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__field",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__label",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Stimme"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__control-shell",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "select",
+                                          "klassen": "werft-b08__select",
+                                          "funktion": "F-23",
+                                          "beschriftung": "Microsoft-Edge-Stimme",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          },
+                                          "eintraege": [
+                                            "de-DE-SeraphinaMultilingualNeural"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__field",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "start",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__label",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Sprechgeschwindigkeit"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__range-wrap",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "klassen": "werft-b08__range",
+                                      "funktion": "F-23",
+                                      "beschriftung": "Sprechgeschwindigkeit in Schritten von 0,05",
+                                      "bereich": {
+                                        "von": "0.7",
+                                        "bis": "1.3",
+                                        "schritt": "0.05",
+                                        "wert": "1.0"
+                                      },
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      }
+                                    },
+                                    {
+                                      "tag": "datalist",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        },
+                                        {
+                                          "tag": "option",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "12px",
+                                            "quer": "start",
+                                            "innen": "20px"
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "output",
+                                      "klassen": "werft-b08__range-value",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      },
+                                      "text": "1,00"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__button-row",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b08__action",
+                              "funktion": "F-23",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Probe hören"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b08__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Zugänge"
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__fields",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__access-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__access-name",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Codex"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__access-state",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "nicht angemeldet"
+                                },
+                                {
+                                  "tag": "button",
+                                  "klassen": "werft-b08__action",
+                                  "funktion": "F-24",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "span",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "center",
+                                        "innen": "20px"
+                                      },
+                                      "text": "Anmelden"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__secret-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "start",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__label",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Groq"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__control-shell",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "klassen": "werft-b08__password",
+                                      "funktion": "F-24",
+                                      "beschriftung": "Groq-Zugang",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__secret-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "start",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__label",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Google Cloud"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__control-shell",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "klassen": "werft-b08__password",
+                                      "funktion": "F-24",
+                                      "beschriftung": "Google-Cloud-Zugang",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__secret-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "start",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__label",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Alibaba"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__control-shell",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "start",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "klassen": "werft-b08__password",
+                                      "funktion": "F-24",
+                                      "beschriftung": "Alibaba-Zugang",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "start",
+                                        "innen": "20px"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b08__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Erinnerungen"
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b08__reminders",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__reminder-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__reminder-name",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Morgens"
+                                },
+                                {
+                                  "tag": "input",
+                                  "klassen": "werft-b08__time",
+                                  "funktion": "F-25",
+                                  "beschriftung": "Uhrzeit morgens",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "6px"
+                                  }
+                                },
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__switch",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "funktion": "F-25",
+                                      "beschriftung": "Erinnerung morgens",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "center",
+                                        "laengs": "center",
+                                        "innen": "20px"
+                                      }
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__switch-track",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "center",
+                                        "laengs": "center",
+                                        "innen": "20px"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b08__reminder-row",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b08__reminder-name",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Abends"
+                                },
+                                {
+                                  "tag": "input",
+                                  "klassen": "werft-b08__time",
+                                  "funktion": "F-25",
+                                  "beschriftung": "Uhrzeit abends",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "6px"
+                                  }
+                                },
+                                {
+                                  "tag": "label",
+                                  "klassen": "werft-b08__switch",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "20px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "input",
+                                      "funktion": "F-25",
+                                      "beschriftung": "Erinnerung abends",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "center",
+                                        "laengs": "center",
+                                        "innen": "20px"
+                                      }
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "klassen": "werft-b08__switch-track",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "12px",
+                                        "quer": "center",
+                                        "laengs": "center",
+                                        "innen": "20px"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b08__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Erscheinung"
+                        },
+                        {
+                          "tag": "fieldset",
+                          "klassen": "werft-b08__appearance",
+                          "beschriftung": "Erscheinung",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "quer": "center",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__choice",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "input",
+                                  "funktion": "F-26",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  }
+                                },
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Hell"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__choice",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "input",
+                                  "funktion": "F-26",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  }
+                                },
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Dunkel"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "label",
+                              "klassen": "werft-b08__choice",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "quer": "center",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "input",
+                                  "funktion": "F-26",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "innen": "20px"
+                                  }
+                                },
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "20px"
+                                  },
+                                  "text": "Wie das System"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "section",
+                      "klassen": "werft-b08__section",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b08__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "innen": "20px"
+                          },
+                          "text": "Über mich"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b08__nav-row",
+                          "fuehrtZu": "B-09",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "32px",
+                            "quer": "center",
+                            "laengs": "space-between",
+                            "innen": "20px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "span",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "quer": "center",
+                                "laengs": "space-between",
+                                "innen": "20px"
+                              },
+                              "text": "Selbstbild"
+                            },
+                            {
+                              "tag": "svg",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "32px",
+                                "quer": "center",
+                                "laengs": "space-between",
+                                "innen": "20px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "32px",
+                                    "quer": "center",
+                                    "laengs": "space-between",
+                                    "innen": "20px"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b08__version",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "32px",
+                        "innen": "16px 16px calc(112px + env(safe-area-inset-bottom, 0px))"
+                      },
+                      "text": "Version"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

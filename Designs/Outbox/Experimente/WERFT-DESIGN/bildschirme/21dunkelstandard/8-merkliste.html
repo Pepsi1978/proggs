@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="de" data-werft-theme="21dunkelstandard" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimente-SPEC-v1 — Merkliste — 2.1 Dunkel (Standard)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-05" data-screen-name="Merkliste" style="width: 1440px; min-height: 900px;">
+<section class="b05-screen" data-werft-screen="B-05" aria-label="Merkliste">
+  <header class="b05-topbar">
+    <h1 class="b05-title">Merkliste</h1>
+  </header>
+
+  <main class="b05-content">
+    <p class="b05-empty">Nichts gemerkt. Wenn dir ein Vorschlag gefällt, tipp auf das Lesezeichen.</p>
+
+    <div class="b05-card-stack" aria-live="polite"></div>
+  </main>
+
+  <section class="b05-create-surface" data-open="false">
+      <div class="b05-capture">
+        <div class="b05-mic-wrap">
+          <span class="b05-record-ring" aria-hidden="true"></span>
+          <button class="b05-mic b05-hit" type="button" data-recording="false" data-werft-funktion="F-18" aria-label="Eigenes Experiment einsprechen">
+          <svg class="b05-icon b05-mic-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325Q5 13.625 5 11h2q0 2.075 1.463 3.538Q9.925 16 12 16t3.538-1.462Q17 13.075 17 11h2q0 2.625-1.7 4.6-1.7 1.975-4.3 2.325V21h-2Z"/>
+          </svg>
+          <svg class="b05-icon b05-mic-icon-stop" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 17V7h10v10H7Z"/>
+          </svg>
+          </button>
+        </div>
+        <output class="b05-record-time" aria-live="polite" hidden>00:00</output>
+      </div>
+
+      <div class="b05-editor" data-visible="false">
+        <textarea class="b05-input" aria-label="Eigenes Experiment" data-werft-funktion="F-18"></textarea>
+        <div class="b05-editor-actions">
+          <button class="b05-button b05-button-text b05-hit" type="button" data-werft-funktion="F-02">Text mit KI verbessern</button>
+          <button class="b05-button b05-button-filled b05-hit" type="button" data-werft-funktion="F-18">Speichern</button>
+        </div>
+      </div>
+  </section>
+
+  <button class="b05-fab b05-hit" type="button" data-werft-funktion="F-18" aria-label="Eigenes Experiment anlegen" aria-expanded="false">
+    <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2v-6Z"/>
+    </svg>
+  </button>
+
+  <nav class="b05-bottomnav werft-primary-nav" aria-label="Hauptnavigation">
+    <button class="b05-nav-item b05-hit" type="button" data-werft-navigate="B-01">
+      <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-heute"></use></svg>
+      <span>Heute</span>
+    </button>
+
+    <button class="b05-nav-item b05-hit" type="button" data-werft-navigate="B-04">
+      <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-ziele"></use></svg>
+      <span>Ziele</span>
+    </button>
+
+    <button class="b05-nav-item b05-hit" type="button" data-werft-navigate="B-05" aria-current="page">
+      <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-merkliste"></use></svg>
+      <span>Merkliste</span>
+    </button>
+
+    <button class="b05-nav-item b05-hit" type="button" data-werft-navigate="B-06">
+      <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-erkenntnisse"></use></svg>
+      <span>Erkenntnisse</span>
+    </button>
+
+    <button class="b05-nav-item b05-hit" type="button" data-werft-navigate="B-07">
+      <svg class="b05-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-logbuch"></use></svg>
+      <span>Logbuch</span>
+    </button>
+  </nav>
+
+  <dialog class="b05-dialog">
+    <h2 class="b05-dialog-title">Eintrag löschen?</h2>
+    <p class="b05-dialog-text">Der Eintrag wird endgültig aus der Merkliste entfernt.</p>
+    <div class="b05-dialog-actions">
+      <button class="b05-button b05-button-text b05-hit" type="button">Abbrechen</button>
+      <button class="b05-button b05-button-filled b05-hit" type="button" data-werft-funktion="F-19">Löschen</button>
+    </div>
+  </dialog>
+</section>
+
+<script>
+  (() => {
+    const screen = document.currentScript.previousElementSibling;
+    const content = screen.querySelector(".b05-content");
+    const empty = screen.querySelector(".b05-empty");
+    const stack = screen.querySelector(".b05-card-stack");
+    const surface = screen.querySelector(".b05-create-surface");
+    const capture = screen.querySelector(".b05-capture");
+    const mic = screen.querySelector(".b05-mic");
+    const timerOutput = screen.querySelector(".b05-record-time");
+    const editor = screen.querySelector(".b05-editor");
+    const input = screen.querySelector(".b05-input");
+    const fab = screen.querySelector(".b05-fab");
+    const improve = screen.querySelector('[data-werft-funktion="F-02"]');
+    const save = editor.querySelector('[data-werft-funktion="F-18"]');
+    const dialog = screen.querySelector(".b05-dialog");
+    const cancelDelete = dialog.querySelector(".b05-button-text");
+    const confirmDelete = dialog.querySelector('[data-werft-funktion="F-19"]');
+    let previousText = "";
+    let pendingCard = null;
+    let holdTimer = 0;
+    let timer = null;
+    let startedAt = 0;
+
+    const editIcon = () => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "b05-icon b05-icon-card");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("aria-hidden", "true");
+      svg.innerHTML = '<path d="M5 19h1.4L16.85 8.55l-1.4-1.4L5 17.6V19Zm14.3-11.85-2.45-2.45.7-.7q.575-.575 1.413-.575.837 0 1.412.575l.625.625q.575.575.575 1.413 0 .837-.575 1.412l-.7.7ZM3 21v-4.25L15.45 4.3l4.25 4.25L7.25 21H3Z"/>';
+      return svg;
+    };
+
+    const armDelete = card => {
+      card.addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+        holdTimer = window.setTimeout(() => {
+          pendingCard = card;
+          dialog.showModal();
+        }, 550);
+      });
+
+      ["pointerup", "pointercancel", "pointerleave"].forEach(type => {
+        card.addEventListener(type, () => window.clearTimeout(holdTimer));
+      });
+
+      card.addEventListener("contextmenu", event => {
+        event.preventDefault();
+        pendingCard = card;
+        dialog.showModal();
+      });
+
+      card.addEventListener("keydown", event => {
+        if (event.key === "Delete") {
+          pendingCard = card;
+          dialog.showModal();
+        }
+      });
+    };
+
+    fab.addEventListener("click", () => {
+      surface.dataset.open = "true";
+      fab.setAttribute("aria-expanded", "true");
+      fab.hidden = true;
+      content.scrollTop = content.scrollHeight;
+      mic.focus();
+    });
+
+    mic.addEventListener("click", () => {
+      if (navigator.vibrate) navigator.vibrate(20);
+
+      if (mic.dataset.recording === "false") {
+        mic.dataset.recording = "true";
+        mic.setAttribute("aria-label", "Aufnahme stoppen");
+        capture.classList.add("is-recording");
+        startedAt = Date.now();
+        timerOutput.hidden = false;
+        timerOutput.textContent = "00:00";
+        timer = window.setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+          const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+          const seconds = String(elapsed % 60).padStart(2, "0");
+          timerOutput.textContent = `${minutes}:${seconds}`;
+        }, 250);
+      } else {
+        window.clearInterval(timer);
+        timer = null;
+        mic.dataset.recording = "false";
+        mic.setAttribute("aria-label", "Eigenes Experiment einsprechen");
+        capture.classList.remove("is-recording");
+        timerOutput.hidden = true;
+        capture.hidden = true;
+        editor.dataset.visible = "true";
+        input.focus();
+      }
+    });
+
+    improve.addEventListener("click", () => {
+      if (improve.textContent === "Text mit KI verbessern") {
+        previousText = input.value;
+        improve.textContent = "Zurücknehmen";
+      } else {
+        input.value = previousText;
+        improve.textContent = "Text mit KI verbessern";
+        input.focus();
+      }
+    });
+
+    save.addEventListener("click", () => {
+      const value = input.value.trim();
+      if (!value) {
+        input.focus();
+        return;
+      }
+
+      const lines = value.split(/\n+/);
+      const card = document.createElement("article");
+      card.className = "b05-card";
+      card.tabIndex = 0;
+      card.dataset.werftFunktion = "F-19";
+      card.setAttribute("aria-label", "Eigene Idee. Zum Löschen lange drücken.");
+
+      const origin = document.createElement("div");
+      origin.className = "b05-card-origin";
+      origin.appendChild(editIcon());
+
+      const copy = document.createElement("div");
+      copy.className = "b05-card-copy";
+
+      const title = document.createElement("h2");
+      title.className = "b05-card-title";
+      title.textContent = lines.shift();
+
+      copy.appendChild(title);
+
+      if (lines.length) {
+        const description = document.createElement("p");
+        description.className = "b05-card-description";
+        description.textContent = lines.join(" ");
+        copy.appendChild(description);
+      }
+
+      card.append(origin, copy);
+      stack.prepend(card);
+      armDelete(card);
+
+      empty.hidden = true;
+      input.value = "";
+      previousText = "";
+      improve.textContent = "Text mit KI verbessern";
+      editor.dataset.visible = "false";
+      capture.hidden = false;
+      capture.classList.remove("is-recording");
+      window.clearInterval(timer);
+      timer = null;
+      timerOutput.hidden = true;
+      timerOutput.textContent = "00:00";
+      mic.dataset.recording = "false";
+      mic.focus();
+    });
+
+    cancelDelete.addEventListener("click", () => {
+      pendingCard = null;
+      dialog.close();
+    });
+
+    confirmDelete.addEventListener("click", () => {
+      if (pendingCard) pendingCard.remove();
+      pendingCard = null;
+      dialog.close();
+      if (!stack.children.length) empty.hidden = false;
+    });
+
+    dialog.addEventListener("cancel", () => {
+      pendingCard = null;
+    });
+  })();
+</script>
+</section>
+</div>
+</body>
+</html>

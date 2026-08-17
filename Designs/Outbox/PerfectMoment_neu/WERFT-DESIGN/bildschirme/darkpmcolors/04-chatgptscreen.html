@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — ChatGptScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:ChatGptScreen" data-screen-name="ChatGptScreen" style="width: 412px; min-height: 915px;">
+<section id="werft-chatgpt-screen" data-werft-screen="ChatGptScreen" data-chat-state="disconnected" data-device-code="" data-verification-uri="https://auth.openai.com/codex/device">
+    <div class="pm-chat-breath" aria-hidden="true"></div>
+
+    <div class="pm-chat-safe">
+        <div class="pm-chat-shell">
+            <header class="pm-chat-header">
+                <button class="pm-chat-back" type="button" aria-label="Zurück" data-werft-navigate="compose:SettingsScreen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20,11H7.83l5.59,-5.59L12,4l-8,8l8,8l1.41,-1.41L7.83,13H20v-2z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <div class="pm-chat-title">Mit ChatGPT verbinden</div>
+            </header>
+
+            <div class="pm-chat-state pm-chat-disconnected">
+                <div class="pm-chat-disconnected-ring" aria-hidden="true">
+                    <div class="pm-chat-disconnected-dot"></div>
+                </div>
+                <div class="pm-chat-explanation">Perfect Moment braucht deinen ChatGPT-Zugang, um Fragen zu erzeugen.</div>
+                <button class="pm-chat-primary" type="button" data-chat-action="connect">Verbinden</button>
+                <div class="pm-chat-error" aria-live="polite"></div>
+            </div>
+
+            <div class="pm-chat-state pm-chat-device">
+                <div class="pm-chat-code-row">
+                    <div class="pm-chat-code-group" data-code-group="0">––––</div>
+                    <div class="pm-chat-code-separator" aria-hidden="true"></div>
+                    <div class="pm-chat-code-group" data-code-group="1">––––</div>
+                </div>
+
+                <div class="pm-chat-code-instruction">Gib diesen Code auf der geöffneten Seite ein.</div>
+                <div class="pm-chat-device-url">auth.openai.com/codex/device</div>
+
+                <div class="pm-chat-pill-row">
+                    <button class="pm-chat-pill" type="button" data-chat-action="copy">Kopieren</button>
+                    <button class="pm-chat-pill" type="button" data-chat-action="open-page">Seite erneut öffnen</button>
+                </div>
+
+                <button class="pm-chat-new-code" type="button" data-chat-action="new-code">Neuen Code holen</button>
+
+                <div class="pm-chat-waiting">
+                    <svg class="pm-chat-spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                        <circle cx="10" cy="10" r="9" pathLength="360" fill="none" stroke="var(--pm-gold)" stroke-width="2" stroke-linecap="round" stroke-dasharray="250 110"/>
+                    </svg>
+                    <div class="pm-chat-waiting-text">Warte auf Bestätigung…</div>
+                </div>
+            </div>
+
+            <div class="pm-chat-state pm-chat-connected">
+                <div class="pm-chat-success-glow" aria-hidden="true">
+                    <div class="pm-chat-success-dot"></div>
+                </div>
+                <div class="pm-chat-connected-email">ChatGPT verbunden</div>
+                <div class="pm-chat-connected-since">Verbunden</div>
+                <button class="pm-chat-outline" type="button" data-chat-action="disconnect">Verbindung trennen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        const root = document.currentScript.parentElement;
+        const groupElements = root.querySelectorAll("[data-code-group]");
+
+        const renderCode = () => {
+            const raw = root.getAttribute("data-device-code") || "";
+            const code = raw.replace(/[^a-z0-9]/gi, "").slice(0, 8);
+            groupElements[0].textContent = code.slice(0, 4).padEnd(4, "–");
+            groupElements[1].textContent = code.slice(4, 8).padEnd(4, "–");
+        };
+
+        const setState = state => {
+            root.setAttribute("data-chat-state", state);
+            renderCode();
+        };
+
+        const copyCode = async () => {
+            const code = root.getAttribute("data-device-code") || "";
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(code);
+                return;
+            }
+            const field = document.createElement("textarea");
+            field.value = code;
+            field.style.position = "fixed";
+            field.style.opacity = "0";
+            document.body.appendChild(field);
+            field.select();
+            document.execCommand("copy");
+            field.remove();
+        };
+
+        root.addEventListener("click", event => {
+            const control = event.target.closest("[data-chat-action]");
+            if (!control) return;
+
+            switch (control.getAttribute("data-chat-action")) {
+                case "connect":
+                case "new-code":
+                    setState("code");
+                    break;
+                case "copy":
+                    copyCode();
+                    break;
+                case "open-page":
+                    window.open(
+                        root.getAttribute("data-verification-uri") || "https://auth.openai.com/codex/device",
+                        "_blank",
+                        "noopener"
+                    );
+                    break;
+                case "disconnect":
+                    setState("disconnected");
+                    break;
+            }
+        });
+
+        root.addEventListener("werft-chatgpt-state", event => {
+            const detail = event.detail || {};
+            if (typeof detail.code === "string") root.setAttribute("data-device-code", detail.code);
+            if (typeof detail.uri === "string") root.setAttribute("data-verification-uri", detail.uri);
+            if (typeof detail.email === "string") {
+                root.querySelector(".pm-chat-connected-email").textContent = detail.email || "ChatGPT verbunden";
+            }
+            if (typeof detail.since === "string") {
+                root.querySelector(".pm-chat-connected-since").textContent = detail.since ? "Verbunden seit " + detail.since : "Verbunden";
+            }
+            if (detail.state) setState(detail.state);
+            else renderCode();
+        });
+
+        renderCode();
+    })();
+    </script>
+</section>
+</section>
+</div>
+</body>
+</html>

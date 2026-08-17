@@ -1,0 +1,639 @@
+{
+  "bildschirm": "B-05",
+  "name": "Merkliste",
+  "breite": 412,
+  "erscheinung": "22hell",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "anordnung": {
+        "art": "fluss",
+        "abstand": "2px",
+        "innen": "0"
+      },
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "b05-screen",
+          "beschriftung": "Merkliste",
+          "anordnung": {
+            "art": "fluss",
+            "abstand": "2px",
+            "innen": "0"
+          },
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "b05-topbar",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "quer": "center",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "h1",
+                  "klassen": "b05-title",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "text": "Merkliste"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "b05-content",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "p",
+                  "klassen": "b05-empty",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "20px"
+                  },
+                  "text": "Nichts gemerkt. Wenn dir ein Vorschlag gefällt, tipp auf das Lesezeichen."
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b05-card-stack",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  }
+                }
+              ]
+            },
+            {
+              "tag": "section",
+              "klassen": "b05-create-surface",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "div",
+                  "klassen": "b05-capture",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "div",
+                      "klassen": "b05-mic-wrap",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "klassen": "b05-record-ring",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          }
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b05-mic b05-hit",
+                          "funktion": "F-18",
+                          "beschriftung": "Eigenes Experiment einsprechen",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "svg",
+                              "klassen": "b05-icon b05-mic-icon-mic",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "svg",
+                              "klassen": "b05-icon b05-mic-icon-stop",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "output",
+                      "klassen": "b05-record-time",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "text": "00:00"
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b05-editor",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "textarea",
+                      "klassen": "b05-input",
+                      "funktion": "F-18",
+                      "beschriftung": "Eigenes Experiment",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      }
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "b05-editor-actions",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "button",
+                          "klassen": "b05-button b05-button-text b05-hit",
+                          "funktion": "F-02",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "14px 20px"
+                          },
+                          "text": "Text mit KI verbessern"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b05-button b05-button-filled b05-hit",
+                          "funktion": "F-18",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "14px 20px"
+                          },
+                          "text": "Speichern"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "button",
+              "klassen": "b05-fab b05-hit",
+              "funktion": "F-18",
+              "beschriftung": "Eigenes Experiment anlegen",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "svg",
+                  "klassen": "b05-icon",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "path",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "nav",
+              "klassen": "b05-bottomnav werft-primary-nav",
+              "beschriftung": "Hauptnavigation",
+              "anordnung": {
+                "art": "raster",
+                "abstand": "2px",
+                "spalten": "repeat(5, minmax(0, 1fr))",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "b05-nav-item b05-hit",
+                  "fuehrtZu": "B-01",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b05-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Heute"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b05-nav-item b05-hit",
+                  "fuehrtZu": "B-04",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b05-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Ziele"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b05-nav-item b05-hit",
+                  "fuehrtZu": "B-05",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b05-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Merkliste"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b05-nav-item b05-hit",
+                  "fuehrtZu": "B-06",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b05-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Erkenntnisse"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b05-nav-item b05-hit",
+                  "fuehrtZu": "B-07",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b05-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Logbuch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "dialog",
+              "klassen": "b05-dialog",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "h2",
+                  "klassen": "b05-dialog-title",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "text": "Eintrag löschen?"
+                },
+                {
+                  "tag": "p",
+                  "klassen": "b05-dialog-text",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "text": "Der Eintrag wird endgültig aus der Merkliste entfernt."
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b05-dialog-actions",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "laengs": "flex-end",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "button",
+                      "klassen": "b05-button b05-button-text b05-hit",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "flex-end",
+                        "innen": "0"
+                      },
+                      "text": "Abbrechen"
+                    },
+                    {
+                      "tag": "button",
+                      "klassen": "b05-button b05-button-filled b05-hit",
+                      "funktion": "F-19",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "flex-end",
+                        "innen": "0"
+                      },
+                      "text": "Löschen"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

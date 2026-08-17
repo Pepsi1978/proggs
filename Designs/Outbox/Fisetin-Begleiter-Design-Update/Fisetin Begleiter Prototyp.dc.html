@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#f7f6fe;}
+*{box-sizing:border-box;}
+button,input,textarea{font-family:inherit;}
+a{color:#6a5cff;text-decoration:none;}
+a:hover{color:#b04df0;}
+#fb *::-webkit-scrollbar{display:none;}
+#fb{
+--bg0:#f7f6fe;--bg1:#eceffb;--card:rgba(255,255,255,.72);--cardBrd:rgba(255,255,255,.9);--shadow:0 14px 40px rgba(56,48,140,.10);
+--text:#191634;--sub:#615e80;--line:rgba(25,22,52,.09);--chip:rgba(25,22,52,.06);
+--acc:#6a5cff;--acc2:#b04df0;--onAcc:#ffffff;--accSoft:rgba(106,92,255,.13);--glow:rgba(106,92,255,.32);
+--ok:#0d7a50;--okBg:rgba(16,150,96,.12);--warn:#8f6400;--warnBg:rgba(242,178,0,.16);--bad:#c22f3e;--badBg:rgba(226,62,80,.11);
+--navBg:rgba(255,255,255,.78);
+}
+#fb[data-t$="-dark"]{
+--bg0:#0f0d20;--bg1:#191434;--card:rgba(33,28,64,.6);--cardBrd:rgba(255,255,255,.09);--shadow:0 18px 48px rgba(0,0,0,.45);
+--text:#efedfc;--sub:#a29fc8;--line:rgba(255,255,255,.09);--chip:rgba(255,255,255,.07);
+--acc:#8f7bff;--acc2:#c66bff;--onAcc:#120e2c;--accSoft:rgba(143,123,255,.18);--glow:rgba(143,123,255,.5);
+--ok:#43e09c;--okBg:rgba(67,224,156,.13);--warn:#ffcb57;--warnBg:rgba(255,203,87,.13);--bad:#ff6e7e;--badBg:rgba(255,110,126,.14);
+--navBg:rgba(24,19,50,.72);
+}
+#fb[data-t^="vital"]{
+--bg0:#f2faf6;--bg1:#e7f3ec;--text:#132019;--sub:#5a6d62;
+--acc:#0c8f74;--acc2:#39b788;--onAcc:#ffffff;--accSoft:rgba(12,143,116,.13);--glow:rgba(12,143,116,.3);
+}
+#fb[data-t="vital-dark"]{
+--bg0:#08130e;--bg1:#0e211a;--card:rgba(16,42,33,.6);--navBg:rgba(11,29,23,.72);--text:#e8f6ef;--sub:#8fab9d;
+--acc:#35d9ae;--acc2:#7ce3c3;--onAcc:#042019;--accSoft:rgba(53,217,174,.16);--glow:rgba(53,217,174,.42);
+}
+#fb[data-t^="ember"]{
+--bg0:#fbf6ef;--bg1:#f6ece0;--text:#261a10;--sub:#7c6a58;
+--acc:#df5a2c;--acc2:#f0a03a;--onAcc:#ffffff;--accSoft:rgba(223,90,44,.12);--glow:rgba(223,90,44,.3);
+}
+#fb[data-t="ember-dark"]{
+--bg0:#160f08;--bg1:#231710;--card:rgba(48,31,20,.58);--navBg:rgba(36,23,15,.72);--text:#f9efe7;--sub:#b5a190;
+--acc:#ff8a56;--acc2:#ffc058;--onAcc:#2b1204;--accSoft:rgba(255,138,86,.16);--glow:rgba(255,138,86,.42);
+}
+#fb[data-glow="aus"]{--glow:rgba(0,0,0,0);}
+@keyframes fbIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+@keyframes fbUp{from{opacity:0;transform:translateY(70px);}to{opacity:1;transform:none;}}
+@keyframes fbPop{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+@keyframes fbFloat{from{transform:translate3d(0,-10px,0);}to{transform:translate3d(0,14px,0);}}
+@keyframes fbPulse{0%,100%{opacity:.55;}50%{opacity:1;}}
+</style>
+</helmet>
+<div id="fb" data-t="{{ themeKey }}" data-glow="{{ glowKey }}" style="min-height:100vh;font-family:'Outfit',system-ui,sans-serif;background:linear-gradient(160deg,var(--bg0),var(--bg1));color:var(--text);display:flex;flex-direction:column;align-items:center;gap:20px;padding:28px 20px 60px;position:relative;overflow:hidden;transition:background .5s;">
+  <div style="position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 70%);filter:blur(70px);top:-180px;left:-140px;pointer-events:none;animation:fbFloat 9s ease-in-out infinite alternate;"></div>
+  <div style="position:absolute;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 70%);filter:blur(80px);bottom:-160px;right:-120px;pointer-events:none;animation:fbFloat 11s ease-in-out infinite alternate-reverse;"></div>
+  <div style="text-align:center;position:relative;z-index:2;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:-.6px;">Fisetin-Begleiter · Redesign</div>
+    <div style="color:var(--sub);font-size:14px;margin-top:4px;">Interaktiver Prototyp — Tabs, Checklisten, Dialoge und Zeitraffer ausprobieren.</div>
+  </div>
+  <div style="position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--cardBrd);border-radius:22px;padding:10px 14px;box-shadow:var(--shadow);">
+    <sc-for list="{{ variants }}" as="vx" hint-placeholder-count="3">
+      <button onClick="{{ vx.pick }}" style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid {{ vx.brd }};background:{{ vx.bg }};color:{{ vx.fg }};font-size:14px;font-weight:600;cursor:pointer;transition:all .25s;">
+        <span style="width:10px;height:10px;border-radius:50%;background:{{ vx.dot }};box-shadow:0 0 8px {{ vx.dot }};"></span>{{ vx.label }}
+      </button>
+    </sc-for>
+    <div style="width:1px;height:24px;background:var(--line);"></div>
+    <sc-for list="{{ modeOpts }}" as="mo" hint-placeholder-count="2">
+      <button onClick="{{ mo.pick }}" style="padding:9px 16px;border-radius:999px;border:1px solid {{ mo.brd }};background:{{ mo.bg }};color:{{ mo.fg }};font-size:14px;font-weight:600;cursor:pointer;transition:all .25s;">{{ mo.label }}</button>
+    </sc-for>
+    <div style="width:1px;height:24px;background:var(--line);"></div>
+    <div style="padding:9px 14px;border-radius:999px;background:var(--chip);font-size:13px;font-weight:600;color:var(--sub);font-variant-numeric:tabular-nums;">Simulierte Zeit {{ clockStr }}</div>
+    <button onClick="{{ skip30 }}" style="padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;">+30 Min</button>
+    <button onClick="{{ skip120 }}" style="padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;">+2 Std</button>
+    <button onClick="{{ resetDemo }}" style="padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;">Zurücksetzen</button>
+  </div>
+  <div style="position:relative;z-index:2;">
+    <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ isDark }}" bg="var(--bg0)" hint-size="412px,892px">
+      <div data-screen-label="App" style="height:100%;display:flex;flex-direction:column;background:linear-gradient(170deg,var(--bg0) 0%,var(--bg1) 100%);color:var(--text);font-family:'Outfit',system-ui,sans-serif;position:relative;overflow:hidden;transition:background .5s;">
+        <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 70%);filter:blur(50px);top:-90px;right:-80px;pointer-events:none;animation:fbFloat 8s ease-in-out infinite alternate;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 8px;position:relative;z-index:2;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 18px var(--glow);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3s6 6.3 6 10a6 6 0 1 1-12 0c0-3.7 6-10 6-10z" stroke="var(--onAcc)" stroke-width="2" stroke-linejoin="round"></path></svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:16px;letter-spacing:-.2px;">Fisetin-Begleiter</div>
+              <div style="font-size:11px;color:var(--sub);">{{ headerSub }}</div>
+            </div>
+          </div>
+          <button onClick="{{ toggleMode }}" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);transition:transform .25s;" style-hover="transform:rotate(18deg) scale(1.08);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="{{ modeIconD }}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:6px 18px 130px;position:relative;z-index:1;">
+          <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+            <div data-screen-label="Heute" style="animation:fbIn .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.5px;">Heute</div>
+                <div style="color:var(--sub);font-size:14px;">Dein persönliches Protokoll, Schritt für Schritt.</div>
+              </div>
+              <div style="background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--cardBrd);border-radius:24px;padding:24px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-70px;left:50%;transform:translateX(-50%);width:240px;height:140px;background:radial-gradient(ellipse,var(--glow),transparent 70%);filter:blur(30px);pointer-events:none;"></div>
+                <sc-if value="{{ showRing }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:relative;width:152px;height:152px;">
+                    <svg width="152" height="152" viewBox="0 0 152 152" style="transform:rotate(-90deg);">
+                      <circle cx="76" cy="76" r="64" fill="none" stroke="var(--chip)" stroke-width="10"></circle>
+                      <circle cx="76" cy="76" r="64" fill="none" stroke="url(#fbgrad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="{{ ringOffset }}" style="filter:drop-shadow(0 0 8px var(--glow));transition:stroke-dashoffset 1s linear;"></circle>
+                      <defs><linearGradient id="fbgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--acc);"></stop><stop offset="1" style="stop-color:var(--acc2);"></stop></linearGradient></defs>
+                    </svg>
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                      <div style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px;">{{ blockCountdown }}</div>
+                      <div style="font-size:10px;color:var(--sub);letter-spacing:1.6px;text-transform:uppercase;margin-top:2px;">verbleibend</div>
+                      <div style="font-size:12px;font-weight:700;color:var(--acc);margin-top:4px;font-variant-numeric:tabular-nums;">frei ab {{ blockEndTime }} Uhr</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showOk }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:96px;height:96px;border-radius:50%;background:var(--okBg);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px var(--okBg);">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showDrinkIcon }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:96px;height:96px;border-radius:50%;background:var(--accSoft);display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--glow);animation:fbPulse 2.4s ease-in-out infinite;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 3s6 6.3 6 10a6 6 0 1 1-12 0c0-3.7 6-10 6-10z" stroke="var(--acc)" stroke-width="2" stroke-linejoin="round"></path></svg>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showIdle }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:96px;height:96px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--sub)" stroke-width="2" stroke-linecap="round"></path></svg>
+                  </div>
+                </sc-if>
+                <div style="font-size:19px;font-weight:700;margin-top:4px;">{{ heroTitle }}</div>
+                <div style="font-size:13.5px;color:var(--sub);line-height:1.5;max-width:290px;text-wrap:pretty;">{{ heroText }}</div>
+                <sc-if value="{{ cureActive }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:100%;margin-top:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px;"><span>{{ dayLabel }}</span><span>{{ dayPct }}</span></div>
+                    <div style="display:flex;gap:6px;">
+                      <sc-for list="{{ daySegs }}" as="sg" hint-placeholder-count="3">
+                        <div style="flex:1;height:7px;border-radius:99px;background:{{ sg.bg }};transition:background .4s;"></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ showNext }}" hint-placeholder-val="{{ true }}">
+                <div style="background:linear-gradient(135deg,var(--accSoft),transparent);border:1px solid var(--cardBrd);backdrop-filter:blur(16px);border-radius:20px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);">
+                  <div style="width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px var(--glow);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--onAcc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:14.5px;">{{ nextTitle }}</div>
+                    <div style="font-size:12.5px;color:var(--sub);">{{ nextText }}</div>
+                  </div>
+                  <button onClick="{{ goTimeline }}" style="border:none;background:var(--chip);color:var(--acc);font-weight:700;font-size:13px;padding:9px 14px;border-radius:12px;cursor:pointer;">Öffnen</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ctaDrink }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ openDrink }}" style="width:100%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:18px;padding:16px 20px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 12px 28px var(--glow);transition:transform .2s;" style-hover="transform:translateY(-2px);">Drink-Checkliste öffnen</button>
+              </sc-if>
+              <sc-if value="{{ ctaSetup }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ openSetup }}" style="width:100%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:18px;padding:16px 20px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 12px 28px var(--glow);transition:transform .2s;" style-hover="transform:translateY(-2px);">Neue Kur starten</button>
+              </sc-if>
+              <sc-if value="{{ showStackLink }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ goStack }}" style="width:100%;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:18px;padding:14px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;">Angepassten Morgen-Stack ansehen</button>
+              </sc-if>
+              <div style="background:var(--okBg);border-radius:18px;padding:15px 16px;display:flex;gap:12px;align-items:flex-start;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 12.5l2 2 4-4.5" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <div>
+                  <div style="font-weight:700;font-size:14px;color:var(--ok);">Venlafaxin immer einnehmen</div>
+                  <div style="font-size:12.5px;color:var(--sub);line-height:1.45;margin-top:2px;">Medikament — nie wegen der Kur weglassen. Die Kur verändert deinen Einnahmeplan nicht.</div>
+                </div>
+              </div>
+              <div style="background:var(--badBg);border-radius:18px;padding:15px 16px;display:flex;gap:12px;align-items:flex-start;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 3l9.5 16.5h-19L12 3zM12 10v4M12 17.2v.3" stroke="var(--bad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <div>
+                  <div style="font-weight:700;font-size:14px;color:var(--bad);">Harte Regel</div>
+                  <div style="font-size:12.5px;color:var(--sub);line-height:1.45;margin-top:2px;">Kein Vitamin C oder andere starke Antioxidantien zeitgleich oder in den ersten 4 Stunden nach T0.</div>
+                </div>
+              </div>
+              <sc-if value="{{ cureActive }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ openCancel }}" style="width:100%;background:transparent;color:var(--bad);border:1px solid var(--badBg);border-radius:18px;padding:13px 20px;font-size:13.5px;font-weight:600;cursor:pointer;">Kur abbrechen und zurücksetzen</button>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Ablauf" style="animation:fbIn .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.5px;">Tagesablauf</div>
+                <div style="color:var(--sub);font-size:14px;">Alle Uhrzeiten werden ab T0 berechnet.</div>
+              </div>
+              <sc-if value="{{ noT0 }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--cardBrd);border-radius:20px;padding:18px;box-shadow:var(--shadow);">
+                  <div style="font-weight:700;font-size:15px;">Noch kein T0</div>
+                  <div style="font-size:13px;color:var(--sub);margin-top:3px;">Trinke zuerst den Fisetin-Drink über den Heute-Bildschirm.</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasT0 }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;">
+                  <sc-for list="{{ tlSteps }}" as="st" hint-placeholder-count="4">
+                    <div style="display:flex;gap:14px;">
+                      <div style="display:flex;flex-direction:column;align-items:center;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:{{ st.cBg }};color:{{ st.cFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--line);transition:all .3s;box-shadow:{{ st.cSh }};">
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="{{ st.checkOp }}"></path><circle cx="12" cy="12" r="3.4" fill="currentColor" opacity="{{ st.dotOp }}"></circle></svg>
+                        </div>
+                        <sc-if value="{{ st.notLast }}" hint-placeholder-val="{{ true }}">
+                          <div style="width:2px;flex:1;min-height:16px;background:var(--line);"></div>
+                        </sc-if>
+                      </div>
+                      <div style="flex:1;background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--cardBrd);border-radius:18px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);">
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-weight:700;font-size:14.5px;">{{ st.title }}</div>
+                          <div style="font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums;">{{ st.time }}</div>
+                          <sc-if value="{{ st.hasItems }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;">
+                              <sc-for list="{{ st.items }}" as="si" hint-placeholder-count="2">
+                                <div style="background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:10.5px;font-weight:600;color:var(--sub);">{{ si }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+                        </div>
+                        <sc-if value="{{ st.pending }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ st.act }}" style="border:none;background:var(--accSoft);color:var(--acc);font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:12px;cursor:pointer;">Erledigt</button>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ blockActive }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:var(--warnBg);border-radius:18px;padding:14px 16px;display:flex;gap:12px;align-items:center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><path d="M12 7v5l3 3M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <div>
+                      <div style="font-weight:700;font-size:13.5px;color:var(--warn);">Sperrfenster aktiv</div>
+                      <div style="font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums;">Noch {{ blockCountdown }}.</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <button onClick="{{ completeDay }}" disabled="{{ completeOff }}" style="width:100%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:18px;padding:16px 20px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 12px 28px var(--glow);opacity:{{ completeOpacity }};transition:opacity .3s,transform .2s;" style-hover="transform:translateY(-2px);">{{ completeLabel }}</button>
+                <sc-if value="{{ completeHint }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:12.5px;color:var(--sub);text-align:center;line-height:1.5;">Der Abschluss wird freigeschaltet, sobald Mahlzeit, Spermidin-Schritt und Sperrfenster erledigt sind.</div>
+                </sc-if>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isStack }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Stack" style="animation:fbIn .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.5px;">Morgen-Stack</div>
+                <div style="color:var(--sub);font-size:14px;">{{ stackSub }}</div>
+              </div>
+              <sc-if value="{{ blockActive }}" hint-placeholder-val="{{ true }}">
+                <div style="background:var(--warnBg);border-radius:18px;padding:14px 16px;">
+                  <div style="font-weight:700;font-size:14px;color:var(--warn);">Freigabe um {{ blockEndTime }} Uhr</div>
+                  <div style="font-size:12.5px;color:var(--sub);line-height:1.45;margin-top:2px;">Bis dahin rote Substanzen weglassen. Gelbe Grenzfälle im Zweifel ebenfalls verschieben.</div>
+                </div>
+              </sc-if>
+              <div style="font-size:17px;font-weight:700;margin-top:4px;">{{ hardTitle }}</div>
+              <sc-for list="{{ hardItems }}" as="hi" hint-placeholder-count="4">
+                <div style="background:{{ hi.bg }};border-radius:18px;padding:14px 16px;transition:background .4s;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+                    <div style="font-weight:700;font-size:14.5px;color:{{ hi.fg }};text-decoration:{{ hi.deco }};">{{ hi.name }}</div>
+                    <div style="font-size:12px;color:var(--sub);flex-shrink:0;">{{ hi.dose }}</div>
+                  </div>
+                  <div style="font-size:12.5px;font-weight:600;color:{{ hi.fg }};margin-top:3px;">{{ hi.status }}</div>
+                  <sc-if value="{{ hi.hasNote }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:12px;color:var(--sub);line-height:1.4;margin-top:3px;">{{ hi.note }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <div style="font-size:17px;font-weight:700;margin-top:6px;">Grenzfälle</div>
+              <sc-for list="{{ grenzItems }}" as="gi" hint-placeholder-count="3">
+                <div style="background:{{ gi.bg }};border-radius:18px;padding:14px 16px;transition:background .4s;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+                    <div style="font-weight:700;font-size:14.5px;color:{{ gi.fg }};">{{ gi.name }}</div>
+                    <div style="font-size:12px;color:var(--sub);flex-shrink:0;">{{ gi.dose }}</div>
+                  </div>
+                  <div style="font-size:12.5px;font-weight:600;color:{{ gi.fg }};margin-top:3px;">{{ gi.status }}</div>
+                </div>
+              </sc-for>
+              <div style="font-size:17px;font-weight:700;margin-top:6px;">Unproblematisch</div>
+              <div style="background:var(--okBg);border-radius:18px;padding:14px 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+                  <div style="font-weight:700;font-size:14.5px;color:var(--ok);">Venlafaxin</div>
+                  <div style="font-size:12px;color:var(--sub);">100 mg Arbeitstag / 50 mg frei</div>
+                </div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--ok);margin-top:3px;">Medikament — immer einnehmen, nie wegen der Kur weglassen.</div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ okNames }}" as="on" hint-placeholder-count="8">
+                  <div style="background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:500;color:var(--text);">{{ on }}</div>
+                </sc-for>
+              </div>
+              <div style="font-size:12px;color:var(--sub);text-align:center;">Alle unproblematischen Substanzen: wie im Morgen-Stack einnehmen.</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Verlauf" style="animation:fbIn .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.5px;">Protokoll</div>
+                <div style="color:var(--sub);font-size:14px;">Alle Daten bleiben lokal auf diesem Gerät.</div>
+              </div>
+              <sc-for list="{{ histItems }}" as="h" hint-placeholder-count="2">
+                <div style="background:var(--card);backdrop-filter:blur(18px);border:1px solid var(--cardBrd);border-radius:22px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;">{{ h.date }}</div>
+                    <div style="background:{{ h.statusBg }};color:{{ h.statusFg }};font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;letter-spacing:.3px;">{{ h.statusText }}</div>
+                  </div>
+                  <div style="font-size:13px;color:var(--sub);">{{ h.meta }}</div>
+                  <div>
+                    <div style="font-size:11.5px;font-weight:600;color:var(--sub);letter-spacing:.4px;text-transform:uppercase;margin-bottom:5px;">Notiz, Verträglichkeit, Beobachtungen</div>
+                    <textarea value="{{ h.draft }}" onChange="{{ h.onDraft }}" placeholder="Beobachtungen festhalten …" style="width:100%;min-height:64px;background:var(--chip);border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);font-size:13.5px;resize:vertical;outline:none;line-height:1.45;"></textarea>
+                  </div>
+                  <div style="display:flex;gap:10px;">
+                    <button onClick="{{ h.onSave }}" disabled="{{ h.saveOff }}" style="border:none;background:var(--accSoft);color:var(--acc);font-weight:700;font-size:13px;padding:10px 16px;border-radius:12px;cursor:pointer;opacity:{{ h.saveOpacity }};transition:opacity .25s;">Notiz speichern</button>
+                    <sc-if value="{{ h.active }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ openCancel }}" style="border:1px solid var(--badBg);background:transparent;color:var(--bad);font-weight:600;font-size:13px;padding:10px 16px;border-radius:12px;cursor:pointer;">Abbrechen &amp; zurücksetzen</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isSys }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="System" style="animation:fbIn .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.5px;">System</div>
+                <div style="color:var(--sub);font-size:14px;">Berechtigungen und Zuverlässigkeit der App.</div>
+              </div>
+              <button onClick="{{ openBattery }}" style="width:100%;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:18px;padding:14px 18px;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><path d="M13 2L4.5 13.5H11L10 22l8.5-11.5H12L13 2z" stroke="var(--acc)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+                Akku-Optimierung für zuverlässige Erinnerungen prüfen
+              </button>
+              <div style="font-size:17px;font-weight:700;margin-top:8px;">Standard-Protokoll</div>
+              <div style="font-size:12.5px;color:var(--sub);margin-top:-8px;">Änderungen gelten für neue Abläufe.</div>
+              <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+                <div style="background:var(--warnBg);border-radius:18px;padding:14px 16px;">
+                  <div style="font-weight:700;font-size:13.5px;color:var(--warn);">Bearbeitung während der Kur gesperrt</div>
+                  <div style="font-size:12.5px;color:var(--sub);line-height:1.45;margin-top:2px;">So bleiben geplante Alarme und Zeitfenster konsistent. Nach Kurabschluss wieder änderbar.</div>
+                </div>
+              </sc-if>
+              <sc-for list="{{ protoRows }}" as="pr" hint-placeholder-count="6">
+                <div style="background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--cardBrd);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);">
+                  <div style="flex:1;font-size:13.5px;font-weight:600;">{{ pr.label }}</div>
+                  <button onClick="{{ pr.dec }}" disabled="{{ pr.off }}" style="width:32px;height:32px;border-radius:11px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;opacity:{{ pr.btnOpacity }};">−</button>
+                  <div style="min-width:44px;text-align:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;">{{ pr.value }}</div>
+                  <button onClick="{{ pr.inc }}" disabled="{{ pr.off }}" style="width:32px;height:32px;border-radius:11px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;opacity:{{ pr.btnOpacity }};">+</button>
+                </div>
+              </sc-for>
+              <div style="background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--cardBrd);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);">
+                <div style="flex:1;">
+                  <div style="font-size:13.5px;font-weight:600;">Erinnerungen</div>
+                  <div style="font-size:12px;color:var(--sub);">Exakte Alarme für die Kur-Schritte</div>
+                </div>
+                <button onClick="{{ toggleRem }}" style="width:46px;height:27px;border-radius:99px;border:none;background:{{ remBg }};position:relative;cursor:pointer;transition:background .3s;padding:0;">
+                  <span style="position:absolute;top:2.5px;left:2.5px;width:22px;height:22px;border-radius:50%;background:#ffffff;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translateX({{ remX }}px);transition:transform .3s;"></span>
+                </button>
+              </div>
+              <button onClick="{{ saveProto }}" disabled="{{ locked }}" style="width:100%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:18px;padding:15px 20px;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 12px 28px var(--glow);opacity:{{ protoSaveOpacity }};transition:opacity .3s;">Protokollwerte speichern</button>
+              <div style="font-size:17px;font-weight:700;margin-top:8px;">Zutaten</div>
+              <sc-for list="{{ ingGroups }}" as="ig" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-top:4px;">{{ ig.title }}</div>
+                  <sc-for list="{{ ig.rows }}" as="ir" hint-placeholder-count="3">
+                    <div style="background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--cardBrd);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);">
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:13.5px;font-weight:600;">{{ ir.title }}</div>
+                        <div style="font-size:11.5px;color:var(--sub);">{{ ir.sub }}</div>
+                      </div>
+                      <sc-if value="{{ ir.canEdit }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ ir.onEdit }}" style="border:none;background:var(--accSoft);color:var(--acc);font-weight:700;font-size:12px;padding:8px 12px;border-radius:10px;cursor:pointer;">Ändern</button>
+                        <button onClick="{{ ir.onDelete }}" style="border:none;background:var(--badBg);color:var(--bad);font-weight:700;font-size:12px;padding:8px 12px;border-radius:10px;cursor:pointer;">Löschen</button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <button onClick="{{ addIng }}" style="width:100%;background:var(--chip);color:var(--text);border:1px dashed var(--sub);border-radius:16px;padding:13px 18px;font-size:13.5px;font-weight:600;cursor:pointer;">Zutat hinzufügen</button>
+              <div style="font-size:11.5px;color:var(--sub);text-align:center;margin-top:6px;">App-Version 2.0 · Redesign-Prototyp · Juli 2026</div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="position:absolute;left:14px;right:14px;bottom:12px;z-index:20;background:var(--navBg);backdrop-filter:blur(24px);border:1px solid var(--cardBrd);border-radius:26px;box-shadow:var(--shadow);display:flex;padding:8px;gap:2px;">
+          <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+            <button onClick="{{ n.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;border:none;border-radius:18px;background:{{ n.bg }};color:{{ n.fg }};cursor:pointer;transition:all .3s;box-shadow:{{ n.sh }};">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="{{ n.d }}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="font-size:10px;font-weight:700;letter-spacing:.2px;">{{ n.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ showNotice }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:rgba(8,6,20,.45);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;">
+            <div style="background:var(--card);backdrop-filter:blur(24px);border:1px solid var(--cardBrd);border-radius:24px;padding:24px 20px;max-width:320px;box-shadow:var(--shadow);animation:fbPop .35s cubic-bezier(.22,1,.36,1) both;">
+              <div style="font-size:18px;font-weight:700;">Wichtiger Hinweis</div>
+              <div style="font-size:13.5px;color:var(--sub);line-height:1.55;margin-top:10px;">Diese App bildet nur dein persönliches, selbst festgelegtes Protokoll ab. Sie ist keine medizinische Beratung. Bei Unsicherheiten oder Wechselwirkungen ärztlichen Rat einholen.</div>
+              <div style="font-size:13.5px;color:var(--text);font-weight:600;line-height:1.5;margin-top:10px;">Venlafaxin wird durch die Kur nicht verändert und nie ausgesetzt.</div>
+              <button onClick="{{ confirmNotice }}" style="width:100%;margin-top:18px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:16px;padding:14px;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px var(--glow);">Verstanden</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showCancelModal }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:rgba(8,6,20,.45);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;">
+            <div style="background:var(--card);backdrop-filter:blur(24px);border:1px solid var(--cardBrd);border-radius:24px;padding:24px 20px;max-width:320px;box-shadow:var(--shadow);animation:fbPop .35s cubic-bezier(.22,1,.36,1) both;">
+              <div style="font-size:18px;font-weight:700;">Vollständig zurücksetzen?</div>
+              <div style="font-size:13.5px;color:var(--sub);line-height:1.55;margin-top:10px;">Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht.</div>
+              <div style="display:flex;gap:10px;margin-top:18px;">
+                <button onClick="{{ closeModal }}" style="flex:1;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;">Behalten</button>
+                <button onClick="{{ confirmCancel }}" style="flex:1;background:var(--badBg);color:var(--bad);border:none;border-radius:16px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">Löschen</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showSetup }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:rgba(8,6,20,.45);backdrop-filter:blur(8px);display:flex;align-items:flex-end;">
+            <div style="width:100%;max-height:82%;overflow-y:auto;background:var(--card);backdrop-filter:blur(28px);border:1px solid var(--cardBrd);border-radius:28px 28px 0 0;padding:22px 20px 26px;box-shadow:var(--shadow);animation:fbUp .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:16px;">
+              <div style="width:40px;height:4px;border-radius:99px;background:var(--line);align-self:center;margin-top:-6px;"></div>
+              <div style="font-size:19px;font-weight:700;">Kur einrichten</div>
+              <div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Dauer</div>
+                <div style="display:flex;gap:8px;">
+                  <sc-for list="{{ setupDurOpts }}" as="op" hint-placeholder-count="2">
+                    <button onClick="{{ op.pick }}" style="flex:1;padding:12px;border-radius:14px;border:1px solid {{ op.brd }};background:{{ op.bg }};color:{{ op.fg }};font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;">{{ op.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Trägerflüssigkeit</div>
+                <div style="display:flex;gap:8px;">
+                  <sc-for list="{{ setupLiqOpts }}" as="op" hint-placeholder-count="2">
+                    <button onClick="{{ op.pick }}" style="flex:1;padding:12px;border-radius:14px;border:1px solid {{ op.brd }};background:{{ op.bg }};color:{{ op.fg }};font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;">{{ op.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Fettträger</div>
+                <div style="display:flex;gap:8px;">
+                  <sc-for list="{{ setupFatOpts }}" as="op" hint-placeholder-count="2">
+                    <button onClick="{{ op.pick }}" style="flex:1;padding:12px;border-radius:14px;border:1px solid {{ op.brd }};background:{{ op.bg }};color:{{ op.fg }};font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;">{{ op.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Geplante Startzeit</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
+                  <button onClick="{{ setupMinus }}" style="width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;">−15</button>
+                  <div style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;">{{ setupTime }}</div>
+                  <button onClick="{{ setupPlus }}" style="width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;">+15</button>
+                </div>
+              </div>
+              <div style="font-size:12.5px;color:var(--sub);line-height:1.5;">T0 wird erst gesetzt, wenn du „Drink getrunken – jetzt" bestätigst.</div>
+              <div style="display:flex;gap:10px;">
+                <button onClick="{{ closeModal }}" style="flex:1;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;">Abbrechen</button>
+                <button onClick="{{ confirmSetup }}" style="flex:1.4;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:16px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px var(--glow);">Kur anlegen</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showDrinkModal }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:rgba(8,6,20,.45);backdrop-filter:blur(8px);display:flex;align-items:flex-end;">
+            <div style="width:100%;max-height:85%;overflow-y:auto;background:var(--card);backdrop-filter:blur(28px);border:1px solid var(--cardBrd);border-radius:28px 28px 0 0;padding:22px 20px 26px;box-shadow:var(--shadow);animation:fbUp .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:14px;">
+              <div style="width:40px;height:4px;border-radius:99px;background:var(--line);align-self:center;margin-top:-6px;"></div>
+              <div style="font-size:19px;font-weight:700;">Drink-Checkliste</div>
+              <div style="font-size:13px;font-weight:700;color:var(--acc);">Gewählt: {{ drinkChoice }}</div>
+              <sc-for list="{{ drinkList }}" as="dl" hint-placeholder-count="5">
+                <div onClick="{{ dl.toggle }}" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;background:var(--chip);border-radius:16px;padding:12px 14px;transition:background .2s;">
+                  <div style="width:24px;height:24px;border-radius:8px;border:2px solid {{ dl.boxBrd }};background:{{ dl.boxBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;margin-top:1px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--onAcc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="{{ dl.checkOp }}"></path></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:14px;font-weight:700;">{{ dl.name }} <span style="font-weight:500;color:var(--sub);">· {{ dl.amount }}</span></div>
+                    <div style="font-size:12px;color:var(--sub);line-height:1.4;">{{ dl.note }}</div>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="font-size:13px;font-weight:700;text-align:center;">Alles intensiv mixen oder shaken und sofort trinken.</div>
+              <div style="display:flex;gap:10px;">
+                <button onClick="{{ closeModal }}" style="flex:1;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;">Abbrechen</button>
+                <button onClick="{{ confirmDrink }}" disabled="{{ drinkOff }}" style="flex:1.5;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:16px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px var(--glow);opacity:{{ drinkOpacity }};transition:opacity .25s;">Drink getrunken – jetzt</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showIngModal }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:rgba(8,6,20,.45);backdrop-filter:blur(8px);display:flex;align-items:flex-end;">
+            <div style="width:100%;max-height:85%;overflow-y:auto;background:var(--card);backdrop-filter:blur(28px);border:1px solid var(--cardBrd);border-radius:28px 28px 0 0;padding:22px 20px 26px;box-shadow:var(--shadow);animation:fbUp .4s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;gap:14px;">
+              <div style="width:40px;height:4px;border-radius:99px;background:var(--line);align-self:center;margin-top:-6px;"></div>
+              <div style="font-size:19px;font-weight:700;">{{ ingTitle }}</div>
+              <input value="{{ ingName }}" onChange="{{ onIngName }}" placeholder="Name" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:14px;outline:none;">
+              <input value="{{ ingAmount }}" onChange="{{ onIngAmount }}" placeholder="Menge" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:14px;outline:none;">
+              <input value="{{ ingNote }}" onChange="{{ onIngNote }}" placeholder="Hinweis" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--text);font-size:14px;outline:none;">
+              <div style="display:flex;gap:8px;">
+                <sc-for list="{{ ingPhaseOpts }}" as="op" hint-placeholder-count="2">
+                  <button onClick="{{ op.pick }}" style="flex:1;padding:12px;border-radius:14px;border:1px solid {{ op.brd }};background:{{ op.bg }};color:{{ op.fg }};font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;">{{ op.label }}</button>
+                </sc-for>
+              </div>
+              <div onClick="{{ toggleIngOpt }}" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <div style="width:24px;height:24px;border-radius:8px;border:2px solid {{ ingOptBoxBrd }};background:{{ ingOptBoxBg }};display:flex;align-items:center;justify-content:center;transition:all .2s;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--onAcc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="{{ ingOptCheckOp }}"></path></svg>
+                </div>
+                <div style="font-size:14px;font-weight:600;">Optional</div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button onClick="{{ closeModal }}" style="flex:1;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;">Abbrechen</button>
+                <button onClick="{{ saveIng }}" disabled="{{ ingSaveOff }}" style="flex:1.4;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--onAcc);border:none;border-radius:16px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px var(--glow);opacity:{{ ingSaveOpacity }};transition:opacity .25s;">Speichern</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:50;background:var(--text);color:var(--bg0);font-size:13px;font-weight:600;padding:11px 18px;border-radius:999px;box-shadow:0 12px 30px rgba(0,0,0,.3);white-space:nowrap;max-width:88%;overflow:hidden;text-overflow:ellipsis;animation:fbUp .3s cubic-bezier(.22,1,.36,1) both;">{{ toastMsg }}</div>
+        </sc-if>
+      </div>
+    </x-import>
+  </div>
+  <div style="position:relative;z-index:2;color:var(--sub);font-size:12.5px;text-align:center;max-width:520px;line-height:1.6;">Variante und Modus oben umschalten · „+30 Min" springt in der simulierten Zeit vor, um Sperrfenster und Spermidin-Schritt zu testen · „Zurücksetzen" startet die Demo neu.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;variante&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;aurora&quot;,&quot;vital&quot;,&quot;ember&quot;],&quot;default&quot;:&quot;ember&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Design&quot;},&quot;modus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;hell&quot;,&quot;dunkel&quot;],&quot;default&quot;:&quot;hell&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Design&quot;},&quot;leuchten&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Design&quot;}}">
+const MIN = 60000;
+const DRINK = [
+  { id: 1, name: 'Fisetin', amount: '2.000 mg', note: 'Pulver oder Kapseln, laborgeprüft' },
+  { id: 2, name: 'Piperin', amount: '15–20 mg', note: 'Zusammen mit Fisetin im Drink' },
+  { id: 3, name: 'MCT-Öl oder Olivenöl', amount: '10 ml', note: 'Fettträger für die Aufnahme' },
+  { id: 4, name: 'Sonnenblumenlecithin', amount: '5–10 g (1–2 TL)', note: 'Verbessert die Bioverfügbarkeit' },
+  { id: 5, name: 'Lauwarmes Wasser oder grüner Tee', amount: '200–250 ml', note: 'Trägerflüssigkeit' },
+];
+const SPERM = [
+  { id: 6, name: 'Piperin', amount: '10–15 mg', note: 'Als Kapsel', optional: true },
+  { id: 7, name: 'Spermidin', amount: '6 mg', note: 'Fester Bestandteil' },
+  { id: 8, name: 'Leichte Mahlzeit', amount: '1 Portion', note: 'Zusammen einnehmen' },
+];
+const HARD = [
+  { name: 'Vitamin C (Kapseln)', dose: '80 mg × 2', note: 'Direktes starkes Antioxidans' },
+  { name: 'Eisen-Bisglycinat mit Vitamin C', dose: 'enthält 80 mg Vitamin C', note: 'Versteckte Falle: Kapsel verschieben oder Präparat ohne Vitamin C verwenden.' },
+  { name: 'Vitamin E Komplex', dose: '1 Portion', note: 'Fettlösliches Antioxidans' },
+  { name: 'Curcumin Phytosome', dose: '500 mg', note: 'Starkes Antioxidans/Entzündungshemmer' },
+  { name: 'CoQ10 (Ubiquinol)', dose: '200 mg', note: 'Antioxidans' },
+  { name: 'Astaxanthin', dose: '12 mg', note: 'Sehr potentes Antioxidans' },
+];
+const GRENZ = [
+  { name: 'Selen', dose: '200 µg, alle 3 Tage' },
+  { name: 'Nicotinamid-Ribosid', dose: '300 mg' },
+  { name: 'Apigenin', dose: '200 mg' },
+  { name: 'R-Alpha-Liponsäure', dose: 'Sport-Block' },
+  { name: 'PQQ', dose: 'Sport-Block' },
+  { name: 'Fucoxanthin', dose: 'Sport-Block' },
+];
+const OKNAMES = ['L-Theanin', 'L-Tyrosin', 'Vitamin-B-Komplex', 'Hyaluronsäure', 'Löwenmähne', 'Uridin Monophosphat', 'Citicolin', 'EAAs + Kollagen', 'Kreatin', 'Acetyl-L-Carnitin', 'Vitamin D3+K2', 'DHEA', 'Ashwagandha KSM-66', 'Magnesium (beide Formen)', 'Kupfer', 'Mangan', 'Phosphatidylserin', 'Huperzin A', 'Ginkgo', 'TMG', 'MSM', 'Bor', 'Kaffee'];
+const NAVDEFS = [
+  { k: 'today', label: 'Heute', d: 'M3 10.5L12 3l9 7.5M5 9.5V21h14V9.5' },
+  { k: 'timeline', label: 'Ablauf', d: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2' },
+  { k: 'stack', label: 'Stack', d: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5' },
+  { k: 'history', label: 'Verlauf', d: 'M12 8v4l3 2M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z' },
+  { k: 'sys', label: 'System', d: 'M6 4v3M6 11v9M12 4v9M12 17v3M18 4v5M18 13v7M4 9h4M10 15h4M16 11h4' },
+];
+const PHASES = [
+  { k: 'DRINK', label: 'Fisetin-Drink' },
+  { k: 'MEAL', label: 'Fettige Mahlzeit' },
+  { k: 'SPERMIDIN', label: 'Spermidin + leichte Mahlzeit' },
+];
+const SUN = 'M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z';
+const MOON = 'M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z';
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.initState();
+  }
+  initState() {
+    const now = Date.now();
+    const t0 = now - 135 * MIN;
+    return {
+      screen: 'today', modal: 'notice', toast: '',
+      mode: null, variant: null, offsetMin: 0, now,
+      protocol: { dur: 3, block: 240, mealBy: 30, mealWarn: 25, spermFrom: 180, spermRemind: 225, reminders: true },
+      cure: { active: true, day: 2, duration: 3, t0, mealDoneAt: t0 + 22 * MIN, spermidinDoneAt: null, liquid: 'Wasser', fat: 'MCT-Öl', note: '' },
+      history: [
+        { id: 1, date: '12.06.2026', days: 3, done: 12, note: 'Gut vertragen, leichte Müdigkeit an Tag 2.' },
+        { id: 2, date: '03.04.2026', days: 2, done: 8, note: '' },
+      ],
+      drafts: {}, checks: {}, setup: null,
+      ingredients: DRINK.map(i => ({ ...i, phase: 'DRINK' }))
+        .concat([{ id: 9, name: 'Avocado oder Eier', amount: '1 Portion', note: 'Fettreiche Basis für die Aufnahme', phase: 'MEAL' }])
+        .concat(SPERM.map(i => ({ ...i, phase: 'SPERMIDIN' }))),
+      ingEdit: null,
+    };
+  }
+  componentDidMount() { this._t = setInterval(() => this.setState({ now: Date.now() }), 1000); }
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._toast); }
+  say(msg) {
+    clearTimeout(this._toast);
+    this.setState({ toast: msg });
+    this._toast = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+  renderVals() {
+    const S = this.state, P = S.protocol;
+    const now = S.now + S.offsetMin * MIN;
+    const v = S.variant ?? this.props.variante ?? 'aurora';
+    const dark = (S.mode ?? this.props.modus ?? 'hell') === 'dunkel';
+    const glowOn = S.glowOv ?? this.props.leuchten ?? true;
+    const c = S.cure;
+    const active = !!(c && c.active);
+    const t0 = active ? c.t0 : null;
+    const times = t0 ? { meal: t0 + P.mealBy * MIN, sStart: t0 + P.spermFrom * MIN, sEnd: t0 + P.block * MIN, end: t0 + P.block * MIN } : null;
+    const blockActive = !!(t0 && now < times.end);
+    const fmtT = ms => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+    const cd = target => {
+      let s = Math.max(0, Math.floor((target - now) / 1000));
+      const h = Math.floor(s / 3600); s -= h * 3600;
+      const m = Math.floor(s / 60);
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(s - m * 60).padStart(2, '0');
+    };
+    const chip = sel => ({
+      bg: sel ? 'var(--accSoft)' : 'var(--chip)',
+      fg: sel ? 'var(--acc)' : 'var(--sub)',
+      brd: sel ? 'var(--acc)' : 'var(--line)',
+    });
+    // hero
+    let heroTitle, heroText, showRing = false, showOk = false, showDrinkIcon = false, showIdle = false, ctaSetup = false, ctaDrink = false;
+    if (!active) {
+      heroTitle = 'Keine Kur aktiv';
+      heroText = 'Lege die Kur in einen Freiblock: nüchterner Morgen, Mahlzeiten und das 4-Stunden-Fenster brauchen einen freien Tag.';
+      showIdle = true; ctaSetup = true;
+    } else if (!t0) {
+      heroTitle = 'Nächster Schritt: Fisetin-Drink';
+      heroText = 'Morgens nüchtern. Öffne die Checkliste und setze T0 erst direkt nach dem Trinken.';
+      showDrinkIcon = true; ctaDrink = true;
+    } else if (blockActive) {
+      heroTitle = 'Sperrfenster aktiv';
+      heroText = 'Antioxidantien sind ab ' + fmtT(times.end) + ' Uhr wieder erlaubt.';
+      showRing = true;
+    } else {
+      heroTitle = 'Alles im erlaubten Bereich';
+      heroText = 'Grünes Licht: Aktuell ist keine Antioxidantien-Sperre aktiv.';
+      showOk = true;
+    }
+    const canComplete = !!(active && t0 && c.mealDoneAt && c.spermidinDoneAt && !blockActive);
+    // next step
+    let showNext = false, nextTitle = '', nextText = '';
+    if (active && t0) {
+      showNext = true;
+      if (!c.mealDoneAt && now < times.meal) { nextTitle = 'Fettige Mahlzeit'; nextText = 'Bis ' + fmtT(times.meal) + ' Uhr, noch ' + cd(times.meal) + '.'; }
+      else if (!c.spermidinDoneAt && now < times.sStart) { nextTitle = 'Spermidin-Fenster folgt'; nextText = 'Öffnet um ' + fmtT(times.sStart) + ' Uhr.'; }
+      else if (!c.spermidinDoneAt && now < times.sEnd) { nextTitle = 'Spermidin-Schritt jetzt'; nextText = '6 mg Spermidin, optional Piperin und eine leichte Mahlzeit.'; }
+      else if (blockActive) { nextTitle = 'Sperrfenster läuft'; nextText = 'Antioxidantien ab ' + fmtT(times.end) + ' Uhr wieder erlaubt.'; }
+      else if (canComplete) { nextTitle = 'Tag bereit zum Abschluss'; nextText = 'Alle erforderlichen Schritte sind erledigt.'; }
+      else { nextTitle = 'Ablauf prüfen'; nextText = 'Offene Schritte im Tagesablauf ansehen.'; }
+    }
+    const daySegs = active ? Array.from({ length: c.duration }, (_, i) => ({
+      bg: i + 1 < c.day ? 'var(--ok)' : i + 1 === c.day ? 'linear-gradient(90deg,var(--acc),var(--acc2))' : 'var(--chip)',
+    })) : [];
+    // timeline
+    const mkStep = (title, time, done, act, pending) => ({
+      title, time, act, pending,
+      cBg: done ? 'var(--okBg)' : 'var(--chip)',
+      cFg: done ? 'var(--ok)' : 'var(--sub)',
+      cSh: done ? '0 0 14px var(--okBg)' : 'none',
+      checkOp: done ? 1 : 0, dotOp: done ? 0 : 0.5,
+    });
+    let tlSteps = [];
+    if (t0) {
+      tlSteps = [
+        mkStep('Fisetin-Drink', fmtT(t0) + ' Uhr · T0 gesetzt', true, null, false),
+        { ...mkStep('Fettige Mahlzeit', 'bis ' + fmtT(times.meal) + ' Uhr', !!c.mealDoneAt, () => this.markMeal(), !c.mealDoneAt), items: this.ingsOfState('MEAL') },
+        { ...mkStep('Spermidin + leichte Mahlzeit', fmtT(times.sStart) + '–' + fmtT(times.sEnd) + ' Uhr', !!c.spermidinDoneAt, () => this.markSperm(), !c.spermidinDoneAt), items: this.ingsOfState('SPERMIDIN') },
+        mkStep('Sperrfenster vorbei', fmtT(times.end) + ' Uhr', !blockActive, null, false),
+      ];
+      tlSteps.forEach((s, i) => { s.notLast = i < tlSteps.length - 1; s.hasItems = !!(s.items && s.items.length); });
+    }
+    // stack
+    const hardItems = HARD.map(it => ({
+      ...it, hasNote: !!it.note,
+      bg: blockActive ? 'var(--badBg)' : 'var(--okBg)',
+      fg: blockActive ? 'var(--bad)' : 'var(--ok)',
+      deco: blockActive ? 'line-through' : 'none',
+      status: blockActive ? 'Während des Sperrfensters weglassen.' : 'Sperrfenster vorbei – jetzt nachholbar.',
+    }));
+    const grenzItems = GRENZ.map(it => ({
+      ...it,
+      bg: blockActive ? 'var(--warnBg)' : 'var(--okBg)',
+      fg: blockActive ? 'var(--warn)' : 'var(--ok)',
+      status: blockActive ? 'Im Zweifel hinter das 4-Stunden-Fenster verschieben.' : 'Normal einnehmen.',
+    }));
+    // history
+    const histItems = [];
+    if (active) {
+      const done = (c.day - 1) * 4 + [t0, c.mealDoneAt, c.spermidinDoneAt, t0 && !blockActive ? 1 : null].filter(Boolean).length;
+      histItems.push({ id: 'act', date: new Date(now).toLocaleDateString('de-DE'), meta: c.duration + ' Tage · ' + done + ' von ' + c.duration * 4 + ' Schritten dokumentiert', note: c.note || '', active: true, statusText: 'Aktiv', statusFg: 'var(--warn)', statusBg: 'var(--warnBg)' });
+    }
+    S.history.forEach(h => histItems.push({ id: h.id, date: h.date, meta: h.days + ' Tage · ' + h.done + ' von ' + h.days * 4 + ' Schritten dokumentiert', note: h.note, active: false, statusText: 'Abgeschlossen', statusFg: 'var(--ok)', statusBg: 'var(--okBg)' }));
+    histItems.forEach(h => {
+      const draft = S.drafts[h.id] ?? h.note;
+      h.draft = draft;
+      h.onDraft = e => this.setState({ drafts: { ...this.state.drafts, [h.id]: e.target.value } });
+      h.saveOff = draft === h.note;
+      h.saveOpacity = h.saveOff ? 0.45 : 1;
+      h.onSave = () => this.saveNote(h.id, this.state.drafts[h.id] ?? h.note);
+    });
+    // settings
+    const locked = active;
+    const defs = [
+      { k: 'dur', label: 'Standarddauer (Tage)', step: 1, min: 2, max: 3 },
+      { k: 'block', label: 'Antioxidantien-Sperre (Min.)', step: 15, min: 60, max: 480 },
+      { k: 'mealBy', label: 'Mahlzeit bis Minute', step: 5, min: 5, max: 120 },
+      { k: 'mealWarn', label: 'Mahlzeit-Vorwarnung (Min.)', step: 5, min: 0, max: 120 },
+      { k: 'spermFrom', label: 'Spermidin-Fenster ab Minute', step: 15, min: 30, max: 240 },
+      { k: 'spermRemind', label: 'Spermidin-Nachfassung (Min.)', step: 15, min: 30, max: 240 },
+    ];
+    const bump = (d, dir) => {
+      if (locked) { this.say('Während der Kur gesperrt.'); return; }
+      const val = Math.min(d.max, Math.max(d.min, this.state.protocol[d.k] + dir * d.step));
+      this.setState({ protocol: { ...this.state.protocol, [d.k]: val } });
+    };
+    const protoRows = defs.map(d => ({
+      label: d.label, value: P[d.k], off: locked, btnOpacity: locked ? 0.4 : 1,
+      dec: () => bump(d, -1), inc: () => bump(d, 1),
+    }));
+    const mkIngRow = it => ({
+      title: it.name + ' · ' + it.amount,
+      sub: [it.optional ? 'optional' : '', it.note || ''].filter(Boolean).join(' · '),
+      canEdit: true,
+      onEdit: () => this.setState({ ingEdit: { ...it }, modal: 'ing' }),
+      onDelete: () => { this.setState({ ingredients: this.state.ingredients.filter(x => x.id !== it.id) }); this.say('Zutat gelöscht.'); },
+    });
+    const ingGroups = PHASES.map(ph => ({
+      title: ph.label,
+      rows: S.ingredients.filter(x => x.phase === ph.k).map(mkIngRow),
+    }));
+    // setup modal
+    const su = S.setup || { dur: 3, liquid: 'Wasser', fat: 'MCT-Öl', startMin: 480 };
+    const setSu = patch => this.setState({ setup: { ...su, ...patch } });
+    const mkOpts = (vals, cur, key, labelFn) => vals.map(val => ({
+      label: labelFn ? labelFn(val) : val, ...chip(cur === val), pick: () => setSu({ [key]: val }),
+    }));
+    // drink modal
+    const drinkIngs = S.ingredients.filter(x => x.phase === 'DRINK');
+    const drinkList = drinkIngs.map(it => {
+      const checked = !!S.checks[it.id];
+      return {
+        ...it, checkOp: checked ? 1 : 0,
+        boxBg: checked ? 'var(--acc)' : 'transparent',
+        boxBrd: checked ? 'var(--acc)' : 'var(--sub)',
+        toggle: () => this.setState({ checks: { ...this.state.checks, [it.id]: !checked } }),
+      };
+    });
+    const drinkOff = !drinkIngs.every(it => S.checks[it.id]);
+    // ingredient editor
+    const ie = S.ingEdit || {};
+    const ingSaveOff = !(ie.name || '').trim() || !(ie.amount || '').trim();
+    const setIe = patch => this.setState({ ingEdit: { ...this.state.ingEdit, ...patch } });
+    // nav + header
+    const navItems = NAVDEFS.map(n => {
+      const sel = S.screen === n.k;
+      return {
+        ...n, go: () => this.setState({ screen: n.k }),
+        bg: sel ? 'var(--accSoft)' : 'transparent',
+        fg: sel ? 'var(--acc)' : 'var(--sub)',
+        sh: sel ? '0 6px 18px var(--glow)' : 'none',
+      };
+    });
+    const variants = [
+      { k: 'aurora', label: 'Aurora', dot: '#6a5cff' },
+      { k: 'vital', label: 'Vital', dot: '#0c8f74' },
+      { k: 'ember', label: 'Ember', dot: '#e0562f' },
+    ].map(x => ({ ...x, ...chip(v === x.k), pick: () => this.setState({ variant: x.k }) }));
+    const modeOpts = [
+      { label: 'Hell', val: 'hell' }, { label: 'Dunkel', val: 'dunkel' },
+    ].map(x => ({ ...x, ...chip((dark ? 'dunkel' : 'hell') === x.val), pick: () => this.setState({ mode: x.val }) }));
+    const headerSub = !active ? 'Bereit für die nächste Kur'
+      : !t0 ? 'Tag ' + c.day + ' von ' + c.duration + ' · wartet auf den Drink'
+      : blockActive ? 'Tag ' + c.day + ' von ' + c.duration + ' · Sperrfenster läuft'
+      : 'Tag ' + c.day + ' von ' + c.duration + ' · alles erlaubt';
+    return {
+      themeKey: v + '-' + (dark ? 'dark' : 'light'),
+      glowKey: glowOn ? 'an' : 'aus',
+      isDark: dark,
+      variants, modeOpts,
+      clockStr: fmtT(now),
+      skip30: () => this.setState({ offsetMin: S.offsetMin + 30 }),
+      skip120: () => this.setState({ offsetMin: S.offsetMin + 120 }),
+      resetDemo: () => { this.setState(this.initState()); this.say('Demo zurückgesetzt.'); },
+      headerSub,
+      toggleMode: () => this.setState({ mode: dark ? 'hell' : 'dunkel' }),
+      modeIconD: dark ? SUN : MOON,
+      navItems,
+      isToday: S.screen === 'today', isTimeline: S.screen === 'timeline', isStack: S.screen === 'stack', isHistory: S.screen === 'history', isSys: S.screen === 'sys',
+      heroTitle, heroText, showRing, showOk, showDrinkIcon, showIdle,
+      ringOffset: t0 ? Math.min(1, Math.max(0, (now - t0) / (P.block * MIN))) * 402 : 0,
+      blockCountdown: times ? cd(times.end) : '',
+      cureActive: active,
+      dayLabel: active ? 'Tag ' + c.day + ' von ' + c.duration : '',
+      dayPct: active ? Math.round(((c.day - 1) / c.duration) * 100) + ' %' : '',
+      daySegs,
+      showNext, nextTitle, nextText,
+      goTimeline: () => this.setState({ screen: 'timeline' }),
+      goStack: () => this.setState({ screen: 'stack' }),
+      showStackLink: active && !!t0,
+      ctaDrink, openDrink: () => this.setState({ modal: 'drink', checks: {} }),
+      ctaSetup, openSetup: () => this.setState({ modal: 'setup', setup: { dur: Math.min(3, Math.max(2, P.dur)), liquid: 'Wasser', fat: 'MCT-Öl', startMin: 480 } }),
+      openCancel: () => this.setState({ modal: 'cancel' }),
+      noT0: active && !t0, hasT0: !!t0, blockActive,
+      blockEndTime: times ? fmtT(times.end) : '',
+      tlSteps,
+      completeLabel: active && c.day === c.duration ? 'Kur abschließen' : 'Tag ' + (active ? c.day : '') + ' abschließen',
+      completeDay: () => this.completeDay(canComplete),
+      completeOff: !canComplete, completeOpacity: canComplete ? 1 : 0.45,
+      completeHint: !!t0 && !canComplete,
+      stackSub: blockActive ? 'Für heute während des aktiven Sperrfensters.' : 'Aktuell besteht keine Antioxidantien-Sperre.',
+      hardTitle: blockActive ? 'Harte Sperre' : 'Jetzt wieder erlaubt',
+      hardItems, grenzItems, okNames: OKNAMES,
+      histItems,
+      openBattery: () => this.say('Öffnet die Android-Systemeinstellungen (Demo).'),
+      locked, protoRows,
+      protoSaveOpacity: locked ? 0.45 : 1,
+      remBg: P.reminders ? 'linear-gradient(135deg,var(--acc),var(--acc2))' : 'var(--chip)',
+      remX: P.reminders ? 19 : 0,
+      toggleRem: () => { if (locked) { this.say('Während der Kur gesperrt.'); return; } this.setState({ protocol: { ...P, reminders: !P.reminders } }); },
+      saveProto: () => { if (!locked) this.say('Protokollwerte gespeichert.'); },
+      ingGroups,
+      addIng: () => this.setState({ ingEdit: { name: '', amount: '', note: '', phase: 'DRINK', optional: false }, modal: 'ing' }),
+      showNotice: S.modal === 'notice',
+      confirmNotice: () => this.setState({ modal: null }),
+      showCancelModal: S.modal === 'cancel',
+      confirmCancel: () => { this.setState({ cure: null, modal: null, screen: 'today' }); this.say('Kur gelöscht und zurückgesetzt.'); },
+      closeModal: () => this.setState({ modal: null }),
+      showSetup: S.modal === 'setup',
+      setupDurOpts: mkOpts([2, 3], su.dur, 'dur', x => x + ' Tage'),
+      setupLiqOpts: mkOpts(['Wasser', 'Grüner Tee'], su.liquid, 'liquid'),
+      setupFatOpts: mkOpts(['MCT-Öl', 'Olivenöl'], su.fat, 'fat'),
+      setupTime: String(Math.floor(su.startMin / 60)).padStart(2, '0') + ':' + String(su.startMin % 60).padStart(2, '0'),
+      setupMinus: () => setSu({ startMin: Math.max(0, su.startMin - 15) }),
+      setupPlus: () => setSu({ startMin: Math.min(1425, su.startMin + 15) }),
+      confirmSetup: () => {
+        this.setState({ cure: { active: true, day: 1, duration: su.dur, t0: null, mealDoneAt: null, spermidinDoneAt: null, liquid: su.liquid, fat: su.fat, note: '' }, modal: null, screen: 'today' });
+        this.say('Kur angelegt – Tag 1 wartet auf den Drink.');
+      },
+      showDrinkModal: S.modal === 'drink',
+      drinkChoice: active ? c.liquid + ' · ' + c.fat : 'Wasser · MCT-Öl',
+      drinkList, drinkOff, drinkOpacity: drinkOff ? 0.45 : 1,
+      confirmDrink: () => {
+        if (drinkOff) return;
+        this.setState({ cure: { ...c, t0: now }, modal: null, checks: {} });
+        this.say('T0 gesetzt – das 4-Stunden-Fenster läuft.');
+      },
+      showIngModal: S.modal === 'ing',
+      ingTitle: ie.id ? 'Zutat bearbeiten' : 'Zutat hinzufügen',
+      ingName: ie.name || '', onIngName: e => setIe({ name: e.target.value }),
+      ingAmount: ie.amount || '', onIngAmount: e => setIe({ amount: e.target.value }),
+      ingNote: ie.note || '', onIngNote: e => setIe({ note: e.target.value }),
+      ingPhaseOpts: PHASES.map(ph => ({
+        label: ph.k === 'DRINK' ? 'Drink' : ph.k === 'MEAL' ? 'Mahlzeit' : 'Spermidin', ...chip(ie.phase === ph.k), pick: () => setIe({ phase: ph.k }),
+      })),
+      ingOptBoxBg: ie.optional ? 'var(--acc)' : 'transparent',
+      ingOptBoxBrd: ie.optional ? 'var(--acc)' : 'var(--sub)',
+      ingOptCheckOp: ie.optional ? 1 : 0,
+      toggleIngOpt: () => setIe({ optional: !ie.optional }),
+      ingSaveOff, ingSaveOpacity: ingSaveOff ? 0.45 : 1,
+      saveIng: () => this.saveIngredient(),
+      toastOn: !!S.toast, toastMsg: S.toast,
+    };
+  }
+  ingsOfState(k) {
+    return this.state.ingredients.filter(x => x.phase === k).map(x => x.name + ' · ' + x.amount);
+  }
+  markMeal() {
+    const c = this.state.cure;
+    this.setState({ cure: { ...c, mealDoneAt: this.state.now + this.state.offsetMin * MIN } });
+    this.say('Mahlzeit dokumentiert.');
+  }
+  markSperm() {
+    const c = this.state.cure;
+    this.setState({ cure: { ...c, spermidinDoneAt: this.state.now + this.state.offsetMin * MIN } });
+    this.say('Spermidin-Schritt dokumentiert.');
+  }
+  saveNote(id, text) {
+    if (id === 'act') {
+      this.setState({ cure: { ...this.state.cure, note: text }, drafts: { ...this.state.drafts, act: undefined } });
+    } else {
+      this.setState({ history: this.state.history.map(h => h.id === id ? { ...h, note: text } : h) });
+    }
+    this.say('Notiz gespeichert.');
+  }
+  completeDay(can) {
+    if (!can) { this.say('Erst alle Schritte und das Sperrfenster abschließen.'); return; }
+    const c = this.state.cure;
+    if (c.day < c.duration) {
+      this.setState({ cure: { ...c, day: c.day + 1, t0: null, mealDoneAt: null, spermidinDoneAt: null } });
+      this.say('Tag ' + c.day + ' abgeschlossen – weiter mit Tag ' + (c.day + 1) + '.');
+    } else {
+      const entry = { id: Date.now(), date: new Date().toLocaleDateString('de-DE'), days: c.duration, done: c.duration * 4, note: c.note || '' };
+      this.setState({ cure: null, history: [entry, ...this.state.history], screen: 'today' });
+      this.say('Kur abgeschlossen! Eintrag im Verlauf gespeichert.');
+    }
+  }
+  saveIngredient() {
+    const ie = this.state.ingEdit;
+    if (!ie || !(ie.name || '').trim() || !(ie.amount || '').trim()) return;
+    let list = this.state.ingredients;
+    if (ie.id) list = list.map(x => x.id === ie.id ? { ...ie } : x);
+    else list = [...list, { ...ie, id: Date.now() }];
+    this.setState({ ingredients: list, modal: null, ingEdit: null });
+    this.say('Zutat gespeichert.');
+  }
+}
+</script>
+</body>
+</html>

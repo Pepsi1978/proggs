@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="de" data-werft-theme="lightpmcolors" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — StartScreen — LightPmColors</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:StartScreen" data-screen-name="StartScreen" data-start="true" style="width: 412px; min-height: 915px;">
+<div class="pm-start-screen" id="pm-start-screen" data-screen-id="StartScreen" data-pm-theme="dark">
+    <div class="pm-start__safe">
+        <div class="pm-start__scroll">
+            <header class="pm-start__header">
+                <div class="pm-start__title">Perfect Moment</div>
+
+                <button
+                    class="pm-start__theme"
+                    type="button"
+                    aria-label="Zum hellen Erscheinungsbild wechseln"
+                    data-werft-theme-toggle
+                >
+                    <svg class="pm-start__theme-dark" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9.37 5.51A7.35 7.35 0 0 0 9.1 7.5c0 4.08 3.32 7.4 7.4 7.4.68 0 1.34-.09 1.99-.27A7.49 7.49 0 0 1 12 18.5 7.5 7.5 0 0 1 9.37 5.51M12 3c.46 0 .91.04 1.36.1a.97.97 0 0 1 .32 1.84 5.4 5.4 0 0 0-2.58 4.6 5.4 5.4 0 0 0 5.4 5.4c.48 0 .96-.06 1.42-.19a.97.97 0 0 1 1.1 1.45A9.45 9.45 0 0 1 12 20.5 8.75 8.75 0 0 1 3.5 12 9 9 0 0 1 12 3Z"/>
+                    </svg>
+                    <svg class="pm-start__theme-light" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Zm0-5.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm0-6c.55 0 1-.45 1-1V1c0-.55-.45-1-1-1s-1 .45-1 1v2c0 .55.45 1 1 1Zm0 16c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1ZM4 12c0-.55-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1Zm19-1h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1ZM5.64 7.05a1 1 0 0 0 1.41-1.41L5.64 4.22a1 1 0 1 0-1.42 1.42l1.42 1.41Zm12.72 9.9a1 1 0 0 0-1.41 1.41l1.41 1.42a1 1 0 0 0 1.42-1.42l-1.42-1.41Zm0-9.9 1.42-1.41a1 1 0 0 0-1.42-1.42l-1.41 1.42a1 1 0 0 0 1.41 1.41ZM5.64 16.95l-1.42 1.41a1 1 0 0 0 1.42 1.42l1.41-1.42a1 1 0 0 0-1.41-1.41Z"/>
+                    </svg>
+                </button>
+
+                <span class="pm-start__header-gap"></span>
+
+                <button
+                    class="pm-start__header-icon"
+                    type="button"
+                    aria-label="Verlauf"
+                    data-werft-navigate="compose:HistoryScreen"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3Zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12Z"/>
+                    </svg>
+                </button>
+
+                <span class="pm-start__header-gap"></span>
+
+                <button
+                    class="pm-start__header-icon"
+                    type="button"
+                    aria-label="Einstellungen"
+                    data-werft-navigate="compose:SettingsScreen"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.33 7.33 0 0 0-1.69-.98L14.5 2.42A.49.49 0 0 0 14 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.49.49 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.08.66-.08.98s.04.66.08.98l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.31.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.24.42.49.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.12-1.65ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Zm0-5.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="pm-start__hooks" aria-label="Gesprächsaufhänger">
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Wie fühlt es sich an, dass es dir gut geht?"
+                    style="--pm-hook-dark:#c4a7e7;--pm-hook-dark-fill:rgba(196,167,231,0.15);--pm-hook-light:#7954a1;--pm-hook-light-fill:rgba(121,84,161,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M16.5 3A5.9 5.9 0 0 0 12 5.09 5.9 5.9 0 0 0 7.5 3 5.42 5.42 0 0 0 2 8.5c0 3.76 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.26 22 8.5A5.42 5.42 0 0 0 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5A3.4 3.4 0 0 1 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87A3.88 3.88 0 0 1 16.5 5 3.4 3.4 0 0 1 20 8.5c0 2.89-3.14 5.74-7.9 10.05Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Wie fühlt es sich an, dass es dir gut geht?</span>
+                </button>
+
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Wofür bist du gerade besonders dankbar?"
+                    style="--pm-hook-dark:#75c8b2;--pm-hook-dark-fill:rgba(117,200,178,0.15);--pm-hook-light:#2a7d69;--pm-hook-light-fill:rgba(42,125,105,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3Zm-1.5 3.5A1.5 1.5 0 1 0 13 8a1.5 1.5 0 0 0-1.5-1.5ZM8 11a1.5 1.5 0 1 0 1.5 1.5A1.5 1.5 0 0 0 8 11Zm7.5-1a1.5 1.5 0 1 0 1.5 1.5 1.5 1.5 0 0 0-1.5-1.5ZM12 15a1.5 1.5 0 1 0 1.5 1.5A1.5 1.5 0 0 0 12 15Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Wofür bist du gerade besonders dankbar?</span>
+                </button>
+
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Was wäre, wenn heute alles möglich wäre?"
+                    style="--pm-hook-dark:#8ab4f8;--pm-hook-dark-fill:rgba(138,180,248,0.15);--pm-hook-light:#3f6fa8;--pm-hook-light-fill:rgba(63,111,168,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm-1.1-8a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 0 0-2.2 0Zm-1.09-2.19L6 18l8.19-3.81L18 6 9.81 9.81Zm3.03 3.03-2.13.99.99-2.13 2.13-.99-.99 2.13Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Was wäre, wenn heute alles möglich wäre?</span>
+                </button>
+
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Was darf heute leicht sein?"
+                    style="--pm-hook-dark:#ffc66d;--pm-hook-dark-fill:rgba(255,198,109,0.15);--pm-hook-light:#a66b00;--pm-hook-light-fill:rgba(166,107,0,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1Zm3-19a7 7 0 0 0-4 12.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26A7 7 0 0 0 12 2Zm2.85 11.1-.85.6V16h-4v-2.3l-.85-.6A5 5 0 1 1 17 9a5 5 0 0 1-2.15 4.1Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Was darf heute leicht sein?</span>
+                </button>
+
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Welcher perfekte Moment wartet heute auf dich?"
+                    style="--pm-hook-dark:#f28ba8;--pm-hook-dark-fill:rgba(242,139,168,0.15);--pm-hook-light:#a54462;--pm-hook-light-fill:rgba(165,68,98,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m19 9 1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9Zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5Zm-3 3.09L7.91 13.9l-1.31.6 1.31.59.59 1.31.59-1.31 1.31-.59-1.31-.59-.59-1.32Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Welcher perfekte Moment wartet heute auf dich?</span>
+                </button>
+
+                <button
+                    class="pm-start__hook"
+                    type="button"
+                    data-topic="Was brauchst du, um ganz bei dir anzukommen?"
+                    style="--pm-hook-dark:#ff9e80;--pm-hook-dark-fill:rgba(255,158,128,0.15);--pm-hook-light:#b94b32;--pm-hook-light-fill:rgba(185,75,50,0.15)"
+                >
+                    <span class="pm-start__hook-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm9 9a8.76 8.76 0 0 1-7.13-3.65l-1.37-1.9a.5.5 0 0 0-.81 0l-1.37 1.9A8.76 8.76 0 0 1 3.19 15H2a8 8 0 0 0 8 8h4a8 8 0 0 0 8-8h-1Zm-7 6h-4a6 6 0 0 1-5.65-4h.84a10.8 10.8 0 0 0 7.28-3.66l.53-.71.53.71A10.8 10.8 0 0 0 20.81 17h.84A6 6 0 0 1 16 21h-2Z"/>
+                        </svg>
+                    </span>
+                    <span class="pm-start__hook-text">Was brauchst du, um ganz bei dir anzukommen?</span>
+                </button>
+            </div>
+
+            <div class="pm-start__section-label">Oder eigene Frage</div>
+
+            <textarea
+                class="pm-start__topic"
+                rows="3"
+                aria-label="Eigene Frage"
+                placeholder="Was möchtest du hören?"
+            ></textarea>
+
+            <div class="pm-start__parameters">
+                <button class="pm-start__parameter" type="button" data-werft-navigate="compose:DurationSheet">
+                    <span class="pm-start__parameter-label">Pause</span>
+                    <span class="pm-start__parameter-value">2 s</span>
+                </button>
+
+                <button class="pm-start__parameter" type="button" data-werft-navigate="compose:DurationSheet">
+                    <span class="pm-start__parameter-label">Wiederholungen</span>
+                    <span class="pm-start__parameter-value">3×</span>
+                </button>
+
+                <button class="pm-start__parameter" type="button" data-werft-navigate="compose:DurationSheet">
+                    <span class="pm-start__parameter-label">Dauer</span>
+                    <span class="pm-start__parameter-value">20 min</span>
+                </button>
+            </div>
+
+            <div class="pm-start__recorder-row">
+                <div class="pm-start__recorder" data-state="idle">
+                    <div class="pm-start__recorder-visual">
+                        <span class="pm-start__recorder-glow"></span>
+
+                        <svg class="pm-start__recorder-sweep" viewBox="0 0 138.6666666667 138.6666666667" aria-hidden="true">
+                            <circle pathLength="100" cx="69.3333333333" cy="69.3333333333" r="66.6666666667"></circle>
+                        </svg>
+
+                        <span class="pm-start__record-ring"></span>
+                        <span class="pm-start__record-ring"></span>
+                        <span class="pm-start__record-ring"></span>
+
+                        <button class="pm-start__recorder-button" type="button" aria-label="Spracheingabe starten">
+                            <svg class="pm-start__recorder-mic" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5a3 3 0 0 0-6 0v6c0 1.66 1.34 3 3 3Zm-1.2-9.1c0-.66.54-1.2 1.2-1.2s1.2.54 1.2 1.2l-.01 6.2c0 .66-.53 1.2-1.19 1.2s-1.2-.54-1.2-1.2V4.9ZM17.3 11c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7Z"/>
+                            </svg>
+
+                            <svg class="pm-start__recorder-stop" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M6 6h12v12H6z"/>
+                            </svg>
+
+                            <svg class="pm-start__recorder-spinner" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle pathLength="100" cx="12" cy="12" r="9"></circle>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="pm-start__recorder-label">
+                        <span class="pm-start__recorder-idle-label">Antippen zum Sprechen</span>
+                        <span class="pm-start__recorder-recording-label">Ich höre zu…</span>
+                        <span class="pm-start__recorder-processing-label">Einen Moment…</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pm-start__bottom">
+        <button
+            class="pm-start__locked-hint"
+            type="button"
+            data-werft-navigate="compose:ChatGptScreen"
+        >Bitte zuerst mit ChatGPT verbinden</button>
+        <button class="pm-start__primary" type="button" disabled>Sitzung beginnen</button>
+    </div>
+</div>
+
+<script>
+(() => {
+    const root = document.getElementById("pm-start-screen");
+    if (!root) return;
+
+    const themeButton = root.querySelector(".pm-start__theme");
+    const topic = root.querySelector(".pm-start__topic");
+    const hooks = Array.from(root.querySelectorAll(".pm-start__hook"));
+    const recorder = root.querySelector(".pm-start__recorder");
+    const recorderButton = root.querySelector(".pm-start__recorder-button");
+
+    themeButton.addEventListener("click", () => {
+        const light = root.dataset.pmTheme === "light";
+        root.dataset.pmTheme = light ? "dark" : "light";
+        themeButton.setAttribute(
+            "aria-label",
+            light
+                ? "Zum hellen Erscheinungsbild wechseln"
+                : "Zum dunklen Erscheinungsbild wechseln"
+        );
+    });
+
+    const sizeTopic = () => {
+        topic.style.height = "144px";
+        topic.style.height = Math.min(180, Math.max(144, topic.scrollHeight)) + "px";
+    };
+
+    hooks.forEach((hook) => {
+        hook.addEventListener("click", () => {
+            const selected = hook.classList.contains("is-selected");
+            hooks.forEach((item) => item.classList.remove("is-selected"));
+
+            if (selected) {
+                topic.value = "";
+            } else {
+                hook.classList.add("is-selected");
+                topic.value = hook.dataset.topic || "";
+            }
+            sizeTopic();
+        });
+    });
+
+    topic.addEventListener("input", () => {
+        hooks.forEach((item) => item.classList.remove("is-selected"));
+        sizeTopic();
+    });
+
+    recorderButton.addEventListener("click", () => {
+        const state = recorder.dataset.state;
+        if (state === "idle") {
+            recorder.dataset.state = "recording";
+            recorderButton.setAttribute("aria-label", "Aufnahme stoppen");
+        } else if (state === "recording") {
+            recorder.dataset.state = "processing";
+            recorderButton.setAttribute("aria-label", "Spracheingabe wird verarbeitet");
+        }
+    });
+
+    sizeTopic();
+})();
+</script>
+</section>
+</div>
+</body>
+</html>

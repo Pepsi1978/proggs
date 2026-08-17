@@ -1,0 +1,239 @@
+{
+  "bildschirm": "B-09",
+  "name": "Selbstbild",
+  "breite": 412,
+  "erscheinung": "22hell",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "b09-screen",
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "b09-topbar",
+              "anordnung": {
+                "art": "zeile",
+                "quer": "center",
+                "innen": "0 20px"
+              },
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "b09-back",
+                  "fuehrtZu": "B-08",
+                  "beschriftung": "Zurück zu Einstellungen",
+                  "anordnung": {
+                    "art": "spalte",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "spalte",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "spalte",
+                            "quer": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "h1",
+                  "klassen": "b09-title",
+                  "anordnung": {
+                    "art": "zeile",
+                    "quer": "center",
+                    "innen": "0 20px"
+                  },
+                  "text": "Selbstbild"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "b09-content",
+              "kinder": [
+                {
+                  "tag": "p",
+                  "klassen": "b09-intro",
+                  "anordnung": {
+                    "art": "fluss",
+                    "innen": "16px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "br",
+                      "anordnung": {
+                        "art": "fluss",
+                        "innen": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Alles, was die App dauerhaft über dich wissen soll."
+                },
+                {
+                  "tag": "textarea",
+                  "klassen": "b09-editor",
+                  "funktion": "F-21",
+                  "beschriftung": "Selbstbild",
+                  "platzhalter": "Wer bist du? Was prägt dich? Was war?&#10;Sprich einfach drauflos.",
+                  "anordnung": {
+                    "art": "fluss",
+                    "innen": "16px"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b09-controls",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "12px",
+                    "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                    "quer": "center"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "button",
+                      "klassen": "b09-improve",
+                      "funktion": "F-02",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "12px",
+                        "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                        "quer": "center",
+                        "innen": "8px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "klassen": "b09-improve-label",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "12px",
+                            "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                            "quer": "center",
+                            "innen": "8px"
+                          },
+                          "text": "Text mit KI verbessern"
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "b09-mic-wrap",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "12px",
+                        "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                        "quer": "center"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "klassen": "b09-mic-ring",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "quer": "center"
+                          }
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b09-mic-button",
+                          "funktion": "F-21",
+                          "beschriftung": "Selbstbild einsprechen",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "12px",
+                            "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "svg",
+                              "klassen": "b09-mic-icon",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "raster",
+                                "abstand": "12px",
+                                "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "raster",
+                                    "abstand": "12px",
+                                    "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "svg",
+                              "klassen": "b09-stop-icon",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "12px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "12px",
+                        "spalten": "minmax(0, 1fr) 88px minmax(0, 1fr)",
+                        "quer": "center"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

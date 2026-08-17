@@ -1,0 +1,567 @@
+{
+  "bildschirm": "B-04",
+  "name": "Wünsche &amp; Ziele",
+  "breite": 412,
+  "erscheinung": "22hell",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "anordnung": {
+        "art": "fluss",
+        "abstand": "2px",
+        "innen": "0"
+      },
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "b04-screen",
+          "anordnung": {
+            "art": "fluss",
+            "abstand": "2px",
+            "innen": "0"
+          },
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "b04-topbar",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "quer": "center",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "h1",
+                  "klassen": "b04-title",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "text": "Wünsche &amp; Ziele"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "b04-content",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "p",
+                  "klassen": "b04-intro",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "20px"
+                  },
+                  "text": "Was möchtest du erreichen? Die Vorschläge tasten dich Schritt für Schritt heran."
+                },
+                {
+                  "tag": "section",
+                  "klassen": "b04-goals",
+                  "beschriftung": "Ziele",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "p",
+                      "klassen": "b04-empty",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "20px"
+                      },
+                      "text": "Noch keine Ziele. Sprich das erste ein."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "section",
+              "klassen": "b04-create-layer",
+              "beschriftung": "Ziel anlegen",
+              "versteckt": true,
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "div",
+                  "klassen": "b04-record-state",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "div",
+                      "klassen": "b04-mic-wrap",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "klassen": "b04-record-ring",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          }
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b04-mic",
+                          "funktion": "F-20",
+                          "beschriftung": "Ziel einsprechen",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "svg",
+                              "klassen": "b04-icon b04-mic-icon",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "output",
+                      "klassen": "b04-record-time",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "text": "00:00"
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b04-editor",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "textarea",
+                      "klassen": "b04-goal-input",
+                      "funktion": "F-20",
+                      "beschriftung": "Ziel",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      }
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "b04-editor-actions",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "button",
+                          "klassen": "b04-text-button",
+                          "funktion": "F-02",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "text": "Text mit KI verbessern"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b04-action-button",
+                          "funktion": "F-20",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "text": "Speichern"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "button",
+              "klassen": "b04-fab",
+              "funktion": "F-20",
+              "beschriftung": "Ziel anlegen",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "svg",
+                  "klassen": "b04-icon",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "path",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "nav",
+              "klassen": "b04-bottom-nav werft-primary-nav",
+              "beschriftung": "Hauptnavigation",
+              "anordnung": {
+                "art": "raster",
+                "abstand": "2px",
+                "spalten": "repeat(5, minmax(0, 1fr))",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "b04-nav-item",
+                  "fuehrtZu": "B-01",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b04-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b04-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Heute"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b04-nav-item is-active",
+                  "fuehrtZu": "B-04",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b04-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b04-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Ziele"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b04-nav-item",
+                  "fuehrtZu": "B-05",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b04-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b04-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Merkliste"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b04-nav-item",
+                  "fuehrtZu": "B-06",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b04-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b04-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Erkenntnisse"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b04-nav-item",
+                  "fuehrtZu": "B-07",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b04-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b04-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Logbuch"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

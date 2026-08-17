@@ -26,6 +26,7 @@ import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.auth.SessionPromptDecision
 import de.frank.perfectmoment.data.local.HookEntity
+import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
 import de.frank.perfectmoment.data.local.SkillEntity
@@ -329,6 +330,14 @@ class AppViewModel(
     var readingQuestionId by mutableStateOf<Long?>(null)
         private set
     var readingQuestionText by mutableStateOf("")
+        private set
+
+    /** Offen, solange die bearbeitete Frage in andere eigene Sessions kopiert wird. */
+    var readingLinkOpen by mutableStateOf(false)
+        private set
+
+    /** Die eigenen Sessions, die für die Kopie angehakt sind. */
+    var readingLinkTargets by mutableStateOf<Set<Long>>(emptySet())
         private set
 
     var hookEditorId by mutableStateOf<Long?>(null)
@@ -1510,6 +1519,75 @@ class AppViewModel(
         readingQuestionOpen = false
         readingQuestionId = null
         readingQuestionText = ""
+        readingLinkOpen = false
+        readingLinkTargets = emptySet()
+    }
+
+    /** Die Fragen der offenen eigenen Session in der Reihenfolge, in der sie gezogen wurden. */
+    val readingQuestions: List<QuestionEntity>
+        get() = historyDetail?.questions.orEmpty()
+
+    /** Schiebt eine Frage während des Ziehens an ihren neuen Platz. */
+    fun moveReadingQuestion(from: Int, to: Int) {
+        val detail = historyDetail ?: return
+        val current = detail.questions
+        if (from !in current.indices || to !in current.indices || from == to) return
+        val next = current.toMutableList()
+        next.add(to, next.removeAt(from))
+        historyDetail = detail.copy(questions = next)
+    }
+
+    /** Hält die gezogene Reihenfolge fest, damit sie beim nächsten Öffnen wieder so dasteht. */
+    fun persistReadingQuestionOrder() {
+        val detail = historyDetail ?: return
+        val sessionId = detail.session.id
+        val orderedIds = detail.questions.map(QuestionEntity::id)
+        if (orderedIds.isEmpty()) return
+        viewModelScope.launch { sessionRepository.reorderQuestions(sessionId, orderedIds) }
+    }
+
+    /** Die eigenen Sessions, in die die offene Frage kopiert werden kann — ohne die offene selbst. */
+    val readingLinkSessions: List<SessionEntity>
+        get() = readingSessions.filterNot { it.id == historyDetail?.session?.id }
+
+    fun openReadingLinkPicker() {
+        readingLinkTargets = emptySet()
+        readingLinkOpen = true
+    }
+
+    fun toggleReadingLinkTarget(sessionId: Long) {
+        readingLinkTargets = if (sessionId in readingLinkTargets) {
+            readingLinkTargets - sessionId
+        } else {
+            readingLinkTargets + sessionId
+        }
+    }
+
+    fun closeReadingLinkPicker() {
+        readingLinkOpen = false
+        readingLinkTargets = emptySet()
+    }
+
+    /**
+     * Kopiert die offene Frage wortwörtlich — samt ihrem Symbol — ans Ende der angehakten
+     * eigenen Sessions. Das Original bleibt unangetastet, wo es steht.
+     */
+    fun copyReadingQuestionToSessions() {
+        val text = readingQuestionText.trim().replace(Regex("\\s*\\R\\s*"), " ")
+        val emoji = historyDetail?.questions?.firstOrNull { it.id == readingQuestionId }?.emoji
+            ?.takeIf { it.isNotBlank() }
+            ?: EmojiParser.FALLBACK_EMOJI
+        val targets = readingLinkTargets.toList()
+        closeReadingLinkPicker()
+        if (text.isBlank() || targets.isEmpty()) return
+        viewModelScope.launch {
+            targets.forEach { sessionId -> sessionRepository.appendQuestion(sessionId, emoji, text) }
+            message = if (targets.size == 1) {
+                "Frage in 1 Session kopiert."
+            } else {
+                "Frage in ${targets.size} Sessions kopiert."
+            }
+        }
     }
 
     /**

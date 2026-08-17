@@ -704,10 +704,10 @@ private fun StackMedicineRow(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.width(8.dp))
                             if (medicine.warningReason.isNotEmpty()) {
                                 Text("!", color = colors.red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             }
+                            Spacer(Modifier.width(8.dp))
                             SolubilityLabel(medicine.solubility)
                         }
                         Text(medicine.dose, Modifier.fillMaxWidth(), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

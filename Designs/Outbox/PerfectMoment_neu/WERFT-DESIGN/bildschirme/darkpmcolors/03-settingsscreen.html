@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — SettingsScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:SettingsScreen" data-screen-name="SettingsScreen" style="width: 412px; min-height: 915px;">
+<div class="pm-settings-screen" data-theme="dark" data-theme-choice="dark">
+  <div class="pm-settings-screen__layout">
+    <header class="pm-settings-screen__header">
+      <button
+        class="pm-settings-screen__back"
+        type="button"
+        aria-label="Zurück"
+        data-werft-navigate="compose:StartScreen"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+      <div class="pm-settings-screen__title">Einstellungen</div>
+    </header>
+
+    <main class="pm-settings-screen__scroll">
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">Ablauf</div>
+        <div class="pm-settings-card">
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Pause zwischen Wiederholungen</span>
+            </span>
+            <span class="pm-settings-setting-row__value">5 s</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Pause bis zur nächsten Frage</span>
+            </span>
+            <span class="pm-settings-setting-row__value">10 s</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Wiederholungen pro Frage</span>
+            </span>
+            <span class="pm-settings-setting-row__value">3×</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row"
+            type="button"
+            data-werft-navigate="compose:DurationSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Sitzungsdauer</span>
+            </span>
+            <span class="pm-settings-setting-row__value">20 min</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">Inhalt</div>
+        <div class="pm-settings-card">
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:HooksScreen"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Gesprächsaufhänger</span>
+            </span>
+            <span class="pm-settings-setting-row__value">6</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:SkillsScreen"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Skills</span>
+            </span>
+            <span class="pm-settings-setting-row__value">Perfect Moment</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <div class="pm-settings-perspective">
+            <div class="pm-settings-perspective__title">Frageperspektive</div>
+            <div class="pm-settings-perspective__supporting">Wie die KI ihre Fragen formuliert</div>
+            <div class="pm-settings-segments" data-segment-group="perspective">
+              <button class="pm-settings-segment" type="button" aria-pressed="false">Ich-Person</button>
+              <button class="pm-settings-segment" type="button" aria-pressed="true">Du-Person</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">Stimme</div>
+        <div class="pm-settings-card">
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Anbieter</span>
+            </span>
+            <span class="pm-settings-setting-row__value">Microsoft Edge</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:VoiceScreen"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Stimme</span>
+            </span>
+            <span class="pm-settings-setting-row__value">Seraphina</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <div class="pm-settings-voice-speed">
+            <div class="pm-settings-voice-speed__header">
+              <span class="pm-settings-voice-speed__label">Geschwindigkeit</span>
+              <span class="pm-settings-voice-speed__value">1×</span>
+            </div>
+            <input
+              class="pm-settings-voice-speed__range"
+              type="range"
+              min="0.7"
+              max="1.3"
+              step="0.05"
+              value="1"
+              aria-label="Geschwindigkeit"
+            >
+          </div>
+          <div class="pm-settings-key-row pm-settings-key-row--divider">
+            <div class="pm-settings-key-row__copy">
+              <div class="pm-settings-key-row__label">Google-API</div>
+              <div class="pm-settings-key-row__supporting">TTS · Chirp 3 HD</div>
+            </div>
+            <input
+              class="pm-settings-key-row__input"
+              type="password"
+              value=""
+              autocomplete="off"
+              aria-label="Google-API"
+            >
+            <button
+              class="pm-settings-key-row__visibility"
+              type="button"
+              data-visible="false"
+              aria-label="Schlüssel anzeigen"
+            >
+              <svg class="pm-settings-icon-visibility" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+              <svg class="pm-settings-icon-visibility-off" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.45.45C3.08 8.3 1.78 10.03 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 20 21 18.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="pm-settings-key-row">
+            <div class="pm-settings-key-row__copy">
+              <div class="pm-settings-key-row__label">Groq-API</div>
+              <div class="pm-settings-key-row__supporting">Whisper Large v3 · Spracheingabe</div>
+            </div>
+            <input
+              class="pm-settings-key-row__input"
+              type="password"
+              value=""
+              autocomplete="off"
+              aria-label="Groq-API"
+            >
+            <button
+              class="pm-settings-key-row__visibility"
+              type="button"
+              data-visible="false"
+              aria-label="Schlüssel anzeigen"
+            >
+              <svg class="pm-settings-icon-visibility" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+              <svg class="pm-settings-icon-visibility-off" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.45.45C3.08 8.3 1.78 10.03 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 20 21 18.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">KI-Verbindung</div>
+        <div class="pm-settings-card">
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:ChatGptScreen"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Mit ChatGPT verbinden</span>
+            </span>
+            <span class="pm-settings-setting-row__value pm-settings-setting-row__value--muted">Nicht verbunden</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row pm-settings-setting-row--divider"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Modell</span>
+            </span>
+            <span class="pm-settings-setting-row__value">GPT-5.1 Codex</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+          <button
+            class="pm-settings-setting-row"
+            type="button"
+            data-werft-navigate="compose:OptionSheet"
+          >
+            <span class="pm-settings-setting-row__main">
+              <span class="pm-settings-setting-row__label">Denkstärke</span>
+            </span>
+            <span class="pm-settings-setting-row__value">Mittel</span>
+            <svg class="pm-settings-setting-row__chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.71a.996.996 0 0 0-1.41 0z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">Sicherheit</div>
+        <div class="pm-settings-card">
+          <div class="pm-settings-setting-row pm-settings-setting-row--supporting pm-settings-setting-row--static">
+            <div class="pm-settings-setting-row__main">
+              <div class="pm-settings-setting-row__label">App mit Fingerabdruck sperren</div>
+              <div class="pm-settings-setting-row__supporting">Nur starker biometrischer Fingerabdruck</div>
+            </div>
+            <label class="pm-settings-switch">
+              <input type="checkbox" role="switch" aria-label="App mit Fingerabdruck sperren">
+              <span class="pm-settings-switch__track">
+                <span class="pm-settings-switch__thumb"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="pm-settings-section" data-werft-theme-toggle>
+        <div class="pm-settings-section__label">Darstellung</div>
+        <div class="pm-settings-card">
+          <div class="pm-settings-appearance" data-segment-group="theme">
+            <button
+              class="pm-settings-segment"
+              type="button"
+              aria-pressed="false"
+              data-theme-choice="light"
+              data-werft-theme-toggle
+            >Hell</button>
+            <button
+              class="pm-settings-segment"
+              type="button"
+              aria-pressed="true"
+              data-theme-choice="dark"
+              data-werft-theme-toggle
+            >Dunkel</button>
+            <button
+              class="pm-settings-segment"
+              type="button"
+              aria-pressed="false"
+              data-theme-choice="system"
+              data-werft-theme-toggle
+            >Wie System</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="pm-settings-section">
+        <div class="pm-settings-section__label">Über</div>
+        <div class="pm-settings-card">
+          <div class="pm-settings-about">V.1.0 (1)</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(function (screen) {
+  if (!screen) return;
+
+  screen.querySelectorAll('[data-segment-group="perspective"]').forEach(function (group) {
+    group.querySelectorAll('.pm-settings-segment').forEach(function (segment) {
+      segment.addEventListener('click', function () {
+        group.querySelectorAll('.pm-settings-segment').forEach(function (item) {
+          item.setAttribute('aria-pressed', item === segment ? 'true' : 'false');
+        });
+      });
+    });
+  });
+
+  var themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+  var themeButtons = screen.querySelectorAll('[data-segment-group="theme"] .pm-settings-segment');
+
+  function applyTheme(choice) {
+    var resolved = choice === 'system' ? (themeMedia.matches ? 'dark' : 'light') : choice;
+    screen.dataset.themeChoice = choice;
+    screen.dataset.theme = resolved;
+    themeButtons.forEach(function (button) {
+      button.setAttribute('aria-pressed', button.dataset.themeChoice === choice ? 'true' : 'false');
+    });
+  }
+
+  themeButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      applyTheme(button.dataset.themeChoice);
+    });
+  });
+
+  if (themeMedia.addEventListener) {
+    themeMedia.addEventListener('change', function () {
+      if (screen.dataset.themeChoice === 'system') applyTheme('system');
+    });
+  }
+
+  screen.querySelectorAll('.pm-settings-key-row__visibility').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var input = button.parentElement.querySelector('.pm-settings-key-row__input');
+      var visible = button.dataset.visible !== 'true';
+      button.dataset.visible = visible ? 'true' : 'false';
+      button.setAttribute('aria-label', visible ? 'Schlüssel verbergen' : 'Schlüssel anzeigen');
+      input.type = visible ? 'text' : 'password';
+    });
+  });
+
+  screen.querySelectorAll('.pm-settings-voice-speed__range').forEach(function (range) {
+    var valueLabel = range.parentElement.querySelector('.pm-settings-voice-speed__value');
+
+    function updateRange() {
+      var min = Number(range.min);
+      var max = Number(range.max);
+      var value = Number(range.value);
+      var progress = ((value - min) / (max - min)) * 100;
+      var display = value.toFixed(2).replace(/0+$/, '').replace(/[.,]$/, '').replace('.', ',');
+      range.style.setProperty('--pm-slider-progress', progress + '%');
+      valueLabel.textContent = display + '×';
+    }
+
+    range.addEventListener('input', updateRange);
+    updateRange();
+  });
+})(document.currentScript.previousElementSibling);
+</script>
+</section>
+</div>
+</body>
+</html>

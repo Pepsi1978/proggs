@@ -1,0 +1,221 @@
+{
+  "bildschirm": "B-02",
+  "name": "Gespräch",
+  "breite": 412,
+  "erscheinung": "21dunkelstandard",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "b02-screen",
+          "beschriftung": "Gespräch",
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "b02-topbar",
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "b02-back",
+                  "fuehrtZu": "B-01",
+                  "beschriftung": "Zurück zu Heute",
+                  "anordnung": {
+                    "art": "fluss",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "fluss",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "b02-main",
+              "anordnung": {
+                "art": "spalte"
+              },
+              "kinder": [
+                {
+                  "tag": "div",
+                  "klassen": "b02-experiment-header",
+                  "anordnung": {
+                    "art": "spalte",
+                    "innen": "16px 16px 0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "h1",
+                      "klassen": "b02-experiment-title",
+                      "anordnung": {
+                        "art": "spalte",
+                        "innen": "16px 16px 0"
+                      },
+                      "text": "⟨Experimenttitel⟩"
+                    },
+                    {
+                      "tag": "p",
+                      "klassen": "b02-experiment-day",
+                      "anordnung": {
+                        "art": "spalte",
+                        "innen": "16px 16px 0"
+                      },
+                      "text": "Tag 2 von 3"
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "klassen": "b02-thread",
+                  "anordnung": {
+                    "art": "spalte",
+                    "abstand": "12px",
+                    "innen": "20px 16px 16px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "p",
+                      "klassen": "b02-empty",
+                      "anordnung": {
+                        "art": "spalte",
+                        "abstand": "12px",
+                        "innen": "20px"
+                      },
+                      "text": "Frag mich, wie du das angehen könntest."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "form",
+              "klassen": "b02-composer",
+              "funktion": "F-09",
+              "anordnung": {
+                "art": "zeile",
+                "abstand": "8px",
+                "quer": "center",
+                "innen": "16px"
+              },
+              "kinder": [
+                {
+                  "tag": "label",
+                  "klassen": "b02-input-shell",
+                  "anordnung": {
+                    "art": "zeile",
+                    "abstand": "8px",
+                    "quer": "center",
+                    "innen": "16px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "input",
+                      "klassen": "b02-input",
+                      "funktion": "F-09",
+                      "beschriftung": "Nachricht eingeben",
+                      "platzhalter": "Oder tippen …",
+                      "anordnung": {
+                        "art": "zeile",
+                        "abstand": "8px",
+                        "quer": "center",
+                        "innen": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b02-mic-button",
+                  "funktion": "F-09",
+                  "beschriftung": "Gespräch aufnehmen",
+                  "anordnung": {
+                    "art": "zeile",
+                    "abstand": "8px",
+                    "quer": "center",
+                    "innen": "16px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "span",
+                      "klassen": "b02-recording-ring",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "8px",
+                        "quer": "center",
+                        "innen": "16px"
+                      }
+                    },
+                    {
+                      "tag": "svg",
+                      "klassen": "b02-mic-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "8px",
+                        "quer": "center",
+                        "innen": "16px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "8px",
+                            "quer": "center",
+                            "innen": "16px"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "svg",
+                      "klassen": "b02-stop-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "8px",
+                        "quer": "center",
+                        "innen": "16px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "rect",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "8px",
+                            "quer": "center",
+                            "innen": "16px"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

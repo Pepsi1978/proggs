@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — HookEditorScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:HookEditorScreen" data-screen-name="HookEditorScreen" style="width: 412px; min-height: 915px;">
+<section class="pm-hook-editor-screen" id="pm-hook-editor-screen" data-werft-screen="HookEditorScreen">
+  <div class="pm-hook-editor__safe">
+    <header class="pm-hook-editor__header">
+      <button class="pm-hook-editor__back" type="button" aria-label="Zurück" data-werft-navigate="compose:HooksScreen">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20,11H7.83l5.59,-5.59L12,4l-8,8l8,8l1.41,-1.41L7.83,13H20z" fill="currentColor"/>
+        </svg>
+      </button>
+      <h1 class="pm-hook-editor__title">Aufhänger bearbeiten</h1>
+    </header>
+
+    <main class="pm-hook-editor__body">
+      <label class="pm-hook-editor__field pm-hook-editor__field--emoji">
+        <input
+          class="pm-hook-editor__emoji-input"
+          id="pm-hook-editor-emoji"
+          type="text"
+          placeholder="✨"
+          aria-label="Emoji"
+          autocomplete="off"
+        />
+      </label>
+
+      <p class="pm-hook-editor__hint">Antippen öffnet die Emoji-Tastatur</p>
+
+      <label class="pm-hook-editor__field pm-hook-editor__field--text">
+        <textarea
+          class="pm-hook-editor__text-input"
+          id="pm-hook-editor-text"
+          placeholder="Text des Aufhängers"
+          aria-label="Text des Aufhängers"
+        ></textarea>
+      </label>
+    </main>
+
+    <footer class="pm-hook-editor__actions">
+      <button class="pm-hook-editor__primary" id="pm-hook-editor-save" type="button">Speichern</button>
+      <button class="pm-hook-editor__outline" type="button" data-werft-navigate="compose:HooksScreen">Löschen</button>
+    </footer>
+  </div>
+
+  <div class="pm-hook-editor__message" id="pm-hook-editor-message" data-open="false" aria-hidden="true">
+    <div class="pm-hook-editor__message-card">
+      <p class="pm-hook-editor__message-text">Emoji und Aufhängertext dürfen nicht leer sein.</p>
+      <button class="pm-hook-editor__message-close" id="pm-hook-editor-message-close" type="button">Schließen</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const root = document.getElementById("pm-hook-editor-screen");
+  const emoji = root.querySelector("#pm-hook-editor-emoji");
+  const text = root.querySelector("#pm-hook-editor-text");
+  const save = root.querySelector("#pm-hook-editor-save");
+  const message = root.querySelector("#pm-hook-editor-message");
+  const close = root.querySelector("#pm-hook-editor-message-close");
+
+  const dismissMessage = () => {
+    message.dataset.open = "false";
+    message.setAttribute("aria-hidden", "true");
+  };
+
+  save.addEventListener("click", (event) => {
+    save.removeAttribute("data-werft-navigate");
+    if (!emoji.value.trim() || !text.value.trim()) {
+      event.stopPropagation();
+      message.dataset.open = "true";
+      message.setAttribute("aria-hidden", "false");
+      return;
+    }
+    save.setAttribute("data-werft-navigate", "HooksScreen");
+  });
+
+  close.addEventListener("click", dismissMessage);
+  message.addEventListener("click", (event) => {
+    if (event.target === message) dismissMessage();
+  });
+})();
+</script>
+</section>
+</div>
+</body>
+</html>

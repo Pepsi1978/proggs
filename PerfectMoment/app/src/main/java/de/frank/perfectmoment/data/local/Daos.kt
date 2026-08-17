@@ -89,6 +89,25 @@ abstract class SessionDao {
         durationMin: Int,
     )
 
+    @Query("UPDATE questions SET orderIndex = :orderIndex WHERE id = :questionId")
+    protected abstract suspend fun setQuestionOrder(questionId: Long, orderIndex: Int)
+
+    @Query("SELECT id FROM questions WHERE sessionId = :sessionId")
+    protected abstract suspend fun questionIds(sessionId: Long): List<Long>
+
+    /**
+     * Legt die Fragen eines Vorlese-Verlaufs in die gezogene Reihenfolge. Der Umweg über negative
+     * Plätze hält den eindeutigen Index (sessionId, orderIndex) auch mitten im Tausch sauber.
+     */
+    @Transaction
+    open suspend fun reorderQuestions(sessionId: Long, orderedIds: List<Long>) {
+        if (orderedIds.isEmpty()) return
+        if (orderedIds.size != orderedIds.distinct().size) return
+        if (orderedIds.toSet() != questionIds(sessionId).toSet()) return
+        orderedIds.forEachIndexed { index, questionId -> setQuestionOrder(questionId, -index - 1) }
+        orderedIds.forEachIndexed { index, questionId -> setQuestionOrder(questionId, index) }
+    }
+
     @Query("SELECT COALESCE(MAX(orderIndex) + 1, 0) FROM questions WHERE sessionId = :sessionId")
     abstract suspend fun nextQuestionIndex(sessionId: Long): Int
 

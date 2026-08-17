@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<title>Entropy Journal — Aktuelle UI (Nachbildung)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0" rel="stylesheet">
+<style>
+  body { margin:0; background:#0B0D0E; }
+  a { color:#14B8A6; } a:hover { color:#4ECDC4; }
+  @keyframes twinkle { 0%,100%{opacity:.15} 50%{opacity:.8} }
+  @keyframes wave { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+  @keyframes ringspin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+</style>
+</helmet>
+<div style="padding:48px; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; gap:24px">
+  <div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#5C6B68; text-transform:uppercase">Referenz · Nachbildung des Ist-Zustands</div>
+    <div style="font-family:'Exo 2',sans-serif; font-size:28px; font-weight:700; color:#E6E1E5; margin-top:4px">Entropy Journal — Aktuelle UI (Theme: Profilfarbe, Dunkel)</div>
+  </div>
+  <div style="display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap">
+
+    <!-- ══════════ LOGIN / SPLASH ══════════ -->
+    <div data-screen-label="Login" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Login</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#0C0C0F; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; font-family:'Source Sans 3',sans-serif">
+          <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:56px; color:#00E5FF; line-height:1">E</div>
+          <div style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:34px; color:#F0EDF1; margin-top:20px">Entropy Journal</div>
+          <div style="font-size:17px; color:#A9A4B0; text-align:center; line-height:1.5; margin-top:16px">Dein persönliches KI-Tagebuch<br>für Klarheit und Veränderung</div>
+          <div style="margin-top:56px; background:#FFFFFF; color:#1A1A1A; font-size:19px; font-weight:500; border-radius:32px; padding:18px 0; width:310px; text-align:center">Mit Google anmelden</div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ TAGEBUCH ══════════ -->
+    <div data-screen-label="Tagebuch" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Tagebuch (Timeline)</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; position:relative; overflow:hidden">
+          <div style="padding:8px 16px 0">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:8px">
+                <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:24px">Tagebuch</div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#666666">light_mode</span>
+                  <div style="width:1px; height:20px; background:#2A2A2A"></div>
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:26px; color:#FFD54F">dark_mode</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#4CAF7D">cloud_done</span>
+                <div style="display:flex; align-items:center; gap:4px; border:1px solid rgba(147,143,153,0.3); background:rgba(33,44,43,0.5); border-radius:20px; padding:6px 12px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:18px; color:#CAC4D0">search</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#CAC4D0">Suche</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:4px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#CAC4D0">124 Einträge</span>
+              <div style="display:flex; align-items:center; gap:3px; background:rgba(255,179,0,0.1); border-radius:12px; padding:3px 8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:16px; color:#FFB300">local_fire_department</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#FFB300">12 Tage</span>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:8px 16px 0">
+            <div style="padding:12px 0 4px">
+              <div style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:14px; color:#14B8A6">Heute</div>
+              <div style="height:1px; background:#2A2A2A; margin-top:4px"></div>
+            </div>
+            <div style="display:flex">
+              <div style="width:52px; display:flex; flex-direction:column; align-items:center">
+                <div style="flex:1"></div>
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(20,184,166,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">directions_walk</span></div>
+                <div style="width:2px; flex:1; background:#2A2A2A"></div>
+              </div>
+              <div style="width:8px"></div>
+              <div style="flex:1; padding:6px 0">
+                <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 20px rgba(20,184,166,0.08)">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:16px; color:#14B8A6; text-decoration:underline">Spaziergang am See</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#938F99; margin-top:2px">18. Juli 2026, 09:12 · vor 2 Std.</div>
+                  <div style="font-size:16px; line-height:24px; color:#E6E1E5; margin-top:8px">Heute Morgen bin ich früh aufgestanden und eine Runde um den See gelaufen. Die Luft war klar und ich habe gemerkt, wie viel ruhiger mein Kopf danach war.</div>
+                  <div style="display:flex; gap:4px; margin-top:8px">
+                    <div style="background:#212C2B; border-radius:4px; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#CAC4D0">Gesundheit</div>
+                    <div style="background:#212C2B; border-radius:4px; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#CAC4D0">Achtsamkeit</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex">
+              <div style="width:52px; display:flex; flex-direction:column; align-items:center">
+                <div style="width:2px; flex:1; background:#2A2A2A"></div>
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(20,184,166,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">work</span></div>
+                <div style="flex:1"></div>
+              </div>
+              <div style="width:8px"></div>
+              <div style="flex:1; padding:6px 0">
+                <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 20px rgba(20,184,166,0.08)">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:16px; color:#14B8A6; text-decoration:underline">Projekt endlich abgeschlossen</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#938F99; margin-top:2px">18. Juli 2026, 07:45 · vor 4 Std.</div>
+                  <div style="font-size:16px; line-height:24px; color:#E6E1E5; margin-top:8px">Das große Projekt ist abgeschlossen. Ich bin erleichtert, aber auch ein bisschen leer. Morgen will ich bewusst einen ruhigen Tag einlegen.</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:12px 0 4px">
+              <div style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:14px; color:#14B8A6">Gestern</div>
+              <div style="height:1px; background:#2A2A2A; margin-top:4px"></div>
+            </div>
+            <div style="display:flex">
+              <div style="width:52px; display:flex; flex-direction:column; align-items:center; justify-content:center">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(20,184,166,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">restaurant</span></div>
+              </div>
+              <div style="width:8px"></div>
+              <div style="flex:1; padding:6px 0">
+                <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 20px rgba(20,184,166,0.08)">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:16px; color:#14B8A6; text-decoration:underline">Abendessen mit Lena</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#938F99; margin-top:2px">17. Juli 2026, 20:31 · gestern</div>
+                  <div style="font-size:16px; line-height:24px; color:#E6E1E5; margin-top:8px">Langes Gespräch über die Zukunft. Wir haben beschlossen, im Herbst die Wanderung in Südtirol wirklich zu machen.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute; bottom:96px; left:0; right:0; display:flex; justify-content:center; gap:12px">
+            <div style="width:64px; height:64px; border-radius:50%; background:#212C2B; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4)"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:#E6E1E5">edit</span></div>
+            <div style="width:64px; height:64px; border-radius:50%; background:#212C2B; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4)"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:#E6E1E5">mic</span></div>
+          </div>
+          <div style="display:flex; background:#18201F; padding:10px 0 14px">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">auto_awesome</span><span style="font-size:12px; color:#938F99">Rückblick</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">analytics</span><span style="font-size:12px; color:#938F99">Dashboard</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><div style="background:#0E453D; border-radius:16px; padding:2px 16px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:#14B8A6">book</span></div><span style="font-size:12px; color:#14B8A6; font-weight:600">Tagebuch</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">settings</span><span style="font-size:12px; color:#938F99">Einstellungen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ AUFNAHME ══════════ -->
+    <div data-screen-label="Aufnahme" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Aufnahme-Overlay</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; position:relative; overflow:hidden">
+          <div style="padding:8px 16px 0; opacity:.35">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:8px">
+                <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:24px">Tagebuch</div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#666666">light_mode</span>
+                  <div style="width:1px; height:20px; background:#2A2A2A"></div>
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:26px; color:#FFD54F">dark_mode</span>
+                </div>
+              </div>
+              <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#4CAF7D">cloud_done</span>
+            </div>
+            <div style="margin-top:20px; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; height:110px"></div>
+            <div style="margin-top:12px; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; height:110px"></div>
+          </div>
+          <div style="position:absolute; bottom:180px; left:16px; right:16px; background:rgba(24,32,31,0.95); border-radius:20px; padding:16px; display:flex; flex-direction:column; align-items:center">
+            <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:32px; color:#14B8A6">0:42</div>
+            <div style="display:flex; align-items:flex-end; gap:3px; height:36px; margin-top:12px">
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.9s ease-in-out infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.7s ease-in-out -0.2s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 1.1s ease-in-out -0.4s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.8s ease-in-out -0.1s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 1s ease-in-out -0.5s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.75s ease-in-out -0.3s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.95s ease-in-out -0.6s infinite"></div>
+              <div style="width:4px; height:100%; background:#14B8A6; border-radius:2px; animation:wave 0.85s ease-in-out -0.15s infinite"></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:8px">
+              <div style="width:8px; height:8px; border-radius:50%; background:#FF5252"></div>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#CAC4D0">Lokales Whisper-Modell</span>
+            </div>
+            <div style="font-size:14px; color:#CAC4D0; margin-top:4px">Erneut tippen zum Stoppen</div>
+          </div>
+          <div style="position:absolute; bottom:96px; left:0; right:0; display:flex; justify-content:center; gap:12px">
+            <div style="width:64px; height:64px; border-radius:50%; background:#212C2B; display:flex; align-items:center; justify-content:center; opacity:.5"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:#E6E1E5">edit</span></div>
+            <div style="width:72px; height:72px; margin:-4px; border-radius:50%; background:conic-gradient(#4ECDC4,#7C4DFF,#FF00E5,#4ECDC4); padding:3px; animation:ringspin 3s linear infinite; display:flex">
+              <div style="flex:1; border-radius:50%; background:#121918; display:flex; align-items:center; justify-content:center">
+                <div style="width:58px; height:58px; border-radius:50%; background:#FF5252; display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:#FFFFFF">stop</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; background:#18201F; padding:10px 0 14px">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">auto_awesome</span><span style="font-size:12px; color:#938F99">Rückblick</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">analytics</span><span style="font-size:12px; color:#938F99">Dashboard</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><div style="background:#0E453D; border-radius:16px; padding:2px 16px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:#14B8A6">book</span></div><span style="font-size:12px; color:#14B8A6; font-weight:600">Tagebuch</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">settings</span><span style="font-size:12px; color:#938F99">Einstellungen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ DASHBOARD ══════════ -->
+    <div data-screen-label="Dashboard" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Dashboard (KI-Analyse)</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; position:relative; overflow:hidden">
+          <div style="position:absolute; inset:0; pointer-events:none">
+            <div style="position:absolute; top:12%; left:14%; width:2px; height:2px; border-radius:50%; background:#fff; animation:twinkle 3s ease-in-out infinite"></div>
+            <div style="position:absolute; top:24%; left:78%; width:2px; height:2px; border-radius:50%; background:#fff; animation:twinkle 4s ease-in-out -1s infinite"></div>
+            <div style="position:absolute; top:45%; left:88%; width:1.5px; height:1.5px; border-radius:50%; background:#fff; animation:twinkle 3.5s ease-in-out -2s infinite"></div>
+            <div style="position:absolute; top:60%; left:8%; width:2px; height:2px; border-radius:50%; background:#fff; animation:twinkle 5s ease-in-out -0.5s infinite"></div>
+            <div style="position:absolute; top:80%; left:70%; width:1.5px; height:1.5px; border-radius:50%; background:#fff; animation:twinkle 4.5s ease-in-out -3s infinite"></div>
+            <div style="position:absolute; top:35%; left:40%; width:1.5px; height:1.5px; border-radius:50%; background:#fff; animation:twinkle 4s ease-in-out -1.5s infinite"></div>
+          </div>
+          <div style="padding:8px 16px 0">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:8px">
+                <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:24px">Dashboard</div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#666666">light_mode</span>
+                  <div style="width:1px; height:20px; background:#2A2A2A"></div>
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:26px; color:#FFD54F">dark_mode</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:16px">
+                <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#CAC4D0">info</span>
+                <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#14B8A6">refresh</span>
+              </div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#CAC4D0; margin-top:2px">Zuletzt aktualisiert: heute, 09:14</div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:8px 16px 0; display:flex; flex-direction:column; gap:12px">
+            <div style="background:#212C2B; border-radius:12px; padding:12px">
+              <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:14px; color:#14B8A6">Aktives Profil: Zusammenfassung</div>
+              <div style="font-size:12px; line-height:16px; color:#CAC4D0; margin-top:4px">Alle Tagebucheinträge gleichwertig betrachtet — Muster, Beobachtungen und Empfehlungen.</div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 24px rgba(91,141,239,0.12)">
+              <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:20px; color:#5B8DEF; text-align:center">Überblick</div>
+              <div style="font-size:16px; line-height:24px; color:#CAC4D0; margin-top:12px">Deine Woche war geprägt von viel Arbeit und wenig Schlaf. Positiv: Du warst dreimal draußen in der Natur, das hat dir spürbar gut getan.</div>
+              <div style="display:flex; gap:16px; margin-top:12px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#FF8C00">volume_up</span>
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#FF8C00">share</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px; overflow:hidden; padding:0 0 4px">
+              <div style="width:110px; height:100px; flex-shrink:0; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:6px; box-shadow:0 0 16px rgba(255,82,82,0.25); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(255,82,82,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#FF5252">bedtime</span></div>
+                <div style="font-size:10px; line-height:12px; color:#FF5252; text-align:center">Schlaf</div>
+                <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(255,82,82,0.2)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 30.5 9.5" fill="none" stroke="#FF5252" stroke-width="3" stroke-linecap="round"></path></svg>
+              </div>
+              <div style="width:110px; height:100px; flex-shrink:0; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(99,102,241,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#6366F1">work</span></div>
+                <div style="font-size:10px; line-height:12px; color:#CAC4D0; text-align:center">Arbeit</div>
+                <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(99,102,241,0.2)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 25 6.5" fill="none" stroke="#FFB300" stroke-width="3" stroke-linecap="round"></path></svg>
+              </div>
+              <div style="width:110px; height:100px; flex-shrink:0; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(20,184,166,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">favorite</span></div>
+                <div style="font-size:10px; line-height:12px; color:#CAC4D0; text-align:center">Beziehungen</div>
+                <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(20,184,166,0.2)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 12 4.5" fill="none" stroke="#4CAF7D" stroke-width="3" stroke-linecap="round"></path></svg>
+              </div>
+              <div style="width:110px; height:100px; flex-shrink:0; background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(76,175,125,0.15); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#4CAF7D">fitness_center</span></div>
+                <div style="font-size:10px; line-height:12px; color:#CAC4D0; text-align:center">Sport</div>
+                <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(76,175,125,0.2)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 9 6.8" fill="none" stroke="#4CAF7D" stroke-width="3" stroke-linecap="round"></path></svg>
+              </div>
+            </div>
+            <div style="height:1px; background:linear-gradient(90deg,transparent,#14B8A6,transparent); margin-top:8px"></div>
+            <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:20px; color:#6366F1; text-align:center">Alle Beobachtungen</div>
+            <div style="display:flex; justify-content:center; gap:14px">
+              <div style="display:flex; align-items:center; gap:4px"><div style="width:8px; height:8px; border-radius:50%; background:#FF5252"></div><span style="font-size:12px; color:#CAC4D0">hoch</span></div>
+              <div style="display:flex; align-items:center; gap:4px"><div style="width:8px; height:8px; border-radius:50%; background:#FF9800"></div><span style="font-size:12px; color:#CAC4D0">mittel</span></div>
+              <div style="display:flex; align-items:center; gap:4px"><div style="width:8px; height:8px; border-radius:50%; background:#4ECDC4"></div><span style="font-size:12px; color:#CAC4D0">niedrig</span></div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:14px 16px; display:flex; gap:10px; align-items:flex-start">
+              <div style="width:8px; height:8px; border-radius:50%; background:#FF5252; margin-top:6px; flex-shrink:0"></div>
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#938F99">Schlaf</div>
+                <div style="font-size:14px; line-height:20px; color:#E6E1E5">Du gehst seit 5 Tagen nach Mitternacht ins Bett — plane heute 23:00 Uhr als feste Grenze ein.</div>
+              </div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:14px 16px; display:flex; gap:10px; align-items:flex-start">
+              <div style="width:8px; height:8px; border-radius:50%; background:#FF9800; margin-top:6px; flex-shrink:0"></div>
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#938F99">Arbeit</div>
+                <div style="font-size:14px; line-height:20px; color:#E6E1E5">Nach dem Projektabschluss fehlt dir ein neues Ziel — nimm dir 30 Minuten für eine Wochenplanung.</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; background:#18201F; padding:10px 0 14px">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">auto_awesome</span><span style="font-size:12px; color:#938F99">Rückblick</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><div style="background:#0E453D; border-radius:16px; padding:2px 16px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:#14B8A6">analytics</span></div><span style="font-size:12px; color:#14B8A6; font-weight:600">Dashboard</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">book</span><span style="font-size:12px; color:#938F99">Tagebuch</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">settings</span><span style="font-size:12px; color:#938F99">Einstellungen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ RÜCKBLICK ══════════ -->
+    <div data-screen-label="Rueckblick" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Rückblick</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; overflow:hidden">
+          <div style="padding:18px 16px 0">
+            <div style="display:flex; align-items:center; gap:8px">
+              <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:24px">Rückblick</div>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#666666">light_mode</span>
+                <div style="width:1px; height:20px; background:#2A2A2A"></div>
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:26px; color:#FFD54F">dark_mode</span>
+              </div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#CAC4D0; margin-top:2px">Aktualisiert: Sonntag, 06:00</div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:8px 16px 0">
+            <div style="border-radius:24px; padding:24px; text-align:center; background:linear-gradient(180deg, rgba(20,184,166,0.35), rgba(20,184,166,0.22) 33%, rgba(20,184,166,0.10) 66%, #18201F)">
+              <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:48px; color:#14B8A6">auto_awesome</span>
+              <div style="font-family:'Exo 2',sans-serif; font-weight:700; font-size:20px; margin-top:16px">Dein persönlicher Rückblick</div>
+              <div style="font-size:16px; line-height:24px; color:rgba(230,225,229,0.8); margin-top:12px">Manchmal vergessen wir im Alltag, wie viel wir eigentlich erlebt haben. Dein Tagebuch erinnert sich an alles, an die großen Momente und die kleinen, stillen Augenblicke, die dein Leben ausmachen.</div>
+              <div style="font-size:14px; font-style:italic; color:#14B8A6; margin-top:10px">Schau zurück und entdecke, was dich bewegt hat.</div>
+            </div>
+            <div style="margin-top:28px; display:flex; flex-direction:column; gap:16px">
+              <div style="border-radius:20px; padding:16px; display:flex; align-items:center; gap:14px; background:linear-gradient(180deg, rgba(20,184,166,0.22), #18201F); border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:44px; height:44px; border-radius:50%; background:rgba(20,184,166,0.18); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#14B8A6">calendar_today</span></div>
+                <div style="flex:1">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:16px">Wochenrückblick</div>
+                  <div style="font-size:14px; color:#CAC4D0">Die letzten 7 Tage im Überblick</div>
+                </div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">expand_more</span>
+              </div>
+              <div style="border-radius:20px; padding:16px; display:flex; align-items:center; gap:14px; background:linear-gradient(180deg, rgba(20,184,166,0.22), #18201F); border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:44px; height:44px; border-radius:50%; background:rgba(20,184,166,0.18); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#14B8A6">date_range</span></div>
+                <div style="flex:1">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:16px">Monatsrückblick</div>
+                  <div style="font-size:14px; color:#CAC4D0">Dein vergangener Monat auf einen Blick</div>
+                </div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">expand_more</span>
+              </div>
+              <div style="border-radius:20px; padding:16px; display:flex; align-items:center; gap:14px; background:linear-gradient(180deg, rgba(20,184,166,0.22), #18201F); border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:44px; height:44px; border-radius:50%; background:rgba(20,184,166,0.18); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#14B8A6">calendar_month</span></div>
+                <div style="flex:1">
+                  <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:16px">Jahresrückblick</div>
+                  <div style="font-size:14px; color:#CAC4D0">Dein Jahr in Momenten</div>
+                </div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">expand_more</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; background:#18201F; padding:10px 0 14px">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><div style="background:#0E453D; border-radius:16px; padding:2px 16px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:#14B8A6">auto_awesome</span></div><span style="font-size:12px; color:#14B8A6; font-weight:600">Rückblick</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">analytics</span><span style="font-size:12px; color:#938F99">Dashboard</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">book</span><span style="font-size:12px; color:#938F99">Tagebuch</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">settings</span><span style="font-size:12px; color:#938F99">Einstellungen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ EINTRAG-DETAIL ══════════ -->
+    <div data-screen-label="Eintrag-Detail" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Eintrag-Detail</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; overflow:hidden">
+          <div style="height:56px; display:flex; align-items:center; padding:0 8px">
+            <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#E6E1E5; padding:12px">arrow_back</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 16px; display:flex; flex-direction:column; gap:14px">
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 20px rgba(20,184,166,0.1)">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#14B8A6">tips_and_updates</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:14px; color:#14B8A6">Zusammenfassung</span>
+              </div>
+              <div style="font-size:14px; line-height:22px; color:#CAC4D0; margin-top:8px">• Morgenspaziergang um den See<br>• Kopf danach deutlich klarer<br>• Vorsatz: öfter vor der Arbeit raus</div>
+            </div>
+            <div style="display:flex; border-bottom:1px solid #2A2A2A">
+              <div style="flex:1; text-align:center; padding:10px; color:#14B8A6; font-weight:600; border-bottom:2px solid #14B8A6; font-size:14px">Verbessert</div>
+              <div style="flex:1; text-align:center; padding:10px; color:#938F99; font-size:14px">Original</div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px; box-shadow:0 0 20px rgba(255,179,0,0.12)">
+              <div style="display:flex; justify-content:space-between; align-items:center">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#FFB300">book</span>
+                  <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:14px; color:#FFB300">Tagebucheintrag</span>
+                </div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#FF5252">delete</span>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#938F99; margin-top:2px">18. Juli 2026, 09:12 · vor 2 Std.</div>
+              <div style="font-size:16px; line-height:24px; color:#E6E1E5; margin-top:8px">Heute Morgen bin ich früh aufgestanden und eine Runde um den See gelaufen. Die Luft war klar und ich habe gemerkt, wie viel ruhiger mein Kopf danach war. Ich möchte das öfter machen, am besten direkt vor der Arbeit.</div>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:12px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#FF8C00">volume_up</span>
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#FF8C00">share</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#938F99">Aufnahmedauer: 1:23</span>
+              </div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#FFB300">edit_note</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:14px; color:#FFB300">Nachtrag Eins</span>
+                <div style="flex:1"></div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#FF5252">delete</span>
+              </div>
+              <div style="font-size:15px; line-height:22px; color:#E6E1E5; margin-top:8px">Mittags noch kurz mit Jonas telefoniert — er kommt am Wochenende vorbei.</div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:#14B8A6">photo_camera</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:14px; color:#14B8A6">Fotos und Videos</span>
+              </div>
+              <div style="display:flex; gap:8px; margin-top:10px">
+                <div style="width:72px; height:72px; border-radius:12px; background:repeating-linear-gradient(45deg,#212C2B,#212C2B 6px,#1B2423 6px,#1B2423 12px); display:flex; align-items:center; justify-content:center"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5C6B68">Foto</span></div>
+                <div style="width:72px; height:72px; border-radius:12px; border:1px dashed #3A4644; display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#5C6B68">add</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:center; gap:12px; padding:12px 0 20px">
+            <div style="display:flex; align-items:center; gap:8px; border:1px solid #3A4644; border-radius:24px; padding:12px 22px"><span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#E6E1E5">edit</span><span style="font-size:14px">Schreiben</span></div>
+            <div style="display:flex; align-items:center; gap:8px; border:1px solid #3A4644; border-radius:24px; padding:12px 22px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">mic</span><span style="font-size:14px">Einsprechen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ══════════ EINSTELLUNGEN ══════════ -->
+    <div data-screen-label="Einstellungen" style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8A9995">Einstellungen (mit Themes Manager)</div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="width:100%; height:100%; background:#121918; color:#E6E1E5; font-family:'Source Sans 3',sans-serif; display:flex; flex-direction:column; overflow:hidden">
+          <div style="padding:18px 16px 8px">
+            <div style="font-family:'Exo 2',sans-serif; font-weight:600; font-size:24px">Einstellungen</div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:8px 16px 0; display:flex; flex-direction:column; gap:16px">
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px">
+              <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">person</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:16px; color:#14B8A6">Konto</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:12px">
+                <div style="width:40px; height:40px; border-radius:50%; background:#FFFFFF; display:flex; align-items:center; justify-content:center; font-family:'Exo 2',sans-serif; font-weight:700; font-size:20px; color:#4285F4">G</div>
+                <div style="flex:1">
+                  <div style="font-size:16px">Frank Barwandt</div>
+                  <div style="font-size:14px; color:#CAC4D0">barwandt@gmail.com</div>
+                </div>
+                <div style="border:1px solid #FF5252; color:#FF5252; border-radius:20px; padding:8px 16px; font-size:14px">Abmelden</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#938F99; margin-top:12px">Letzte Synchronisation: 18. Juli 2026, 08:02</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                <div style="display:flex; align-items:center; gap:8px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">photo_camera</span><span style="font-size:14px">Fotos sichern</span></div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#14B8A6; position:relative"><div style="position:absolute; right:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#FFFFFF"></div></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px">
+                <div style="display:flex; align-items:center; gap:8px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">videocam</span><span style="font-size:14px">Videos sichern</span></div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#3A4644; position:relative"><div style="position:absolute; left:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#938F99"></div></div>
+              </div>
+              <div style="display:flex; justify-content:center; margin-top:14px"><div style="background:#14B8A6; color:#04211D; border-radius:24px; padding:12px 24px; font-size:14px; font-weight:600">Tagebucheinträge sichern</div></div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px">
+              <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">brightness_6</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:16px; color:#14B8A6">Erscheinungsbild</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:#FFD54F">dark_mode</span>
+                  <div><div style="font-size:16px">Dunkelmodus</div><div style="font-size:14px; color:#CAC4D0">Aktiv</div></div>
+                </div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#14B8A6; position:relative"><div style="position:absolute; right:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#FFFFFF"></div></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#938F99">smartphone</span>
+                  <div><div style="font-size:16px">System folgen</div><div style="font-size:14px; color:#CAC4D0">Automatisch</div></div>
+                </div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#3A4644; position:relative"><div style="position:absolute; left:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#938F99"></div></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#938F99">routine</span>
+                  <div><div style="font-size:16px">Sonnenauf-/untergang</div><div style="font-size:14px; color:#CAC4D0">Dunkel bei Nacht, hell bei Tag</div></div>
+                </div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#3A4644; position:relative"><div style="position:absolute; left:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#938F99"></div></div>
+              </div>
+              <div style="height:1px; background:#2A2A2A; margin:14px 0"></div>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Material Symbols Rounded'; font-size:16px; color:#CAC4D0">palette</span>
+                <span style="font-size:14px; color:#CAC4D0">Themes Manager</span>
+              </div>
+              <div style="margin-top:6px; background:#212C2B; border-radius:12px 12px 0 0; border-bottom:1px solid #14B8A6; padding:14px 12px; display:flex; justify-content:space-between; align-items:center">
+                <span style="font-size:15px">Profilfarbe — Farbe des Dashboard-Profils</span>
+                <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#CAC4D0">keyboard_arrow_down</span>
+              </div>
+            </div>
+            <div style="background:linear-gradient(180deg,#18201F,#1A2422); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:16px">
+              <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:#14B8A6">lock</span>
+                <span style="font-family:'Exo 2',sans-serif; font-weight:500; font-size:16px; color:#14B8A6">Sicherheit</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#938F99">fingerprint</span>
+                  <div><div style="font-size:16px">Fingerabdruck / PIN</div><div style="font-size:14px; color:#CAC4D0">Sperrt nach 60 s im Hintergrund</div></div>
+                </div>
+                <div style="width:52px; height:32px; border-radius:16px; background:#3A4644; position:relative"><div style="position:absolute; left:4px; top:4px; width:24px; height:24px; border-radius:50%; background:#938F99"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; background:#18201F; padding:10px 0 14px">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">auto_awesome</span><span style="font-size:12px; color:#938F99">Rückblick</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">analytics</span><span style="font-size:12px; color:#938F99">Dashboard</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#938F99">book</span><span style="font-size:12px; color:#938F99">Tagebuch</span></div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px"><div style="background:#0E453D; border-radius:16px; padding:2px 16px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:#14B8A6">settings</span></div><span style="font-size:12px; color:#14B8A6; font-weight:600">Einstellungen</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

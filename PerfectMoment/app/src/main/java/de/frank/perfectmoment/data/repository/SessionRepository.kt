@@ -33,6 +33,9 @@ interface SessionRepository {
     suspend fun setQuestionText(questionId: Long, text: String)
     suspend fun setQuestionEmoji(questionId: Long, emoji: String)
     suspend fun removeQuestion(sessionId: Long, questionId: Long)
+
+    /** Legt die Fragen eines Vorlese-Verlaufs in die gezogene Reihenfolge. */
+    suspend fun reorderQuestions(sessionId: Long, orderedIds: List<Long>)
     suspend fun setSessionSettings(
         sessionId: Long,
         pauseRep: Int,
@@ -135,6 +138,9 @@ class RoomSessionRepository(
 
     override suspend fun removeQuestion(sessionId: Long, questionId: Long) =
         sessionDao.removeQuestion(sessionId, questionId)
+
+    override suspend fun reorderQuestions(sessionId: Long, orderedIds: List<Long>) =
+        sessionDao.reorderQuestions(sessionId, orderedIds)
 
     override suspend fun setSessionSettings(
         sessionId: Long,

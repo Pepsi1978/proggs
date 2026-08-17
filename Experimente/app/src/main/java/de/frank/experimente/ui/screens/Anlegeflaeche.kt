@@ -39,6 +39,7 @@ import de.frank.experimente.ui.components.merkeDruck
 import de.frank.experimente.ui.theme.Bewegung
 import de.frank.experimente.ui.theme.LocalEffektstufe
 import de.frank.experimente.ui.theme.LocalFarben
+import de.frank.experimente.ui.theme.Masse
 import de.frank.experimente.ui.theme.LocalSchriften
 import de.frank.experimente.ui.theme.Symbole
 import de.frank.experimente.ui.theme.dauer
@@ -147,7 +148,15 @@ fun BoxScope.Anlegeblatt(
                     indication = null,
                     onClick = {},
                 )
-                .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 28.dp),
+                // Unten bleibt die Höhe der Reiterleiste frei (64 dp Leiste + 12 dp Luft):
+                // sonst liegen „Abbrechen“, „Verbessern“ und „Speichern“ hinter der Leiste
+                // und lassen sich kaum treffen.
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 24.dp,
+                    bottom = 28.dp + Masse.leiste + Masse.luft,
+                ),
         ) {
             Text(titel, style = schriften.abschnittstitel, color = farben.text)
             Text(

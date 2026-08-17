@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;background:#0b0a09;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:inherit}
+#fold-app{--grund:#151210;--flaeche:#201B17;--erhoeht:#2A231D;--rand:#38302A;--randweich:#2C251F;--text:#F4EEE7;--gedaempft:#A99C8F;--blass:#6E635A;--aktion:#C4623C;--aktiongedeckt:#3A231A;--erledigt:#6F8F6A;--erledigtgedeckt:#22301F;--warnung:#D8A03C;--glas:rgba(21,18,16,.62);--aufaktion:#FFF6F1}
+#fold-app[data-theme="hell"]{--grund:#F8F4EE;--flaeche:#FFFFFF;--erhoeht:#FFFFFF;--rand:#E6DCD0;--randweich:#EFE8DF;--text:#1E1915;--gedaempft:#6C6157;--blass:#9C9186;--aktion:#B0522E;--aktiongedeckt:#F6E6DD;--erledigt:#5A7A55;--erledigtgedeckt:#E6EFE3;--warnung:#9A6A12;--glas:rgba(248,244,238,.66);--aufaktion:#FFF6F1}
+#fold-app ::-webkit-scrollbar{width:0;height:0}
+#fold-app [data-i="1"]{animation-delay:60ms}
+#fold-app [data-i="2"]{animation-delay:120ms}
+#fold-app [data-i="3"]{animation-delay:180ms}
+#fold-app [data-i="4"]{animation-delay:240ms}
+#fold-app [data-i="5"]{animation-delay:300ms}
+#fold-app[data-effekte="Gedämpft"] [data-dauerbewegung]{animation:none!important;opacity:.45}
+#fold-app[data-effekte="Aus"] *{animation:none!important;transition:none!important}
+#fold-app[data-effekte="Aus"] [data-dauerbewegung]{display:none!important}
+@keyframes lichtgrund{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-6%,7%,0) scale(1.15)}100%{transform:translate3d(0,0,0) scale(1)}}
+@keyframes saum{to{transform:rotate(360deg)}}
+@keyframes einfliegen{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes atmen{0%{transform:scale(1);box-shadow:0 10px 26px color-mix(in srgb,var(--aktion) 34%,transparent)}50%{transform:scale(1.05);box-shadow:0 14px 40px color-mix(in srgb,var(--aktion) 52%,transparent)}100%{transform:scale(1);box-shadow:0 10px 26px color-mix(in srgb,var(--aktion) 34%,transparent)}}
+@keyframes puls{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.9);opacity:0}}
+@keyframes schimmer{from{transform:translateX(-100%)}to{transform:translateX(280%)}}
+@keyframes streifen{from{transform:translateX(-100%)}to{transform:translateX(333%)}}
+@keyframes funke{0%{opacity:0;transform:translateY(0) scale(.4)}18%{opacity:1}100%{opacity:0;transform:translateY(-86px) scale(.9)}}
+@keyframes bluete{from{opacity:.7;transform:scale(.2)}to{opacity:0;transform:scale(2.4)}}
+@keyframes welle{0%{transform:scaleY(.22)}100%{transform:scaleY(1)}}
+@keyframes hakenzeile{0%{background:color-mix(in srgb,var(--erledigt) 30%,transparent)}100%{background:transparent}}
+@keyframes dot{0%,60%,100%{opacity:.25}30%{opacity:1}}
+@keyframes hoch{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media (prefers-reduced-motion: reduce){#fold-app [data-dauerbewegung]{animation:none!important}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 20px 40px">
+<div style="display:flex;justify-content:center">
+<div ref="{{ setWrap }}" style="transform-origin:top center;width:470px;height:740px;border-radius:42px;padding:10px;background:linear-gradient(160deg,#3a3733,#171614 42%,#2c2926);box-shadow:0 40px 90px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.06) inset">
+<div id="fold-app" data-theme="{{ theme }}" data-effekte="{{ effekte }}" ref="{{ setScreen }}" style="position:relative;width:450px;height:720px;border-radius:33px;overflow:hidden;background:var(--grund);color:var(--text);font-family:Inter,sans-serif;isolation:isolate">
+
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden">
+    <div data-dauerbewegung style="position:absolute;top:-18%;right:-24%;width:98%;height:44%;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--aktion) 30%,transparent) 0,transparent 68%);filter:blur(22px);animation:lichtgrund 24000ms cubic-bezier(0.42,0,0.58,1) infinite"></div>
+    <div data-dauerbewegung style="position:absolute;bottom:6%;left:-30%;width:96%;height:40%;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--erledigt) 22%,transparent) 0,transparent 66%);filter:blur(26px);animation:lichtgrund 24000ms cubic-bezier(0.42,0,0.58,1) infinite reverse"></div>
+    <div style="position:absolute;inset:0;opacity:.035;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%223%22/></filter><rect width=%22120%22 height=%22120%22 filter=%22url(%23n)%22/></svg>')"></div>
+  </div>
+
+  <div style="position:absolute;top:0;left:0;right:0;height:30px;z-index:6;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:500 12px/12px 'JetBrains Mono',monospace;color:var(--text);pointer-events:none">
+    <span>7:04</span>
+    <span style="display:flex;align-items:center;gap:6px">
+      <span style="display:block;width:14px;height:9px;border-radius:1px;background:currentColor;opacity:.8"></span>
+      <span style="display:block;width:12px;height:9px;border-radius:1px 1px 4px 4px;background:currentColor;opacity:.8"></span>
+      <span style="display:block;width:20px;height:10px;border-radius:3px;border:1px solid currentColor;opacity:.8"></span>
+    </span>
+  </div>
+  <div aria-hidden="true" style="position:absolute;top:9px;left:50%;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:#050404;z-index:7;box-shadow:0 0 0 1px rgba(255,255,255,.08)"></div>
+
+  <sc-if value="{{ istMonitor }}" hint-placeholder-val="{{ true }}">
+  <section data-screen-label="B-10 Monitor" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:4px;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid color-mix(in srgb,var(--rand) 60%,transparent)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Monitor</h1>
+      <span style="flex:1"></span>
+      <button type="button" aria-label="Erscheinung umschalten" onClick="{{ themaWechseln }}" style="width:48px;height:48px;border:0;border-radius:9999px;display:grid;place-items:center;background:transparent;color:var(--text);cursor:pointer">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="{{ themaIcon }}"></path></svg>
+      </button>
+      <button type="button" aria-label="Einstellungen" onClick="{{ zuEinstellungen }}" style="width:48px;height:48px;border:0;border-radius:9999px;display:grid;place-items:center;background:transparent;color:var(--text);cursor:pointer">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.13 7.13 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.48.48 0 0 0 .12.61l2.03 1.58c-.05.31-.09.65-.09.98s.03.66.08.98l-2.02 1.57a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.38.31.59.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.23.24.41.48.41h3.84c.24 0 .44-.18.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.02-1.57ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"></path></svg>
+      </button>
+    </header>
+
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 132px">
+      <p style="margin:0;font:400 13px/18px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ zaehlzeile }}</p>
+
+      <sc-if value="{{ zeigtLaedt }}">
+        <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ skelette }}" as="s" hint-placeholder-count="3">
+            <div style="position:relative;overflow:hidden;height:118px;border-radius:20px;background:var(--flaeche);border:1px solid var(--randweich)">
+              <div data-dauerbewegung style="position:absolute;inset:0;width:60%;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--text) 9%,transparent),transparent);animation:schimmer 1400ms linear infinite"></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ zeigtGanzLeer }}">
+        <div style="margin-top:120px;text-align:center;padding:0 12px">
+          <p style="margin:0;font-family:Fraunces,serif;font-size:22px;line-height:30px;font-weight:600;text-wrap:pretty">Hier steht noch nichts. Leg dir eines an oder hol dir Vorschläge.</p>
+          <button type="button" onClick="{{ zuHeute }}" style="margin-top:24px;height:48px;padding:0 20px;border:0;border-radius:9999px;background:transparent;color:var(--aktion);font:500 16px/20px Inter,sans-serif;cursor:pointer">Vorschläge holen</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ zeigtLaeuft }}">
+        <h2 style="margin:24px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Läuft</h2>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ laufkarten }}" as="k" hint-placeholder-count="2">
+            <article data-i="{{ k.i }}" data-kipp style="position:relative;padding:1.5px;border-radius:20px;background:color-mix(in srgb,var(--aktion) 26%,var(--rand));overflow:hidden;cursor:pointer;box-shadow:0 0 22px color-mix(in srgb,var(--aktion) 20%,transparent);animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both;transform:perspective(900px) rotateX(calc(var(--ky,0)*1deg)) rotateY(calc(var(--kx,0)*1deg))" onClick="{{ k.klapp }}">
+              <div data-dauerbewegung style="position:absolute;left:-70%;top:-160%;width:240%;height:420%;background:conic-gradient(from 0deg,transparent 0 60%,color-mix(in srgb,var(--aktion) 95%,transparent) 76%,transparent 88%);animation:saum 6000ms linear infinite"></div>
+              <div style="position:relative;border-radius:18.5px;background:var(--erhoeht);padding:21px;border-top:1px solid color-mix(in srgb,var(--text) 14%,transparent)">
+                <div style="display:flex;align-items:flex-start;gap:14px">
+                  <div style="flex:1;min-width:0">
+                    <h3 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ k.titel }}</h3>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+                      <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;background:var(--aktiongedeckt);color:var(--aktion);font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap">{{ k.stufe }}</span>
+                      <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--gedaempft);font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap">{{ k.tag }}</span>
+                      <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;border:1px solid var(--rand);color:var(--gedaempft);font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap">{{ k.herkunft }}</span>
+                    </div>
+                  </div>
+                  <div style="position:relative;width:56px;height:56px;flex:0 0 56px;display:grid;place-items:center">
+                    <svg width="56" height="56" viewBox="0 0 56 56" style="position:absolute;inset:0;transform:rotate(-90deg)">
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="var(--randweich)" stroke-width="4"></circle>
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="var(--aktion)" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{ k.dash }}" style="filter:drop-shadow(0 0 6px color-mix(in srgb,var(--aktion) 70%,transparent));transition:stroke-dasharray 600ms cubic-bezier(.2,0,0,1)"></circle>
+                    </svg>
+                    <span style="position:relative;font:500 10.5px/13px 'JetBrains Mono',monospace;color:var(--text);white-space:nowrap">{{ k.stand }}</span>
+                  </div>
+                </div>
+                <sc-if value="{{ k.offen }}">
+                  <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--randweich)">
+                    <p style="margin:0;font:400 16px/25px Inter,sans-serif;color:var(--text);text-wrap:pretty">{{ k.text }}</p>
+                    <p style="margin:14px 0 8px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Aufgaben heute</p>
+                    <sc-for list="{{ k.aufgaben }}" as="a" hint-placeholder-count="2">
+                      <p style="margin:0 0 6px;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">{{ a.text }}</p>
+                    </sc-for>
+                    <div style="display:flex;gap:10px;margin-top:16px">
+                      <button type="button" onClick="{{ k.gespraech }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--text);font:500 15px/20px Inter,sans-serif;cursor:pointer">Gespräch</button>
+                      <button type="button" onClick="{{ k.auswerten }}" style="flex:1.4;height:48px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 15px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%));box-shadow:0 8px 20px color-mix(in srgb,var(--aktion) 30%,transparent)">Wie ist es gelaufen?</button>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ k.funkelt }}">
+                <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px">
+                  <i style="position:absolute;bottom:14px;left:8%;width:4px;height:4px;border-radius:50%;background:var(--aktion);animation:funke 1200ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:18%;width:3px;height:3px;border-radius:50%;background:var(--warnung);animation:funke 1200ms 90ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:27%;width:5px;height:5px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 40ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:38%;width:3px;height:3px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 220ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:47%;width:4px;height:4px;border-radius:50%;background:var(--warnung);animation:funke 1200ms 150ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:58%;width:3px;height:3px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 300ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:66%;width:5px;height:5px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 60ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:76%;width:3px;height:3px;border-radius:50%;background:var(--warnung);animation:funke 1200ms 260ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:86%;width:4px;height:4px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 180ms linear both"></i>
+                  <i style="position:absolute;bottom:14px;left:93%;width:3px;height:3px;border-radius:50%;background:var(--aktion);animation:funke 1200ms 340ms linear both"></i>
+                </div>
+              </sc-if>
+            </article>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ zeigtLaeuftLeer }}">
+        <h2 style="margin:24px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Läuft</h2>
+        <p style="margin:0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Noch läuft nichts. Starte eines von unten.</p>
+      </sc-if>
+
+      <sc-if value="{{ zeigtTodo }}">
+        <h2 style="margin:24px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Heute zu tun</h2>
+        <div style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);overflow:hidden">
+          <sc-for list="{{ todogruppen }}" as="g" hint-placeholder-count="2">
+            <h3 style="margin:0;padding:16px 16px 8px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">{{ g.titel }}</h3>
+            <sc-for list="{{ g.aufgaben }}" as="a" hint-placeholder-count="2">
+              <button type="button" onClick="{{ a.haken }}" style="width:100%;min-height:48px;padding:12px 16px;border:0;border-top:1px solid var(--randweich);display:flex;align-items:center;gap:12px;background:transparent;text-align:left;cursor:pointer;color:{{ a.farbe }}">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="flex:0 0 24px"><path d="{{ a.icon }}"></path></svg>
+                <span style="font:400 15px/22px Inter,sans-serif;color:{{ a.textfarbe }}">{{ a.text }}</span>
+              </button>
+            </sc-for>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ zeigtStehtAn }}">
+        <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Steht an</h2>
+        <sc-if value="{{ istVoll }}">
+          <p style="margin:0 0 12px;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--warnung) 14%,transparent);border:1px solid color-mix(in srgb,var(--warnung) 40%,transparent);font:400 14px/21px Inter,sans-serif;color:var(--text)">Drei Experimente laufen schon. Schließ eines ab, bevor du ein neues beginnst.</p>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ wartekarten }}" as="w" hint-placeholder-count="4">
+            <article data-i="{{ w.i }}" style="position:relative;border:1px solid var(--rand);border-radius:20px;background:color-mix(in srgb,var(--flaeche) 92%,transparent);padding:18px;animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent);transform:{{ w.transform }};transition:{{ w.zugRuhe }};box-shadow:{{ w.zugSchatten }}">
+              <span aria-hidden="true" style="position:absolute;inset:0;border-radius:20px;pointer-events:none;opacity:{{ w.wischOpazitaet }};background:color-mix(in srgb,var(--warnung) 16%,transparent)"></span>
+              <div style="display:flex;align-items:flex-start;gap:10px">
+                <span onPointerDown="{{ w.sortieren }}" style="color:{{ w.grifffarbe }};cursor:grab;padding-top:2px;touch-action:none" title="Ziehen zum Umsortieren">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 20a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm-6-6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM9 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"></path></svg>
+                </span>
+                <div style="flex:1;min-width:0;cursor:pointer;touch-action:pan-y" onClick="{{ w.klapp }}" onPointerDown="{{ w.greifen }}">
+                  <h3 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ w.titel }}</h3>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+                    <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--gedaempft);font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap">{{ w.meta }}</span>
+                    <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;border:1px solid var(--rand);color:var(--gedaempft);font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap">{{ w.herkunft }}</span>
+                  </div>
+                </div>
+                <button type="button" aria-label="Aus dem Monitor nehmen" onClick="{{ w.entfernen }}" style="width:36px;height:36px;flex:0 0 36px;border:0;border-radius:9999px;background:transparent;color:var(--blass);cursor:pointer;display:grid;place-items:center">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"></path></svg>
+                </button>
+              </div>
+              <sc-if value="{{ w.offen }}">
+                <p style="margin:14px 0 0;font:400 15px/23px Inter,sans-serif;color:var(--gedaempft);text-wrap:pretty">{{ w.text }}</p>
+              </sc-if>
+              <button type="button" onClick="{{ w.starten }}" disabled="{{ istVoll }}" style="margin-top:16px;width:100%;height:48px;border:0;border-radius:9999px;font:500 16px/20px Inter,sans-serif;cursor:{{ w.cursor }};color:{{ w.knopffarbe }};background-image:{{ w.knopfgrund }};box-shadow:{{ w.knopfschein }}">Starten</button>
+            </article>
+          </sc-for>
+        </div>
+        <sc-if value="{{ zeigtStehtAnLeer }}">
+          <p style="margin:0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Nichts vorgemerkt.</p>
+        </sc-if>
+      </sc-if>
+    </main>
+
+    <button type="button" aria-label="Eigenes Experiment anlegen" onClick="{{ anlegenOeffnen }}" style="position:absolute;right:24px;bottom:100px;z-index:5;width:64px;height:64px;border:0;border-radius:9999px;color:var(--aufaktion);cursor:pointer;display:grid;place-items:center;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">
+      <span data-dauerbewegung style="position:absolute;inset:0;border-radius:9999px;animation:atmen 3200ms cubic-bezier(0.42,0,0.58,1) infinite"></span>
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="position:relative"><path d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2v-6Z"></path></svg>
+    </button>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istHeute }}">
+  <section data-screen-label="B-01 Heute" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:4px;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Heute</h1>
+      <span style="flex:1"></span>
+      <button type="button" aria-label="Erscheinung umschalten" onClick="{{ themaWechseln }}" style="width:48px;height:48px;border:0;border-radius:9999px;display:grid;place-items:center;background:transparent;color:var(--text);cursor:pointer">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="{{ themaIcon }}"></path></svg>
+      </button>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 120px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
+        <p style="margin:0;font:400 13px/18px 'JetBrains Mono',monospace;color:var(--gedaempft)">MITTWOCH, 12. AUGUST 2026</p>
+        <div style="display:flex;gap:4px;padding:4px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent)">
+          <button type="button" onClick="{{ zuMorgen }}" style="min-height:36px;padding:0 14px;border:0;border-radius:9999px;font:500 13px/18px Inter,sans-serif;cursor:pointer;background:{{ morgenGrund }};color:{{ morgenFarbe }}">Morgen</button>
+          <button type="button" onClick="{{ zuAbend }}" style="min-height:36px;padding:0 14px;border:0;border-radius:9999px;font:500 13px/18px Inter,sans-serif;cursor:pointer;background:{{ abendGrund }};color:{{ abendFarbe }}">Abend</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ b01Leer }}">
+        <h2 style="margin:0;font-family:Fraunces,serif;font-size:22px;font-weight:600;line-height:28px">Wie ist deine Lage heute?</h2>
+        <p style="margin:8px 0 0;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">Was für ein Tag ist das? Was liegt vor dir?</p>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:36px">
+          <div style="position:relative;width:88px;height:88px;display:grid;place-items:center">
+            <sc-if value="{{ aufnahme }}">
+              <span data-dauerbewegung style="position:absolute;inset:0;border-radius:9999px;border:2px solid var(--aktion);animation:puls 1800ms ease-out infinite"></span>
+              <span data-dauerbewegung style="position:absolute;inset:0;border-radius:9999px;border:2px solid var(--aktion);animation:puls 1800ms 400ms ease-out infinite"></span>
+              <span data-dauerbewegung style="position:absolute;inset:0;border-radius:9999px;border:2px solid var(--aktion);animation:puls 1800ms 800ms ease-out infinite"></span>
+            </sc-if>
+            <button type="button" onClick="{{ aufnahmeUmschalten }}" aria-label="Lage einsprechen" style="position:relative;width:88px;height:88px;border:1px solid color-mix(in srgb,var(--text) 28%,transparent);border-radius:9999px;display:grid;place-items:center;color:var(--aufaktion);background:var(--aktion);cursor:pointer;box-shadow:0 10px 30px color-mix(in srgb,var(--aktion) 36%,transparent)">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><path d="{{ mikroIcon }}"></path></svg>
+            </button>
+          </div>
+          <sc-if value="{{ aufnahme }}">
+            <div style="display:flex;align-items:flex-end;gap:3px;height:40px;margin-top:18px">
+              <sc-for list="{{ wellen }}" as="b" hint-placeholder-count="24">
+                <i data-dauerbewegung style="display:block;width:3px;height:36px;border-radius:2px;background:var(--aktion);transform-origin:bottom;animation:welle {{ b.dauer }} ease-in-out infinite alternate;animation-delay:{{ b.versatz }}"></i>
+              </sc-for>
+            </div>
+            <p style="margin:10px 0 0;font:400 13px/18px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ zeitAnzeige }}</p>
+          </sc-if>
+          <button type="button" onClick="{{ tippen }}" style="margin-top:14px;min-height:48px;padding:0 16px;border:0;border-radius:14px;background:transparent;color:var(--aktion);font:500 16px/20px Inter,sans-serif;cursor:pointer">Lieber tippen</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b01Text }}">
+        <textarea aria-label="Heutige Lage" value="{{ lage }}" onChange="{{ lageAendern }}" placeholder="Was für ein Tag ist das? Was liegt vor dir?" style="display:block;width:100%;min-height:150px;resize:none;padding:18px;border:1px solid var(--rand);border-radius:14px;color:var(--text);background:var(--erhoeht);font:400 16px/25px Inter,sans-serif;caret-color:var(--aktion);outline:none"></textarea>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px">
+          <button type="button" onClick="{{ verbessern }}" style="min-height:48px;padding:0 14px;border:0;border-radius:14px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">Text mit KI verbessern</button>
+          <button type="button" onClick="{{ vorschlaegeErzeugen }}" style="min-height:48px;padding:0 22px;border:0;border-radius:14px;color:var(--aufaktion);font:500 16px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Weiter</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b01Wartet }}">
+        <div style="margin-top:40px;border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);overflow:hidden">
+          <div style="height:2px;background:var(--erhoeht);overflow:hidden"><div data-dauerbewegung style="width:30%;height:2px;background:var(--aktion);animation:streifen 1800ms linear infinite"></div></div>
+          <p style="margin:0;padding:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Ich sehe mir an, was ich über dich weiß …</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b01Vorschlaege }}">
+        <h2 style="margin:0 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Fünf Vorschläge für heute</h2>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ vorschlaege }}" as="v" hint-placeholder-count="5">
+            <article data-i="{{ v.i }}" onPointerDown="{{ v.greifen }}" style="position:relative;border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent);touch-action:pan-y;transform:{{ v.transform }};transition:{{ v.zugRuhe }}">
+              <span aria-hidden="true" style="position:absolute;inset:0;border-radius:20px;pointer-events:none;opacity:{{ v.wischOpazitaet }};background:{{ v.wischGrund }}"></span>
+              <span aria-hidden="true" style="position:absolute;top:18px;left:18px;right:18px;text-align:{{ v.wischSeite }};font:500 13px/18px 'JetBrains Mono',monospace;letter-spacing:.4px;pointer-events:none;opacity:{{ v.wischOpazitaet }};color:{{ v.wischFarbe }}">{{ v.wischText }}</span>
+              <h3 style="margin:0;padding-right:44px;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ v.titel }}</h3>
+              <p style="margin:8px 0 0;font:400 15px/23px Inter,sans-serif;text-wrap:pretty">{{ v.text }}</p>
+              <p style="margin:12px 0 0;font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--gedaempft)">{{ v.meta }}</p>
+              <sc-if value="{{ v.vonMerkliste }}">
+                <span style="display:inline-flex;align-items:center;height:24px;margin-top:10px;padding:0 10px;border-radius:9999px;background:var(--aktiongedeckt);color:var(--aktion);font:400 12px/16px 'JetBrains Mono',monospace">von deiner Merkliste</span>
+              </sc-if>
+              <button type="button" aria-label="Auf die Merkliste legen" onClick="{{ v.merken }}" style="position:absolute;top:12px;right:10px;width:40px;height:40px;border:0;border-radius:9999px;background:transparent;color:{{ v.merkfarbe }};cursor:pointer;display:grid;place-items:center">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="{{ v.merkicon }}"></path></svg>
+              </button>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button type="button" onClick="{{ v.inMonitor }}" style="flex:1;height:48px;border:1px solid var(--aktion);border-radius:9999px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">In den Monitor</button>
+                <button type="button" onClick="{{ v.jetztStarten }}" style="flex:1;height:48px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 15px/20px Inter,sans-serif;cursor:{{ v.cursor }};background-image:{{ v.knopfgrund }}">Jetzt starten</button>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:16px">
+          <button type="button" onClick="{{ andereVorschlaege }}" style="min-height:48px;padding:0 16px;border:0;border-radius:14px;background:transparent;color:var(--aktion);font:500 16px/20px Inter,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 20q-3.35 0-5.675-2.325T4 12q0-3.35 2.325-5.675T12 4q1.725 0 3.3.713T18 6.7V4h2v7h-7V9h3.8q-.95-1.4-2.15-2.2T12 6Q9.5 6 7.75 7.75T6 12q0 2.5 1.75 4.25T12 18q1.925 0 3.475-1.1T17.65 14H19.7q-.7 2.65-2.85 4.325T12 20Z"></path></svg>
+            <span>Andere Vorschläge</span>
+          </button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b01Abend }}">
+        <h2 style="margin:0 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Abend</h2>
+        <p style="margin:0 0 16px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">{{ abendzeile }}</p>
+        <sc-for list="{{ laufkarten }}" as="k" hint-placeholder-count="2">
+          <article style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;margin-bottom:12px;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent)">
+            <h3 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ k.titel }}</h3>
+            <p style="margin:6px 0 14px;font:400 13px/18px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ k.tag }} · {{ k.stand }} erledigt</p>
+            <div style="display:flex;flex-direction:column;border-top:1px solid var(--randweich);margin-bottom:14px">
+              <sc-for list="{{ k.liste }}" as="a" hint-placeholder-count="3">
+                <button type="button" onClick="{{ a.haken }}" style="min-height:48px;padding:10px 0;border:0;border-bottom:1px solid var(--randweich);display:flex;align-items:center;gap:12px;background:transparent;text-align:left;cursor:pointer;color:{{ a.farbe }}">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="flex:0 0 24px"><path d="{{ a.icon }}"></path></svg>
+                  <span style="font:400 15px/22px Inter,sans-serif;color:{{ a.textfarbe }}">{{ a.text }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button type="button" onClick="{{ k.gespraech }}" aria-label="Gespräch zum Experiment" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--text);font:500 15px/20px Inter,sans-serif;cursor:pointer">Gespräch</button>
+              <button type="button" onClick="{{ k.nichtUmgesetzt }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--gedaempft);font:500 15px/20px Inter,sans-serif;cursor:pointer">Nicht umgesetzt</button>
+            </div>
+            <button type="button" onClick="{{ k.auswerten }}" style="width:100%;height:48px;margin-top:10px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 16px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Wie ist es gelaufen?</button>
+          </article>
+        </sc-for>
+      </sc-if>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istGespraech }}">
+  <section data-screen-label="B-02 Gespräch" style="position:absolute;inset:0;z-index:1;background:var(--grund);animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:8px;padding:0 8px;background:var(--glas);backdrop-filter:blur(24px)">
+      <button type="button" aria-label="Zurück" onClick="{{ zurueck }}" style="width:48px;height:48px;border:0;border-radius:9999px;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg>
+      </button>
+      <div style="min-width:0">
+        <h1 style="margin:0;font-family:Fraunces,serif;font-size:20px;font-weight:600;line-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ gespraechTitel }}</h1>
+        <p style="margin:0;font:400 12px/16px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ gespraechTag }}</p>
+      </div>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:96px;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ nachrichten }}" as="n" hint-placeholder-count="3">
+        <div style="width:fit-content;max-width:calc(100% - 28px);padding:16px;font:400 15px/24px Inter,sans-serif;white-space:pre-wrap;align-self:{{ n.seite }};border-radius:{{ n.radius }};background:{{ n.grund }};border:{{ n.rand }}">{{ n.text }}</div>
+      </sc-for>
+      <sc-if value="{{ denkt }}">
+        <div style="width:fit-content;padding:16px 20px;border-radius:20px 20px 20px 6px;border:1px solid var(--rand);background:var(--flaeche);display:flex;gap:6px">
+          <i data-dauerbewegung style="width:6px;height:6px;border-radius:50%;background:var(--gedaempft);animation:dot 1400ms linear infinite"></i>
+          <i data-dauerbewegung style="width:6px;height:6px;border-radius:50%;background:var(--gedaempft);animation:dot 1400ms 200ms linear infinite"></i>
+          <i data-dauerbewegung style="width:6px;height:6px;border-radius:50%;background:var(--gedaempft);animation:dot 1400ms 400ms linear infinite"></i>
+        </div>
+      </sc-if>
+    </main>
+    <form onSubmit="{{ senden }}" style="position:absolute;left:0;right:0;bottom:0;height:96px;display:flex;align-items:center;gap:10px;padding:20px 16px;background:var(--glas);backdrop-filter:blur(24px)">
+      <div style="flex:1;height:56px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);display:flex;align-items:center">
+        <input value="{{ entwurf }}" onChange="{{ entwurfAendern }}" placeholder="Nachricht eingeben" aria-label="Nachricht eingeben" style="width:100%;min-width:0;border:0;outline:0;background:transparent;padding:0 6px 0 16px;color:var(--text);font:400 16px/25px Inter,sans-serif;caret-color:var(--aktion)">
+        <button type="button" onClick="{{ gespraechSprechen }}" aria-label="Gespräch aufnehmen" style="width:48px;height:48px;flex:0 0 48px;margin-right:4px;border:0;border-radius:9999px;background:transparent;color:{{ gespraechMikroFarbe }};cursor:pointer;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="{{ gespraechMikroIcon }}"></path></svg>
+        </button>
+      </div>
+      <button type="submit" aria-label="Senden" style="width:56px;height:56px;flex:0 0 56px;border:0;border-radius:9999px;background:var(--aktion);color:var(--aufaktion);cursor:pointer;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8-19 8Z"></path></svg>
+      </button>
+    </form>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istAuswertung }}">
+  <section data-screen-label="B-03 Auswertung" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--glas);backdrop-filter:blur(24px)">
+      <button type="button" aria-label="Zurück" onClick="{{ zurueck }}" style="width:48px;height:48px;border:0;border-radius:9999px;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg>
+      </button>
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:22px;font-weight:600;line-height:28px">Auswertung</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:20px 16px 40px">
+      <h2 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px">{{ gespraechTitel }}</h2>
+      <p style="margin:6px 0 0;font:400 13px/18px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ gespraechTag }} · mittel</p>
+
+      <sc-if value="{{ b03Aufnahme }}">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:36px">
+          <button type="button" onClick="{{ b03Sprechen }}" aria-label="Auswertung einsprechen" style="position:relative;width:88px;height:88px;border:0;border-radius:9999px;display:grid;place-items:center;color:var(--aufaktion);background:var(--aktion);cursor:pointer;box-shadow:0 10px 30px color-mix(in srgb,var(--aktion) 36%,transparent)">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z"></path></svg>
+          </button>
+          <p style="margin:16px 0 0;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft);text-align:center">Erzähl, was daraus geworden ist.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b03Text }}">
+        <textarea aria-label="Auswertungstext" value="{{ b03Inhalt }}" onChange="{{ b03Aendern }}" style="display:block;width:100%;min-height:140px;margin-top:24px;resize:none;padding:16px;border:1px solid var(--rand);border-radius:14px;color:var(--text);background:var(--erhoeht);font:400 16px/25px Inter,sans-serif;outline:none;caret-color:var(--aktion)"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
+          <button type="button" onClick="{{ b03Verbessern }}" style="min-height:48px;padding:0 14px;border:0;border-radius:14px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">Text mit KI verbessern</button>
+          <button type="button" onClick="{{ b03Weiter }}" style="flex:1;min-height:48px;padding:0 20px;border:0;border-radius:14px;color:var(--aufaktion);font:500 16px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Weiter</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b03Wartet }}">
+        <div style="margin-top:24px;border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);overflow:hidden">
+          <div style="height:2px;background:var(--erhoeht);overflow:hidden"><div data-dauerbewegung style="width:30%;height:2px;background:var(--aktion);animation:streifen 1800ms linear infinite"></div></div>
+          <p style="margin:0;padding:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Ich denke darüber nach …</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ b03Antwort }}">
+        <div style="position:relative;margin-top:24px;border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;animation:hoch 400ms ease both">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--aktion)">Einschätzung</span>
+            <button type="button" aria-label="Auswertung vorlesen" onClick="{{ vorlesen }}" style="width:44px;height:44px;border:0;border-radius:9999px;background:transparent;color:{{ vorlesefarbe }};cursor:pointer;display:grid;place-items:center">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3c0-1.77-1-3.29-2.5-4.03v8.05c1.5-.73 2.5-2.25 2.5-4.02ZM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77Z"></path></svg>
+            </button>
+          </div>
+          <p style="margin:0;font:400 16px/25px Inter,sans-serif;text-wrap:pretty">
+            <sc-for list="{{ abschnitte }}" as="t" hint-placeholder-count="3">
+              <span style="border-radius:4px;padding:1px 0;background:{{ t.grund }};color:{{ t.farbe }};transition:background-color 240ms ease">{{ t.text }}</span>
+            </sc-for>
+          </p>
+          <button type="button" onClick="{{ nochmalVersuchen }}" style="margin-top:14px;min-height:48px;padding:0 14px;border:0;border-radius:14px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 20q-3.35 0-5.675-2.325T4 12q0-3.35 2.325-5.675T12 4q1.725 0 3.3.713T18 6.7V4h2v7h-7V9h3.8q-.95-1.4-2.15-2.2T12 6Q9.5 6 7.75 7.75T6 12q0 2.5 1.75 4.25T12 18q1.925 0 3.475-1.1T17.65 14H19.7q-.7 2.65-2.85 4.325T12 20Z"></path></svg>
+            <span>Nochmal versuchen</span>
+          </button>
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button type="button" onClick="{{ ueberspringen }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--text);font:500 15px/20px Inter,sans-serif;cursor:pointer">Überspringen</button>
+            <button type="button" onClick="{{ abschliessen }}" style="flex:1;height:48px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 15px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Fertig</button>
+          </div>
+          <sc-if value="{{ bluete }}">
+            <span aria-hidden="true" style="position:absolute;left:50%;top:50%;width:220px;height:220px;margin:-110px 0 0 -110px;border-radius:50%;border:2px solid var(--aktion);pointer-events:none;animation:bluete 1600ms cubic-bezier(.2,0,0,1) both"></span>
+          </sc-if>
+        </div>
+      </sc-if>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istZiele }}">
+  <section data-screen-label="B-04 Wünsche und Ziele" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Wünsche &amp; Ziele</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 120px">
+      <sc-if value="{{ zieleLeer }}">
+        <p style="margin:0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Noch keine Ziele. Sprich eines ein.</p>
+      </sc-if>
+      <sc-for list="{{ ziele }}" as="z" hint-placeholder-count="3">
+        <article data-i="{{ z.i }}" style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;margin-bottom:12px;animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both">
+          <h3 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ z.titel }}</h3>
+          <p style="margin:8px 0 0;font:400 15px/23px Inter,sans-serif;color:var(--gedaempft);text-wrap:pretty">{{ z.text }}</p>
+          <p style="margin:12px 0 0;font:400 12px/16px 'JetBrains Mono',monospace;color:var(--blass)">{{ z.datum }}</p>
+        </article>
+      </sc-for>
+    </main>
+    <button type="button" aria-label="Ziel anlegen" onClick="{{ zielOeffnen }}" style="position:absolute;right:24px;bottom:100px;z-index:5;width:64px;height:64px;border:0;border-radius:9999px;color:var(--aufaktion);cursor:pointer;display:grid;place-items:center;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%));box-shadow:0 10px 26px color-mix(in srgb,var(--aktion) 34%,transparent)">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2v-6Z"></path></svg>
+    </button>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istMerkliste }}">
+  <section data-screen-label="B-05 Merkliste" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Merkliste</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 120px">
+      <sc-for list="{{ merkliste }}" as="m" hint-placeholder-count="4">
+        <article data-i="{{ m.i }}" style="display:flex;align-items:flex-start;gap:12px;border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;margin-bottom:12px;animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both">
+          <div style="flex:1;min-width:0">
+            <h3 style="margin:0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ m.titel }}</h3>
+            <p style="margin:10px 0 0;font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--gedaempft)">{{ m.meta }}</p>
+          </div>
+          <button type="button" aria-label="Löschen" onClick="{{ m.loeschen }}" style="width:40px;height:40px;flex:0 0 40px;border:0;border-radius:9999px;background:transparent;color:var(--blass);cursor:pointer;display:grid;place-items:center">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 19q0 .825.588 1.413T8 21h8q.825 0 1.413-.587T18 19V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"></path></svg>
+          </button>
+        </article>
+      </sc-for>
+      <sc-if value="{{ merklisteLeer }}">
+        <p style="margin:24px 0 0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Die Merkliste ist leer.</p>
+      </sc-if>
+    </main>
+    <button type="button" aria-label="Eigenes Experiment anlegen" onClick="{{ anlegenOeffnen }}" style="position:absolute;right:24px;bottom:100px;z-index:5;width:64px;height:64px;border:0;border-radius:9999px;color:var(--aufaktion);cursor:pointer;display:grid;place-items:center;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%));box-shadow:0 10px 26px color-mix(in srgb,var(--aktion) 34%,transparent)">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2v-6Z"></path></svg>
+    </button>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istErkenntnisse }}">
+  <section data-screen-label="B-06 Erkenntnisse" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Erkenntnisse</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 120px">
+      <sc-if value="{{ erkenntnisseLeer }}">
+        <p style="margin:0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Noch keine Erkenntnisse. Sie wachsen aus den Auswertungen.</p>
+      </sc-if>
+      <sc-for list="{{ erkenntnisse }}" as="e" hint-placeholder-count="5">
+        <article data-i="{{ e.i }}" style="padding:18px 0;border-bottom:1px solid var(--randweich);animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both">
+          <p style="margin:0;font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--blass)">{{ e.datum }}</p>
+          <p style="margin:8px 0 0;font:400 16px/25px Inter,sans-serif;text-wrap:pretty">{{ e.text }}</p>
+        </article>
+      </sc-for>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istLogbuch }}">
+  <section data-screen-label="B-07 Logbuch" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;padding:0 16px;background:var(--glas);backdrop-filter:blur(24px)">
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:28px;font-weight:600;line-height:34px">Logbuch</h1>
+    </header>
+    <div style="position:absolute;top:94px;left:16px;right:16px;z-index:3;display:flex;gap:6px;padding:5px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent)">
+      <button type="button" onClick="{{ tab15 }}" style="flex:1;height:40px;border:0;border-radius:9999px;font:500 14px/20px Inter,sans-serif;cursor:pointer;background:{{ tab15Grund }};color:{{ tab15Farbe }}">Letzte 15 Tage</button>
+      <button type="button" onClick="{{ tabLang }}" style="flex:1;height:40px;border:0;border-radius:9999px;font:500 14px/20px Inter,sans-serif;cursor:pointer;background:{{ tabLangGrund }};color:{{ tabLangFarbe }}">Langzeit</button>
+    </div>
+    <main style="position:absolute;top:150px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 120px">
+      <sc-if value="{{ logbuchLeer }}">
+        <p style="margin:0;padding:20px;border:1px dashed var(--rand);border-radius:20px;font:400 16px/25px Inter,sans-serif;color:var(--gedaempft)">Das Logbuch beginnt mit dem ersten Tag.</p>
+      </sc-if>
+      <sc-for list="{{ logeintraege }}" as="l" hint-placeholder-count="4">
+        <article data-i="{{ l.i }}" style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;margin-bottom:12px;animation:einfliegen 240ms cubic-bezier(.2,0,0,1) both">
+          <p style="margin:0;font:400 12px/16px 'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--aktion)">{{ l.datum }}</p>
+          <h3 style="margin:8px 0 0;font-family:Fraunces,serif;font-size:19px;font-weight:600;line-height:25px;text-wrap:pretty">{{ l.titel }}</h3>
+          <p style="margin:8px 0 0;font:400 15px/23px Inter,sans-serif;color:var(--gedaempft);text-wrap:pretty">{{ l.text }}</p>
+        </article>
+      </sc-for>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istEinstellungen }}">
+  <section data-screen-label="B-08 Einstellungen" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--glas);backdrop-filter:blur(24px)">
+      <button type="button" aria-label="Zurück" onClick="{{ zurueck }}" style="width:48px;height:48px;border:0;border-radius:9999px;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg>
+      </button>
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:26px;font-weight:600;line-height:32px">Einstellungen</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 40px">
+      <h2 style="margin:8px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Modelle</h2>
+      <div style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;display:flex;flex-direction:column;gap:18px">
+        <sc-for list="{{ modellgruppen }}" as="g" hint-placeholder-count="2">
+          <div>
+            <h3 style="margin:0 0 10px;font-family:Fraunces,serif;font-size:17px;font-weight:600;line-height:23px">{{ g.titel }}</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <sc-for list="{{ g.felder }}" as="f" hint-placeholder-count="2">
+                <label style="display:block">
+                  <span style="display:block;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">{{ f.label }}</span>
+                  <span style="position:relative;display:block">
+                    <select value="{{ f.wert }}" onChange="{{ f.aendern }}" aria-label="{{ f.aria }}" style="appearance:none;-webkit-appearance:none;width:100%;height:48px;padding:0 38px 0 13px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 15px/24px Inter,sans-serif;cursor:pointer;outline:none">
+                      <sc-for list="{{ f.auswahl }}" as="o" hint-placeholder-count="3">
+                        <option value="{{ o.wert }}">{{ o.wert }}</option>
+                      </sc-for>
+                    </select>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--gedaempft)" style="position:absolute;right:12px;top:14px;pointer-events:none"><path d="M12 15 7 10h10l-5 5Z"></path></svg>
+                  </span>
+                </label>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <p style="margin:0;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">Das Logbuch darf ein anderes Modell benutzen als die Experimente.</p>
+      </div>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Stimme</h2>
+      <div style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;display:flex;flex-direction:column;gap:16px">
+        <label style="display:block">
+          <span style="display:block;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">Anbieter</span>
+          <span style="position:relative;display:block">
+            <select value="{{ stimmeAnbieter }}" onChange="{{ anbieterAendern }}" aria-label="Stimmenanbieter" style="appearance:none;-webkit-appearance:none;width:100%;height:48px;padding:0 38px 0 13px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 16px/24px Inter,sans-serif;cursor:pointer;outline:none">
+              <option value="google">Google Chirp 3 HD</option>
+              <option value="own">Meine Stimme</option>
+              <option value="edge">Microsoft Edge</option>
+            </select>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--gedaempft)" style="position:absolute;right:12px;top:14px;pointer-events:none"><path d="M12 15 7 10h10l-5 5Z"></path></svg>
+          </span>
+        </label>
+
+        <sc-if value="{{ anbieterGoogle }}" hint-placeholder-val="{{ true }}">
+          <label style="display:block">
+            <span style="display:block;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">Stimme</span>
+            <span style="position:relative;display:block">
+              <select value="{{ googleStimme }}" onChange="{{ googleStimmeAendern }}" aria-label="Google-Stimme" style="appearance:none;-webkit-appearance:none;width:100%;height:48px;padding:0 38px 0 13px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 15px/24px 'JetBrains Mono',monospace;cursor:pointer;outline:none">
+                <sc-for list="{{ googleStimmen }}" as="o" hint-placeholder-count="4">
+                  <option value="{{ o.wert }}">{{ o.wert }}</option>
+                </sc-for>
+              </select>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--gedaempft)" style="position:absolute;right:12px;top:14px;pointer-events:none"><path d="M12 15 7 10h10l-5 5Z"></path></svg>
+            </span>
+          </label>
+        </sc-if>
+
+        <sc-if value="{{ anbieterEigen }}">
+          <div>
+            <span style="display:block;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">Stimme</span>
+            <button type="button" onClick="{{ stimmeAufnehmen }}" aria-label="Stimme aufnehmen" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid {{ aufnahmeRand }};border-radius:14px;background:{{ aufnahmeGrund }};color:{{ aufnahmeFarbe }};font:500 16px/20px Inter,sans-serif;cursor:pointer">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="{{ aufnahmeIcon }}"></path></svg>
+              <span>{{ aufnahmeText }}</span>
+            </button>
+            <p style="margin:10px 0 0;font:400 13px/19px Inter,sans-serif;color:var(--gedaempft)">Deine eigene Stimme wird über Alibaba erzeugt. Der Zugang dafür steht unter „Zugänge“.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ anbieterEdge }}">
+          <label style="display:block">
+            <span style="display:block;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">Stimme</span>
+            <span style="position:relative;display:block">
+              <select value="{{ edgeStimme }}" onChange="{{ edgeStimmeAendern }}" aria-label="Microsoft-Edge-Stimme" style="appearance:none;-webkit-appearance:none;width:100%;height:48px;padding:0 38px 0 13px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 14px/24px 'JetBrains Mono',monospace;cursor:pointer;outline:none">
+                <sc-for list="{{ edgeStimmen }}" as="o" hint-placeholder-count="3">
+                  <option value="{{ o.wert }}">{{ o.wert }}</option>
+                </sc-for>
+              </select>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--gedaempft)" style="position:absolute;right:12px;top:14px;pointer-events:none"><path d="M12 15 7 10h10l-5 5Z"></path></svg>
+            </span>
+          </label>
+        </sc-if>
+
+        <div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+            <span style="font:400 13px/18px Inter,sans-serif;color:var(--gedaempft)">Sprechgeschwindigkeit</span>
+            <output style="font:500 15px/20px 'JetBrains Mono',monospace;color:var(--aktion)">{{ tempoAnzeige }}</output>
+          </div>
+          <div style="position:relative;padding:0 9px">
+            <div aria-hidden="true" style="position:absolute;left:9px;right:9px;top:26px;display:flex;justify-content:space-between">
+              <sc-for list="{{ tempostriche }}" as="t" hint-placeholder-count="13">
+                <i style="display:block;width:1px;height:{{ t.hoehe }};background:{{ t.farbe }}"></i>
+              </sc-for>
+            </div>
+            <input type="range" min="0.7" max="1.3" step="0.05" value="{{ tempo }}" onChange="{{ tempoAendern }}" aria-label="Sprechgeschwindigkeit in Schritten von 0,05" style="position:relative;display:block;width:100%;height:24px;margin:0 -9px;padding:0 9px;box-sizing:content-box;accent-color:var(--aktion);background:transparent;cursor:pointer">
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:14px;font:400 12px/16px 'JetBrains Mono',monospace;color:var(--blass)">
+            <span>0,70</span>
+            <span>1,00</span>
+            <span>1,30</span>
+          </div>
+        </div>
+
+        <button type="button" onClick="{{ probeHoeren }}" aria-label="Probe hören" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--rand);border-radius:14px;background:transparent;color:{{ probeFarbe }};font:500 16px/20px Inter,sans-serif;cursor:pointer">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3c0-1.77-1-3.29-2.5-4.03v8.05c1.5-.73 2.5-2.25 2.5-4.02ZM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77Z"></path></svg>
+          <span>{{ probeText }}</span>
+        </button>
+      </div>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Zugänge</h2>
+      <div style="border:1px solid var(--rand);border-radius:20px;background:var(--flaeche);padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px;min-height:48px">
+          <span style="flex:1;min-width:0">
+            <span style="display:block;font:500 16px/22px Inter,sans-serif">OpenAI Codex</span>
+            <span style="display:block;font:400 13px/18px 'JetBrains Mono',monospace;color:{{ codexFarbe }}">{{ codexStand }}</span>
+          </span>
+          <button type="button" onClick="{{ codexUmschalten }}" style="min-height:48px;padding:0 20px;border:{{ codexKnopfRand }};border-radius:9999px;background-image:{{ codexKnopfGrund }};color:{{ codexKnopfFarbe }};font:500 15px/20px Inter,sans-serif;cursor:pointer">{{ codexKnopfText }}</button>
+        </div>
+        <p style="margin:0;font:400 13px/19px Inter,sans-serif;color:var(--gedaempft)">Codex läuft über deine Anmeldung, nicht über einen Schlüssel.</p>
+        <sc-for list="{{ schluessel }}" as="k" hint-placeholder-count="3">
+          <div style="border-top:1px solid var(--randweich);padding-top:14px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+              <span style="font:500 15px/21px Inter,sans-serif">{{ k.name }}</span>
+              <span style="font:400 12px/16px 'JetBrains Mono',monospace;color:var(--blass)">{{ k.zweck }}</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <input type="{{ k.art }}" value="{{ k.wert }}" onChange="{{ k.aendern }}" aria-label="{{ k.aria }}" style="flex:1;min-width:0;height:48px;padding:0 14px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 15px/24px 'JetBrains Mono',monospace;letter-spacing:1px;outline:none;caret-color:var(--aktion)">
+              <button type="button" onClick="{{ k.sichtbarkeit }}" aria-label="{{ k.zeigenAria }}" style="width:48px;height:48px;flex:0 0 48px;border:1px solid var(--rand);border-radius:14px;background:transparent;color:{{ k.augeFarbe }};cursor:pointer;display:grid;place-items:center">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="{{ k.augeIcon }}"></path></svg>
+              </button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Erinnerungen</h2>
+      <sc-for list="{{ erinnerungen }}" as="e" hint-placeholder-count="2">
+        <div style="min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);padding:0 14px;margin-bottom:12px">
+          <span style="font:400 16px/25px Inter,sans-serif">{{ e.name }}</span>
+          <span style="display:flex;align-items:center;gap:12px">
+            <span style="font:400 15px/20px 'JetBrains Mono',monospace;color:var(--gedaempft)">{{ e.zeit }}</span>
+            <button type="button" onClick="{{ e.umschalten }}" aria-label="Erinnerung umschalten" style="width:48px;height:28px;border:0;border-radius:9999px;cursor:pointer;position:relative;background:{{ e.spurfarbe }}">
+              <span style="position:absolute;top:3px;left:{{ e.knopflinks }};width:22px;height:22px;border-radius:50%;background:#fff;transition:left 200ms cubic-bezier(.2,0,0,1);box-shadow:0 1px 3px rgba(0,0,0,.4)"></span>
+            </button>
+          </span>
+        </div>
+      </sc-for>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Effekte</h2>
+      <div style="display:flex;gap:6px;padding:5px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent)">
+        <sc-for list="{{ effektstufen }}" as="s" hint-placeholder-count="3">
+          <button type="button" onClick="{{ s.waehlen }}" style="flex:1;height:44px;border:0;border-radius:9999px;font:500 15px/20px Inter,sans-serif;cursor:pointer;background:{{ s.grund }};color:{{ s.farbe }}">{{ s.name }}</button>
+        </sc-for>
+      </div>
+      <p style="margin:10px 0 0;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">Auf <em>Aus</em> bleibt jede Funktion vollständig bedienbar.</p>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Erscheinung</h2>
+      <div style="display:flex;gap:6px;padding:5px;border-radius:9999px;background:color-mix(in srgb,var(--text) 8%,transparent)">
+        <sc-for list="{{ erscheinungen }}" as="s" hint-placeholder-count="3">
+          <button type="button" onClick="{{ s.waehlen }}" style="flex:1;height:44px;border:0;border-radius:9999px;font:500 15px/20px Inter,sans-serif;cursor:pointer;background:{{ s.grund }};color:{{ s.farbe }}">{{ s.name }}</button>
+        </sc-for>
+      </div>
+
+      <h2 style="margin:28px 0 12px;font:600 13px/17px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--gedaempft)">Über mich</h2>
+
+      <button type="button" onClick="{{ zuSelbstbild }}" style="width:100%;min-height:56px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 16px/25px Inter,sans-serif;cursor:pointer">
+        <span>Selbstbild</span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--gedaempft)"><path d="m9 18-1.4-1.4 4.6-4.6-4.6-4.6L9 6l6 6-6 6Z"></path></svg>
+      </button>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ istSelbstbild }}">
+  <section data-screen-label="B-09 Selbstbild" style="position:absolute;inset:0;z-index:1;animation:hoch 260ms cubic-bezier(.2,0,0,1) both">
+    <header style="position:absolute;top:30px;left:0;right:0;height:64px;z-index:4;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--glas);backdrop-filter:blur(24px)">
+      <button type="button" aria-label="Zurück zu Einstellungen" onClick="{{ zuEinstellungen }}" style="width:48px;height:48px;border:0;border-radius:9999px;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg>
+      </button>
+      <h1 style="margin:0;font-family:Fraunces,serif;font-size:26px;font-weight:600;line-height:32px">Selbstbild</h1>
+    </header>
+    <main style="position:absolute;top:94px;left:0;right:0;bottom:0;overflow-y:auto;padding:16px 16px 40px">
+      <textarea aria-label="Selbstbild" value="{{ selbstbild }}" onChange="{{ selbstbildAendern }}" placeholder="Erzähl der App, wer du bist." style="display:block;width:100%;min-height:360px;resize:none;padding:18px;border:1px solid var(--rand);border-radius:14px;color:var(--text);background:var(--erhoeht);font:400 16px/25px Inter,sans-serif;outline:none;caret-color:var(--aktion)"></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button type="button" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:14px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">Text mit KI verbessern</button>
+        <button type="button" aria-label="Selbstbild einsprechen" style="width:56px;height:48px;border:0;border-radius:14px;background:var(--aktion);color:var(--aufaktion);cursor:pointer;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z"></path></svg>
+        </button>
+      </div>
+    </main>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ zeigtNav }}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Hauptnavigation" style="position:absolute;left:12px;right:12px;bottom:12px;height:64px;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);border-radius:24px;background:var(--glas);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid color-mix(in srgb,var(--rand) 70%,transparent);box-shadow:0 16px 32px rgba(0,0,0,.28)">
+      <sc-for list="{{ navfelder }}" as="n" hint-placeholder-count="6">
+        <button type="button" onClick="{{ n.gehe }}" style="border:0;border-radius:20px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:{{ n.farbe }}">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="{{ n.icon }}"></path></svg>
+          <span style="font:400 11px/14px Inter,sans-serif">{{ n.name }}</span>
+        </button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{ anlegenOffen }}">
+    <div style="position:absolute;inset:0;z-index:8;background:color-mix(in srgb,var(--grund) 62%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;justify-content:flex-end">
+      <div onClick="{{ anlegenSchliessen }}" style="flex:1"></div>
+      <div style="border-radius:24px 24px 0 0;background:var(--flaeche);border-top:1px solid color-mix(in srgb,var(--text) 14%,transparent);padding:24px 16px 28px;animation:hoch 320ms cubic-bezier(.2,0,0,1) both;box-shadow:0 -20px 50px rgba(0,0,0,.4)">
+        <h2 style="margin:0 0 4px;font-family:Fraunces,serif;font-size:22px;font-weight:600;line-height:28px">Eigenes Experiment</h2>
+        <p style="margin:0 0 16px;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">Einsprechen oder tippen. Es steht danach unter „Steht an“.</p>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <button type="button" aria-label="Eigenes Experiment einsprechen" style="width:56px;height:56px;flex:0 0 56px;border:0;border-radius:9999px;background:var(--aktion);color:var(--aufaktion);cursor:pointer;display:grid;place-items:center;box-shadow:0 8px 22px color-mix(in srgb,var(--aktion) 34%,transparent)">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z"></path></svg>
+          </button>
+          <textarea aria-label="Eigenes Experiment" value="{{ anlegeText }}" onChange="{{ anlegeTextAendern }}" placeholder="Was willst du ausprobieren?" style="flex:1;min-height:120px;resize:none;padding:14px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 16px/25px Inter,sans-serif;outline:none;caret-color:var(--aktion)"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="button" onClick="{{ anlegenSchliessen }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--text);font:500 15px/20px Inter,sans-serif;cursor:pointer">Abbrechen</button>
+          <button type="button" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">Verbessern</button>
+          <button type="button" onClick="{{ anlegenSpeichern }}" style="flex:1.2;height:48px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 15px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ zielOffen }}">
+    <div style="position:absolute;inset:0;z-index:8;background:color-mix(in srgb,var(--grund) 62%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;justify-content:flex-end">
+      <div onClick="{{ zielSchliessen }}" style="flex:1"></div>
+      <div style="border-radius:24px 24px 0 0;background:var(--flaeche);border-top:1px solid color-mix(in srgb,var(--text) 14%,transparent);padding:24px 16px 28px;animation:hoch 320ms cubic-bezier(.2,0,0,1) both;box-shadow:0 -20px 50px rgba(0,0,0,.4)">
+        <h2 style="margin:0 0 4px;font-family:Fraunces,serif;font-size:22px;font-weight:600;line-height:28px">Neues Ziel</h2>
+        <p style="margin:0 0 16px;font:400 14px/21px Inter,sans-serif;color:var(--gedaempft)">Ein Wunsch oder ein Ziel, an dem sich die Vorschläge ausrichten.</p>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <button type="button" onClick="{{ zielSprechen }}" aria-label="Ziel einsprechen" style="width:56px;height:56px;flex:0 0 56px;border:0;border-radius:9999px;background:var(--aktion);color:var(--aufaktion);cursor:pointer;display:grid;place-items:center;box-shadow:0 8px 22px color-mix(in srgb,var(--aktion) 34%,transparent)">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z"></path></svg>
+          </button>
+          <textarea aria-label="Ziel" value="{{ zielText }}" onChange="{{ zielTextAendern }}" placeholder="Was willst du erreichen?" style="flex:1;min-height:120px;resize:none;padding:14px;border:1px solid var(--rand);border-radius:14px;background:var(--erhoeht);color:var(--text);font:400 16px/25px Inter,sans-serif;outline:none;caret-color:var(--aktion)"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="button" onClick="{{ zielSchliessen }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--text);font:500 15px/20px Inter,sans-serif;cursor:pointer">Abbrechen</button>
+          <button type="button" onClick="{{ zielVerbessern }}" style="flex:1;height:48px;border:1px solid var(--rand);border-radius:9999px;background:transparent;color:var(--aktion);font:500 15px/20px Inter,sans-serif;cursor:pointer">Verbessern</button>
+          <button type="button" onClick="{{ zielSpeichern }}" style="flex:1.2;height:48px;border:0;border-radius:9999px;color:var(--aufaktion);font:500 15px/20px Inter,sans-serif;cursor:pointer;background-image:linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stoerung }}">
+    <div role="status" style="position:absolute;top:98px;left:16px;right:16px;z-index:7;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--warnung) 16%,var(--flaeche));border:1px solid color-mix(in srgb,var(--warnung) 46%,transparent);box-shadow:0 12px 30px rgba(0,0,0,.3);animation:hoch 220ms cubic-bezier(.2,0,0,1) both">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--warnung)" style="flex:0 0 24px"><path d="M12 17q.425 0 .713-.288T13 16q0-.425-.288-.712T12 15q-.425 0-.712.288T11 16q0 .425.288.713T12 17Zm-1-4h2V7h-2v6Zm1 9q-2.075 0-3.9-.788t-3.175-2.137Q3.575 17.725 2.788 15.9T2 12q0-2.075.788-3.9t2.137-3.175Q6.275 3.575 8.1 2.788T12 2q2.075 0 3.9.788t3.175 2.137q1.35 1.35 2.138 3.175T22 12q0 2.075-.788 3.9t-2.137 3.175q-1.35 1.35-3.175 2.138T12 22Z"></path></svg>
+      <p style="margin:0;flex:1;font:400 15px/22px Inter,sans-serif;color:var(--text);text-wrap:pretty">{{ stoerung }}</p>
+      <button type="button" onClick="{{ stoerungNochmal }}" style="min-height:44px;padding:0 14px;border:0;border-radius:9999px;background:transparent;color:var(--aktion);font:500 14px/20px Inter,sans-serif;cursor:pointer">Nochmal</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hinweis }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:92px;z-index:9;padding:14px 16px;border-radius:14px;background:var(--erhoeht);border:1px solid var(--rand);box-shadow:0 12px 30px rgba(0,0,0,.35);font:400 14px/21px Inter,sans-serif;color:var(--text);animation:hoch 220ms cubic-bezier(.2,0,0,1) both">{{ hinweis }}</div>
+  </sc-if>
+
+</div>
+</div>
+</div>
+<p style="margin:0;font:400 12px/18px 'JetBrains Mono',monospace;color:#7c736b;text-align:center">Galaxy Z Fold 8 · Außendisplay · 450 × 720 dp (1248 × 1972 px, 10:16) · {{ fusszeile }}</p>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;erscheinung&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Dunkel&quot;,&quot;Hell&quot;],&quot;default&quot;:&quot;Dunkel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Darstellung&quot;},&quot;effekte&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Voll&quot;,&quot;Gedämpft&quot;,&quot;Aus&quot;],&quot;default&quot;:&quot;Voll&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Darstellung&quot;},&quot;monitorZustand&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Automatisch&quot;,&quot;LEER&quot;,&quot;NUR_ANSTEHEND&quot;,&quot;LAEUFT&quot;,&quot;VOLL&quot;,&quot;lädt&quot;],&quot;default&quot;:&quot;Automatisch&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Monitor B-10&quot;},&quot;b01Zustand&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;LEER&quot;,&quot;LAGE_STEHT&quot;,&quot;WARTET&quot;,&quot;VORSCHLAEGE&quot;,&quot;ABEND&quot;],&quot;default&quot;:&quot;LEER&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Heute B-01&quot;},&quot;stoerung&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;keine&quot;,&quot;Dafür brauche ich Netz.&quot;,&quot;Da war nichts zu hören.&quot;,&quot;Der Text konnte nicht verbessert werden.&quot;,&quot;Deine Anmeldung ist abgelaufen.&quot;,&quot;Dein Kontingent ist erschöpft.&quot;,&quot;Die Antwort war unbrauchbar.&quot;,&quot;Ohne Mikrofon kann ich dich nicht hören.&quot;,&quot;Für diese Stimme fehlt der Schlüssel.&quot;],&quot;default&quot;:&quot;keine&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Zwischenzustände&quot;}}">
+const ICONS = {
+  monitor: "M4 4h7v7H4V4Zm0 9h7v7H4v-7Zm9-9h7v4h-7V4Zm0 6h7v10h-7V10Z",
+  heute: "M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22H5Zm0-2h14V10H5v10Zm0-12h14V6H5v2Z",
+  ziele: "M5 21V4h9l.4 2H20v10h-7l-.4-2H7v7H5Zm2-9h7.25l.4 2H18V8h-5.25l-.4-2H7v6Z",
+  merkliste: "M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z",
+  merklisteVoll: "M5 21V5q0-.825.588-1.412T7 3h10q.825 0 1.413.588T19 5v16l-7-3Z",
+  erkenntnisse: "M9 21q-.425 0-.712-.288T8 20v-1h8v1q0 .425-.288.713T15 21H9Zm-1-4v-2.2q-1.4-.85-2.2-2.225T5 9.5q0-2.725 1.888-4.612T11.5 3q2.725 0 4.613 1.888T18 9.5q0 1.7-.8 3.075T15 14.8V17H8Z",
+  logbuch: "M13 3q3.325 0 5.663 2.338T21 11q0 3.325-2.337 5.663T13 19q-2.075 0-3.85-1T6.2 15.25L4 17.45V11H2q0-4.575 3.213-7.787T13 0v3Zm0 2Q9.675 5 7.338 7.338T5 13h1.8l-.05 1.65 1.1-1.1.7 1.1Q9.35 15.8 10.5 16.4T13 17q2.5 0 4.25-1.75T19 11q0-2.5-1.75-4.25T13 5Zm-1 2v5l4.25 2.5 1-1.65-3.25-1.9V7h-2Z",
+  sonne: "M11 1h2v3h-2V1Zm0 19h2v3h-2v-3ZM3.5 4.9l1.4-1.4L7 5.6 5.6 7 3.5 4.9Zm13.4 13.5 1.4-1.4 2.1 2.1-1.4 1.4-2.1-2.1ZM1 11h3v2H1v-2Zm19 0h3v2h-3v-2ZM3.5 19.1l2.1-2.1L7 18.4l-2.1 2.1-1.4-1.4ZM17 5.6l2.1-2.1 1.4 1.4L18.4 7 17 5.6ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
+  mond: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z",
+  mikro: "M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z",
+  stopp: "M7 7h10v10H7Z",
+  kastenLeer: "M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Zm0-2h14V5H5v14Z",
+  kastenVoll: "M10.6 16.6 17.65 9.55l-1.4-1.4L10.6 13.8l-2.85-2.85-1.4 1.4 4.25 4.25ZM5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Z",
+  auge: "M12 16q1.875 0 3.188-1.312T16.5 11.5q0-1.875-1.312-3.187T12 7q-1.875 0-3.187 1.313T7.5 11.5q0 1.875 1.313 3.188T12 16Zm0-1.8q-1.125 0-1.912-.787T9.3 11.5q0-1.125.788-1.912T12 8.8q1.125 0 1.913.788T14.7 11.5q0 1.125-.787 1.913T12 14.2Zm0 4.8q-3.65 0-6.65-2.037T1 11.5q1.35-3.425 4.35-5.462T12 4q3.65 0 6.65 2.038T23 11.5q-1.35 3.425-4.35 5.463T12 19Z",
+  augeAus: "m19.8 22.6-4.2-4.15q-.875.275-1.762.412T12 19q-3.775 0-6.725-2.087T1 11.5q.525-1.325 1.325-2.463T4.15 7L1.4 4.2l1.4-1.4 18.4 18.4-1.4 1.4ZM12 16q.275 0 .525-.025t.475-.1L8.625 11.5q-.075.225-.1.475T8.5 12.5q0 1.45 1.025 2.475T12 16Zm7.3.45-3.175-3.15q.175-.425.275-.862t.1-.938q0-1.875-1.312-3.187T12 7q-.5 0-.937.1t-.863.275L7.65 4.85q1-.425 2.087-.638T12 4q3.775 0 6.725 2.087T23 11.5q-.575 1.475-1.512 2.712T19.3 16.45Z",
+  aufnahmePunkt: "M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0-6a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"
+};
+
+const MODELLE = ["GPT 5.6 Sol", "GPT 5.6 Terra", "GPT 5.6 Luna"];
+const EFFORT = ["Niedrig", "Mittel", "Hoch", "Sehr hoch", "Maximal"];
+const GOOGLE_STIMMEN = ["de-DE-Chirp3-HD-Kore", "de-DE-Chirp3-HD-Puck", "de-DE-Chirp3-HD-Aoede", "de-DE-Chirp3-HD-Charon"];
+const EINSCHAETZUNG = [
+  "Du hast die Stunde zweimal gehalten und beim dritten Mal abgebrochen — und genau das ist die interessante Stelle. ",
+  "Beide Male, an denen es gelungen ist, lag die Stunde vor dem ersten Blick ins Postfach. ",
+  "Das deckt sich mit dem, was du im Juni über deine Vormittage gesagt hast."
+];
+
+const VORSCHLAEGE = [
+  { id: "v1", titel: "Eine Sache bewusst abschließen", text: "Wähle eine überschaubare Aufgabe und bleib bei ihr, bis sie wirklich fertig ist.", meta: "leicht · 1 Tag" },
+  { id: "v2", titel: "Den ersten Schritt verkleinern", text: "Nimm dir etwas vor, das in zehn ruhigen Minuten beginnen kann.", meta: "leicht · 1 Tag" },
+  { id: "v3", titel: "Eine Stunde ohne Wechsel", text: "Reserviere eine Stunde für eine Aufgabe und lass alles andere sichtbar warten.", meta: "mittel · 1 Tag", vonMerkliste: true },
+  { id: "v4", titel: "Ein Werkzeug reparieren statt ersetzen", text: "Nimm etwas Kaputtes, das du sonst weggeben würdest, und versuch es selbst.", meta: "mittel · 3 Tage" },
+  { id: "v5", titel: "Den Tag mit einer Grenze beginnen", text: "Lege fest, was heute ausdrücklich nicht mehr auf deine Liste kommt.", meta: "fordernd · 3 Tage" }
+];
+
+const ERKENNTNISSE = [
+  { datum: "11.08.2026", text: "Was vor dem ersten Blick ins Postfach beginnt, hält. Danach hält fast nichts." },
+  { datum: "07.08.2026", text: "Du brichst nicht ab, weil es zu schwer ist, sondern weil etwas anderes dringlicher aussieht." },
+  { datum: "29.07.2026", text: "Körperliche Experimente setzt du zuverlässiger um als solche, die ein Gespräch verlangen." },
+  { datum: "18.07.2026", text: "Drei Tage sind für dich die richtige Länge. Bei sieben Tagen verlierst du am vierten das Interesse." },
+  { datum: "02.07.2026", text: "„Nicht gemacht“ liefert dir mehr als „gemacht“ — du erklärst dann genauer, was dazwischenkam." }
+];
+
+const EDGE_STIMMEN = ["de-DE-SeraphinaMultilingualNeural", "de-DE-FlorianMultilingualNeural", "de-DE-KatjaNeural"];
+
+const VERLAUF = "linear-gradient(145deg,color-mix(in srgb,var(--aktion),var(--text) 10%),var(--aktion) 58%,color-mix(in srgb,var(--aktion),#000 16%))";
+
+class Component extends DCLogic {
+  state = {
+    themeOverride: null,
+    effekteOverride: null,
+    zustandOverride: null,
+    screen: "B-10",
+    zurueckZu: "B-10",
+    offen: null,
+    funkelt: null,
+    hinweis: null,
+    anlegenOffen: false,
+    anlegeText: "",
+    laufend: [
+      { id: "l1", titel: "Eine Stunde ohne Wechsel", stufe: "mittel", tag: "Tag 2 von 3", herkunft: "KI-Vorschlag",
+        text: "Reserviere eine Stunde für eine Aufgabe und lass alles andere sichtbar warten.",
+        aufgaben: ["Die Stunde am Abend vorher festlegen.", "Das Telefon in einen anderen Raum legen.", "Danach zwei Sätze notieren."] },
+      { id: "l2", titel: "Vor dem Antworten kurz warten", stufe: "fordernd", tag: "Tag 1 von 3", herkunft: "selbst angelegt",
+        text: "Mach vor wichtigen Antworten eine kleine Pause und prüfe, was du wirklich sagen willst.",
+        aufgaben: ["Einmal bewusst bis fünf zählen, bevor du antwortest.", "Abends eine Stelle nennen, an der es geholfen hat."] }
+    ],
+    anstehend: [
+      { id: "a1", titel: "Den Tag mit einer Grenze beginnen", meta: "fordernd · 3 Tage", herkunft: "KI-Vorschlag",
+        text: "Lege fest, was heute ausdrücklich nicht mehr auf deine Liste kommt." },
+      { id: "a2", titel: "Eine Sache bewusst abschließen", meta: "leicht · 1 Tag", herkunft: "selbst angelegt",
+        text: "Wähle eine überschaubare Aufgabe und bleib bei ihr, bis sie wirklich fertig ist." },
+      { id: "a3", titel: "Einen Umweg zu Fuß gehen", meta: "leicht · 1 Tag", herkunft: "KI-Vorschlag",
+        text: "Nimm einen Weg, den du sonst nie nimmst, und lass dir zehn Minuten mehr Zeit." },
+      { id: "a4", titel: "Ein Gespräch ohne Telefon führen", meta: "mittel · 2 Tage", herkunft: "selbst angelegt",
+        text: "Führe ein längeres Gespräch, ohne dass ein Gerät auf dem Tisch liegt." }
+    ],
+    todos: [
+      { id: "t1", gruppe: "l1", text: "Die Stunde am Abend vorher festlegen.", fertig: true },
+      { id: "t2", gruppe: "l1", text: "Das Telefon in einen anderen Raum legen.", fertig: true },
+      { id: "t3", gruppe: "l1", text: "Danach zwei Sätze notieren.", fertig: true },
+      { id: "t4", gruppe: "l1", text: "Eine Unterbrechung bewusst abwehren.", fertig: false },
+      { id: "t5", gruppe: "l1", text: "Am Ende zurückblicken, was liegen blieb.", fertig: false },
+      { id: "t6", gruppe: "l2", text: "Einmal bewusst bis fünf zählen, bevor du antwortest.", fertig: true },
+      { id: "t7", gruppe: "l2", text: "Abends eine Stelle nennen, an der es geholfen hat.", fertig: false }
+    ],
+    b01: "LEER",
+    lage: "",
+    aufnahme: false,
+    sekunden: 0,
+    merkiert: {},
+    nachrichten: [
+      { rolle: "ki", text: "Du bist am zweiten Tag. Wie ist die Stunde heute gelaufen?" },
+      { rolle: "ich", text: "Erst gut, dann kam eine Rückfrage rein und ich war raus." },
+      { rolle: "ki", text: "Das ist dieselbe Stelle wie gestern. Beide Male war es eine Rückfrage von außen, nicht dein eigener Antrieb. Was müsste passieren, damit die Rückfrage bis nach der Stunde warten kann?" }
+    ],
+    entwurf: "",
+    denkt: false,
+    b03: "AUFNAHME",
+    b03Inhalt: "",
+    bluete: false,
+    vorlesen: false,
+    b07tab: "15",
+    verworfen: {},
+    zug: null,
+    zielOffen: false,
+    zielText: "",
+    gespraechAufnahme: false,
+    mitlese: -1,
+    stoerungOverride: null,
+    ziele: [
+      { id: "z1", titel: "Weniger anfangen, mehr abschließen", text: "Ich will Dinge fertig machen, statt drei neue zu beginnen.", datum: "seit 14.05.2026" },
+      { id: "z2", titel: "Körperlich beweglich bleiben", text: "Nicht Sport um des Sports willen — einfach in Bewegung bleiben.", datum: "seit 02.06.2026" },
+      { id: "z3", titel: "Wieder mehr mit Menschen sprechen", text: "Gespräche, die länger als fünf Minuten dauern.", datum: "seit 21.07.2026" }
+    ],
+    modell: { expModell: "GPT 5.6 Sol", expEffort: "Hoch", logModell: "GPT 5.6 Luna", logEffort: "Mittel" },
+    stimmeAnbieter: "google",
+    googleStimme: "de-DE-Chirp3-HD-Kore",
+    edgeStimme: "de-DE-SeraphinaMultilingualNeural",
+    tempo: 1,
+    probeLaeuft: false,
+    stimmeAufnahme: false,
+    codexAngemeldet: false,
+    geheim: {
+      groq: { wert: "gsk_7f2a9c41d8b3", sichtbar: false },
+      google: { wert: "AIzaSyD4kQ2n8Vb1", sichtbar: false },
+      alibaba: { wert: "sk-ali-93c7ef20a5", sichtbar: false }
+    },
+    merkliste: [
+      { id: "m1", titel: "Eine Woche ohne Nachrichten am Morgen", meta: "fordernd · 7 Tage" },
+      { id: "m2", titel: "Einen alten Kontakt anrufen", meta: "mittel · 1 Tag" },
+      { id: "m3", titel: "Etwas Handwerkliches reparieren", meta: "mittel · 2 Tage" },
+      { id: "m4", titel: "Einen Tag ohne Uhr verbringen", meta: "leicht · 1 Tag" }
+    ],
+    erinnerungenAn: { morgens: true, abends: false },
+    selbstbild: "Ich bin 54, arbeite seit Jahren an eigenen Projekten und merke, dass ich mich schwer festlege. Ich lese viel, rede wenig darüber. Vormittage sind meine beste Zeit; nach 16 Uhr passiert selten noch etwas Ernsthaftes. Ich mag klare Sprache und misstraue allem, was nach Motivation klingt."
+  };
+
+  componentDidMount() {
+    if (this.props.b01Zustand && this.props.b01Zustand !== this.state.b01) this.setState({ b01: this.props.b01Zustand });
+    this.fit();
+    this._onResize = () => this.fit();
+    window.addEventListener("resize", this._onResize);
+    if (this.screenEl) {
+      this._onMove = (e) => {
+        const r = this.screenEl.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width - 0.5) * 2;
+        const y = ((e.clientY - r.top) / r.height - 0.5) * 2;
+        this.screenEl.style.setProperty("--kx", (x * 6).toFixed(2));
+        this.screenEl.style.setProperty("--ky", (-y * 6).toFixed(2));
+      };
+      this._onLeave = () => {
+        this.screenEl.style.setProperty("--kx", "0");
+        this.screenEl.style.setProperty("--ky", "0");
+      };
+      this.screenEl.addEventListener("pointermove", this._onMove);
+      this.screenEl.addEventListener("pointerleave", this._onLeave);
+    }
+  }
+
+  zugStart(art, id, e) {
+    if (e.button === 1 || e.button === 2) return;
+    this._zug = { art, id, x0: e.clientX, y0: e.clientY, bewegt: false };
+    window.addEventListener("pointermove", this._zugMove);
+    window.addEventListener("pointerup", this._zugEnde);
+    window.addEventListener("pointercancel", this._zugEnde);
+  }
+
+  _zugMove = (e) => {
+    const z = this._zug;
+    if (!z) return;
+    const dx = e.clientX - z.x0;
+    const dy = e.clientY - z.y0;
+    if (!z.bewegt && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    z.bewegt = true;
+    this.setState({ zug: { art: z.art, id: z.id, dx, dy } });
+  };
+
+  _zugEnde = () => {
+    const z = this._zug;
+    const zug = this.state.zug;
+    this._zug = null;
+    window.removeEventListener("pointermove", this._zugMove);
+    window.removeEventListener("pointerup", this._zugEnde);
+    window.removeEventListener("pointercancel", this._zugEnde);
+    if (!z || !zug) { this.setState({ zug: null }); return; }
+    const { dx, dy } = zug;
+    this.setState({ zug: null });
+    if (z.art === "vorschlag") {
+      if (dx > 100) this._vorschlagInMonitor(z.id);
+      else if (dx < -100) {
+        this.setState((p) => ({ verworfen: { ...p.verworfen, [z.id]: true } }));
+        this.melde("Vorschlag verworfen.");
+      }
+    } else if (z.art === "warte" && dx < -110) {
+      const w = this.state.anstehend.find((a) => a.id === z.id);
+      this.setState((p) => ({ anstehend: p.anstehend.filter((a) => a.id !== z.id) }));
+      this.melde("„" + (w ? w.titel : "Experiment") + "“ ist wieder auf der Merkliste.");
+    } else if (z.art === "sort" && Math.abs(dy) > 50) {
+      const schritt = Math.round(dy / 96);
+      this.setState((p) => {
+        const liste = p.anstehend.slice();
+        const von = liste.findIndex((a) => a.id === z.id);
+        if (von < 0 || schritt === 0) return null;
+        const nach = Math.max(0, Math.min(liste.length - 1, von + schritt));
+        liste.splice(nach, 0, liste.splice(von, 1)[0]);
+        return { anstehend: liste };
+      });
+      this.melde("Reihenfolge geändert.");
+    }
+  };
+
+  _vorschlagInMonitor(id) {
+    const v = VORSCHLAEGE.find((x) => x.id === id);
+    if (!v) return;
+    this.setState((p) => ({
+      anstehend: p.anstehend.concat([{ id: v.id + "-" + p.anstehend.length, titel: v.titel, meta: v.meta, herkunft: "KI-Vorschlag", text: v.text }]),
+      verworfen: { ...p.verworfen, [v.id]: true }
+    }));
+    this.melde("„" + v.titel + "“ steht jetzt im Monitor unter „Steht an“.");
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this._onResize);
+    window.removeEventListener("pointermove", this._zugMove);
+    window.removeEventListener("pointerup", this._zugEnde);
+    clearInterval(this._mitlese);
+    if (this.screenEl) {
+      this.screenEl.removeEventListener("pointermove", this._onMove);
+      this.screenEl.removeEventListener("pointerleave", this._onLeave);
+    }
+    clearInterval(this._timer);
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.erscheinung !== this.props.erscheinung) this.setState({ themeOverride: null });
+    if (prev.effekte !== this.props.effekte) this.setState({ effekteOverride: null });
+    if (prev.monitorZustand !== this.props.monitorZustand) this.setState({ zustandOverride: null });
+    if (prev.b01Zustand !== this.props.b01Zustand && this.props.b01Zustand) this.setState({ b01: this.props.b01Zustand });
+  }
+
+  fit() {
+    const el = this.wrap;
+    if (!el || !el.parentElement) return;
+    const s = Math.min(1, (window.innerHeight - 110) / 740);
+    el.style.transform = "scale(" + s + ")";
+    el.parentElement.style.height = 740 * s + "px";
+  }
+
+  melde(text) {
+    this.setState({ hinweis: text });
+    clearTimeout(this._hinweis);
+    this._hinweis = setTimeout(() => this.setState({ hinweis: null }), 2600);
+  }
+
+  gehe(screen) {
+    this.setState((s) => ({ screen, zurueckZu: ["B-02", "B-03", "B-08", "B-09"].includes(screen) ? s.screen : s.zurueckZu, offen: null }));
+  }
+
+  theme() {
+    return this.state.themeOverride ?? (this.props.erscheinung === "Hell" ? "hell" : "dunkel");
+  }
+
+  effektstufe() {
+    return this.state.effekteOverride ?? (this.props.effekte ?? "Voll");
+  }
+
+  zustand() {
+    const g = this.state.zustandOverride ?? (this.props.monitorZustand ?? "Automatisch");
+    if (g !== "Automatisch") return g;
+    if (this.state.laufend.length === 0 && this.state.anstehend.length === 0) return "LEER";
+    if (this.state.laufend.length === 0) return "NUR_ANSTEHEND";
+    if (this.state.laufend.length >= 3) return "VOLL";
+    return "LAEUFT";
+  }
+
+  starten(id) {
+    const z = this.state.anstehend.find((a) => a.id === id);
+    if (!z) return;
+    if (this.state.laufend.length >= 3) {
+      this.melde("Drei Experimente laufen schon. Schließ eines ab, bevor du ein neues beginnst.");
+      return;
+    }
+    this.setState((s) => ({
+      anstehend: s.anstehend.filter((a) => a.id !== id),
+      laufend: s.laufend.concat([{ id: z.id, titel: z.titel, stufe: z.meta.split(" · ")[0], tag: "Tag 1 von " + (z.meta.split(" · ")[1] || "1 Tag").replace("Tage", "").replace("Tag", "").trim(), herkunft: z.herkunft, text: z.text, aufgaben: ["Den ersten Schritt heute machen.", "Abends zwei Sätze dazu sagen."] }]),
+      todos: s.todos.concat([
+        { id: z.id + "-1", gruppe: z.id, text: "Den ersten Schritt heute machen.", fertig: false },
+        { id: z.id + "-2", gruppe: z.id, text: "Abends zwei Sätze dazu sagen.", fertig: false }
+      ]),
+      funkelt: z.id,
+      zustandOverride: "Automatisch"
+    }));
+    setTimeout(() => this.setState({ funkelt: null }), 1300);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const zustand = this.zustand();
+    const laedt = zustand === "lädt";
+    const leer = zustand === "LEER";
+    const nurAnstehend = zustand === "NUR_ANSTEHEND";
+    const voll = zustand === "VOLL" || s.laufend.length >= 3;
+    const theme = this.theme();
+    const istMon = s.screen === "B-10";
+    const zug = s.zug;
+    const zugDx = zug ? zug.dx : 0;
+    const zugDy = zug ? zug.dy : 0;
+
+    const laufend = leer ? [] : (nurAnstehend ? [] : s.laufend);
+    const anstehend = leer ? [] : s.anstehend;
+
+    const laufkarten = laufend.map((k, i) => {
+      const eigene = s.todos.filter((t) => t.gruppe === k.id);
+      const fertig = eigene.filter((t) => t.fertig).length;
+      const anteil = eigene.length ? fertig / eigene.length : 0;
+      return {
+        i: String(i),
+        id: k.id,
+        titel: k.titel,
+        stufe: k.stufe,
+        tag: k.tag,
+        herkunft: k.herkunft,
+        text: k.text,
+        aufgaben: k.aufgaben.map((t, j) => ({ id: k.id + j, text: "· " + t })),
+        stand: fertig + " von " + eigene.length,
+        dash: (anteil * 150.8).toFixed(1) + " 150.8",
+        offen: s.offen === k.id,
+        funkelt: s.funkelt === k.id,
+        liste: eigene.map((t) => ({
+          id: "ab" + t.id,
+          text: t.text,
+          icon: t.fertig ? ICONS.kastenVoll : ICONS.kastenLeer,
+          farbe: t.fertig ? "var(--erledigt)" : "var(--text)",
+          textfarbe: t.fertig ? "var(--blass)" : "var(--text)",
+          haken: () => this.setState((p) => ({ todos: p.todos.map((x) => (x.id === t.id ? { ...x, fertig: !x.fertig } : x)) }))
+        })),
+        nichtUmgesetzt: () => {
+          this.setState((p) => ({ laufend: p.laufend.filter((x) => x.id !== k.id), todos: p.todos.filter((t) => t.gruppe !== k.id) }));
+          this.melde("Nicht umgesetzt — der Eintrag steht im Logbuch.");
+        },
+        klapp: () => this.setState((p) => ({ offen: p.offen === k.id ? null : k.id })),
+        gespraech: () => this.gehe("B-02"),
+        auswerten: () => this.setState({ screen: "B-03", zurueckZu: s.screen, b03: "AUFNAHME", b03Inhalt: "", bluete: false })
+      };
+    });
+
+    const wartekarten = anstehend.map((w, i) => ({
+      i: String(i),
+      titel: w.titel,
+      meta: w.meta,
+      herkunft: w.herkunft,
+      text: w.text,
+      offen: s.offen === w.id,
+      transform: zug && zug.art === "warte" && zug.id === w.id ? "translateX(" + Math.min(0, zugDx) + "px)"
+        : (zug && zug.art === "sort" && zug.id === w.id ? "translateY(" + zugDy + "px) scale(1.02)" : "none"),
+      zugRuhe: zug && zug.id === w.id ? "none" : "transform 240ms cubic-bezier(.2,0,0,1)",
+      zugSchatten: zug && zug.art === "sort" && zug.id === w.id ? "0 18px 40px rgba(0,0,0,.4)" : "none",
+      wischOpazitaet: zug && zug.art === "warte" && zug.id === w.id ? Math.min(1, Math.max(0, -zugDx / 110)) : 0,
+      grifffarbe: zug && zug.art === "sort" && zug.id === w.id ? "var(--aktion)" : "var(--blass)",
+      greifen: (e) => this.zugStart("warte", w.id, e),
+      sortieren: (e) => this.zugStart("sort", w.id, e),
+      cursor: voll ? "not-allowed" : "pointer",
+      knopffarbe: voll ? "var(--blass)" : "var(--aufaktion)",
+      knopfgrund: voll ? "linear-gradient(var(--erhoeht),var(--erhoeht))" : VERLAUF,
+      knopfschein: voll ? "none" : "0 8px 20px color-mix(in srgb,var(--aktion) 30%,transparent)",
+      klapp: () => this.setState((p) => ({ offen: p.offen === w.id ? null : w.id })),
+      starten: () => this.starten(w.id),
+      entfernen: () => this.setState((p) => ({ anstehend: p.anstehend.filter((a) => a.id !== w.id) }), () => this.melde("„" + w.titel + "“ ist wieder auf der Merkliste."))
+    }));
+
+    const gruppen = laufend.map((k) => ({
+      id: k.id,
+      titel: k.titel,
+      aufgaben: s.todos.filter((t) => t.gruppe === k.id).map((t) => ({
+        id: t.id,
+        text: t.text,
+        icon: t.fertig ? ICONS.kastenVoll : ICONS.kastenLeer,
+        farbe: t.fertig ? "var(--erledigt)" : "var(--text)",
+        textfarbe: t.fertig ? "var(--blass)" : "var(--text)",
+        haken: () => this.setState((p) => ({ todos: p.todos.map((x) => (x.id === t.id ? { ...x, fertig: !x.fertig } : x)) }))
+      }))
+    }));
+
+    const navdaten = [
+      { id: "B-10", name: "Monitor", icon: ICONS.monitor },
+      { id: "B-01", name: "Heute", icon: ICONS.heute },
+      { id: "B-04", name: "Ziele", icon: ICONS.ziele },
+      { id: "B-05", name: "Merkliste", icon: ICONS.merkliste },
+      { id: "B-06", name: "Erkenntnisse", icon: ICONS.erkenntnisse },
+      { id: "B-07", name: "Logbuch", icon: ICONS.logbuch }
+    ];
+
+    const vorschlagsdaten = VORSCHLAEGE.filter((v) => !s.verworfen[v.id]);
+
+    const logbuch15 = [
+      { datum: "11.08.2026", titel: "Eine Stunde ohne Wechsel · Tag 1", text: "Gehalten, aber erst am Nachmittag. Zwei Unterbrechungen abgewehrt, die dritte nicht." },
+      { datum: "10.08.2026", titel: "Vor dem Antworten kurz warten", text: "Zweimal gelungen, einmal vergessen. Die Pause fällt leichter am Telefon als in Nachrichten." },
+      { datum: "09.08.2026", titel: "Einen Umweg zu Fuß gehen", text: "Nicht umgesetzt — der Tag war zu voll. Zurück auf die Merkliste." },
+      { datum: "08.08.2026", titel: "Eine Sache bewusst abschließen", text: "Abgeschlossen. Das Gefühl danach war stärker als erwartet." }
+    ];
+    const logbuchLang = [
+      { datum: "Juli 2026", titel: "Sieben Experimente, fünf abgeschlossen", text: "Die Vormittage tragen. Alles, was nach 16 Uhr beginnen sollte, ist liegengeblieben — dreimal in Folge." },
+      { datum: "Juni 2026", titel: "Neun Experimente, sechs abgeschlossen", text: "Körperliche Experimente laufen zuverlässiger als solche, die Gespräche verlangen." },
+      { datum: "Mai 2026", titel: "Anfang", text: "Erste zwei Wochen. Vieles zu groß angesetzt; kürzere Experimente kommen weiter." }
+    ];
+
+    return {
+      theme,
+      effekte: this.effektstufe(),
+      setWrap: (el) => { this.wrap = el; },
+      setScreen: (el) => { this.screenEl = el; },
+      themaIcon: theme === "dunkel" ? ICONS.sonne : ICONS.mond,
+      themaWechseln: () => this.setState({ themeOverride: theme === "dunkel" ? "hell" : "dunkel" }),
+      fusszeile: theme === "dunkel" ? "Dunkel (Standard)" : "Hell",
+
+      istMonitor: istMon,
+      istHeute: s.screen === "B-01",
+      istGespraech: s.screen === "B-02",
+      istAuswertung: s.screen === "B-03",
+      istZiele: s.screen === "B-04",
+      istMerkliste: s.screen === "B-05",
+      istErkenntnisse: s.screen === "B-06",
+      istLogbuch: s.screen === "B-07",
+      istEinstellungen: s.screen === "B-08",
+      istSelbstbild: s.screen === "B-09",
+      zeigtNav: ["B-10", "B-01", "B-04", "B-05", "B-06", "B-07"].includes(s.screen),
+
+      zaehlzeile: "Steht an: " + anstehend.length + " · Läuft: " + laufend.length,
+      zeigtLaedt: istMon && laedt,
+      zeigtGanzLeer: istMon && !laedt && leer,
+      zeigtLaeuft: istMon && !laedt && laufkarten.length > 0,
+      zeigtLaeuftLeer: istMon && !laedt && !leer && laufkarten.length === 0,
+      zeigtTodo: istMon && !laedt && laufkarten.length > 0,
+      zeigtStehtAn: istMon && !laedt && !leer,
+      zeigtStehtAnLeer: istMon && !laedt && !leer && wartekarten.length === 0,
+      istVoll: voll,
+      laufkarten,
+      wartekarten,
+      todogruppen: gruppen,
+      skelette: [{ id: "s1" }, { id: "s2" }, { id: "s3" }],
+
+      navfelder: navdaten.map((n) => ({
+        id: n.id,
+        name: n.name,
+        icon: n.icon,
+        farbe: s.screen === n.id ? "var(--aktion)" : "var(--gedaempft)",
+        gehe: () => this.gehe(n.id)
+      })),
+
+      b01Leer: s.b01 === "LEER",
+      b01Text: s.b01 === "LAGE_STEHT",
+      b01Wartet: s.b01 === "WARTET",
+      b01Vorschlaege: s.b01 === "VORSCHLAEGE",
+      b01Abend: s.b01 === "ABEND",
+      zuMorgen: () => this.setState({ b01: "LEER", lage: "", aufnahme: false }),
+      zuAbend: () => this.setState({ b01: "ABEND" }),
+      morgenGrund: s.b01 === "ABEND" ? "transparent" : "var(--flaeche)",
+      morgenFarbe: s.b01 === "ABEND" ? "var(--gedaempft)" : "var(--aktion)",
+      abendGrund: s.b01 === "ABEND" ? "var(--flaeche)" : "transparent",
+      abendFarbe: s.b01 === "ABEND" ? "var(--aktion)" : "var(--gedaempft)",
+      aufnahme: s.aufnahme,
+      mikroIcon: s.aufnahme ? ICONS.stopp : ICONS.mikro,
+      zeitAnzeige: "00:" + String(s.sekunden).padStart(2, "0"),
+      wellen: Array.from({ length: 24 }, (_, i) => ({ id: "w" + i, dauer: (320 + ((i * 97) % 420)) + "ms", versatz: ((i * 63) % 380) + "ms" })),
+      lage: s.lage,
+      lageAendern: (e) => this.setState({ lage: e.target.value }),
+      aufnahmeUmschalten: () => {
+        if (s.aufnahme) {
+          clearInterval(this._timer);
+          this.setState({ aufnahme: false, b01: "LAGE_STEHT", lage: "Heute liegt einiges vor mir. Ich möchte ruhig anfangen und mich auf eine Sache konzentrieren." });
+        } else {
+          this.setState({ aufnahme: true, sekunden: 0 });
+          clearInterval(this._timer);
+          this._timer = setInterval(() => this.setState((p) => ({ sekunden: p.sekunden + 1 })), 1000);
+        }
+      },
+      tippen: () => this.setState({ b01: "LAGE_STEHT", lage: "" }),
+      verbessern: () => this.setState({ lage: "Heute liegt einiges vor mir. Ich will ruhig anfangen, mich auf eine Sache konzentrieren und den Rest bewusst warten lassen." }),
+      vorschlaegeErzeugen: () => {
+        this.setState({ b01: "WARTET" });
+        setTimeout(() => this.setState({ b01: "VORSCHLAEGE" }), 1400);
+      },
+      andereVorschlaege: () => this.melde("Fünf andere Vorschläge aus anderen Bereichen."),
+      vorschlaege: vorschlagsdaten.map((v, i) => ({
+        i: String(i),
+        titel: v.titel,
+        text: v.text,
+        meta: v.meta,
+        vonMerkliste: !!v.vonMerkliste,
+        greifen: (e) => this.zugStart("vorschlag", v.id, e),
+        transform: zug && zug.art === "vorschlag" && zug.id === v.id ? "translateX(" + zugDx + "px) rotate(" + (zugDx * 0.02).toFixed(2) + "deg)" : "none",
+        zugRuhe: zug && zug.id === v.id ? "none" : "transform 240ms cubic-bezier(.2,0,0,1)",
+        wischOpazitaet: zug && zug.art === "vorschlag" && zug.id === v.id ? Math.min(1, Math.abs(zugDx) / 100) : 0,
+        wischGrund: zugDx >= 0 ? "color-mix(in srgb,var(--aktion) 18%,transparent)" : "color-mix(in srgb,var(--warnung) 16%,transparent)",
+        wischFarbe: zugDx >= 0 ? "var(--aktion)" : "var(--warnung)",
+        wischSeite: zugDx >= 0 ? "right" : "left",
+        wischText: zugDx >= 0 ? "IN DEN MONITOR" : "VERWORFEN",
+        merkicon: s.merkiert[v.id] ? ICONS.merklisteVoll : ICONS.merkliste,
+        merkfarbe: s.merkiert[v.id] ? "var(--aktion)" : "var(--blass)",
+        cursor: voll ? "not-allowed" : "pointer",
+        knopfgrund: voll ? "linear-gradient(var(--erhoeht),var(--erhoeht))" : VERLAUF,
+        merken: () => this.setState((p) => ({ merkiert: { ...p.merkiert, [v.id]: !p.merkiert[v.id] } })),
+        inMonitor: () => this._vorschlagInMonitor(v.id),
+        jetztStarten: () => {
+          if (voll) { this.melde("Drei Experimente laufen schon. Schließ eines ab, bevor du ein neues beginnst."); return; }
+          const neu = { id: v.id + "-x", titel: v.titel, meta: v.meta, herkunft: "KI-Vorschlag", text: v.text };
+          this.setState((p) => ({ anstehend: p.anstehend.concat([neu]) }), () => { this.starten(neu.id); this.gehe("B-10"); });
+        }
+      })),
+
+      gespraechTitel: s.laufend[0] ? s.laufend[0].titel : "Experiment",
+      gespraechTag: s.laufend[0] ? s.laufend[0].tag : "Tag 1",
+      nachrichten: s.nachrichten.map((n, i) => ({
+        id: "n" + i,
+        text: n.text,
+        seite: n.rolle === "ich" ? "flex-end" : "flex-start",
+        radius: n.rolle === "ich" ? "20px 20px 6px 20px" : "20px 20px 20px 6px",
+        grund: n.rolle === "ich" ? "var(--erhoeht)" : "var(--flaeche)",
+        rand: n.rolle === "ich" ? "0" : "1px solid var(--rand)"
+      })),
+      denkt: s.denkt,
+      gespraechMikroIcon: s.gespraechAufnahme ? ICONS.stopp : ICONS.mikro,
+      gespraechMikroFarbe: s.gespraechAufnahme ? "var(--aktion)" : "var(--gedaempft)",
+      gespraechSprechen: () => {
+        if (s.gespraechAufnahme) this.setState({ gespraechAufnahme: false, entwurf: "Ich versuche es morgen vor dem Postfach." });
+        else this.setState({ gespraechAufnahme: true });
+      },
+      entwurf: s.entwurf,
+      entwurfAendern: (e) => this.setState({ entwurf: e.target.value }),
+      senden: (e) => {
+        e.preventDefault();
+        const text = s.entwurf.trim() || "Ich versuche es morgen früher.";
+        this.setState((p) => ({ nachrichten: p.nachrichten.concat([{ rolle: "ich", text }]), entwurf: "", denkt: true }));
+        setTimeout(() => this.setState((p) => ({
+          denkt: false,
+          nachrichten: p.nachrichten.concat([{ rolle: "ki", text: "Früher heißt bei dir vor dem ersten Blick ins Postfach. An den zwei Tagen, an denen das geklappt hat, hat auch die Stunde gehalten. Nimm dir morgen genau diese Reihenfolge vor." }])
+        })), 1600);
+      },
+
+      b03Aufnahme: s.b03 === "AUFNAHME",
+      b03Text: s.b03 === "TEXT",
+      b03Wartet: s.b03 === "WARTET",
+      b03Antwort: s.b03 === "ANTWORT",
+      b03Inhalt: s.b03Inhalt,
+      b03Aendern: (e) => this.setState({ b03Inhalt: e.target.value }),
+      b03Sprechen: () => this.setState({ b03: "TEXT", b03Inhalt: "Zweimal hat die Stunde gehalten, gestern nicht. Es lag an einer Rückfrage, die ich sofort beantwortet habe." }),
+      b03Verbessern: () => this.setState({ b03Inhalt: "An zwei von drei Tagen hat die Stunde gehalten. Gestern habe ich eine Rückfrage sofort beantwortet und bin danach nicht mehr hineingekommen." }),
+      b03Weiter: () => {
+        this.setState({ b03: "WARTET" });
+        setTimeout(() => this.setState({ b03: "ANTWORT" }), 1600);
+      },
+      abschnitte: EINSCHAETZUNG.map((t, i) => ({
+        id: "ea" + i,
+        text: t,
+        grund: s.vorlesen && s.mitlese === i ? "rgba(196,98,60,.26)" : "transparent",
+        farbe: s.vorlesen && s.mitlese === i ? "var(--text)" : "inherit"
+      })),
+      nochmalVersuchen: () => this.setState({ b03: "WARTET", vorlesen: false, mitlese: -1 }, () => setTimeout(() => this.setState({ b03: "ANTWORT" }), 1400)),
+      vorlesen: () => {
+        clearInterval(this._mitlese);
+        if (s.vorlesen) { this.setState({ vorlesen: false, mitlese: -1 }); return; }
+        this.setState({ vorlesen: true, mitlese: 0 });
+        this._mitlese = setInterval(() => this.setState((p) => {
+          const n = p.mitlese + 1;
+          if (n >= EINSCHAETZUNG.length) { clearInterval(this._mitlese); return { vorlesen: false, mitlese: -1 }; }
+          return { mitlese: n };
+        }), 1800);
+      },
+      vorlesefarbe: s.vorlesen ? "var(--aktion)" : "var(--text)",
+      bluete: s.bluete,
+      ueberspringen: () => this.gehe(s.zurueckZu),
+      abschliessen: () => {
+        this.setState({ bluete: true });
+        setTimeout(() => {
+          this.setState((p) => ({
+            bluete: false,
+            laufend: p.laufend.slice(1),
+            todos: p.todos.filter((t) => t.gruppe !== (p.laufend[0] ? p.laufend[0].id : "")),
+            screen: "B-10"
+          }));
+          this.melde("Abgeschlossen. Der Eintrag steht im Logbuch.");
+        }, 1200);
+      },
+
+      ziele: s.ziele.map((z, i) => ({ i: String(i), id: z.id, titel: z.titel, text: z.text, datum: z.datum })),
+      zieleLeer: s.ziele.length === 0,
+      zielOffen: s.zielOffen,
+      zielText: s.zielText,
+      zielTextAendern: (e) => this.setState({ zielText: e.target.value }),
+      zielOeffnen: () => this.setState({ zielOffen: true, zielText: "" }),
+      zielSchliessen: () => this.setState({ zielOffen: false, zielText: "" }),
+      zielSprechen: () => this.setState({ zielText: "Ich will wieder regelmäßig etwas mit den Händen machen." }),
+      zielVerbessern: () => this.setState({ zielText: (s.zielText || "Ich will wieder regelmäßig etwas mit den Händen machen.").replace(/\.?$/, " — und zwar in kleinen Schritten, die ich neben der Arbeit halten kann.") }),
+      zielSpeichern: () => {
+        const t = s.zielText.trim() || "Wieder etwas mit den Händen machen";
+        this.setState((p) => ({ zielOffen: false, zielText: "", ziele: p.ziele.concat([{ id: "z" + (p.ziele.length + 1), titel: t, text: "Selbst angelegt.", datum: "seit 12.08.2026" }]) }));
+        this.melde("Ziel gespeichert.");
+      },
+
+      merkliste: s.merkliste.map((m, i) => ({
+        i: String(i),
+        titel: m.titel,
+        meta: m.meta,
+        loeschen: () => this.setState((p) => ({ merkliste: p.merkliste.filter((x) => x.id !== m.id) }))
+      })),
+      merklisteLeer: s.merkliste.length === 0,
+
+      erkenntnisse: ERKENNTNISSE.map((e, i) => ({ i: String(i), id: "e" + i, datum: e.datum, text: e.text })),
+      erkenntnisseLeer: ERKENNTNISSE.length === 0,
+      logbuchLeer: false,
+      abendzeile: laufkarten.length === 1 ? "Ein Experiment wartet auf deine Auswertung." : laufkarten.length + " Experimente warten auf deine Auswertung.",
+      stoerung: s.stoerungOverride ?? (this.props.stoerung && this.props.stoerung !== "keine" ? this.props.stoerung : null),
+      stoerungNochmal: () => this.setState({ stoerungOverride: null }),
+
+      b07tab: s.b07tab,
+      tab15: () => this.setState({ b07tab: "15" }),
+      tabLang: () => this.setState({ b07tab: "lang" }),
+      tab15Grund: s.b07tab === "15" ? "var(--flaeche)" : "transparent",
+      tab15Farbe: s.b07tab === "15" ? "var(--text)" : "var(--gedaempft)",
+      tabLangGrund: s.b07tab === "lang" ? "var(--flaeche)" : "transparent",
+      tabLangFarbe: s.b07tab === "lang" ? "var(--text)" : "var(--gedaempft)",
+      logeintraege: (s.b07tab === "15" ? logbuch15 : logbuchLang).map((l, i) => ({ i: String(i), id: "lg" + i, datum: l.datum, titel: l.titel, text: l.text })),
+
+      modellgruppen: [
+        { id: "g-exp", titel: "Experimente", felder: [
+          { id: "expModell", label: "Modell", aria: "Modell für Experimente", auswahl: MODELLE },
+          { id: "expEffort", label: "Effort", aria: "Effort für Experimente", auswahl: EFFORT }
+        ] },
+        { id: "g-log", titel: "Logbuch", felder: [
+          { id: "logModell", label: "Modell", aria: "Modell für das Logbuch", auswahl: MODELLE },
+          { id: "logEffort", label: "Effort", aria: "Effort für das Logbuch", auswahl: EFFORT }
+        ] }
+      ].map((g) => ({
+        id: g.id,
+        titel: g.titel,
+        felder: g.felder.map((f) => ({
+          id: f.id,
+          label: f.label,
+          aria: f.aria,
+          wert: s.modell[f.id],
+          auswahl: f.auswahl.map((w) => ({ id: f.id + w, wert: w })),
+          aendern: (e) => this.setState((p) => ({ modell: { ...p.modell, [f.id]: e.target.value } }))
+        }))
+      })),
+
+      stimmeAnbieter: s.stimmeAnbieter,
+      anbieterAendern: (e) => this.setState({ stimmeAnbieter: e.target.value, probeLaeuft: false }),
+      anbieterGoogle: s.stimmeAnbieter === "google",
+      anbieterEigen: s.stimmeAnbieter === "own",
+      anbieterEdge: s.stimmeAnbieter === "edge",
+      googleStimme: s.googleStimme,
+      googleStimmen: GOOGLE_STIMMEN.map((w) => ({ id: w, wert: w })),
+      googleStimmeAendern: (e) => this.setState({ googleStimme: e.target.value }),
+      edgeStimme: s.edgeStimme,
+      edgeStimmen: EDGE_STIMMEN.map((w) => ({ id: w, wert: w })),
+      edgeStimmeAendern: (e) => this.setState({ edgeStimme: e.target.value }),
+      stimmeAufnehmen: () => {
+        if (s.stimmeAufnahme) {
+          this.setState({ stimmeAufnahme: false });
+          this.melde("Stimmprobe aufgenommen. Alibaba erzeugt daraus deine Stimme.");
+        } else {
+          this.setState({ stimmeAufnahme: true });
+        }
+      },
+      aufnahmeText: s.stimmeAufnahme ? "Aufnahme läuft — antippen zum Beenden" : "Stimme aufnehmen",
+      aufnahmeIcon: s.stimmeAufnahme ? ICONS.aufnahmePunkt : ICONS.mikro,
+      aufnahmeFarbe: s.stimmeAufnahme ? "var(--aufaktion)" : "var(--text)",
+      aufnahmeGrund: s.stimmeAufnahme ? "var(--aktion)" : "transparent",
+      aufnahmeRand: s.stimmeAufnahme ? "var(--aktion)" : "var(--rand)",
+      tempo: s.tempo,
+      tempoAnzeige: s.tempo.toFixed(2).replace(".", ","),
+      tempostriche: Array.from({ length: 13 }, (_, i) => {
+        const wert = 0.7 + i * 0.05;
+        const gross = i === 0 || i === 6 || i === 12;
+        return {
+          id: "t" + i,
+          hoehe: gross ? "12px" : "7px",
+          farbe: Math.abs(wert - s.tempo) < 0.001 ? "var(--aktion)" : (gross ? "var(--gedaempft)" : "var(--blass)")
+        };
+      }),
+      tempoAendern: (e) => this.setState({ tempo: parseFloat(e.target.value) }),
+      probeHoeren: () => {
+        this.setState({ probeLaeuft: true });
+        clearTimeout(this._probe);
+        this._probe = setTimeout(() => this.setState({ probeLaeuft: false }), 2400);
+      },
+      probeText: s.probeLaeuft ? "Probe läuft …" : "Probe hören",
+      probeFarbe: s.probeLaeuft ? "var(--aktion)" : "var(--text)",
+
+      codexStand: s.codexAngemeldet ? "angemeldet · frank" : "nicht angemeldet",
+      codexFarbe: s.codexAngemeldet ? "var(--erledigt)" : "var(--gedaempft)",
+      codexKnopfText: s.codexAngemeldet ? "Abmelden" : "Anmelden",
+      codexKnopfRand: s.codexAngemeldet ? "1px solid var(--rand)" : "0",
+      codexKnopfGrund: s.codexAngemeldet ? "linear-gradient(transparent,transparent)" : VERLAUF,
+      codexKnopfFarbe: s.codexAngemeldet ? "var(--text)" : "var(--aufaktion)",
+      codexUmschalten: () => {
+        this.setState((p) => ({ codexAngemeldet: !p.codexAngemeldet }));
+        this.melde(s.codexAngemeldet ? "Von Codex abgemeldet." : "Mit OpenAI Codex verbunden.");
+      },
+
+      schluessel: [
+        { id: "groq", name: "Groq", zweck: "Transkription" },
+        { id: "google", name: "Google Cloud", zweck: "Chirp-3-Stimmen" },
+        { id: "alibaba", name: "Alibaba", zweck: "eigene Stimme" }
+      ].map((k) => {
+        const g = s.geheim[k.id];
+        return {
+          id: k.id,
+          name: k.name,
+          zweck: k.zweck,
+          aria: k.name + "-Zugang",
+          art: g.sichtbar ? "text" : "password",
+          wert: g.wert,
+          augeIcon: g.sichtbar ? ICONS.augeAus : ICONS.auge,
+          augeFarbe: g.sichtbar ? "var(--aktion)" : "var(--gedaempft)",
+          zeigenAria: g.sichtbar ? k.name + "-Zugang verbergen" : k.name + "-Zugang zeigen",
+          aendern: (e) => this.setState((p) => ({ geheim: { ...p.geheim, [k.id]: { ...p.geheim[k.id], wert: e.target.value } } })),
+          sichtbarkeit: () => this.setState((p) => ({ geheim: { ...p.geheim, [k.id]: { ...p.geheim[k.id], sichtbar: !p.geheim[k.id].sichtbar } } }))
+        };
+      }),
+      effektstufen: ["Voll", "Gedämpft", "Aus"].map((n) => ({
+        id: n,
+        name: n,
+        grund: this.effektstufe() === n ? "var(--flaeche)" : "transparent",
+        farbe: this.effektstufe() === n ? "var(--aktion)" : "var(--gedaempft)",
+        waehlen: () => this.setState({ effekteOverride: n })
+      })),
+      erscheinungen: [
+        { id: "dunkel", name: "Dunkel" },
+        { id: "hell", name: "Hell" },
+        { id: "auto", name: "Wie das System" }
+      ].map((e) => ({
+        id: e.id,
+        name: e.name,
+        grund: theme === e.id ? "var(--flaeche)" : "transparent",
+        farbe: theme === e.id ? "var(--aktion)" : "var(--gedaempft)",
+        waehlen: () => this.setState({ themeOverride: e.id === "auto" ? "dunkel" : e.id })
+      })),
+      erinnerungen: [
+        { id: "morgens", name: "Erinnerung morgens", zeit: "08:00", an: s.erinnerungenAn.morgens },
+        { id: "abends", name: "Erinnerung abends", zeit: "20:30", an: s.erinnerungenAn.abends }
+      ].map((e) => ({
+        id: e.id,
+        name: e.name,
+        zeit: e.zeit,
+        spurfarbe: e.an ? "var(--aktion)" : "var(--rand)",
+        knopflinks: e.an ? "23px" : "3px",
+        umschalten: () => this.setState((p) => ({ erinnerungenAn: { ...p.erinnerungenAn, [e.id]: !p.erinnerungenAn[e.id] } }))
+      })),
+
+      selbstbild: s.selbstbild,
+      selbstbildAendern: (e) => this.setState({ selbstbild: e.target.value }),
+
+      zuEinstellungen: () => this.gehe("B-08"),
+      zuSelbstbild: () => this.gehe("B-09"),
+      zuHeute: () => this.gehe("B-01"),
+      zurueck: () => this.gehe(s.zurueckZu),
+
+      anlegenOffen: s.anlegenOffen,
+      anlegeText: s.anlegeText,
+      anlegeTextAendern: (e) => this.setState({ anlegeText: e.target.value }),
+      anlegenOeffnen: () => this.setState({ anlegenOffen: true, anlegeText: "" }),
+      anlegenSchliessen: () => this.setState({ anlegenOffen: false, anlegeText: "" }),
+      anlegenSpeichern: () => {
+        const t = s.anlegeText.trim() || "Einen Vormittag ohne Bildschirm beginnen";
+        this.setState((p) => ({
+          anlegenOffen: false,
+          anlegeText: "",
+          anstehend: p.anstehend.concat([{ id: "eig" + p.anstehend.length, titel: t, meta: "leicht · 1 Tag", herkunft: "selbst angelegt", text: "Selbst angelegt am 12.08.2026." }]),
+          screen: "B-10"
+        }));
+        this.melde("Steht jetzt unter „Steht an“.");
+      },
+
+      hinweis: s.hinweis
+    };
+  }
+}
+
+</script>
+</body>
+</html>

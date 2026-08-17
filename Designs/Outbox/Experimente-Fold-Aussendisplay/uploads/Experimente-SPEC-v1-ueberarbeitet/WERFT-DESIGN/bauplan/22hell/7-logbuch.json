@@ -1,0 +1,440 @@
+{
+  "bildschirm": "B-07",
+  "name": "Logbuch",
+  "breite": 412,
+  "erscheinung": "22hell",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "b07-screen",
+          "beschriftung": "Logbuch",
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "b07-topbar",
+              "anordnung": {
+                "art": "zeile",
+                "quer": "center",
+                "innen": "0 20px"
+              },
+              "kinder": [
+                {
+                  "tag": "h1",
+                  "klassen": "b07-title",
+                  "anordnung": {
+                    "art": "zeile",
+                    "quer": "center",
+                    "innen": "0 20px"
+                  },
+                  "text": "Logbuch"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "b07-content",
+              "anordnung": {
+                "art": "fluss",
+                "innen": "0 20px 32px"
+              },
+              "kinder": [
+                {
+                  "tag": "div",
+                  "klassen": "b07-content-stack",
+                  "anordnung": {
+                    "art": "spalte",
+                    "abstand": "32px",
+                    "innen": "0 20px 32px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "div",
+                      "klassen": "b07-tabs",
+                      "beschriftung": "Logbuch-Zeitraum",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "32px",
+                        "spalten": "repeat(2, minmax(0, 1fr))",
+                        "innen": "0 20px 32px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "klassen": "b07-tab-indicator",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "32px",
+                            "spalten": "repeat(2, minmax(0, 1fr))",
+                            "innen": "0 20px 32px"
+                          }
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b07-tab",
+                          "funktion": "Letzte 15 Tage anzeigen",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "32px",
+                            "spalten": "repeat(2, minmax(0, 1fr))",
+                            "innen": "0"
+                          },
+                          "text": "Letzte 15 Tage"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "b07-tab",
+                          "funktion": "Langzeit anzeigen",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "32px",
+                            "spalten": "repeat(2, minmax(0, 1fr))",
+                            "innen": "0"
+                          },
+                          "text": "Langzeit"
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "b07-tab-panels",
+                      "anordnung": {
+                        "art": "spalte",
+                        "abstand": "32px",
+                        "innen": "0 20px 32px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "section",
+                          "klassen": "b07-tab-panel is-active",
+                          "anordnung": {
+                            "art": "spalte",
+                            "abstand": "32px",
+                            "innen": "0 20px 32px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "p",
+                              "klassen": "b07-empty",
+                              "anordnung": {
+                                "art": "spalte",
+                                "abstand": "32px",
+                                "innen": "20px"
+                              },
+                              "text": "Noch nichts aufgeschrieben."
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "section",
+                          "klassen": "b07-tab-panel",
+                          "anordnung": {
+                            "art": "spalte",
+                            "abstand": "32px",
+                            "innen": "0 20px 32px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "p",
+                              "klassen": "b07-empty",
+                              "anordnung": {
+                                "art": "spalte",
+                                "abstand": "32px",
+                                "innen": "20px"
+                              },
+                              "text": "Noch nichts aufgeschrieben."
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "nav",
+              "klassen": "b07-bottom-nav werft-primary-nav",
+              "beschriftung": "Hauptnavigation",
+              "anordnung": {
+                "art": "raster",
+                "spalten": "repeat(5, minmax(0, 1fr))"
+              },
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "b07-nav-item",
+                  "fuehrtZu": "B-01",
+                  "beschriftung": "Heute",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b07-nav-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b07-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Heute"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b07-nav-item",
+                  "fuehrtZu": "B-04",
+                  "beschriftung": "Ziele",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b07-nav-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b07-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Ziele"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b07-nav-item",
+                  "fuehrtZu": "B-05",
+                  "beschriftung": "Merkliste",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b07-nav-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b07-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Merkliste"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b07-nav-item",
+                  "fuehrtZu": "B-06",
+                  "beschriftung": "Erkenntnisse",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b07-nav-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b07-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Erkenntnisse"
+                    }
+                  ]
+                },
+                {
+                  "tag": "button",
+                  "klassen": "b07-nav-item is-active",
+                  "fuehrtZu": "B-07",
+                  "beschriftung": "Logbuch",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "b07-nav-icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "use",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "klassen": "b07-nav-label",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Logbuch"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

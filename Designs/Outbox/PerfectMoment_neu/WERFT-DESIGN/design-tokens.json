@@ -1,0 +1,1245 @@
+{
+  "erzeugtVon": "Werft Studio",
+  "projekt": "PerfectMoment",
+  "plattform": "android",
+  "geometrie": {
+    "width": 412,
+    "height": 915,
+    "device": "—",
+    "density": 1,
+    "source": "design.html"
+  },
+  "vollstaendigkeit": {
+    "bildschirmeImDesign": 18,
+    "bildschirmeExportiert": 18,
+    "erscheinungen": 2,
+    "dateienJeBildschirm": 2,
+    "nichtAufgebaut": []
+  },
+  "erscheinungen": [
+    {
+      "id": "darkpmcolors",
+      "name": "DarkPmColors (Dunkel)",
+      "art": "dark",
+      "vorschaufarbe": "#181209",
+      "tokens": {
+        "background": "#181209",
+        "surface": "#251c10",
+        "surface2": "#332717",
+        "gold": "#d4a24c",
+        "goldHi": "#f0c97a",
+        "goldDim": "#9a7c40",
+        "amber": "#e8873b",
+        "text1": "#f5eee2",
+        "text2": "#b3a68f",
+        "text3": "#786a57",
+        "warning": "#c4634a",
+        "breath": "rgba(212, 162, 76, 0.1294)"
+      }
+    },
+    {
+      "id": "lightpmcolors",
+      "name": "LightPmColors",
+      "art": "light",
+      "vorschaufarbe": "#fbf6ec",
+      "tokens": {
+        "background": "#fbf6ec",
+        "surface": "#f3ead9",
+        "surface2": "#ede1ca",
+        "gold": "#a87a2a",
+        "goldHi": "#7a5518",
+        "goldDim": "#c7ae7e",
+        "amber": "#c4661f",
+        "text1": "#241d12",
+        "text2": "#6b5d48",
+        "text3": "#a2947c",
+        "warning": "#a33f28",
+        "breath": "rgba(168, 122, 42, 0.0706)"
+      }
+    }
+  ],
+  "bildschirme": [
+    {
+      "nummer": 1,
+      "id": "compose:StartScreen",
+      "name": "StartScreen",
+      "istStart": true,
+      "navigiertZu": [
+        "compose:HistoryScreen",
+        "compose:SettingsScreen",
+        "compose:ChatGptScreen",
+        "compose:DurationSheet"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/01-startscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/01-startscreen.html"
+      }
+    },
+    {
+      "nummer": 2,
+      "id": "compose:HistoryScreen",
+      "name": "HistoryScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:HistoryDetailScreen"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/02-historyscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/02-historyscreen.html"
+      }
+    },
+    {
+      "nummer": 3,
+      "id": "compose:SettingsScreen",
+      "name": "SettingsScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:HooksScreen",
+        "compose:SkillsScreen",
+        "compose:VoiceScreen",
+        "compose:ChatGptScreen",
+        "compose:DurationSheet",
+        "compose:OptionSheet"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/03-settingsscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/03-settingsscreen.html"
+      }
+    },
+    {
+      "nummer": 4,
+      "id": "compose:ChatGptScreen",
+      "name": "ChatGptScreen",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/04-chatgptscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/04-chatgptscreen.html"
+      }
+    },
+    {
+      "nummer": 5,
+      "id": "compose:DurationSheet",
+      "name": "DurationSheet",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/05-durationsheet.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/05-durationsheet.html"
+      }
+    },
+    {
+      "nummer": 6,
+      "id": "compose:HistoryDetailScreen",
+      "name": "HistoryDetailScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:DurationSheet"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/06-historydetailscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/06-historydetailscreen.html"
+      }
+    },
+    {
+      "nummer": 7,
+      "id": "compose:HooksScreen",
+      "name": "HooksScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:HookEditorScreen"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/07-hooksscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/07-hooksscreen.html"
+      }
+    },
+    {
+      "nummer": 8,
+      "id": "compose:SkillsScreen",
+      "name": "SkillsScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:SkillEditorScreen"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/08-skillsscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/08-skillsscreen.html"
+      }
+    },
+    {
+      "nummer": 9,
+      "id": "compose:VoiceScreen",
+      "name": "VoiceScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:SettingsScreen"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/09-voicescreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/09-voicescreen.html"
+      }
+    },
+    {
+      "nummer": 10,
+      "id": "compose:OptionSheet",
+      "name": "OptionSheet",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/10-optionsheet.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/10-optionsheet.html"
+      }
+    },
+    {
+      "nummer": 11,
+      "id": "compose:HookEditorScreen",
+      "name": "HookEditorScreen",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/11-hookeditorscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/11-hookeditorscreen.html"
+      }
+    },
+    {
+      "nummer": 12,
+      "id": "compose:SkillEditorScreen",
+      "name": "SkillEditorScreen",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/12-skilleditorscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/12-skilleditorscreen.html"
+      }
+    },
+    {
+      "nummer": 13,
+      "id": "compose:AppBottomSheet",
+      "name": "AppBottomSheet",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:DurationSheet",
+        "compose:OptionSheet",
+        "compose:IntroAnswerSheet"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/13-appbottomsheet.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/13-appbottomsheet.html"
+      }
+    },
+    {
+      "nummer": 14,
+      "id": "compose:AppLockedScreen",
+      "name": "AppLockedScreen",
+      "istStart": false,
+      "navigiertZu": [
+        "compose:SessionScreen"
+      ],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/14-applockedscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/14-applockedscreen.html"
+      }
+    },
+    {
+      "nummer": 15,
+      "id": "compose:IntroAnswerSheet",
+      "name": "IntroAnswerSheet",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/15-introanswersheet.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/15-introanswersheet.html"
+      }
+    },
+    {
+      "nummer": 16,
+      "id": "compose:RawDataScreen",
+      "name": "RawDataScreen",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/16-rawdatascreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/16-rawdatascreen.html"
+      }
+    },
+    {
+      "nummer": 17,
+      "id": "compose:SessionScreen",
+      "name": "SessionScreen",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/17-sessionscreen.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/17-sessionscreen.html"
+      }
+    },
+    {
+      "nummer": 18,
+      "id": "compose:SessionStopDialog",
+      "name": "SessionStopDialog",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "quelldateien": [
+        "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+      ],
+      "dateien": {
+        "darkpmcolors": "bildschirme/darkpmcolors/18-sessionstopdialog.html",
+        "lightpmcolors": "bildschirme/lightpmcolors/18-sessionstopdialog.html"
+      }
+    }
+  ],
+  "farben": [
+    {
+      "name": "colors.success",
+      "css": "#6fa860",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.background",
+      "css": "#181209",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.surface",
+      "css": "#251c10",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.surface2",
+      "css": "#332717",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.gold",
+      "css": "#d4a24c",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.goldHi",
+      "css": "#f0c97a",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.goldDim",
+      "css": "#9a7c40",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.amber",
+      "css": "#e8873b",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.text1",
+      "css": "#f5eee2",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.text2",
+      "css": "#b3a68f",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.text3",
+      "css": "#786a57",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.warning",
+      "css": "#c4634a",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "DarkPmColors.breath",
+      "css": "rgba(212, 162, 76, 0.1294)",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.background",
+      "css": "#fbf6ec",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.surface",
+      "css": "#f3ead9",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.surface2",
+      "css": "#ede1ca",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.gold",
+      "css": "#a87a2a",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.goldHi",
+      "css": "#7a5518",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.goldDim",
+      "css": "#c7ae7e",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.amber",
+      "css": "#c4661f",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.text1",
+      "css": "#241d12",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.text2",
+      "css": "#6b5d48",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.text3",
+      "css": "#a2947c",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.warning",
+      "css": "#a33f28",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "LightPmColors.breath",
+      "css": "rgba(168, 122, 42, 0.0706)",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": true
+    },
+    {
+      "name": "success",
+      "css": "#6fa860",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "verwendet": false
+    }
+  ],
+  "masse": [
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(10dp) ×9",
+      "px": 10,
+      "original": "10.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:width(12dp) ×9",
+      "px": 12,
+      "original": "12.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(8dp) ×7",
+      "px": 8,
+      "original": "8.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt:padding(16dp) ×6",
+      "px": 16,
+      "original": "16.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(20dp) ×5",
+      "px": 20,
+      "original": "20.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(24dp) ×5",
+      "px": 24,
+      "original": "24.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(48dp) ×4",
+      "px": 48,
+      "original": "48.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(26dp) ×4",
+      "px": 26,
+      "original": "26.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(18dp) ×4",
+      "px": 18,
+      "original": "18.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(14dp) ×4",
+      "px": 14,
+      "original": "14.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(28dp) ×3",
+      "px": 28,
+      "original": "28.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:padding(40dp) ×3",
+      "px": 40,
+      "original": "40.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(52dp) ×3",
+      "px": 52,
+      "original": "52.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(32dp) ×3",
+      "px": 32,
+      "original": "32.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:padding(2dp) ×3",
+      "px": 2,
+      "original": "2.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:height(1dp) ×3",
+      "px": 1,
+      "original": "1.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:size(96dp) ×2",
+      "px": 96,
+      "original": "96.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt:size(42dp) ×2",
+      "px": 42,
+      "original": "42.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:height(56dp) ×2",
+      "px": 56,
+      "original": "56.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:padding(3dp) ×2",
+      "px": 3,
+      "original": "3.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:height(44dp) ×2",
+      "px": 44,
+      "original": "44.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:padding(6dp) ×2",
+      "px": 6,
+      "original": "6.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt:padding(36dp) ×2",
+      "px": 36,
+      "original": "36.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(38dp) ×2",
+      "px": 38,
+      "original": "38.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(72dp) ×2",
+      "px": 72,
+      "original": "72.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(22dp) ×2",
+      "px": 22,
+      "original": "22.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(4dp) ×2",
+      "px": 4,
+      "original": "4.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:size(50dp)",
+      "px": 50,
+      "original": "50.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt:height(58dp)",
+      "px": 58,
+      "original": "58.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(108dp)",
+      "px": 108,
+      "original": "108.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:height(188dp)",
+      "px": 188,
+      "original": "188.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(168dp)",
+      "px": 168,
+      "original": "168.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(27dp)",
+      "px": 27,
+      "original": "27.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(64dp)",
+      "px": 64,
+      "original": "64.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(13dp)",
+      "px": 13,
+      "original": "13.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:width(220dp)",
+      "px": 220,
+      "original": "220.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(88dp)",
+      "px": 88,
+      "original": "88.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(30dp)",
+      "px": 30,
+      "original": "30.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:width(126dp)",
+      "px": 126,
+      "original": "126.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:size(23dp)",
+      "px": 23,
+      "original": "23.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:height(140dp)",
+      "px": 140,
+      "original": "140.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(5dp)",
+      "px": 5,
+      "original": "5.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:height(180dp)",
+      "px": 180,
+      "original": "180.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:height(68dp)",
+      "px": 68,
+      "original": "68.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:padding(7dp)",
+      "px": 7,
+      "original": "7.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:width(240dp)",
+      "px": 240,
+      "original": "240.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:height(1.5dp)",
+      "px": 1.5,
+      "original": "1.5.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": true
+    },
+    {
+      "name": "itemStep",
+      "px": 78,
+      "original": "78.dp",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "verwendet": false
+    }
+  ],
+  "typografie": [
+    {
+      "name": "Theme.PerfectMoment",
+      "schriftart": "sans",
+      "quelle": "PerfectMoment/app/src/main/res/values/themes.xml"
+    },
+    {
+      "name": "textStyle",
+      "schriftart": "if",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+    },
+    {
+      "name": "screenTitle",
+      "schriftart": "Inter",
+      "groessePx": 26,
+      "staerke": 600,
+      "zeilenhoehePx": 32.5,
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt"
+    },
+    {
+      "name": "section",
+      "schriftart": "Inter",
+      "groessePx": 13,
+      "staerke": 500,
+      "zeilenhoehePx": 17,
+      "laufweitePx": 0.8,
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt"
+    },
+    {
+      "name": "body",
+      "schriftart": "Inter",
+      "groessePx": 15,
+      "staerke": 400,
+      "zeilenhoehePx": 23.25,
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt"
+    },
+    {
+      "name": "question",
+      "schriftart": "Newsreader",
+      "groessePx": 20,
+      "staerke": 300,
+      "zeilenhoehePx": 31,
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt"
+    },
+    {
+      "name": "mono",
+      "schriftart": "JetBrainsMono",
+      "groessePx": 13,
+      "staerke": 400,
+      "zeilenhoehePx": 20.8,
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt"
+    }
+  ],
+  "formen": [
+    {
+      "name": "shape",
+      "radius": "20px",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+    },
+    {
+      "name": "controlShape",
+      "radius": "14px",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+    },
+    {
+      "name": "topShape",
+      "radius": "24px",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt"
+    }
+  ],
+  "effekte": [
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt:Dauerschleife",
+      "art": "animation",
+      "css": "animation: werft-loop 1767ms linear infinite alternate",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt (infiniteRepeatable, rememberInfiniteTransition)"
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt:Ein-/Ausblenden",
+      "art": "animation",
+      "css": "transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt (AnimatedContent, AnimatedVisibility)"
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:Dauerschleife",
+      "art": "animation",
+      "css": "animation: werft-loop 2200ms linear infinite",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt (infiniteRepeatable, rememberInfiniteTransition)"
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt:Zustandsübergang",
+      "art": "animation",
+      "css": "transition: all 2200ms linear",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt (animateColorAsState, animateFloatAsState, animateTo)"
+    },
+    {
+      "name": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt:Dauerschleife",
+      "art": "animation",
+      "css": "animation: werft-loop 300ms cubic-bezier(0.4, 0, 0.2, 1) infinite alternate",
+      "quelle": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt (infiniteRepeatable, rememberInfiniteTransition)"
+    }
+  ],
+  "assets": [
+    {
+      "name": "ic_app_icon",
+      "art": "vector",
+      "pfad": "PerfectMoment/app/src/main/res/drawable/ic_app_icon.xml",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"108\" height=\"108\" viewBox=\"0 0 108 108\"><path d=\"M0,0h108v108h-108z\" fill=\"#181209\"/><path d=\"M54,18a36,36 0,1 0,0 72a36,36 0,1 0,0 -72\" fill=\"#d4a24c\"/><path d=\"M54,49a5,5 0,1 0,0 10a5,5 0,1 0,0 -10\" fill=\"#f0c97a\"/></svg>"
+    },
+    {
+      "name": "ic_notification",
+      "art": "vector",
+      "pfad": "PerfectMoment/app/src/main/res/drawable/ic_notification.xml",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M12,3a9,9 0,1 0,0 18a9,9 0,1 0,0 -18M12,10a2,2 0,1 1,0 4a2,2 0,1 1,0 -4\" fill=\"#ffffff\"/></svg>"
+    }
+  ],
+  "texte": [
+    {
+      "name": "app_name",
+      "value": "Perfect Moment"
+    },
+    {
+      "name": "notification_channel_session",
+      "value": "Laufende Sitzung"
+    }
+  ],
+  "dateien": [
+    {
+      "pfad": "PerfectMoment/01-DESIGN-BRIEF.md",
+      "bytes": 23922
+    },
+    {
+      "pfad": "PerfectMoment/02-PROGRAMMIER-SPEC.md",
+      "bytes": 32376
+    },
+    {
+      "pfad": "PerfectMoment/build.gradle.kts",
+      "bytes": 210
+    },
+    {
+      "pfad": "PerfectMoment/gradle.properties",
+      "bytes": 136
+    },
+    {
+      "pfad": "PerfectMoment/README.md",
+      "bytes": 682
+    },
+    {
+      "pfad": "PerfectMoment/settings.gradle.kts",
+      "bytes": 568
+    },
+    {
+      "pfad": "PerfectMoment/SPEC.md",
+      "bytes": 5037
+    },
+    {
+      "pfad": "PerfectMoment/gradle/libs.versions.toml",
+      "bytes": 3026
+    },
+    {
+      "pfad": "PerfectMoment/gradle/wrapper/gradle-wrapper.properties",
+      "bytes": 260
+    },
+    {
+      "pfad": "PerfectMoment/app/build.gradle.kts",
+      "bytes": 2384
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/AndroidManifest.xml",
+      "bytes": 2088
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/xml/backup_rules.xml",
+      "bytes": 293
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/xml/data_extraction_rules.xml",
+      "bytes": 630
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/xml/network_security_config.xml",
+      "bytes": 146
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/values/strings.xml",
+      "bytes": 190
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/values/themes.xml",
+      "bytes": 529
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/font/inter.ttf",
+      "bytes": 876576
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/font/jetbrains_mono.ttf",
+      "bytes": 187208
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/font/newsreader.ttf",
+      "bytes": 451664
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/drawable/ic_app_icon.xml",
+      "bytes": 506
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/res/drawable/ic_notification.xml",
+      "bytes": 381
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/MainActivity.kt",
+      "bytes": 11358
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/PerfectMomentApplication.kt",
+      "bytes": 364
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/AppViewModel.kt",
+      "bytes": 35199
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Components.kt",
+      "bytes": 19400
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/DictationText.kt",
+      "bytes": 425
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/PerfectMomentApp.kt",
+      "bytes": 13429
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/Screens.kt",
+      "bytes": 86401
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/ui/theme/PerfectMomentTheme.kt",
+      "bytes": 7368
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/EdgeTtsPlayer.kt",
+      "bytes": 15602
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/GoogleCloudTtsPlayer.kt",
+      "bytes": 10164
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/TtsCatalog.kt",
+      "bytes": 3309
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/TtsManager.kt",
+      "bytes": 7048
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/EmojiParser.kt",
+      "bytes": 4491
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/SessionController.kt",
+      "bytes": 18537
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/SessionEngine.kt",
+      "bytes": 22244
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/SessionForegroundService.kt",
+      "bytes": 7573
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/SessionModels.kt",
+      "bytes": 2288
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/session/SessionNotification.kt",
+      "bytes": 3349
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/security/AppLockManager.kt",
+      "bytes": 1661
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/network/OkHttpShutdown.kt",
+      "bytes": 741
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/di/AppContainer.kt",
+      "bytes": 1128
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/settings/SecureSettings.kt",
+      "bytes": 9251
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/repository/ContentRepository.kt",
+      "bytes": 1854
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/repository/SessionRepository.kt",
+      "bytes": 4181
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/local/Daos.kt",
+      "bytes": 4567
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/local/Entities.kt",
+      "bytes": 2344
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/local/PerfectMomentDatabase.kt",
+      "bytes": 3682
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/data/local/PreinstalledContent.kt",
+      "bytes": 6893
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/ActiveCallTracker.kt",
+      "bytes": 431
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/CodexAuthManager.kt",
+      "bytes": 42159
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/CodexModels.kt",
+      "bytes": 2470
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/IntroQuestionPolicy.kt",
+      "bytes": 948
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/QuestionResponseValidator.kt",
+      "bytes": 6195
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/StreamingQuestionDecoder.kt",
+      "bytes": 2073
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/audio/GroqModels.kt",
+      "bytes": 354
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/audio/GroqTranscriber.kt",
+      "bytes": 6115
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/audio/MicRecorder.kt",
+      "bytes": 8527
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/audio/SpeechAnalyzer.kt",
+      "bytes": 2998
+    },
+    {
+      "pfad": "PerfectMoment/app/src/main/java/de/frank/perfectmoment/audio/WhisperHallucinationFilter.kt",
+      "bytes": 5777
+    },
+    {
+      "pfad": "PerfectMoment/app/schemas/de.frank.perfectmoment.data.local.PerfectMomentDatabase/2.json",
+      "bytes": 8513
+    },
+    {
+      "pfad": "PerfectMoment/app/schemas/de.frank.perfectmoment.data.local.PerfectMomentDatabase/3.json",
+      "bytes": 8921
+    },
+    {
+      "pfad": "PerfectMoment/app/schemas/de.frank.perfectmoment.data.local.PerfectMomentDatabase/4.json",
+      "bytes": 9406
+    },
+    {
+      "pfad": ".werft-generated/019fa36f-d701-7075-b9b8-955d0e41cd8b/1/design.html",
+      "bytes": 311582
+    }
+  ],
+  "hinweise": [
+    "Compose-Navigation ohne NavHost: „StartScreen“ ist der Startbildschirm (Aufzählungs-Navigation). Er muss beim Öffnen sichtbar sein.",
+    "Start-Activity laut Manifest: .MainActivity. Der erste sichtbare Zustand der Rekonstruktion muss dieser Activity entsprechen."
+  ]
+}

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — HistoryScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:HistoryScreen" data-screen-name="HistoryScreen" style="width: 412px; min-height: 915px;">
+<section id="pm-history-screen" data-werft-screen="HistoryScreen" aria-label="Verlauf">
+  <div class="pm-history__breath" aria-hidden="true"></div>
+
+  <div class="pm-history__content">
+    <header class="pm-history__header">
+      <button
+        class="pm-history__back"
+        type="button"
+        aria-label="Zurück"
+        data-werft-navigate="compose:StartScreen"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+
+      <div class="pm-history__title">Verlauf</div>
+
+      <button
+        id="pm-history-sort-button"
+        class="pm-history__sort"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="pm-history-sort-menu"
+        aria-label="Verlauf sortieren: Am häufigsten"
+      >
+        <svg class="pm-history__sort-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M1 6H23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M7 18H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="pm-history__empty">
+      <div class="pm-history__empty-mark" aria-hidden="true">
+        <span class="pm-history__empty-dot"></span>
+      </div>
+      <div class="pm-history__empty-text">Noch keine Sitzungen.</div>
+    </div>
+  </div>
+
+  <div
+    id="pm-history-sort-menu"
+    class="pm-history__sort-menu"
+    role="menu"
+    aria-label="Verlauf sortieren"
+    aria-hidden="true"
+  >
+    <button class="pm-history__menu-item" type="button" role="menuitemradio" aria-checked="true" data-sort-label="Am häufigsten">
+      <span class="pm-history__menu-label">Am häufigsten</span>
+      <svg class="pm-history__menu-check" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+    </button>
+
+    <button class="pm-history__menu-item" type="button" role="menuitemradio" aria-checked="false" data-sort-label="Neueste">
+      <span class="pm-history__menu-label">Neueste</span>
+      <svg class="pm-history__menu-check" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+    </button>
+
+    <button class="pm-history__menu-item" type="button" role="menuitemradio" aria-checked="false" data-sort-label="Älteste">
+      <span class="pm-history__menu-label">Älteste</span>
+      <svg class="pm-history__menu-check" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+    </button>
+
+    <button class="pm-history__menu-item" type="button" role="menuitemradio" aria-checked="false" data-sort-label="A–Z">
+      <span class="pm-history__menu-label">A–Z</span>
+      <svg class="pm-history__menu-check" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+    </button>
+  </div>
+</section>
+
+<script>
+(() => {
+  const screen = document.getElementById("pm-history-screen");
+  const trigger = screen.querySelector("#pm-history-sort-button");
+  const menu = screen.querySelector("#pm-history-sort-menu");
+  const items = Array.from(menu.querySelectorAll(".pm-history__menu-item"));
+
+  const setOpen = (open) => {
+    menu.classList.toggle("is-open", open);
+    menu.setAttribute("aria-hidden", String(!open));
+    trigger.setAttribute("aria-expanded", String(open));
+  };
+
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(!menu.classList.contains("is-open"));
+  });
+
+  menu.addEventListener("click", (event) => event.stopPropagation());
+
+  items.forEach((item) => {
+    item.addEventListener("click", () => {
+      items.forEach((entry) => entry.setAttribute("aria-checked", "false"));
+      item.setAttribute("aria-checked", "true");
+      trigger.setAttribute("aria-label", "Verlauf sortieren: " + item.dataset.sortLabel);
+      setOpen(false);
+    });
+  });
+
+  document.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      setOpen(false);
+      trigger.focus();
+    }
+  });
+})();
+</script>
+</section>
+</div>
+</body>
+</html>

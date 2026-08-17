@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="de" data-werft-theme="21dunkelstandard" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="werft-render-width" content="412">
+<title>Experimente-SPEC-v1 — Heute — 2.1 Dunkel (Standard)</title>
+<!--
+  Die Schriften des Entwurfs — als Kopf-Verweis, nicht als @import im Stil. Ein @import ist laut
+  CSS-Spezifikation nur gueltig, wenn er VOR allen anderen Regeln steht; beim Zusammenfuehren der
+  Style-Bloecke zu design.css rutscht er dahinter und wird von jedem Browser STILL verworfen.
+  Genau so ist ein Entwurf mit drei eigenen Schriften komplett in der Systemschrift gerendert
+  worden, ohne dass irgendwo ein Fehler auftauchte.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap">
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+<!--
+  Die breitenbezogenen Media Queries aus design.css, ausgewertet fuer 412 dp — die Breite,
+  fuer die dieser Bildschirm entworfen wurde. Ohne diesen Block haengt das Aussehen am Fenster
+  des Betrachters: eine Regel wie "max-width: 480px" greift im Studio-Geraeterahmen, im breiten
+  Browserfenster aber nicht — und die Datei zeigt eine Anordnung, die es im Entwurf nie gab.
+  design.css bleibt unveraendert; hier gewinnt nur, was bei 412 dp wirklich gilt.
+-->
+<style data-werft-aufgeloest="412">
+
+  .werft-theme-switcher {
+    display: none !important;
+  }
+
+
+  .werft-b01__topbar,
+  .werft-b03__topbar,
+  .werft-b08__topbar,
+  .b09-topbar,
+  .b06-topbar,
+  .b07-topbar,
+  .b05-topbar,
+  .b04-topbar {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .b02-back {
+    left: 8px;
+  }
+
+  .werft-b01__content {
+    padding: 16px 16px 32px;
+  }
+
+  .werft-b01__date {
+    margin-bottom: 20px;
+  }
+
+  .werft-b01__voice-area {
+    margin-top: 20px;
+  }
+
+  .werft-b01__proposal,
+  .werft-b01__experiment-card,
+  .werft-b03__answer-card,
+  .werft-b03__loading-card,
+  .werft-b03__error-card,    .b02-bubble,
+  .b05-card,
+  .b04-goal-card {
+    padding: 16px;
+  }
+
+  .b02-experiment-header {
+    padding: 16px 16px 0;
+  }
+
+  .b02-thread {
+    padding: 20px 16px 16px;
+  }
+
+  .b02-bubble {
+    max-width: calc(100% - 20px);
+  }
+
+  .b02-composer {
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .werft-b03__title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .werft-b03__main {
+    padding: 20px 16px 112px;
+  }
+
+  .werft-b08__scroll {
+    padding: 16px 16px max(112px, env(safe-area-inset-bottom));
+  }
+
+  .werft-b08__field,
+  .werft-b08__secret-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    row-gap: 6px;
+  }
+
+  .werft-b08__access-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+
+  .werft-b08__access-name,
+  .werft-b08__access-state {
+    grid-column: 1;
+  }
+
+  .werft-b08__access-state {
+    grid-row: 2;
+  }
+
+  .werft-b08__access-row .werft-b08__action {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .werft-b08__reminder-row {
+    min-height: 112px;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: 48px 48px;
+    column-gap: 12px;
+    padding: 8px 12px;
+  }
+
+  .werft-b08__reminder-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .werft-b08__reminder-row .werft-b08__switch {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .werft-b08__reminder-row input.werft-b08__time {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border-top: 1px solid var(--rand-weich);
+  }
+
+  .werft-b08__appearance {
+    width: 100%;
+  }
+
+  .werft-b08__choice span {
+    padding: 4px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .werft-b08__button-row,
+  .werft-b03__actions,
+  .b05-editor-actions,
+  .b04-editor-actions {
+    flex-wrap: wrap;
+  }
+
+  .b09-intro {
+    right: 16px;
+    left: 16px;
+  }
+
+  .b09-editor {
+    right: 16px;
+    left: 16px;
+    width: calc(100% - 32px);
+    padding: 16px;
+  }
+
+  .b09-controls {
+    right: 16px;
+    left: 16px;
+    grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .b09-improve {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 8px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .b09-improve-label {
+    white-space: normal;
+  }
+
+  .b06-content,
+  .b07-content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .b05-content,
+  .b05-create-surface,
+  .b04-content,
+  .b04-create-layer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .werft-b01__nav-item,
+  .b06-nav-item,
+  .b07-nav-item,
+  .b05-nav-item,
+  .b04-nav-label {
+    gap: 2px;
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+  }
+
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-01" data-screen-name="Heute" data-start="true" style="width: 1440px; min-height: 900px;">
+<section class="werft-b01" data-screen-id="B-01" data-theme="dark" aria-label="Heute">
+  <header class="werft-b01__topbar">
+    <h1 class="werft-b01__title">Heute</h1>
+    <span class="werft-b01__top-spacer"></span>
+    <div class="werft-b01__theme-control" aria-label="Erscheinung umschalten">
+      <button class="werft-b01__theme-button" type="button" aria-label="Hellmodus einschalten" title="Hellmodus einschalten" data-theme-cycle data-next-theme-mode="light" data-werft-funktion="F-26 schaltet nacheinander auf Hellmodus, Dunkelmodus und Automatik um, zeigt dafür Sonne, Mondsichel oder A mit seitlichen Strahlen und lässt Automatik sofort sowie bei späteren Systemwechseln der Systemdarstellung folgen">
+        <svg class="werft-b01__theme-icon werft-b01__theme-icon--sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 1h2v3h-2V1Zm0 19h2v3h-2v-3ZM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.929Zm13.435 13.435 1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121ZM1 11h3v2H1v-2Zm19 0h3v2h-3v-2ZM3.515 19.071l2.121-2.121 1.414 1.414-2.121 2.121-1.414-1.414ZM16.95 5.636l2.121-2.121 1.414 1.414-2.121 2.121-1.414-1.414ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>
+        <svg class="werft-b01__theme-icon werft-b01__theme-icon--moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        <svg class="werft-b01__theme-icon werft-b01__theme-icon--system" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.25 18 12 6l3.75 12M9.7 13.5h4.6M5.5 7.5 3.75 5.75M4.5 12H2M5.5 16.5l-1.75 1.75M18.5 7.5l1.75-1.75M19.5 12H22M18.5 16.5l1.75 1.75"/></svg>
+      </button>
+    </div>
+    <a class="werft-b01__icon-action" href="#" aria-label="Einstellungen" data-werft-navigate="B-08">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.13 7.13 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.48.48 0 0 0 .12.61l2.03 1.58c-.05.31-.09.65-.09.98s.03.66.08.98l-2.02 1.57a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.38.31.59.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.23.24.41.48.41h3.84c.24 0 .44-.18.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.02-1.57ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/>
+      </svg>
+    </a>
+  </header>
+
+  <main class="werft-b01__content">
+    <p class="werft-b01__date">SONNTAG, 9. AUGUST 2026</p>
+
+    <section class="werft-b01__state" data-b01-state="empty">
+      <div class="werft-b01__intro">
+        <h2 class="werft-b01__section-title">Wie ist deine Lage heute?</h2>
+        <p class="werft-b01__subtitle">Was für ein Tag ist das? Was liegt vor dir?</p>
+      </div>
+
+      <div class="werft-b01__voice-area">
+        <div class="werft-b01__mic-wrap" data-b01-mic-wrap>
+          <span class="werft-b01__recording-ring" aria-hidden="true"></span>
+          <button class="werft-b01__mic" type="button" aria-label="Lage einsprechen" data-b01-record data-werft-funktion="F-01">
+            <svg class="werft-b01__mic-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="werft-b01__recording-time" data-b01-time hidden>00:00</div>
+        <button class="werft-b01__text-action werft-b01__type-action" type="button" data-b01-type data-werft-funktion="Lage tippen">
+          Lieber tippen
+        </button>
+      </div>
+    </section>
+
+    <section class="werft-b01__state" data-b01-state="text" hidden>
+      <textarea class="werft-b01__input" data-b01-input aria-label="Heutige Lage">Heute liegt einiges vor mir. Ich möchte ruhig anfangen und mich auf eine Sache konzentrieren.</textarea>
+      <div class="werft-b01__button-row">
+        <button class="werft-b01__text-action" type="button" data-b01-improve data-werft-funktion="F-02">
+          Text mit KI verbessern
+        </button>
+        <button class="werft-b01__primary-action" type="button" data-b01-next data-werft-funktion="F-03">
+          <span>Weiter</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="werft-b01__state" data-b01-state="suggestions" hidden>
+      <h2 class="werft-b01__eyebrow">FÜNF VORSCHLÄGE FÜR HEUTE</h2>
+
+      <div class="werft-b01__cards">
+        <article class="werft-b01__proposal" role="button" tabindex="0" data-werft-funktion="F-06">
+          <div class="werft-b01__card-copy">
+            <h3 class="werft-b01__card-title">Eine Sache bewusst abschließen</h3>
+            <p class="werft-b01__card-description">Wähle eine überschaubare Aufgabe und bleib bei ihr, bis sie wirklich fertig ist.</p>
+            <p class="werft-b01__card-meta">leicht · 1 Tag</p>
+          </div>
+          <button class="werft-b01__icon-action werft-b01__bookmark" type="button" aria-label="Auf die Merkliste legen" data-werft-funktion="F-05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z"/></svg>
+          </button>
+        </article>
+
+        <article class="werft-b01__proposal" role="button" tabindex="0" data-werft-funktion="F-06">
+          <div class="werft-b01__card-copy">
+            <h3 class="werft-b01__card-title">Den ersten Schritt verkleinern</h3>
+            <p class="werft-b01__card-description">Nimm dir etwas vor, das in zehn ruhigen Minuten beginnen kann.</p>
+            <p class="werft-b01__card-meta">leicht · 1 Tag</p>
+          </div>
+          <button class="werft-b01__icon-action werft-b01__bookmark" type="button" aria-label="Auf die Merkliste legen" data-werft-funktion="F-05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z"/></svg>
+          </button>
+        </article>
+
+        <article class="werft-b01__proposal" role="button" tabindex="0" data-werft-funktion="F-06">
+          <div class="werft-b01__card-copy">
+            <h3 class="werft-b01__card-title">Eine Stunde ohne Wechsel</h3>
+            <p class="werft-b01__card-description">Reserviere eine Stunde für eine Aufgabe und lass alles andere sichtbar warten.</p>
+            <p class="werft-b01__card-meta">mittel · 1 Tag</p>
+            <span class="werft-b01__chip">von deiner Merkliste</span>
+          </div>
+          <button class="werft-b01__icon-action werft-b01__bookmark is-saved" type="button" aria-label="Von der Merkliste nehmen" data-werft-funktion="F-05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V5q0-.825.588-1.412T7 3h10q.825 0 1.413.588T19 5v16l-7-3Z"/></svg>
+          </button>
+        </article>
+
+        <article class="werft-b01__proposal" role="button" tabindex="0" data-werft-funktion="F-06">
+          <div class="werft-b01__card-copy">
+            <h3 class="werft-b01__card-title">Vor dem Antworten kurz warten</h3>
+            <p class="werft-b01__card-description">Mach vor wichtigen Antworten eine kleine Pause und prüfe, was du wirklich sagen willst.</p>
+            <p class="werft-b01__card-meta">mittel · 3 Tage</p>
+          </div>
+          <button class="werft-b01__icon-action werft-b01__bookmark" type="button" aria-label="Auf die Merkliste legen" data-werft-funktion="F-05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z"/></svg>
+          </button>
+        </article>
+
+        <article class="werft-b01__proposal" role="button" tabindex="0" data-werft-funktion="F-06">
+          <div class="werft-b01__card-copy">
+            <h3 class="werft-b01__card-title">Den Tag mit einer Grenze beginnen</h3>
+            <p class="werft-b01__card-description">Lege fest, was heute ausdrücklich nicht mehr auf deine Liste kommt.</p>
+            <p class="werft-b01__card-meta">fordernd · 3 Tage</p>
+          </div>
+          <button class="werft-b01__icon-action werft-b01__bookmark" type="button" aria-label="Auf die Merkliste legen" data-werft-funktion="F-05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z"/></svg>
+          </button>
+        </article>
+      </div>
+
+      <div class="werft-b01__center-action">
+        <button class="werft-b01__text-action" type="button" data-b01-refresh data-werft-funktion="F-04">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20q-3.35 0-5.675-2.325T4 12q0-3.35 2.325-5.675T12 4q1.725 0 3.3.713T18 6.7V4h2v7h-7V9h3.8q-.95-1.4-2.15-2.2T12 6Q9.5 6 7.75 7.75T6 12q0 2.5 1.75 4.25T12 18q1.925 0 3.475-1.1T17.65 14H19.7q-.7 2.65-2.85 4.325T12 20Z"/></svg>
+          <span>Andere Vorschläge</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="werft-b01__state" data-b01-state="running" hidden>
+      <div class="werft-b01__running-group">
+        <h2 class="werft-b01__eyebrow">LÄUFT</h2>
+        <article class="werft-b01__experiment-card">
+          <div class="werft-b01__experiment-head">
+            <div class="werft-b01__experiment-copy">
+              <h3 class="werft-b01__card-title" data-b01-running-title>Eine Sache bewusst abschließen</h3>
+              <p class="werft-b01__experiment-day">Tag 1 von 1</p>
+            </div>
+            <a class="werft-b01__icon-action" href="#" aria-label="Gespräch zum Experiment" data-werft-navigate="B-02" data-werft-funktion="F-09">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20q-.825 0-1.412-.588T2 18V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v12q0 .825-.587 1.412T20 20H7l-5 4V6h2v13.125L6.3 18H20V6H4v14Zm4-7h8v-2H8v2Zm0-3h8V8H8v2Zm0 6h5v-2H8v2Z"/></svg>
+            </a>
+          </div>
+          <div class="werft-b01__experiment-actions">
+            <button class="werft-b01__text-action" type="button" data-b01-not-done data-werft-funktion="F-13">Nicht umgesetzt</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="werft-b01__running-group">
+        <h2 class="werft-b01__eyebrow">HEUTE ZU TUN</h2>
+        <div class="werft-b01__todo-list" data-werft-funktion="F-07">
+          <h3 class="werft-b01__todo-title" data-b01-todo-title>Eine Sache bewusst abschließen</h3>
+          <button class="werft-b01__todo" type="button" aria-pressed="false" data-werft-funktion="F-08">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Zm0-2h14V5H5v14Z"/></svg>
+            <span>Eine Aufgabe auswählen, die heute wirklich fertig werden soll.</span>
+          </button>
+          <button class="werft-b01__todo" type="button" aria-pressed="false" data-werft-funktion="F-08">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Zm0-2h14V5H5v14Z"/></svg>
+            <span>Alles andere beiseitelegen und den ersten Schritt machen.</span>
+          </button>
+        </div>
+      </div>
+
+      <a class="werft-b01__primary-action werft-b01__evening-action" href="#" data-werft-navigate="B-03" data-werft-funktion="F-10">
+        <span>Wie ist es gelaufen?</span>
+      </a>
+    </section>
+  </main>
+
+  <nav class="werft-b01__bottomnav werft-primary-nav" aria-label="Hauptnavigation">
+    <a class="werft-b01__nav-item is-active" href="#" aria-current="page" data-werft-navigate="B-01">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22H5Zm0-2h14V10H5v10Zm0-12h14V6H5v2Zm7 6q-.825 0-1.412-.587T10 12q0-.825.588-1.412T12 10q.825 0 1.413.588T14 12q0 .825-.587 1.413T12 14Z"/></svg>
+      <span>Heute</span>
+    </a>
+    <a class="werft-b01__nav-item" href="#" data-werft-navigate="B-04">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h9l.4 2H20v10h-7l-.4-2H7v7H5Zm2-9h7.25l.4 2H18V8h-5.25l-.4-2H7v6Z"/></svg>
+      <span>Ziele</span>
+    </a>
+    <a class="werft-b01__nav-item" href="#" data-werft-navigate="B-05">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z"/></svg>
+      <span>Merkliste</span>
+    </a>
+    <a class="werft-b01__nav-item" href="#" data-werft-navigate="B-06">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21q-.425 0-.712-.288T8 20v-1h8v1q0 .425-.288.713T15 21H9Zm-1-4v-2.2q-1.4-.85-2.2-2.225T5 9.5q0-2.725 1.888-4.612T11.5 3q2.725 0 4.613 1.888T18 9.5q0 1.7-.8 3.075T15 14.8V17H8Zm2-2h3v-1.3l.95-.55q.95-.55 1.5-1.5T16 9.5q0-1.875-1.312-3.187T11.5 5Q9.625 5 8.313 6.313T7 9.5q0 1.2.55 2.15t1.5 1.5l.95.55V15Z"/></svg>
+      <span>Erkenntnisse</span>
+    </a>
+    <a class="werft-b01__nav-item" href="#" data-werft-navigate="B-07">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3q3.325 0 5.663 2.338T21 11q0 3.325-2.337 5.663T13 19q-2.075 0-3.85-1T6.2 15.25L4 17.45V11H2q0-4.575 3.213-7.787T13 0v3Zm0 2Q9.675 5 7.338 7.338T5 13h1.8l-.05 1.65 1.1-1.1.7 1.1Q9.35 15.8 10.5 16.4T13 17q2.5 0 4.25-1.75T19 11q0-2.5-1.75-4.25T13 5Zm-1 2v5l4.25 2.5 1-1.65-3.25-1.9V7h-2Z"/></svg>
+      <span>Logbuch</span>
+    </a>
+  </nav>
+
+  <script>
+  (() => {
+    const root = document.currentScript.closest(".werft-b01");
+    const states = [...root.querySelectorAll("[data-b01-state]")];
+    const micWrap = root.querySelector("[data-b01-mic-wrap]");
+    const micButton = root.querySelector("[data-b01-record]");
+    const micIcon = root.querySelector(".werft-b01__mic-icon");
+    const time = root.querySelector("[data-b01-time]");
+    const input = root.querySelector("[data-b01-input]");
+    let recording = false;
+    let seconds = 0;
+    let timer = null;
+
+    const micPath = "M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.575T13 17.925V21Z";
+    const stopPath = "M7 7h10v10H7Z";
+    const emptyBox = "M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Zm0-2h14V5H5v14Z";
+    const checkedBox = "M10.6 16.6 17.65 9.55 16.25 8.15 10.6 13.8 7.75 10.95 6.35 12.35 10.6 16.6ZM5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21H5Zm0-2h14V5H5v14Z";
+    const bookmarkOutline = "M7 3h10q.825 0 1.413.588T19 5v16l-7-3-7 3V5q0-.825.588-1.412T7 3Zm0 3v11.95l5-2.15 5 2.15V5H7Z";
+    const bookmarkFilled = "M5 21V5q0-.825.588-1.412T7 3h10q.825 0 1.413.588T19 5v16l-7-3Z";
+
+    function show(name) {
+      states.forEach(state => {
+        state.hidden = state.dataset.b01State !== name;
+      });
+      root.querySelector(".werft-b01__content").scrollTop = 0;
+    }
+
+    function formatTime(value) {
+      const min = String(Math.floor(value / 60)).padStart(2, "0");
+      const sec = String(value % 60).padStart(2, "0");
+      return min + ":" + sec;
+    }
+
+    function stopRecording() {
+      recording = false;
+      clearInterval(timer);
+      timer = null;
+      micWrap.classList.remove("is-recording");
+      micIcon.querySelector("path").setAttribute("d", micPath);
+      micButton.setAttribute("aria-label", "Lage einsprechen");
+      time.hidden = true;
+      show("text");
+      input.focus();
+    }
+
+    micButton.addEventListener("click", () => {
+      if (recording) {
+        stopRecording();
+        return;
+      }
+      recording = true;
+      seconds = 0;
+      time.textContent = "00:00";
+      time.hidden = false;
+      micWrap.classList.add("is-recording");
+      micIcon.querySelector("path").setAttribute("d", stopPath);
+      micButton.setAttribute("aria-label", "Aufnahme stoppen");
+      timer = setInterval(() => {
+        seconds += 1;
+        time.textContent = formatTime(seconds);
+      }, 1000);
+    });
+
+    root.querySelector("[data-b01-type]").addEventListener("click", () => {
+      show("text");
+      input.value = "";
+      input.placeholder = "Was für ein Tag ist das? Was liegt vor dir?";
+      input.focus();
+    });
+
+    root.querySelector("[data-b01-improve]").addEventListener("click", event => {
+      const button = event.currentTarget;
+      if (button.textContent.trim() === "Zurücknehmen") {
+        input.value = input.dataset.previous || input.value;
+        button.textContent = "Text mit KI verbessern";
+      } else {
+        input.dataset.previous = input.value;
+        input.value = input.value.trim() || "Heute liegt einiges vor mir. Ich möchte ruhig anfangen und mich auf eine Sache konzentrieren.";
+        button.textContent = "Zurücknehmen";
+      }
+    });
+
+    root.querySelector("[data-b01-next]").addEventListener("click", () => show("suggestions"));
+
+    root.querySelectorAll(".werft-b01__bookmark").forEach(button => {
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        const saved = button.classList.toggle("is-saved");
+        button.querySelector("path").setAttribute("d", saved ? bookmarkFilled : bookmarkOutline);
+        button.setAttribute("aria-label", saved ? "Von der Merkliste nehmen" : "Auf die Merkliste legen");
+      });
+    });
+
+    function startProposal(card) {
+      const title = card.querySelector(".werft-b01__card-title").textContent;
+      root.querySelector("[data-b01-running-title]").textContent = title;
+      root.querySelector("[data-b01-todo-title]").textContent = title;
+      show("running");
+    }
+
+    root.querySelectorAll(".werft-b01__proposal").forEach(card => {
+      card.addEventListener("click", event => {
+        if (!event.target.closest(".werft-b01__bookmark")) startProposal(card);
+      });
+      card.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          startProposal(card);
+        }
+      });
+    });
+
+    root.querySelector("[data-b01-refresh]").addEventListener("click", () => {
+      const cards = root.querySelector(".werft-b01__cards");
+      cards.style.display = "none";
+      requestAnimationFrame(() => {
+        cards.style.display = "flex";
+      });
+    });
+
+    root.querySelectorAll(".werft-b01__todo").forEach(todo => {
+      todo.addEventListener("click", () => {
+        const done = todo.classList.toggle("is-done");
+        todo.setAttribute("aria-pressed", String(done));
+        todo.querySelector("path").setAttribute("d", done ? checkedBox : emptyBox);
+      });
+    });
+
+    root.querySelector("[data-b01-not-done]").addEventListener("click", () => {
+      show("suggestions");
+    });
+  })();
+  </script>
+</section>
+</section>
+</div>
+</body>
+</html>

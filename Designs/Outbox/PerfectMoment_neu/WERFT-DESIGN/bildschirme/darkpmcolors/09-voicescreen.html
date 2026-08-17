@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — VoiceScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:VoiceScreen" data-screen-name="VoiceScreen" style="width: 412px; min-height: 915px;">
+<div class="werft-voice-screen" data-provider="edge" aria-label="Stimme">
+  <div class="werft-voice-screen__breath" aria-hidden="true"></div>
+
+  <main class="werft-voice-screen__safe">
+    <header class="werft-voice-screen__header">
+      <button class="werft-voice-screen__back" type="button" aria-label="Zurück" data-werft-navigate="compose:SettingsScreen">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+      <div class="werft-voice-screen__title">Stimme</div>
+    </header>
+
+    <div class="werft-voice-screen__tabs" role="tablist" aria-label="Sprachanbieter">
+      <button class="werft-voice-screen__segment is-selected" type="button" role="tab" aria-selected="true" data-provider-tab="edge">Microsoft Edge</button>
+      <button class="werft-voice-screen__segment" type="button" role="tab" aria-selected="false" data-provider-tab="google">Google Chirp 3 HD</button>
+    </div>
+
+    <div class="werft-voice-screen__key-wrap" data-key-warning hidden>
+      <button class="werft-voice-screen__key" type="button" data-werft-navigate="compose:SettingsScreen">
+        Bitte zuerst einen Google-API-Schlüssel hinterlegen. Zu den Einstellungen
+      </button>
+    </div>
+
+    <div class="werft-voice-screen__list" data-voice-list="edge" role="list">
+      <div class="werft-voice-screen__voice is-selected" role="button" tabindex="0" aria-selected="true" data-voice="Seraphina" data-fixed-star="true">
+        <span class="werft-voice-screen__star">★</span>
+        <span class="werft-voice-screen__name">Seraphina</span>
+        <span class="werft-voice-screen__meta">weiblich · mehrsprachig</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Seraphina auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+
+      <div class="werft-voice-screen__voice" role="button" tabindex="0" aria-selected="false" data-voice="Florian" data-fixed-star="true">
+        <span class="werft-voice-screen__star">★</span>
+        <span class="werft-voice-screen__name">Florian</span>
+        <span class="werft-voice-screen__meta">männlich · mehrsprachig</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Florian auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+
+      <div class="werft-voice-screen__voice" role="button" tabindex="0" aria-selected="false" data-voice="Katja">
+        <span class="werft-voice-screen__star" hidden>★</span>
+        <span class="werft-voice-screen__name">Katja</span>
+        <span class="werft-voice-screen__meta">weiblich</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Katja auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+
+      <div class="werft-voice-screen__voice" role="button" tabindex="0" aria-selected="false" data-voice="Killian">
+        <span class="werft-voice-screen__star" hidden>★</span>
+        <span class="werft-voice-screen__name">Killian</span>
+        <span class="werft-voice-screen__meta">männlich</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Killian auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+
+      <div class="werft-voice-screen__voice" role="button" tabindex="0" aria-selected="false" data-voice="Conrad">
+        <span class="werft-voice-screen__star" hidden>★</span>
+        <span class="werft-voice-screen__name">Conrad</span>
+        <span class="werft-voice-screen__meta">männlich</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Conrad auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+
+      <div class="werft-voice-screen__voice" role="button" tabindex="0" aria-selected="false" data-voice="Amala">
+        <span class="werft-voice-screen__star" hidden>★</span>
+        <span class="werft-voice-screen__name">Amala</span>
+        <span class="werft-voice-screen__meta">weiblich</span>
+        <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören">
+          <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg>
+          <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>
+        </button>
+        <span class="werft-voice-screen__spacer"></span>
+        <button class="werft-voice-screen__check-button" type="button" aria-label="Amala auswählen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="werft-voice-screen__list is-disabled" data-voice-list="google" role="list" aria-disabled="true" hidden></div>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.currentScript.closest(".werft-voice-screen");
+      const warning = root.querySelector("[data-key-warning]");
+      const edgeList = root.querySelector('[data-voice-list="edge"]');
+      const googleList = root.querySelector('[data-voice-list="google"]');
+      const tabs = Array.from(root.querySelectorAll("[data-provider-tab]"));
+      const femaleGoogleVoices = [
+        "Achernar", "Aoede", "Autonoe", "Callirrhoe", "Despina", "Erinome", "Gacrux",
+        "Kore", "Laomedeia", "Leda", "Pulcherrima", "Sulafat", "Vindemiatrix", "Zephyr"
+      ];
+      const maleGoogleVoices = [
+        "Achird", "Algenib", "Algieba", "Alnilam", "Charon", "Enceladus", "Fenrir",
+        "Iapetus", "Orus", "Puck", "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar",
+        "Umbriel", "Zubenelgenubi"
+      ];
+      const playPath = "M10 8.64 15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z";
+      const stopPath = "M6 6h12v12H6z";
+      const checkPath = "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z";
+
+      function voiceMarkup(name, gender, selected) {
+        return `
+          <div class="werft-voice-screen__voice${selected ? " is-selected" : ""}" role="button" tabindex="-1" aria-selected="${selected}" aria-disabled="true" data-voice="${name}">
+            <span class="werft-voice-screen__star" hidden>★</span>
+            <span class="werft-voice-screen__name">${name}</span>
+            <span class="werft-voice-screen__meta">${gender}</span>
+            <button class="werft-voice-screen__preview" type="button" aria-label="Stimme Probehören" disabled>
+              <svg class="werft-voice-screen__preview-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${playPath}"/></svg>
+              <svg class="werft-voice-screen__preview-stop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${stopPath}"/></svg>
+            </button>
+            <span class="werft-voice-screen__spacer"></span>
+            <button class="werft-voice-screen__check-button" type="button" aria-label="${name} auswählen" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${checkPath}"/></svg>
+            </button>
+          </div>`;
+      }
+
+      googleList.innerHTML = femaleGoogleVoices
+        .concat(maleGoogleVoices)
+        .map((name, index) => voiceMarkup(name, index < femaleGoogleVoices.length ? "weiblich" : "männlich", index === 0))
+        .join("");
+
+      function stopPreview() {
+        root.querySelectorAll(".werft-voice-screen__voice.is-playing").forEach(card => card.classList.remove("is-playing"));
+      }
+
+      function listLocked(list) {
+        return list.classList.contains("is-disabled");
+      }
+
+      function selectVoice(card) {
+        const list = card.closest(".werft-voice-screen__list");
+        if (listLocked(list)) return;
+        list.querySelectorAll(".werft-voice-screen__voice").forEach(item => {
+          const selected = item === card;
+          item.classList.toggle("is-selected", selected);
+          item.setAttribute("aria-selected", String(selected));
+        });
+      }
+
+      function toggleFavorite(card) {
+        if (listLocked(card.closest(".werft-voice-screen__list"))) return;
+        if (card.dataset.fixedStar === "true") return;
+        const star = card.querySelector(".werft-voice-screen__star");
+        star.hidden = !star.hidden;
+      }
+
+      function prepareCard(card) {
+        const list = card.closest(".werft-voice-screen__list");
+        const preview = card.querySelector(".werft-voice-screen__preview");
+        const check = card.querySelector(".werft-voice-screen__check-button");
+        let holdTimer = 0;
+
+        card.addEventListener("click", event => {
+          if (card.dataset.suppressClick === "true") {
+            event.preventDefault();
+            card.dataset.suppressClick = "false";
+            return;
+          }
+          if (event.target.closest("button")) return;
+          selectVoice(card);
+        });
+
+        card.addEventListener("keydown", event => {
+          if ((event.key === "Enter" || event.key === " ") && !listLocked(list)) {
+            event.preventDefault();
+            selectVoice(card);
+          }
+        });
+
+        preview.addEventListener("click", event => {
+          event.stopPropagation();
+          if (listLocked(list)) return;
+          const wasPlaying = card.classList.contains("is-playing");
+          stopPreview();
+          if (!wasPlaying) card.classList.add("is-playing");
+        });
+
+        check.addEventListener("click", event => {
+          event.stopPropagation();
+          selectVoice(card);
+        });
+
+        card.addEventListener("pointerdown", event => {
+          if (event.target.closest("button") || listLocked(list)) return;
+          window.clearTimeout(holdTimer);
+          holdTimer = window.setTimeout(() => {
+            toggleFavorite(card);
+            card.dataset.suppressClick = "true";
+          }, 500);
+        });
+
+        ["pointerup", "pointercancel", "pointerleave"].forEach(type => {
+          card.addEventListener(type, () => window.clearTimeout(holdTimer));
+        });
+
+        card.addEventListener("contextmenu", event => {
+          if (listLocked(list)) return;
+          event.preventDefault();
+          toggleFavorite(card);
+        });
+      }
+
+      root.querySelectorAll(".werft-voice-screen__voice").forEach(prepareCard);
+
+      function setProvider(provider) {
+        const google = provider === "google";
+        root.dataset.provider = provider;
+        stopPreview();
+        warning.hidden = !google;
+        edgeList.hidden = google;
+        googleList.hidden = !google;
+
+        tabs.forEach(tab => {
+          const selected = tab.dataset.providerTab === provider;
+          tab.classList.toggle("is-selected", selected);
+          tab.setAttribute("aria-selected", String(selected));
+        });
+
+        edgeList.querySelectorAll(".werft-voice-screen__voice").forEach(card => {
+          card.tabIndex = google ? -1 : 0;
+          card.setAttribute("aria-disabled", String(google));
+          card.querySelectorAll("button").forEach(button => button.disabled = google);
+        });
+
+        googleList.querySelectorAll(".werft-voice-screen__voice").forEach(card => {
+          card.tabIndex = -1;
+          card.setAttribute("aria-disabled", "true");
+          card.querySelectorAll("button").forEach(button => button.disabled = true);
+        });
+      }
+
+      tabs.forEach(tab => tab.addEventListener("click", () => setProvider(tab.dataset.providerTab)));
+      setProvider("edge");
+    })();
+  </script>
+</div>
+</section>
+</div>
+</body>
+</html>

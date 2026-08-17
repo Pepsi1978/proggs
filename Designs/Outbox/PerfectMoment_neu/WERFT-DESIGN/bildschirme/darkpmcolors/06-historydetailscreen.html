@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — HistoryDetailScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:HistoryDetailScreen" data-screen-name="HistoryDetailScreen" style="width: 412px; min-height: 915px;">
+<section id="pm-history-detail-screen" aria-label="Sitzungsdetails">
+  <div class="pm-history-detail__safe-area">
+    <header class="pm-history-detail__header">
+      <button
+        class="pm-history-detail__back"
+        type="button"
+        aria-label="Zurück"
+        data-werft-navigate="compose:HistoryScreen"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20,11H7.83l5.59,-5.59L12,4l-8,8l8,8l1.41,-1.41L7.83,13H20z" fill="currentColor"/>
+        </svg>
+      </button>
+      <div class="pm-history-detail__header-title"></div>
+    </header>
+
+    <main class="pm-history-detail__scroll">
+      <button
+        class="pm-history-detail__primary"
+        type="button"
+        data-werft-navigate="compose:SessionScreen"
+      >
+        Erneut abspielen
+      </button>
+
+      <div class="pm-history-detail__parameters">
+        <button
+          class="pm-history-detail__parameter"
+          type="button"
+          data-werft-navigate="compose:DurationSheet"
+        >
+          <span class="pm-history-detail__parameter-label">PAUSE</span>
+          <span class="pm-history-detail__parameter-value">5 s</span>
+        </button>
+
+        <button
+          class="pm-history-detail__parameter"
+          type="button"
+          data-werft-navigate="compose:DurationSheet"
+        >
+          <span class="pm-history-detail__parameter-label">WIEDERHOLUNGEN</span>
+          <span class="pm-history-detail__parameter-value">3×</span>
+        </button>
+
+        <button
+          class="pm-history-detail__parameter"
+          type="button"
+          data-werft-navigate="compose:DurationSheet"
+        >
+          <span class="pm-history-detail__parameter-label">DAUER</span>
+          <span class="pm-history-detail__parameter-value">20 min</span>
+        </button>
+      </div>
+
+      <label class="pm-history-detail__random">
+        <input class="pm-history-detail__random-input" type="checkbox" aria-label="Zufällige Reihenfolge">
+        <span class="pm-history-detail__random-copy">
+          <span class="pm-history-detail__random-title">Zufällige Reihenfolge</span>
+          <span class="pm-history-detail__random-supporting">Fragen werden gemischt abgespielt</span>
+        </span>
+        <span class="pm-history-detail__switch" aria-hidden="true">
+          <span class="pm-history-detail__switch-thumb"></span>
+        </span>
+      </label>
+
+      <div class="pm-history-detail__topic-card">
+        <p class="pm-history-detail__topic">Wie fühlt es sich an, dass es dir gut geht?</p>
+      </div>
+
+      <div class="pm-history-detail__questions">
+        <div class="pm-history-detail__question">
+          <span class="pm-history-detail__emoji">🌿</span>
+          <p class="pm-history-detail__question-text">Was nimmst du gerade in deinem Körper wahr, wenn du spürst, dass es dir gut geht?</p>
+        </div>
+
+        <div class="pm-history-detail__question">
+          <span class="pm-history-detail__emoji">✨</span>
+          <p class="pm-history-detail__question-text">Welche Gedanken entstehen, wenn du diesen Moment ganz bewusst genießt?</p>
+        </div>
+
+        <div class="pm-history-detail__question">
+          <span class="pm-history-detail__emoji">💛</span>
+          <p class="pm-history-detail__question-text">Wofür bist du in diesem Augenblick besonders dankbar?</p>
+        </div>
+
+        <div class="pm-history-detail__question">
+          <span class="pm-history-detail__emoji">☀️</span>
+          <p class="pm-history-detail__question-text">Was darf heute leicht und mühelos für dich sein?</p>
+        </div>
+
+        <div class="pm-history-detail__question">
+          <span class="pm-history-detail__emoji">🌱</span>
+          <p class="pm-history-detail__question-text">Wie möchtest du dieses Gefühl mit in deinen Tag nehmen?</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+</section>
+</div>
+</body>
+</html>

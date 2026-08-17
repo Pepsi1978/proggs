@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="de" data-werft-theme="22hell" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimente-SPEC-v1 — Logbuch — 2.2 Hell</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-07" data-screen-name="Logbuch" style="width: 1440px; min-height: 900px;">
+<section class="b07-screen" id="b07-logbuch" data-screen-id="B-07" aria-label="Logbuch">
+  <header class="b07-topbar">
+    <h1 class="b07-title">Logbuch</h1>
+  </header>
+
+  <main class="b07-content">
+    <div class="b07-content-stack">
+      <div class="b07-tabs" role="tablist" aria-label="Logbuch-Zeitraum" data-active="recent">
+        <span class="b07-tab-indicator" aria-hidden="true"></span>
+
+        <button
+          class="b07-tab"
+          id="b07-tab-recent"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="b07-panel-recent"
+          tabindex="0"
+          data-b07-view="recent"
+          data-werft-funktion="Letzte 15 Tage anzeigen"
+        >Letzte 15 Tage</button>
+
+        <button
+          class="b07-tab"
+          id="b07-tab-longterm"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="b07-panel-longterm"
+          tabindex="-1"
+          data-b07-view="longterm"
+          data-werft-funktion="Langzeit anzeigen"
+        >Langzeit</button>
+      </div>
+
+      <div class="b07-tab-panels">
+        <section
+          class="b07-tab-panel is-active"
+          id="b07-panel-recent"
+          role="tabpanel"
+          aria-labelledby="b07-tab-recent"
+          data-b07-panel="recent"
+        >
+          <p class="b07-empty">Noch nichts aufgeschrieben.</p>
+        </section>
+
+        <section
+          class="b07-tab-panel"
+          id="b07-panel-longterm"
+          role="tabpanel"
+          aria-labelledby="b07-tab-longterm"
+          data-b07-panel="longterm"
+        >
+          <p class="b07-empty">Noch nichts aufgeschrieben.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <nav class="b07-bottom-nav werft-primary-nav" aria-label="Hauptnavigation">
+    <button class="b07-nav-item" type="button" data-werft-navigate="B-01" aria-label="Heute">
+      <svg class="b07-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-heute"></use></svg>
+      <span class="b07-nav-label">Heute</span>
+    </button>
+
+    <button class="b07-nav-item" type="button" data-werft-navigate="B-04" aria-label="Ziele">
+      <svg class="b07-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-ziele"></use></svg>
+      <span class="b07-nav-label">Ziele</span>
+    </button>
+
+    <button class="b07-nav-item" type="button" data-werft-navigate="B-05" aria-label="Merkliste">
+      <svg class="b07-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-merkliste"></use></svg>
+      <span class="b07-nav-label">Merkliste</span>
+    </button>
+
+    <button class="b07-nav-item" type="button" data-werft-navigate="B-06" aria-label="Erkenntnisse">
+      <svg class="b07-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-erkenntnisse"></use></svg>
+      <span class="b07-nav-label">Erkenntnisse</span>
+    </button>
+
+    <button class="b07-nav-item is-active" type="button" data-werft-navigate="B-07" aria-current="page" aria-label="Logbuch">
+      <svg class="b07-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#werft-nav-logbuch"></use></svg>
+      <span class="b07-nav-label">Logbuch</span>
+    </button>
+  </nav>
+</section>
+
+<script>
+  (() => {
+    const screen = document.getElementById("b07-logbuch");
+    const tabs = screen.querySelector(".b07-tabs");
+    const tabButtons = Array.from(screen.querySelectorAll("[data-b07-view]"));
+    const panels = Array.from(screen.querySelectorAll("[data-b07-panel]"));
+
+    const selectView = (view) => {
+      tabs.dataset.active = view;
+
+      tabButtons.forEach((button) => {
+        const selected = button.dataset.b07View === view;
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+        button.tabIndex = selected ? 0 : -1;
+      });
+
+      panels.forEach((panel) => {
+        panel.classList.toggle("is-active", panel.dataset.b07Panel === view);
+      });
+    };
+
+    tabButtons.forEach((button, index) => {
+      button.addEventListener("click", () => selectView(button.dataset.b07View));
+
+      button.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const nextIndex = (index + direction + tabButtons.length) % tabButtons.length;
+        tabButtons[nextIndex].focus();
+        selectView(tabButtons[nextIndex].dataset.b07View);
+      });
+    });
+  })();
+</script>
+</section>
+</div>
+</body>
+</html>

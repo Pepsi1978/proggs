@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de" data-werft-theme="lightpmcolors" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — IntroAnswerSheet — LightPmColors</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:IntroAnswerSheet" data-screen-name="IntroAnswerSheet" style="width: 412px; min-height: 915px;">
+<section class="pm-intro-answer-sheet" data-werft-screen="IntroAnswerSheet">
+  <div class="pm-ias-underlay">
+    <div class="pm-ias-intro-content">
+      <div class="pm-ias-section">Die KI fragt zuerst</div>
+      <div class="pm-ias-under-question">„Wie fühlt es sich an, dass es dir gut geht?“</div>
+      <button
+        class="pm-ias-under-action"
+        type="button"
+        data-werft-navigate="compose:IntroAnswerSheet"
+        onclick="const o=this.closest('.pm-intro-answer-sheet').querySelector('.pm-ias-overlay');o.hidden=false;"
+      >Antworten &amp; beginnen</button>
+      <div class="pm-ias-under-hint">Danach beginnt die Routine des Skills.</div>
+    </div>
+  </div>
+
+  <div class="pm-ias-overlay">
+    <button
+      class="pm-ias-scrim"
+      type="button"
+      aria-label="Schließen"
+      onclick="this.parentElement.hidden=true;"
+    ></button>
+
+    <form
+      class="pm-ias-sheet"
+      onsubmit="event.preventDefault();if(!this.querySelector('textarea').value.trim())return false;this.closest('.pm-intro-answer-sheet').querySelector('.pm-ias-overlay').hidden=true;return false;"
+    >
+      <div class="pm-ias-section">Deine Antwort</div>
+
+      <div class="pm-ias-textarea-block">
+        <textarea
+          class="pm-ias-textarea"
+          rows="1"
+          aria-label="Deine Antwort"
+          placeholder="Wie fühlt es sich an, dass es dir gut geht?"
+          oninput="this.style.height='1px';const wanted=this.scrollHeight;const h=Math.max(98,Math.min(318,wanted));this.style.height=h+'px';this.style.overflowY=wanted>318?'auto':'hidden';this.parentElement.style.height=(h+12)+'px';this.closest('form').querySelector('.pm-ias-primary').disabled=!this.value.trim();"
+        ></textarea>
+      </div>
+
+      <div class="pm-ias-gap-8"></div>
+
+      <div class="pm-ias-recorder" data-state="idle">
+        <div class="pm-ias-recorder-scene">
+          <div class="pm-ias-recording-ring"></div>
+          <div class="pm-ias-recording-ring"></div>
+          <div class="pm-ias-recording-ring"></div>
+          <div class="pm-ias-recorder-glow"></div>
+
+          <svg class="pm-ias-recorder-sweep" xmlns="http://www.w3.org/2000/svg" width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
+            <circle cx="52" cy="52" r="50" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="91.6297857297 222.5294796293"/>
+          </svg>
+
+          <button
+            class="pm-ias-recorder-button"
+            type="button"
+            aria-label="Antippen zum Sprechen"
+            onclick="const c=this.closest('.pm-ias-recorder');const s=c.dataset.state;if(s==='idle'){c.dataset.state='recording';this.setAttribute('aria-label','Aufnahme stoppen');this.setAttribute('aria-pressed','true');}else if(s==='recording'){c.dataset.state='processing';this.setAttribute('aria-label','Einen Moment');this.setAttribute('aria-pressed','false');}"
+          >
+            <svg class="pm-ias-mic-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5s-1.5-.7-1.5-1.5V5.5C10.5 4.7 11.2 4 12 4m0-2C10.1 2 8.5 3.6 8.5 5.5V11c0 1.9 1.6 3.5 3.5 3.5s3.5-1.6 3.5-3.5V5.5C15.5 3.6 13.9 2 12 2m5.3 9c0 3-2.5 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.4 2.7 6.2 6 6.7V21h2v-3.3c3.3-.5 6-3.3 6-6.7h-1.7z" fill="currentColor"/>
+            </svg>
+
+            <svg class="pm-ias-stop-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6h12v12H6z" fill="currentColor"/>
+            </svg>
+
+            <svg class="pm-ias-spinner-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="56.7232006898 24.9582083035"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="pm-ias-recorder-label">
+          <span class="pm-ias-label-idle">Antippen zum Sprechen</span>
+          <span class="pm-ias-label-recording">Ich höre zu…</span>
+          <span class="pm-ias-label-processing">Einen Moment…</span>
+        </div>
+      </div>
+
+      <div class="pm-ias-gap-12"></div>
+
+      <button class="pm-ias-primary" type="submit" disabled>Beginnen</button>
+    </form>
+  </div>
+</section>
+</section>
+</div>
+</body>
+</html>

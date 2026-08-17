@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="de" data-werft-theme="22hell" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimente-SPEC-v1 — Einstellungen — 2.2 Hell</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-08" data-screen-name="Einstellungen" style="width: 1440px; min-height: 900px;">
+<section class="werft-b08" id="werft-b08-screen" aria-labelledby="werft-b08-title">
+  <header class="werft-b08__topbar">
+    <h1 class="werft-b08__title" id="werft-b08-title">Einstellungen</h1>
+  </header>
+
+  <main class="werft-b08__scroll">
+    <div class="werft-b08__content">
+      <section class="werft-b08__section" aria-label="KI">
+
+        <div class="werft-b08__subgroup">
+          <div class="werft-b08__fields">
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Modell</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-22" aria-label="Modell für Experimente">
+                  <option>GPT 5.6 Sol</option>
+                  <option selected>GPT 5.6 Terra</option>
+                  <option>GPT 5.6 Luna</option>
+                </select>
+              </span>
+            </label>
+
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Effort</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-22" aria-label="Effort für Experimente">
+                  <option>Niedrig</option>
+                  <option>Mittel</option>
+                  <option selected>Hoch</option>
+                  <option>Sehr hoch</option>
+                  <option>Maximal</option>
+                </select>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="werft-b08__subgroup">
+          <h3 class="werft-b08__subgroup-title">Logbuch</h3>
+          <div class="werft-b08__fields">
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Modell</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-22" aria-label="Modell für das Logbuch">
+                  <option>GPT 5.6 Sol</option>
+                  <option>GPT 5.6 Terra</option>
+                  <option selected>GPT 5.6 Luna</option>
+                </select>
+              </span>
+            </label>
+
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Effort</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-22" aria-label="Effort für das Logbuch">
+                  <option>Niedrig</option>
+                  <option selected>Mittel</option>
+                  <option>Hoch</option>
+                  <option>Sehr hoch</option>
+                  <option>Maximal</option>
+                </select>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <p class="werft-b08__hint">Das Logbuch darf ein anderes Modell benutzen als die Experimente.</p>
+      </section>
+
+      <section class="werft-b08__section" aria-labelledby="werft-b08-stimme">
+        <h2 class="werft-b08__section-title" id="werft-b08-stimme">Stimme</h2>
+
+        <div class="werft-b08__fields">
+          <label class="werft-b08__field">
+            <span class="werft-b08__label">Anbieter</span>
+            <span class="werft-b08__control-shell">
+              <select class="werft-b08__select" id="werft-b08-provider" data-werft-funktion="F-23" aria-label="Stimmenanbieter">
+                <option value="google" selected>Google Chirp 3 HD</option>
+                <option value="own">Meine Stimme</option>
+                <option value="edge">Microsoft Edge</option>
+              </select>
+            </span>
+          </label>
+
+          <div class="werft-b08__voice-panel" data-provider-panel="google">
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Stimme</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-23" aria-label="Google-Stimme">
+                  <option selected>de-DE-Chirp3-HD-Kore</option>
+                </select>
+              </span>
+            </label>
+          </div>
+
+          <div class="werft-b08__voice-panel" data-provider-panel="own" hidden>
+            <div class="werft-b08__field">
+              <span class="werft-b08__label">Stimme</span>
+              <button class="werft-b08__action" type="button" id="werft-b08-record-voice" data-werft-funktion="F-23" aria-pressed="false">
+                <span>Stimme aufnehmen</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="werft-b08__voice-panel" data-provider-panel="edge" hidden>
+            <label class="werft-b08__field">
+              <span class="werft-b08__label">Stimme</span>
+              <span class="werft-b08__control-shell">
+                <select class="werft-b08__select" data-werft-funktion="F-23" aria-label="Microsoft-Edge-Stimme">
+                  <option selected>de-DE-SeraphinaMultilingualNeural</option>
+                </select>
+              </span>
+            </label>
+          </div>
+
+          <label class="werft-b08__field">
+            <span class="werft-b08__label">Sprechgeschwindigkeit</span>
+            <span class="werft-b08__range-wrap">
+              <input class="werft-b08__range" id="werft-b08-rate" type="range" min="0.7" max="1.3" step="0.05" value="1.0" list="werft-b08-rate-ticks" aria-label="Sprechgeschwindigkeit in Schritten von 0,05" aria-describedby="werft-b08-rate-value" data-werft-funktion="F-23">
+              <datalist id="werft-b08-rate-ticks">
+                <option value="0.70"></option>
+                <option value="0.75"></option>
+                <option value="0.80"></option>
+                <option value="0.85"></option>
+                <option value="0.90"></option>
+                <option value="0.95"></option>
+                <option value="1.00"></option>
+                <option value="1.05"></option>
+                <option value="1.10"></option>
+                <option value="1.15"></option>
+                <option value="1.20"></option>
+                <option value="1.25"></option>
+                <option value="1.30"></option>
+              </datalist>
+              <output class="werft-b08__range-value" id="werft-b08-rate-value" for="werft-b08-rate">1,00</output>
+            </span>
+          </label>
+        </div>
+
+        <div class="werft-b08__button-row">
+          <button class="werft-b08__action" type="button" id="werft-b08-preview" data-werft-funktion="F-23" aria-pressed="false">
+            <span>Probe hören</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="werft-b08__section" aria-labelledby="werft-b08-zugaenge">
+        <h2 class="werft-b08__section-title" id="werft-b08-zugaenge">Zugänge</h2>
+
+        <div class="werft-b08__fields">
+          <div class="werft-b08__access-row">
+            <span class="werft-b08__access-name">Codex</span>
+            <span class="werft-b08__access-state" id="werft-b08-codex-state">nicht angemeldet</span>
+            <button class="werft-b08__action" type="button" id="werft-b08-codex-button" data-werft-funktion="F-24" aria-pressed="false">
+              <span>Anmelden</span>
+            </button>
+          </div>
+
+          <label class="werft-b08__secret-row">
+            <span class="werft-b08__label">Groq</span>
+            <span class="werft-b08__control-shell">
+              <input class="werft-b08__password" type="password" value="••••••••••••" data-werft-funktion="F-24" aria-label="Groq-Zugang">
+            </span>
+          </label>
+
+          <label class="werft-b08__secret-row">
+            <span class="werft-b08__label">Google Cloud</span>
+            <span class="werft-b08__control-shell">
+              <input class="werft-b08__password" type="password" value="••••••••••••" data-werft-funktion="F-24" aria-label="Google-Cloud-Zugang">
+            </span>
+          </label>
+
+          <label class="werft-b08__secret-row">
+            <span class="werft-b08__label">Alibaba</span>
+            <span class="werft-b08__control-shell">
+              <input class="werft-b08__password" type="password" value="••••••••••••" data-werft-funktion="F-24" aria-label="Alibaba-Zugang">
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="werft-b08__section" aria-labelledby="werft-b08-erinnerungen">
+        <h2 class="werft-b08__section-title" id="werft-b08-erinnerungen">Erinnerungen</h2>
+
+        <div class="werft-b08__reminders">
+          <div class="werft-b08__reminder-row">
+            <span class="werft-b08__reminder-name">Morgens</span>
+            <input class="werft-b08__time" type="time" value="08:00" data-werft-funktion="F-25" aria-label="Uhrzeit morgens">
+            <label class="werft-b08__switch">
+              <input type="checkbox" data-werft-funktion="F-25" aria-label="Erinnerung morgens">
+              <span class="werft-b08__switch-track"></span>
+            </label>
+          </div>
+
+          <div class="werft-b08__reminder-row">
+            <span class="werft-b08__reminder-name">Abends</span>
+            <input class="werft-b08__time" type="time" value="20:30" data-werft-funktion="F-25" aria-label="Uhrzeit abends">
+            <label class="werft-b08__switch">
+              <input type="checkbox" data-werft-funktion="F-25" aria-label="Erinnerung abends">
+              <span class="werft-b08__switch-track"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="werft-b08__section" aria-labelledby="werft-b08-erscheinung">
+        <h2 class="werft-b08__section-title" id="werft-b08-erscheinung">Erscheinung</h2>
+
+        <fieldset class="werft-b08__appearance" data-werft-theme-toggle aria-label="Erscheinung">
+          <label class="werft-b08__choice" data-werft-theme-toggle>
+            <input id="werft-b08-theme-light" type="radio" name="werft-b08-theme" value="light" data-werft-theme-toggle data-werft-funktion="F-26">
+            <span>Hell</span>
+          </label>
+          <label class="werft-b08__choice" data-werft-theme-toggle>
+            <input id="werft-b08-theme-dark" type="radio" name="werft-b08-theme" value="dark" checked data-werft-theme-toggle data-werft-funktion="F-26">
+            <span>Dunkel</span>
+          </label>
+          <label class="werft-b08__choice" data-werft-theme-toggle>
+            <input id="werft-b08-theme-system" type="radio" name="werft-b08-theme" value="system" data-werft-theme-toggle data-werft-funktion="F-26">
+            <span>Wie das System</span>
+          </label>
+        </fieldset>
+      </section>
+
+      <section class="werft-b08__section" aria-labelledby="werft-b08-ueber-mich">
+        <h2 class="werft-b08__section-title" id="werft-b08-ueber-mich">Über mich</h2>
+        <button class="werft-b08__nav-row" type="button" data-werft-navigate="B-09">
+          <span>Selbstbild</span>
+          <svg viewBox="0 0 960 960" aria-hidden="true">
+            <path d="M480-160 160-480l320-320 57 56-224 224h487v80H313l224 224-57 56Z"></path>
+          </svg>
+        </button>
+      </section>
+
+      <div class="werft-b08__version">Version</div>
+    </div>
+  </main>
+</section>
+
+<script>
+  (() => {
+    const root = document.getElementById("werft-b08-screen");
+    if (!root) return;
+
+    const provider = root.querySelector("#werft-b08-provider");
+    const voicePanels = root.querySelectorAll("[data-provider-panel]");
+
+    const updateVoicePanel = () => {
+      voicePanels.forEach((panel) => {
+        panel.hidden = panel.getAttribute("data-provider-panel") !== provider.value;
+      });
+    };
+
+    provider.addEventListener("change", updateVoicePanel);
+    updateVoicePanel();
+
+    const rate = root.querySelector("#werft-b08-rate");
+    const rateValue = root.querySelector("#werft-b08-rate-value");
+    rate.addEventListener("input", () => {
+      const value = Number(rate.value);
+      rateValue.textContent = value.toFixed(2).replace(".", ",");
+    });
+
+    const preview = root.querySelector("#werft-b08-preview");
+    preview.addEventListener("click", () => {
+      const active = preview.getAttribute("aria-pressed") !== "true";
+      preview.setAttribute("aria-pressed", String(active));
+      preview.classList.toggle("is-active", active);
+    });
+
+    const recordVoice = root.querySelector("#werft-b08-record-voice");
+    recordVoice.addEventListener("click", () => {
+      const active = recordVoice.getAttribute("aria-pressed") !== "true";
+      recordVoice.setAttribute("aria-pressed", String(active));
+      recordVoice.classList.toggle("is-active", active);
+    });
+
+    const codexButton = root.querySelector("#werft-b08-codex-button");
+    const codexState = root.querySelector("#werft-b08-codex-state");
+
+    codexButton.addEventListener("click", () => {
+      const signedIn = codexButton.getAttribute("aria-pressed") !== "true";
+      codexButton.setAttribute("aria-pressed", String(signedIn));
+      codexButton.classList.toggle("is-active", signedIn);
+      codexState.textContent = signedIn ? "angemeldet" : "nicht angemeldet";
+      codexButton.querySelector("span").textContent = signedIn ? "Abmelden" : "Anmelden";
+    });
+
+    const reminderRows = [...root.querySelectorAll(".werft-b08__reminder-row")];
+    reminderRows.forEach((row, index) => {
+      const toggle = row.querySelector('.werft-b08__switch input[type="checkbox"]');
+      const timeInput = row.querySelector("input.werft-b08__time");
+      const reminderKey = index === 0 ? "morning" : "evening";
+      const enabledStorageKey = `experimente-reminder-${reminderKey}-on`;
+      const timeStorageKey = `experimente-reminder-${reminderKey}-time`;
+
+      try {
+        const storedEnabled = localStorage.getItem(enabledStorageKey);
+        const storedTime = localStorage.getItem(timeStorageKey);
+        if (storedEnabled !== null) toggle.checked = storedEnabled === "true";
+        if (storedTime) timeInput.value = storedTime;
+      } catch (_) {}
+
+      toggle.addEventListener("change", () => {
+        try {
+          localStorage.setItem(enabledStorageKey, String(toggle.checked));
+        } catch (_) {}
+      });
+
+      timeInput.addEventListener("input", () => {
+        try {
+          localStorage.setItem(timeStorageKey, timeInput.value);
+        } catch (_) {}
+      });
+
+      const switchLabel = row.querySelector(".werft-b08__switch");
+      switchLabel.addEventListener("click", (event) => {
+        if (event.target === toggle) return;
+        event.preventDefault();
+        toggle.checked = !toggle.checked;
+        toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+  })();
+</script>
+</section>
+</div>
+</body>
+</html>

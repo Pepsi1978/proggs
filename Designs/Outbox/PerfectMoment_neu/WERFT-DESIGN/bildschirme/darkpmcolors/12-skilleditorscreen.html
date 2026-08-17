@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de" data-werft-theme="darkpmcolors" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — SkillEditorScreen — DarkPmColors (Dunkel)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:SkillEditorScreen" data-screen-name="SkillEditorScreen" style="width: 412px; min-height: 915px;">
+<section class="pm-skill-editor-screen" aria-label="Skill bearbeiten">
+  <header class="pm-se-header">
+    <button class="pm-se-back" type="button" aria-label="Zurück" data-werft-navigate="compose:SkillsScreen">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
+      </svg>
+    </button>
+    <h1 class="pm-se-title">Skill bearbeiten</h1>
+  </header>
+
+  <form class="pm-se-form">
+    <input
+      class="pm-se-name"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      placeholder="Name des Skills"
+      aria-label="Name des Skills"
+    />
+
+    <textarea
+      class="pm-se-skill-text"
+      placeholder="Vollständiger Skill-Text"
+      aria-label="Vollständiger Skill-Text"
+      spellcheck="false"
+    ></textarea>
+
+    <section class="pm-se-operating-card">
+      <button class="pm-se-operating-toggle" type="button" aria-expanded="false">
+        <span class="pm-se-operating-copy">
+          <span class="pm-se-operating-title">Betriebsmodus (automatischer Anhang)</span>
+          <span class="pm-se-operating-support">Wird unter jeden Skill gehängt und steuert das Frage-Format.</span>
+        </span>
+        <span class="pm-se-operating-mark" aria-hidden="true">+</span>
+      </button>
+      <div class="pm-se-operating-editor" hidden>
+        <textarea
+          class="pm-se-operating-text"
+          placeholder="Betriebsmodus"
+          aria-label="Betriebsmodus"
+          spellcheck="false"
+        ></textarea>
+      </div>
+    </section>
+
+    <div class="pm-se-explicit-spacer" aria-hidden="true"></div>
+
+    <button class="pm-se-primary" type="button">Speichern</button>
+    <button class="pm-se-outline" type="button">Löschen</button>
+  </form>
+
+  <div class="pm-se-message-overlay" hidden>
+    <div class="pm-se-message-card">
+      <p class="pm-se-message-text"></p>
+      <button class="pm-se-message-close" type="button">Schließen</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const root = document.currentScript.previousElementSibling;
+  const toggle = root.querySelector(".pm-se-operating-toggle");
+  const editor = root.querySelector(".pm-se-operating-editor");
+  const mark = root.querySelector(".pm-se-operating-mark");
+  const skillText = root.querySelector(".pm-se-skill-text");
+  const nameField = root.querySelector(".pm-se-name");
+  const operatingText = root.querySelector(".pm-se-operating-text");
+  const saveButton = root.querySelector(".pm-se-primary");
+  const deleteButton = root.querySelector(".pm-se-outline");
+  const overlay = root.querySelector(".pm-se-message-overlay");
+  const message = root.querySelector(".pm-se-message-text");
+  const closeButton = root.querySelector(".pm-se-message-close");
+
+  const showMessage = (text) => {
+    message.textContent = text;
+    overlay.hidden = false;
+  };
+
+  toggle.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.setAttribute("aria-expanded", String(open));
+    editor.hidden = !open;
+    mark.textContent = open ? "−" : "+";
+  });
+
+  saveButton.addEventListener("click", (event) => {
+    if (
+      nameField.value.trim() === "" ||
+      skillText.value.trim() === "" ||
+      operatingText.value.trim() === ""
+    ) {
+      event.stopPropagation();
+      showMessage("Name, Skill-Text und Betriebsmodus dürfen nicht leer sein.");
+      return;
+    }
+    saveButton.setAttribute("data-werft-navigate", "SkillsScreen");
+  });
+
+  deleteButton.addEventListener("click", () => {
+    showMessage("Mindestens ein Skill muss bestehen bleiben.");
+  });
+
+  const dismissMessage = () => {
+    overlay.hidden = true;
+  };
+
+  overlay.addEventListener("click", dismissMessage);
+  closeButton.addEventListener("click", dismissMessage);
+
+  const updateEditingState = () => {
+    const viewport = window.visualViewport;
+    const imeBottom = viewport
+      ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      : 0;
+    root.classList.toggle(
+      "pm-se-text-editing",
+      document.activeElement === skillText && imeBottom > 0
+    );
+  };
+
+  skillText.addEventListener("focus", updateEditingState);
+  skillText.addEventListener("blur", updateEditingState);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateEditingState);
+    window.visualViewport.addEventListener("scroll", updateEditingState);
+  }
+})();
+</script>
+</section>
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de" data-werft-theme="lightpmcolors" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — SessionStopDialog — LightPmColors</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:SessionStopDialog" data-screen-name="SessionStopDialog" style="width: 412px; min-height: 915px;">
+<section class="pm-session-stop-screen" data-werft-screen="SessionStopDialog">
+  <div class="pm-session-stop-breath" aria-hidden="true"></div>
+
+  <div class="pm-session-stop-modal">
+    <button
+      class="pm-session-stop-backdrop"
+      type="button"
+      aria-label="Dialog schließen"
+      onclick="this.closest('.pm-session-stop-modal').style.display='none'"
+    ></button>
+
+    <section
+      class="pm-session-stop-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pm-session-stop-title"
+      aria-describedby="pm-session-stop-copy"
+    >
+      <h1 class="pm-session-stop-title" id="pm-session-stop-title">Sitzung stoppen?</h1>
+      <p class="pm-session-stop-copy" id="pm-session-stop-copy">Möchten Sie die Sitzung komplett beenden oder an diesem Punkt speichern?</p>
+
+      <div class="pm-session-stop-actions">
+        <button
+          class="pm-session-stop-button pm-session-stop-end"
+          type="button"
+          data-werft-navigate="compose:StartScreen"
+          onclick="this.closest('.pm-session-stop-modal').style.display='none'"
+        >Beenden</button>
+        <button
+          class="pm-session-stop-button pm-session-stop-save"
+          type="button"
+          data-werft-navigate="compose:StartScreen"
+          onclick="this.closest('.pm-session-stop-modal').style.display='none'"
+        >Speichern</button>
+      </div>
+    </section>
+  </div>
+</section>
+</section>
+</div>
+</body>
+</html>

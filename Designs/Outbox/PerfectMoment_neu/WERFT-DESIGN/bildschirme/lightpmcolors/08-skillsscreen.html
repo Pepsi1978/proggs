@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de" data-werft-theme="lightpmcolors" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — SkillsScreen — LightPmColors</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:SkillsScreen" data-screen-name="SkillsScreen" style="width: 412px; min-height: 915px;">
+<section class="pm-skills-screen" aria-label="Skills">
+  <div class="pm-skills-content">
+    <header class="pm-skills-header">
+      <button
+        class="pm-skills-icon-button pm-skills-back"
+        type="button"
+        aria-label="Zurück"
+        data-werft-navigate="compose:SettingsScreen"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+
+      <div class="pm-skills-title">Skills</div>
+
+      <button
+        class="pm-skills-icon-button pm-skills-add"
+        type="button"
+        aria-label="Skill hinzufügen"
+        data-werft-navigate="compose:SkillEditorScreen"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="pm-skills-list" role="list">
+      <div
+        class="pm-skills-card"
+        role="button"
+        tabindex="0"
+        aria-pressed="true"
+        data-skill-id="perfect-moment"
+      >
+        <div class="pm-skills-card-row">
+          <div class="pm-skills-copy">
+            <p class="pm-skills-name">Perfect Moment</p>
+            <p class="pm-skills-preview">Stelle tiefe, abwechslungsreiche Fragen zum gewählten Thema…</p>
+          </div>
+
+          <button
+            class="pm-skills-edit"
+            type="button"
+            aria-label="Skill bearbeiten"
+            data-werft-navigate="compose:SkillEditorScreen"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2 1.58 9.06-9.06 1.17 1.17L6.17 20H5v-1.17zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+          </button>
+
+          <span class="pm-skills-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.currentScript.closest(".pm-skills-screen");
+      if (!root) return;
+
+      const cards = Array.from(root.querySelectorAll(".pm-skills-card"));
+
+      const selectCard = (selectedCard) => {
+        cards.forEach((card) => {
+          card.setAttribute("aria-pressed", card === selectedCard ? "true" : "false");
+        });
+      };
+
+      cards.forEach((card) => {
+        card.addEventListener("click", (event) => {
+          if (event.target.closest("[data-werft-navigate]")) return;
+          selectCard(card);
+        });
+
+        card.addEventListener("keydown", (event) => {
+          if (event.target.closest("[data-werft-navigate]")) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectCard(card);
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+</section>
+</div>
+</body>
+</html>

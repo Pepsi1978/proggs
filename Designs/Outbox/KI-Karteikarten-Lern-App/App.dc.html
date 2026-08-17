@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes bgDrift { 0%{transform:translate(0,0)} 50%{transform:translate(4%,-3%)} 100%{transform:translate(0,0)} }
+</style>
+</helmet>
+<div style="min-height:100vh;width:100%;background:radial-gradient(circle at 20% 10%, #1b1e2c, #0b0d13 60%);font-family:'Schibsted Grotesk',system-ui,sans-serif;padding:48px 40px 64px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-10%;left:-5%;width:50%;height:50%;border-radius:50%;background:rgba(217,169,91,0.14);filter:blur(120px);animation:bgDrift 20s ease-in-out infinite;pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-10%;right:-5%;width:45%;height:45%;border-radius:50%;background:rgba(127,168,201,0.12);filter:blur(120px);pointer-events:none;"></div>
+
+  <div style="position:relative;max-width:1040px;margin:0 auto 44px;text-align:center;">
+    <div style="font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#d9a95b;font-weight:700;margin-bottom:12px;">Interaktiver Prototyp · v2</div>
+    <h1 style="font-size:48px;line-height:1.1;font-weight:600;color:#f4f5fb;margin:0 0 14px;font-family:'Newsreader',serif;">KI-Karteikarten</h1>
+    <p style="font-size:17px;line-height:1.6;color:#a3a7bd;max-width:620px;margin:0 auto;text-wrap:pretty;">Sprechen, lernen, wissen. Beide Themes voll bedienbar — tippe das Mikrofon an, sende die Frage, öffne „Lernen" und drehe die Karte. Ton ist aktiv.</p>
+  </div>
+
+  <div style="position:relative;display:flex;gap:56px;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;gap:8px;color:#c9ccda;font-size:14px;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:7px 16px;border-radius:99px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#12131a;border:1px solid rgba(255,255,255,0.3);"></span> Dunkles Theme
+      </div>
+      <dc-import name="Phone" theme="dark" hint-size="412px,892px" style="width:412px;height:892px;"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;gap:8px;color:#c9ccda;font-size:14px;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:7px 16px;border-radius:99px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#f6f7fc;"></span> Helles Theme
+      </div>
+      <dc-import name="Phone" theme="light" hint-size="412px,892px" style="width:412px;height:892px;"></dc-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

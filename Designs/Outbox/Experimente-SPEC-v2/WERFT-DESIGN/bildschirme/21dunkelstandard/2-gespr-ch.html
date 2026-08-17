@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de" data-werft-theme="21dunkelstandard" data-theme="dark" style="color-scheme: dark;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimente-SPEC-v1 — Gespräch — 2.1 Dunkel (Standard)</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-02" data-screen-name="Gespräch" style="width: 1440px; min-height: 900px;">
+<section class="b02-screen" data-werft-screen="B-02" aria-label="Gespräch">
+  <header class="b02-topbar">
+    <button class="b02-back" type="button" aria-label="Zurück zu Heute" data-werft-navigate="B-01">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2Z"></path>
+      </svg>
+    </button>
+  </header>
+
+  <main class="b02-main">
+    <div class="b02-experiment-header">
+      <h1 class="b02-experiment-title">⟨Experimenttitel⟩</h1>
+      <p class="b02-experiment-day">Tag 2 von 3</p>
+    </div>
+
+    <div class="b02-thread" aria-live="polite">
+      <p class="b02-empty">Frag mich, wie du das angehen könntest.</p>
+    </div>
+  </main>
+
+  <form class="b02-composer" data-werft-funktion="F-09">
+    <label class="b02-input-shell">
+      <input
+        class="b02-input"
+        type="text"
+        autocomplete="off"
+        aria-label="Nachricht eingeben"
+        placeholder="Oder tippen …"
+        data-werft-funktion="F-09"
+      >
+    </label>
+
+    <button
+      class="b02-mic-button"
+      type="button"
+      aria-label="Gespräch aufnehmen"
+      aria-pressed="false"
+      data-recording="false"
+      data-werft-funktion="F-09"
+    >
+      <span class="b02-recording-ring" aria-hidden="true"></span>
+      <svg class="b02-mic-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 14q-1.25 0-2.125-.875T9 11V5q0-1.25.875-2.125T12 2q1.25 0 2.125.875T15 5v6q0 1.25-.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.462T17 11h2q0 2.6-1.7 4.6T13 17.925V21h-2Z"></path>
+      </svg>
+      <svg class="b02-stop-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+      </svg>
+    </button>
+  </form>
+</section>
+
+<script>
+  (() => {
+    const screen = document.currentScript.previousElementSibling;
+    const form = screen.querySelector(".b02-composer");
+    const input = screen.querySelector(".b02-input");
+    const thread = screen.querySelector(".b02-thread");
+    const mic = screen.querySelector(".b02-mic-button");
+
+    const vibrateConfirm = () => {
+      if (navigator.vibrate) navigator.vibrate(30);
+    };
+
+    mic.addEventListener("click", () => {
+      const recording = mic.dataset.recording !== "true";
+      mic.dataset.recording = String(recording);
+      mic.setAttribute("aria-pressed", String(recording));
+      mic.setAttribute("aria-label", recording ? "Aufnahme stoppen" : "Gespräch aufnehmen");
+      vibrateConfirm();
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      const empty = thread.querySelector(".b02-empty");
+      if (empty) empty.remove();
+
+      const userBubble = document.createElement("div");
+      userBubble.className = "b02-bubble b02-bubble-user";
+      userBubble.textContent = text;
+      thread.appendChild(userBubble);
+
+      const aiBubble = document.createElement("div");
+      aiBubble.className = "b02-bubble b02-bubble-ai b02-appearing";
+      aiBubble.setAttribute("aria-label", "Antwort wird geladen");
+      aiBubble.innerHTML =
+        '<span class="b02-loading-dots" aria-hidden="true"><span>•</span><span>•</span><span>•</span></span>';
+      thread.appendChild(aiBubble);
+
+      input.value = "";
+      thread.scrollTop = thread.scrollHeight;
+    });
+  })();
+</script>
+</section>
+</div>
+</body>
+</html>

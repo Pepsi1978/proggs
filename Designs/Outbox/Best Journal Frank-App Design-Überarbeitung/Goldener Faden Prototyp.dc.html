@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Entropy Journal — Goldener Faden (klickbarer Prototyp)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Source+Sans+3:wght@400;500;600&family=Nunito:wght@400;600;800&family=Nunito+Sans:wght@400;600&family=Lora:wght@500;700&family=Manrope:wght@400;600&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;700&family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0" rel="stylesheet">
+<style>
+  body { margin:0; background:#0B0906; }
+  a { color:#E8B547; } a:hover { color:#FFB689; }
+  @keyframes twinkle { 0%,100%{opacity:.12} 50%{opacity:.85} }
+  @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes ringspin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  @keyframes wave { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+  @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+</style>
+</helmet>
+<div style="min-height:100vh; box-sizing:border-box; padding:36px 20px 60px; display:flex; flex-direction:column; align-items:center; gap:18px; font-family:'Source Sans 3',sans-serif">
+  <div style="text-align:center; max-width:600px">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#8A7A5C; text-transform:uppercase">Klickbarer Prototyp · Richtung 1c</div>
+    <div style="font-family:'Playfair Display',serif; font-weight:700; font-size:28px; color:#F2E3C8; margin-top:4px">Goldener Faden</div>
+    <div style="font-size:14px; line-height:1.5; color:#B3A489; margin-top:8px">Alles ist klickbar: Login-Button · Tabs unten · Einträge → Detail · Mikrofon → Aufnahme · Sonne/Mond → Hell/Dunkel · Rückblick-Kapitel aufklappen · Themes &amp; Schriftarten in den Einstellungen umschalten.</div>
+  </div>
+  <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ dark }}" hint-size="412px,892px">
+    <div style="width:100%; height:100%; position:relative; overflow:hidden; background:#16110D">
+      <div style="{{ rootStyle }}">
+        <div style="position:absolute; inset:0; pointer-events:none; z-index:0">
+          <div style="position:absolute; top:12%; left:14%; width:2px; height:2px; border-radius:50%; background:var(--dust,#E8B547); animation:twinkle 4s ease-in-out infinite"></div>
+          <div style="position:absolute; top:24%; left:82%; width:2px; height:2px; border-radius:50%; background:var(--dust,#E8B547); animation:twinkle 5s ease-in-out -1.4s infinite"></div>
+          <div style="position:absolute; top:55%; left:8%; width:1.5px; height:1.5px; border-radius:50%; background:var(--dust,#E8B547); animation:twinkle 4.4s ease-in-out -2.2s infinite"></div>
+          <div style="position:absolute; top:70%; left:88%; width:1.5px; height:1.5px; border-radius:50%; background:var(--dust,#E8B547); animation:twinkle 3.6s ease-in-out -0.8s infinite"></div>
+          <div style="position:absolute; top:86%; left:40%; width:2px; height:2px; border-radius:50%; background:var(--dust,#E8B547); animation:twinkle 4.8s ease-in-out -3s infinite"></div>
+        </div>
+
+        <!-- ══════════ SPLASH / LOGIN ══════════ -->
+        <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; overflow:hidden">
+            <div style="position:relative; height:44%; flex-shrink:0">
+              <img src="assets/splash_hero_book.png" alt="Aufgeschlagenes Buch im warmen Licht" style="width:100%; height:100%; object-fit:cover; display:block">
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(22,17,13,0.15) 0%, rgba(22,17,13,0) 40%, #16110D 96%)"></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; padding:0 32px; margin-top:-8px; position:relative">
+              <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:36px; color:#F2E3C8">Entropy Journal</div>
+              <div style="height:2px; width:72px; margin-top:14px; border-radius:1px; background:linear-gradient(90deg, transparent, #E8B547 25%, #DF741E 50%, #E8B547 75%, transparent); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="font-size:16px; color:#B3A489; text-align:center; line-height:1.6; margin-top:16px">Dein persönliches KI-Tagebuch<br>für Klarheit und Veränderung</div>
+              <div onClick="{{ login }}" style="cursor:pointer; margin-top:38px; display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#E8B547,#DF741E); color:#241505; font-size:17px; font-weight:600; border-radius:999px; padding:16px 34px; box-shadow:0 0 34px rgba(232,181,71,0.35), 0 12px 30px rgba(0,0,0,0.5); animation:breathe 2.6s ease-in-out infinite">
+                <div style="width:24px; height:24px; border-radius:50%; background:#FFFDF6; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:#4285F4">G</div>
+                Mit Google anmelden
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8A7A5C; margin-top:auto; padding-bottom:18px">v0.7.0 · © Frank Barwandt</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ TAGEBUCH ══════════ -->
+        <sc-if value="{{ isTagebuch }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column">
+            <div style="padding:12px 18px 0; flex-shrink:0">
+              <div style="display:flex; justify-content:space-between; align-items:center">
+                <div style="display:flex; align-items:center; gap:10px">
+                  <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:27px; color:var(--text,#F2E3C8)">Tagebuch</div>
+                  <div onClick="{{ toggleDark }}" style="cursor:pointer; display:flex; align-items:center; gap:6px; padding:4px">
+                    <span style="{{ sunStyle }}">light_mode</span>
+                    <div style="width:1px; height:18px; background:var(--cardborder,#3A2E22)"></div>
+                    <span style="{{ moonStyle }}">dark_mode</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px">
+                  <span onClick="{{ openCloud }}" style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:20px; color:var(--succ,#9CBF7E); cursor:pointer">cloud_done</span>
+                  <div onClick="{{ toggleSearch }}" style="cursor:pointer; display:flex; align-items:center; gap:5px; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--chipborder,rgba(232,181,71,0.3)); border-radius:20px; padding:7px 13px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:17px; color:var(--gold,#D9BE8C)">search</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold,#D9BE8C)">Suche</span>
+                  </div>
+                </div>
+              </div>
+              <div style="height:2px; margin-top:10px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:8px">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77)">124 Einträge</span>
+                <div onClick="{{ openStreak }}" style="cursor:pointer; display:flex; align-items:center; gap:4px; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); border-radius:12px; padding:3px 9px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:15px; color:var(--copper,#FFB689)">local_fire_department</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--copper,#FFB689)">12 Tage</span>
+                </div>
+              </div>
+              <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:10px; display:flex; align-items:center; gap:8px; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.3)); border-radius:14px; padding:10px 14px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:18px; color:var(--gold,#E8B547)">search</span>
+                  <input placeholder="Einträge durchsuchen…" style="flex:1; background:transparent; border:none; outline:none; font-family:var(--fb,'Source Sans 3'),sans-serif; font-size:14px; color:var(--text,#EFE7DB)">
+                  <span onClick="{{ toggleSearch }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:18px; color:var(--muted,#9C8D77)">close</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:6px 18px 150px">
+              <div style="display:flex; align-items:center; gap:10px; padding:10px 0 6px">
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-style:italic; font-size:15px; color:var(--golddec,#E8B547)">Heute</span>
+                <div style="flex:1; height:1px; background:linear-gradient(90deg, var(--cardborder,rgba(232,181,71,0.5)), transparent)"></div>
+              </div>
+              <div style="display:flex">
+                <div style="width:46px; display:flex; flex-direction:column; align-items:center; flex-shrink:0">
+                  <div style="flex:1"></div>
+                  <div style="width:38px; height:38px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.45)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--golddec,#E8B547)">directions_walk</span></div>
+                  <div style="width:1px; flex:1; background:linear-gradient(180deg, var(--cardborder,rgba(232,181,71,0.6)), transparent)"></div>
+                </div>
+                <div style="width:10px; flex-shrink:0"></div>
+                <div style="flex:1; padding:6px 0">
+                  <div onClick="{{ openDetail }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--text,#F2E3C8)">Spaziergang am See</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:3px">18. Juli 2026, 09:12 · vor 2 Std.</div>
+                    <div style="font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:9px">Heute Morgen bin ich früh aufgestanden und eine Runde um den See gelaufen. Die Luft war klar und ich habe gemerkt, wie viel ruhiger mein Kopf danach war.</div>
+                    <div style="display:flex; gap:6px; margin-top:10px">
+                      <div style="background:var(--chipbg,rgba(232,181,71,0.1)); border:1px solid var(--chipborder,rgba(232,181,71,0.3)); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gold,#E8B547)">Gesundheit</div>
+                      <div style="background:var(--chipbg,rgba(223,116,30,0.1)); border:1px solid var(--chipborder,rgba(223,116,30,0.35)); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--copper,#FFB689)">Achtsamkeit</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex">
+                <div style="width:46px; display:flex; flex-direction:column; align-items:center; flex-shrink:0">
+                  <div style="width:1px; flex:1; background:linear-gradient(180deg, transparent, var(--cardborder,rgba(232,181,71,0.6)))"></div>
+                  <div style="width:38px; height:38px; border-radius:50%; background:var(--iconcircle,rgba(223,116,30,0.16)); border:1px solid var(--chipborder,rgba(223,116,30,0.5)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--copper,#FFB689)">work</span></div>
+                  <div style="flex:1"></div>
+                </div>
+                <div style="width:10px; flex-shrink:0"></div>
+                <div style="flex:1; padding:6px 0">
+                  <div onClick="{{ openDetail }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--text,#F2E3C8)">Projekt endlich abgeschlossen</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:3px">18. Juli 2026, 07:45 · vor 4 Std.</div>
+                    <div style="font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:9px">Das große Projekt ist abgeschlossen. Ich bin erleichtert, aber auch ein bisschen leer. Morgen will ich bewusst einen ruhigen Tag einlegen.</div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; padding:10px 0 6px">
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-style:italic; font-size:15px; color:var(--golddec,#E8B547)">Gestern</span>
+                <div style="flex:1; height:1px; background:linear-gradient(90deg, var(--cardborder,rgba(232,181,71,0.5)), transparent)"></div>
+              </div>
+              <div style="display:flex">
+                <div style="width:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0">
+                  <div style="width:38px; height:38px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.45)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--golddec,#E8B547)">restaurant</span></div>
+                </div>
+                <div style="width:10px; flex-shrink:0"></div>
+                <div style="flex:1; padding:6px 0">
+                  <div onClick="{{ openDetail }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--text,#F2E3C8)">Abendessen mit Lena</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:3px">17. Juli 2026, 20:31 · gestern</div>
+                    <div style="font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:9px">Langes Gespräch über die Zukunft. Wir haben beschlossen, im Herbst die Wanderung in Südtirol wirklich zu machen.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ notRecording }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute; bottom:104px; left:0; right:0; display:flex; justify-content:center; gap:14px; z-index:3">
+                <div onClick="{{ openCompose }}" style="width:60px; height:60px; border-radius:50%; background:var(--card,#241C14); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,0.5)); cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:26px; color:var(--golddec,#E8B547)">edit</span></div>
+                <div onClick="{{ startRec }}" style="cursor:pointer; width:64px; height:64px; margin-top:-2px; border-radius:50%; background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px var(--g4,rgba(223,116,30,0.45)); animation:breathe 3s ease-in-out infinite"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:var(--mictext,#241505)">mic</span></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ recording }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; left:16px; right:16px; bottom:210px; z-index:4; background:var(--navbg,rgba(30,23,18,0.92)); backdrop-filter:blur(24px); border:1px solid var(--chipborder,rgba(232,181,71,0.3)); border-radius:26px; padding:20px 16px; display:flex; flex-direction:column; align-items:center; box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+                <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:42px; color:var(--golddec,#E8B547)">0:42</div>
+                <div style="display:flex; align-items:center; gap:3px; height:40px; margin-top:12px">
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.9s ease-in-out infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.7s ease-in-out -0.2s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 1.1s ease-in-out -0.4s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.8s ease-in-out -0.1s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 1s ease-in-out -0.5s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.75s ease-in-out -0.3s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.95s ease-in-out -0.6s infinite"></div>
+                  <div style="width:5px; height:100%; background:var(--micgrad,linear-gradient(180deg,#E8B547,#DF741E)); border-radius:3px; animation:wave 0.85s ease-in-out -0.15s infinite"></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:10px">
+                  <div style="width:8px; height:8px; border-radius:50%; background:#FF5252; box-shadow:0 0 10px rgba(255,82,82,0.9)"></div>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2,#D8CCBA)">Lokales Whisper-Modell</span>
+                </div>
+                <div style="font-size:14px; color:var(--muted,#9C8D77); margin-top:6px">Tippe auf Stopp zum Beenden</div>
+              </div>
+              <div style="position:absolute; bottom:104px; left:0; right:0; display:flex; justify-content:center; z-index:4">
+                <div onClick="{{ stopRec }}" style="cursor:pointer; width:76px; height:76px; border-radius:50%; background:conic-gradient(var(--golddec,#E8B547),var(--acc2,#DF741E),var(--copper,#FFB689),var(--golddec,#E8B547)); padding:3px; animation:ringspin 3s linear infinite; box-shadow:0 0 30px var(--g3,rgba(232,181,71,0.4))">
+                  <div style="width:100%; height:100%; border-radius:50%; background:#16110D; display:flex; align-items:center; justify-content:center; box-sizing:border-box; padding:4px">
+                    <div style="width:100%; height:100%; border-radius:50%; background:#FF5252; display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:28px; color:#FFFFFF">stop</span></div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ EINTRAG-DETAIL ══════════ -->
+        <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column">
+            <div style="height:56px; display:flex; align-items:center; gap:8px; padding:0 12px; flex-shrink:0">
+              <div onClick="{{ goTagebuch }}" style="cursor:pointer; width:40px; height:40px; border-radius:50%; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--chipborder,rgba(232,181,71,0.3)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-size:20px; color:var(--text,#EFE7DB)">arrow_back</span></div>
+              <div style="flex:1"></div>
+              <div onClick="{{ openShare }}" style="width:40px; height:40px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.12)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--copper,#FFB689)">share</span></div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:4px 18px 40px; display:flex; flex-direction:column; gap:14px">
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">tips_and_updates</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:15px; color:var(--golddec,#E8B547)">Zusammenfassung</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px">
+                  <div style="display:flex; gap:8px"><div style="width:6px; height:6px; border-radius:50%; background:var(--golddec,#E8B547); margin-top:7px; flex-shrink:0"></div><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Morgenspaziergang um den See</span></div>
+                  <div style="display:flex; gap:8px"><div style="width:6px; height:6px; border-radius:50%; background:var(--copper,#FFB689); margin-top:7px; flex-shrink:0"></div><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Kopf danach deutlich klarer</span></div>
+                  <div style="display:flex; gap:8px"><div style="width:6px; height:6px; border-radius:50%; background:var(--succ,#9CBF7E); margin-top:7px; flex-shrink:0"></div><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Vorsatz: öfter vor der Arbeit raus</span></div>
+                </div>
+              </div>
+              <div style="display:flex; background:var(--chipbg,rgba(232,181,71,0.07)); border:1px solid var(--cardborder,rgba(232,181,71,0.25)); border-radius:999px; padding:4px">
+                <div onClick="{{ tabVerb }}" style="{{ tabVStyle }}">Verbessert</div>
+                <div onClick="{{ tabOrig }}" style="{{ tabOStyle }}">Original</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                  <div style="display:flex; align-items:center; gap:8px">
+                    <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">book</span>
+                    <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:15px; color:var(--golddec,#E8B547)">Tagebucheintrag</span>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:var(--danger,#FF7B6B); cursor:pointer">delete</span>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:2px">18. Juli 2026, 09:12 · vor 2 Std.</div>
+                <sc-if value="{{ isVerb }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:15px; line-height:24px; color:var(--text,#EFE7DB); margin-top:10px">Heute Morgen bin ich früh aufgestanden und eine Runde um den See gelaufen. Die Luft war klar und ich habe gemerkt, wie viel ruhiger mein Kopf danach war. Ich möchte das öfter machen, am besten direkt vor der Arbeit.</div>
+                </sc-if>
+                <sc-if value="{{ isOrig }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:15px; line-height:24px; color:var(--text,#EFE7DB); margin-top:10px">also heute morgen bin ich mal früh aufgestanden und ähm eine runde um den see gelaufen … die luft war voll klar und ich hab gemerkt dass mein kopf danach viel ruhiger war … will das öfter machen am besten direkt vor der arbeit</div>
+                </sc-if>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:12px">
+                  <div style="width:36px; height:36px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">volume_up</span></div>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77)">Aufnahmedauer: 1:23</span>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">edit_note</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:15px; color:var(--copper,#FFB689)">Nachtrag Eins</span>
+                  <div style="flex:1"></div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:18px; color:var(--danger,#FF7B6B); cursor:pointer">delete</span>
+                </div>
+                <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:8px">Mittags noch kurz mit Jonas telefoniert — er kommt am Wochenende vorbei.</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">photo_camera</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:15px; color:var(--golddec,#E8B547)">Fotos und Videos</span>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:12px">
+                  <div style="width:74px; height:74px; border-radius:14px; background:repeating-linear-gradient(45deg, var(--chipbg,rgba(232,181,71,0.1)), var(--chipbg,rgba(232,181,71,0.1)) 6px, transparent 6px, transparent 12px); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); display:flex; align-items:center; justify-content:center; position:relative"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted,#9C8D77)">Foto</span><div style="position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:var(--navbg,rgba(30,23,18,0.88)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-size:13px; color:var(--danger,#FF7B6B)">close</span></div></div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:12px">
+                  <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:999px; padding:11px 0; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">photo_camera</span><span style="font-size:13px; color:var(--text,#EFE7DB)">Kamera</span></div>
+                  <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:999px; padding:11px 0; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">videocam</span><span style="font-size:13px; color:var(--text,#EFE7DB)">Video</span></div>
+                  <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); border-radius:999px; padding:11px 0; cursor:pointer; box-shadow:0 0 14px var(--g3,rgba(232,181,71,0.3))"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--mictext,#241505)">photo_library</span><span style="font-size:13px; color:var(--mictext,#241505); font-weight:600">Galerie</span></div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:center; gap:12px; padding:6px 0 10px">
+                <div style="display:flex; align-items:center; gap:8px; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--chipborder,rgba(232,181,71,0.35)); border-radius:999px; padding:12px 22px; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-size:19px; color:var(--text,#EFE7DB)">edit</span><span style="font-size:14px; color:var(--text,#EFE7DB)">Schreiben</span></div>
+                <div style="display:flex; align-items:center; gap:8px; background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); border-radius:999px; padding:12px 22px; box-shadow:0 0 20px var(--g3,rgba(232,181,71,0.3)); cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--mictext,#241505)">mic</span><span style="font-size:14px; color:var(--mictext,#241505); font-weight:600">Einsprechen</span></div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ DASHBOARD ══════════ -->
+        <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column">
+            <div style="padding:12px 18px 0; flex-shrink:0">
+              <div style="display:flex; justify-content:space-between; align-items:center">
+                <div style="display:flex; align-items:center; gap:10px">
+                  <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:27px; color:var(--text,#F2E3C8)">Dashboard</div>
+                  <div onClick="{{ toggleDark }}" style="cursor:pointer; display:flex; align-items:center; gap:6px; padding:4px">
+                    <span style="{{ sunStyle }}">light_mode</span>
+                    <div style="width:1px; height:18px; background:var(--cardborder,#3A2E22)"></div>
+                    <span style="{{ moonStyle }}">dark_mode</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div onClick="{{ openLegend }}" style="width:38px; height:38px; border-radius:50%; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.3)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-size:19px; color:var(--text2,#D8CCBA)">info</span></div>
+                  <div style="width:38px; height:38px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-size:19px; color:var(--golddec,#E8B547)">refresh</span></div>
+                </div>
+              </div>
+              <div style="height:2px; margin-top:10px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:8px">Zuletzt aktualisiert: heute, 09:14</div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:10px 18px 130px; display:flex; flex-direction:column; gap:12px">
+              <div style="display:flex; align-items:center; gap:10px; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:10px 14px">
+                <div style="width:34px; height:34px; border-radius:50%; background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--mictext,#241505)">psychology</span></div>
+                <div style="flex:1">
+                  <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:14px; color:var(--golddec,#E8B547)">Aktives Profil: Zusammenfassung</div>
+                  <div style="font-size:12px; line-height:16px; color:var(--muted,#9C8D77)">Alle Einträge gleichwertig — Muster &amp; Empfehlungen</div>
+                </div>
+                <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:var(--muted,#9C8D77)">expand_more</span>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px">
+                  <div style="width:24px; height:1px; background:linear-gradient(90deg, transparent, var(--golddec,#E8B547))"></div>
+                  <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:19px; color:var(--golddec,#E8B547)">Überblick</div>
+                  <div style="width:24px; height:1px; background:linear-gradient(90deg, var(--golddec,#E8B547), transparent)"></div>
+                </div>
+                <div style="font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:10px">Deine Woche war geprägt von viel Arbeit und wenig Schlaf. Positiv: Du warst dreimal draußen in der Natur, das hat dir spürbar gut getan.</div>
+                <div style="display:flex; gap:10px; margin-top:12px">
+                  <div style="width:38px; height:38px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--copper,#FFB689)">volume_up</span></div>
+                  <div onClick="{{ openShare }}" style="width:38px; height:38px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--copper,#FFB689)">share</span></div>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px">
+                <div style="width:104px; height:124px; box-sizing:border-box; justify-content:center; flex-shrink:0; background:var(--card,#221A13); border:1px solid var(--prio1,#FF6B5E); border-radius:16px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <div style="width:34px; height:34px; border-radius:50%; background:var(--chipbg,rgba(255,107,94,0.14)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--prio1,#FF6B5E)">bedtime</span></div>
+                  <div style="font-size:11px; color:var(--prio1,#FF6B5E); font-weight:600">Schlaf</div>
+                  <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(155,120,90,0.3)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 30.5 9.5" fill="none" stroke="#FF6B5E" stroke-width="3" stroke-linecap="round"></path></svg>
+                </div>
+                <div style="width:104px; height:124px; box-sizing:border-box; justify-content:center; flex-shrink:0; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <div style="width:34px; height:34px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">work</span></div>
+                  <div style="font-size:11px; color:var(--text2,#D8CCBA)">Arbeit</div>
+                  <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(155,120,90,0.3)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 25 6.5" fill="none" stroke="#FFA94D" stroke-width="3" stroke-linecap="round"></path></svg>
+                </div>
+                <div style="width:104px; height:124px; box-sizing:border-box; justify-content:center; flex-shrink:0; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <div style="width:34px; height:34px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">favorite</span></div>
+                  <div style="font-size:11px; color:var(--text2,#D8CCBA)">Beziehungen</div>
+                  <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(155,120,90,0.3)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 12 4.5" fill="none" stroke="#9CBF7E" stroke-width="3" stroke-linecap="round"></path></svg>
+                </div>
+                <div style="width:104px; height:124px; box-sizing:border-box; justify-content:center; flex-shrink:0; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <div style="width:34px; height:34px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--succ,#9CBF7E)">fitness_center</span></div>
+                  <div style="font-size:11px; color:var(--text2,#D8CCBA)">Sport</div>
+                  <svg width="36" height="18" viewBox="0 0 36 18"><path d="M3 17 A15 15 0 0 1 33 17" fill="none" stroke="rgba(155,120,90,0.3)" stroke-width="3"></path><path d="M3 17 A15 15 0 0 1 9 6.8" fill="none" stroke="#9CBF7E" stroke-width="3" stroke-linecap="round"></path></svg>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:center; gap:10px; padding:4px 0">
+                <div style="flex:1; height:1px; background:linear-gradient(90deg, transparent, var(--chipborder,rgba(232,181,71,0.5)))"></div>
+                <div style="width:8px; height:8px; transform:rotate(45deg); background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); box-shadow:0 0 10px var(--g3,rgba(232,181,71,0.5))"></div>
+                <div style="flex:1; height:1px; background:linear-gradient(90deg, var(--chipborder,rgba(232,181,71,0.5)), transparent)"></div>
+              </div>
+              <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:18px; color:var(--golddec,#E8B547); text-align:center">Alle Beobachtungen</div>
+              <div style="display:flex; justify-content:center; gap:14px">
+                <div style="display:flex; align-items:center; gap:5px"><div style="width:8px; height:8px; border-radius:50%; background:var(--prio1,#FF6B5E)"></div><span style="font-size:12px; color:var(--text2,#D8CCBA)">hoch</span></div>
+                <div style="display:flex; align-items:center; gap:5px"><div style="width:8px; height:8px; border-radius:50%; background:var(--prio2,#FFA94D)"></div><span style="font-size:12px; color:var(--text2,#D8CCBA)">mittel</span></div>
+                <div style="display:flex; align-items:center; gap:5px"><div style="width:8px; height:8px; border-radius:50%; background:var(--succ,#9CBF7E)"></div><span style="font-size:12px; color:var(--text2,#D8CCBA)">niedrig</span></div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:13px 15px; display:flex; gap:10px; align-items:flex-start">
+                <div style="width:8px; height:8px; border-radius:50%; background:var(--prio1,#FF6B5E); margin-top:6px; flex-shrink:0"></div>
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--muted,#9C8D77); text-transform:uppercase">Schlaf</div>
+                  <div style="font-size:14px; line-height:20px; color:var(--text,#EFE7DB); margin-top:2px">Du gehst seit 5 Tagen nach Mitternacht ins Bett — plane heute 23:00 Uhr als feste Grenze ein.</div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:13px 15px; display:flex; gap:10px; align-items:flex-start">
+                <div style="width:8px; height:8px; border-radius:50%; background:var(--prio2,#FFA94D); margin-top:6px; flex-shrink:0"></div>
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--muted,#9C8D77); text-transform:uppercase">Arbeit</div>
+                  <div style="font-size:14px; line-height:20px; color:var(--text,#EFE7DB); margin-top:2px">Nach dem Projektabschluss fehlt dir ein neues Ziel — nimm dir 30 Minuten für eine Wochenplanung.</div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:13px 15px; display:flex; gap:10px; align-items:flex-start">
+                <div style="width:8px; height:8px; border-radius:50%; background:var(--succ,#9CBF7E); margin-top:6px; flex-shrink:0"></div>
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--muted,#9C8D77); text-transform:uppercase">Beziehungen</div>
+                  <div style="font-size:14px; line-height:20px; color:var(--text,#EFE7DB); margin-top:2px">Die Abende mit Lena und Jonas geben dir Kraft — halte den Rhythmus von einem Treffen pro Woche.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ RÜCKBLICK ══════════ -->
+        <sc-if value="{{ isRueckblick }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column">
+            <div style="padding:12px 18px 0; flex-shrink:0">
+              <div style="display:flex; align-items:center; gap:10px">
+                <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:27px; color:var(--text,#F2E3C8)">Rückblick</div>
+                <div onClick="{{ toggleDark }}" style="cursor:pointer; display:flex; align-items:center; gap:6px; padding:4px">
+                  <span style="{{ sunStyle }}">light_mode</span>
+                  <div style="width:1px; height:18px; background:var(--cardborder,#3A2E22)"></div>
+                  <span style="{{ moonStyle }}">dark_mode</span>
+                </div>
+              </div>
+              <div style="height:2px; margin-top:10px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="display:flex; align-items:center; margin-top:8px">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77)">Aktualisiert: Sonntag, 06:00</span>
+                <div style="flex:1"></div>
+                <div onClick="{{ openRueckInfo }}" style="width:32px; height:32px; border-radius:50%; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.3)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-size:17px; color:var(--text2,#D8CCBA)">info</span></div>
+              </div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:10px 18px 130px">
+              <div style="position:relative; border-radius:22px; padding:26px 22px; text-align:center; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.35)); box-shadow:var(--shadow,0 16px 40px rgba(0,0,0,0.4)); overflow:hidden">
+                <div style="position:absolute; inset:0; background:radial-gradient(60% 50% at 50% 0%, rgba(232,181,71,0.16), transparent 70%); pointer-events:none"></div>
+                <div style="position:relative; display:inline-flex; width:72px; height:72px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.5)); align-items:center; justify-content:center; box-shadow:0 0 30px var(--g3,rgba(232,181,71,0.3)); animation:floaty 4s ease-in-out infinite"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:36px; color:var(--golddec,#E8B547)">auto_awesome</span></div>
+                <div style="position:relative; font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:22px; margin-top:16px; color:var(--text,#F2E3C8)">Dein persönlicher Rückblick</div>
+                <div style="position:relative; font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:10px">Manchmal vergessen wir im Alltag, wie viel wir eigentlich erlebt haben. Dein Tagebuch erinnert sich an alles — an die großen Momente und die kleinen, stillen Augenblicke.</div>
+                <div style="position:relative; font-family:var(--fh,'Playfair Display'),serif; font-style:italic; font-size:15px; color:var(--golddec,#E8B547); margin-top:10px">Schau zurück und entdecke, was dich bewegt hat.</div>
+              </div>
+              <div style="margin-top:20px; display:flex; flex-direction:column; gap:12px">
+                <div onClick="{{ toggleWeek }}" style="cursor:pointer; border-radius:18px; padding:14px 16px; display:flex; align-items:center; gap:14px; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.35))">
+                  <div style="width:44px; height:44px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.45)); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:21px; color:var(--golddec,#E8B547)">calendar_today</span></div>
+                  <div style="flex:1">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--text,#F2E3C8)">Wochenrückblick</div>
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">Die letzten 7 Tage im Überblick</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:var(--golddec,#E8B547)">{{ weekChevron }}</span>
+                </div>
+                <sc-if value="{{ weekOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-left:20px; border-left:1px solid var(--chipborder,rgba(232,181,71,0.4)); padding-left:16px; position:relative; display:flex; flex-direction:column; gap:10px">
+                    <div style="position:absolute; left:-5px; top:22px; width:9px; height:9px; border-radius:50%; background:var(--golddec,#E8B547); box-shadow:0 0 10px var(--g3,rgba(232,181,71,0.7))"></div>
+                    <div onClick="{{ openSumW29 }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:14px">
+                      <div style="display:flex; justify-content:space-between; align-items:center">
+                        <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:14px; color:var(--golddec,#E8B547)">Woche 29 · 13.–19. Juli</div>
+                        <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">volume_up</span>
+                      </div>
+                      <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:6px">Eine Woche zwischen Projektdruck und neuen Anfängen — mit einem klaren Höhepunkt: dem Abschluss am Freitag.</div>
+                    </div>
+                    <div style="position:absolute; left:-5px; bottom:34px; width:9px; height:9px; border-radius:50%; background:var(--copper,#FFB689); box-shadow:0 0 10px rgba(255,182,137,0.6)"></div>
+                    <div onClick="{{ openSumW28 }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:14px">
+                      <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:14px; color:var(--copper,#FFB689)">Woche 28 · 6.–12. Juli</div>
+                      <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:6px">Viel Alltag, wenig Schlaf — aber zwei lange Abende mit Freunden, die dir Energie gegeben haben.</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <div onClick="{{ toggleMonth }}" style="cursor:pointer; border-radius:18px; padding:14px 16px; display:flex; align-items:center; gap:14px; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28))">
+                  <div style="width:44px; height:44px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.14)); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:21px; color:var(--golddec,#E8B547)">date_range</span></div>
+                  <div style="flex:1">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--text,#F2E3C8)">Monatsrückblick</div>
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">Dein vergangener Monat auf einen Blick</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:var(--muted,#9C8D77)">{{ monthChevron }}</span>
+                </div>
+                <sc-if value="{{ monthOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-left:20px; border-left:1px solid var(--chipborder,rgba(232,181,71,0.4)); padding-left:16px; position:relative">
+                    <div style="position:absolute; left:-5px; top:22px; width:9px; height:9px; border-radius:50%; background:var(--golddec,#E8B547); box-shadow:0 0 10px var(--g3,rgba(232,181,71,0.7))"></div>
+                    <div onClick="{{ openSumMonat }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:14px">
+                      <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:14px; color:var(--golddec,#E8B547)">Juni 2026</div>
+                      <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:6px">Ein Monat des Übergangs: das neue Projekt, der Start der Laufroutine und drei Wochenenden in der Natur.</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <div onClick="{{ toggleYear }}" style="cursor:pointer; border-radius:18px; padding:14px 16px; display:flex; align-items:center; gap:14px; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28))">
+                  <div style="width:44px; height:44px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.14)); display:flex; align-items:center; justify-content:center; flex-shrink:0"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:21px; color:var(--golddec,#E8B547)">calendar_month</span></div>
+                  <div style="flex:1">
+                    <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--text,#F2E3C8)">Jahresrückblick</div>
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">Dein Jahr in Momenten</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:var(--muted,#9C8D77)">{{ yearChevron }}</span>
+                </div>
+                <sc-if value="{{ yearOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-left:20px; border-left:1px solid var(--chipborder,rgba(232,181,71,0.4)); padding-left:16px; position:relative">
+                    <div style="position:absolute; left:-5px; top:22px; width:9px; height:9px; border-radius:50%; background:var(--golddec,#E8B547); box-shadow:0 0 10px var(--g3,rgba(232,181,71,0.7))"></div>
+                    <div onClick="{{ openSumJahr }}" style="cursor:pointer; background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:16px; padding:14px">
+                      <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:14px; color:var(--golddec,#E8B547)">2025</div>
+                      <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:6px">Dein Jahr der leisen Neuanfänge — vom ersten Eintrag im Februar bis zur Bergtour im Oktober.</div>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ EINSTELLUNGEN ══════════ -->
+        <sc-if value="{{ isEinstellungen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:1; display:flex; flex-direction:column">
+            <div style="padding:12px 18px 0; flex-shrink:0">
+              <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:27px; color:var(--text,#F2E3C8)">Einstellungen</div>
+              <div style="height:2px; margin-top:10px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:12px 18px 130px; display:flex; flex-direction:column; gap:14px">
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; box-shadow:var(--shadow,0 14px 30px rgba(0,0,0,0.45))">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">person</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Konto</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; margin-top:14px">
+                  <div style="width:40px; height:40px; border-radius:50%; background:#FFFDF6; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:700; font-size:20px; color:#4285F4; flex-shrink:0">G</div>
+                  <div style="flex:1">
+                    <div style="font-size:15px; color:var(--text,#EFE7DB)">Frank Barwandt</div>
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">barwandt@gmail.com</div>
+                  </div>
+                  <div style="border:1px solid var(--danger,#FF7B6B); color:var(--danger,#FF7B6B); border-radius:999px; padding:8px 16px; font-size:13px; cursor:pointer">Abmelden</div>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:12px">Letzte Synchronisation: 18. Juli 2026, 08:02</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                  <div style="display:flex; align-items:center; gap:8px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--golddec,#E8B547)">photo_camera</span><span style="font-size:14px; color:var(--text,#EFE7DB)">Fotos sichern</span></div>
+                  <div onClick="{{ toggleFotos }}" style="{{ swFotos }}"><div style="{{ swFotosTh }}"></div></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                  <div style="display:flex; align-items:center; gap:8px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:19px; color:var(--golddec,#E8B547)">videocam</span><span style="font-size:14px; color:var(--text,#EFE7DB)">Videos sichern</span></div>
+                  <div onClick="{{ toggleVideos }}" style="{{ swVideos }}"><div style="{{ swVideosTh }}"></div></div>
+                </div>
+                <div style="display:flex; justify-content:center; margin-top:14px"><div style="background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); color:var(--mictext,#241505); border-radius:999px; padding:12px 24px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 0 18px var(--g3,rgba(232,181,71,0.25))">Tagebucheinträge sichern</div></div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">brightness_6</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Erscheinungsbild</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:21px; color:var(--golddec,#E8B547)">dark_mode</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">Dunkelmodus</div><div style="font-size:13px; color:var(--muted,#9C8D77)">{{ darkLabel }}</div></div>
+                  </div>
+                  <div onClick="{{ toggleDark }}" style="{{ swDark }}"><div style="{{ swDarkTh }}"></div></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">smartphone</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">System folgen</div><div style="font-size:13px; color:var(--muted,#9C8D77)">Automatisch</div></div>
+                  </div>
+                  <div onClick="{{ toggleSys }}" style="{{ swSys }}"><div style="{{ swSysTh }}"></div></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">routine</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">Sonnenauf-/untergang</div><div style="font-size:13px; color:var(--muted,#9C8D77)">Dunkel bei Nacht, hell bei Tag</div></div>
+                  </div>
+                  <div onClick="{{ toggleSun }}" style="{{ swSun }}"><div style="{{ swSunTh }}"></div></div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">palette</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Themes Manager</span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px">
+                  <sc-for list="{{ themeChips }}" as="chip" hint-placeholder-count="6">
+                    <div onClick="{{ chip.onPick }}" style="{{ chip.style }}">
+                      <div style="{{ chip.dotStyle }}"></div>
+                      <span style="{{ chip.nameStyle }}">{{ chip.name }}</span>
+                      <sc-if value="{{ chip.neu }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--succ,#9CBF7E); border:1px solid var(--succ,#9CBF7E); border-radius:4px; padding:1px 4px">NEU</span></sc-if>
+                      <sc-if value="{{ chip.active }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Material Symbols Rounded'; font-size:14px; color:var(--golddec,#E8B547)">check</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-size:12px; color:var(--muted,#9C8D77); margin-top:10px">Die Theme-Auswahl färbt den gesamten Prototyp sofort um — in Hell und Dunkel.</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">text_fields</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Schriftart</span>
+                </div>
+                <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:14px">Überschriften</div>
+                <div onClick="{{ toggleFontH }}" style="cursor:pointer; margin-top:6px; display:flex; align-items:center; gap:10px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:14px; padding:12px 14px">
+                  <span style="font-family:var(--fh,'Playfair Display'); font-size:17px; font-weight:700; color:var(--text,#EFE7DB); flex:1">{{ fontHName }}</span>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:var(--golddec,#E8B547)">{{ fontHChevron }}</span>
+                </div>
+                <sc-if value="{{ fontHOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px">
+                    <sc-for list="{{ headRows }}" as="row" hint-placeholder-count="7">
+                      <div onClick="{{ row.onPick }}" style="{{ row.rowStyle }}">
+                        <div style="{{ row.radioOuter }}"><sc-if value="{{ row.active }}" hint-placeholder-val="{{ false }}"><div style="width:8px; height:8px; border-radius:50%; background:var(--golddec,#E8B547)"></div></sc-if></div>
+                        <div style="flex:1">
+                          <div style="{{ row.nameStyle }}">{{ row.name }}</div>
+                          <div style="{{ row.descStyle }}">{{ row.desc }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:14px">Fließtext</div>
+                <div onClick="{{ toggleFontB }}" style="cursor:pointer; margin-top:6px; display:flex; align-items:center; gap:10px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:14px; padding:12px 14px">
+                  <span style="font-family:var(--fb,'Source Sans 3'); font-size:15px; font-weight:600; color:var(--text,#EFE7DB); flex:1">{{ fontBName }}</span>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:var(--golddec,#E8B547)">{{ fontBChevron }}</span>
+                </div>
+                <sc-if value="{{ fontBOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px">
+                    <sc-for list="{{ bodyRows }}" as="row" hint-placeholder-count="6">
+                      <div onClick="{{ row.onPick }}" style="{{ row.rowStyle }}">
+                        <div style="{{ row.radioOuter }}"><sc-if value="{{ row.active }}" hint-placeholder-val="{{ false }}"><div style="width:8px; height:8px; border-radius:50%; background:var(--golddec,#E8B547)"></div></sc-if></div>
+                        <div style="flex:1">
+                          <div style="{{ row.nameStyle }}">{{ row.name }}</div>
+                          <div style="{{ row.descStyle }}">{{ row.desc }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="font-size:12px; color:var(--muted,#9C8D77); margin-top:10px">Überschrift- und Textschrift wirken sofort auf alle Screens des Prototyps.</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">lock</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Sicherheit</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">fingerprint</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">Fingerabdruck / PIN</div><div style="font-size:13px; color:var(--muted,#9C8D77)">Sperrt nach 60 s im Hintergrund</div></div>
+                  </div>
+                  <div onClick="{{ toggleBio }}" style="{{ swBio }}"><div style="{{ swBioTh }}"></div></div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">vpn_key</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">API-Schlüssel</span>
+                </div>
+                <div style="margin-top:14px; display:flex; align-items:center; gap:10px; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px 14px">
+                  <div style="flex:1">
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">Gemini API-Schlüssel</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--text,#EFE7DB); margin-top:2px">••••••••••••3kF9</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:var(--muted,#9C8D77); cursor:pointer">visibility</span>
+                </div>
+                <div style="margin-top:8px; display:flex; align-items:center; gap:10px; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px 14px">
+                  <div style="flex:1">
+                    <div style="font-size:13px; color:var(--muted,#9C8D77)">Groq API-Schlüssel (optional)</div>
+                    <div style="font-size:14px; color:var(--muted,#9C8D77); margin-top:2px; font-style:italic">Nicht hinterlegt — lokales Whisper aktiv</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:var(--golddec,#E8B547); cursor:pointer">add</span>
+                </div>
+                <div style="font-size:12px; color:var(--muted,#9C8D77); margin-top:10px">Schlüssel gehören zum Gerät und werden nie in der Cloud gespeichert. Sichtbar nur nach Fingerabdruck.</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">smart_toy</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Gemini-Modell</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px">
+                  <sc-for list="{{ modelChips }}" as="m" hint-placeholder-count="5">
+                    <div onClick="{{ m.onPick }}" style="{{ m.rowStyle }}">
+                      <div style="{{ m.radioOuter }}"><sc-if value="{{ m.active }}" hint-placeholder-val="{{ false }}"><div style="width:8px; height:8px; border-radius:50%; background:var(--golddec,#E8B547)"></div></sc-if></div>
+                      <div style="flex:1">
+                        <div style="{{ m.nameStyle }}">{{ m.name }}</div>
+                        <div style="{{ m.descStyle }}">{{ m.price }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">mic</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Aufnahme</span>
+                </div>
+                <div style="font-size:14px; color:var(--text,#EFE7DB); margin-top:14px">Maximale Aufnahmedauer</div>
+                <div style="display:flex; gap:8px; margin-top:8px">
+                  <sc-for list="{{ recLenChips }}" as="c" hint-placeholder-count="4">
+                    <div onClick="{{ c.onPick }}" style="{{ c.style }}">{{ c.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">auto_fix_high</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">KI-Textverbesserung</div><div style="font-size:13px; color:var(--muted,#9C8D77)">Standard für neue Einträge</div></div>
+                  </div>
+                  <div onClick="{{ toggleImprove }}" style="{{ swImprove }}"><div style="{{ swImproveTh }}"></div></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">update</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">Dashboard-Auto-Update</div><div style="font-size:13px; color:var(--muted,#9C8D77)">Nach jedem neuen Eintrag</div></div>
+                  </div>
+                  <div onClick="{{ toggleAuto }}" style="{{ swAuto }}"><div style="{{ swAutoTh }}"></div></div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">notifications</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Erinnerungen</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px">
+                  <div style="display:flex; align-items:center; gap:12px">
+                    <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:var(--muted,#9C8D77)">alarm</span>
+                    <div><div style="font-size:15px; color:var(--text,#EFE7DB)">Tägliche Erinnerung</div><div style="font-size:13px; color:var(--muted,#9C8D77)">20:00 Uhr</div></div>
+                  </div>
+                  <div onClick="{{ toggleRem }}" style="{{ swRem }}"><div style="{{ swRemTh }}"></div></div>
+                </div>
+                <div style="font-size:12px; color:var(--muted,#9C8D77); margin-top:10px">Wochenrückblick: sonntags · Monatsrückblick: am Monatsende · Jahresrückblick: am 31. Dezember</div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">feedback</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Feedback</span>
+                </div>
+                <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:10px; text-align:center">Geht an dev.app.support@gmail.com — du erhältst eine Kopie</div>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:12px">
+                  <div style="border:1px solid var(--chipborder,rgba(232,181,71,0.4)); color:var(--golddec,#E8B547); border-radius:999px; padding:10px 20px; font-size:13px; cursor:pointer">Als PDF exportieren</div>
+                  <div style="background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); color:var(--mictext,#241505); border-radius:999px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer">Feedback senden</div>
+                </div>
+              </div>
+              <div style="background:var(--card,#221A13); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:18px; padding:16px; text-align:center">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                  <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">info</span>
+                  <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:16px; color:var(--golddec,#E8B547)">Über die App</span>
+                </div>
+                <div style="font-size:14px; color:var(--text2,#D8CCBA); margin-top:10px">Entropy Journal v0.7.0</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:4px">© Frank Barwandt</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ DIALOGE ══════════ -->
+        <sc-if value="{{ dlgLegend }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px">
+            <div style="width:100%; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:22px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">info</span>
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--golddec,#E8B547)">Legende</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ closeDialog }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              </div>
+              <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:10px">Relevanz der Beobachtungen</div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px">
+                <div style="display:flex; align-items:center; gap:10px"><div style="width:10px; height:10px; border-radius:50%; background:var(--prio1,#FF6B5E); box-shadow:0 0 8px rgba(255,107,94,0.6)"></div><span style="font-size:14px; color:var(--text,#EFE7DB)">Hoch — jetzt angehen</span></div>
+                <div style="display:flex; align-items:center; gap:10px"><div style="width:10px; height:10px; border-radius:50%; background:var(--prio2,#FFA94D); box-shadow:0 0 8px rgba(255,169,77,0.6)"></div><span style="font-size:14px; color:var(--text,#EFE7DB)">Mittel — diese Woche</span></div>
+                <div style="display:flex; align-items:center; gap:10px"><div style="width:10px; height:10px; border-radius:50%; background:var(--succ,#9CBF7E); box-shadow:0 0 8px rgba(156,191,126,0.6)"></div><span style="font-size:14px; color:var(--text,#EFE7DB)">Niedrig — im Blick behalten</span></div>
+              </div>
+              <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:14px">Entropie-Bogen pro Kategorie</div>
+              <div style="font-size:14px; line-height:21px; color:var(--text2,#D8CCBA); margin-top:6px">Je voller der Bogen, desto mehr Unordnung zeigt die Kategorie. Grün = wenig, Bernstein = mittel, Rot = viel. Kategorien sind nach Entropie sortiert — die höchste steht links.</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dlgRueckInfo }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px">
+            <div style="width:100%; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:22px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">auto_awesome</span>
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--golddec,#E8B547)">So entstehen Rückblicke</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ closeDialog }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px">
+                <div style="display:flex; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">calendar_today</span><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Wochenrückblick: sonntags, ab 2 Einträgen pro Woche</span></div>
+                <div style="display:flex; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">date_range</span><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Monatsrückblick: am Monatsende aus den Wochenrückblicken</span></div>
+                <div style="display:flex; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">calendar_month</span><span style="font-size:14px; line-height:20px; color:var(--text2,#D8CCBA)">Jahresrückblick: am 31. Dezember aus allen Monaten</span></div>
+              </div>
+              <div style="font-size:13px; line-height:19px; color:var(--muted,#9C8D77); margin-top:12px">Die KI fasst zusammen, was dich bewegt hat — antippen öffnet den ganzen Text, das Lautsprecher-Symbol liest ihn vor.</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dlgCloud }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px">
+            <div style="width:100%; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:22px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">cloud</span>
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--golddec,#E8B547)">Google Drive Backup</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ closeDialog }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px; background:var(--chipbg,rgba(156,191,126,0.1)); border:1px solid var(--succ,#9CBF7E); border-radius:14px; padding:12px 14px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:22px; color:var(--succ,#9CBF7E)">cloud_done</span>
+                <div><div style="font-size:14px; font-weight:600; color:var(--text,#EFE7DB)">Alles gesichert</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77)">Letzte Synchronisation: heute, 08:02</div></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px">
+                <div style="display:flex; align-items:center; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-size:18px; color:var(--golddec,#E8B547)">cloud_upload</span><span style="font-size:13px; color:var(--text2,#D8CCBA)">Pfeil nach oben — Einträge werden hochgeladen</span></div>
+                <div style="display:flex; align-items:center; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-size:18px; color:var(--golddec,#E8B547)">cloud_download</span><span style="font-size:13px; color:var(--text2,#D8CCBA)">Pfeil nach unten — Backup wird geladen</span></div>
+                <div style="display:flex; align-items:center; gap:10px"><span style="font-family:'Material Symbols Rounded'; font-size:18px; color:var(--danger,#FF7B6B)">cloud_off</span><span style="font-size:13px; color:var(--text2,#D8CCBA)">Rot — Fehler, antippen zum Wiederholen</span></div>
+              </div>
+              <div style="display:flex; justify-content:center; margin-top:14px"><div onClick="{{ closeDialog }}" style="background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); color:var(--mictext,#241505); border-radius:999px; padding:11px 24px; font-size:13px; font-weight:600; cursor:pointer">Jetzt sichern</div></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dlgStreak }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px">
+            <div style="width:100%; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:22px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,0.6); text-align:center; position:relative">
+              <span onClick="{{ closeDialog }}" style="position:absolute; top:16px; right:16px; cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              <div style="display:inline-flex; width:72px; height:72px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.5)); align-items:center; justify-content:center; box-shadow:0 0 30px var(--g3,rgba(232,181,71,0.35)); animation:floaty 3.5s ease-in-out infinite"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:36px; color:var(--copper,#FFB689)">local_fire_department</span></div>
+              <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:26px; color:var(--golddec,#E8B547); margin-top:12px">12 Tage in Folge</div>
+              <div style="font-size:14px; color:var(--text2,#D8CCBA); margin-top:4px">Du schreibst seit dem 7. Juli jeden Tag.</div>
+              <div style="display:flex; gap:10px; margin-top:16px">
+                <div style="flex:1; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px 6px"><div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:20px; color:var(--golddec,#E8B547)">12</div><div style="font-size:11px; color:var(--muted,#9C8D77)">Aktuelle Serie</div></div>
+                <div style="flex:1; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px 6px"><div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:20px; color:var(--copper,#FFB689)">21</div><div style="font-size:11px; color:var(--muted,#9C8D77)">Längste Serie</div></div>
+                <div style="flex:1; background:var(--chipbg,rgba(232,181,71,0.08)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px 6px"><div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:20px; color:var(--text,#EFE7DB)">124</div><div style="font-size:11px; color:var(--muted,#9C8D77)">Einträge gesamt</div></div>
+              </div>
+              <div style="font-size:13px; font-style:italic; color:var(--muted,#9C8D77); margin-top:14px">Noch 9 Tage bis zu deinem Rekord.</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dlgCompose }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:flex-end; padding:0">
+            <div style="width:100%; box-sizing:border-box; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:26px 26px 0 0; padding:20px 20px 26px; box-shadow:0 -20px 60px rgba(0,0,0,0.6)">
+              <div style="width:40px; height:4px; border-radius:2px; background:var(--cardborder,rgba(232,181,71,0.4)); margin:0 auto"></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:14px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">edit</span>
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--golddec,#E8B547)">Neuer Eintrag</span>
+                <div style="flex:1"></div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77)">18. Juli 2026</span>
+              </div>
+              <div style="font-family:'Caveat',cursive; font-size:15px; color:var(--copper,#FFB689); margin-top:8px">Tagesimpuls: Was hat dir heute Energie gegeben?</div>
+              <textarea rows="5" placeholder="Was beschäftigt dich gerade?" style="width:100%; box-sizing:border-box; margin-top:10px; background:var(--chipbg,rgba(232,181,71,0.07)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); border-radius:14px; padding:12px; font-family:var(--fb,'Source Sans 3'),sans-serif; font-size:15px; line-height:22px; color:var(--text,#EFE7DB); outline:none; resize:none"></textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+                <div style="display:flex; align-items:center; gap:10px">
+                  <span style="font-family:'Material Symbols Rounded'; font-size:19px; color:var(--muted,#9C8D77)">auto_fix_high</span>
+                  <span style="font-size:13px; color:var(--text2,#D8CCBA)">KI-Verbesserung</span>
+                  <div onClick="{{ toggleCompImprove }}" style="{{ swComp }}"><div style="{{ swCompTh }}"></div></div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px">
+                <div onClick="{{ closeDialog }}" style="border:1px solid var(--cardborder,rgba(232,181,71,0.35)); color:var(--text2,#D8CCBA); border-radius:999px; padding:11px 22px; font-size:14px; cursor:pointer">Abbrechen</div>
+                <div onClick="{{ closeDialog }}" style="background:var(--micgrad,linear-gradient(135deg,#E8B547,#DF741E)); color:var(--mictext,#241505); border-radius:999px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 0 18px var(--g3,rgba(232,181,71,0.3))">Speichern</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dlgSum }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px">
+            <div style="width:100%; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:22px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+              <div style="display:flex; align-items:flex-start; gap:8px">
+                <div style="flex:1">
+                  <div style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:21px; color:var(--golddec,#E8B547)">{{ sumTitle }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted,#9C8D77); margin-top:2px">{{ sumPeriod }}</div>
+                </div>
+                <span onClick="{{ closeDialog }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              </div>
+              <div style="height:2px; margin-top:12px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="font-size:15px; line-height:24px; color:var(--text2,#D8CCBA); margin-top:12px">{{ sumText }}</div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px">
+                <div style="width:38px; height:38px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">volume_up</span></div>
+                <div onClick="{{ openShare }}" style="width:38px; height:38px; border-radius:50%; background:var(--chipbg,rgba(223,116,30,0.14)); border:1px solid var(--chipborder,rgba(223,116,30,0.4)); display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--copper,#FFB689)">share</span></div>
+                <div style="flex:1"></div>
+                <div onClick="{{ closeDialog }}" style="border:1px solid var(--chipborder,rgba(232,181,71,0.4)); color:var(--golddec,#E8B547); border-radius:999px; padding:10px 22px; font-size:13px; cursor:pointer">Schließen</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ dlgShare }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; z-index:9; background:rgba(10,7,4,0.55); backdrop-filter:blur(6px); display:flex; align-items:flex-end">
+            <div style="width:100%; box-sizing:border-box; background:var(--card,#221A13); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); border-radius:26px 26px 0 0; padding:18px 20px 28px; box-shadow:0 -20px 60px rgba(0,0,0,0.6)">
+              <div style="width:40px; height:4px; border-radius:2px; background:var(--cardborder,rgba(232,181,71,0.4)); margin:0 auto"></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:14px">
+                <span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:18px; color:var(--golddec,#E8B547)">share</span>
+                <span style="font-family:var(--fh,'Playfair Display'),serif; font-weight:700; font-size:17px; color:var(--golddec,#E8B547)">Teilen</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ closeDialog }}" style="cursor:pointer; font-family:'Material Symbols Rounded'; font-size:22px; color:var(--muted,#9C8D77)">close</span>
+              </div>
+              <div style="font-size:13px; color:var(--muted,#9C8D77); margin-top:4px">Tagebucheintrag · 18. Juli 2026</div>
+              <div style="height:2px; margin-top:12px; border-radius:1px; background:var(--hair,linear-gradient(90deg,transparent,#E8B547,#DF741E,#E8B547,transparent)); background-size:200% 100%; animation:shimmer 5s linear infinite"></div>
+              <div style="display:flex; gap:8px; margin-top:14px">
+                <div style="flex:1; text-align:center; padding:9px 0; border-radius:999px; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); color:var(--golddec,#E8B547); font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 0 14px var(--g3,rgba(232,181,71,0.3))">Als Text</div>
+                <div style="flex:1; text-align:center; padding:9px 0; border-radius:999px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); color:var(--muted,#9C8D77); font-size:13px; cursor:pointer">Als Bild</div>
+                <div style="flex:1; text-align:center; padding:9px 0; border-radius:999px; background:var(--chipbg,rgba(232,181,71,0.09)); border:1px solid var(--cardborder,rgba(232,181,71,0.28)); color:var(--muted,#9C8D77); font-size:13px; cursor:pointer">Als PDF</div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:18px; padding:0 6px">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; width:64px">
+                  <div style="width:52px; height:52px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:var(--golddec,#E8B547)">chat</span></div>
+                  <span style="font-size:11px; color:var(--text2,#D8CCBA)">WhatsApp</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; width:64px">
+                  <div style="width:52px; height:52px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:var(--golddec,#E8B547)">mail</span></div>
+                  <span style="font-size:11px; color:var(--text2,#D8CCBA)">E-Mail</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; width:64px">
+                  <div style="width:52px; height:52px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:var(--golddec,#E8B547)">picture_as_pdf</span></div>
+                  <span style="font-size:11px; color:var(--text2,#D8CCBA)">Speichern</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; width:64px">
+                  <div style="width:52px; height:52px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:var(--golddec,#E8B547)">content_copy</span></div>
+                  <span style="font-size:11px; color:var(--text2,#D8CCBA)">Kopieren</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; width:64px">
+                  <div style="width:52px; height:52px; border-radius:50%; background:var(--iconcircle,rgba(232,181,71,0.16)); border:1px solid var(--chipborder,rgba(232,181,71,0.4)); display:flex; align-items:center; justify-content:center"><span style="font-family:'Material Symbols Rounded'; font-variation-settings:'FILL' 1; font-size:24px; color:var(--golddec,#E8B547)">more_horiz</span></div>
+                  <span style="font-size:11px; color:var(--text2,#D8CCBA)">Mehr</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══════════ NAVIGATION ══════════ -->
+        <sc-if value="{{ navVisible }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; bottom:22px; left:16px; right:16px; z-index:5; display:flex; background:var(--navbg,rgba(30,23,18,0.88)); backdrop-filter:blur(22px); border:1px solid var(--chipborder,rgba(232,181,71,0.28)); border-radius:26px; padding:8px; box-shadow:0 16px 40px rgba(0,0,0,0.5)">
+            <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="4">
+              <div onClick="{{ item.onClick }}" style="{{ item.pillStyle }}">
+                <span style="{{ item.iconStyle }}">{{ item.icon }}</span>
+                <span style="{{ item.labelStyle }}">{{ item.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: "splash", dark: true, recording: false, searchOpen: false, isVerb: true,
+    weekOpen: true, monthOpen: false, yearOpen: false,
+    theme: "Goldener Faden", font: "Playfair × Source Sans",
+    sysFollow: false, sunFollow: false, fotos: true, videos: false,
+    dialog: null, sum: null, composeImprove: true,
+    fontH: "Playfair Display", fontB: "Source Sans 3", fontHOpen: false, fontBOpen: false,
+    bio: false, improve: true, autoUp: true, reminder: true,
+    model: "gemini-3-flash-preview", recLen: 3,
+  };
+
+  renderVals() {
+    const s = this.state;
+    const dark = s.dark;
+    const hx = (h, a) => { const n = parseInt(h.slice(1), 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; };
+    // Theme-Paletten: d=[bg oben, bg unten, karte], a/a2=Akzente dunkel, c=Sekundär-Textakzent dunkel, l=[bg oben, bg unten, karte] hell, aL/a2L=Akzente hell
+    const THEMES = {
+      "Goldener Faden": { d: ["#1E1712", "#16110D", "#221A13"], a: "#E8B547", a2: "#DF741E", c: "#FFB689", l: ["#FBF5EA", "#F6EDDD", "#FFFDF8"], aL: "#B45309", a2L: "#92600D" },
+      "Profilfarbe": { d: ["#121918", "#0E1414", "#18201F"], a: "#2DD4BF", a2: "#0E9F8C", c: "#7EE7F4", l: ["#EDF5F8", "#E9F2F1", "#FCFEFE"], aL: "#0F766E", a2L: "#0369A1" },
+      "Neutral": { d: ["#141210", "#0F0E0C", "#1E1A16"], a: "#E8722A", a2: "#C25E00", c: "#F0A05C", l: ["#F8F3EC", "#F2EADF", "#FFFDF8"], aL: "#9A4B00", a2L: "#7A3E00" },
+      "Sonnenwende": { d: ["#003545", "#00212B", "#0A3B47"], a: "#268BD2", a2: "#2AA198", c: "#5EC6C0", l: ["#FDF6E3", "#EEE8D5", "#FFFDF4"], aL: "#1E6FA8", a2L: "#1F8A82" },
+      "Mitternacht": { d: ["#2B2D3E", "#1F2130", "#31344A"], a: "#BD93F9", a2: "#FF79C6", c: "#FF9DD6", l: ["#FFFBEB", "#FFF6DC", "#FFFFFF"], aL: "#644AC9", a2L: "#C7367E" },
+      "Atelier": { d: ["#2B3039", "#1E222A", "#2E3440"], a: "#61AFEF", a2: "#C678DD", c: "#D2A8E8", l: ["#FAFAFA", "#F0F0F1", "#FFFFFF"], aL: "#4078F2", a2L: "#A626A4" },
+      "Polarnacht": { d: ["#323A4A", "#272E3B", "#3D4658"], a: "#88C0D0", a2: "#A3BE8C", c: "#B5D3A2", l: ["#ECEFF4", "#E5E9F0", "#FFFFFF"], aL: "#5E81AC", a2L: "#6B8F4E" },
+      "Bernstein": { d: ["#2C2622", "#211D1A", "#363029"], a: "#E8B93B", a2: "#D65D0E", c: "#FDA45C", l: ["#FBF1C7", "#F5E8B8", "#FFFBEA"], aL: "#B57614", a2L: "#AF3A03" },
+      "Cosmos": { d: ["#0F1729", "#0A0E1A", "#1D212C"], a: "#22D3EE", a2: "#A78BFA", c: "#C4B5FD", l: ["#F5F7FB", "#E8EDFA", "#FFFFFF"], aL: "#0891B2", a2L: "#7C5DFA" },
+      "Aurora": { d: ["#173035", "#2E2244", "#2C2435"], a: "#7DD3A4", a2: "#B5A8E8", c: "#CDBFF2", l: ["#D8EDDF", "#E2D6F0", "#FFFFFF"], aL: "#1F8E5A", a2L: "#7A6BB8" },
+      "Polarlicht": { d: ["#0C1B2A", "#081018", "#102233"], a: "#4CC9F0", a2: "#4361EE", c: "#80FFDB", l: ["#F2F8FC", "#E3EFF8", "#FFFFFF"], aL: "#0077B6", a2L: "#3F5EDB" },
+      "Nebula": { d: ["#1C1030", "#140A24", "#241540"], a: "#C084FC", a2: "#F472B6", c: "#F9A8D4", l: ["#FAF5FF", "#F6ECFB", "#FFFFFF"], aL: "#9333EA", a2L: "#DB2777" },
+      "Smaragdwald": { d: ["#0E1F17", "#08120E", "#14291E"], a: "#34D399", a2: "#E8B547", c: "#F2CD7B", l: ["#F3F8F4", "#E9F2E9", "#FFFFFF"], aL: "#047857", a2L: "#92600D" },
+      "Sonnenglut": { d: ["#231410", "#170E08", "#2B1A12"], a: "#FF8C42", a2: "#FFB300", c: "#FFCE7A", l: ["#FDF6EE", "#FAEBDD", "#FFFFFF"], aL: "#C2410C", a2L: "#B45309" },
+    };
+    const t = THEMES[s.theme] || THEMES["Goldener Faden"];
+    const A = dark ? t.a : t.aL, A2 = dark ? t.a2 : t.a2L;
+    const pal = dark ? {
+      bg: "radial-gradient(110% 80% at 50% 0%, " + t.d[0] + " 0%, " + t.d[1] + " 60%, " + t.d[1] + " 100%)",
+      text: "#EFEAE0", text2: "#D8D2C7", muted: "#9C9483",
+      card: "linear-gradient(160deg," + t.d[2] + "," + t.d[1] + ")", cardborder: hx(t.a, 0.28),
+      gold: hx(t.a, 0.9), golddec: t.a, copper: t.c,
+      chipbg: hx(t.a, 0.09), chipborder: hx(t.a, 0.4),
+      navbg: hx(t.d[2], 0.9),
+      hair: "linear-gradient(90deg, transparent, " + t.a + " 25%, " + t.a2 + " 50%, " + t.a + " 75%, transparent)",
+      shadow: "0 14px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
+      succ: "#9CBF7E", danger: "#FF7B6B", prio1: "#FF6B5E", prio2: "#FFA94D",
+      micgrad: "linear-gradient(135deg," + t.a + "," + t.a2 + ")", mictext: "#171009",
+      dust: t.a, iconCircle: "linear-gradient(135deg, " + hx(t.a, 0.2) + ", " + hx(t.a2, 0.14) + ")",
+      swOff: "rgba(255,255,255,0.1)", swOffBorder: "rgba(255,255,255,0.16)", thumbOff: "#9C9483",
+      glowSm: "0 0 14px " + hx(t.a, 0.3),
+    } : {
+      bg: "linear-gradient(180deg," + t.l[0] + " 0%," + t.l[1] + " 100%)",
+      text: "#2C2620", text2: "#463F35", muted: "#8A8272",
+      card: t.l[2], cardborder: hx(A, 0.4),
+      gold: A2, golddec: A, copper: A2,
+      chipbg: hx(A, 0.1), chipborder: hx(A, 0.35),
+      navbg: hx(t.l[2], 0.92),
+      hair: "linear-gradient(90deg, transparent, " + A + " 25%, " + A2 + " 50%, " + A + " 75%, transparent)",
+      shadow: "0 12px 28px rgba(70,58,38,0.12), inset 0 1px 0 #FFFFFF",
+      succ: "#5C8C4A", danger: "#C03A2B", prio1: "#C03A2B", prio2: "#B45309",
+      micgrad: "linear-gradient(135deg," + A + "," + A2 + ")", mictext: "#FFFDF6",
+      dust: A, iconCircle: "linear-gradient(135deg, " + hx(A, 0.22) + ", " + hx(A2, 0.12) + ")",
+      swOff: "rgba(44,38,32,0.1)", swOffBorder: "rgba(44,38,32,0.2)", thumbOff: "#8A8272",
+      glowSm: "0 0 12px " + hx(A, 0.2),
+    };
+
+    const headFonts = {
+      "Playfair Display": { css: "'Playfair Display', serif", desc: "Elegant & literarisch — Standard" },
+      "Great Vibes": { css: "'Great Vibes', cursive", desc: "Kalligrafie — mit viel Schwung" },
+      "Caveat": { css: "'Caveat', cursive", desc: "Handschrift — locker & persönlich" },
+      "Lora": { css: "'Lora', serif", desc: "Ruhige, klassische Serife" },
+      "Sora": { css: "'Sora', sans-serif", desc: "Modern & klar" },
+      "Space Grotesk": { css: "'Space Grotesk', sans-serif", desc: "Technisch & präzise" },
+      "Nunito": { css: "'Nunito', sans-serif", desc: "Freundlich & rund" },
+    };
+    const bodyFonts = {
+      "Source Sans 3": { css: "'Source Sans 3', sans-serif", desc: "Klar & neutral — Standard" },
+      "Manrope": { css: "'Manrope', sans-serif", desc: "Ruhig & lesbar" },
+      "IBM Plex Sans": { css: "'IBM Plex Sans', sans-serif", desc: "Sachlich & präzise" },
+      "Nunito Sans": { css: "'Nunito Sans', sans-serif", desc: "Weich & freundlich" },
+      "Lora": { css: "'Lora', serif", desc: "Serife — wie ein Buch" },
+      "Caveat": { css: "'Caveat', cursive", desc: "Handschrift — wie ein echtes Tagebuch" },
+    };
+    const fp = {
+      fh: (headFonts[s.fontH] || headFonts["Playfair Display"]).css,
+      fb: (bodyFonts[s.fontB] || bodyFonts["Source Sans 3"]).css,
+    };
+
+    const rootStyle = {
+      width: "100%", height: "100%", display: "flex", flexDirection: "column",
+      position: "relative", overflow: "hidden",
+      background: pal.bg, color: pal.text, fontFamily: fp.fb,
+      "--fh": fp.fh, "--fb": fp.fb,
+      "--text": pal.text, "--text2": pal.text2, "--muted": pal.muted,
+      "--card": pal.card, "--cardborder": pal.cardborder,
+      "--gold": pal.gold, "--golddec": pal.golddec, "--copper": pal.copper,
+      "--chipbg": pal.chipbg, "--chipborder": pal.chipborder,
+      "--navbg": pal.navbg, "--hair": pal.hair, "--shadow": pal.shadow,
+      "--succ": pal.succ, "--danger": pal.danger, "--prio1": pal.prio1, "--prio2": pal.prio2,
+      "--micgrad": pal.micgrad, "--mictext": pal.mictext,
+      "--dust": pal.dust, "--iconcircle": pal.iconCircle,
+      "--g3": hx(A, 0.32), "--g4": hx(A2, 0.4), "--acc2": A2,
+    };
+
+    const go = (screen) => () => this.setState({ screen, recording: false });
+
+    const navItems = [
+      ["auto_awesome", "Rückblick", "rueckblick"],
+      ["analytics", "Dashboard", "dashboard"],
+      ["book", "Tagebuch", "tagebuch"],
+      ["settings", "Einstellungen", "einstellungen"],
+    ].map(([icon, label, key]) => {
+      const active = s.screen === key || (key === "tagebuch" && s.screen === "detail");
+      return {
+        icon, label, onClick: go(key),
+        pillStyle: {
+          flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+          padding: "6px 0", cursor: "pointer", borderRadius: 18,
+          background: active ? pal.iconCircle : "transparent",
+          border: active ? "1px solid " + pal.chipborder : "1px solid transparent",
+          boxShadow: active ? pal.glowSm : "none",
+        },
+        iconStyle: {
+          fontFamily: "'Material Symbols Rounded'",
+          fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+          fontSize: 22, color: active ? pal.golddec : pal.muted,
+        },
+        labelStyle: { fontSize: 10, color: active ? pal.golddec : pal.muted, fontWeight: active ? 600 : 400 },
+      };
+    });
+
+    const themeDefs = [
+      ["Goldener Faden", "linear-gradient(135deg,#E8B547,#DF741E)", true],
+      ["Profilfarbe", "linear-gradient(135deg,#14B8A6,#22D3EE)", false],
+      ["Neutral", "#C25E00", false],
+      ["Sonnenwende", "#268BD2", false],
+      ["Mitternacht", "#BD93F9", false],
+      ["Atelier", "#61AFEF", false],
+      ["Polarnacht", "#88C0D0", false],
+      ["Bernstein", "#D79921", false],
+      ["Cosmos", "#22D3EE", false],
+      ["Aurora", "linear-gradient(135deg,#7DD3A4,#B5A8E8)", false],
+      ["Polarlicht", "linear-gradient(135deg,#4CC9F0,#4361EE)", true],
+      ["Nebula", "linear-gradient(135deg,#C084FC,#F472B6)", true],
+      ["Smaragdwald", "linear-gradient(135deg,#34D399,#E8B547)", true],
+      ["Sonnenglut", "linear-gradient(135deg,#FF8C42,#D93636)", true],
+    ];
+    const themeChips = themeDefs.map(([name, dot, neu]) => {
+      const active = s.theme === name;
+      return {
+        name, neu, active,
+        onPick: () => this.setState({ theme: name }),
+        style: {
+          display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+          background: active ? pal.iconCircle : pal.chipbg,
+          border: "1px solid " + (active ? pal.chipborder : pal.cardborder),
+          borderRadius: 999, padding: "6px 11px",
+          boxShadow: active ? pal.glowSm : "none",
+        },
+        dotStyle: { width: 12, height: 12, borderRadius: "50%", background: dot, flexShrink: 0 },
+        nameStyle: { fontSize: 12, color: active ? pal.golddec : pal.text2, fontWeight: active ? 600 : 400 },
+      };
+    });
+
+    const mkFontRows = (fonts, cur, key) => Object.keys(fonts).map((name) => {
+      const active = cur === name;
+      const f = fonts[name];
+      return {
+        name, active, desc: f.desc,
+        onPick: () => this.setState({ [key]: name, fontHOpen: false, fontBOpen: false }),
+        rowStyle: {
+          display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+          background: active ? pal.iconCircle : pal.chipbg,
+          border: "1px solid " + (active ? pal.chipborder : pal.cardborder),
+          borderRadius: 14, padding: "10px 14px",
+          boxShadow: active ? pal.glowSm : "none",
+        },
+        radioOuter: {
+          width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+          border: "2px solid " + (active ? pal.golddec : pal.muted),
+          display: "flex", alignItems: "center", justifyContent: "center",
+        },
+        nameStyle: { fontFamily: f.css, fontWeight: 700, fontSize: (f.css.indexOf("cursive") >= 0 ? 19 : 15), color: pal.text },
+        descStyle: { fontFamily: fp.fb, fontSize: 12, color: pal.muted },
+      };
+    });
+    const headRows = mkFontRows(headFonts, s.fontH, "fontH");
+    const bodyRows = mkFontRows(bodyFonts, s.fontB, "fontB");
+
+    const sw = (on) => ({
+      track: {
+        width: 50, height: 30, borderRadius: 15, position: "relative", cursor: "pointer", flexShrink: 0,
+        background: on ? pal.micgrad : pal.swOff,
+        border: on ? "1px solid transparent" : "1px solid " + pal.swOffBorder,
+        boxShadow: on ? pal.glowSm : "none",
+        boxSizing: "border-box",
+      },
+      thumb: {
+        position: "absolute", top: 2, width: 24, height: 24, borderRadius: "50%",
+        background: on ? "#FFFDF6" : pal.thumbOff,
+        left: on ? 22 : 2, transition: "left .2s",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+      },
+    });
+    const swDarkS = sw(dark), swSysS = sw(s.sysFollow), swSunS = sw(s.sunFollow), swFotosS = sw(s.fotos), swVideosS = sw(s.videos);
+    const swBioS = sw(s.bio), swImproveS = sw(s.improve), swAutoS = sw(s.autoUp), swRemS = sw(s.reminder), swCompS = sw(s.composeImprove);
+
+    const radioRow = (active) => ({
+      rowStyle: {
+        display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+        background: active ? pal.iconCircle : pal.chipbg,
+        border: "1px solid " + (active ? pal.chipborder : pal.cardborder),
+        borderRadius: 14, padding: "10px 14px",
+        boxShadow: active ? pal.glowSm : "none",
+      },
+      radioOuter: {
+        width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+        border: "2px solid " + (active ? pal.golddec : pal.muted),
+        display: "flex", alignItems: "center", justifyContent: "center",
+      },
+    });
+
+    const modelChips = [
+      ["gemini-3-flash-preview", "$0.50 / $3.00 · empfohlen"],
+      ["gemini-3.1-flash-lite", "$0.25 / $1.50"],
+      ["gemini-2.5-flash", "$0.30 / $2.50"],
+      ["gemini-2.5-flash-lite", "$0.10 / $0.40"],
+      ["gemini-2.0-flash", "$0.10 / $0.40"],
+    ].map(([name, price]) => {
+      const active = s.model === name;
+      return {
+        name, price, active,
+        onPick: () => this.setState({ model: name }),
+        ...radioRow(active),
+        nameStyle: { fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, fontSize: 13, color: pal.text },
+        descStyle: { fontSize: 12, color: pal.muted },
+      };
+    });
+
+    const recLenChips = [1, 3, 5, 10].map((min) => {
+      const active = s.recLen === min;
+      return {
+        label: min + " Min", active,
+        onPick: () => this.setState({ recLen: min }),
+        style: {
+          cursor: "pointer", borderRadius: 999, padding: "7px 14px", fontSize: 13,
+          fontWeight: active ? 600 : 400,
+          color: active ? pal.golddec : pal.text2,
+          background: active ? pal.iconCircle : pal.chipbg,
+          border: "1px solid " + (active ? pal.chipborder : pal.cardborder),
+          boxShadow: active ? pal.glowSm : "none",
+        },
+      };
+    });
+
+    const openDlg = (name) => () => this.setState({ dialog: name });
+    const closeDialog = () => this.setState({ dialog: null });
+    const openSum = (title, period, text) => () => this.setState({ dialog: "sum", sum: { title, period, text } });
+
+    const iconBase = { fontFamily: "'Material Symbols Rounded'", fontVariationSettings: "'FILL' 1", cursor: "pointer" };
+    const sunStyle = { ...iconBase, fontSize: dark ? 17 : 24, color: dark ? pal.muted : "#D97706", filter: dark ? "none" : "drop-shadow(0 0 8px rgba(217,119,6,0.5))" };
+    const moonStyle = { ...iconBase, fontSize: dark ? 24 : 17, color: dark ? "#FFD54F" : pal.muted, filter: dark ? "drop-shadow(0 0 8px rgba(255,213,79,0.6))" : "none" };
+
+    const tabBase = { flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 999, fontSize: 13, cursor: "pointer" };
+    const tabActive = { ...tabBase, background: pal.iconCircle, border: "1px solid " + pal.chipborder, color: pal.golddec, fontWeight: 600, boxShadow: pal.glowSm };
+    const tabIdle = { ...tabBase, border: "1px solid transparent", color: pal.muted };
+
+    return {
+      dark, rootStyle, navItems, themeChips, headRows, bodyRows,
+      fontHName: s.fontH, fontBName: s.fontB,
+      fontHOpen: s.fontHOpen, fontBOpen: s.fontBOpen,
+      fontHChevron: s.fontHOpen ? "expand_less" : "expand_more",
+      fontBChevron: s.fontBOpen ? "expand_less" : "expand_more",
+      toggleFontH: () => this.setState({ fontHOpen: !s.fontHOpen, fontBOpen: false }),
+      toggleFontB: () => this.setState({ fontBOpen: !s.fontBOpen, fontHOpen: false }),
+      isSplash: s.screen === "splash",
+      isTagebuch: s.screen === "tagebuch",
+      isDetail: s.screen === "detail",
+      isDashboard: s.screen === "dashboard",
+      isRueckblick: s.screen === "rueckblick",
+      isEinstellungen: s.screen === "einstellungen",
+      navVisible: s.screen !== "splash",
+      recording: s.recording, notRecording: !s.recording,
+      searchOpen: s.searchOpen,
+      isVerb: s.isVerb, isOrig: !s.isVerb,
+      weekOpen: s.weekOpen, monthOpen: s.monthOpen, yearOpen: s.yearOpen,
+      weekChevron: s.weekOpen ? "expand_less" : "expand_more",
+      monthChevron: s.monthOpen ? "expand_less" : "expand_more",
+      yearChevron: s.yearOpen ? "expand_less" : "expand_more",
+      darkLabel: dark ? "Aktiv" : "Aus",
+      login: go("tagebuch"),
+      goTagebuch: go("tagebuch"),
+      openDetail: go("detail"),
+      toggleDark: () => this.setState({ dark: !dark }),
+      toggleSearch: () => this.setState({ searchOpen: !s.searchOpen }),
+      startRec: () => this.setState({ recording: true }),
+      stopRec: () => this.setState({ recording: false }),
+      tabVerb: () => this.setState({ isVerb: true }),
+      tabOrig: () => this.setState({ isVerb: false }),
+      toggleWeek: () => this.setState({ weekOpen: !s.weekOpen }),
+      toggleMonth: () => this.setState({ monthOpen: !s.monthOpen }),
+      toggleYear: () => this.setState({ yearOpen: !s.yearOpen }),
+      toggleSys: () => this.setState({ sysFollow: !s.sysFollow }),
+      toggleSun: () => this.setState({ sunFollow: !s.sunFollow }),
+      toggleFotos: () => this.setState({ fotos: !s.fotos }),
+      toggleVideos: () => this.setState({ videos: !s.videos }),
+      sunStyle, moonStyle,
+      tabVStyle: s.isVerb ? tabActive : tabIdle,
+      tabOStyle: s.isVerb ? tabIdle : tabActive,
+      swDark: swDarkS.track, swDarkTh: swDarkS.thumb,
+      swSys: swSysS.track, swSysTh: swSysS.thumb,
+      swSun: swSunS.track, swSunTh: swSunS.thumb,
+      swFotos: swFotosS.track, swFotosTh: swFotosS.thumb,
+      swVideos: swVideosS.track, swVideosTh: swVideosS.thumb,
+      swBio: swBioS.track, swBioTh: swBioS.thumb,
+      swImprove: swImproveS.track, swImproveTh: swImproveS.thumb,
+      swAuto: swAutoS.track, swAutoTh: swAutoS.thumb,
+      swRem: swRemS.track, swRemTh: swRemS.thumb,
+      swComp: swCompS.track, swCompTh: swCompS.thumb,
+      toggleBio: () => this.setState({ bio: !s.bio }),
+      toggleImprove: () => this.setState({ improve: !s.improve }),
+      toggleAuto: () => this.setState({ autoUp: !s.autoUp }),
+      toggleRem: () => this.setState({ reminder: !s.reminder }),
+      toggleCompImprove: () => this.setState({ composeImprove: !s.composeImprove }),
+      modelChips, recLenChips,
+      dlgLegend: s.dialog === "legend",
+      dlgRueckInfo: s.dialog === "rueckinfo",
+      dlgCloud: s.dialog === "cloud",
+      dlgStreak: s.dialog === "streak",
+      dlgCompose: s.dialog === "compose",
+      dlgSum: s.dialog === "sum",
+      dlgShare: s.dialog === "share",
+      openShare: openDlg("share"),
+      openLegend: openDlg("legend"),
+      openRueckInfo: openDlg("rueckinfo"),
+      openCloud: openDlg("cloud"),
+      openStreak: openDlg("streak"),
+      openCompose: openDlg("compose"),
+      closeDialog,
+      openSumW29: openSum("Woche 29", "13.–19. Juli 2026", "Eine Woche zwischen Projektdruck und neuen Anfängen. Montag bis Donnerstag hast du fast täglich über die Deadline geschrieben — am Freitag kam der Abschluss und mit ihm spürbare Erleichterung. Auffällig: Beide Spaziergänge am See haben deine Stimmung direkt gehoben. Am Wochenende standen Lena und die Südtirol-Pläne im Mittelpunkt."),
+      openSumW28: openSum("Woche 28", "6.–12. Juli 2026", "Viel Alltag, wenig Schlaf: Du warst viermal nach Mitternacht wach und hast morgens über Müdigkeit geschrieben. Dagegen standen zwei lange Abende mit Freunden, die dir sichtbar Energie gegeben haben. Dein Vorsatz vom Dienstag — früher ins Bett — taucht dreimal auf, wurde aber noch nicht umgesetzt."),
+      openSumMonat: openSum("Juni 2026", "Monatsrückblick", "Ein Monat des Übergangs: das neue Projekt hat Fahrt aufgenommen, die Laufroutine ist gestartet (9 Läufe!), und drei Wochenenden in der Natur haben dir Ruhe gegeben. Wiederkehrendes Thema: der Wunsch nach mehr Zeit für dich selbst — vor allem in den Arbeitswochen."),
+      openSumJahr: openSum("2025", "Jahresrückblick", "Dein Jahr der leisen Neuanfänge: vom ersten Tagebucheintrag im Februar über den Jobwechsel im Mai bis zur Bergtour im Oktober. 214 Einträge erzählen von wachsender Klarheit — die Themen Schlaf und Arbeit blieben Dauergäste, aber Familie und Gesundheit haben deutlich mehr Raum bekommen."),
+      sumTitle: (s.sum || {}).title || "",
+      sumPeriod: (s.sum || {}).period || "",
+      sumText: (s.sum || {}).text || "",
+    };
+  }
+}
+</script>
+</body>
+</html>

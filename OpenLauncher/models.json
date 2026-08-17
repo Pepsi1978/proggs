@@ -54,6 +54,15 @@
         "IsUserDefined": false,
         "ProviderId": "openai",
         "ProviderName": "OpenAI",
+        "Slug": "gpt-5.6-sol-fast",
+        "DisplayName": "GPT-5.6 Sol Fast",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
         "Slug": "gpt-5.6-sol",
         "DisplayName": "GPT-5.6 Sol",
         "IsHidden": false
@@ -75,15 +84,6 @@
         "Slug": "gpt-5.6-luna",
         "DisplayName": "GPT-5.6 Luna",
         "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openai",
-        "ProviderName": "OpenAI",
-        "Slug": "gpt-5.6-sol-fast",
-        "DisplayName": "GPT-5.6 Sol Fast",
-        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
@@ -301,8 +301,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash:free",
-        "DisplayName": "Ling-3.0-flash Free",
+        "Slug": "poolside/laguna-s-2.1:free",
+        "DisplayName": "Poolside Laguna S 2.1 Free",
         "IsHidden": false
       },
       {
@@ -310,8 +310,35 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "poolside/laguna-s-2.1:free",
-        "DisplayName": "Poolside Laguna S 2.1 Free",
+        "Slug": "liquid/lfm-2.5-2.6b:free",
+        "DisplayName": "LiquidAI LFM2.5-2.6B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-lightning:free",
+        "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "dots-studio/dots-3-note-preview:free",
+        "DisplayName": "Dots Studio Dots3-Note Preview Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.2:free",
+        "DisplayName": "Z.ai GLM 5.2 Free",
         "IsHidden": false
       }
     ],
@@ -335,19 +362,22 @@
     ],
     "KnownSyncedModelSlugs": [
       "cohere/north-mini-code:free",
+      "dots-studio/dots-3-note-preview:free",
       "google/gemma-4-26b-a4b-it:free",
       "google/gemma-4-31b-it:free",
-      "inclusionai/ling-3.0-flash:free",
+      "liquid/lfm-2.5-2.6b:free",
       "nvidia/nemotron-3-nano-30b-a3b:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
       "nvidia/nemotron-3-super-120b-a12b:free",
       "nvidia/nemotron-3-ultra-550b-a55b:free",
       "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-3.5-lightning:free",
       "nvidia/nemotron-nano-12b-v2-vl:free",
       "nvidia/nemotron-nano-9b-v2:free",
       "openai/gpt-oss-20b:free",
       "poolside/laguna-s-2.1:free",
-      "poolside/laguna-xs-2.1:free"
+      "poolside/laguna-xs-2.1:free",
+      "z-ai/glm-5.2:free"
     ],
     "IsExpanded": false
   },

@@ -55,3 +55,5 @@ Melde danach kurz:
 - Was geändert wurde. 
 - Mache maximal 3 Verbesserungsvorschläge zum Projekt, falls dir etwas Substantielles aufgefallen ist.
 - Committet ja/nein, gepusht ja/nein, installiert auf welchem Gerät.
+
+12. Wenn der Emulator angefodert wird, Starte den Emulator, immer mit dem Fold 8 Profil über C:\Users\barwa\proggs\Werkzeuge\fold8-emulator

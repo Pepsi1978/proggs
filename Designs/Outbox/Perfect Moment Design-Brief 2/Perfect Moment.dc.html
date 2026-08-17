@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#120E0A;}
+a{color:#D4A24C;text-decoration:none;} a:hover{color:#F0C97A;}
+[data-theme="dark"]{--bg:#231B12;--surface:#302519;--surface2:#403321;--gold:#D8AA5A;--gold-hi:#F2CD83;--gold-dim:#A58A55;--amber:#EA914F;--t1:#F7F0E6;--t2:#C7BAA5;--t3:#94846D;--warn:#D1745C;--breath:rgba(216,170,90,0.17);--desk:#17110C;--shadow:none;}
+[data-theme="light"]{--bg:#FBF6EC;--surface:#F3EAD9;--surface2:#EDE1CA;--gold:#A87A2A;--gold-hi:#7A5518;--gold-dim:#C7AE7E;--amber:#C4661F;--t1:#241D12;--t2:#6B5D48;--t3:#A2947C;--warn:#A33F28;--breath:rgba(168,122,42,0.07);--desk:#EFE7D8;--shadow:0 2px 24px rgba(120,84,24,0.08);}
+@keyframes atmen{0%,100%{opacity:0;transform:translate(0,0);}50%{opacity:1;transform:translate(-6px,8px);}}
+@keyframes screenIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes sessionIn{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes sheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes ampulse{0%,100%{opacity:0.25;}50%{opacity:0.5;}}
+@keyframes ringamber{0%,100%{opacity:0.5;transform:scale(1);}50%{opacity:1;transform:scale(1.03);}}
+@keyframes recring{0%{transform:scale(1);opacity:0.35;}100%{transform:scale(2.1);opacity:0;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes dot{0%,60%,100%{opacity:0.2;}30%{opacity:1;}}
+@keyframes qglow{from{opacity:0.4;}to{opacity:1;}}
+@keyframes glowpulse{0%,100%{opacity:0.3;}50%{opacity:0.95;}}
+@keyframes shimmer{to{transform:rotate(360deg);}}
+[data-rm="true"] *{animation:none !important;transition-duration:200ms !important;}
+.pm-scroll{scrollbar-width:none;}
+.pm-scroll::-webkit-scrollbar{display:none;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:36px;background:transparent;margin:0;}
+input[type="range"]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--gold) var(--fill,50%),var(--surface) var(--fill,50%));}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--gold-hi);margin-top:-10px;border:none;box-shadow:0 1px 6px rgba(0,0,0,0.4);}
+input[type="range"]::-moz-range-track{height:6px;border-radius:3px;background:var(--surface);}
+input[type="range"]::-moz-range-progress{height:6px;border-radius:3px;background:var(--gold);}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--gold-hi);border:none;}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" data-rm="{{ rm }}" style="min-height:100vh;background:var(--desk);display:flex;align-items:flex-start;justify-content:center;gap:36px;padding:36px 24px;font-family:Inter,sans-serif;transition:background 600ms;">
+
+<!-- ===================== PHONE ===================== -->
+<div style="width:412px;height:915px;flex:0 0 412px;position:relative;overflow:hidden;border-radius:38px;background:var(--bg);border:1px solid rgba(138,110,54,0.35);box-shadow:0 24px 80px rgba(0,0,0,0.45);transition:background 600ms;">
+<div style="position:absolute;inset:-15%;pointer-events:none;background:radial-gradient(120% 80% at 50% 35%, var(--breath), transparent 60%);animation:atmen {{ breathDur }} ease-in-out infinite;"></div>
+
+<!-- ① START -->
+<sc-if value="{{ isStart }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Start" class="pm-scroll" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
+    <div style="font-weight:600;font-size:18px;color:var(--gold);">Perfect Moment</div>
+    <div style="display:flex;gap:18px;align-items:center;">
+      <div style="display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:16px;padding:6px 12px;">
+        <svg onClick="{{ setLight }}" style="cursor:pointer;transition:all 400ms ease-out;transform:scale({{ sunScale }});filter:{{ sunGlow }};" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ sunColor }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+        <svg onClick="{{ setDark }}" style="cursor:pointer;transition:all 400ms ease-out;transform:scale({{ moonScale }});filter:{{ moonGlow }};" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ moonColor }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </div>
+      <svg onClick="{{ goVerlauf }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <svg onClick="{{ goSettings }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    </div>
+  </div>
+  <div class="pm-scroll" style="display:flex;gap:12px;overflow-x:auto;padding:14px 20px 6px 20px;flex:0 0 auto;">
+    <sc-for list="{{ hooks }}" as="h" hint-placeholder-count="3">
+      <div onClick="{{ h.select }}" style-hover="transform:translateY(-3px);filter:brightness(1.12);" style-active="transform:scale(0.97);" style="flex:0 0 168px;width:168px;height:168px;border-radius:20px;background:{{ h.bg }};border:1.5px solid {{ h.border }};padding:16px;box-sizing:border-box;cursor:pointer;transition:all 400ms ease-out;box-shadow:var(--shadow);">
+        <div style="width:48px;height:48px;border-radius:50%;background:{{ h.iconBg }};display:flex;align-items:center;justify-content:center;font-family:Newsreader,Georgia,serif;font-weight:400;font-size:26px;line-height:1;color:#fff;border:2px solid rgba(255,255,255,0.2);box-sizing:border-box;box-shadow:0 7px 18px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.3);transform:scale({{ h.scale }});transform-origin:left top;transition:transform 400ms;">{{ h.emoji }}</div>
+        <div style="margin-top:12px;font-weight:500;font-size:16px;line-height:1.4;color:{{ h.color }};display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;">{{ h.text }}</div>
+      </div>
+    </sc-for>
+    <div style="flex:0 0 8px;"></div>
+  </div>
+  <div style="padding:18px 20px 0 20px;">
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Oder eigene Frage</div>
+    <textarea class="pm-scroll" value="{{ customText }}" onChange="{{ onCustom }}" placeholder="Was möchtest du hören?" style="width:100%;box-sizing:border-box;min-height:96px;border-radius:20px;background:var(--surface);border:none;outline:none;resize:none;padding:16px;font-family:Inter,sans-serif;font-size:15px;line-height:1.55;color:{{ inputColor }};box-shadow:var(--shadow);"></textarea>
+  </div>
+  <div style="display:flex;gap:12px;padding:18px 20px 0 20px;">
+    <div onClick="{{ openPause }}" style="flex:1;background:var(--surface);border-radius:20px;padding:12px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);">
+      <div style="font-weight:500;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Pause</div>
+      <div style="font-weight:600;font-size:18px;color:var(--t1);margin-top:4px;">{{ pauseRep }} s</div>
+    </div>
+    <div onClick="{{ openReps }}" style="flex:1.2;background:var(--surface);border-radius:20px;padding:12px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);">
+      <div style="font-weight:500;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Wiederholungen</div>
+      <div style="font-weight:600;font-size:18px;color:var(--t1);margin-top:4px;">{{ reps }}×</div>
+    </div>
+    <div onClick="{{ openDuration }}" style="flex:1;background:var(--surface);border-radius:20px;padding:12px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);">
+      <div style="font-weight:500;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Dauer</div>
+      <div style="font-weight:600;font-size:18px;color:var(--t1);margin-top:4px;">{{ duration }} min</div>
+    </div>
+  </div>
+  <div style="flex:1;"></div>
+  <div style="padding:16px 20px 24px 20px;">
+    <div style="display:flex;justify-content:center;margin-bottom:1cm;">
+      <div style="position:relative;width:144px;height:144px;">
+        <div style="position:absolute;inset:-32px;border-radius:50%;background:radial-gradient(circle,var(--gold),transparent 70%);filter:blur(24px);animation:glowpulse 3.2s ease-in-out infinite;pointer-events:none;"></div>
+        <div style="position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0%,var(--gold-hi) 12%,transparent 28%);animation:shimmer 4.5s linear infinite;pointer-events:none;opacity:0.9;"></div>
+        <div onClick="{{ recTap }}" style-hover="transform:scale(1.06);" style-active="transform:scale(0.93);" style="position:absolute;inset:0;border-radius:50%;background:{{ recBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 350ms;">
+          <sc-if value="{{ recIsRec }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid var(--amber);animation:recring 1.6s ease-out infinite;"></div>
+            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid var(--amber);animation:recring 1.6s ease-out infinite;animation-delay:0.53s;"></div>
+            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid var(--amber);animation:recring 1.6s ease-out infinite;animation-delay:1.06s;"></div>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="var(--bg)"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+          </sc-if>
+          <sc-if value="{{ recIsIdle }}" hint-placeholder-val="{{ true }}">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+          </sc-if>
+          <sc-if value="{{ recIsProc }}" hint-placeholder-val="{{ false }}">
+            <div style="width:64px;height:64px;border-radius:50%;border:5px solid transparent;border-top-color:var(--gold);animation:spin 1s linear infinite;"></div>
+          </sc-if>
+        </div>
+        <div style="position:absolute;top:156px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;color:var(--t2);">{{ recLabel }}</div>
+      </div>
+    </div>
+    <sc-if value="{{ startLocked }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ lockReasonTap }}" style="text-align:center;font-size:13px;color:var(--t2);margin-bottom:10px;cursor:pointer;">{{ lockReason }}</div>
+      <div style="width:100%;height:60px;border-radius:30px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:17px;color:var(--t3);">Sitzung beginnen</div>
+    </sc-if>
+    <sc-if value="{{ startUnlocked }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ startSession }}" style-hover="filter:brightness(1.1);transform:translateY(-1px);" style-active="transform:scale(0.98);" style="width:100%;height:60px;border-radius:30px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:17px;color:var(--bg);cursor:pointer;box-shadow:0 6px 28px rgba(212,162,76,0.3);transition:all 300ms ease-out;">Sitzung beginnen</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<!-- ② SITZUNG -->
+<sc-if value="{{ isSession }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Sitzung" style="position:absolute;inset:0;animation:sessionIn 700ms cubic-bezier(0.2,0,0,1);">
+  <div class="pm-scroll" ref="{{ listRef }}" style="position:absolute;inset:0;overflow-y:auto;padding:96px 28px 240px 28px;box-sizing:border-box;">
+    <sc-for list="{{ sessionQ }}" as="q" hint-placeholder-count="5">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:20px;transition:all 700ms cubic-bezier(0.4,0,0.2,1);">
+        <div style="font-size:24px;line-height:1.3;opacity:{{ q.eop }};transform:scale({{ q.scale }});transition:all 700ms;">{{ q.emoji }}</div>
+        <div style="font-family:Newsreader,serif;font-weight:300;font-size:{{ q.size }}px;line-height:1.55;color:{{ q.color }};max-width:30ch;transition:all 700ms cubic-bezier(0.4,0,0.2,1);text-wrap:pretty;">{{ q.text }}</div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ loadingMore }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px;justify-content:center;padding:16px 0;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:dot 1.4s ease-in-out infinite;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:dot 1.4s ease-in-out infinite;animation-delay:0.25s;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:dot 1.4s ease-in-out infinite;animation-delay:0.5s;"></div>
+      </div>
+    </sc-if>
+  </div>
+  <div style="position:absolute;top:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:linear-gradient(var(--bg) 30%,transparent);z-index:3;">
+    <div style="font-size:14px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;">{{ sessionTopic }}</div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:{{ netFill }};border:1.5px solid var(--gold-dim);box-sizing:border-box;transition:background 350ms;"></div>
+      <div onClick="{{ toggleSpeak }}" style="position:relative;cursor:pointer;width:26px;height:26px;">
+        <sc-if value="{{ speaking }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,var(--amber),transparent 70%);animation:ampulse 2.4s ease-in-out infinite;"></div>
+          <svg style="position:relative;" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+        </sc-if>
+        <sc-if value="{{ muted }}" hint-placeholder-val="{{ true }}">
+          <svg style="opacity:0.7;" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="22" y1="9" x2="16" y2="15"></line><line x1="16" y1="9" x2="22" y2="15"></line></svg>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:64px;left:0;right:0;display:flex;flex-direction:column;align-items:center;z-index:3;pointer-events:none;">
+    <div style="position:relative;width:64px;height:64px;">
+      <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);animation:{{ ringAnim }};">
+        <circle cx="32" cy="32" r="30" fill="none" stroke="var(--surface2)" stroke-width="2.5"></circle>
+        <circle cx="32" cy="32" r="30" fill="none" stroke="{{ ringColor }}" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="{{ ringOffset }}"></circle>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;color:var(--t2);">{{ remainingStr }}</div>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--t3);">Frage {{ qNum }} · Wiederholung {{ repIndex }} von {{ reps }}</div>
+    <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:8px;font-size:12px;color:var(--t3);">Keine Verbindung — die Sitzung wartet.</div>
+    </sc-if>
+  </div>
+  <div onClick="{{ stopSession }}" style="position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;border:1px solid var(--gold-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--t2)"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>
+  </div>
+  <sc-if value="{{ introAsk }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:7;background:var(--bg);display:flex;flex-direction:column;justify-content:center;padding:0 32px;gap:22px;animation:screenIn 700ms ease-out;">
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Die KI fragt zuerst</div>
+      <div style="font-family:Newsreader,serif;font-weight:300;font-size:28px;line-height:1.5;color:var(--gold-hi);max-width:26ch;text-wrap:pretty;">„Welche Frage hast du und welches Gefühl möchtest du damit verstärken?"</div>
+      <textarea class="pm-scroll" value="{{ introAnswer }}" onChange="{{ onIntroAnswer }}" placeholder="Deine Antwort…" style="width:100%;box-sizing:border-box;min-height:110px;border-radius:20px;background:var(--surface);border:none;outline:none;resize:none;padding:16px;font-family:Inter,sans-serif;font-size:15px;line-height:1.55;color:var(--t1);"></textarea>
+      <div onClick="{{ introSubmit }}" style-hover="filter:brightness(1.1);" style-active="transform:scale(0.98);" style="height:56px;border-radius:28px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:var(--bg);cursor:pointer;box-shadow:0 6px 28px rgba(212,162,76,0.3);transition:all 300ms;">Antworten &amp; beginnen</div>
+      <div style="font-size:13px;color:var(--t3);text-align:center;">Danach beginnt die Routine des Skills.</div>
+    </div>
+  </sc-if>
+  <div onClick="{{ wake }}" style="position:absolute;inset:0;background:#000;opacity:{{ dimOpacity }};pointer-events:{{ dimPointer }};transition:opacity {{ dimDur }};z-index:8;"></div>
+  <sc-if value="{{ ended }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ goStart }}" style="position:absolute;inset:0;z-index:9;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;animation:screenIn 900ms ease-out;cursor:pointer;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--gold);box-shadow:0 0 60px var(--breath);"></div>
+      <div style="font-family:Newsreader,serif;font-weight:300;font-size:28px;color:var(--gold-hi);text-align:center;padding:0 40px;animation:qglow 2s ease-out;">„Der perfekte Moment ist hier."</div>
+      <div style="font-size:13px;color:var(--t3);">Antippen, um zurückzukehren</div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ③ VERLAUF -->
+<sc-if value="{{ isVerlauf }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Verlauf" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goStart }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:26px;letter-spacing:-0.3px;color:var(--t1);">Verlauf</div>
+  </div>
+  <sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:70%;gap:20px;">
+      <div style="width:88px;height:88px;border-radius:50%;border:1.5px solid var(--gold-dim);opacity:0.5;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;border-radius:50%;background:var(--gold-dim);"></div></div>
+      <div style="font-size:15px;color:var(--t3);">Noch keine Sitzungen.</div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ historyFilled }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:12px;padding:8px 20px 32px 20px;">
+      <sc-for list="{{ history }}" as="hs" hint-placeholder-count="3">
+        <div onClick="{{ hs.open }}" style-hover="filter:brightness(1.1);" style-active="transform:scale(0.98);" style="background:var(--surface);border-radius:20px;min-height:92px;display:flex;align-items:center;padding:14px 16px;gap:14px;cursor:pointer;box-shadow:var(--shadow);transition:all 300ms;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;font-size:16px;line-height:1.35;color:var(--t1);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{{ hs.topic }}</div>
+            <div style="font-size:13px;color:var(--t2);margin-top:6px;">{{ hs.meta }}</div>
+          </div>
+          <div style="width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--gold)"><path d="m6 3 14 9-14 9V3z"></path></svg>
+          </div>
+        </div>
+      </sc-for>
+      <div style="font-size:12px;color:var(--t3);text-align:center;margin-top:8px;">Nach links wischen zeigt „Löschen"</div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ③b SITZUNGSANSICHT -->
+<sc-if value="{{ isVerlaufDetail }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Sitzungsansicht" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goVerlauf }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:20px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ detailTopic }}</div>
+  </div>
+  <div style="padding:8px 20px 32px 20px;">
+    <div onClick="{{ startSession }}" style-hover="filter:brightness(1.1);transform:translateY(-1px);" style-active="transform:scale(0.98);" style="height:56px;border-radius:28px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:16px;color:var(--bg);cursor:pointer;margin-bottom:12px;box-shadow:0 6px 28px rgba(212,162,76,0.3);transition:all 300ms ease-out;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--bg)"><path d="m6 3 14 9-14 9V3z"></path></svg>
+      Erneut abspielen
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <div onClick="{{ openPause }}" style-hover="filter:brightness(1.12);" style-active="transform:scale(0.97);" style="flex:1;background:var(--surface);border-radius:20px;padding:10px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:all 300ms;">
+        <div style="font-weight:500;font-size:10px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Pause</div>
+        <div style="font-weight:600;font-size:16px;color:var(--t1);margin-top:3px;">{{ pauseRep }} s</div>
+      </div>
+      <div onClick="{{ openReps }}" style-hover="filter:brightness(1.12);" style-active="transform:scale(0.97);" style="flex:1.2;background:var(--surface);border-radius:20px;padding:10px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:all 300ms;">
+        <div style="font-weight:500;font-size:10px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Wiederholungen</div>
+        <div style="font-weight:600;font-size:16px;color:var(--t1);margin-top:3px;">{{ reps }}×</div>
+      </div>
+      <div onClick="{{ openDuration }}" style-hover="filter:brightness(1.12);" style-active="transform:scale(0.97);" style="flex:1;background:var(--surface);border-radius:20px;padding:10px 0;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:all 300ms;">
+        <div style="font-weight:500;font-size:10px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Dauer</div>
+        <div style="font-weight:600;font-size:16px;color:var(--t1);margin-top:3px;">{{ duration }} min</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:20px;padding:14px 16px;margin-bottom:24px;box-shadow:var(--shadow);">
+      <div>
+        <div style="font-weight:500;font-size:15px;color:var(--t1);">Zufällige Reihenfolge</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:3px;">Fragen werden gemischt abgespielt</div>
+      </div>
+      <div onClick="{{ toggleRandom }}" style="width:52px;height:32px;flex:0 0 52px;border-radius:16px;background:{{ randomBg }};position:relative;cursor:pointer;transition:background 300ms;">
+        <div style="position:absolute;top:3px;left:{{ randomKnob }}px;width:26px;height:26px;border-radius:50%;background:var(--t1);transition:left 300ms cubic-bezier(0.2,0,0,1);box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>
+      </div>
+    </div>
+    <sc-for list="{{ detailQ }}" as="q" hint-placeholder-count="4">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;">
+        <div style="font-size:20px;line-height:1.4;">{{ q.emoji }}</div>
+        <div style="font-family:Newsreader,serif;font-weight:300;font-size:20px;line-height:1.55;color:var(--t2);max-width:32ch;">{{ q.text }}</div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ④ EINSTELLUNGEN -->
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Einstellungen" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goStart }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:26px;letter-spacing:-0.3px;color:var(--t1);">Einstellungen</div>
+  </div>
+  <div style="padding:4px 20px 40px 20px;display:flex;flex-direction:column;gap:26px;">
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Ablauf</div>
+      <div style="background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);">
+        <div onClick="{{ openPause }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Pause zwischen Wiederholungen</span><span style="font-size:15px;color:var(--t2);">{{ pauseRep }} s</span>
+        </div>
+        <div onClick="{{ openPause }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Pause bis zur nächsten Frage</span><span style="font-size:15px;color:var(--t2);">{{ pauseNext }} s</span>
+        </div>
+        <div onClick="{{ openReps }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Wiederholungen pro Frage</span><span style="font-size:15px;color:var(--t2);">{{ reps }}×</span>
+        </div>
+        <div onClick="{{ openDuration }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;">
+          <span style="font-size:15px;color:var(--t1);">Sitzungsdauer</span><span style="font-size:15px;color:var(--t2);">{{ duration }} min</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Inhalt</div>
+      <div style="background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);">
+        <div onClick="{{ goHooks }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Gesprächsaufhänger</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:15px;color:var(--t2);">{{ hookCount }} <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+        </div>
+        <div onClick="{{ goSkills }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;">
+          <span style="font-size:15px;color:var(--t1);">Skills</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:15px;color:var(--t2);">{{ activeSkillName }} <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Stimme</div>
+      <div style="background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);">
+        <div onClick="{{ openProvider }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Anbieter</span><span style="font-size:15px;color:var(--t2);">{{ provider }}</span>
+        </div>
+        <div onClick="{{ goVoice }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Stimme</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:15px;color:var(--t2);">{{ voice }} <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+        </div>
+        <div style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:12px;border-bottom:1px solid var(--surface2);">
+          <span style="white-space:nowrap;">
+            <span style="display:block;font-size:15px;color:var(--t1);">Google-API-Schlüssel</span>
+            <span style="display:block;font-size:11px;color:var(--t3);margin-top:2px;">TTS · Chirp 3 HD</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <input type="{{ keyType }}" value="AIzaSyB4kQ9mR2xN7wPfE1" readOnly="{{ true }}" style="background:transparent;border:none;outline:none;text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--t2);width:130px;" />
+            <svg onClick="{{ toggleKey }}" style="cursor:pointer;flex:0 0 20px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </span>
+        </div>
+        <div style="min-height:60px;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;gap:12px;">
+          <span style="white-space:nowrap;">
+            <span style="display:block;font-size:15px;color:var(--t1);">Groq-API-Schlüssel</span>
+            <span style="display:block;font-size:11px;color:var(--t3);margin-top:2px;">Whisper Large v3 · Spracheingabe</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <input type="{{ keyType2 }}" value="gsk_7Xw2Lq9RfV4tB8nM3z" readOnly="{{ true }}" style="background:transparent;border:none;outline:none;text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--t2);width:130px;" />
+            <svg onClick="{{ toggleKey2 }}" style="cursor:pointer;flex:0 0 20px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">KI-Verbindung</div>
+      <div style="background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);">
+        <div onClick="{{ goCg }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Mit ChatGPT verbinden</span>
+          <sc-if value="{{ connected }}" hint-placeholder-val="{{ true }}">
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);"><span style="width:8px;height:8px;border-radius:50%;background:#6FA860;"></span>frank@gmail.com</span>
+          </sc-if>
+          <sc-if value="{{ disconnected }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:14px;color:var(--t3);">Nicht verbunden</span>
+          </sc-if>
+        </div>
+        <div onClick="{{ openModel }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;border-bottom:1px solid var(--surface2);">
+          <span style="font-size:15px;color:var(--t1);">Modell</span><span style="font-size:15px;color:var(--t2);">{{ model }}</span>
+        </div>
+        <div onClick="{{ openDenk }}" style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;">
+          <span style="font-size:15px;color:var(--t1);">Denkstärke</span><span style="font-size:15px;color:var(--t2);">{{ denk }}</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Darstellung</div>
+      <div style="background:var(--surface);border-radius:20px;padding:12px;display:flex;gap:8px;box-shadow:var(--shadow);">
+        <div onClick="{{ setLight }}" style="flex:1;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;cursor:pointer;background:{{ lightBg }};color:{{ lightC }};transition:all 350ms;">Hell</div>
+        <div onClick="{{ setDark }}" style="flex:1;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;cursor:pointer;background:{{ darkBg }};color:{{ darkC }};transition:all 350ms;">Dunkel</div>
+        <div onClick="{{ setSystem }}" style="flex:1;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;cursor:pointer;background:{{ sysBg }};color:{{ sysC }};transition:all 350ms;">Wie System</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;">Über</div>
+      <div style="background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);">
+        <div style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--surface2);"><span style="font-size:15px;color:var(--t1);">Version</span><span style="font-size:14px;color:var(--t2);">1.0 (Muster)</span></div>
+        <div style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--surface2);"><span style="font-size:15px;color:var(--t1);">Paketname</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t2);">de.frank.perfectmoment</span></div>
+        <div style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;"><span style="font-size:15px;color:var(--t1);">Rohdaten</span><span style="font-size:14px;color:var(--gold);">Anzeigen</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤a AUFHÄNGER -->
+<sc-if value="{{ isHooks }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Gesprächsaufhänger" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goSettings }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="flex:1;font-weight:600;font-size:24px;letter-spacing:-0.3px;color:var(--t1);">Gesprächsaufhänger</div>
+    <svg onClick="{{ goHookEdit }}" style="cursor:pointer;" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:8px 20px 32px 20px;">
+    <sc-for list="{{ hookRows }}" as="h" hint-placeholder-count="4">
+      <div onClick="{{ h.edit }}" draggable="{{ true }}" onDragStart="{{ h.dragStart }}" onDragOver="{{ h.dragOver }}" onDrop="{{ h.drop }}" style-hover="filter:brightness(1.1);" style-active="transform:scale(0.98);" style="background:var(--surface);border-radius:20px;min-height:64px;display:flex;align-items:center;gap:14px;padding:12px 16px;box-sizing:border-box;cursor:grab;box-shadow:var(--shadow);transition:filter 300ms;">
+        <div style="width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:{{ h.iconBg }};display:flex;align-items:center;justify-content:center;font-family:Newsreader,Georgia,serif;font-weight:400;font-size:24px;line-height:1;color:#fff;border:2px solid rgba(255,255,255,0.18);box-sizing:border-box;box-shadow:0 6px 16px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3);">{{ h.emoji }}</div>
+        <div style="flex:1;font-weight:500;font-size:15px;line-height:1.4;color:var(--t1);">{{ h.text }}</div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--t3)"><circle cx="9" cy="5" r="1.3"></circle><circle cx="9" cy="12" r="1.3"></circle><circle cx="9" cy="19" r="1.3"></circle><circle cx="15" cy="5" r="1.3"></circle><circle cx="15" cy="12" r="1.3"></circle><circle cx="15" cy="19" r="1.3"></circle></svg>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤a-Edit -->
+<sc-if value="{{ isHookEdit }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Aufhänger bearbeiten" style="position:absolute;inset:0;display:flex;flex-direction:column;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goHooks }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:24px;letter-spacing:-0.3px;color:var(--t1);">Aufhänger bearbeiten</div>
+  </div>
+  <div style="padding:12px 20px;display:flex;flex-direction:column;gap:16px;flex:1;">
+    <div style="width:88px;height:88px;border-radius:50%;background:{{ editHookBg }};display:flex;align-items:center;justify-content:center;font-family:Newsreader,Georgia,serif;font-weight:400;font-size:46px;color:#fff;cursor:pointer;border:3px solid rgba(255,255,255,0.2);box-sizing:border-box;box-shadow:0 10px 26px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.35);">{{ editHookEmoji }}</div>
+    <div style="font-size:12px;color:var(--t3);margin-top:-8px;">Antippen öffnet die Symbolauswahl</div>
+    <textarea class="pm-scroll" value="{{ editHookText }}" onChange="{{ onEditHook }}" style="width:100%;box-sizing:border-box;min-height:140px;border-radius:20px;background:var(--surface);border:none;outline:none;resize:none;padding:16px;font-family:Inter,sans-serif;font-size:16px;line-height:1.5;color:var(--t1);box-shadow:var(--shadow);"></textarea>
+  </div>
+  <div style="padding:16px 20px 24px 20px;display:flex;flex-direction:column;gap:12px;">
+    <div onClick="{{ goHooks }}" style="height:56px;border-radius:28px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:var(--bg);cursor:pointer;">Speichern</div>
+    <div onClick="{{ goHooks }}" style="height:52px;border-radius:26px;border:1px solid var(--warn);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:15px;color:var(--warn);cursor:pointer;">Löschen</div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤b SKILLS -->
+<sc-if value="{{ isSkills }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Skills" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goSettings }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="flex:1;font-weight:600;font-size:26px;letter-spacing:-0.3px;color:var(--t1);">Skills</div>
+    <svg onClick="{{ goSkillEdit }}" style="cursor:pointer;" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:8px 20px 32px 20px;">
+    <sc-for list="{{ skillRows }}" as="s" hint-placeholder-count="2">
+      <div onClick="{{ s.pick }}" style="background:var(--surface);border-radius:20px;display:flex;align-items:center;gap:14px;padding:16px;cursor:pointer;box-shadow:var(--shadow);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:500;font-size:16px;color:var(--t1);">{{ s.name }}</div>
+          <div style="font-size:13px;color:var(--t3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.preview }}</div>
+        </div>
+        <svg onClick="{{ s.edit }}" style="cursor:pointer;flex:0 0 18px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"></path></svg>
+        <div style="width:24px;flex:0 0 24px;transition:opacity 300ms;opacity:{{ s.checkOp }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤b-Edit -->
+<sc-if value="{{ isSkillEdit }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Skill bearbeiten" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;flex:0 0 56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goSkills }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:24px;letter-spacing:-0.3px;color:var(--t1);">Skill bearbeiten</div>
+  </div>
+  <div style="padding:8px 20px 24px 20px;display:flex;flex-direction:column;gap:14px;">
+    <input value="{{ skillName }}" onChange="{{ onSkillName }}" placeholder="Name des Skills" style="width:100%;box-sizing:border-box;height:52px;border-radius:16px;background:var(--surface);border:none;outline:none;padding:0 16px;font-family:Inter,sans-serif;font-weight:500;font-size:16px;color:var(--t1);box-shadow:var(--shadow);" />
+    <textarea class="pm-scroll" value="{{ skillText }}" onChange="{{ onSkillText }}" style="width:100%;box-sizing:border-box;height:340px;border-radius:16px;background:var(--surface);border:none;outline:none;resize:none;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;color:var(--t1);box-shadow:var(--shadow);"></textarea>
+    <div style="background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);">
+      <div onClick="{{ toggleBm }}" style="display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;">
+        <div>
+          <div style="font-weight:500;font-size:15px;color:var(--t1);">Betriebsmodus (automatischer Anhang)</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:4px;">Wird unter jeden Skill gehängt und steuert das Frage-Format.</div>
+        </div>
+        <svg style="transform:rotate({{ bmRot }}deg);transition:transform 300ms;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </div>
+      <sc-if value="{{ bmOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:0 16px 16px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--t2);">Erzeuge genau 30 Fragen als Liste. Jede Frage beginnt mit einem passenden Emoji, ist offen formuliert, wird nicht beantwortet und richtet sich direkt an den Hörer („du"). Keine Nummerierung, keine Erklärungen, nur die Fragen.</div>
+      </sc-if>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
+      <div onClick="{{ goSkills }}" style="height:56px;border-radius:28px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:var(--bg);cursor:pointer;">Speichern</div>
+      <div onClick="{{ goSkills }}" style="height:52px;border-radius:26px;border:1px solid var(--warn);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:15px;color:var(--warn);cursor:pointer;">Löschen</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤c STIMME -->
+<sc-if value="{{ isVoice }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Stimme" class="pm-scroll" style="position:absolute;inset:0;overflow-y:auto;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goSettings }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:26px;letter-spacing:-0.3px;color:var(--t1);">Stimme</div>
+  </div>
+  <div style="display:flex;gap:8px;padding:4px 20px 14px 20px;">
+    <div onClick="{{ tabEdge }}" style="flex:1;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;cursor:pointer;background:{{ edgeTabBg }};color:{{ edgeTabC }};transition:all 350ms;">Microsoft Edge</div>
+    <div onClick="{{ tabGoogle }}" style="flex:1;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;cursor:pointer;background:{{ googleTabBg }};color:{{ googleTabC }};transition:all 350ms;">Google Chirp 3 HD</div>
+  </div>
+  <sc-if value="{{ voiceNoKey }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:0 20px 14px 20px;padding:14px 16px;border-radius:16px;background:var(--surface2);font-size:14px;line-height:1.5;color:var(--t2);">Bitte zuerst einen Google-API-Schlüssel hinterlegen. <span onClick="{{ goSettings }}" style="color:var(--gold);cursor:pointer;">Zu den Einstellungen</span></div>
+  </sc-if>
+  <div style="display:flex;flex-direction:column;gap:8px;padding:0 20px 32px 20px;opacity:{{ voiceListOp }};">
+    <sc-for list="{{ voiceRows }}" as="v" hint-placeholder-count="6">
+      <div style="background:var(--surface);border-radius:16px;height:60px;display:flex;align-items:center;gap:10px;padding:0 14px;box-shadow:var(--shadow);">
+        <sc-if value="{{ v.star }}" hint-placeholder-val="{{ false }}"><span style="color:var(--gold);font-size:13px;">★</span></sc-if>
+        <span style="font-weight:500;font-size:15px;color:var(--t1);">{{ v.name }}</span>
+        <span style="flex:1;font-size:13px;color:var(--t3);">{{ v.tag }}</span>
+        <div onClick="{{ v.play }}" style-hover="filter:brightness(1.2);transform:scale(1.08);" style-active="transform:scale(0.92);" style="width:36px;height:36px;border-radius:50%;background:{{ v.playBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 300ms;">
+          <sc-if value="{{ v.playing }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--bg)"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></sc-if>
+          <sc-if value="{{ v.notPlaying }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)"><path d="m6 3 14 9-14 9V3z"></path></svg></sc-if>
+        </div>
+        <div onClick="{{ v.pick }}" style="width:24px;cursor:pointer;transition:opacity 300ms;opacity:{{ v.checkOp }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ⑤d CHATGPT -->
+<sc-if value="{{ isCg }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Mit ChatGPT verbinden" style="position:absolute;inset:0;display:flex;flex-direction:column;animation:screenIn 450ms cubic-bezier(0.2,0,0,1);">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;">
+    <svg onClick="{{ goSettings }}" style="cursor:pointer;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <div style="font-weight:600;font-size:24px;letter-spacing:-0.3px;color:var(--t1);">Mit ChatGPT verbinden</div>
+  </div>
+  <sc-if value="{{ cgIsOff }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:0 48px;text-align:center;">
+      <div style="width:96px;height:96px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;"><div style="width:14px;height:14px;border-radius:50%;background:var(--gold-hi);box-shadow:0 0 24px var(--gold);"></div></div>
+      <div style="font-size:15px;line-height:1.55;color:var(--t2);max-width:26ch;">Perfect Moment braucht deinen ChatGPT-Zugang, um Fragen zu erzeugen.</div>
+      <div onClick="{{ cgToCode }}" style-hover="filter:brightness(1.1);transform:translateY(-1px);" style-active="transform:scale(0.98);" style="width:240px;height:56px;border-radius:28px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:var(--bg);cursor:pointer;box-shadow:0 6px 28px rgba(212,162,76,0.3);transition:all 300ms;">Verbinden</div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ cgIsCode }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 32px;text-align:center;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:40px;letter-spacing:4px;color:{{ codeColor }};text-decoration:{{ codeDeco }};display:flex;align-items:center;gap:14px;">
+        <span>H4KP</span><span style="width:16px;height:1.5px;background:var(--gold-dim);display:inline-block;"></span><span>9TRQ</span>
+      </div>
+      <div style="font-size:15px;color:var(--t2);">Gib diesen Code auf der geöffneten Seite ein.</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--t3);">auth.openai.com/codex/device</div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <div style="padding:0 24px;height:48px;border-radius:24px;background:var(--surface2);display:flex;align-items:center;font-weight:500;font-size:14px;color:var(--t1);cursor:pointer;">Kopieren</div>
+        <div style="padding:0 24px;height:48px;border-radius:24px;background:var(--surface2);display:flex;align-items:center;font-weight:500;font-size:14px;color:var(--t1);cursor:pointer;">Seite erneut öffnen</div>
+      </div>
+      <sc-if value="{{ cgWaiting }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:12px;margin-top:28px;">
+          <div style="width:20px;height:20px;border-radius:50%;border:2px solid transparent;border-top-color:var(--gold);animation:spin 2.2s linear infinite;"></div>
+          <span style="font-size:14px;color:var(--t2);">Warte auf Bestätigung…</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ cgExpired }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cgToCode }}" style="margin-top:20px;padding:0 24px;height:48px;border-radius:24px;background:linear-gradient(90deg,var(--gold),var(--gold-hi));display:flex;align-items:center;font-weight:600;font-size:14px;color:var(--bg);cursor:pointer;">Neuen Code holen</div>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ cgIsOn }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 48px;text-align:center;">
+      <div style="width:12px;height:12px;border-radius:50%;background:#6FA860;box-shadow:0 0 16px rgba(111,168,96,0.5);"></div>
+      <div style="font-weight:500;font-size:17px;color:var(--t1);">frank@gmail.com</div>
+      <div style="font-size:14px;color:var(--t2);">Verbunden seit 12. Juli 2026</div>
+      <div onClick="{{ cgDisconnect }}" style="margin-top:24px;padding:0 28px;height:50px;border-radius:25px;border:1px solid var(--warn);display:flex;align-items:center;font-weight:500;font-size:15px;color:var(--warn);cursor:pointer;">Verbindung trennen</div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- SHEETS -->
+<sc-if value="{{ sheetPause }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:30;"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface2);border-radius:28px 28px 0 0;padding:28px 28px 44px 28px;animation:sheetUp 400ms cubic-bezier(0.2,0,0,1);">
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Pause zwischen Wiederholungen</div>
+    <div style="text-align:center;font-weight:600;font-size:32px;color:var(--gold-hi);margin:10px 0 2px 0;">{{ pauseRep }} s</div>
+    <input type="range" min="1" max="30" step="1" value="{{ pauseRep }}" onChange="{{ onPauseRep }}" style="--fill:{{ pauseRepPct }}%;" />
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-top:24px;">Pause bis zur nächsten Frage</div>
+    <div style="text-align:center;font-weight:600;font-size:32px;color:var(--gold-hi);margin:10px 0 2px 0;">{{ pauseNext }} s</div>
+    <input type="range" min="1" max="60" step="1" value="{{ pauseNext }}" onChange="{{ onPauseNext }}" style="--fill:{{ pauseNextPct }}%;" />
+  </div>
+</sc-if>
+<sc-if value="{{ sheetReps }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:30;"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface2);border-radius:28px 28px 0 0;padding:28px 28px 44px 28px;animation:sheetUp 400ms cubic-bezier(0.2,0,0,1);">
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);">Wiederholungen pro Frage</div>
+    <div style="text-align:center;font-weight:600;font-size:32px;color:var(--gold-hi);margin:10px 0 2px 0;">{{ reps }}×</div>
+    <input type="range" min="1" max="10" step="1" value="{{ reps }}" onChange="{{ onReps }}" style="--fill:{{ repsPct }}%;" />
+  </div>
+</sc-if>
+<sc-if value="{{ sheetDuration }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:30;"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface2);border-radius:28px 28px 0 0;padding:28px 28px 44px 28px;animation:sheetUp 400ms cubic-bezier(0.2,0,0,1);">
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:16px;">Sitzungsdauer</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <sc-for list="{{ durationOpts }}" as="d" hint-placeholder-count="7">
+        <div onClick="{{ d.pick }}" style-hover="filter:brightness(1.12);" style-active="transform:scale(0.95);" style="height:52px;border-radius:26px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;cursor:pointer;background:{{ d.bg }};color:{{ d.color }};transition:all 300ms;">{{ d.label }}</div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ sheetOptions }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:30;"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface2);border-radius:28px 28px 0 0;padding:28px 20px 44px 20px;animation:sheetUp 400ms cubic-bezier(0.2,0,0,1);">
+    <div style="font-weight:500;font-size:13px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t2);margin-bottom:12px;padding:0 8px;">{{ optionTitle }}</div>
+    <div style="display:flex;flex-direction:column;">
+      <sc-for list="{{ optionRows }}" as="o" hint-placeholder-count="3">
+        <div onClick="{{ o.pick }}" style="height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;cursor:pointer;border-bottom:1px solid var(--surface);">
+          <span style="font-size:16px;color:var(--t1);">{{ o.label }}</span>
+          <div style="opacity:{{ o.checkOp }};transition:opacity 300ms;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+</div>
+
+<!-- ===================== DEMO-PANEL ===================== -->
+<div style="width:250px;flex:0 0 250px;display:flex;flex-direction:column;gap:20px;color:var(--t2);font-size:13px;position:sticky;top:36px;">
+  <div style="font-weight:600;font-size:15px;color:var(--t1);">Muster-Steuerung</div>
+  <div style="display:flex;gap:8px;">
+    <div onClick="{{ setLight }}" style="flex:1;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:500;cursor:pointer;background:{{ lightBg }};color:{{ lightC }};transition:all 350ms;">Hell</div>
+    <div onClick="{{ setDark }}" style="flex:1;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:500;cursor:pointer;background:{{ darkBg }};color:{{ darkC }};transition:all 350ms;">Dunkel</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="font-weight:500;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t3);">Bildschirme</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <div onClick="{{ goStart }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">① Start</div>
+      <div onClick="{{ startSession }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">② Sitzung</div>
+      <div onClick="{{ goVerlauf }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">③ Verlauf</div>
+      <div onClick="{{ goSettings }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">④ Einstellungen</div>
+      <div onClick="{{ goHooks }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">⑤a Aufhänger</div>
+      <div onClick="{{ goSkills }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">⑤b Skills</div>
+      <div onClick="{{ goSkillEdit }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">⑤b Skill-Editor</div>
+      <div onClick="{{ goVoice }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">⑤c Stimme</div>
+      <div onClick="{{ goCg }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">⑤d ChatGPT</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="font-weight:500;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--t3);">Zustände vorführen</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <div onClick="{{ demoLock }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Start gesperrt: {{ demoLockLabel }}</div>
+      <div onClick="{{ demoEmpty }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Verlauf leer: {{ demoEmptyLabel }}</div>
+      <div onClick="{{ demoOffline }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Kein Netz: {{ demoOfflineLabel }}</div>
+      <div onClick="{{ demoMore }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Nachschub-Punkte: {{ demoMoreLabel }}</div>
+      <div onClick="{{ demoDim }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Dimmung jetzt zeigen</div>
+      <div onClick="{{ demoEnd }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">Sitzungsende zeigen</div>
+      <div onClick="{{ cgCycle }}" style="padding:7px 12px;border-radius:16px;background:var(--surface);cursor:pointer;">ChatGPT-Zustand: {{ cgLabel }}</div>
+    </div>
+  </div>
+  <div style="font-size:12px;line-height:1.6;color:var(--t3);">Die Sitzung startet stumm — erst der Lautsprecher oben rechts beginnt das Vorlesen. Der Fortschrittsring füllt sich im Takt der Pause.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;demoTempo&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;max&quot;:8,&quot;step&quot;:1,&quot;unit&quot;:&quot;×&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Vorführung&quot;},&quot;reducedMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Vorführung&quot;}}">
+const QUESTIONS = [
+["🌱","Welche deiner heutigen Entscheidungen hat sich schon ganz leicht angefühlt?"],
+["🌊","Woran merkst du gerade, dass dein Körper langsamer wird?"],
+["🕯️","Welcher Gedanke von heute Morgen ist inzwischen still geworden?"],
+["🧭","Was in deinem Tag zeigt dir, dass du in die richtige Richtung gehst?"],
+["🌾","Welche Anspannung hat sich bereits von selbst gelöst, ohne dass du etwas tun musstest?"],
+["🌙","Wie fühlt es sich an, wenn dein Atem von allein ruhiger wird?"],
+["✨","Welcher kleine Moment von heute verdient ein zweites Hinsehen?"],
+["🕊️","Wo in deinem Körper ist es gerade am ruhigsten?"],
+["🌲","Welches Geräusch würdest du hören, wenn du jetzt im Wald lägest?"],
+["🔮","Wie fühlt sich der Moment an, kurz bevor du einschläfst?"],
+["🌅","Was wäre morgen früh das erste Zeichen eines guten Tages?"],
+["💫","Welche Wärme spürst du gerade, ohne danach gesucht zu haben?"],
+["🍃","Was darfst du heute einfach unerledigt lassen?"],
+["🌌","Wie klingt Stille, wenn du ihr eine Farbe geben müsstest?"],
+["🕰️","Welcher Augenblick von heute hätte ruhig länger dauern dürfen?"],
+["🌤️","Woran erkennst du, dass es dir gerade gut geht?"],
+["🪶","Was fühlt sich heute leichter an als gestern?"],
+["🌿","Welche Stelle deines Körpers hat heute gute Arbeit geleistet?"],
+["🌛","Was darf dein Kopf jetzt an die Nacht abgeben?"],
+["🫧","Welche Sorge wirkt aus der Ferne betrachtet schon kleiner?"],
+["🌞","Welches Lächeln von heute fällt dir zuerst ein?"],
+["🧺","Was hast du heute gut genug gemacht?"],
+["🌧️","Welcher Klang würde dich jetzt am sanftesten begleiten?"],
+["🕊️","Wie fühlt es sich an, nichts beweisen zu müssen?"],
+["🌊","Welche Welle darf dich jetzt tragen statt fordern?"],
+["🌱","Was wächst in deinem Leben gerade ganz ohne dein Zutun?"],
+["✨","Wofür könntest du heute still danke sagen?"],
+["🌙","Wie tief darf dein Schlaf heute Nacht werden?"],
+["🧭","Was weißt du heute sicherer als vor einem Jahr?"],
+["🪷","Wie fühlt sich der perfekte Moment an, wenn er da ist?"]
+];
+const HOOKS = [["☼","Wie fühlt sich ein schönes Leben an?"],["◇","Wie fühlt sich ein freies Leben an?"],["△","Wie fühlt sich ein fitter Körper an?"],["☾","Wie schaffe ich es, dass mein Schlaf immer tiefer wird?"],["✦","Warum ist das Leben schön?"],["◎","Wie schaffe ich es, dass es mir immer gut geht?"],["♧","Was macht mich im Wald so ruhig?"],["◌","Wie fühlt sich ein Leben ohne Schmerzen an?"],["⌁","Frage mich immer zuerst: „Welche Frage hast du und welches Gefühl möchtest du damit verstärken?“ Nach meiner Eingabe beginne mit der Routine dieses Skills!",true]];
+const HOOK_ICON_COLORS = {
+  "☼":"linear-gradient(135deg,#FF9A55,#E45757)",
+  "◇":"linear-gradient(135deg,#58A6FF,#5367D9)",
+  "△":"linear-gradient(135deg,#4FD18B,#288B63)",
+  "☾":"linear-gradient(135deg,#8A7CFF,#5B4BC4)",
+  "✦":"linear-gradient(135deg,#FFC857,#E88A2D)",
+  "◎":"linear-gradient(135deg,#F06FA6,#BB4D88)",
+  "♧":"linear-gradient(135deg,#78C96B,#3E8E55)",
+  "◌":"linear-gradient(135deg,#44C7C7,#2C7FA3)",
+  "⌁":"linear-gradient(135deg,#B073E8,#7651B5)"
+};
+const EDGE_VOICES = [["Seraphina","weiblich · mehrsprachig",true],["Florian","männlich · mehrsprachig",true],["Katja","weiblich",false],["Killian","männlich",false],["Conrad","männlich",false],["Amala","weiblich",false]];
+const GOOGLE_F = ["Achernar","Aoede","Autonoe","Callirrhoe","Despina","Erinome","Gacrux","Kore","Laomedeia","Leda","Pulcherrima","Sulafat","Vindemiatrix","Zephyr"];
+const GOOGLE_M = ["Achird","Algenib","Algieba","Alnilam","Charon","Enceladus","Fenrir","Iapetus","Orus","Puck","Rasalgethi","Sadachbia","Sadaltager","Schedar","Umbriel","Zubenelgenubi"];
+const SKILL_TEXT = "Du bist ein Forschungsteam aus 50 Expertinnen und Experten: Schlafforscher, Neurologen, Meditationslehrerinnen, Hypnotherapeuten, Sportmediziner, Philosophinnen, Atemtrainer, Schmerztherapeutinnen und Sprachkünstler.\n\nEure Aufgabe: Zu dem gegebenen Thema entwickelt ihr gemeinsam Fragen, die beim Zuhören mit geschlossenen Augen wirken. Jede Frage:\n- setzt voraus, dass das Gute bereits geschieht (praesupponierend),\n- ist sinnlich und koerpernah formuliert,\n- laesst sich nicht mit Ja oder Nein beantworten,\n- ist kurz genug, um in einem Atemzug gehoert zu werden.\n\nVermeidet Ratschlaege, Behauptungen und jede Form von Druck. Die Fragen werden niemals beantwortet — sie sollen nur wirken.";
+const HISTORY = [
+{topic:"Wie schaffe ich es, dass mein Schlaf immer tiefer wird?", meta:"Gestern, 21:14 · 30 min · 42 Fragen · Seraphina"},
+{topic:"Was macht mich im Wald so ruhig?", meta:"Donnerstag, 22:02 · 45 min · 58 Fragen · Seraphina"},
+{topic:"Wie fühlt sich ein Leben ohne Schmerzen an?", meta:"12. Juli, 21:40 · 30 min · 40 Fragen · Kore"}
+];
+const RING_C = 188.5;
+class Component extends DCLogic {
+  state = { theme:"dark", appearance:"dark", screen:"start", hooks:HOOKS.map(h=>h.slice()), skillName:"Forschungsteam", selectedHook:0, customText:HOOKS[0][1], edited:false, rec:"idle",
+    pauseRep:8, pauseNext:12, reps:3, duration:30, sheet:null, connected:true, historyEmpty:false, histSel:0,
+    speaking:false, qIndex:0, repIndex:1, phase:"idle", phaseT:0, remaining:1800, ended:false, offline:false, dimmed:false, loadingMore:false,
+    voiceTab:"edge", voice:"Seraphina", googleVoice:"Kore", playing:null, hasKey:true, keyVisible:false, keyVisible2:false, randomOrder:false, intro:null, introAnswer:"",
+    cg:"connected", activeSkill:0, skillText:SKILL_TEXT, bmOpen:false,
+    provider:"Microsoft Edge", model:"GPT 5.6 Sol", denk:"Hoch",
+    editHookEmoji:"☼", editHookText:HOOKS[0][1] };
+  componentDidMount(){ this.iv = setInterval(()=>this.tick(), 100); }
+  componentWillUnmount(){ clearInterval(this.iv); clearTimeout(this.recT); clearTimeout(this.playT); }
+  tick(){
+    const s = this.state;
+    if(s.screen!=="session" || !s.speaking || s.ended || s.offline || s.intro) return;
+    const sp = this.props.demoTempo ?? 1;
+    let {phase, phaseT, qIndex, repIndex, remaining} = s;
+    phaseT += 0.1*sp; remaining = Math.max(0, remaining - 0.1*sp);
+    const speakDur = 3, pauseDur = repIndex < s.reps ? s.pauseRep : s.pauseNext;
+    if(phase!=="speak" && phase!=="pause") phase = "speak";
+    else if(phase==="speak" && phaseT >= speakDur){ phase="pause"; phaseT=0; }
+    else if(phase==="pause" && phaseT >= pauseDur){
+      phase="speak"; phaseT=0;
+      if(repIndex < s.reps) repIndex++;
+      else { repIndex=1; qIndex=(qIndex+1)%QUESTIONS.length; setTimeout(()=>this.scrollToQ(qIndex),50); }
+    }
+    if(remaining<=0){ this.setState({ended:true, speaking:false}); return; }
+    this.setState({phase, phaseT, qIndex, repIndex, remaining});
+  }
+  scrollToQ(i){
+    const el = this.listEl; if(!el) return;
+    const row = el.children[i]; if(!row) return;
+    el.scrollTo({top: row.offsetTop - el.clientHeight*0.4, behavior:"smooth"});
+  }
+  nav(screen, extra){ this.setState(Object.assign({screen, sheet:null}, extra||{})); }
+  cycleOpts(key, opts){ const i = opts.indexOf(this.state[key]); return opts[(i+1)%opts.length]; }
+  renderVals(){
+    const s = this.state;
+    const canStart = s.connected && (s.selectedHook!=null || s.customText.trim().length>0);
+    const speakDur = 3, pauseDur = s.repIndex < s.reps ? s.pauseRep : s.pauseNext;
+    const inPause = s.phase==="pause";
+    const prog = inPause ? Math.min(1, s.phaseT/pauseDur) : (s.phase==="speak" ? 1 : 0);
+    const mm = Math.floor(s.remaining/60), ss = Math.floor(s.remaining%60);
+    const optionSheets = {
+      provider:{title:"Anbieter", key:"provider", opts:["Microsoft Edge","Google Chirp 3 HD"]},
+      model:{title:"Modell", key:"model", opts:["GPT 5.6 Sol","GPT 5.6 Terra","GPT 5.6 Luna"]},
+      denk:{title:"Denkstärke", key:"denk", opts:["Niedrig","Mittel","Hoch","Sehr hoch"]}
+    };
+    const os = optionSheets[s.sheet];
+    const skills = [
+      {name:s.skillName, text:this.state.skillText},
+      {name:"Sanfte Begleitung", text:"Du bist eine ruhige Begleiterin. Formuliere weiche, bildhafte Fragen mit Naturmetaphern, die zum Loslassen einladen und den Atem vertiefen."}
+    ];
+    const voiceList = s.voiceTab==="edge"
+      ? EDGE_VOICES.map(v=>({name:v[0], tag:v[1], star:v[2]}))
+      : GOOGLE_F.map(n=>({name:n, tag:"weiblich", star:false})).concat(GOOGLE_M.map(n=>({name:n, tag:"männlich", star:false})));
+    const curVoice = s.voiceTab==="edge" ? s.voice : s.googleVoice;
+    const noKey = s.voiceTab==="google" && !s.hasKey;
+    const isDark = s.theme==="dark";
+    const seg = (on)=>({bg: on?"var(--gold)":"var(--surface2)", c: on?"var(--bg)":"var(--t2)"});
+    const segL = seg(s.appearance==="light"), segD = seg(s.appearance==="dark"), segS = seg(s.appearance==="system");
+    const topicText = (s.intro===null && s.introAnswer.trim()) ? s.introAnswer.trim() : (s.customText.trim() || "Eigenes Thema");
+    return {
+      theme:s.theme, rm:(this.props.reducedMotion ?? false), breathDur: s.screen==="session"?"30s":"20s",
+      isStart:s.screen==="start", isSession:s.screen==="session", isVerlauf:s.screen==="verlauf", isVerlaufDetail:s.screen==="verlaufDetail",
+      isSettings:s.screen==="settings", isHooks:s.screen==="hooks", isHookEdit:s.screen==="hookEdit", isSkills:s.screen==="skills",
+      isSkillEdit:s.screen==="skillEdit", isVoice:s.screen==="voice", isCg:s.screen==="cg",
+      goStart:()=>this.nav("start",{ended:false,dimmed:false}), goVerlauf:()=>this.nav("verlauf"), goSettings:()=>this.nav("settings"),
+      goHooks:()=>this.nav("hooks"), goSkills:()=>this.nav("skills"), goVoice:()=>this.nav("voice"), goCg:()=>this.nav("cg"),
+      goHookEdit:()=>this.nav("hookEdit"), goSkillEdit:()=>this.nav("skillEdit"),
+      sunColor: isDark?"var(--gold-dim)":"var(--gold)", moonColor: isDark?"var(--gold)":"var(--gold-dim)",
+      sunScale: isDark?1:1.15, moonScale: isDark?1.15:1,
+      sunGlow: isDark?"none":"drop-shadow(0 0 6px var(--gold))", moonGlow: isDark?"drop-shadow(0 0 6px var(--gold))":"none",
+      hooks: s.hooks.map((h,i)=>{
+        const sel = s.selectedHook===i;
+        return {emoji:h[0], text:h[1], iconBg:HOOK_ICON_COLORS[h[0]] || "linear-gradient(135deg,#A58A55,#765E38)", bg: sel?"var(--surface2)":"var(--surface)", border: sel?"var(--gold)":"transparent",
+          color: sel?"var(--t1)":"var(--t2)", scale: sel?1.08:1,
+          select:()=>this.setState({selectedHook:i, customText:h[1], edited:false})};
+      }),
+      customText:s.customText, inputColor: (!s.edited && s.selectedHook!=null) ? "var(--t3)" : "var(--t1)",
+      onCustom:(e)=>{ const v=e.target.value; this.setState({customText:v, edited:true, selectedHook: null}); },
+      recIsIdle:s.rec==="idle", recIsRec:s.rec==="rec", recIsProc:s.rec==="proc",
+      recBg: s.rec==="rec" ? "var(--amber)" : s.rec==="proc" ? "var(--surface2)" : "linear-gradient(135deg,var(--gold),var(--gold-hi))",
+      recLabel: s.rec==="idle" ? "Antippen zum Sprechen" : s.rec==="rec" ? "Ich höre zu…" : "Einen Moment…",
+      recTap:()=>{
+        if(s.rec==="idle") this.setState({rec:"rec"});
+        else if(s.rec==="rec"){ this.setState({rec:"proc"}); this.recT=setTimeout(()=>this.setState({rec:"idle", customText:"Wie fühlt es sich an, wenn mein Rücken ganz entspannt ist?", edited:true, selectedHook:null}),2200); }
+      },
+      pauseRep:s.pauseRep, pauseNext:s.pauseNext, reps:s.reps, duration:s.duration,
+      openPause:()=>this.setState({sheet:"pause"}), openReps:()=>this.setState({sheet:"reps"}), openDuration:()=>this.setState({sheet:"duration"}),
+      openProvider:()=>this.setState({sheet:"provider"}), openModel:()=>this.setState({sheet:"model"}), openDenk:()=>this.setState({sheet:"denk"}),
+      closeSheet:()=>this.setState({sheet:null}),
+      sheetPause:s.sheet==="pause", sheetReps:s.sheet==="reps", sheetDuration:s.sheet==="duration", sheetOptions:!!os,
+      onPauseRep:(e)=>this.setState({pauseRep:+e.target.value}), onPauseNext:(e)=>this.setState({pauseNext:+e.target.value}), onReps:(e)=>this.setState({reps:+e.target.value}),
+      pauseRepPct: Math.round((s.pauseRep-1)/29*100), pauseNextPct: Math.round((s.pauseNext-1)/59*100), repsPct: Math.round((s.reps-1)/9*100),
+      durationOpts: [10,20,30,45,60,90,120].map(d=>({label:String(d), pick:()=>this.setState({duration:d, sheet:null}),
+        bg: s.duration===d?"var(--gold)":"var(--surface)", color: s.duration===d?"var(--bg)":"var(--t1)"})),
+      optionTitle: os?os.title:"", optionRows: os?os.opts.map(o=>({label:o, checkOp: s[os.key]===o?1:0, pick:()=>this.setState({[os.key]:o, sheet:null})})):[],
+      startLocked:!canStart, startUnlocked:canStart,
+      lockReason: !s.connected ? "Bitte zuerst mit ChatGPT verbinden" : "Bitte zuerst ein Thema wählen",
+      lockReasonTap:()=>{ if(!s.connected) this.nav("cg"); },
+      startSession:()=>{ if(canStart||s.screen==="verlaufDetail") this.setState({screen:"session", sheet:null, speaking:false, qIndex:0, repIndex:1, phase:"idle", phaseT:0, remaining:s.duration*60, ended:false, dimmed:false, introAnswer:"", intro: (s.screen!=="verlaufDetail" && s.selectedHook!=null && s.hooks[s.selectedHook][2]) ? "ask" : null}); },
+      introAsk: s.screen==="session" && s.intro==="ask" && !s.ended,
+      onIntroAnswer:(e)=>this.setState({introAnswer:e.target.value}),
+      introSubmit:()=>this.setState({intro:null}),
+      toggleRandom:()=>this.setState({randomOrder:!s.randomOrder}),
+      randomBg: s.randomOrder?"var(--gold)":"var(--surface2)", randomKnob: s.randomOrder?23:3,
+      keyType2: s.keyVisible2?"text":"password", toggleKey2:()=>this.setState({keyVisible2:!s.keyVisible2}),
+      sessionTopic: topicText, sessionQ: QUESTIONS.map((q,i)=>({
+        emoji:q[0], text:q[1],
+        size: i===s.qIndex?32:20,
+        color: i===s.qIndex?"var(--gold-hi)": i<s.qIndex?"var(--t3)":"var(--t2)",
+        eop: i===s.qIndex?1: i<s.qIndex?0.3:0.55, scale: i===s.qIndex?1.15:1
+      })),
+      listRef:(el)=>{ this.listEl=el; },
+      speaking:s.speaking, muted:!s.speaking,
+      toggleSpeak:()=>this.setState({speaking:!s.speaking, phase: !s.speaking && s.phase==="idle" ? "speak" : s.phase, phaseT: s.phase==="idle"?0:s.phaseT}),
+      netFill: s.offline ? "transparent" : "var(--gold-dim)",
+      ringColor: s.phase==="speak" && s.speaking ? "var(--amber)" : "var(--gold)",
+      ringOffset: RING_C*(1-prog),
+      ringAnim: s.phase==="speak" && s.speaking ? "ringamber 2.4s ease-in-out infinite" : "none",
+      remainingStr: mm+":"+String(ss).padStart(2,"0"),
+      qNum:s.qIndex+1, repIndex:s.repIndex, offline:s.offline, loadingMore:s.loadingMore, ended:s.ended,
+      stopSession:()=>this.nav("start",{speaking:false,ended:false,dimmed:false}),
+      dimOpacity: s.dimmed?0.88:0, dimPointer: s.dimmed?"auto":"none", dimDur: s.dimmed?"4s linear":"300ms ease-out",
+      wake:()=>this.setState({dimmed:false}),
+      historyEmpty:s.historyEmpty, historyFilled:!s.historyEmpty,
+      history: HISTORY.map((h,i)=>({topic:h.topic, meta:h.meta, open:()=>this.nav("verlaufDetail",{histSel:i})})),
+      detailTopic: HISTORY[s.histSel].topic, detailQ: QUESTIONS.slice(0,12).map(q=>({emoji:q[0], text:q[1]})),
+      hookCount: s.hooks.length,
+      skillName:s.skillName, onSkillName:(e)=>this.setState({skillName:e.target.value}),
+      activeSkillName: skills[s.activeSkill].name,
+      skillRows: skills.map((sk,i)=>({name:sk.name, preview:sk.text.slice(0,60)+"…", checkOp: s.activeSkill===i?1:0,
+        pick:()=>this.setState({activeSkill:i}), edit:(e)=>{e.stopPropagation(); this.nav("skillEdit");}})),
+      skillText:s.skillText, onSkillText:(e)=>this.setState({skillText:e.target.value}),
+      bmOpen:s.bmOpen, bmRot:s.bmOpen?90:0, toggleBm:()=>this.setState({bmOpen:!s.bmOpen}),
+      editHookEmoji:s.editHookEmoji, editHookBg:HOOK_ICON_COLORS[s.editHookEmoji] || "linear-gradient(135deg,#A58A55,#765E38)", editHookText:s.editHookText, onEditHook:(e)=>this.setState({editHookText:e.target.value}),
+      hookRows: s.hooks.map((h,i)=>({emoji:h[0], text:h[1], iconBg:HOOK_ICON_COLORS[h[0]] || "linear-gradient(135deg,#A58A55,#765E38)", edit:()=>this.nav("hookEdit",{editHookEmoji:h[0], editHookText:h[1]}),
+        dragStart:()=>{ this.dragI=i; },
+        dragOver:(e)=>e.preventDefault(),
+        drop:(e)=>{ e.preventDefault(); if(this.dragI==null||this.dragI===i) return; const arr=s.hooks.slice(); const m=arr.splice(this.dragI,1)[0]; arr.splice(i,0,m); this.dragI=null; this.setState({hooks:arr, selectedHook:null}); }})),
+      voiceTab:s.voiceTab, tabEdge:()=>this.setState({voiceTab:"edge"}), tabGoogle:()=>this.setState({voiceTab:"google"}),
+      edgeTabBg: s.voiceTab==="edge"?"var(--gold)":"var(--surface)", edgeTabC: s.voiceTab==="edge"?"var(--bg)":"var(--t2)",
+      googleTabBg: s.voiceTab==="google"?"var(--gold)":"var(--surface)", googleTabC: s.voiceTab==="google"?"var(--bg)":"var(--t2)",
+      voiceNoKey:noKey, voiceListOp: noKey?0.35:1,
+      voiceRows: voiceList.map(v=>({name:v.name, tag:v.tag, star:v.star,
+        playing:s.playing===v.name, notPlaying:s.playing!==v.name,
+        playBg: s.playing===v.name?"var(--amber)":"var(--surface2)",
+        play:()=>{ if(noKey)return; clearTimeout(this.playT); this.setState({playing:v.name}); this.playT=setTimeout(()=>this.setState({playing:null}),2600); },
+        checkOp: curVoice===v.name?1:0.12,
+        pick:()=>{ if(noKey)return; this.setState(s.voiceTab==="edge"?{voice:v.name}:{googleVoice:v.name}); }})),
+      keyType: s.keyVisible?"text":"password", toggleKey:()=>this.setState({keyVisible:!s.keyVisible}),
+      provider:s.provider, model:s.model, denk:s.denk,
+      connected:s.connected, disconnected:!s.connected,
+      cgIsOn:s.cg==="connected", cgIsOff:s.cg==="off", cgIsCode:s.cg==="code"||s.cg==="expired",
+      cgWaiting:s.cg==="code", cgExpired:s.cg==="expired",
+      codeColor: s.cg==="expired"?"var(--t3)":"var(--gold-hi)", codeDeco: s.cg==="expired"?"line-through":"none",
+      cgToCode:()=>this.setState({cg:"code"}),
+      cgDisconnect:()=>this.setState({cg:"off", connected:false}),
+      cgCycle:()=>{ const next={connected:"off", off:"code", code:"expired", expired:"connected"}[s.cg]; this.setState({cg:next, connected:next==="connected", screen:"cg"}); },
+      cgLabel: {connected:"verbunden", off:"getrennt", code:"Code", expired:"abgelaufen"}[s.cg],
+      lightBg:segL.bg, lightC:segL.c, darkBg:segD.bg, darkC:segD.c, sysBg:segS.bg, sysC:segS.c,
+      setLight:()=>this.setState({theme:"light", appearance:"light"}), setDark:()=>this.setState({theme:"dark", appearance:"dark"}),
+      setSystem:()=>this.setState({appearance:"system", theme: window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light":"dark"}),
+      demoLock:()=>this.setState({selectedHook:null, customText:"", edited:false, screen:"start"}),
+      demoLockLabel: canStart?"aus":"an",
+      demoEmpty:()=>this.setState({historyEmpty:!s.historyEmpty, screen:"verlauf"}), demoEmptyLabel: s.historyEmpty?"an":"aus",
+      demoOffline:()=>this.setState({offline:!s.offline, screen:"session"}), demoOfflineLabel: s.offline?"an":"aus",
+      demoMore:()=>{ this.setState({loadingMore:!s.loadingMore, screen:"session"}); if(!s.loadingMore) setTimeout(()=>{ const el=this.listEl; if(el) el.scrollTo({top:el.scrollHeight, behavior:"smooth"}); },300); },
+      demoMoreLabel: s.loadingMore?"an":"aus",
+      demoDim:()=>this.setState({dimmed:true, screen:"session"}),
+      demoEnd:()=>this.setState({ended:true, speaking:false, screen:"session"})
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1530 @@
+{
+  "bildschirm": "B-01",
+  "name": "Heute",
+  "breite": 412,
+  "erscheinung": "21dunkelstandard",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "werft-b01",
+          "beschriftung": "Heute",
+          "anordnung": {
+            "art": "fluss",
+            "abstand": "2px",
+            "innen": "0"
+          },
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "werft-b01__topbar",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "quer": "center",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "h1",
+                  "klassen": "werft-b01__title",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "text": "Heute"
+                },
+                {
+                  "tag": "span",
+                  "klassen": "werft-b01__top-spacer",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "klassen": "werft-b01__theme-control",
+                  "beschriftung": "Erscheinung umschalten",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "button",
+                      "klassen": "werft-b01__theme-button",
+                      "funktion": "F-26 schaltet nacheinander auf Hellmodus, Dunkelmodus und Automatik um, zeigt dafür Sonne, Mondsichel oder A mit seitlichen Strahlen und lässt Automatik sofort sowie bei späteren Systemwechseln der Systemdarstellung folgen",
+                      "beschriftung": "Hellmodus einschalten",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "svg",
+                          "klassen": "werft-b01__theme-icon werft-b01__theme-icon--sun",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "path",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "svg",
+                          "klassen": "werft-b01__theme-icon werft-b01__theme-icon--moon",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "path",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "svg",
+                          "klassen": "werft-b01__theme-icon werft-b01__theme-icon--system",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "path",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__icon-action",
+                  "fuehrtZu": "B-08",
+                  "beschriftung": "Einstellungen",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "werft-b01__content",
+              "anordnung": {
+                "art": "fluss",
+                "abstand": "2px",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "p",
+                  "klassen": "werft-b01__date",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "text": "SONNTAG, 9. AUGUST 2026"
+                },
+                {
+                  "tag": "section",
+                  "klassen": "werft-b01__state",
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__intro",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "20px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b01__section-title",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "20px"
+                          },
+                          "text": "Wie ist deine Lage heute?"
+                        },
+                        {
+                          "tag": "p",
+                          "klassen": "werft-b01__subtitle",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "20px"
+                          },
+                          "text": "Was für ein Tag ist das? Was liegt vor dir?"
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__voice-area",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b01__mic-wrap",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "span",
+                              "klassen": "werft-b01__recording-ring",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              }
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__mic",
+                              "funktion": "F-01",
+                              "beschriftung": "Lage einsprechen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "klassen": "werft-b01__mic-icon",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "center",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b01__recording-time",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "innen": "0"
+                          },
+                          "text": "00:00"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b01__text-action werft-b01__type-action",
+                          "funktion": "Lage tippen",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          },
+                          "text": "Lieber tippen"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "section",
+                  "klassen": "werft-b01__state",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "textarea",
+                      "klassen": "werft-b01__input",
+                      "beschriftung": "Heutige Lage",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      },
+                      "text": "Heute liegt einiges vor mir. Ich möchte ruhig anfangen und mich auf eine Sache konzentrieren."
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__button-row",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "flex-end",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b01__text-action",
+                          "funktion": "F-02",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "flex-end",
+                            "innen": "0"
+                          },
+                          "text": "Text mit KI verbessern"
+                        },
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b01__primary-action",
+                          "funktion": "F-03",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "span",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "text": "Weiter"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "section",
+                  "klassen": "werft-b01__state",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "h2",
+                      "klassen": "werft-b01__eyebrow",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      },
+                      "text": "FÜNF VORSCHLÄGE FÜR HEUTE"
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__cards",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__proposal",
+                          "funktion": "F-06",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__card-copy",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "h3",
+                                  "klassen": "werft-b01__card-title",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Eine Sache bewusst abschließen"
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-description",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Wähle eine überschaubare Aufgabe und bleib bei ihr, bis sie wirklich fertig ist."
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-meta",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "leicht · 1 Tag"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__icon-action werft-b01__bookmark",
+                              "funktion": "F-05",
+                              "beschriftung": "Auf die Merkliste legen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__proposal",
+                          "funktion": "F-06",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__card-copy",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "h3",
+                                  "klassen": "werft-b01__card-title",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Den ersten Schritt verkleinern"
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-description",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Nimm dir etwas vor, das in zehn ruhigen Minuten beginnen kann."
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-meta",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "leicht · 1 Tag"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__icon-action werft-b01__bookmark",
+                              "funktion": "F-05",
+                              "beschriftung": "Auf die Merkliste legen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__proposal",
+                          "funktion": "F-06",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__card-copy",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "h3",
+                                  "klassen": "werft-b01__card-title",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Eine Stunde ohne Wechsel"
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-description",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Reserviere eine Stunde für eine Aufgabe und lass alles andere sichtbar warten."
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-meta",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "mittel · 1 Tag"
+                                },
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b01__chip",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "text": "von deiner Merkliste"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__icon-action werft-b01__bookmark is-saved",
+                              "funktion": "F-05",
+                              "beschriftung": "Von der Merkliste nehmen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__proposal",
+                          "funktion": "F-06",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__card-copy",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "h3",
+                                  "klassen": "werft-b01__card-title",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Vor dem Antworten kurz warten"
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-description",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Mach vor wichtigen Antworten eine kleine Pause und prüfe, was du wirklich sagen willst."
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-meta",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "mittel · 3 Tage"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__icon-action werft-b01__bookmark",
+                              "funktion": "F-05",
+                              "beschriftung": "Auf die Merkliste legen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__proposal",
+                          "funktion": "F-06",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__card-copy",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "h3",
+                                  "klassen": "werft-b01__card-title",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Den Tag mit einer Grenze beginnen"
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-description",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "Lege fest, was heute ausdrücklich nicht mehr auf deine Liste kommt."
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b01__card-meta",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "text": "fordernd · 3 Tage"
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__icon-action werft-b01__bookmark",
+                              "funktion": "F-05",
+                              "beschriftung": "Auf die Merkliste legen",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__center-action",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b01__text-action",
+                          "funktion": "F-04",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "svg",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "laengs": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "span",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "text": "Andere Vorschläge"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "section",
+                  "klassen": "werft-b01__state",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "abstand": "2px",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__running-group",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b01__eyebrow",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "text": "LÄUFT"
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b01__experiment-card",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__experiment-head",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "flex-start",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "div",
+                                  "klassen": "werft-b01__experiment-copy",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "flex-start",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "h3",
+                                      "klassen": "werft-b01__card-title",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "flex-start",
+                                        "innen": "0"
+                                      },
+                                      "text": "Eine Sache bewusst abschließen"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "klassen": "werft-b01__experiment-day",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "flex-start",
+                                        "innen": "0"
+                                      },
+                                      "text": "Tag 1 von 1"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "a",
+                                  "klassen": "werft-b01__icon-action",
+                                  "funktion": "F-09",
+                                  "fuehrtZu": "B-02",
+                                  "beschriftung": "Gespräch zum Experiment",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "flex-start",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "svg",
+                                      "versteckt": true,
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "flex-start",
+                                        "innen": "0"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "path",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "2px",
+                                            "quer": "flex-start",
+                                            "innen": "0"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b01__experiment-actions",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "laengs": "flex-end",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "button",
+                                  "klassen": "werft-b01__text-action",
+                                  "funktion": "F-13",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "laengs": "flex-end",
+                                    "innen": "0"
+                                  },
+                                  "text": "Nicht umgesetzt"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b01__running-group",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "h2",
+                          "klassen": "werft-b01__eyebrow",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "text": "HEUTE ZU TUN"
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b01__todo-list",
+                          "funktion": "F-07",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "h3",
+                              "klassen": "werft-b01__todo-title",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "innen": "0"
+                              },
+                              "text": "Eine Sache bewusst abschließen"
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__todo",
+                              "funktion": "F-08",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "center",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "text": "Eine Aufgabe auswählen, die heute wirklich fertig werden soll."
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b01__todo",
+                              "funktion": "F-08",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "2px",
+                                "quer": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "svg",
+                                  "versteckt": true,
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "path",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "2px",
+                                        "quer": "center",
+                                        "innen": "0"
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "span",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "2px",
+                                    "quer": "center",
+                                    "innen": "0"
+                                  },
+                                  "text": "Alles andere beiseitelegen und den ersten Schritt machen."
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "a",
+                      "klassen": "werft-b01__primary-action werft-b01__evening-action",
+                      "funktion": "F-10",
+                      "fuehrtZu": "B-03",
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "2px",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "2px",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          },
+                          "text": "Wie ist es gelaufen?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "nav",
+              "klassen": "werft-b01__bottomnav werft-primary-nav",
+              "beschriftung": "Hauptnavigation",
+              "anordnung": {
+                "art": "raster",
+                "abstand": "2px",
+                "spalten": "repeat(5, minmax(0, 1fr))",
+                "innen": "0"
+              },
+              "kinder": [
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__nav-item is-active",
+                  "fuehrtZu": "B-01",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Heute"
+                    }
+                  ]
+                },
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__nav-item",
+                  "fuehrtZu": "B-04",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Ziele"
+                    }
+                  ]
+                },
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__nav-item",
+                  "fuehrtZu": "B-05",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Merkliste"
+                    }
+                  ]
+                },
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__nav-item",
+                  "fuehrtZu": "B-06",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Erkenntnisse"
+                    }
+                  ]
+                },
+                {
+                  "tag": "a",
+                  "klassen": "werft-b01__nav-item",
+                  "fuehrtZu": "B-07",
+                  "anordnung": {
+                    "art": "raster",
+                    "abstand": "2px",
+                    "spalten": "repeat(5, minmax(0, 1fr))",
+                    "quer": "center",
+                    "laengs": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "raster",
+                            "abstand": "2px",
+                            "spalten": "repeat(5, minmax(0, 1fr))",
+                            "quer": "center",
+                            "laengs": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "span",
+                      "anordnung": {
+                        "art": "raster",
+                        "abstand": "2px",
+                        "spalten": "repeat(5, minmax(0, 1fr))",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Logbuch"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

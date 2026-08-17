@@ -1,5 +1,7 @@
 package de.frank.perfectmoment.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,20 +22,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DragIndicator
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.ui.theme.Inter
@@ -49,9 +63,9 @@ import de.frank.perfectmoment.ui.theme.PmTextStyles
 fun ReadingSection(viewModel: AppViewModel, onDeleteRequest: (SessionEntity) -> Unit) {
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxWidth().padding(top = 26.dp)) {
-        SectionLabel("Vorlesen", Modifier.padding(start = 8.dp, bottom = 6.dp), decorated = true)
+        SectionLabel("Eigene Sessions", Modifier.padding(start = 8.dp, bottom = 6.dp), decorated = true)
         Text(
-            "Verläufe mit eigenen Fragen — ohne KI, genau so vorgelesen, wie du sie schreibst.",
+            "Sessions mit eigenen Fragen — ohne KI, genau so vorgelesen, wie du sie schreibst.",
             color = colors.text3,
             fontFamily = Inter,
             fontSize = 12.sp,
@@ -159,6 +173,9 @@ fun ReadingDetailScreen(
 ) {
     val colors = LocalPmColors.current
     val detail = viewModel.historyDetail
+    var draggedQuestionId by remember { mutableStateOf<Long?>(null) }
+    // Die Fragen sind verschieden hoch, darum merkt sich die Liste jede Höhe für das Ziehen.
+    val questionHeights = remember { mutableStateMapOf<Long, Float>() }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("", viewModel::back)
         if (detail == null) {
@@ -236,32 +253,96 @@ fun ReadingDetailScreen(
                     }
                 }
                 items(detail.questions, key = QuestionEntity::id) { question ->
-                    PmCard(
+                    var dragY by remember(question.id) { mutableStateOf(0f) }
+                    val isDragging = draggedQuestionId == question.id
+                    val cardAlpha by animateFloatAsState(
+                        if (draggedQuestionId == null || isDragging) 1f else 0.45f,
+                        label = "Frage Deckkraft",
+                    )
+                    val cardScale by animateFloatAsState(
+                        if (isDragging) 1.035f else 1f,
+                        label = "Frage Größe",
+                    )
+                    Box(
                         Modifier.fillMaxWidth().padding(bottom = 10.dp)
-                            .pmClickable(shape = RoundedCornerShape(24.dp), lift = true) {
-                                viewModel.openReadingQuestionEditor(question.id, question.text)
+                            .onGloballyPositioned { questionHeights[question.id] = it.size.height.toFloat() }
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = if (isDragging) dragY else 0f
+                                alpha = cardAlpha
+                                scaleX = cardScale
+                                scaleY = cardScale
                             },
-                        radius = 24,
                     ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.Top,
+                        PmCard(
+                            Modifier.fillMaxWidth()
+                                .pmClickable(shape = RoundedCornerShape(24.dp), lift = true) {
+                                    viewModel.openReadingQuestionEditor(question.id, question.text)
+                                },
+                            radius = 24,
                         ) {
-                            Text(question.emoji, fontSize = 20.sp, lineHeight = 28.sp)
-                            Text(
-                                question.text,
-                                color = colors.text2,
-                                style = PmTextStyles.question,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Icon(
-                                Icons.Outlined.Delete,
-                                "Frage löschen",
-                                tint = colors.text3,
-                                modifier = Modifier.size(20.dp)
-                                    .pmClickable { viewModel.deleteReadingQuestion(question.id) },
-                            )
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Text(question.emoji, fontSize = 20.sp, lineHeight = 28.sp)
+                                Text(
+                                    question.text,
+                                    color = colors.text2,
+                                    style = PmTextStyles.question,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Icon(
+                                    Icons.Outlined.DragIndicator,
+                                    "Zum Sortieren halten und ziehen",
+                                    tint = colors.text3,
+                                    modifier = Modifier.size(20.dp).pointerInput(question.id) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { draggedQuestionId = question.id },
+                                            onDragEnd = {
+                                                dragY = 0f
+                                                draggedQuestionId = null
+                                                viewModel.persistReadingQuestionOrder()
+                                            },
+                                            onDragCancel = {
+                                                dragY = 0f
+                                                draggedQuestionId = null
+                                                viewModel.persistReadingQuestionOrder()
+                                            },
+                                        ) { change, amount ->
+                                            change.consume()
+                                            dragY += amount.y
+                                            var index = viewModel.readingQuestions
+                                                .indexOfFirst { it.id == question.id }
+                                            if (index < 0) return@detectDragGesturesAfterLongPress
+                                            while (index < viewModel.readingQuestions.lastIndex) {
+                                                val below = viewModel.readingQuestions[index + 1].id
+                                                val step = questionHeights[below] ?: 0f
+                                                if (step <= 0f || dragY <= step / 2f) break
+                                                viewModel.moveReadingQuestion(index, index + 1)
+                                                dragY -= step
+                                                index++
+                                            }
+                                            while (index > 0) {
+                                                val above = viewModel.readingQuestions[index - 1].id
+                                                val step = questionHeights[above] ?: 0f
+                                                if (step <= 0f || dragY >= -step / 2f) break
+                                                viewModel.moveReadingQuestion(index, index - 1)
+                                                dragY += step
+                                                index--
+                                            }
+                                        }
+                                    },
+                                )
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    "Frage löschen",
+                                    tint = colors.text3,
+                                    modifier = Modifier.size(20.dp)
+                                        .pmClickable { viewModel.deleteReadingQuestion(question.id) },
+                                )
+                            }
                         }
                     }
                 }
@@ -274,6 +355,103 @@ fun ReadingDetailScreen(
     }
     if (viewModel.readingQuestionOpen) {
         ReadingQuestionDialog(viewModel, microphonePermissionGranted, requestMicrophonePermission)
+    }
+    if (viewModel.readingLinkOpen) {
+        ReadingLinkDialog(viewModel)
+    }
+}
+
+/**
+ * Hängt die offene Frage wortwörtlich — samt Symbol — ans Ende der angehakten eigenen Sessions.
+ * Das Original bleibt dabei stehen, wo es steht.
+ */
+@Composable
+private fun ReadingLinkDialog(viewModel: AppViewModel) {
+    val colors = LocalPmColors.current
+    val sessions = viewModel.readingLinkSessions
+    Dialog(onDismissRequest = viewModel::closeReadingLinkPicker) {
+        PmCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(22.dp)) {
+                SectionLabel("In Sessions kopieren", Modifier.padding(bottom = 8.dp), decorated = true)
+                Text(
+                    "Die Frage wird eins zu eins ans Ende der gewählten eigenen Sessions gehängt.",
+                    color = colors.text3,
+                    fontFamily = Inter,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                )
+                if (sessions.isEmpty()) {
+                    Text(
+                        "Es gibt noch keine weitere eigene Session.",
+                        color = colors.text3,
+                        fontFamily = Inter,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    )
+                } else {
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                        items(sessions, key = SessionEntity::id) { session ->
+                            val checked = session.id in viewModel.readingLinkTargets
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .pmClickable(shape = RoundedCornerShape(16.dp)) {
+                                        viewModel.toggleReadingLinkTarget(session.id)
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    Modifier.size(24.dp).background(
+                                        if (checked) colors.gold else colors.surface2,
+                                        CircleShape,
+                                    ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (checked) {
+                                        Icon(
+                                            Icons.Outlined.Check,
+                                            null,
+                                            tint = colors.background,
+                                            modifier = Modifier.size(15.dp),
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        historyDisplayTitle(session).ifBlank { AppViewModel.NEW_READING_TITLE },
+                                        color = colors.text1,
+                                        fontFamily = Inter,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        "${session.questionCount} Fragen",
+                                        color = colors.text3,
+                                        fontFamily = Inter,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(top = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                PrimaryButton("Kopieren", viewModel::copyReadingQuestionToSessions, height = 50)
+                Spacer(Modifier.height(10.dp))
+                OutlineButton(
+                    "Abbrechen",
+                    colors.text2,
+                    viewModel::closeReadingLinkPicker,
+                    Modifier.fillMaxWidth(),
+                    height = 46,
+                )
+            }
+        }
     }
 }
 
@@ -288,11 +466,25 @@ private fun ReadingQuestionDialog(
     Dialog(onDismissRequest = viewModel::closeReadingQuestionEditor) {
         PmCard(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(22.dp)) {
-                SectionLabel(
-                    if (existing == null) "Neue Frage" else "Frage bearbeiten",
-                    Modifier.padding(bottom = 12.dp),
-                    decorated = true,
-                )
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionLabel(
+                        if (existing == null) "Neue Frage" else "Frage bearbeiten",
+                        Modifier.weight(1f),
+                        decorated = true,
+                    )
+                    if (existing != null) {
+                        Icon(
+                            Icons.Outlined.Link,
+                            "Frage in andere Sessions kopieren",
+                            tint = colors.goldHi,
+                            modifier = Modifier.size(24.dp)
+                                .pmClickable(onClick = viewModel::openReadingLinkPicker),
+                        )
+                    }
+                }
                 PmTextArea(
                     value = viewModel.readingQuestionText,
                     onValueChange = viewModel::updateReadingQuestionText,

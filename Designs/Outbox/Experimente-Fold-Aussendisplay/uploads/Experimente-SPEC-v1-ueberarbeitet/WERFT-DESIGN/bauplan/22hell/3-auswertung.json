@@ -1,0 +1,482 @@
+{
+  "bildschirm": "B-03",
+  "name": "Auswertung",
+  "breite": 412,
+  "erscheinung": "22hell",
+  "baum": [
+    {
+      "tag": "section",
+      "klassen": "werft-screen",
+      "kinder": [
+        {
+          "tag": "section",
+          "klassen": "werft-b03",
+          "kinder": [
+            {
+              "tag": "header",
+              "klassen": "werft-b03__topbar",
+              "anordnung": {
+                "art": "zeile",
+                "abstand": "12px",
+                "quer": "center",
+                "innen": "0 20px"
+              },
+              "kinder": [
+                {
+                  "tag": "button",
+                  "klassen": "werft-b03__back werft-b03__state-layer",
+                  "fuehrtZu": "B-01",
+                  "beschriftung": "Zurück",
+                  "anordnung": {
+                    "art": "spalte",
+                    "abstand": "12px",
+                    "quer": "center",
+                    "innen": "0"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "svg",
+                      "klassen": "werft-b03__icon",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "abstand": "12px",
+                        "quer": "center",
+                        "innen": "0"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "path",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "quer": "center",
+                            "innen": "0"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "h1",
+                  "klassen": "werft-b03__title",
+                  "anordnung": {
+                    "art": "zeile",
+                    "abstand": "12px",
+                    "quer": "center",
+                    "innen": "0 20px"
+                  },
+                  "text": "Wie ist es gelaufen?"
+                }
+              ]
+            },
+            {
+              "tag": "main",
+              "klassen": "werft-b03__main",
+              "anordnung": {
+                "art": "fluss",
+                "innen": "20px 16px 112px"
+              },
+              "kinder": [
+                {
+                  "tag": "section",
+                  "klassen": "werft-b03__section",
+                  "anordnung": {
+                    "art": "spalte",
+                    "innen": "20px 16px 112px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "h2",
+                      "klassen": "werft-b03__experiment-title",
+                      "anordnung": {
+                        "art": "spalte",
+                        "innen": "20px 16px 112px"
+                      },
+                      "text": "⟨Experimenttitel⟩"
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b03__metadata",
+                      "anordnung": {
+                        "art": "spalte",
+                        "abstand": "20px",
+                        "innen": "20px 16px 112px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "span",
+                          "anordnung": {
+                            "art": "spalte",
+                            "abstand": "20px",
+                            "innen": "20px 16px 112px"
+                          },
+                          "text": "Tag 2 von 3"
+                        },
+                        {
+                          "tag": "span",
+                          "anordnung": {
+                            "art": "spalte",
+                            "abstand": "20px",
+                            "innen": "20px 16px 112px"
+                          },
+                          "text": "3 von 5 erledigt"
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b03__capture",
+                      "anordnung": {
+                        "art": "spalte",
+                        "laengs": "center",
+                        "innen": "20px 16px 112px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "button",
+                          "klassen": "werft-b03__mic werft-b03__state-layer",
+                          "funktion": "F-10",
+                          "beschriftung": "Auswertung einsprechen",
+                          "anordnung": {
+                            "art": "spalte",
+                            "laengs": "center",
+                            "innen": "0"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "svg",
+                              "klassen": "werft-b03__mic-icon werft-b03__mic-start",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "path",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "laengs": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "svg",
+                              "klassen": "werft-b03__mic-icon werft-b03__mic-stop",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "rect",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "laengs": "center",
+                                    "innen": "0"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b03__transcript",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "innen": "20px 16px 112px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "textarea",
+                          "klassen": "werft-b03__textarea",
+                          "funktion": "Auswertungstext bearbeiten",
+                          "beschriftung": "Auswertungstext",
+                          "anordnung": {
+                            "art": "fluss",
+                            "innen": "20px 16px 112px"
+                          }
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b03__actions",
+                          "anordnung": {
+                            "art": "fluss",
+                            "abstand": "12px",
+                            "innen": "20px 16px 112px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b03__button werft-b03__button--text werft-b03__state-layer",
+                              "funktion": "F-02",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "text": "Text mit KI verbessern"
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b03__button werft-b03__button--filled werft-b03__state-layer",
+                              "funktion": "F-11",
+                              "anordnung": {
+                                "art": "fluss",
+                                "abstand": "12px",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "text": "Weiter"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "div",
+                      "klassen": "werft-b03__response",
+                      "versteckt": true,
+                      "anordnung": {
+                        "art": "fluss",
+                        "innen": "20px 16px 112px"
+                      },
+                      "kinder": [
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b03__loading-card",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "innen": "20px 16px 112px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "div",
+                              "klassen": "werft-b03__waiting-bar",
+                              "versteckt": true,
+                              "anordnung": {
+                                "art": "fluss",
+                                "innen": "20px 16px 112px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "span",
+                                  "klassen": "werft-b03__waiting-strip",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "innen": "20px 16px 112px"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "p",
+                              "klassen": "werft-b03__waiting-text",
+                              "anordnung": {
+                                "art": "fluss",
+                                "innen": "20px 16px 112px"
+                              },
+                              "text": "Ich sehe mir deine letzten Tage an …"
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "klassen": "werft-b03__answer-shell",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "innen": "20px 16px 112px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "article",
+                              "klassen": "werft-b03__answer-card",
+                              "anordnung": {
+                                "art": "fluss",
+                                "innen": "20px 16px 112px"
+                              },
+                              "kinder": [
+                                {
+                                  "tag": "div",
+                                  "klassen": "werft-b03__answer-icons",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "abstand": "4px",
+                                    "quer": "center",
+                                    "laengs": "flex-end",
+                                    "innen": "20px 16px 112px"
+                                  },
+                                  "kinder": [
+                                    {
+                                      "tag": "svg",
+                                      "klassen": "werft-b03__ai-icon",
+                                      "versteckt": true,
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "4px",
+                                        "quer": "center",
+                                        "laengs": "flex-end",
+                                        "innen": "20px 16px 112px"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "path",
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "4px",
+                                            "quer": "center",
+                                            "laengs": "flex-end",
+                                            "innen": "20px 16px 112px"
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "klassen": "werft-b03__speaker werft-b03__state-layer",
+                                      "funktion": "F-12",
+                                      "beschriftung": "Auswertung vorlesen",
+                                      "anordnung": {
+                                        "art": "fluss",
+                                        "abstand": "4px",
+                                        "quer": "center",
+                                        "laengs": "flex-end",
+                                        "innen": "0"
+                                      },
+                                      "kinder": [
+                                        {
+                                          "tag": "svg",
+                                          "versteckt": true,
+                                          "anordnung": {
+                                            "art": "fluss",
+                                            "abstand": "4px",
+                                            "quer": "center",
+                                            "laengs": "flex-end",
+                                            "innen": "0"
+                                          },
+                                          "kinder": [
+                                            {
+                                              "tag": "path",
+                                              "anordnung": {
+                                                "art": "fluss",
+                                                "abstand": "4px",
+                                                "quer": "center",
+                                                "laengs": "flex-end",
+                                                "innen": "0"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "tag": "p",
+                                  "klassen": "werft-b03__answer-text",
+                                  "anordnung": {
+                                    "art": "fluss",
+                                    "innen": "20px 16px 112px"
+                                  },
+                                  "text": "⟨KI-Auswertung⟩"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "article",
+                          "klassen": "werft-b03__error-card",
+                          "versteckt": true,
+                          "anordnung": {
+                            "art": "fluss",
+                            "innen": "20px 16px 112px"
+                          },
+                          "kinder": [
+                            {
+                              "tag": "p",
+                              "klassen": "werft-b03__error-text",
+                              "anordnung": {
+                                "art": "fluss",
+                                "innen": "20px 16px 112px"
+                              },
+                              "text": "Da war nichts zu hören."
+                            },
+                            {
+                              "tag": "button",
+                              "klassen": "werft-b03__button werft-b03__button--text werft-b03__state-layer werft-b03__retry",
+                              "funktion": "F-10",
+                              "anordnung": {
+                                "art": "fluss",
+                                "quer": "center",
+                                "laengs": "center",
+                                "innen": "0"
+                              },
+                              "text": "Nochmal versuchen"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "button",
+                      "klassen": "werft-b03__button werft-b03__button--text werft-b03__state-layer werft-b03__skip",
+                      "funktion": "Zum nächsten Experiment springen",
+                      "anordnung": {
+                        "art": "spalte",
+                        "quer": "center",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Überspringen"
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "klassen": "werft-b03__finished",
+                  "versteckt": true,
+                  "anordnung": {
+                    "art": "fluss",
+                    "quer": "flex-start",
+                    "innen": "20px 16px 112px"
+                  },
+                  "kinder": [
+                    {
+                      "tag": "button",
+                      "klassen": "werft-b03__button werft-b03__button--filled werft-b03__state-layer",
+                      "fuehrtZu": "B-01",
+                      "anordnung": {
+                        "art": "fluss",
+                        "quer": "flex-start",
+                        "laengs": "center",
+                        "innen": "0"
+                      },
+                      "text": "Fertig"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

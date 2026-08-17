@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de" data-werft-theme="lightpmcolors" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PerfectMoment — DurationSheet — LightPmColors</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="compose:DurationSheet" data-screen-name="DurationSheet" style="width: 412px; min-height: 915px;">
+<div class="pm-duration-screen" data-screen-id="DurationSheet">
+  <div class="pm-duration-breath" aria-hidden="true"></div>
+
+  <main class="pm-duration-underlay" aria-hidden="true">
+    <header class="pm-duration-header">
+      <div class="pm-duration-brand">Perfect Moment</div>
+      <div class="pm-duration-header-actions">
+        <button
+          class="pm-duration-theme-button"
+          type="button"
+          aria-label="Darstellung wechseln"
+          data-werft-theme-toggle
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.76 4.84 4.96 3.05 3.55 4.46l1.79 1.79 1.42-1.41ZM1 13h3v-2H1v2ZM11 1v3h2V1h-2Zm8.04 2.05-1.79 1.8 1.41 1.41 1.8-1.79-1.42-1.42Zm-1.8 16.11 1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4ZM20 11v2h3v-2h-3Zm-9 9v3h2v-3h-2Zm-7.45-.46 1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8ZM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/>
+          </svg>
+        </button>
+
+        <button
+          class="pm-duration-icon-button"
+          type="button"
+          aria-label="Verlauf"
+          data-werft-navigate="compose:HistoryScreen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 2.06 4.94l-1.42 1.42A9 9 0 1 0 13 3Zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12Z"/>
+          </svg>
+        </button>
+
+        <button
+          class="pm-duration-icon-button"
+          type="button"
+          aria-label="Einstellungen"
+          data-werft-navigate="compose:SettingsScreen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.4 7.4 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 14 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.18.59-1.69.98l-2.49-1a.49.49 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.05.32-.08.66-.08.98s.03.66.08.98l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.37.31.6.22l2.49-1c.51.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .47-.18.5-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1c.23.09.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="pm-duration-hooks" aria-label="Gesprächsaufhänger">
+      <button class="pm-duration-hook-card" type="button" aria-label="Gesprächsaufhänger auswählen">
+        <span class="pm-duration-hook-icon pm-hook-one">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm9 9-6.34-2.82a1.16 1.16 0 0 1-.66-1.06V10a2 2 0 0 0-4 0v1.12c0 .46-.26.88-.68 1.06L3 15a1.68 1.68 0 0 0-1 1.54V22h2v-5.2l5-2.2V17l-3.5 2v3h2v-1.8l4.5-2.7 4.5 2.7V22h2v-3l-3.5-2v-2.4l5 2.2V22h2v-5.46c0-.66-.39-1.27-1-1.54Z"/>
+          </svg>
+        </span>
+      </button>
+
+      <button class="pm-duration-hook-card" type="button" aria-label="Gesprächsaufhänger auswählen">
+        <span class="pm-duration-hook-icon pm-hook-two">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16.5 3A6.02 6.02 0 0 0 12 5.09 6.02 6.02 0 0 0 7.5 3 5.44 5.44 0 0 0 2 8.5c0 3.76 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.26 22 8.5A5.44 5.44 0 0 0 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5A3.39 3.39 0 0 1 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87A3.9 3.9 0 0 1 16.5 5 3.39 3.39 0 0 1 20 8.5c0 2.89-3.14 5.74-7.9 10.05Z"/>
+          </svg>
+        </span>
+      </button>
+    </section>
+
+    <div class="pm-duration-own-label">Oder eigene Frage</div>
+
+    <textarea
+      class="pm-duration-topic"
+      aria-label="Eigene Frage"
+      placeholder="Was möchtest du hören?"
+    ></textarea>
+
+    <section class="pm-duration-parameters" aria-label="Sitzungsparameter">
+      <button class="pm-duration-parameter" type="button">
+        <span class="pm-duration-parameter-label">Pause</span>
+        <span class="pm-duration-parameter-value">5 s</span>
+      </button>
+
+      <button class="pm-duration-parameter" type="button">
+        <span class="pm-duration-parameter-label">Wiederholungen</span>
+        <span class="pm-duration-parameter-value">3×</span>
+      </button>
+
+      <button
+        class="pm-duration-parameter"
+        type="button"
+        data-werft-navigate="compose:DurationSheet"
+      >
+        <span class="pm-duration-parameter-label">Dauer</span>
+        <span class="pm-duration-parameter-value pm-duration-current-value">20 min</span>
+      </button>
+    </section>
+
+    <div class="pm-duration-recorder">
+      <div class="pm-duration-recorder-orbit">
+        <span class="pm-duration-recorder-glow"></span>
+        <span class="pm-duration-recorder-sweep"></span>
+        <span class="pm-duration-recorder-ring pm-ring-one"></span>
+        <span class="pm-duration-recorder-ring pm-ring-two"></span>
+        <span class="pm-duration-recorder-ring pm-ring-three"></span>
+
+        <button class="pm-duration-recorder-button" type="button" aria-label="Aufnahme starten">
+          <svg class="pm-duration-recorder-mic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14a3 3 0 0 0 2.99-3L15 5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7Z"/>
+          </svg>
+          <svg class="pm-duration-recorder-stop" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6h12v12H6Z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="pm-duration-recorder-label">Antippen zum Sprechen</div>
+    </div>
+  </main>
+
+  <div
+    class="pm-duration-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="pm-duration-sheet-title"
+  >
+    <button
+      class="pm-duration-scrim"
+      type="button"
+      aria-label="Sitzungsdauer schließen"
+    ></button>
+
+    <section class="pm-duration-sheet">
+      <div class="pm-duration-sheet-title" id="pm-duration-sheet-title">Sitzungsdauer</div>
+
+      <div class="pm-duration-segment-row">
+        <button class="pm-duration-segment" type="button" data-duration="10" aria-pressed="false">10</button>
+        <button class="pm-duration-segment is-selected" type="button" data-duration="20" aria-pressed="true">20</button>
+        <button class="pm-duration-segment" type="button" data-duration="30" aria-pressed="false">30</button>
+        <button class="pm-duration-segment" type="button" data-duration="45" aria-pressed="false">45</button>
+      </div>
+
+      <div class="pm-duration-segment-row">
+        <button class="pm-duration-segment" type="button" data-duration="60" aria-pressed="false">60</button>
+        <button class="pm-duration-segment" type="button" data-duration="90" aria-pressed="false">90</button>
+        <button class="pm-duration-segment" type="button" data-duration="120" aria-pressed="false">120</button>
+        <span class="pm-duration-segment-spacer" aria-hidden="true"></span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const script = document.currentScript;
+  const root = script.previousElementSibling;
+  const overlay = root.querySelector(".pm-duration-overlay");
+  const underlay = root.querySelector(".pm-duration-underlay");
+  const scrim = root.querySelector(".pm-duration-scrim");
+  const segments = root.querySelectorAll(".pm-duration-segment");
+  const currentValue = root.querySelector(".pm-duration-current-value");
+  const themeButton = root.querySelector("[data-werft-theme-toggle]");
+  const recorder = root.querySelector(".pm-duration-recorder");
+  const recorderButton = root.querySelector(".pm-duration-recorder-button");
+  const recorderLabel = root.querySelector(".pm-duration-recorder-label");
+
+  const closeSheet = () => {
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    underlay.setAttribute("aria-hidden", "false");
+  };
+
+  scrim.addEventListener("click", closeSheet);
+
+  segments.forEach((segment) => {
+    segment.addEventListener("click", () => {
+      segments.forEach((item) => {
+        item.classList.remove("is-selected");
+        item.setAttribute("aria-pressed", "false");
+      });
+
+      segment.classList.add("is-selected");
+      segment.setAttribute("aria-pressed", "true");
+      currentValue.textContent = segment.dataset.duration + " min";
+
+      window.setTimeout(closeSheet, 100);
+    });
+  });
+
+  themeButton.addEventListener("click", () => {
+    root.classList.toggle("pm-light");
+  });
+
+  recorderButton.addEventListener("click", () => {
+    const recording = recorder.classList.toggle("is-recording");
+    recorderButton.setAttribute("aria-label", recording ? "Aufnahme stoppen" : "Aufnahme starten");
+    recorderLabel.textContent = recording ? "Ich höre zu…" : "Antippen zum Sprechen";
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !overlay.hidden) closeSheet();
+  });
+})();
+</script>
+</section>
+</div>
+</body>
+</html>

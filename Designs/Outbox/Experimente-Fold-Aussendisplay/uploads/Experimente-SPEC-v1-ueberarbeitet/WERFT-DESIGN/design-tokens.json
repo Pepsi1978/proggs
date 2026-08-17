@@ -1,0 +1,1257 @@
+{
+  "erzeugtVon": "Werft Studio",
+  "projekt": "Experimente-SPEC-v1",
+  "plattform": "web",
+  "geometrie": {
+    "width": 412,
+    "height": 915,
+    "device": "—",
+    "density": 1,
+    "source": "design.html"
+  },
+  "vollstaendigkeit": {
+    "bildschirmeImDesign": 10,
+    "bildschirmeExportiert": 9,
+    "erscheinungen": 2,
+    "dateienJeBildschirm": 2,
+    "nichtAufgebaut": [
+      "Experimente-SPEC-v1"
+    ]
+  },
+  "erscheinungen": [
+    {
+      "id": "21dunkelstandard",
+      "name": "2.1 Dunkel (Standard)",
+      "art": "dark",
+      "vorschaufarbe": "#151210",
+      "tokens": {
+        "Grund": "#151210",
+        "Fläche": "#201B17",
+        "Erhöht": "#2A231D",
+        "Rand": "#38302A",
+        "Rand weich": "#2C251F",
+        "Text": "#F4EEE7",
+        "Gedämpft": "#A99C8F",
+        "Blass": "#6E635A",
+        "Aktion": "#C4623C",
+        "Aktion gedeckt": "#3A231A",
+        "Erledigt": "#6F8F6A",
+        "Erledigt gedeckt": "#22301F",
+        "Warnung": "#D8A03C"
+      }
+    },
+    {
+      "id": "22hell",
+      "name": "2.2 Hell",
+      "art": "light",
+      "vorschaufarbe": "#F8F4EE",
+      "tokens": {
+        "Grund": "#F8F4EE",
+        "Fläche": "#FFFFFF",
+        "Erhöht": "#FFFFFF",
+        "Rand": "#E6DCD0",
+        "Rand weich": "#EFE8DF",
+        "Text": "#1E1915",
+        "Gedämpft": "#6C6157",
+        "Blass": "#9C9186",
+        "Aktion": "#B0522E",
+        "Aktion gedeckt": "#F6E6DD",
+        "Erledigt": "#5A7A55",
+        "Erledigt gedeckt": "#E6EFE3",
+        "Warnung": "#9A6A12"
+      }
+    }
+  ],
+  "bildschirme": [
+    {
+      "nummer": 1,
+      "id": "B-01",
+      "name": "Heute",
+      "istStart": true,
+      "navigiertZu": [
+        "B-02",
+        "B-03",
+        "B-08"
+      ],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/1-heute.html",
+        "22hell": "bildschirme/22hell/1-heute.html"
+      }
+    },
+    {
+      "nummer": 2,
+      "id": "B-02",
+      "name": "Gespräch",
+      "istStart": false,
+      "navigiertZu": [
+        "B-01"
+      ],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/2-gespr-ch.html",
+        "22hell": "bildschirme/22hell/2-gespr-ch.html"
+      }
+    },
+    {
+      "nummer": 3,
+      "id": "B-03",
+      "name": "Auswertung",
+      "istStart": false,
+      "navigiertZu": [
+        "B-01"
+      ],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/3-auswertung.html",
+        "22hell": "bildschirme/22hell/3-auswertung.html"
+      }
+    },
+    {
+      "nummer": 4,
+      "id": "B-08",
+      "name": "Einstellungen",
+      "istStart": false,
+      "navigiertZu": [
+        "B-09"
+      ],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/4-einstellungen.html",
+        "22hell": "bildschirme/22hell/4-einstellungen.html"
+      }
+    },
+    {
+      "nummer": 5,
+      "id": "B-09",
+      "name": "Selbstbild",
+      "istStart": false,
+      "navigiertZu": [
+        "B-08"
+      ],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/5-selbstbild.html",
+        "22hell": "bildschirme/22hell/5-selbstbild.html"
+      }
+    },
+    {
+      "nummer": 6,
+      "id": "B-06",
+      "name": "Erkenntnisse",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/6-erkenntnisse.html",
+        "22hell": "bildschirme/22hell/6-erkenntnisse.html"
+      }
+    },
+    {
+      "nummer": 7,
+      "id": "B-07",
+      "name": "Logbuch",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/7-logbuch.html",
+        "22hell": "bildschirme/22hell/7-logbuch.html"
+      }
+    },
+    {
+      "nummer": 8,
+      "id": "B-05",
+      "name": "Merkliste",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/8-merkliste.html",
+        "22hell": "bildschirme/22hell/8-merkliste.html"
+      }
+    },
+    {
+      "nummer": 9,
+      "id": "B-04",
+      "name": "Wünsche &amp; Ziele",
+      "istStart": false,
+      "navigiertZu": [],
+      "quelle": "02-UI-SPEC.md",
+      "quelldateien": [
+        "02-UI-SPEC.md"
+      ],
+      "dateien": {
+        "21dunkelstandard": "bildschirme/21dunkelstandard/9-w-nsche-amp-ziele.html",
+        "22hell": "bildschirme/22hell/9-w-nsche-amp-ziele.html"
+      }
+    }
+  ],
+  "farben": [
+    {
+      "name": "21dunkelstandard.Grund",
+      "css": "#151210",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Fläche",
+      "css": "#201B17",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Erhöht",
+      "css": "#2A231D",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Rand",
+      "css": "#38302A",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Rand weich",
+      "css": "#2C251F",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Text",
+      "css": "#F4EEE7",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Gedämpft",
+      "css": "#A99C8F",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Blass",
+      "css": "#6E635A",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Aktion",
+      "css": "#C4623C",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Aktion gedeckt",
+      "css": "#3A231A",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Erledigt",
+      "css": "#6F8F6A",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Erledigt gedeckt",
+      "css": "#22301F",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "21dunkelstandard.Warnung",
+      "css": "#D8A03C",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Grund",
+      "css": "#F8F4EE",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Fläche",
+      "css": "#FFFFFF",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Erhöht",
+      "css": "#FFFFFF",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Rand",
+      "css": "#E6DCD0",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Rand weich",
+      "css": "#EFE8DF",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Text",
+      "css": "#1E1915",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Gedämpft",
+      "css": "#6C6157",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Blass",
+      "css": "#9C9186",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Aktion",
+      "css": "#B0522E",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Aktion gedeckt",
+      "css": "#F6E6DD",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Erledigt",
+      "css": "#5A7A55",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Erledigt gedeckt",
+      "css": "#E6EFE3",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "22hell.Warnung",
+      "css": "#9A6A12",
+      "quelle": "02-UI-SPEC.md",
+      "verwendet": true
+    },
+    {
+      "name": "--Grund",
+      "css": "#f8f4ee",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Fl-che",
+      "css": "#ffffff",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Erh-ht",
+      "css": "#ffffff",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Rand",
+      "css": "#e6dcd0",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Rand-weich",
+      "css": "#efe8df",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Text",
+      "css": "#1e1915",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Ged-mpft",
+      "css": "#6c6157",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Blass",
+      "css": "#9c9186",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Aktion",
+      "css": "#b0522e",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Aktion-gedeckt",
+      "css": "#f6e6dd",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Erledigt",
+      "css": "#5a7a55",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Erledigt-gedeckt",
+      "css": "#e6efe3",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--Warnung",
+      "css": "#9a6a12",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b02-warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b03-warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b09-eingaberand",
+      "css": "#e6dcd0",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b06-warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-grund",
+      "css": "#151210",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-flaeche",
+      "css": "#201b17",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-erhoeht",
+      "css": "#2a231d",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-rand",
+      "css": "#38302a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-rand-weich",
+      "css": "#2c251f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-text",
+      "css": "#f4eee7",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-gedaempft",
+      "css": "#a99c8f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-blass",
+      "css": "#6e635a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-aktion",
+      "css": "#c4623c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-aktion-gedeckt",
+      "css": "#3a231a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-erledigt",
+      "css": "#6f8f6a",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-erledigt-gedeckt",
+      "css": "#22301f",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-warnung",
+      "css": "#d8a03c",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--eingabefeld-rand",
+      "css": "#e6dcd0",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    }
+  ],
+  "masse": [
+    {
+      "name": "--radius-eingabefeld ×5",
+      "px": 14,
+      "original": "14px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--radius-karte ×5",
+      "px": 20,
+      "original": "20px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--radius-dialog ×5",
+      "px": 24,
+      "original": "24px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--radius-vollrund ×4",
+      "px": 9999,
+      "original": "9999px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    },
+    {
+      "name": "--b07-radius-vollrund",
+      "px": 999,
+      "original": "999px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "verwendet": false
+    }
+  ],
+  "typografie": [
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:font(3) ×61",
+      "schriftart": "Inter, sans-serif",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:font(4) ×14",
+      "schriftart": "Fraunces, serif",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:font(5) ×14",
+      "schriftart": "\"JetBrains Mono\", monospace",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:font(0) ×3",
+      "schriftart": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": "Bildschirmtitel",
+      "schriftart": "Fraunces",
+      "groessePx": 28,
+      "staerke": 600,
+      "zeilenhoehePx": 34,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Abschnittstitel",
+      "schriftart": "Fraunces",
+      "groessePx": 22,
+      "staerke": 600,
+      "zeilenhoehePx": 28,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Kartentitel",
+      "schriftart": "Fraunces",
+      "groessePx": 19,
+      "staerke": 600,
+      "zeilenhoehePx": 25,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Fließtext",
+      "schriftart": "Inter",
+      "groessePx": 16,
+      "staerke": 400,
+      "zeilenhoehePx": 25,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Fließtext klein",
+      "schriftart": "Inter",
+      "groessePx": 14,
+      "staerke": 400,
+      "zeilenhoehePx": 21,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Knopfbeschriftung",
+      "schriftart": "Inter",
+      "groessePx": 16,
+      "staerke": 500,
+      "zeilenhoehePx": 20,
+      "laufweitePx": 0.2,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Zwischenüberschrift",
+      "schriftart": "Inter",
+      "groessePx": 13,
+      "staerke": 600,
+      "zeilenhoehePx": 17,
+      "laufweitePx": 0.6,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Daten und Zahlen",
+      "schriftart": "JetBrains Mono",
+      "groessePx": 13,
+      "staerke": 400,
+      "zeilenhoehePx": 18,
+      "laufweitePx": 0,
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Stufe / Dauer",
+      "schriftart": "JetBrains Mono",
+      "groessePx": 12,
+      "staerke": 400,
+      "zeilenhoehePx": 16,
+      "laufweitePx": 0.4,
+      "quelle": "02-UI-SPEC.md"
+    }
+  ],
+  "schriften": [
+    {
+      "familie": "Inter",
+      "quelle": "verzeichnis",
+      "url": "https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap",
+      "gewichte": [
+        "400",
+        "500",
+        "600"
+      ]
+    },
+    {
+      "familie": "Fraunces",
+      "quelle": "verzeichnis",
+      "url": "https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap",
+      "gewichte": [
+        "400",
+        "600"
+      ]
+    },
+    {
+      "familie": "JetBrains Mono",
+      "quelle": "verzeichnis",
+      "url": "https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap",
+      "gewichte": [
+        "400"
+      ]
+    }
+  ],
+  "formen": [
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(5) ×5",
+      "radius": "inherit",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(13) ×5",
+      "radius": "20px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(0) ×4",
+      "radius": "999px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": "Eingabefeld ×2",
+      "radius": "14 dp",
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Reiter, Chip, Stufen-Etikett ×2",
+      "radius": "vollrund",
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(14) ×2",
+      "radius": "24px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": "Karte",
+      "radius": "20 dp",
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": "Dialog",
+      "radius": "24 dp",
+      "quelle": "02-UI-SPEC.md"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(4)",
+      "radius": "50%",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(7)",
+      "radius": "20px 20px 6px 20px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(8)",
+      "radius": "20px 20px 20px 6px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(11)",
+      "radius": "14px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(12)",
+      "radius": "9999px",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:radius(15)",
+      "radius": "0",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    }
+  ],
+  "effekte": [
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:shadow(0) ×2",
+      "art": "shadow",
+      "css": "0 6px 24px rgba(0, 0, 0, 0.28)",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(7) ×2",
+      "art": "gradient",
+      "css": "background-image: linear-gradient(145deg, color-mix(in srgb, var(--Aktion-gedeckt) 88%, var(--Text) 6%), var(--Aktion-gedeckt))",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:shadow(2)",
+      "art": "shadow",
+      "css": "0 0 20px color-mix(in srgb, currentColor 18%, transparent), inset 0 1px 0 color-mix(in srgb, currentColor 18%, transparent)",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(3)",
+      "art": "gradient",
+      "css": "background-image: linear-gradient(\n        to right,\n        var(--rand) 0 1px,\n        transparent 1px calc(100% / 12)\n      ),\n      repeating-linear-gradient(\n        to right,\n        var(--gedaempft) 0 1px,\n        transparent 1px calc(100% / 6)\n      )",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(4)",
+      "art": "gradient",
+      "css": "background-image: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--aktion) 18%, transparent) 0, transparent 32%),\n    radial-gradient(circle at 0% 82%, color-mix(in srgb, var(--erledigt) 12%, transparent) 0, transparent 28%),\n    var(--grund)",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(5)",
+      "art": "gradient",
+      "css": "background-image: linear-gradient(145deg, color-mix(in srgb, var(--aktion), var(--text) 10%), var(--aktion) 58%, color-mix(in srgb, var(--aktion), #000000 16%))",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(6)",
+      "art": "gradient",
+      "css": "background-image: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--Aktion) 18%, transparent) 0, transparent 32%),\n    radial-gradient(circle at 0% 82%, color-mix(in srgb, var(--Erledigt) 12%, transparent) 0, transparent 28%),\n    var(--Grund)",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    },
+    {
+      "name": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html:gradient(9)",
+      "art": "gradient",
+      "css": "background-image: linear-gradient(145deg, color-mix(in srgb, var(--Aktion), var(--Text) 10%), var(--Aktion) 58%, color-mix(in srgb, var(--Aktion), #000000 16%))",
+      "quelle": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html"
+    }
+  ],
+  "assets": [],
+  "texte": [],
+  "dateien": [
+    {
+      "pfad": "00-PROJEKT.md",
+      "bytes": 7972
+    },
+    {
+      "pfad": "01-FUNKTIONS-SPEC.md",
+      "bytes": 35729
+    },
+    {
+      "pfad": "02-UI-SPEC.md",
+      "bytes": 19679
+    },
+    {
+      "pfad": "03-MOTION-SPEC.md",
+      "bytes": 10327
+    },
+    {
+      "pfad": "LIESMICH.md",
+      "bytes": 3733
+    },
+    {
+      "pfad": "SPEC.md",
+      "bytes": 76019
+    },
+    {
+      "pfad": ".werft-generated/019fe79c-9efe-757f-867f-19f80caa5a78/1/design.html",
+      "bytes": 225274
+    }
+  ],
+  "hinweise": [
+    "Design-Fakten stammen aus dem Spec-Paket (00-PROJEKT.md, 01-FUNKTIONS-SPEC.md, 02-UI-SPEC.md, 03-MOTION-SPEC.md), nicht aus Quellcode: die Software existiert noch nicht.",
+    "Funktionen aus dem Spec — das ausloesende Bedienelement traegt data-werft-funktion mit dieser Kennung: F-01 = Lage einsprechen; F-02 = Text mit KI verbessern; F-03 = Fünf Vorschläge erzeugen; F-04 = Vorschläge aktualisieren; F-05 = Vorschlag auf die Merkliste legen; F-06 = Experiment auswählen und starten; F-07 = To-Do-Liste des Tages; F-08 = Aufgabe abhaken; F-09 = Gespräch zum Experiment; F-10 = Auswertung einsprechen; F-11 = KI-Auswertung erzeugen; F-12 = Auswertung vorlesen; F-13 = Experiment abschließen; F-14 = Logbuch fortschreiben; F-15 = Tagesverdichtung nach 15 Tagen; F-16 = Logbuch-Eintrag ändern oder löschen; F-17 = Erkenntnisse fortschreiben; F-18 = Merkliste: eigenes Experiment anlegen; F-19 = Merkliste: Eintrag löschen; F-20 = Wünsche & Ziele pflegen; F-21 = Selbstbild pflegen; F-22 = Modell und Effort wählen; F-23 = Stimme und Vorlesen einstellen; F-24 = Zugänge einrichten; F-25 = Erinnerungen einstellen; F-26 = Erscheinung umschalten"
+  ]
+}

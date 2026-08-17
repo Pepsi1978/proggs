@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="de" data-werft-theme="22hell" data-theme="light" style="color-scheme: light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimente-SPEC-v1 — Auswertung — 2.2 Hell</title>
+<link rel="stylesheet" href="../design.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+.werft-screen { display: block !important; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="werft-screens" style="width: 412px;">
+<section class="werft-screen" data-screen-id="B-03" data-screen-name="Auswertung" style="width: 1440px; min-height: 900px;">
+<section class="werft-b03" id="werft-b03-screen" data-werft-screen="B-03" aria-labelledby="werft-b03-title">
+  <header class="werft-b03__topbar">
+    <button
+      class="werft-b03__back werft-b03__state-layer"
+      type="button"
+      aria-label="Zurück"
+      data-werft-navigate="B-01"
+    >
+      <svg class="werft-b03__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"></path>
+      </svg>
+    </button>
+    <h1 class="werft-b03__title" id="werft-b03-title">Wie ist es gelaufen?</h1>
+  </header>
+
+  <main class="werft-b03__main">
+    <section class="werft-b03__section" id="werft-b03-experiment" aria-labelledby="werft-b03-experiment-title">
+      <h2 class="werft-b03__experiment-title" id="werft-b03-experiment-title">⟨Experimenttitel⟩</h2>
+
+      <div class="werft-b03__metadata">
+        <span>Tag 2 von 3</span>
+        <span>3 von 5 erledigt</span>
+      </div>
+
+      <div class="werft-b03__capture" id="werft-b03-capture">
+        <button
+          class="werft-b03__mic werft-b03__state-layer"
+          id="werft-b03-mic"
+          type="button"
+          aria-label="Auswertung einsprechen"
+          aria-pressed="false"
+          data-werft-funktion="F-10"
+        >
+          <svg class="werft-b03__mic-icon werft-b03__mic-start" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14q1.25 0 2.125-.875T15 11V5q0-1.25-.875-2.125T12 2 9.875 2.875 9 5v6q0 1.25.875 2.125T12 14Zm-1 7v-3.075q-2.6-.35-4.3-2.325T5 11h2q0 2.075 1.463 3.538T12 16q2.075 0 3.538-1.463T17 11h2q0 2.6-1.7 4.575T13 17.925V21h-2Z"></path>
+          </svg>
+          <svg class="werft-b03__mic-icon werft-b03__mic-stop" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+          </svg>
+        </button>
+      </div>
+
+      <div class="werft-b03__transcript" id="werft-b03-transcript" hidden>
+        <textarea
+          class="werft-b03__textarea"
+          id="werft-b03-textarea"
+          aria-label="Auswertungstext"
+          data-werft-funktion="Auswertungstext bearbeiten"
+        ></textarea>
+
+        <div class="werft-b03__actions">
+          <button
+            class="werft-b03__button werft-b03__button--text werft-b03__state-layer"
+            id="werft-b03-improve"
+            type="button"
+            data-werft-funktion="F-02"
+          >Text mit KI verbessern</button>
+
+          <button
+            class="werft-b03__button werft-b03__button--filled werft-b03__state-layer"
+            id="werft-b03-continue"
+            type="button"
+            data-werft-funktion="F-11"
+          >Weiter</button>
+        </div>
+      </div>
+
+      <div class="werft-b03__response" id="werft-b03-response" aria-live="polite" hidden>
+        <div class="werft-b03__loading-card" id="werft-b03-loading" hidden>
+          <div class="werft-b03__waiting-bar" aria-hidden="true">
+            <span class="werft-b03__waiting-strip"></span>
+          </div>
+          <p class="werft-b03__waiting-text">Ich sehe mir deine letzten Tage an …</p>
+        </div>
+
+        <div class="werft-b03__answer-shell" id="werft-b03-answer-shell" hidden>
+          <article class="werft-b03__answer-card">
+            <div class="werft-b03__answer-icons">
+              <svg class="werft-b03__ai-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m19 9-1.25-2.75L15 5l2.75-1.25L19 1l1.25 2.75L23 5l-2.75 1.25L19 9Zm-7 12-2.5-5.5L4 13l5.5-2.5L12 5l2.5 5.5L20 13l-5.5 2.5L12 21ZM5 8 3.75 5.25 1 4l2.75-1.25L5 0l1.25 2.75L9 4 6.25 5.25 5 8Z"></path>
+              </svg>
+              <button
+                class="werft-b03__speaker werft-b03__state-layer"
+                id="werft-b03-speaker"
+                type="button"
+                aria-label="Auswertung vorlesen"
+                aria-pressed="false"
+                data-werft-funktion="F-12"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 15V9h4l5-5v16l-5-5H3Zm11.5 1.5v-2q1.05-.475 1.775-1.375T17 11q0-1.225-.725-2.125T14.5 7.5v-2q1.9.55 3.2 2.075T19 11q0 1.9-1.3 3.425T14.5 16.5Zm0 4.1v-2.05q2.75-.625 4.625-2.75T21 11q0-2.675-1.875-4.8T14.5 3.45V1.4q3.6.65 6.05 3.35T23 11q0 3.55-2.45 6.25T14.5 20.6Z"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="werft-b03__answer-text" id="werft-b03-answer-text">⟨KI-Auswertung⟩</p>
+          </article>
+        </div>
+
+        <article class="werft-b03__error-card" id="werft-b03-error" hidden>
+          <p class="werft-b03__error-text">Da war nichts zu hören.</p>
+          <button
+            class="werft-b03__button werft-b03__button--text werft-b03__state-layer werft-b03__retry"
+            id="werft-b03-retry"
+            type="button"
+            data-werft-funktion="F-10"
+          >Nochmal versuchen</button>
+        </article>
+      </div>
+
+      <button
+        class="werft-b03__button werft-b03__button--text werft-b03__state-layer werft-b03__skip"
+        id="werft-b03-skip"
+        type="button"
+        data-werft-funktion="Zum nächsten Experiment springen"
+      >Überspringen</button>
+    </section>
+
+    <div class="werft-b03__finished" id="werft-b03-finished" hidden>
+      <button
+        class="werft-b03__button werft-b03__button--filled werft-b03__state-layer"
+        type="button"
+        data-werft-navigate="B-01"
+      >Fertig</button>
+    </div>
+  </main>
+</section>
+
+<script>
+  (() => {
+    const root = document.getElementById("werft-b03-screen");
+    if (!root) return;
+
+    const experiment = root.querySelector("#werft-b03-experiment");
+    const finished = root.querySelector("#werft-b03-finished");
+    const capture = root.querySelector("#werft-b03-capture");
+    const mic = root.querySelector("#werft-b03-mic");
+    const transcript = root.querySelector("#werft-b03-transcript");
+    const textarea = root.querySelector("#werft-b03-textarea");
+    const improve = root.querySelector("#werft-b03-improve");
+    const next = root.querySelector("#werft-b03-continue");
+    const skip = root.querySelector("#werft-b03-skip");
+    const response = root.querySelector("#werft-b03-response");
+    const loading = root.querySelector("#werft-b03-loading");
+    const answerShell = root.querySelector("#werft-b03-answer-shell");
+    const answerText = root.querySelector("#werft-b03-answer-text");
+    const error = root.querySelector("#werft-b03-error");
+    const retry = root.querySelector("#werft-b03-retry");
+    const speaker = root.querySelector("#werft-b03-speaker");
+
+    let recording = false;
+    let originalText = "";
+    let improved = false;
+    let loadingTimer = 0;
+    let fadeTimer = 0;
+
+    const stopSpeech = () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      speaker.classList.remove("is-speaking");
+      speaker.setAttribute("aria-pressed", "false");
+    };
+
+    const clearTimers = () => {
+      window.clearTimeout(loadingTimer);
+      window.clearTimeout(fadeTimer);
+    };
+
+    mic.addEventListener("click", () => {
+      if (!recording) {
+        recording = true;
+        mic.classList.add("is-recording");
+        mic.setAttribute("aria-pressed", "true");
+        mic.setAttribute("aria-label", "Aufnahme stoppen");
+        return;
+      }
+
+      recording = false;
+      mic.classList.remove("is-recording");
+      mic.setAttribute("aria-pressed", "false");
+      mic.setAttribute("aria-label", "Auswertung einsprechen");
+      capture.hidden = true;
+      transcript.hidden = false;
+      textarea.focus();
+    });
+
+    improve.addEventListener("click", () => {
+      if (!improved) {
+        originalText = textarea.value;
+        const trimmed = textarea.value.trim();
+        if (trimmed) {
+          textarea.value =
+            trimmed.charAt(0).toUpperCase() +
+            trimmed.slice(1) +
+            (/[.!?…]$/.test(trimmed) ? "" : ".");
+        }
+        improved = true;
+        improve.textContent = "Zurücknehmen";
+      } else {
+        textarea.value = originalText;
+        improved = false;
+        improve.textContent = "Text mit KI verbessern";
+      }
+    });
+
+    next.addEventListener("click", () => {
+      clearTimers();
+      stopSpeech();
+      response.hidden = false;
+      answerShell.hidden = true;
+      error.hidden = true;
+      loading.classList.remove("is-ending");
+
+      if (!textarea.value.trim()) {
+        loading.hidden = true;
+        error.hidden = false;
+        return;
+      }
+
+      loading.hidden = false;
+
+      loadingTimer = window.setTimeout(() => {
+        loading.classList.add("is-ending");
+
+        fadeTimer = window.setTimeout(() => {
+          loading.hidden = true;
+          loading.classList.remove("is-ending");
+          answerText.textContent = "⟨KI-Auswertung⟩";
+          answerShell.hidden = false;
+        }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 70 : 140);
+      }, 1800);
+    });
+
+    retry.addEventListener("click", () => {
+      clearTimers();
+      response.hidden = true;
+      error.hidden = true;
+      capture.hidden = false;
+      transcript.hidden = true;
+      recording = false;
+      mic.classList.remove("is-recording");
+      mic.setAttribute("aria-pressed", "false");
+      mic.setAttribute("aria-label", "Auswertung einsprechen");
+      mic.focus();
+    });
+
+    speaker.addEventListener("click", () => {
+      if (!("speechSynthesis" in window)) return;
+
+      if (speaker.classList.contains("is-speaking")) {
+        stopSpeech();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(answerText.textContent);
+      utterance.lang = "de-DE";
+      utterance.onend = stopSpeech;
+      utterance.onerror = stopSpeech;
+      speaker.classList.add("is-speaking");
+      speaker.setAttribute("aria-pressed", "true");
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+
+    skip.addEventListener("click", () => {
+      clearTimers();
+      stopSpeech();
+      experiment.hidden = true;
+      finished.hidden = false;
+      const finishButton = finished.querySelector("button");
+      if (finishButton) finishButton.focus();
+    });
+  })();
+</script>
+</section>
+</div>
+</body>
+</html>
