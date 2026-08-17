@@ -1,7 +1,5 @@
 package de.frank.perfectmoment.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
@@ -31,23 +30,15 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.zIndex
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.ui.theme.Inter
@@ -60,11 +51,12 @@ import de.frank.perfectmoment.ui.theme.PmTextStyles
  * füllen; vorgelesen wird er mit derselben Taktung wie jeder andere Verlauf.
  */
 @Composable
-fun ReadingSection(viewModel: AppViewModel, onDeleteRequest: (SessionEntity) -> Unit) {
+fun ReadingSection(
+    viewModel: AppViewModel,
+    reorder: ReorderState,
+    onDeleteRequest: (SessionEntity) -> Unit,
+) {
     val colors = LocalPmColors.current
-    var draggedSessionId by remember { mutableStateOf<Long?>(null) }
-    // Die Zeilen sind verschieden hoch, darum merkt sich der Bereich jede Höhe für das Ziehen.
-    val rowHeights = remember { mutableStateMapOf<Long, Float>() }
     Column(Modifier.fillMaxWidth().padding(top = 26.dp)) {
         SectionLabel("Eigene Sessions", Modifier.padding(start = 8.dp, bottom = 6.dp), decorated = true)
         Text(
@@ -75,68 +67,24 @@ fun ReadingSection(viewModel: AppViewModel, onDeleteRequest: (SessionEntity) -> 
             modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
         )
         viewModel.readingSessions.forEach { session ->
-            var dragY by remember(session.id) { mutableStateOf(0f) }
-            val isDragging = draggedSessionId == session.id
-            val rowAlpha by animateFloatAsState(
-                if (draggedSessionId == null || isDragging) 1f else 0.45f,
-                label = "Session Deckkraft",
-            )
-            val rowScale by animateFloatAsState(
-                if (isDragging) 1.035f else 1f,
-                label = "Session Größe",
-            )
-            Box(
-                Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                    .onGloballyPositioned { rowHeights[session.id] = it.size.height.toFloat() }
-                    .zIndex(if (isDragging) 1f else 0f)
-                    .graphicsLayer {
-                        translationY = if (isDragging) dragY else 0f
-                        alpha = rowAlpha
-                        scaleX = rowScale
-                        scaleY = rowScale
-                    },
-            ) {
-                ReadingRow(
-                    session = session,
-                    onClick = { viewModel.openReadingDetail(session.id) },
-                    onDelete = { onDeleteRequest(session) },
-                    dragModifier = Modifier.pointerInput(session.id) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { draggedSessionId = session.id },
-                            onDragEnd = {
-                                dragY = 0f
-                                draggedSessionId = null
-                                viewModel.persistReadingSessionOrder()
-                            },
-                            onDragCancel = {
-                                dragY = 0f
-                                draggedSessionId = null
-                                viewModel.persistReadingSessionOrder()
-                            },
-                        ) { change, amount ->
-                            change.consume()
-                            dragY += amount.y
-                            var index = viewModel.readingSessions.indexOfFirst { it.id == session.id }
-                            if (index < 0) return@detectDragGesturesAfterLongPress
-                            while (index < viewModel.readingSessions.lastIndex) {
-                                val below = viewModel.readingSessions[index + 1].id
-                                val step = rowHeights[below] ?: 0f
-                                if (step <= 0f || dragY <= step / 2f) break
-                                viewModel.moveReadingSession(index, index + 1)
-                                dragY -= step
-                                index++
-                            }
-                            while (index > 0) {
-                                val above = viewModel.readingSessions[index - 1].id
-                                val step = rowHeights[above] ?: 0f
-                                if (step <= 0f || dragY >= -step / 2f) break
-                                viewModel.moveReadingSession(index, index - 1)
-                                dragY += step
-                                index--
-                            }
-                        }
-                    },
-                )
+            key(session.id) {
+                Box(
+                    Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        .reorderRow(reorder, session.id),
+                ) {
+                    ReadingRow(
+                        session = session,
+                        onClick = { viewModel.openReadingDetail(session.id) },
+                        onDelete = { onDeleteRequest(session) },
+                        dragModifier = reorderHandle(
+                            state = reorder,
+                            id = session.id,
+                            order = { viewModel.readingSessions.map(SessionEntity::id) },
+                            onMove = viewModel::moveReadingSession,
+                            onDrop = viewModel::persistReadingSessionOrder,
+                        ),
+                    )
+                }
             }
         }
         AddCard("Neuer Vorlese-Verlauf", viewModel::createReadingSession)
@@ -245,15 +193,19 @@ fun ReadingDetailScreen(
 ) {
     val colors = LocalPmColors.current
     val detail = viewModel.historyDetail
-    var draggedQuestionId by remember { mutableStateOf<Long?>(null) }
-    // Die Fragen sind verschieden hoch, darum merkt sich die Liste jede Höhe für das Ziehen.
-    val questionHeights = remember { mutableStateMapOf<Long, Float>() }
+    val reorder = rememberReorderState()
+    val listState = rememberLazyListState()
+    ReorderAutoScroll(reorder, listState)
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("", viewModel::back)
         if (detail == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingDots() }
         } else {
-            LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp)) {
+            LazyColumn(
+                Modifier.reorderViewport(reorder),
+                state = listState,
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
+            ) {
                 item {
                     HistoryTitleCard(
                         title = viewModel.historyTitleDraft,
@@ -325,26 +277,9 @@ fun ReadingDetailScreen(
                     }
                 }
                 items(detail.questions, key = QuestionEntity::id) { question ->
-                    var dragY by remember(question.id) { mutableStateOf(0f) }
-                    val isDragging = draggedQuestionId == question.id
-                    val cardAlpha by animateFloatAsState(
-                        if (draggedQuestionId == null || isDragging) 1f else 0.45f,
-                        label = "Frage Deckkraft",
-                    )
-                    val cardScale by animateFloatAsState(
-                        if (isDragging) 1.035f else 1f,
-                        label = "Frage Größe",
-                    )
                     Box(
                         Modifier.fillMaxWidth().padding(bottom = 10.dp)
-                            .onGloballyPositioned { questionHeights[question.id] = it.size.height.toFloat() }
-                            .zIndex(if (isDragging) 1f else 0f)
-                            .graphicsLayer {
-                                translationY = if (isDragging) dragY else 0f
-                                alpha = cardAlpha
-                                scaleX = cardScale
-                                scaleY = cardScale
-                            },
+                            .reorderRow(reorder, question.id),
                     ) {
                         PmCard(
                             Modifier.fillMaxWidth()
@@ -369,43 +304,13 @@ fun ReadingDetailScreen(
                                     Icons.Outlined.DragIndicator,
                                     "Zum Sortieren halten und ziehen",
                                     tint = colors.text3,
-                                    modifier = Modifier.size(20.dp).pointerInput(question.id) {
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = { draggedQuestionId = question.id },
-                                            onDragEnd = {
-                                                dragY = 0f
-                                                draggedQuestionId = null
-                                                viewModel.persistReadingQuestionOrder()
-                                            },
-                                            onDragCancel = {
-                                                dragY = 0f
-                                                draggedQuestionId = null
-                                                viewModel.persistReadingQuestionOrder()
-                                            },
-                                        ) { change, amount ->
-                                            change.consume()
-                                            dragY += amount.y
-                                            var index = viewModel.readingQuestions
-                                                .indexOfFirst { it.id == question.id }
-                                            if (index < 0) return@detectDragGesturesAfterLongPress
-                                            while (index < viewModel.readingQuestions.lastIndex) {
-                                                val below = viewModel.readingQuestions[index + 1].id
-                                                val step = questionHeights[below] ?: 0f
-                                                if (step <= 0f || dragY <= step / 2f) break
-                                                viewModel.moveReadingQuestion(index, index + 1)
-                                                dragY -= step
-                                                index++
-                                            }
-                                            while (index > 0) {
-                                                val above = viewModel.readingQuestions[index - 1].id
-                                                val step = questionHeights[above] ?: 0f
-                                                if (step <= 0f || dragY >= -step / 2f) break
-                                                viewModel.moveReadingQuestion(index, index - 1)
-                                                dragY += step
-                                                index--
-                                            }
-                                        }
-                                    },
+                                    modifier = reorderHandle(
+                                        state = reorder,
+                                        id = question.id,
+                                        order = { viewModel.readingQuestions.map(QuestionEntity::id) },
+                                        onMove = viewModel::moveReadingQuestion,
+                                        onDrop = viewModel::persistReadingQuestionOrder,
+                                    ).size(20.dp),
                                 )
                                 Icon(
                                     Icons.Outlined.Delete,

@@ -973,6 +973,9 @@ fun HistoryScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
     var pendingDelete by remember { mutableStateOf<SessionEntity?>(null) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    val readingReorder = rememberReorderState()
+    val historyListState = rememberLazyListState()
+    ReorderAutoScroll(readingReorder, historyListState)
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Verlauf",
@@ -1045,6 +1048,8 @@ fun HistoryScreen(viewModel: AppViewModel) {
         val sortedSessions = viewModel.sortedSessions
         val topSessions = sortedSessions.take(3)
         LazyColumn(
+            Modifier.reorderViewport(readingReorder),
+            state = historyListState,
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -1136,7 +1141,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
             }
             // Der Vorlese-Bereich steht immer ganz unten — als letzter Verlauf im Verlauf.
             item(key = "reading-section") {
-                ReadingSection(viewModel) { pendingDelete = it }
+                ReadingSection(viewModel, readingReorder) { pendingDelete = it }
             }
         }
     }
