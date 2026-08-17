@@ -345,8 +345,11 @@ class Ablage(
         if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return false
         val experiment = db.experimente().einer(experimentId) ?: return false
         if (experiment.state != ExperimentZustand.ANSTEHEND) return false
+        // Das frisch Gestartete kommt oben im Abschnitt „Läuft“ an — sonst stünde es an der
+        // Stelle, die es unter „Steht an“ hatte, also irgendwo mittendrin.
+        val obenauf = (db.experimente().kleinsterRangLaufend() ?: 0) - 1
         db.experimente().aendere(
-            experiment.copy(state = ExperimentZustand.LAEUFT, startedAt = tag),
+            experiment.copy(state = ExperimentZustand.LAEUFT, startedAt = tag, order = obenauf),
         )
         return true
     }
@@ -369,11 +372,23 @@ class Ablage(
     // --- F-38 / F-39 --------------------------------------------------------------------
 
     /**
-     * F-38 — die Reihenfolge unter „Steht an“ ändern. Nur dieser Abschnitt ist sortierbar;
-     * laufende Experimente ordnen sich nach ihrem Startzeitpunkt.
+     * F-38 — die Reihenfolge unter „Läuft“ ändern. Beide Abschnitte sind sortierbar; jeder
+     * für sich, denn beide zählen ihre Ränge getrennt.
+     */
+    suspend fun sortiereLaufende(experimentId: Long, nachIndex: Int) {
+        ordneNeu(db.experimente().laufende(), experimentId, nachIndex)
+    }
+
+    /**
+     * F-38 — die Reihenfolge unter „Steht an“ ändern.
      */
     suspend fun sortiere(experimentId: Long, nachIndex: Int) {
-        val liste = db.experimente().anstehende().toMutableList()
+        ordneNeu(db.experimente().anstehende(), experimentId, nachIndex)
+    }
+
+    /** Der gemeinsame Handgriff beider Abschnitte: verschieben und alle Ränge neu vergeben. */
+    private suspend fun ordneNeu(sortiert: List<Experiment>, experimentId: Long, nachIndex: Int) {
+        val liste = sortiert.toMutableList()
         val von = liste.indexOfFirst { it.id == experimentId }
         if (von < 0) return
         val nach = nachIndex.coerceIn(0, liste.size - 1)

@@ -97,13 +97,18 @@ interface VorschlaegeDao {
 interface ExperimenteDao {
     /**
      * Abschnitt „Läuft“ des Monitors — höchstens drei, das jüngst gestartete oben (F-34).
-     * Laufende ordnen sich nach ihrem Startzeitpunkt und sind nicht verschiebbar (F-38).
+     * Auch Laufende stehen in Franks eigener Reihenfolge (F-38): der Rang gewinnt, erst
+     * danach entscheidet der Startzeitpunkt.
      */
-    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY startedAt DESC, id DESC")
+    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY order_index ASC, startedAt DESC, id DESC")
     fun beobachteLaufende(): Flow<List<Experiment>>
 
-    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY startedAt DESC, id DESC")
+    @Query("SELECT * FROM experimente WHERE state = 'LAEUFT' ORDER BY order_index ASC, startedAt DESC, id DESC")
     suspend fun laufende(): List<Experiment>
+
+    /** F-38 — auch der Abschnitt „Läuft“ hat eine eigene Reihenfolge; neu Gestartetes kommt oben an. */
+    @Query("SELECT MIN(order_index) FROM experimente WHERE state = 'LAEUFT'")
+    suspend fun kleinsterRangLaufend(): Int?
 
     /** Abschnitt „Steht an“ — beliebig viele, in Franks eigener Reihenfolge (F-38). */
     @Query("SELECT * FROM experimente WHERE state = 'ANSTEHEND' ORDER BY order_index ASC, addedAt DESC")

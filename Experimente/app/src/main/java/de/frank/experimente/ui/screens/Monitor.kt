@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -195,6 +196,8 @@ fun Monitor(modell: AppViewModel) {
                     modell = modell,
                     offen = aufgeklappt == experiment.id,
                     funkelt = funkelt == experiment.id,
+                    nr = laufende.indexOf(experiment),
+                    anzahl = laufende.size,
                 )
                 }
             }
@@ -249,12 +252,27 @@ private fun Laufkarte(
     modell: AppViewModel,
     offen: Boolean,
     funkelt: Boolean,
+    nr: Int,
+    anzahl: Int,
 ) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
     val stufe = LocalEffektstufe.current
     val kippung = neigung(stufe)
     val quelle = merkeDruck()
+    val dichte = LocalDensity.current
+
+    // F-38 — auch laufende Karten lassen sich umsortieren: langer Druck auf den Griff, dann
+    // ziehen. Die Schrittweite ist die gemessene Höhe der Karte plus der Abstand der Liste —
+    // eine feste Weite ginge daneben, sobald eine Karte aufgeklappt ist.
+    var ziehweg by remember { mutableFloatStateOf(0f) }
+    var kartenhoehe by remember { mutableIntStateOf(0) }
+    val zieht = ziehweg != 0f
+    val hebung by animateFloatAsState(
+        targetValue = if (zieht) 1.02f else 1f,
+        animationSpec = tween(dauer(Bewegung.ABHEBEN, stufe), easing = Bewegung.ruhig),
+        label = "abheben-lauf",
+    )
 
     val heutige = modell.heutigeAufgaben(experiment)
     val fertig = heutige.count { it.doneAt != null }
@@ -285,10 +303,14 @@ private fun Laufkarte(
     Box(
         Modifier
             .fillMaxWidth()
+            .onSizeChanged { kartenhoehe = it.height }
             .graphicsLayer {
                 rotationX = kippung.umX
                 rotationY = kippung.umY
                 cameraDistance = 12f * density
+                translationY = ziehweg
+                scaleX = hebung
+                scaleY = hebung
             }
             .federdruck(quelle)
             .then(
@@ -311,7 +333,32 @@ private fun Laufkarte(
             .clickable(interactionSource = quelle, indication = null) { modell.klappeUm(experiment.id) },
     ) {
         Column(Modifier.padding(21.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // F-38 — langer Druck auf den Griff, dann ziehen.
+                Icon(
+                    imageVector = Symbole.Griff,
+                    contentDescription = "Ziehen zum Umsortieren",
+                    tint = if (zieht) farben.aktion else farben.blass,
+                    modifier = Modifier
+                        .padding(top = 3.dp)
+                        .size(20.dp)
+                        .pointerInput(experiment.id, anzahl) {
+                            detectDragGesturesAfterLongPress(
+                                onDragEnd = {
+                                    val schrittweite = (kartenhoehe + with(dichte) { 12.dp.toPx() })
+                                        .coerceAtLeast(1f)
+                                    val schritte = Math.round(ziehweg / schrittweite)
+                                    ziehweg = 0f
+                                    if (schritte != 0) modell.sortiereLaufende(experiment, nr + schritte)
+                                },
+                                onDragCancel = { ziehweg = 0f },
+                            ) { _, weite -> ziehweg += weite.y }
+                        },
+                )
                 Column(Modifier.weight(1f)) {
                     Text(experiment.title, style = schriften.kartentitel, color = farben.text)
                     Row(

@@ -622,6 +622,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         }
     }
 
+    /** F-38 — die Reihenfolge unter „Läuft“ ändern. */
+    fun sortiereLaufende(experiment: Experiment, nachIndex: Int) {
+        viewModelScope.launch {
+            ablage.sortiereLaufende(experiment.id, nachIndex)
+            melde("Reihenfolge geändert.")
+        }
+    }
+
     /** F-39 — ein anstehendes Experiment aus dem Monitor nehmen. */
     fun nimmAusMonitor(experiment: Experiment, aufMerkliste: Boolean) {
         viewModelScope.launch {
