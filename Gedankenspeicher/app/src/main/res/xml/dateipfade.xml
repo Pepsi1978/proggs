@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- F-16: die Export-Datei liegt im Cache und wird von dort geteilt. -->
+    <cache-path name="export" path="export/" />
+</paths>
