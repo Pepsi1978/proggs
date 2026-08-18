@@ -58,7 +58,7 @@ internal fun DatenbankBestand.toTransfer(exportiertAm: Long): TransferDokument =
         MittelTransfer(it.id, it.name, it.loeslichkeit.name, it.darreichungsform.name, it.hersteller, it.durchfallrisiko, it.beistoffe, it.darreichungsformText, it.loeslichkeitKiErmittelt)
     },
     wirkstoffkomponenten = komponenten.map { WirkstoffkomponenteTransfer(it.id, it.mittelId, it.name, it.menge?.toPlainString(), it.einheit?.name) },
-    stacks = stacks.map { StackTransfer(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
+    stacks = stacks.map { StackTransfer(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung, it.gesperrt) },
     eintraege = eintraege.map {
         StackEintragTransfer(it.id, it.stackId, it.mittelId, it.frequenzTyp.name, it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis, it.frequenzText)
     },
@@ -81,7 +81,7 @@ internal fun TransferDokument.toBestand(): DatenbankBestand = DatenbankBestand(
     komponenten = wirkstoffkomponenten.map {
         WirkstoffkomponenteEntity(it.id, it.mittelId, it.name, it.menge?.let(::BigDecimal), it.einheit?.let { name -> enumValue<Einheit>(name) })
     },
-    stacks = stacks.map { StackEntity(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung) },
+    stacks = stacks.map { StackEntity(it.id, it.name, it.zeitpunkt, it.einnahmeHinweis, it.sortierung, it.gesperrt) },
     eintraege = eintraege.map {
         StackEintragEntity(it.id, it.stackId, it.mittelId, enumValue(it.frequenzTyp), it.alleNTage, it.aktiv, it.reihenfolge, it.gruppeId, it.zusatztext, it.offenerHinweis, it.frequenzText)
     },

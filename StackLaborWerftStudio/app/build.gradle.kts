@@ -38,9 +38,9 @@ android {
         applicationId = "de.frank.stacklabor.werftstudio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 44
-        versionName = "0.3.26"
-        buildConfigField("String", "VERSION_BUMPED_AT", quoted("15.08.2026, 13:29 Uhr"))
+        versionCode = 45
+        versionName = "0.3.27"
+        buildConfigField("String", "VERSION_BUMPED_AT", quoted("18.08.2026, 14:11 Uhr"))
         buildConfigField("String", "GOOGLE_TTS_API_KEY", quoted(googleTtsKey))
         buildConfigField("String", "QWEN_TTS_API_KEY", quoted(qwenTtsKey))
         buildConfigField("String", "QWEN_TTS_VOICE_ID", quoted(qwenVoiceId))
@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.serialization.json)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    implementation(libs.biometric)
 
     testImplementation(libs.junit)
     testImplementation(kotlin("test-junit"))

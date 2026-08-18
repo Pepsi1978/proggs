@@ -33,6 +33,9 @@ interface StackDao {
     @Delete
     suspend fun loescheStack(stack: StackEntity)
 
+    @Query("UPDATE stack SET gesperrt = :gesperrt WHERE id = :stackId")
+    suspend fun setzeGesperrt(stackId: String, gesperrt: Boolean)
+
     @Query("UPDATE stack SET sortierung = :position WHERE id = :stackId")
     suspend fun setzeStackPosition(stackId: String, position: Int)
 

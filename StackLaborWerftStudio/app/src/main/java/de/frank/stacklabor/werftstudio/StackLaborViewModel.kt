@@ -57,6 +57,7 @@ import de.frank.stacklabor.werftstudio.ui.model.DoseSummaryUi
 import de.frank.stacklabor.werftstudio.ui.model.DoseVariant
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationRunUi
 import de.frank.stacklabor.werftstudio.ui.model.EvaluationState
+import de.frank.stacklabor.werftstudio.ui.model.FingerprintPurpose
 import de.frank.stacklabor.werftstudio.ui.model.GoalUi
 import de.frank.stacklabor.werftstudio.ui.model.GoalInputState
 import de.frank.stacklabor.werftstudio.ui.model.HistoryChangeUi
@@ -149,6 +150,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var medicineDraft = MedicineDraft()
     private var undoAction: (suspend () -> Unit)? = null
     private val selectedHistoryIds = linkedSetOf<String>()
+    /** Die Startsperre wird pro App-Lauf genau einmal gestellt. */
+    private var startsperreGeprueft = false
+    /** Welcher Stack auf einen Fingerabdruck wartet, um sein Schloss umzulegen. */
+    private var wartenderSchlossStack: String? = null
 
     init {
         observeGlobalData()
@@ -179,14 +184,14 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }
             is StackLaborEvent.ChangeSearch -> mutableState.update { it.copy(searchQuery = event.query) }
-            is StackLaborEvent.ToggleMedicine -> launchAction {
+            is StackLaborEvent.ToggleMedicine -> if (!gesperrtGemeldet(event.stackId)) launchAction {
                 currentEntries.firstOrNull { it.stackId == event.stackId && it.mittelId == event.medicineId }?.let {
                     repository.setzeEintragAktiv(it.id, !it.aktiv)
                 }
             }
-            is StackLaborEvent.RemoveMedicineFromStack -> removeMedicineFromStack(event.stackId, event.medicineId)
-            is StackLaborEvent.ReorderMedicine -> reorderMedicine(event.stackId, event.medicineId, event.targetIndex)
-            is StackLaborEvent.ApplyMedicineOrder -> applyMedicineOrder(event.stackId, event.medicineIds)
+            is StackLaborEvent.RemoveMedicineFromStack -> if (!gesperrtGemeldet(event.stackId)) removeMedicineFromStack(event.stackId, event.medicineId)
+            is StackLaborEvent.ReorderMedicine -> if (!gesperrtGemeldet(event.stackId)) reorderMedicine(event.stackId, event.medicineId, event.targetIndex)
+            is StackLaborEvent.ApplyMedicineOrder -> if (!gesperrtGemeldet(event.stackId)) applyMedicineOrder(event.stackId, event.medicineIds)
             is StackLaborEvent.ApplyStackOrder -> launchAction { repository.sortiereStacks(event.stackIds) }
             is StackLaborEvent.EditGoal -> launchAction { repository.speichereZiel(Ziel(event.goalId, event.text.trim())) }
             is StackLaborEvent.BeginGoalDraft -> beginGoalDraft(event.text)
@@ -215,11 +220,20 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.SaveApiKey -> saveApiKey(event.keyId, event.value)
             StackLaborEvent.LoadClonedVoices -> loadClonedVoices()
             is StackLaborEvent.RemoveQuestion -> removeQuestion(event.questionId)
-            is StackLaborEvent.SaveStack -> saveStack(event.stackId)
-            is StackLaborEvent.DeleteStack -> launchAction("Stack gelöscht") { repository.loescheStack(event.stackId) }
-            is StackLaborEvent.SaveMedicine -> saveMedicine(event.medicineId, event.stackId)
+            is StackLaborEvent.SaveStack -> if (!gesperrtGemeldet(event.stackId)) saveStack(event.stackId)
+            is StackLaborEvent.DeleteStack -> if (!gesperrtGemeldet(event.stackId)) launchAction("Stack gelöscht") { repository.loescheStack(event.stackId) }
+            is StackLaborEvent.ToggleStackLock -> toggleStackLock(event.stackId)
+            StackLaborEvent.ReportStackLocked -> message("Der Stack ist gesperrt. Öffne zuerst das Schloss.")
+            StackLaborEvent.ToggleFingerprint -> toggleFingerprint()
+            StackLaborEvent.RetryAppUnlock -> requestFingerprint(
+                FingerprintPurpose.AppStart,
+                "StackLabor entsperren",
+                "Bitte mit dem Fingerabdruck bestätigen.",
+            )
+            is StackLaborEvent.FingerprintResult -> fingerprintResult(event.purpose, event.granted, event.message)
+            is StackLaborEvent.SaveMedicine -> if (!gesperrtGemeldet(event.stackId)) saveMedicine(event.medicineId, event.stackId)
             is StackLaborEvent.DeleteMedicine -> launchAction("Mittel gelöscht") { repository.loescheMittel(event.medicineId, bestaetigt = true) }
-            is StackLaborEvent.AddMedicineToStack -> addMedicineToStack(event.stackId, event.medicineId)
+            is StackLaborEvent.AddMedicineToStack -> if (!gesperrtGemeldet(event.stackId)) addMedicineToStack(event.stackId, event.medicineId)
             is StackLaborEvent.AddGoal -> launchAction("Ziel gespeichert") {
                 repository.speichereZiel(Ziel(UUID.randomUUID().toString(), event.text.trim()))
             }
@@ -307,6 +321,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 medicineCount = entries.count { it.stackId == stack.id },
                 signal = result.sammelAmpel.toSignalState(),
                 counts = counts,
+                locked = stack.gesperrt,
             )
         }
         val usageByMedicine = entries.groupingBy { it.mittelId }.eachCount()
@@ -338,6 +353,9 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackName = selectedStack?.name ?: current.stackName,
                 stackTime = selectedStack?.zeitpunkt ?: current.stackTime,
                 stackNote = selectedStack?.einnahmeHinweis ?: current.stackNote,
+                stackLocked = selectedStack?.gesperrt ?: current.stackLocked,
+                fingerprintEnabled = settings.fingerabdruckAktiv,
+                appLocked = if (startsperreGeprueft) current.appLocked else settings.fingerabdruckAktiv,
                 catalogMedicines = catalogUi,
                 goals = goalCatalogUi,
                 dailyDoses = dailyDoses(
@@ -375,6 +393,16 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 codexModelLabel = settings.codexModell.substringAfterLast('-').replaceFirstChar(Char::uppercase),
                 codexReasoningLabel = settings.codexDenkstufe.reasoningLabel(),
             )
+        }
+        if (!startsperreGeprueft) {
+            startsperreGeprueft = true
+            if (settings.fingerabdruckAktiv) {
+                requestFingerprint(
+                    FingerprintPurpose.AppStart,
+                    "StackLabor entsperren",
+                    "Bitte mit dem Fingerabdruck bestätigen.",
+                )
+            }
         }
         applyTagEvaluation(tagEvaluation)
     }
@@ -439,6 +467,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 stackName = stack.name,
                 stackTime = stack.zeitpunkt,
                 stackNote = stack.einnahmeHinweis,
+                stackLocked = stack.gesperrt,
                 sortMode = if (snapshot.evaluation.third.ansicht == Sortieransicht.LOESLICHKEIT) SortMode.Loeslichkeit else SortMode.Einnahme,
                 solubilityFatFirst = snapshot.settings.loeslichkeitFettZuerst,
                 medicines = selectedMedicines,
@@ -900,10 +929,77 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Ein gesperrter Stack ist festgeschrieben — jede ändernde Aktion wird hier abgefangen. */
+    private fun istGesperrt(stackId: String?): Boolean =
+        stackId != null && stacks.firstOrNull { it.id == stackId }?.gesperrt == true
+
+    /** Meldet die Sperre und sagt zugleich, ob die Aktion abgebrochen werden muss. */
+    private fun gesperrtGemeldet(stackId: String?): Boolean {
+        if (!istGesperrt(stackId)) return false
+        message("Der Stack ist gesperrt. Öffne zuerst das Schloss.")
+        return true
+    }
+
+    private fun toggleStackLock(stackId: String) {
+        val stack = stacks.firstOrNull { it.id == stackId } ?: return
+        // Ist der Fingerabdruck eingeschaltet, darf das Schloss nur nach einer Prüfung umspringen.
+        if (settings.fingerabdruckAktiv) {
+            wartenderSchlossStack = stackId
+            requestFingerprint(
+                FingerprintPurpose.StackLock,
+                if (stack.gesperrt) "Stack entsperren" else "Stack sperren",
+                "Bitte mit dem Fingerabdruck bestätigen.",
+            )
+            return
+        }
+        setzeSchloss(stackId)
+    }
+
+    private fun setzeSchloss(stackId: String) = launchAction {
+        val stack = stacks.firstOrNull { it.id == stackId } ?: return@launchAction
+        repository.setzeStackGesperrt(stackId, !stack.gesperrt)
+        message(if (stack.gesperrt) "Stack entsperrt" else "Stack gesperrt")
+    }
+
+    private fun toggleFingerprint() {
+        val einschalten = !settings.fingerabdruckAktiv
+        requestFingerprint(
+            if (einschalten) FingerprintPurpose.Enable else FingerprintPurpose.Disable,
+            if (einschalten) "Fingerabdruck einrichten" else "Fingerabdruck abschalten",
+            "Bitte einmal mit dem Fingerabdruck bestätigen.",
+        )
+    }
+
+    private fun requestFingerprint(purpose: FingerprintPurpose, title: String, subtitle: String) {
+        sendEffect(StackLaborUiEffect.RequestFingerprint(purpose, title, subtitle))
+    }
+
+    private fun fingerprintResult(purpose: FingerprintPurpose, granted: Boolean, hinweis: String) {
+        if (!granted) {
+            wartenderSchlossStack = null
+            if (hinweis.isNotBlank()) message(hinweis)
+            return
+        }
+        when (purpose) {
+            FingerprintPurpose.AppStart -> mutableState.update { it.copy(appLocked = false) }
+            FingerprintPurpose.Enable -> launchAction("Fingerabdruck eingeschaltet") {
+                container.settings.setzeFingerabdruckAktiv(true)
+            }
+            FingerprintPurpose.Disable -> launchAction("Fingerabdruck abgeschaltet") {
+                container.settings.setzeFingerabdruckAktiv(false)
+            }
+            FingerprintPurpose.StackLock -> wartenderSchlossStack?.let { id ->
+                wartenderSchlossStack = null
+                setzeSchloss(id)
+            }
+        }
+    }
+
     private fun saveStack(stackId: String?) = launchAction("Stack gespeichert") {
         val id = stackId ?: UUID.randomUUID().toString()
         val position = stacks.firstOrNull { it.id == id }?.sortierung ?: ((stacks.maxOfOrNull { it.sortierung } ?: 0) + 1)
-        repository.speichereStack(Stack(id, stackDraft.name.trim(), stackDraft.time.trim(), stackDraft.note.trim(), position))
+        val gesperrt = stacks.firstOrNull { it.id == id }?.gesperrt ?: false
+        repository.speichereStack(Stack(id, stackDraft.name.trim(), stackDraft.time.trim(), stackDraft.note.trim(), position, gesperrt))
         selectedStackId.value = id
     }
 

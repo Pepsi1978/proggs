@@ -53,6 +53,7 @@ data class StackTransfer(
     val zeitpunkt: String = "",
     @SerialName("einnahme_hinweis") val einnahmeHinweis: String = "",
     val sortierung: Int,
+    val gesperrt: Boolean = false,
 )
 
 @Serializable

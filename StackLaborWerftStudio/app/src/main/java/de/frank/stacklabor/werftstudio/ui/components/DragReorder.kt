@@ -81,6 +81,9 @@ class ReorderState<T : Any> internal constructor(
     /** Wo der Finger im Sichtfenster steht — für das Weiterrollen am Rand. */
     internal var fingerY by mutableFloatStateOf(0f)
 
+    /** Ist das Ziehen erlaubt? Bei einem gesperrten Stack steht die Reihenfolge fest. */
+    internal var aktiv: Boolean by mutableStateOf(true)
+
     internal var onDropped: ((List<String>) -> Unit)? = null
     internal var onGrabbed: (() -> Unit)? = null
 
@@ -104,7 +107,7 @@ class ReorderState<T : Any> internal constructor(
     }
 
     /** Der lange Druck bleibt an der Liste verankert, auch wenn die gezogene Zeile umsortiert wird. */
-    fun dragModifier(): Modifier = Modifier.pointerInput(items.size) {
+    fun dragModifier(): Modifier = if (!aktiv) Modifier else Modifier.pointerInput(items.size, aktiv) {
         detectDragGesturesAfterLongPress(
             onDragStart = { position ->
                 val visibleItem = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
@@ -207,6 +210,7 @@ fun <T : Any> rememberReorder(
     keyOf: (T) -> String,
     listState: LazyListState,
     rowHeight: Dp,
+    enabled: Boolean = true,
     onGrabbed: () -> Unit = {},
     onDropped: (List<String>) -> Unit,
 ): ReorderState<T> {
@@ -214,6 +218,7 @@ fun <T : Any> rememberReorder(
     val state = remember(listState, rowHeightPx) { ReorderState(listState, keyOf, rowHeightPx) }
     state.onDropped = onDropped
     state.onGrabbed = onGrabbed
+    state.aktiv = enabled
     // Die Quelle wird bei JEDEM Durchlauf gesetzt, nicht in einem Effekt. Damit kann die
     // Anzeige gar nicht erst hinter der Wahrheit zurueckbleiben — etwa wenn die Sortierung
     // umgeschaltet wird, waehrend der Bildschirm offen ist.

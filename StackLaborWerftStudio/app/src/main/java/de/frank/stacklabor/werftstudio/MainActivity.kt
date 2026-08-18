@@ -7,11 +7,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
 import de.frank.stacklabor.werftstudio.service.tts.TtsPlaybackService
 import de.frank.stacklabor.werftstudio.ui.StackLaborApp
+import de.frank.stacklabor.werftstudio.ui.model.FingerprintPurpose
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiEffect
 import java.io.IOException
@@ -27,7 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private lateinit var viewModel: StackLaborViewModel
     private var pendingExport: String? = null
     private var pendingTextExport: String? = null
@@ -115,6 +118,7 @@ class MainActivity : ComponentActivity() {
                         StackLaborUiEffect.ResumeTts -> TtsPlaybackService.resume(this@MainActivity)
                         StackLaborUiEffect.StopTts -> TtsPlaybackService.stop(this@MainActivity)
                         StackLaborUiEffect.RequestMicrophonePermission -> requestMicrophonePermission()
+                        is StackLaborUiEffect.RequestFingerprint -> requestFingerprint(effect.purpose, effect.title, effect.subtitle)
                         is StackLaborUiEffect.Message -> showMessage(effect.text)
                     }
                 }
@@ -144,6 +148,59 @@ class MainActivity : ComponentActivity() {
         } else {
             microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    /**
+     * Zeigt die Fingerabdruck-Abfrage des Systems und meldet das Ergebnis zurück.
+     *
+     * Fehlt dem Gerät ein eingerichteter Fingerabdruck, wird das gesagt statt still zu scheitern.
+     */
+    private fun requestFingerprint(purpose: FingerprintPurpose, title: String, subtitle: String) {
+        val stufe = BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        when (BiometricManager.from(this).canAuthenticate(stufe)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> Unit
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                viewModel.onEvent(
+                    StackLaborEvent.FingerprintResult(purpose, false, "Auf diesem Gerät ist noch kein Fingerabdruck eingerichtet."),
+                )
+                return
+            }
+            else -> {
+                viewModel.onEvent(
+                    StackLaborEvent.FingerprintResult(purpose, false, "Dieses Gerät kann keinen Fingerabdruck prüfen."),
+                )
+                return
+            }
+        }
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    viewModel.onEvent(StackLaborEvent.FingerprintResult(purpose, true))
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    val abgebrochen = errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                        errorCode == BiometricPrompt.ERROR_CANCELED
+                    viewModel.onEvent(
+                        StackLaborEvent.FingerprintResult(purpose, false, if (abgebrochen) "" else errString.toString()),
+                    )
+                }
+
+                override fun onAuthenticationFailed() {
+                    // Ein einzelner Fehlversuch bricht nichts ab — das System fragt weiter.
+                }
+            },
+        )
+        prompt.authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle(title)
+                .setSubtitle(subtitle)
+                .setAllowedAuthenticators(stufe)
+                .build(),
+        )
     }
 
     private fun showMessage(text: String) {

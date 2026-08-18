@@ -71,8 +71,8 @@ internal fun Wirkstoffkomponente.toEntity(): WirkstoffkomponenteEntity = Wirksto
     einheit = einheit,
 )
 
-internal fun StackEntity.toDomain(): Stack = Stack(id, name, zeitpunkt, einnahmeHinweis, sortierung)
-internal fun Stack.toEntity(): StackEntity = StackEntity(id, name, zeitpunkt, einnahmeHinweis, sortierung)
+internal fun StackEntity.toDomain(): Stack = Stack(id, name, zeitpunkt, einnahmeHinweis, sortierung, gesperrt)
+internal fun Stack.toEntity(): StackEntity = StackEntity(id, name, zeitpunkt, einnahmeHinweis, sortierung, gesperrt)
 
 internal fun StackEintragMitDosenUndPartnern.toDomain(): StackEintrag = StackEintrag(
     id = eintrag.id,

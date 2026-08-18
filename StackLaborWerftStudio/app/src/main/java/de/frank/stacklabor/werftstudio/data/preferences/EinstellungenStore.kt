@@ -46,6 +46,8 @@ data class AppEinstellungen(
     val codexModell: String = "gpt-5.6-terra",
     val codexDenkstufe: String = "high",
     val bewegungReduziert: Boolean,
+    /** Ist die App durch den Fingerabdruck geschützt? */
+    val fingerabdruckAktiv: Boolean = false,
 )
 
 class EinstellungenStore(
@@ -95,6 +97,7 @@ class EinstellungenStore(
         schreibe(CODEX_DENKSTUFE, value)
     }
     suspend fun setzeBewegungReduziert(value: Boolean): Unit = schreibe(BEWEGUNG_REDUZIERT, value)
+    suspend fun setzeFingerabdruckAktiv(value: Boolean): Unit = schreibe(FINGERABDRUCK_AKTIV, value)
 
     private fun mappe(preferences: Preferences): AppEinstellungen = AppEinstellungen(
         erscheinung = enumMitCode(Erscheinung.entries, preferences[ERSCHEINUNG] ?: Erscheinung.HELL.code) { it.code },
@@ -113,6 +116,7 @@ class EinstellungenStore(
         codexModell = preferences[CODEX_MODELL] ?: "gpt-5.6-terra",
         codexDenkstufe = preferences[CODEX_DENKSTUFE] ?: "high",
         bewegungReduziert = preferences[BEWEGUNG_REDUZIERT] ?: systemBewegungReduziert,
+        fingerabdruckAktiv = preferences[FINGERABDRUCK_AKTIV] ?: false,
     )
 
     private suspend fun <T> schreibe(key: Preferences.Key<T>, value: T) {
@@ -140,6 +144,7 @@ class EinstellungenStore(
         val CODEX_MODELL = stringPreferencesKey("codex_modell")
         val CODEX_DENKSTUFE = stringPreferencesKey("codex_denkstufe")
         val BEWEGUNG_REDUZIERT = booleanPreferencesKey("bewegung_reduziert")
+        val FINGERABDRUCK_AKTIV = booleanPreferencesKey("fingerabdruck_aktiv")
 
         val CODEX_MODELLE = setOf("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna")
         val DENKSTUFEN = setOf("low", "medium", "high", "xhigh", "max")

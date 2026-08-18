@@ -21,6 +21,9 @@ enum class GoalInputState { Idle, Recording, Transcribing, Improving }
 
 enum class CodexLoginState { Waiting, Success, Expired, Denied, NetworkError }
 
+/** Wofür gerade ein Fingerabdruck verlangt wird. */
+enum class FingerprintPurpose { AppStart, Enable, Disable, StackLock }
+
 data class SignalCounts(
     val green: Int,
     val yellow: Int,
@@ -34,6 +37,8 @@ data class StackSummaryUi(
     val medicineCount: Int,
     val signal: SignalState,
     val counts: SignalCounts,
+    /** Gesperrter Stack: Reihenfolge und Bestand sind festgeschrieben. */
+    val locked: Boolean = false,
 )
 
 data class MedicineUi(
@@ -155,6 +160,12 @@ data class StackLaborUiState(
     val stackName: String = "",
     val stackTime: String = "",
     val stackNote: String = "",
+    /** Ist der gerade geöffnete Stack gesperrt? */
+    val stackLocked: Boolean = false,
+    /** Sicherheit: Fingerabdruck-Schutz eingeschaltet? */
+    val fingerprintEnabled: Boolean = false,
+    /** Sicherheit: Die App wartet auf den Fingerabdruck und zeigt solange nichts. */
+    val appLocked: Boolean = false,
     val medicineName: String = "",
     val medicineSolubilityAiState: MedicineSolubilityAiState = MedicineSolubilityAiState.Idle,
     val evaluationParagraphs: List<String> = emptyList(),
@@ -220,6 +231,8 @@ sealed interface StackLaborUiEffect {
     data object ResumeTts : StackLaborUiEffect
     data object StopTts : StackLaborUiEffect
     data object RequestMicrophonePermission : StackLaborUiEffect
+    /** Bittet die Activity, die Fingerabdruck-Abfrage anzuzeigen. */
+    data class RequestFingerprint(val purpose: FingerprintPurpose, val title: String, val subtitle: String) : StackLaborUiEffect
     data class Message(val text: String) : StackLaborUiEffect
 }
 
@@ -262,6 +275,16 @@ sealed interface StackLaborEvent {
     data class RemoveQuestion(val questionId: String) : StackLaborEvent
     data class SaveStack(val stackId: String?) : StackLaborEvent
     data class DeleteStack(val stackId: String) : StackLaborEvent
+    /** Schaltet das Schloss eines Stacks um — zu heißt: nichts mehr veränderbar. */
+    data class ToggleStackLock(val stackId: String) : StackLaborEvent
+    /** Sagt nur Bescheid, dass die Sperre gerade eine Bedienung verhindert. */
+    data object ReportStackLocked : StackLaborEvent
+    /** Schaltet den Fingerabdruck-Schutz ein oder aus. */
+    data object ToggleFingerprint : StackLaborEvent
+    /** Meldet das Ergebnis einer Fingerabdruck-Abfrage zurück. */
+    data class FingerprintResult(val purpose: FingerprintPurpose, val granted: Boolean, val message: String = "") : StackLaborEvent
+    /** Fordert den Fingerabdruck für den Start erneut an. */
+    data object RetryAppUnlock : StackLaborEvent
     data class SaveMedicine(val medicineId: String?, val stackId: String?) : StackLaborEvent
     data class DeleteMedicine(val medicineId: String) : StackLaborEvent
     data class AddMedicineToStack(val stackId: String, val medicineId: String) : StackLaborEvent

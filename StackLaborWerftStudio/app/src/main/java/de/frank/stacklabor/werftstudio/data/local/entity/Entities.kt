@@ -55,6 +55,7 @@ data class StackEntity(
     val zeitpunkt: String,
     val einnahmeHinweis: String,
     val sortierung: Int,
+    @androidx.room.ColumnInfo(defaultValue = "0") val gesperrt: Boolean = false,
 )
 
 @Entity(

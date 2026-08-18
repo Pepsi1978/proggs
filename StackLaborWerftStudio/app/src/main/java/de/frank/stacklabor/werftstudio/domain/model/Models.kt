@@ -93,6 +93,8 @@ data class Stack(
     val zeitpunkt: String = "",
     val einnahmeHinweis: String = "",
     val sortierung: Int,
+    /** Gesperrt heißt: Reihenfolge, Bestand und Angaben dieses Stacks sind festgeschrieben. */
+    val gesperrt: Boolean = false,
 )
 
 data class StackEintragDosis(

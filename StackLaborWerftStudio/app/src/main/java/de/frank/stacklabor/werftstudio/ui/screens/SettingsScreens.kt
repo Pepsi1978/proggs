@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Storage
@@ -170,6 +171,24 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                                 SettingsToggle(state.reducedMotion)
                             },
                             onClick = { callbacks.onEvent(StackLaborEvent.SelectSetting("reduced-motion")) },
+                        )
+                    }
+                }
+                item {
+                    SettingsGroup("Sicherheit", Icons.Default.Fingerprint) {
+                        SettingsItem(
+                            "Fingerabdruck",
+                            if (state.fingerprintEnabled) "Eingeschaltet" else "Ausgeschaltet",
+                            trailing = { SettingsToggle(state.fingerprintEnabled) },
+                            onClick = { callbacks.onEvent(StackLaborEvent.ToggleFingerprint) },
+                        )
+                        SettingsDivider()
+                        Text(
+                            "Ist der Fingerabdruck eingeschaltet, öffnet sich die App nur nach einer Prüfung — " +
+                                "und auch das Schloss eines Stacks springt erst nach einer Prüfung um.",
+                            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StackLaborTheme.colors.textMuted,
                         )
                     }
                 }

@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -130,6 +131,8 @@ fun GlassHeader(
     onOverflow: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     framedBack: Boolean = false,
+    /** Steht links neben den drei Punkten — etwa das Schloss eines Stacks. */
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = StackLaborTheme.colors
     Row(
@@ -176,6 +179,7 @@ fun GlassHeader(
             Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) Text(subtitle, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
         }
+        if (trailing != null) trailing()
         if (onOverflow != null) {
             IconTouchButton("Weitere Optionen", onOverflow) { Icon(Icons.Default.MoreVert, null, Modifier.size(24.dp)) }
         } else {
@@ -456,7 +460,13 @@ fun StackCard(
         Row(Modifier.fillMaxSize()) {
             SignalBar(stack.signal.color())
             Column(Modifier.weight(1f).padding(start = 12.dp, top = 7.dp, bottom = 7.dp)) {
-                Text(stack.name, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stack.name, Modifier.weight(1f, fill = false), style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (stack.locked) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(Icons.Default.Lock, "Gesperrt", Modifier.size(15.dp), tint = colors.green)
+                    }
+                }
                 Text(stack.meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
                 Spacer(Modifier.weight(1f))
                 SignalCountsRow(stack.counts)

@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
@@ -330,6 +332,9 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                 subtitle = state.stackTime,
                 onBack = callbacks.onBack,
                 onOverflow = { menuOpen = !menuOpen },
+                trailing = {
+                    StackLockButton(state.stackLocked) { callbacks.onEvent(StackLaborEvent.ToggleStackLock(stackId)) }
+                },
             )
             TargetStrip(state) { callbacks.onNavigate(StackLaborRoute.StackGoals(stackId, Origin.StackDetail)) }
             ToolsRow(state, searchOpen, { searchOpen = !searchOpen }, callbacks)
@@ -339,7 +344,7 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
             AdaptiveSplit(
                 narrow = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, fatFirst = state.solubilityFatFirst, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = if (state.evaluationState == EvaluationState.Running) 148.dp else 52.dp))
+                        MedicineList(stackId = stackId, filtered = filtered, sortMode = state.sortMode, fatFirst = state.solubilityFatFirst, evaluationId = state.latestEvaluationId, evaluationMeta = state.evaluationMeta, locked = state.stackLocked, callbacks = callbacks, onRequestDelete = { deleteCandidateId = it.id }, modifier = Modifier.fillMaxSize().padding(bottom = if (state.evaluationState == EvaluationState.Running) 148.dp else 52.dp))
                         EvaluateFooter(
                             callbacks = callbacks,
                             running = state.evaluationState == EvaluationState.Running,
@@ -347,13 +352,13 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                             animationsEnabled = animationsEnabled,
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
-                        BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
+                        BreathingFab("Mittel hinzufügen", animationsEnabled, { if (state.stackLocked) callbacks.onEvent(StackLaborEvent.ReportStackLocked) else callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp))
                     }
                 },
                 primary = {
                     Box(Modifier.fillMaxSize()) {
-                        MedicineList(stackId, filtered, state.sortMode, state.solubilityFatFirst, state.latestEvaluationId, state.evaluationMeta, callbacks, { deleteCandidateId = it.id }, Modifier.fillMaxSize().padding(bottom = 68.dp))
-                        BreathingFab("Mittel hinzufügen", animationsEnabled, { callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(12.dp))
+                        MedicineList(stackId, filtered, state.sortMode, state.solubilityFatFirst, state.latestEvaluationId, state.evaluationMeta, state.stackLocked, callbacks, { deleteCandidateId = it.id }, Modifier.fillMaxSize().padding(bottom = 68.dp))
+                        BreathingFab("Mittel hinzufügen", animationsEnabled, { if (state.stackLocked) callbacks.onEvent(StackLaborEvent.ReportStackLocked) else callbacks.onNavigate(StackLaborRoute.MedicineCatalog(stackId, Origin.StackDetail)) }, Modifier.align(Alignment.BottomEnd).padding(12.dp))
                     }
                 },
                 secondary = {
@@ -385,7 +390,11 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                     .bevel()
                     .border(1.5.dp, metalRim(0.95f), menuShape),
             ) {
-                MenuItem("Stack bearbeiten") { menuOpen = false; callbacks.onNavigate(StackLaborRoute.StackEdit(stackId, Origin.StackDetail)) }
+                MenuItem("Stack bearbeiten") {
+                    menuOpen = false
+                    if (state.stackLocked) callbacks.onEvent(StackLaborEvent.ReportStackLocked)
+                    else callbacks.onNavigate(StackLaborRoute.StackEdit(stackId, Origin.StackDetail))
+                }
                 MenuTrenner()
                 MenuItem("Stack exportieren") { menuOpen = false; callbacks.onEvent(StackLaborEvent.ExportStack(stackId)) }
                 MenuTrenner()
@@ -402,6 +411,36 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                     deleteCandidateId = null
                 },
                 onDismiss = { deleteCandidateId = null },
+            )
+        }
+    }
+}
+
+/**
+ * Das Schloss eines Stacks: geschlossen und grün heißt festgeschrieben, offen und rot heißt
+ * frei zum Ändern. Ein Tippen schaltet um.
+ */
+@Composable
+private fun StackLockButton(locked: Boolean, onToggle: () -> Unit) {
+    val colors = StackLaborTheme.colors
+    val tint = if (locked) colors.green else colors.red
+    IconTouchButton(
+        if (locked) "Stack ist gesperrt — zum Entsperren tippen" else "Stack ist offen — zum Sperren tippen",
+        onToggle,
+    ) {
+        Box(
+            Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.14f))
+                .border(1.dp, tint.copy(alpha = 0.65f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
+                null,
+                Modifier.size(20.dp),
+                tint = tint,
             )
         }
     }
@@ -477,6 +516,7 @@ private fun MedicineList(
     fatFirst: Boolean,
     evaluationId: String?,
     evaluationMeta: String,
+    locked: Boolean,
     callbacks: StackLaborCallbacks,
     onRequestDelete: (MedicineUi) -> Unit,
     modifier: Modifier,
@@ -487,6 +527,7 @@ private fun MedicineList(
         keyOf = { it.id },
         listState = listState,
         rowHeight = MedicineRowHeight,
+        enabled = !locked,
         onGrabbed = {
             // Die Löslichkeits-Ansicht sortiert selbst — eine von Hand gezogene Reihenfolge
             // wäre dort sofort wieder überschrieben. Deshalb beim Greifen umschalten.
@@ -505,7 +546,12 @@ private fun MedicineList(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 80.dp),
     ) {
         if (filtered.isEmpty()) {
-            item { de.frank.stacklabor.werftstudio.ui.components.EmptyState("Nichts gefunden", "Neu anlegen") { callbacks.onNavigate(StackLaborRoute.MedicineEdit(null, stackId, Origin.StackDetail)) } }
+            item {
+                de.frank.stacklabor.werftstudio.ui.components.EmptyState("Nichts gefunden", "Neu anlegen") {
+                    if (locked) callbacks.onEvent(StackLaborEvent.ReportStackLocked)
+                    else callbacks.onNavigate(StackLaborRoute.MedicineEdit(null, stackId, Origin.StackDetail))
+                }
+            }
         }
         itemsIndexed(reorder.items, key = { _, medicine -> medicine.id }) { index, medicine ->
             var horizontalOffset by remember(medicine.id) { mutableFloatStateOf(0f) }
@@ -527,6 +573,7 @@ private fun MedicineList(
             SwipeToDeleteRow(
                 offset = shownOffset,
                 width = swipeWidth,
+                enabled = !locked,
                 modifier = gestureModifier,
                 onWidth = { swipeWidth = it },
                 onDrag = { amount ->
@@ -544,7 +591,10 @@ private fun MedicineList(
                 StackMedicineRow(
                     medicine = medicine,
                     intakePosition = if (sortMode == SortMode.Einnahme) index + 1 else null,
-                    onOpen = { callbacks.onNavigate(StackLaborRoute.MedicineEdit(medicine.id, stackId, Origin.StackDetail)) },
+                    onOpen = {
+                        if (locked) callbacks.onEvent(StackLaborEvent.ReportStackLocked)
+                        else callbacks.onNavigate(StackLaborRoute.MedicineEdit(medicine.id, stackId, Origin.StackDetail))
+                    },
                     onSignal = { callbacks.onNavigate(StackLaborRoute.Breakdown(stackId, medicine.id, Origin.StackDetail)) },
                     onToggle = { callbacks.onEvent(StackLaborEvent.ToggleMedicine(stackId, medicine.id)) },
                 )
@@ -601,6 +651,7 @@ private fun DeleteMedicineDialog(name: String, onConfirm: () -> Unit, onDismiss:
 private fun SwipeToDeleteRow(
     offset: Float,
     width: Float,
+    enabled: Boolean,
     modifier: Modifier,
     onWidth: (Float) -> Unit,
     onDrag: (Float) -> Unit,
@@ -648,13 +699,15 @@ private fun SwipeToDeleteRow(
         }
         Box(
             Modifier.graphicsLayer { translationX = offset }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, amount -> change.consume(); onDrag(amount) },
-                        onDragEnd = onDragEnd,
-                        onDragCancel = onDragCancel,
-                    )
-                },
+                .then(
+                    if (!enabled) Modifier else Modifier.pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { change, amount -> change.consume(); onDrag(amount) },
+                            onDragEnd = onDragEnd,
+                            onDragCancel = onDragCancel,
+                        )
+                    },
+                ),
         ) { content() }
     }
 }

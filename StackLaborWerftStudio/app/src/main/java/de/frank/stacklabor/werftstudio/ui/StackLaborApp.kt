@@ -31,6 +31,7 @@ import de.frank.stacklabor.werftstudio.ui.screens.SettingsScreen
 import de.frank.stacklabor.werftstudio.ui.screens.StackDetailScreen
 import de.frank.stacklabor.werftstudio.ui.screens.StackEditSheet
 import de.frank.stacklabor.werftstudio.ui.screens.StackGoalsSheet
+import de.frank.stacklabor.werftstudio.ui.screens.AppLockScreen
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
 import de.frank.stacklabor.werftstudio.ui.theme.rememberSystemAnimationsEnabled
 
@@ -57,7 +58,10 @@ fun StackLaborApp(
         darkTheme = state.appearance == Appearance.Dark,
         reducedMotion = !animationsEnabled,
     ) {
-        if (animationsEnabled) {
+        if (state.appLocked) {
+            // Solange der Fingerabdruck fehlt, bleibt der Inhalt der App unsichtbar.
+            AppLockScreen(callbacks)
+        } else if (animationsEnabled) {
             AnimatedContent(
                 targetState = navigator.currentRoute,
                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },

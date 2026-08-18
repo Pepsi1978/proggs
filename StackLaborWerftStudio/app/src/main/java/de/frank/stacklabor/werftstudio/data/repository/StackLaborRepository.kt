@@ -76,6 +76,7 @@ interface StackLaborRepository {
     suspend fun fuehreMittelZusammen(behalteneMittelId: String, zuErsetzendeMittelId: String)
     suspend fun speichereStack(stack: Stack)
     suspend fun loescheStack(stackId: String)
+    suspend fun setzeStackGesperrt(stackId: String, gesperrt: Boolean)
     suspend fun speichereEintrag(eintrag: StackEintrag)
     suspend fun loescheEintrag(eintragId: String)
     suspend fun setzeEintragAktiv(eintragId: String, aktiv: Boolean)
@@ -244,6 +245,10 @@ class RoomStackLaborRepository(
 
     override suspend fun loescheStack(stackId: String) {
         stackDao.holeStack(stackId)?.let { stackDao.loescheStack(it) }
+    }
+
+    override suspend fun setzeStackGesperrt(stackId: String, gesperrt: Boolean) {
+        stackDao.setzeGesperrt(stackId, gesperrt)
     }
 
     override suspend fun speichereEintrag(eintrag: StackEintrag) {
