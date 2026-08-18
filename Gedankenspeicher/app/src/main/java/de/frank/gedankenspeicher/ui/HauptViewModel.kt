@@ -6,8 +6,6 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewModelScope
 import de.frank.gedankenspeicher.audio.MicRecorder
 import androidx.documentfile.provider.DocumentFile
@@ -575,56 +573,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun verschiebeNotiz(notiz: Notiz, zielSitzung: Long) {
         viewModelScope.launch { repo.verschiebeNotiz(notiz, zielSitzung) }
-    }
-
-    /**
-     * Ein kurzer Tipp in den Notiztext: hier wird bearbeitet, und zwar an **dieser** Stelle.
-     *
-     * Läuft gerade das Vorlesen dieser Notiz, hört es auf — ein Text, der sich unter der
-     * vorlesenden Stimme ändert, ergibt weder auf dem Bildschirm noch im Ohr Sinn.
-     */
-    fun beginneInlineBearbeitung(notiz: Notiz, stelle: Int) {
-        if (notiz.zustand != Notizzustand.FERTIG) return
-        // Eine andere Notiz war offen: erst deren Stand sichern.
-        if (_verlauf.value.bearbeiteteNotiz != null && _verlauf.value.bearbeiteteNotiz != notiz.id) {
-            beendeInlineBearbeitung()
-        }
-        if (_verlauf.value.liestVor == "notiz:" + notiz.id) vorleser.halteAn()
-        _verlauf.update {
-            it.copy(
-                bearbeiteteNotiz = notiz.id,
-                bearbeitungsEntwurf = TextFieldValue(
-                    text = notiz.text,
-                    selection = TextRange(stelle.coerceIn(0, notiz.text.length)),
-                ),
-            )
-        }
-    }
-
-    fun setzeInlineEntwurf(wert: TextFieldValue) =
-        _verlauf.update { it.copy(bearbeitungsEntwurf = wert) }
-
-    /**
-     * Die Bearbeitung beenden und speichern.
-     *
-     * Gespeichert wird nur, wenn sich wirklich etwas geändert hat — sonst schriebe jedes
-     * versehentliche Antippen einen neuen Datenbankstand, und die Notiz zählte als
-     * verändert, obwohl niemand etwas verändert hat.
-     */
-    fun beendeInlineBearbeitung() {
-        val zustand = _verlauf.value
-        val id = zustand.bearbeiteteNotiz ?: return
-        val neuerText = zustand.bearbeitungsEntwurf.text
-        _verlauf.update { it.copy(bearbeiteteNotiz = null, bearbeitungsEntwurf = TextFieldValue()) }
-        viewModelScope.launch {
-            val notiz = repo.notiz(id) ?: return@launch
-            if (notiz.text == neuerText) return@launch
-            if (neuerText.isBlank()) {
-                melde("Eine leere Notiz wird nicht gespeichert — der alte Text bleibt stehen.")
-                return@launch
-            }
-            repo.aendere(notiz.copy(text = neuerText))
-        }
     }
 
     fun oeffneBearbeitung(notiz: Notiz) {
@@ -1233,8 +1181,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * läuft weiter — sie hängt am ViewModel, nicht am Bildschirm.
      */
     fun inDenHintergrund() {
-        // Ein halb getippter Satz darf nicht verschwinden, nur weil das Telefon klingelt.
-        beendeInlineBearbeitung()
         if (_verlauf.value.nimmtAuf) beendeAufnahme()
         // Auch die Stimmprobe: sie lief bisher im Hintergrund weiter und hielt das
         // Mikrofon besetzt, bis die App wiederkam.

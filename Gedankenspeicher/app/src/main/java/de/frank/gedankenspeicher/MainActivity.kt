@@ -370,10 +370,6 @@ private fun Oberflaeche(
         ziel = Ziel.VERLAUF
     }
     BackHandler(enabled = schubladeOffen && ziel == Ziel.VERLAUF) { schubladeOffen = false }
-    // Wer beim Tippen zurückwischt, will das Feld schliessen — nicht die App verlassen.
-    BackHandler(enabled = verlauf.bearbeiteteNotiz != null && ziel == Ziel.VERLAUF) {
-        vm.beendeInlineBearbeitung()
-    }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Ab 400 dp ist das Innendisplay aufgeklappt — dann bekommt die Schublade ihre
@@ -395,9 +391,6 @@ private fun Oberflaeche(
             beiVerbessern = vm::verbessere,
             beiRueckgaengig = vm::macheVerbesserungRueckgaengig,
             beiNotizMenue = { notizMenue = it },
-            beiTippenImText = vm::beginneInlineBearbeitung,
-            beiKartenEntwurf = vm::setzeInlineEntwurf,
-            beiBearbeitenFertig = vm::beendeInlineBearbeitung,
             beiAntwortMenue = { antwortMenue = it },
             beiWiederholen = vm::versucheTranskriptionErneut,
         )
