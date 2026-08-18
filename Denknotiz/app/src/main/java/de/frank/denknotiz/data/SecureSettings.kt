@@ -16,9 +16,9 @@ enum class AppTheme(val id: String, val label: String) {
 }
 
 enum class TtsProvider(val id: String, val label: String) {
-    CHIRP("chirp", "Google Chirp"),
+    CHIRP("chirp", "Google Chirp 3 HD"),
     EDGE("edge", "Microsoft Edge"),
-    QWEN("qwen", "Eigene Qwen-Stimme"),
+    QWEN("qwen", "Eigene Stimme"),
 }
 
 enum class CodexModel(val apiId: String, val label: String) {
@@ -39,11 +39,12 @@ data class SettingsSnapshot(
     val groqKey: String = "",
     val googleKey: String = "",
     val qwenKey: String = "",
-    val codexToken: String = "",
     val theme: AppTheme = AppTheme.GOLD_DARK,
     val model: CodexModel = CodexModel.TERRA,
     val reasoning: ReasoningEffort = ReasoningEffort.MEDIUM,
-    val profileId: String = "analyst",
+    val profileId: String = "normal",
+    val profileNames: Map<String, String> = emptyMap(),
+    val profileInstructions: Map<String, String> = emptyMap(),
     val ttsProvider: TtsProvider = TtsProvider.EDGE,
     val chirpVoice: String = "de-DE-Chirp3-HD-Kore",
     val edgeVoice: String = "de-DE-SeraphinaMultilingualNeural",
@@ -71,11 +72,12 @@ class SecureSettings(context: Context) {
             .putString("groq", next.groqKey.trim())
             .putString("google", next.googleKey.trim())
             .putString("qwen", next.qwenKey.filterNot(Char::isWhitespace))
-            .putString("codex_token", next.codexToken.trim())
             .putString("theme", next.theme.id)
             .putString("model", next.model.apiId)
             .putString("reasoning", next.reasoning.apiValue)
             .putString("profile", next.profileId)
+            .putString("profile_names", JSONObject(next.profileNames.toMap<String, Any>()).toString())
+            .putString("profile_instructions", JSONObject(next.profileInstructions.toMap<String, Any>()).toString())
             .putString("tts_provider", next.ttsProvider.id)
             .putString("chirp_voice", next.chirpVoice.trim())
             .putString("edge_voice", next.edgeVoice.trim())
@@ -87,20 +89,21 @@ class SecureSettings(context: Context) {
     }
 
     private fun read(): SettingsSnapshot {
-        val names = runCatching {
-            val json = JSONObject(preferences.getString("qwen_names", "{}") ?: "{}")
-            json.keys().asSequence().associateWith(json::optString).filterValues(String::isNotBlank)
-        }.getOrDefault(emptyMap())
+        val names = readStringMap("qwen_names")
+        val profileNames = readStringMap("profile_names")
+        val profileInstructions = readStringMap("profile_instructions", keepBlank = true)
+        val storedProfile = preferences.getString("profile", "normal").orEmpty()
         return SettingsSnapshot(
             groqKey = preferences.getString("groq", "").orEmpty(),
             googleKey = preferences.getString("google", "").orEmpty(),
             qwenKey = preferences.getString("qwen", "").orEmpty(),
-            codexToken = preferences.getString("codex_token", "").orEmpty(),
             theme = AppTheme.entries.firstOrNull { it.id == preferences.getString("theme", "") } ?: AppTheme.GOLD_DARK,
             model = CodexModel.entries.firstOrNull { it.apiId == preferences.getString("model", "") } ?: CodexModel.TERRA,
             reasoning = ReasoningEffort.entries.firstOrNull { it.apiValue == preferences.getString("reasoning", "") }
                 ?: ReasoningEffort.MEDIUM,
-            profileId = preferences.getString("profile", "analyst").orEmpty(),
+            profileId = if (storedProfile in setOf("short", "normal", "detailed", "custom1", "custom2", "custom3")) storedProfile else "normal",
+            profileNames = profileNames,
+            profileInstructions = profileInstructions,
             ttsProvider = TtsProvider.entries.firstOrNull { it.id == preferences.getString("tts_provider", "") }
                 ?: TtsProvider.EDGE,
             chirpVoice = preferences.getString("chirp_voice", "de-DE-Chirp3-HD-Kore").orEmpty(),
@@ -111,4 +114,11 @@ class SecureSettings(context: Context) {
             reducedMotion = preferences.getBoolean("reduced_motion", false),
         )
     }
+
+    private fun readStringMap(key: String, keepBlank: Boolean = false): Map<String, String> = runCatching {
+        val json = JSONObject(preferences.getString(key, "{}") ?: "{}")
+        json.keys().asSequence().associateWith(json::optString).let { values ->
+            if (keepBlank) values else values.filterValues(String::isNotBlank)
+        }
+    }.getOrDefault(emptyMap())
 }

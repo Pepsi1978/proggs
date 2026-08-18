@@ -13,17 +13,18 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import org.json.JSONArray
+import org.json.JSONObject
 
 class DenknotizRepository(private val db: DenknotizDatabase) {
     val sessions: Flow<List<SessionEntity>> = db.sessionDao().observeAll()
 
-    fun observeBundle(sessionId: String): Flow<SessionBundle> = combine(
+    fun observeBundle(sessionId: String): Flow<SessionBundle?> = combine(
         db.sessionDao().observe(sessionId),
         db.entryDao().observeForSession(sessionId),
         db.evaluationDao().observeForSession(sessionId),
         db.boundaryDao().observe(sessionId),
     ) { session, entries, snapshots, boundary ->
-        SessionBundle(session ?: error("Sitzung nicht gefunden"), entries, snapshots, boundary)
+        session?.let { SessionBundle(it, entries, snapshots, boundary) }
     }
 
     suspend fun createSession(): String {
@@ -34,6 +35,9 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
     }
 
     suspend fun updateSession(session: SessionEntity) = db.sessionDao().update(session.copy(updatedAt = System.currentTimeMillis()))
+    suspend fun togglePinned(id: String) = db.sessionDao().togglePinned(id, System.currentTimeMillis())
+    suspend fun setArchived(id: String, archived: Boolean) = db.sessionDao().setArchived(id, archived, System.currentTimeMillis())
+    suspend fun firstVisibleSessionExcept(id: String): SessionEntity? = db.sessionDao().firstVisibleExcept(id)
     suspend fun deleteSession(id: String) = db.sessionDao().delete(id)
 
     suspend fun addNote(sessionId: String, text: String): EntryEntity = db.withTransaction {
@@ -75,8 +79,8 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         return addNote(current.sessionId, current.text)
     }
 
-    suspend fun improveNote(id: String, improved: String) {
-        val current = db.entryDao().get(id) ?: return
+    suspend fun improveNote(id: String, improved: String) = db.withTransaction {
+        val current = db.entryDao().get(id) ?: return@withTransaction
         require(current.type == EntryType.NOTE)
         db.entryDao().update(current.copy(
             text = improved.trim(),
@@ -86,14 +90,18 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         db.entryDao().markResponsesHistorical(id)
     }
 
-    suspend fun restoreNote(id: String) {
-        val current = db.entryDao().get(id) ?: return
-        val original = current.originalText ?: return
+    suspend fun restoreNote(id: String) = db.withTransaction {
+        val current = db.entryDao().get(id) ?: return@withTransaction
+        val original = current.originalText ?: return@withTransaction
         db.entryDao().update(current.copy(text = original, originalText = null, updatedAt = System.currentTimeMillis()))
         db.entryDao().markResponsesHistorical(id)
     }
 
-    suspend fun deleteEntry(id: String) = db.entryDao().delete(id)
+    suspend fun deleteEntry(id: String) = db.withTransaction {
+        val entry = db.entryDao().get(id) ?: return@withTransaction
+        if (entry.type == EntryType.NOTE) db.entryDao().markResponsesHistorical(id)
+        db.entryDao().delete(id)
+    }
 
     suspend fun createSnapshot(
         sessionId: String,
@@ -102,6 +110,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         web: Boolean,
         model: String,
         reasoning: String,
+        profileInstruction: String,
         maxChunkChars: Int,
     ): EvaluationSnapshotEntity = db.withTransaction {
         val lower = db.boundaryDao().get(sessionId)?.lastIncludedOrdinal ?: 0
@@ -109,18 +118,32 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         val notes = db.entryDao().notesInRange(sessionId, lower, upper)
         require(notes.isNotEmpty()) { "Seit der letzten Auswertung gibt es keine neue Notiz." }
         val sourceJson = JSONArray(notes.map(EntryEntity::id)).toString()
+        val sourceNotesJson = JSONArray(notes.map { note ->
+            JSONObject().put("id", note.id).put("ordinal", note.ordinal).put("title", note.title).put("text", note.text)
+        }).toString()
         val count = chunkNotes(notes, maxChunkChars).size
         EvaluationSnapshotEntity(
             id = UUID.randomUUID().toString(), sessionId = sessionId, lowerOrdinalExclusive = lower,
             upperOrdinalInclusive = upper, sourceNoteIdsJson = sourceJson, focusQuestion = focus.trim(), profileId = profileId,
             webEnabled = web, model = model, reasoning = reasoning, chunkCount = count, status = SnapshotStatus.RUNNING,
-            createdAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis(), sourceNotesJson = sourceNotesJson, profileInstruction = profileInstruction,
         ).also { db.evaluationDao().insert(it) }
     }
 
     suspend fun snapshotInput(snapshot: EvaluationSnapshotEntity): List<String> {
+        val frozen = runCatching {
+            val array = JSONArray(snapshot.sourceNotesJson)
+            (0 until array.length()).mapNotNull { index -> array.optJSONObject(index) }.map { note ->
+                "[Notiz ${note.optLong("ordinal")} – ${note.optString("title")} ]\n${note.optString("text")}\n\n"
+            }
+        }.getOrDefault(emptyList())
+        if (frozen.isNotEmpty()) return chunkBlocks(frozen, MODEL_CHUNK_CHARS)
+        val sourceIds = runCatching {
+            val array = JSONArray(snapshot.sourceNoteIdsJson)
+            (0 until array.length()).mapNotNull(array::optString).toSet()
+        }.getOrDefault(emptySet())
         val notes = db.entryDao().notesInRange(snapshot.sessionId, snapshot.lowerOrdinalExclusive, snapshot.upperOrdinalInclusive)
-            .filter { snapshot.sourceNoteIdsJson.contains(it.id) }
+            .filter { it.id in sourceIds }
         return chunkNotes(notes, MODEL_CHUNK_CHARS)
     }
 
@@ -135,9 +158,16 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         return running
     }
 
+    suspend fun recoverInterruptedEvaluations() = db.evaluationDao().failRunning("Die App wurde während der Auswertung beendet. Bitte erneut versuchen.")
+
     suspend fun completeSnapshot(snapshot: EvaluationSnapshotEntity, text: String, citationsJson: String): EntryEntity =
         db.withTransaction {
-            db.entryDao().responseForSnapshot(snapshot.id)?.let { return@withTransaction it }
+            db.entryDao().responseForSnapshot(snapshot.id)?.let { existing ->
+                val now = System.currentTimeMillis()
+                db.evaluationDao().update(snapshot.copy(status = SnapshotStatus.COMPLETED, error = "", completedAt = snapshot.completedAt ?: now))
+                advanceBoundary(snapshot, existing.id, now)
+                return@withTransaction existing
+            }
             val now = System.currentTimeMillis()
             val response = EntryEntity(
                 id = UUID.randomUUID().toString(), sessionId = snapshot.sessionId,
@@ -147,7 +177,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
             )
             db.entryDao().insert(response)
             db.evaluationDao().update(snapshot.copy(status = SnapshotStatus.COMPLETED, error = "", completedAt = now))
-            db.boundaryDao().upsert(ContextBoundaryEntity(snapshot.sessionId, snapshot.upperOrdinalInclusive, response.id, now))
+            advanceBoundary(snapshot, response.id, now)
             db.sessionDao().get(snapshot.sessionId)?.let { db.sessionDao().update(it.copy(updatedAt = now)) }
             response
         }
@@ -168,11 +198,20 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         }
     }
 
-    suspend fun backup(): BackupPayload = BackupPayload(
-        db.sessionDao().all(), db.entryDao().all(), db.evaluationDao().all(), db.boundaryDao().all(),
-    )
+    suspend fun backup(profileNames: Map<String, String>, profileInstructions: Map<String, String>): BackupPayload = db.withTransaction {
+        BackupPayload(
+            db.sessionDao().all(), db.entryDao().all(), db.evaluationDao().all(), db.boundaryDao().all(),
+            profileNames, profileInstructions,
+        )
+    }
 
     suspend fun merge(payload: BackupPayload): Int = db.withTransaction {
+        payload.entries.forEach { incoming ->
+            val conflict = db.entryDao().getByOrdinal(incoming.sessionId, incoming.ordinal)
+            require(conflict == null || conflict.id == incoming.id) {
+                "Die Sicherung enthält für dieselbe Sitzung unterschiedliche Einträge an Position ${incoming.ordinal}. Der Import wurde ohne Änderungen abgebrochen."
+            }
+        }
         var imported = 0
         payload.sessions.forEach { if (db.sessionDao().insert(it) != -1L) imported++ }
         payload.entries.forEach { if (db.entryDao().insert(it) != -1L) imported++ }
@@ -185,10 +224,14 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
     }
 
     private fun chunkNotes(notes: List<EntryEntity>, maxChars: Int): List<String> {
+        val blocks = notes.map { note -> "[Notiz ${note.ordinal}]\n${note.text}\n\n" }
+        return chunkBlocks(blocks, maxChars)
+    }
+
+    private fun chunkBlocks(blocks: List<String>, maxChars: Int): List<String> {
         val chunks = mutableListOf<String>()
         var current = StringBuilder()
-        notes.forEach { note ->
-            val block = "[Notiz ${note.ordinal}]\n${note.text}\n\n"
+        blocks.forEach { block ->
             if (current.isNotEmpty() && current.length + block.length > maxChars) {
                 chunks += current.toString()
                 current = StringBuilder()
@@ -202,6 +245,13 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         }
         if (current.isNotEmpty()) chunks += current.toString()
         return chunks
+    }
+
+    private suspend fun advanceBoundary(snapshot: EvaluationSnapshotEntity, responseId: String, now: Long) {
+        val boundary = ContextBoundaryEntity(snapshot.sessionId, snapshot.upperOrdinalInclusive, responseId, now)
+        if (db.boundaryDao().insertIfMissing(boundary) == -1L) {
+            db.boundaryDao().advance(snapshot.sessionId, snapshot.upperOrdinalInclusive, responseId, now)
+        }
     }
 
     private fun localTitle(text: String): String = text.lineSequence().first().trim()

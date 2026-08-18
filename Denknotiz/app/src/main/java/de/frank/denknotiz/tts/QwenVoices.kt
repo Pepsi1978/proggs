@@ -2,6 +2,8 @@ package de.frank.denknotiz.tts
 
 import android.util.Base64
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,6 +26,8 @@ class QwenVoiceManager {
         val voices = result.optJSONObject("output")?.optJSONArray("voice_list") ?: return@withContext emptyList()
         (0 until voices.length()).mapNotNull { index ->
             val item = voices.optJSONObject(index) ?: return@mapNotNull null
+            val targetModel = item.optString("target_model")
+            if (targetModel.isNotBlank() && targetModel != QWEN_MODEL) return@mapNotNull null
             item.optString("voice").takeIf(String::isNotBlank)?.let { id ->
                 QwenVoice(id, displayName(id), germanDate(item.optString("gmt_create")))
             }
@@ -33,8 +37,11 @@ class QwenVoiceManager {
     suspend fun enroll(rawKey: String, name: String, wav: ByteArray): String = withContext(Dispatchers.IO) {
         val key = rawKey.filterNot(Char::isWhitespace)
         require(key.isNotBlank()) { "Qwen-Schlüssel fehlt." }
-        require(wav.isNotEmpty()) { "Die Stimmaufnahme ist leer." }
-        val cleanName = name.filter(Char::isLetterOrDigit).take(16).ifBlank { "Stimme" }
+        require(wav.size > 44) { "Die Stimmaufnahme ist leer." }
+        val sampleRate = ByteBuffer.wrap(wav, 24, 4).order(ByteOrder.LITTLE_ENDIAN).int.coerceAtLeast(1)
+        val durationSeconds = (wav.size - 44) / 2.0 / sampleRate
+        require(durationSeconds in 10.0..60.0) { "Die Stimmprobe muss zwischen 10 und 60 Sekunden lang sein." }
+        val cleanName = name.filter { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' }.take(16).ifBlank { "Stimme" }
         val body = JSONObject().put("model", ENROLLMENT_MODEL).put("input", JSONObject().put("action", "create")
             .put("target_model", QWEN_MODEL).put("preferred_name", cleanName)
             .put("audio", JSONObject().put("data", "data:audio/wav;base64,${Base64.encodeToString(wav, Base64.NO_WRAP)}")))

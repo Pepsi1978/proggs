@@ -22,6 +22,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions WHERE id = :id")
     suspend fun get(id: String): SessionEntity?
 
+    @Query("SELECT * FROM sessions WHERE archived = 0 AND id != :excludedId ORDER BY pinned DESC, updatedAt DESC LIMIT 1")
+    suspend fun firstVisibleExcept(excludedId: String): SessionEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(session: SessionEntity): Long
 
@@ -30,6 +33,12 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("UPDATE sessions SET pinned = CASE pinned WHEN 1 THEN 0 ELSE 1 END, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun togglePinned(id: String, updatedAt: Long)
+
+    @Query("UPDATE sessions SET archived = :archived, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean, updatedAt: Long)
 }
 
 @Dao
@@ -42,6 +51,9 @@ interface EntryDao {
 
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun get(id: String): EntryEntity?
+
+    @Query("SELECT * FROM entries WHERE sessionId = :sessionId AND ordinal = :ordinal LIMIT 1")
+    suspend fun getByOrdinal(sessionId: String, ordinal: Long): EntryEntity?
 
     @Query("SELECT COALESCE(MAX(ordinal), 0) FROM entries WHERE sessionId = :sessionId")
     suspend fun maxOrdinal(sessionId: String): Long
@@ -81,6 +93,9 @@ interface EvaluationDao {
 
     @Update
     suspend fun update(snapshot: EvaluationSnapshotEntity)
+
+    @Query("UPDATE evaluation_snapshots SET status = 'FAILED', error = :message WHERE status = 'RUNNING'")
+    suspend fun failRunning(message: String)
 }
 
 @Dao
@@ -96,4 +111,10 @@ interface BoundaryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(boundary: ContextBoundaryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfMissing(boundary: ContextBoundaryEntity): Long
+
+    @Query("UPDATE context_boundaries SET lastIncludedOrdinal = :ordinal, lastResponseId = :responseId, updatedAt = :updatedAt WHERE sessionId = :sessionId AND lastIncludedOrdinal < :ordinal")
+    suspend fun advance(sessionId: String, ordinal: Long, responseId: String, updatedAt: Long): Int
 }

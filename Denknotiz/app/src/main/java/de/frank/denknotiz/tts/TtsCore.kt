@@ -32,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -44,6 +45,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -97,7 +100,10 @@ object Paragraphs {
 
 class SpeechController(private val context: Context) {
     val state: StateFlow<SpeechState> = SpeechService.state
-    fun play(text: String) = send(SpeechService.ACTION_PLAY) { putExtra(SpeechService.EXTRA_TEXT, text) }
+    fun play(text: String) {
+        val file = File(context.cacheDir, "speech_request_${UUID.randomUUID()}.txt").apply { writeText(text) }
+        send(SpeechService.ACTION_PLAY) { putExtra(SpeechService.EXTRA_FILE, file.absolutePath) }
+    }
     fun pauseResume() = send(SpeechService.ACTION_TOGGLE)
     fun stop() = send(SpeechService.ACTION_STOP)
     fun previous() = send(SpeechService.ACTION_PREVIOUS)
@@ -124,7 +130,10 @@ class SpeechService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_PLAY -> {
-                paragraphs = Paragraphs.split(intent.getStringExtra(EXTRA_TEXT).orEmpty())
+                val requestFile = intent.getStringExtra(EXTRA_FILE)?.let(::File)
+                val text = runCatching { requestFile?.readText().orEmpty() }.getOrDefault("")
+                requestFile?.delete()
+                paragraphs = Paragraphs.split(text)
                 currentIndex = 0
                 startForeground(NOTIFICATION_ID, notification())
                 startFrom(0)
@@ -155,7 +164,7 @@ class SpeechService : Service() {
             } catch (error: Exception) {
                 stateMutable.value = stateMutable.value.copy(active = false, paused = false,
                     error = readableError(error, selected.ttsProvider))
-                updateNotification(); stopForeground(STOP_FOREGROUND_DETACH); stopSelf()
+                updateNotification(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
             }
         }
     }
@@ -179,7 +188,11 @@ class SpeechService : Service() {
                 try { player.playAndWait(file) } finally { file.delete() }
             }
         } finally {
-            pending.values.forEach { it.cancel() }
+            val remaining = pending.values.toList()
+            remaining.forEach { it.cancel() }
+            withContext(NonCancellable) {
+                remaining.forEach { deferred -> runCatching { deferred.await().delete() } }
+            }
             pending.clear()
         }
     }
@@ -238,7 +251,7 @@ class SpeechService : Service() {
         const val ACTION_STOP = "de.frank.denknotiz.STOP"
         const val ACTION_PREVIOUS = "de.frank.denknotiz.PREVIOUS"
         const val ACTION_NEXT = "de.frank.denknotiz.NEXT"
-        const val EXTRA_TEXT = "text"
+        const val EXTRA_FILE = "file"
         private const val CHANNEL = "speech"
         private const val NOTIFICATION_ID = 4102
         private val stateMutable = MutableStateFlow(SpeechState())
@@ -287,8 +300,9 @@ private object GoogleSynthesizer {
         val body = JSONObject().put("input", JSONObject().put("text", text))
             .put("voice", JSONObject().put("languageCode", "de-DE").put("name", voice))
             .put("audioConfig", JSONObject().put("audioEncoding", "MP3").put("speakingRate", rate.coerceIn(0.7f, 1.3f)))
-        val url = "https://texttospeech.googleapis.com/v1/text:synthesize".toHttpUrl().newBuilder().addQueryParameter("key", key.trim()).build()
-        client.newCall(Request.Builder().url(url).post(body.toString().toRequestBody(JSON)).build()).execute().use { response ->
+        val url = "https://texttospeech.googleapis.com/v1/text:synthesize".toHttpUrl()
+        client.newCall(Request.Builder().url(url).header("x-goog-api-key", key.trim())
+            .post(body.toString().toRequestBody(JSON)).build()).awaitTts().use { response ->
             val raw = response.body?.string().orEmpty()
             if (!response.isSuccessful) throw IOException("Google TTS ${response.code}: ${raw.take(300)}")
             Base64.decode(JSONObject(raw).getString("audioContent"), Base64.DEFAULT)
@@ -304,13 +318,13 @@ private object QwenSynthesizer {
             .put("input", JSONObject().put("text", text).put("voice", voice.trim()).put("language_type", "German"))
         val request = Request.Builder().url("https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation")
             .header("Authorization", "Bearer ${key.filterNot(Char::isWhitespace)}").post(body.toString().toRequestBody(JSON)).build()
-        val url = client.newCall(request).execute().use { response ->
+        val url = client.newCall(request).awaitTts().use { response ->
             val raw = response.body?.string().orEmpty()
             if (!response.isSuccessful) throw IOException("Qwen TTS ${response.code}: ${raw.take(300)}")
             JSONObject(raw).optJSONObject("output")?.optJSONObject("audio")?.optString("url").orEmpty()
                 .ifBlank { throw IOException("Qwen hat keinen Ton-Link geliefert.") }
         }.replace("http://", "https://")
-        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+        client.newCall(Request.Builder().url(url).build()).awaitTts().use { response ->
             if (!response.isSuccessful) throw IOException("Qwen-Audio ${response.code}")
             response.body?.bytes() ?: throw IOException("Qwen-Audio ist leer.")
         }
@@ -339,8 +353,9 @@ private object EdgeSynthesizer {
                         "{\"context\":{\"synthesis\":{\"audio\":{\"outputFormat\":\"audio-24khz-96kbitrate-mono-mp3\"}}}}")
                     val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                     val percent = ((rate.coerceIn(0.7f, 1.3f) - 1f) * 100).toInt()
+                    val signedPercent = if (percent >= 0) "+$percent" else percent.toString()
                     webSocket.send("X-RequestId:$requestId\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n" +
-                        "<speak version='1.0' xml:lang='de-DE'><voice name='$voice'><prosody rate='$percent%'>$escaped</prosody></voice></speak>")
+                        "<speak version='1.0' xml:lang='de-DE'><voice name='$voice'><prosody rate='$signedPercent%'>$escaped</prosody></voice></speak>")
                 }
                 override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                     val data = bytes.toByteArray(); if (data.size > 2) {
@@ -373,4 +388,16 @@ private fun readableError(error: Exception, provider: TtsProvider): String {
         raw.contains("timeout", true) || raw.contains("resolve", true) -> "${provider.label}: Netzwerk nicht erreichbar."
         else -> "${provider.label}: ${raw.ifBlank { "Vorlesen fehlgeschlagen." }}"
     }
+}
+
+private suspend fun Call.awaitTts(): Response = suspendCancellableCoroutine { continuation ->
+    continuation.invokeOnCancellation { cancel() }
+    enqueue(object : Callback {
+        override fun onFailure(call: Call, error: IOException) {
+            if (continuation.isActive) continuation.resumeWithException(error)
+        }
+        override fun onResponse(call: Call, response: Response) {
+            if (continuation.isActive) continuation.resume(response) { _, value, _ -> value.close() } else response.close()
+        }
+    })
 }

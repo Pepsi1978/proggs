@@ -11,7 +11,7 @@ class DenknotizApplication : Application() {
     val container by lazy { AppContainer(this) }
 }
 
-class AppContainer(application: Application) {
+class AppContainer(val application: Application) {
     val database = DenknotizDatabase.create(application)
     val repository = DenknotizRepository(database)
     val settings = SecureSettings(application)

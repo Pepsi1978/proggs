@@ -107,8 +107,14 @@ class CodexClient(context: Context) {
         val partials = mutableListOf<String>()
         val sources = linkedMapOf<String, WebSource>()
         chunks.forEachIndexed { index, chunk ->
+            val evidenceRule = if (web) {
+                "Nutze die bereitgestellten Denknotizen als Ausgangspunkt und ergänze oder prüfe sie gezielt mit Webquellen. " +
+                    "Trenne klar zwischen Notizinhalt und extern recherchierten Fakten."
+            } else {
+                "Beziehe dich ausschließlich auf die bereitgestellten Denknotizen."
+            }
             val result = request(
-                instructions = "$profileInstruction\nBeziehe dich ausschließlich auf die bereitgestellten Denknotizen. " +
+                instructions = "$profileInstruction\n$evidenceRule " +
                     "Bearbeite Teil ${index + 1} von ${chunks.size}. Erhalte Widersprüche und Unsicherheiten.",
                 input = "Fokusfrage: ${focus.ifBlank { "Welche wichtigen Muster und nächsten Schritte ergeben sich?" }}\n\n$chunk",
                 model = model, reasoning = reasoning, web = web, manualToken = manualToken,

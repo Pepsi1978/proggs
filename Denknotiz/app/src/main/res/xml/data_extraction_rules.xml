@@ -3,10 +3,16 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="denknotiz_secure.xml" />
         <exclude domain="sharedpref" path="codex_oauth.xml" />
+        <exclude domain="database" path="denknotiz.db" />
+        <exclude domain="database" path="denknotiz.db-wal" />
+        <exclude domain="database" path="denknotiz.db-shm" />
         <exclude domain="root" path="no_backup/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="denknotiz_secure.xml" />
         <exclude domain="sharedpref" path="codex_oauth.xml" />
+        <exclude domain="database" path="denknotiz.db" />
+        <exclude domain="database" path="denknotiz.db-wal" />
+        <exclude domain="database" path="denknotiz.db-shm" />
     </device-transfer>
 </data-extraction-rules>

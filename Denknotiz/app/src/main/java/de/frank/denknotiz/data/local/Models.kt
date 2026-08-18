@@ -73,6 +73,8 @@ data class EvaluationSnapshotEntity(
     val error: String = "",
     val createdAt: Long,
     val completedAt: Long? = null,
+    val sourceNotesJson: String = "[]",
+    val profileInstruction: String = "",
 )
 
 @Entity(

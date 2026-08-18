@@ -1,12 +1,39 @@
 package de.frank.denknotiz.domain
 
-data class AnalysisProfile(val id: String, val label: String, val instruction: String)
+data class AnalysisProfile(
+    val id: String,
+    val label: String,
+    val description: String,
+    val instruction: String,
+    val customName: Boolean = false,
+)
 
 val AnalysisProfiles = listOf(
-    AnalysisProfile("analyst", "Analytiker", "Analysiere präzise, trenne Beobachtung, Deutung und belastbare Schlussfolgerung."),
-    AnalysisProfile("coach", "Coach", "Antworte zugewandt und handlungsorientiert. Leite konkrete nächste Schritte ab."),
-    AnalysisProfile("challenger", "Herausforderer", "Prüfe Denkfehler, blinde Flecken und bequeme Annahmen direkt, aber fair."),
-    AnalysisProfile("planner", "Planer", "Ordne das Material in Ziele, Abhängigkeiten, Risiken und eine realistische Reihenfolge."),
-    AnalysisProfile("synthesizer", "Synthese", "Verdichte Muster und Zusammenhänge, ohne wichtige Widersprüche zu glätten."),
-    AnalysisProfile("skeptic", "Skeptiker", "Unterscheide Fakten, Vermutungen und fehlende Evidenz. Vermeide voreilige Gewissheit."),
+    AnalysisProfile(
+        "short",
+        "Kurz und schnell",
+        "Liefert eine knappe, direkte Antwort mit den wichtigsten Erkenntnissen und nächsten Schritten.",
+        "Antworte knapp und direkt. Nenne nur die wichtigsten Erkenntnisse, Zusammenhänge und höchstens drei konkrete nächste Schritte.",
+    ),
+    AnalysisProfile(
+        "normal",
+        "Normale Länge",
+        "Analysiert die Notizen ausgewogen, erklärt Zusammenhänge und leitet praktische Schlussfolgerungen ab.",
+        "Analysiere ausgewogen und verständlich. Erkläre die wichtigsten Muster, Widersprüche und Schlussfolgerungen in gut lesbaren Absätzen.",
+    ),
+    AnalysisProfile(
+        "detailed",
+        "Sehr ausführlich",
+        "Durchdenkt das gesamte Material gründlich, berücksichtigt Nuancen und beantwortet die Fokusfrage umfassend.",
+        "Analysiere sehr ausführlich und gründlich. Berücksichtige alle relevanten Details, Unsicherheiten, Gegenargumente, Zusammenhänge und konkrete Handlungsoptionen.",
+    ),
+    AnalysisProfile("custom1", "Eigenes Profil 1", "Verwendet genau deine selbst formulierte Auswertungsanweisung.", "", customName = true),
+    AnalysisProfile("custom2", "Eigenes Profil 2", "Verwendet genau deine selbst formulierte Auswertungsanweisung.", "", customName = true),
+    AnalysisProfile("custom3", "Eigenes Profil 3", "Verwendet genau deine selbst formulierte Auswertungsanweisung.", "", customName = true),
 )
+
+fun profileLabel(profile: AnalysisProfile, names: Map<String, String>): String =
+    names[profile.id]?.takeIf(String::isNotBlank) ?: profile.label
+
+fun profileInstruction(profile: AnalysisProfile, instructions: Map<String, String>): String =
+    instructions[profile.id] ?: profile.instruction

@@ -18,6 +18,8 @@ data class BackupPayload(
     val entries: List<EntryEntity>,
     val snapshots: List<EvaluationSnapshotEntity>,
     val boundaries: List<ContextBoundaryEntity>,
+    val profileNames: Map<String, String> = emptyMap(),
+    val profileInstructions: Map<String, String> = emptyMap(),
 ) {
     fun toJson(): String = JSONObject().apply {
         put("formatVersion", FORMAT_VERSION)
@@ -26,10 +28,12 @@ data class BackupPayload(
         put("entries", JSONArray(entries.map { it.json() }))
         put("snapshots", JSONArray(snapshots.map { it.json() }))
         put("boundaries", JSONArray(boundaries.map { it.json() }))
+        put("profileNames", JSONObject(profileNames.toMap<String, Any>()))
+        put("profileInstructions", JSONObject(profileInstructions.toMap<String, Any>()))
     }.toString(2)
 
     companion object {
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
         const val FILE_NAME = "denknotiz-sicherung.json"
 
         fun fromJson(raw: String): BackupPayload {
@@ -53,12 +57,15 @@ data class BackupPayload(
                         it.long("upperOrdinalInclusive"), it.optString("sourceNoteIdsJson", "[]"), it.string("focusQuestion"),
                         it.string("profileId"), it.optBoolean("webEnabled"), it.string("model"), it.string("reasoning"),
                         it.optInt("chunkCount", 1), SnapshotStatus.valueOf(it.string("status")), it.optString("error"),
-                        it.long("createdAt"), it.optLong("completedAt").takeIf { value -> value > 0 })
+                        it.long("createdAt"), it.optLong("completedAt").takeIf { value -> value > 0 },
+                        it.optString("sourceNotesJson", "[]"), it.optString("profileInstruction"))
                 },
                 boundaries = root.objects("boundaries").map {
                     ContextBoundaryEntity(it.string("sessionId"), it.long("lastIncludedOrdinal"),
                         it.optString("lastResponseId").takeIf(String::isNotBlank), it.long("updatedAt"))
                 },
+                profileNames = root.stringMap("profileNames"),
+                profileInstructions = root.stringMap("profileInstructions", keepBlank = true),
             )
         }
     }
@@ -89,6 +96,7 @@ private fun EvaluationSnapshotEntity.json() = JSONObject().put("id", id).put("se
     .put("sourceNoteIdsJson", sourceNoteIdsJson).put("focusQuestion", focusQuestion).put("profileId", profileId)
     .put("webEnabled", webEnabled).put("model", model).put("reasoning", reasoning).put("chunkCount", chunkCount)
     .put("status", status.name).put("error", error).put("createdAt", createdAt).put("completedAt", completedAt ?: 0)
+    .put("sourceNotesJson", sourceNotesJson).put("profileInstruction", profileInstruction)
 private fun ContextBoundaryEntity.json() = JSONObject().put("sessionId", sessionId)
     .put("lastIncludedOrdinal", lastIncludedOrdinal).put("lastResponseId", lastResponseId ?: "").put("updatedAt", updatedAt)
 private fun JSONObject.objects(name: String): List<JSONObject> = optJSONArray(name)?.let { array ->
@@ -96,3 +104,6 @@ private fun JSONObject.objects(name: String): List<JSONObject> = optJSONArray(na
 }.orEmpty()
 private fun JSONObject.string(name: String) = getString(name)
 private fun JSONObject.long(name: String) = getLong(name)
+private fun JSONObject.stringMap(name: String, keepBlank: Boolean = false): Map<String, String> = optJSONObject(name)?.let { json ->
+    json.keys().asSequence().associateWith(json::optString).let { values -> if (keepBlank) values else values.filterValues(String::isNotBlank) }
+}.orEmpty()

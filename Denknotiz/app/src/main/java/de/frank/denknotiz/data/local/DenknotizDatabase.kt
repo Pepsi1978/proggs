@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 class Converters {
     @TypeConverter fun entryType(value: String): EntryType = EntryType.valueOf(value)
@@ -16,7 +18,7 @@ class Converters {
 
 @Database(
     entities = [SessionEntity::class, EntryEntity::class, EvaluationSnapshotEntity::class, ContextBoundaryEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -31,6 +33,13 @@ abstract class DenknotizDatabase : RoomDatabase() {
             context.applicationContext,
             DenknotizDatabase::class.java,
             "denknotiz.db",
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE evaluation_snapshots ADD COLUMN sourceNotesJson TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("ALTER TABLE evaluation_snapshots ADD COLUMN profileInstruction TEXT NOT NULL DEFAULT ''")
+            }
+        }
     }
 }

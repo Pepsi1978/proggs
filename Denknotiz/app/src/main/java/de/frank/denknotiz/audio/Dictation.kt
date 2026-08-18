@@ -42,7 +42,7 @@ class MicRecorder(private val context: Context) {
     private var activeSampleRate = SAMPLE_RATE
 
     fun start(scope: CoroutineScope, requestedSampleRate: Int = SAMPLE_RATE): Boolean {
-        if (recording.get()) return true
+        if (recording.get()) return false
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
         val sampleRate = listOf(requestedSampleRate, SAMPLE_RATE).distinct().firstOrNull {
             AudioRecord.getMinBufferSize(it, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) > 0
@@ -73,9 +73,10 @@ class MicRecorder(private val context: Context) {
 
     suspend fun stop(): ByteArray? {
         if (!recording.getAndSet(false) && recorder == null) return null
-        job?.cancelAndJoin(); job = null
         val active = recorder; recorder = null
-        runCatching { active?.stop() }; runCatching { active?.release() }
+        runCatching { active?.stop() }
+        job?.cancelAndJoin(); job = null
+        runCatching { active?.release() }
         val pcm = bytes.toByteArray(); bytes.reset()
         return pcm.takeIf(ByteArray::isNotEmpty)?.let(::wav)
     }
@@ -151,7 +152,7 @@ object WhisperHallucinationFilter {
             val start = segment.start; val end = segment.end
             start == null || end == null || value.hasSpeech(start, end)
         } }.orEmpty()
-        val kept = if (analysis != null && aligned.isNotEmpty()) aligned else confident
+        val kept = if (analysis != null) aligned else confident
         return blockFloskel(kept.joinToString(" ") { it.text.trim() }.trim(), analysis)
     }
 

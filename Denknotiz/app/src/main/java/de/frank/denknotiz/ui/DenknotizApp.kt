@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
@@ -116,6 +117,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.BackHandler
 import de.frank.denknotiz.BuildConfig
 import de.frank.denknotiz.data.AppTheme
 import de.frank.denknotiz.data.BackupPayload
@@ -130,7 +132,11 @@ import de.frank.denknotiz.data.local.EvaluationSnapshotEntity
 import de.frank.denknotiz.data.local.SessionEntity
 import de.frank.denknotiz.data.local.SnapshotStatus
 import de.frank.denknotiz.domain.AnalysisProfiles
-import de.frank.denknotiz.tts.QwenVoice
+import de.frank.denknotiz.domain.AnalysisProfile
+import de.frank.denknotiz.domain.profileInstruction
+import de.frank.denknotiz.domain.profileLabel
+import de.frank.denknotiz.tts.SelectableVoice
+import de.frank.denknotiz.tts.VoiceCatalog
 import de.frank.denknotiz.ui.theme.DenknotizTheme
 import java.text.DateFormat
 import java.util.Date
@@ -154,6 +160,9 @@ fun DenknotizApp(
         val drawer = rememberDrawerState(DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val snackbar = remember { SnackbarHostState() }
+        BackHandler(enabled = state.interaction.section == AppSection.SETTINGS) {
+            viewModel.selectSection(AppSection.WORKBENCH)
+        }
         LaunchedEffect(state.interaction.message) {
             state.interaction.message?.let { snackbar.showSnackbar(it); viewModel.consumeMessage() }
         }
@@ -163,24 +172,13 @@ fun DenknotizApp(
         ModalNavigationDrawer(
             drawerState = drawer,
             drawerContent = {
-                ModalDrawerSheet(modifier = Modifier.width(310.dp)) {
-                    Column(Modifier.fillMaxHeight().statusBarsPadding().padding(18.dp)) {
-                        Text("DENKNOTIZ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        Text("Gedankenwerkbank", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 8.dp, bottom = 28.dp))
-                        NavigationDrawerItem(
-                            label = { Text("Werkbank") }, icon = { Icon(Icons.Default.GraphicEq, null) },
-                            selected = state.interaction.section == AppSection.WORKBENCH,
-                            onClick = { viewModel.selectSection(AppSection.WORKBENCH); scope.launch { drawer.close() } },
-                        )
-                        NavigationDrawerItem(
-                            label = { Text("Einstellungen") }, icon = { Icon(Icons.Default.Settings, null) },
-                            selected = state.interaction.section == AppSection.SETTINGS,
-                            onClick = { viewModel.selectSection(AppSection.SETTINGS); scope.launch { drawer.close() } },
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text("v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
+                SessionDrawer(
+                    state = state,
+                    vm = viewModel,
+                    selectSession = { id -> viewModel.selectSession(id); scope.launch { drawer.close() } },
+                    openSettings = { viewModel.selectSection(AppSection.SETTINGS); scope.launch { drawer.close() } },
+                    closeDrawer = { scope.launch { drawer.close() } },
+                )
             },
         ) {
             Scaffold(
@@ -202,11 +200,72 @@ fun DenknotizApp(
                         )
                         AppSection.SETTINGS -> SettingsScreen(
                             state, viewModel, openDrawer = { scope.launch { drawer.open() } },
-                            requestMicrophone = requestMicrophone, createBackup = createBackup, openBackup = openBackup,
+                            requestMicrophone = requestMicrophone, requestNotifications = requestNotifications,
+                            createBackup = createBackup, openBackup = openBackup,
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SessionDrawer(
+    state: DenknotizUiState,
+    vm: DenknotizViewModel,
+    selectSession: (String) -> Unit,
+    openSettings: () -> Unit,
+    closeDrawer: () -> Unit,
+) {
+    var search by rememberSaveable { mutableStateOf("") }
+    var showArchived by rememberSaveable { mutableStateOf(false) }
+    val sessions = state.sessions.filter { it.archived == showArchived && (search.isBlank() || it.title.contains(search, true)) }
+    ModalDrawerSheet(
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.width(330.dp),
+    ) {
+        Column(Modifier.fillMaxHeight().statusBarsPadding().navigationBarsPadding().padding(18.dp)) {
+            Text("DENKNOTIZ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text("Sitzungen", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+            GoldActionButton(
+                text = "Neue Sitzung",
+                icon = Icons.Default.Add,
+                reducedMotion = state.settings.reducedMotion,
+                onClick = { vm.newSession(); closeDrawer() },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                label = { Text("Sitzungen durchsuchen") },
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            )
+            FilterChip(
+                selected = showArchived,
+                onClick = { showArchived = !showArchived },
+                label = { Text(if (showArchived) "Archiv wird angezeigt" else "Archiv anzeigen") },
+                leadingIcon = { Icon(Icons.Default.Archive, null) },
+                modifier = Modifier.padding(bottom = 10.dp),
+            )
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(sessions, key = SessionEntity::id) { session ->
+                    SessionItem(session, state.interaction.selectedSessionId == session.id, expanded = true) {
+                        selectSession(session.id)
+                    }
+                }
+            }
+            NavigationDrawerItem(
+                label = { Text("Einstellungen") },
+                icon = { Icon(Icons.Default.Settings, null) },
+                selected = state.interaction.section == AppSection.SETTINGS,
+                onClick = openSettings,
+            )
+            Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp))
         }
     }
 }
@@ -223,7 +282,7 @@ private fun Workbench(
     BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
         val expanded = maxWidth >= 840.dp
         Row(Modifier.fillMaxSize()) {
-            SessionRail(state, vm, expanded)
+            if (expanded) SessionRail(state, vm)
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 WorkbenchTopBar(state, vm, openDrawer)
                 val bundle = state.bundle
@@ -242,32 +301,38 @@ private fun Workbench(
 }
 
 @Composable
-private fun SessionRail(state: DenknotizUiState, vm: DenknotizViewModel, expanded: Boolean) {
+private fun SessionRail(state: DenknotizUiState, vm: DenknotizViewModel) {
     var search by rememberSaveable { mutableStateOf("") }
-    val sessions = state.sessions.filter { !it.archived && (search.isBlank() || it.title.contains(search, true)) }
+    var showArchived by rememberSaveable { mutableStateOf(false) }
+    val sessions = state.sessions.filter { it.archived == showArchived && (search.isBlank() || it.title.contains(search, true)) }
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         tonalElevation = 5.dp,
-        modifier = Modifier.width(if (expanded) 286.dp else 86.dp).fillMaxHeight(),
+        modifier = Modifier.width(286.dp).fillMaxHeight(),
     ) {
-        Column(Modifier.padding(horizontal = if (expanded) 14.dp else 9.dp, vertical = 16.dp)) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp)) {
             GoldActionButton(
-                text = if (expanded) "Neue Sitzung" else null,
+                text = "Neue Sitzung",
                 icon = Icons.Default.Add,
                 reducedMotion = state.settings.reducedMotion,
                 onClick = vm::newSession,
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (expanded) {
-                OutlinedTextField(
-                    value = search, onValueChange = { search = it }, singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, null) }, label = { Text("Suchen") },
-                    shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                )
-            } else Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = search, onValueChange = { search = it }, singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, null) }, label = { Text("Suchen") },
+                shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            )
+            FilterChip(
+                selected = showArchived,
+                onClick = { showArchived = !showArchived },
+                label = { Text(if (showArchived) "Archiv" else "Aktiv") },
+                leadingIcon = { Icon(Icons.Default.Archive, null) },
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(sessions, key = SessionEntity::id) { session ->
-                    SessionItem(session, state.interaction.selectedSessionId == session.id, expanded) { vm.selectSession(session.id) }
+                    SessionItem(session, state.interaction.selectedSessionId == session.id, true) { vm.selectSession(session.id) }
                 }
             }
         }
@@ -319,10 +384,12 @@ private fun WorkbenchTopBar(state: DenknotizUiState, vm: DenknotizViewModel, ope
         }
         Box {
             IconButton(onClick = { menu = true }, enabled = session != null) { Icon(Icons.Default.MoreVert, "Sitzungsmenü") }
-            DropdownMenu(menu, { menu = false }) {
+            DropdownMenu(menu, { menu = false }, containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 10.dp, shadowElevation = 12.dp, shape = RoundedCornerShape(16.dp)) {
                 DropdownMenuItem({ Text("Umbenennen") }, { menu = false; rename = true }, leadingIcon = { Icon(Icons.Default.Edit, null) })
                 DropdownMenuItem({ Text(if (session?.pinned == true) "Lösen" else "Anpinnen") }, { menu = false; session?.let(vm::togglePin) }, leadingIcon = { Icon(Icons.Default.PushPin, null) })
-                DropdownMenuItem({ Text("Archivieren") }, { menu = false; session?.let(vm::toggleArchive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
+                DropdownMenuItem({ Text(if (session?.archived == true) "Wiederherstellen" else "Archivieren") },
+                    { menu = false; session?.let(vm::toggleArchive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
                 DropdownMenuItem({ Text("Löschen") }, { menu = false; delete = true }, leadingIcon = { Icon(Icons.Default.Delete, null) })
             }
         }
@@ -390,7 +457,8 @@ private fun EntryCard(entry: EntryEntity, vm: DenknotizViewModel) {
                 }
                 Box {
                     IconButton({ menu = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.MoreVert, "Aktionen") }
-                    DropdownMenu(menu, { menu = false }) {
+                    DropdownMenu(menu, { menu = false }, containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 10.dp, shadowElevation = 12.dp, shape = RoundedCornerShape(16.dp)) {
                         if (!ai) {
                             DropdownMenuItem({ Text("Überschrift bearbeiten") }, { menu = false; editTitle = true }, leadingIcon = { Icon(Icons.Default.Edit, null) })
                             DropdownMenuItem({ Text("Text bearbeiten") }, { menu = false; edit = true }, leadingIcon = { Icon(Icons.Default.Edit, null) })
@@ -471,6 +539,7 @@ private fun Composer(
                 Spacer(Modifier.weight(1f))
                 FilledIconButton(
                     onClick = {
+                        requestNotifications()
                         requestMicrophone {
                             if (state.interaction.recording) vm.stopRecording() else vm.startRecording()
                         }
@@ -525,10 +594,11 @@ private fun SpeechBar(state: DenknotizUiState, vm: DenknotizViewModel) {
 
 @Composable
 private fun FocusDialog(state: DenknotizUiState, vm: DenknotizViewModel, dismiss: () -> Unit, confirm: () -> Unit) {
-    var profileMenu by remember { mutableStateOf(false) }
     val boundary = state.bundle?.boundary?.lastIncludedOrdinal ?: 0
     val chars = state.bundle?.entries?.filter { it.type == EntryType.NOTE && it.ordinal > boundary }?.sumOf { it.text.length } ?: 0
     val chunks = ((chars + DenknotizRepository.MODEL_CHUNK_CHARS - 1) / DenknotizRepository.MODEL_CHUNK_CHARS).coerceAtLeast(1)
+    val selectedProfile = AnalysisProfiles.firstOrNull { it.id == state.settings.profileId } ?: AnalysisProfiles.first()
+    val activeInstruction = profileInstruction(selectedProfile, state.settings.profileInstructions)
     AlertDialog(
         onDismissRequest = dismiss,
         shape = RoundedCornerShape(28.dp),
@@ -537,16 +607,15 @@ private fun FocusDialog(state: DenknotizUiState, vm: DenknotizViewModel, dismiss
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(state.interaction.focusQuestion, vm::setFocus,
                     label = { Text("Lokale Fokusfrage") }, minLines = 2, modifier = Modifier.fillMaxWidth())
-                Box {
-                    OutlinedButton({ profileMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(AnalysisProfiles.firstOrNull { it.id == state.settings.profileId }?.label ?: "Profil", modifier = Modifier.weight(1f))
-                    }
-                    DropdownMenu(profileMenu, { profileMenu = false }) {
-                        AnalysisProfiles.forEach { profile -> DropdownMenuItem({ Text(profile.label) }, {
-                            vm.setProfile(profile.id); profileMenu = false
-                        }) }
-                    }
-                }
+                StyledDropdownChoice(
+                    label = "Analyseprofil",
+                    selected = selectedProfile,
+                    values = AnalysisProfiles,
+                    text = { profileLabel(it, state.settings.profileNames) },
+                    onSelect = { vm.setProfile(it.id) },
+                    selectedKey = { it.id },
+                )
+                ProfileDescription(selectedProfile, state.settings)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) { Text("Websuche"); Text("Quellen werden als Links gespeichert.", style = MaterialTheme.typography.bodyMedium) }
                     Switch(state.interaction.webEnabled, vm::setWeb)
@@ -554,7 +623,7 @@ private fun FocusDialog(state: DenknotizUiState, vm: DenknotizViewModel, dismiss
                 Text("Modelllimit: $chunks Chunk(s), keine Kürzung", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
         },
-        confirmButton = { Button(confirm, enabled = chars > 0) { Text("Snapshot auswerten") } },
+        confirmButton = { Button(confirm, enabled = chars > 0 && activeInstruction.isNotBlank()) { Text("Snapshot auswerten") } },
         dismissButton = { TextButton(dismiss) { Text("Abbrechen") } },
     )
 }
@@ -566,6 +635,7 @@ private fun SettingsScreen(
     vm: DenknotizViewModel,
     openDrawer: () -> Unit,
     requestMicrophone: (() -> Unit) -> Unit,
+    requestNotifications: () -> Unit,
     createBackup: () -> Unit,
     openBackup: () -> Unit,
 ) {
@@ -573,11 +643,12 @@ private fun SettingsScreen(
     var groq by remember(state.settings.groqKey) { mutableStateOf(state.settings.groqKey) }
     var google by remember(state.settings.googleKey) { mutableStateOf(state.settings.googleKey) }
     var qwen by remember(state.settings.qwenKey) { mutableStateOf(state.settings.qwenKey) }
-    var codex by remember(state.settings.codexToken) { mutableStateOf(state.settings.codexToken) }
-    var chirpVoice by remember(state.settings.chirpVoice) { mutableStateOf(state.settings.chirpVoice) }
-    var edgeVoice by remember(state.settings.edgeVoice) { mutableStateOf(state.settings.edgeVoice) }
-    var qwenVoice by remember(state.settings.qwenVoiceId) { mutableStateOf(state.settings.qwenVoiceId) }
+    var editProfile by remember { mutableStateOf<AnalysisProfile?>(null) }
     var enrollmentName by rememberSaveable { mutableStateOf("Meine Stimme") }
+    val selectedProfile = AnalysisProfiles.firstOrNull { it.id == state.settings.profileId } ?: AnalysisProfiles.first()
+    LaunchedEffect(state.settings.ttsProvider, state.settings.qwenKey) {
+        if (state.settings.ttsProvider == TtsProvider.QWEN && state.settings.qwenKey.isNotBlank()) vm.loadQwenVoices()
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(openDrawer) { Icon(Icons.Default.Menu, "Menü") }
@@ -604,61 +675,91 @@ private fun SettingsScreen(
                         }
                     }
                 }
-                EnumChoice("Modell", state.settings.model, CodexModel.entries.toList(), { it.label }, vm::setModel)
-                EnumChoice("Reasoning", state.settings.reasoning, ReasoningEffort.entries.toList(), { it.label }, vm::setReasoning)
-                val selectedProfile = AnalysisProfiles.firstOrNull { it.id == state.settings.profileId } ?: AnalysisProfiles.first()
-                EnumChoice("Analyseprofil", selectedProfile, AnalysisProfiles, { it.label }, { vm.setProfile(it.id) }, selectedKey = { it.id })
+                StyledDropdownChoice("Modell", state.settings.model, CodexModel.entries.toList(), { it.label }, vm::setModel)
+                StyledDropdownChoice("Reasoning", state.settings.reasoning, ReasoningEffort.entries.toList(), { it.label }, vm::setReasoning)
+            }
+            SettingsCard("Analyseprofile") {
+                StyledDropdownChoice(
+                    "Aktives Profil",
+                    selectedProfile,
+                    AnalysisProfiles,
+                    { profileLabel(it, state.settings.profileNames) },
+                    { vm.setProfile(it.id) },
+                    selectedKey = { it.id },
+                )
+                ProfileDescription(selectedProfile, state.settings)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button({ editProfile = selectedProfile }) { Icon(Icons.Default.Edit, null); Text("Profil bearbeiten") }
+                    OutlinedButton({ vm.resetProfile(selectedProfile.id) }) { Text("Zurücksetzen") }
+                }
             }
             SettingsCard("Zugänge") {
                 SecretField("Groq API-Key", groq, { groq = it }, showSecrets)
                 SecretField("Google Cloud TTS-Key", google, { google = it }, showSecrets)
                 SecretField("Qwen / DashScope-Key", qwen, { qwen = it }, showSecrets)
-                SecretField("Codex Token (optional)", codex, { codex = it }, showSecrets)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Schlüssel anzeigen", modifier = Modifier.weight(1f)); Switch(showSecrets, { showSecrets = it })
                 }
-                Button({ vm.setKeys(groq, google, qwen, codex) }) { Icon(Icons.Default.Save, null); Text("Lokal verschlüsselt speichern") }
+                Button({ vm.setKeys(groq, google, qwen) }) { Icon(Icons.Default.Save, null); Text("Lokal verschlüsselt speichern") }
             }
             SettingsCard("Sprachausgabe") {
-                EnumChoice("Anbieter", state.settings.ttsProvider, TtsProvider.entries.toList(), { it.label }, vm::setTtsProvider)
-                OutlinedTextField(chirpVoice, { chirpVoice = it }, label = { Text("Chirp-Stimme") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(edgeVoice, { edgeVoice = it }, label = { Text("Edge-Stimme") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(qwenVoice, { qwenVoice = it }, label = { Text("Qwen-Stimm-ID") }, modifier = Modifier.fillMaxWidth())
-                Button({ vm.setVoices(chirpVoice, edgeVoice, qwenVoice) }) { Text("Stimmen speichern") }
-                Text("Tempo ${(state.settings.speechRate * 100).toInt()} %")
-                Slider(state.settings.speechRate, vm::setSpeechRate, valueRange = 0.7f..1.3f)
+                StyledDropdownChoice("Anbieter", state.settings.ttsProvider, TtsProvider.entries.toList(), { it.label }, vm::setTtsProvider)
+                when (state.settings.ttsProvider) {
+                    TtsProvider.CHIRP -> VoiceDropdown(
+                        label = "Chirp-Stimme",
+                        selectedId = state.settings.chirpVoice,
+                        voices = VoiceCatalog.chirp,
+                        onSelect = { vm.setVoices(it.id, state.settings.edgeVoice, state.settings.qwenVoiceId) },
+                    )
+                    TtsProvider.EDGE -> VoiceDropdown(
+                        label = "Edge-Stimme",
+                        selectedId = state.settings.edgeVoice,
+                        voices = VoiceCatalog.edge,
+                        onSelect = { vm.setVoices(state.settings.chirpVoice, it.id, state.settings.qwenVoiceId) },
+                    )
+                    TtsProvider.QWEN -> {
+                        val ownVoices = state.interaction.qwenVoices.map { voice ->
+                            SelectableVoice(voice.id, state.settings.qwenVoiceNames[voice.id] ?: voice.name)
+                        }
+                        VoiceDropdown(
+                            label = "Eigene Stimme",
+                            selectedId = state.settings.qwenVoiceId,
+                            voices = ownVoices,
+                            onSelect = { vm.setVoices(state.settings.chirpVoice, state.settings.edgeVoice, it.id) },
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(vm::loadQwenVoices, enabled = !state.interaction.loadingVoices) {
+                                Icon(Icons.Default.Refresh, null); Text("Stimmen neu laden")
+                            }
+                            if (state.interaction.loadingVoices) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                        }
+                        OutlinedTextField(enrollmentName, { enrollmentName = it }, label = { Text("Name der neuen Stimme") }, modifier = Modifier.fillMaxWidth())
+                        Button(
+                            onClick = {
+                                requestNotifications()
+                                requestMicrophone {
+                                    if (state.interaction.enrollingVoice) vm.stopVoiceEnrollmentRecording(enrollmentName)
+                                    else vm.startVoiceEnrollmentRecording()
+                                }
+                            },
+                            enabled = state.settings.qwenKey.isNotBlank() && !state.interaction.loadingVoices,
+                        ) {
+                            Icon(if (state.interaction.enrollingVoice) Icons.Default.Stop else Icons.Default.Mic, null)
+                            Text(if (state.interaction.enrollingVoice) "Aufnahme beenden und anlegen" else "Neue eigene Stimme aufnehmen")
+                        }
+                    }
+                }
+                if (state.settings.ttsProvider == TtsProvider.QWEN) {
+                    Text("Das Tempo der eigenen Stimme wird vom Qwen-Modell bestimmt.", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text("Tempo ${(state.settings.speechRate * 100).toInt()} %")
+                    Slider(state.settings.speechRate, vm::setSpeechRate, valueRange = 0.7f..1.3f)
+                }
                 Text("Anbieter wechseln nie automatisch.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
-            SettingsCard("Qwen-Stimmverwaltung") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(vm::loadQwenVoices, enabled = !state.interaction.loadingVoices) { Icon(Icons.Default.Refresh, null); Text("Stimmen laden") }
-                    if (state.interaction.loadingVoices) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                }
-                state.interaction.qwenVoices.forEach { rawVoice ->
-                    val voice = rawVoice.copy(name = state.settings.qwenVoiceNames[rawVoice.id] ?: rawVoice.name)
-                    VoiceRow(
-                        voice, state.settings.qwenVoiceId == voice.id,
-                        select = { vm.setVoices(state.settings.chirpVoice, state.settings.edgeVoice, voice.id) },
-                        delete = { vm.deleteQwenVoice(voice) },
-                        rename = { vm.renameQwenVoice(voice, it) },
-                    )
-                }
-                OutlinedTextField(enrollmentName, { enrollmentName = it }, label = { Text("Name der neuen Stimme") }, modifier = Modifier.fillMaxWidth())
-                Button(
-                    onClick = {
-                        requestMicrophone {
-                            if (state.interaction.enrollingVoice) vm.stopVoiceEnrollmentRecording(enrollmentName)
-                            else vm.startVoiceEnrollmentRecording()
-                        }
-                    },
-                    enabled = state.settings.qwenKey.isNotBlank() && !state.interaction.loadingVoices,
-                ) {
-                    Icon(if (state.interaction.enrollingVoice) Icons.Default.Stop else Icons.Default.Mic, null)
-                    Text(if (state.interaction.enrollingVoice) "Aufnahme beenden und anlegen" else "Stimmprobe aufnehmen")
-                }
-            }
             SettingsCard("Darstellung") {
-                EnumChoice("Theme", state.settings.theme, AppTheme.entries.toList(), { it.label }, vm::setTheme)
+                StyledDropdownChoice("Theme", state.settings.theme, AppTheme.entries.toList(), { it.label }, vm::setTheme)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) { Text("Reduzierte Bewegung"); Text("Animationen werden auf 0 ms gesetzt.", style = MaterialTheme.typography.bodyMedium) }
                     Switch(state.settings.reducedMotion, vm::setReducedMotion)
@@ -677,6 +778,14 @@ private fun SettingsScreen(
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+    editProfile?.let { profile ->
+        ProfileEditorDialog(
+            profile = profile,
+            settings = state.settings,
+            dismiss = { editProfile = null },
+            save = { name, instruction -> vm.updateProfile(profile.id, name, instruction); editProfile = null },
+        )
     }
 }
 
@@ -700,42 +809,136 @@ private fun SecretField(label: String, value: String, onChange: (String) -> Unit
 }
 
 @Composable
-private fun <T> EnumChoice(
+private fun <T> StyledDropdownChoice(
     label: String,
     selected: T,
     values: List<T>,
     text: (T) -> String,
     onSelect: (T) -> Unit,
     selectedKey: (T) -> Any = { it as Any },
+    enabled: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton({ expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                Text(label, style = MaterialTheme.typography.labelSmall)
-                Text(values.firstOrNull { selectedKey(it) == selectedKey(selected) }?.let(text) ?: selected.toString())
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val menuWidth = maxWidth
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.72f else 0.35f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { expanded = true },
+        ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(values.firstOrNull { selectedKey(it) == selectedKey(selected) }?.let(text) ?: text(selected),
+                        style = MaterialTheme.typography.bodyLarge)
+                }
+                Icon(Icons.Default.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.primary)
             }
         }
-        DropdownMenu(expanded, { expanded = false }) {
-            values.forEach { item -> DropdownMenuItem({ Text(text(item)) }, { onSelect(item); expanded = false },
-                trailingIcon = { if (selectedKey(item) == selectedKey(selected)) Icon(Icons.Default.Check, null) }) }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.width(menuWidth),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 10.dp,
+            shadowElevation = 12.dp,
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            values.forEach { item ->
+                val chosen = selectedKey(item) == selectedKey(selected)
+                DropdownMenuItem(
+                    text = { Text(text(item), color = MaterialTheme.colorScheme.onSurface) },
+                    onClick = { onSelect(item); expanded = false },
+                    leadingIcon = { if (chosen) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary) },
+                    colors = androidx.compose.material3.MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        leadingIconColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = if (chosen) Modifier.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)) else Modifier,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun VoiceRow(voice: QwenVoice, selected: Boolean, select: () -> Unit, delete: () -> Unit, rename: (String) -> Unit = {}) {
-    var editing by remember { mutableStateOf(false) }
-    Surface(color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = select)) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(voice.name, fontWeight = FontWeight.SemiBold); Text(voice.createdAt, style = MaterialTheme.typography.labelSmall) }
-            if (selected) Icon(Icons.Default.Check, "Gewählt", tint = MaterialTheme.colorScheme.primary)
-            IconButton({ editing = true }) { Icon(Icons.Default.Edit, "Stimme lokal umbenennen") }
-            IconButton(delete) { Icon(Icons.Default.Delete, "Stimme löschen") }
+private fun VoiceDropdown(label: String, selectedId: String, voices: List<SelectableVoice>, onSelect: (SelectableVoice) -> Unit) {
+    val selected = voices.firstOrNull { it.id == selectedId }
+        ?: SelectableVoice(selectedId, if (selectedId.isBlank()) "Noch keine Stimme gewählt" else selectedId)
+    StyledDropdownChoice(
+        label = label,
+        selected = selected,
+        values = voices,
+        text = SelectableVoice::name,
+        onSelect = onSelect,
+        selectedKey = SelectableVoice::id,
+        enabled = voices.isNotEmpty(),
+    )
+    if (voices.isEmpty()) {
+        Text("Für diesen Anbieter wurden noch keine Stimmen geladen.", style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ProfileDescription(profile: AnalysisProfile, settings: SettingsSnapshot) {
+    val effectiveInstruction = profileInstruction(profile, settings.profileInstructions)
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text(profile.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                effectiveInstruction.ifBlank { "Dieses Profil hat noch keine eigene Anweisung. Öffne ‚Profil bearbeiten‘ und beschreibe dort, wie die KI auswerten soll." },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
-    if (editing) EditDialog(voice.name, { editing = false }, { rename(it); editing = false }, "Stimme umbenennen")
+}
+
+@Composable
+private fun ProfileEditorDialog(
+    profile: AnalysisProfile,
+    settings: SettingsSnapshot,
+    dismiss: () -> Unit,
+    save: (String, String) -> Unit,
+) {
+    var name by rememberSaveable(profile.id) { mutableStateOf(profileLabel(profile, settings.profileNames)) }
+    var instruction by rememberSaveable(profile.id) { mutableStateOf(profileInstruction(profile, settings.profileInstructions)) }
+    AlertDialog(
+        onDismissRequest = dismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text("Analyseprofil bearbeiten") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    enabled = profile.customName,
+                    label = { Text(if (profile.customName) "Profilname" else "Fester Profilname") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = instruction,
+                    onValueChange = { instruction = it },
+                    label = { Text("So soll die KI auswerten") },
+                    minLines = 7,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("Dieser Text wird bei jeder Auswertung mit diesem Profil direkt an Codex übergeben.",
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { Button({ save(name, instruction) }, enabled = instruction.isNotBlank()) { Text("Speichern") } },
+        dismissButton = { TextButton(dismiss) { Text("Abbrechen") } },
+    )
 }
 
 @Composable
