@@ -237,7 +237,9 @@ fun AbsatzText(
     stil: androidx.compose.ui.text.TextStyle = Schriften.notiztext,
 ) {
     val farben = Farben
-    val absaetze = Absaetze.teile(text)
+    // Nur neu zerlegen, wenn sich der Text ändert — nicht bei jedem Scrollschritt und
+    // nicht bei jedem Wechsel des vorgelesenen Absatzes.
+    val absaetze = remember(text) { Absaetze.teile(text) }
     if (absaetze.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         absaetze.forEachIndexed { nr, absatz ->

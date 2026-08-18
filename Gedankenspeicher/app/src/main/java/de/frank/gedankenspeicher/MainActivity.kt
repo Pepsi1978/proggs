@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -126,6 +127,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val stimmMikrofonFrage =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
+            if (erlaubt) {
+                modell.mikrofonErlaubt()
+                modell.nimmStimmeAuf()
+            } else {
+                modell.mikrofonAbgelehnt()
+                modell.melde("Ohne Mikrofon kann ich deine Stimme nicht aufnehmen.")
+            }
+        }
+
     /** F-17 — die Sicherungsdatei, aus der wiederhergestellt wird. */
     private val dateiWahl = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) modell.dateiwahlErledigt() else modell.stelleWiederHerAus(uri)
@@ -165,6 +177,7 @@ class MainActivity : ComponentActivity() {
                     beiAntwortMikrofon = { starteAntwortAufnahmeMitRecht(vm) },
                     beiDateiwahl = { dateiWahl.launch(arrayOf("*/*")) },
                     beiNeustart = { starteNeu() },
+                    beiStimmMikrofon = { starteStimmaufnahmeMitRecht(vm) },
                 )
             }
         }
@@ -207,6 +220,13 @@ class MainActivity : ComponentActivity() {
         } else {
             antwortMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    /** F-18 — eine eigene Stimme aufnehmen. Dasselbe Recht, derselbe Weg. */
+    private fun starteStimmaufnahmeMitRecht(vm: HauptViewModel) {
+        val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (hat) vm.nimmStimmeAuf() else stimmMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     /** F-11 — der Gerätecode-Ablauf. Der Browser wird von `CodexAuthManager` selbst geöffnet. */
@@ -267,6 +287,7 @@ private fun Oberflaeche(
     beiAntwortMikrofon: () -> Unit,
     beiDateiwahl: () -> Unit,
     beiNeustart: () -> Unit,
+    beiStimmMikrofon: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val verlauf by vm.verlauf.collectAsStateWithLifecycle()
@@ -277,6 +298,20 @@ private fun Oberflaeche(
     val profile by vm.profile.collectAsStateWithLifecycle(emptyList())
     val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
     val liestVor by vm.vorleser.laeuft.collectAsStateWithLifecycle()
+    val codexVerbunden by vm.codexVerbunden.collectAsStateWithLifecycle()
+    val codexKonto by vm.codexKonto.collectAsStateWithLifecycle()
+    val codexModell by vm.codexModell.collectAsStateWithLifecycle()
+    val codexEffort by vm.codexEffort.collectAsStateWithLifecycle()
+    val websuche by vm.websucheGrundhaltung.collectAsStateWithLifecycle()
+    val groq by vm.groqSchluessel.collectAsStateWithLifecycle()
+    val ttsAnbieter by vm.ttsAnbieter.collectAsStateWithLifecycle()
+    val ttsStimme by vm.ttsStimme.collectAsStateWithLifecycle()
+    val googleSchluessel by vm.googleSchluessel.collectAsStateWithLifecycle()
+    val qwenSchluessel by vm.qwenSchluessel.collectAsStateWithLifecycle()
+    val eigeneStimmen by vm.eigeneStimmen.collectAsStateWithLifecycle()
+    val stimmenLaden by vm.stimmenLaden.collectAsStateWithLifecycle()
+    val nimmtStimmeAuf by vm.nimmtStimmeAuf.collectAsStateWithLifecycle()
+    val driveAn by vm.driveAn.collectAsStateWithLifecycle()
 
     var ziel by remember { mutableStateOf(Ziel.VERLAUF) }
     var schubladeOffen by remember { mutableStateOf(false) }
@@ -305,12 +340,36 @@ private fun Oberflaeche(
         if (ordnerFehlt) beiOrdnerwahl()
     }
 
+    // Beim Betreten der Einstellungen die eigenen Stimmen holen — sonst steht dort
+    // „noch keine Stimme aufgenommen", obwohl bei Alibaba welche liegen.
+    LaunchedEffect(ziel, qwenSchluessel) {
+        if (ziel == Ziel.EINSTELLUNGEN && qwenSchluessel.isNotBlank() && eigeneStimmen.isEmpty()) {
+            vm.ladeEigeneStimmen()
+        }
+    }
+
     val sucheDatei by vm.sucheSicherungsdatei.collectAsStateWithLifecycle()
     LaunchedEffect(sucheDatei) {
         if (sucheDatei) beiDateiwahl()
     }
 
     val neustartNoetig by vm.neustartNoetig.collectAsStateWithLifecycle()
+
+    // Die Zurückgeste, Ebene für Ebene (Aufgabe: „ich möchte nicht aus der App fliegen").
+    //
+    // Ohne diese Handler reicht Android die Geste an das System durch und beendet die
+    // Activity — aus den Einstellungen flog man aus der App statt in den Verlauf. Die
+    // Reihenfolge ist die des Aufbaus: erst die tiefste offene Ebene, zuletzt der Verlauf.
+    // Auf dem Verlauf selbst wird **nicht** abgefangen: dort ist Zurück = App verlassen,
+    // und das soll auch so bleiben.
+    BackHandler(enabled = ziel == Ziel.PROFILE) { ziel = Ziel.EINSTELLUNGEN }
+    BackHandler(enabled = ziel == Ziel.ANMELDUNG) { ziel = Ziel.EINSTELLUNGEN }
+    BackHandler(enabled = ziel == Ziel.EINSTELLUNGEN) { ziel = Ziel.VERLAUF }
+    BackHandler(enabled = ziel == Ziel.SUCHE) {
+        vm.leereSuche()
+        ziel = Ziel.VERLAUF
+    }
+    BackHandler(enabled = schubladeOffen && ziel == Ziel.VERLAUF) { schubladeOffen = false }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Ab 400 dp ist das Innendisplay aufgeklappt — dann bekommt die Schublade ihre
@@ -319,8 +378,10 @@ private fun Oberflaeche(
 
         VerlaufBildschirm(
             zustand = verlauf,
+            istDunkel = Erscheinung.vonId(erscheinungId).farben.istDunkel,
             beiSchublade = { schubladeOffen = true },
             beiSuche = { ziel = Ziel.SUCHE },
+            beiErscheinungUmschalten = vm::erscheinungUmschalten,
             beiEinstellungen = { ziel = Ziel.EINSTELLUNGEN },
             beiEntwurf = vm::setzeEntwurf,
             beiSenden = vm::sendeEntwurf,
@@ -371,18 +432,21 @@ private fun Oberflaeche(
         SchiebtVonRechts(sichtbar = ziel == Ziel.EINSTELLUNGEN) {
             EinstellungenBildschirm(
                 erscheinung = erscheinungId,
-                codexVerbunden = vm.codex.isConnected,
-                codexKonto = vm.codex.email,
-                codexModell = vm.einstellungen.codexModell,
-                codexEffort = vm.einstellungen.codexEffort,
-                websucheGrundhaltung = vm.einstellungen.websucheGrundhaltung,
-                groqSchluessel = vm.groqSchluessel.collectAsStateWithLifecycle().value,
-                ttsAnbieter = vm.ttsAnbieter.collectAsStateWithLifecycle().value,
-                ttsStimme = vm.ttsStimme.collectAsStateWithLifecycle().value,
-                googleSchluessel = vm.googleSchluessel.collectAsStateWithLifecycle().value,
-                qwenSchluessel = vm.qwenSchluessel.collectAsStateWithLifecycle().value,
+                codexVerbunden = codexVerbunden,
+                codexKonto = codexKonto,
+                codexModell = codexModell,
+                codexEffort = codexEffort,
+                websucheGrundhaltung = websuche,
+                groqSchluessel = groq,
+                ttsAnbieter = ttsAnbieter,
+                ttsStimme = ttsStimme,
+                googleSchluessel = googleSchluessel,
+                qwenSchluessel = qwenSchluessel,
+                eigeneStimmen = eigeneStimmen,
+                stimmenLaden = stimmenLaden,
+                nimmtStimmeAuf = nimmtStimmeAuf,
                 probeLaeuft = liestVor,
-                driveAn = vm.driveAn.collectAsStateWithLifecycle().value,
+                driveAn = driveAn,
                 letzteSicherung = vm.einstellungen.letzteSicherungZeit,
                 letzteGroesse = vm.einstellungen.letzteSicherungGroesse,
                 beiErscheinung = vm::setzeErscheinung,
@@ -400,6 +464,9 @@ private fun Oberflaeche(
                 beiStimme = vm::setzeTtsStimme,
                 beiGoogleSchluessel = vm::setzeGoogleSchluessel,
                 beiQwenSchluessel = vm::setzeQwenSchluessel,
+                beiStimmenLaden = vm::ladeEigeneStimmen,
+                beiStimmeAufnehmen = beiStimmMikrofon,
+                beiStimmeLoeschen = vm::loescheEigeneStimme,
                 beiProbe = vm::spieleProbe,
                 beiDrive = vm::setzeDrive,
                 beiJetztSichern = vm::sichereJetzt,

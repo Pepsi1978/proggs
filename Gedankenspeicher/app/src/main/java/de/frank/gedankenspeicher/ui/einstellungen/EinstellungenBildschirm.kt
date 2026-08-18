@@ -6,8 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -26,8 +26,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
@@ -40,18 +43,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.BuildConfig
 import de.frank.gedankenspeicher.auth.CodexModel
 import de.frank.gedankenspeicher.auth.ReasoningEffort
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.settings.Websuche
+import de.frank.gedankenspeicher.tts.ClonedVoice
 import de.frank.gedankenspeicher.tts.TtsCatalog
 import de.frank.gedankenspeicher.tts.TtsProvider
 import de.frank.gedankenspeicher.ui.ki.GeranderterKnopf
@@ -64,8 +68,11 @@ import de.frank.gedankenspeicher.ui.theme.Schriften
 /**
  * **B-04 — die Einstellungen.**
  *
- * Sieben Gruppen in der Reihenfolge des Specs. Sie steht bewusst nicht unter „später":
- * ohne Groq-Schlüssel und Codex-Anmeldung ist die App eine Notiz-App ohne KI.
+ * Die **Zugänge** stehen in einer eigenen Gruppe, nicht bei dem Dienst, den sie freischalten.
+ * Vorher lagen sie darunter — und weil ein Dienst ohne Schlüssel ausgegraut war, kam man an
+ * das Feld für seinen Schlüssel gar nicht heran: Google liess sich nicht wählen, weil der
+ * Schlüssel fehlte, und der Schlüssel liess sich nicht eintragen, weil Google nicht gewählt
+ * war. Ein geschlossener Kreis, aus dem es keinen Weg gab.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -81,6 +88,9 @@ fun EinstellungenBildschirm(
     ttsStimme: String,
     googleSchluessel: String,
     qwenSchluessel: String,
+    eigeneStimmen: List<ClonedVoice>,
+    stimmenLaden: Boolean,
+    nimmtStimmeAuf: Boolean,
     probeLaeuft: Boolean,
     driveAn: Boolean,
     letzteSicherung: Long,
@@ -97,6 +107,9 @@ fun EinstellungenBildschirm(
     beiStimme: (String) -> Unit,
     beiGoogleSchluessel: (String) -> Unit,
     beiQwenSchluessel: (String) -> Unit,
+    beiStimmenLaden: () -> Unit,
+    beiStimmeAufnehmen: () -> Unit,
+    beiStimmeLoeschen: (String) -> Unit,
     beiProbe: () -> Unit,
     beiDrive: (Boolean) -> Unit,
     beiJetztSichern: () -> Unit,
@@ -145,7 +158,11 @@ fun EinstellungenBildschirm(
                     Column(Modifier.weight(1f)) {
                         Text("Verbindung", style = schrift.einstellung, color = farben.textMittel)
                         Text(
-                            if (codexVerbunden) "verbunden${codexKonto?.let { " als $it" }.orEmpty()}" else "nicht verbunden",
+                            if (codexVerbunden) {
+                                "verbunden${codexKonto?.let { " als $it" }.orEmpty()}"
+                            } else {
+                                "nicht verbunden"
+                            },
                             style = schrift.einstellungErklaerung,
                             color = if (codexVerbunden) farben.erfolg else farben.textSchwach,
                         )
@@ -156,28 +173,55 @@ fun EinstellungenBildschirm(
                         beiDruck = if (codexVerbunden) beiTrennen else beiVerbinden,
                     )
                 }
-                Spacer(Modifier.height(14.dp))
+
+                Spacer(Modifier.height(16.dp))
                 Beschriftung("Modell")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     CodexModel.entries.forEach { m ->
                         Wahlfeld(m.label, m.apiId == codexModell) { beiModell(m.apiId) }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+
+                Spacer(Modifier.height(14.dp))
                 Beschriftung("Effort")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Erklaerung("Wie gründlich das Modell nachdenkt, bevor es antwortet.")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     ReasoningEffort.entries.forEach { e ->
                         Wahlfeld(e.label, e.apiValue == codexEffort) { beiEffort(e.apiValue) }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+
+                Spacer(Modifier.height(14.dp))
                 Beschriftung("Websuche")
                 Erklaerung("Die Grundhaltung. Im KI-Blatt lässt sie sich für eine einzelne Auswertung überstimmen.")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Websuche.entries.forEach { w ->
                         Wahlfeld(w.label, w.id == websucheGrundhaltung) { beiWebsuche(w.id) }
                     }
                 }
+
+                Spacer(Modifier.height(14.dp))
+                // Was wirklich benutzt wird, steht hier ausgeschrieben — nicht nur als
+                // hervorgehobenes Feld irgendwo darüber.
+                Text(
+                    text = buildString {
+                        append("Es läuft: ")
+                        append(CodexModel.fromLabel(codexModell).label)
+                        append(" · Effort ").append(ReasoningEffort.fromLabel(codexEffort).label)
+                        append(" · Websuche ").append(Websuche.vonId(websucheGrundhaltung).label)
+                    },
+                    style = schrift.einstellungErklaerung,
+                    color = farben.akzent,
+                )
             }
 
             // 3 — Auswertungsprofile (F-10)
@@ -196,62 +240,93 @@ fun EinstellungenBildschirm(
                 }
             }
 
-            // 4 — Transkription (F-03)
-            Gruppe("Transkription") {
-                Schluesselfeld("Groq-Schlüssel", groqSchluessel, beiGroq)
-                Spacer(Modifier.height(6.dp))
-                Erklaerung("Modell: whisper-large-v3-turbo · vier Schichten gegen Halluzinationen")
+            // 4 — Zugänge: alle drei Schlüssel, immer erreichbar
+            Gruppe("Zugänge") {
+                Schluesselfeld(
+                    beschriftung = "Groq",
+                    zweck = "Transkription",
+                    wert = groqSchluessel,
+                    beiAenderung = beiGroq,
+                )
+                Spacer(Modifier.height(14.dp))
+                Schluesselfeld(
+                    beschriftung = "Google Cloud",
+                    zweck = "Chirp-3-HD-Stimmen",
+                    wert = googleSchluessel,
+                    beiAenderung = beiGoogleSchluessel,
+                )
+                Spacer(Modifier.height(14.dp))
+                Schluesselfeld(
+                    beschriftung = "Alibaba",
+                    zweck = "deine eigene Stimme",
+                    wert = qwenSchluessel,
+                    beiAenderung = beiQwenSchluessel,
+                )
             }
 
             // 5 — Stimme (F-18)
             Gruppe("Stimme") {
                 Beschriftung("Dienst")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    // Jeder Dienst ist wählbar — auch ohne Schlüssel. Fehlt einer, sagt die
+                    // Zeile darunter, welcher, statt den Weg dorthin zu versperren.
                     TtsProvider.entries.forEach { p ->
-                        val fehlt = when (p) {
-                            TtsProvider.GOOGLE_CLOUD -> googleSchluessel.isBlank()
-                            TtsProvider.QWEN_CLONE -> qwenSchluessel.isBlank()
-                            else -> false
-                        }
-                        Box(Modifier.alphaWennFehlt(fehlt)) {
-                            Wahlfeld(p.label, p.id == ttsAnbieter) { if (!fehlt) beiAnbieter(p.id) }
-                        }
+                        Wahlfeld(p.label, p.id == ttsAnbieter) { beiAnbieter(p.id) }
                     }
                 }
+
                 val gewaehlt = TtsProvider.entries.firstOrNull { it.id == ttsAnbieter } ?: TtsProvider.EDGE
-                if (gewaehlt == TtsProvider.GOOGLE_CLOUD && googleSchluessel.isBlank()) {
-                    Erklaerung("Für Google Chirp 3 HD fehlt der Schlüssel.")
-                }
-                if (gewaehlt == TtsProvider.QWEN_CLONE && qwenSchluessel.isBlank()) {
-                    Erklaerung("Für die eigene Stimme fehlen Schlüssel und Sprachprobe.")
-                }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
+
                 when (gewaehlt) {
                     TtsProvider.EDGE -> {
                         Beschriftung("Stimme")
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TtsCatalog.edgeVoices.forEach { v ->
-                                Wahlfeld(v.name, v.id == ttsStimme) { beiStimme(v.id) }
-                            }
-                        }
+                        Erklaerung("Braucht nur Netz, keinen Schlüssel.")
+                        StimmListe(
+                            eintraege = TtsCatalog.edgeVoices.map { it.id to it.name },
+                            gewaehlt = ttsStimme,
+                            beiWahl = beiStimme,
+                        )
                     }
+
                     TtsProvider.GOOGLE_CLOUD -> {
-                        Schluesselfeld("Google-Cloud-Schlüssel", googleSchluessel, beiGoogleSchluessel)
-                        Spacer(Modifier.height(10.dp))
                         Beschriftung("Stimme")
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TtsCatalog.googleVoices.take(12).forEach { v ->
-                                Wahlfeld(v.name, v.id == ttsStimme) { beiStimme(v.id) }
-                            }
+                        if (googleSchluessel.isBlank()) {
+                            Hinweis("Trag oben unter „Zugänge\" den Google-Cloud-Schlüssel ein.")
                         }
+                        Erklaerung("${TtsCatalog.googleVoices.size} Chirp-3-HD-Stimmen.")
+                        StimmListe(
+                            eintraege = TtsCatalog.googleVoices.map { it.id to it.name },
+                            gewaehlt = ttsStimme,
+                            beiWahl = beiStimme,
+                        )
                     }
-                    TtsProvider.QWEN_CLONE -> Schluesselfeld("Qwen-Schlüssel", qwenSchluessel, beiQwenSchluessel)
-                    TtsProvider.GERAET -> Erklaerung("Es spricht, was Android mitbringt — ohne Netz, ohne Schlüssel.")
+
+                    TtsProvider.QWEN_CLONE -> EigeneStimme(
+                        schluesselDa = qwenSchluessel.isNotBlank(),
+                        stimmen = eigeneStimmen,
+                        gewaehlt = ttsStimme,
+                        laden = stimmenLaden,
+                        nimmtAuf = nimmtStimmeAuf,
+                        beiWahl = beiStimme,
+                        beiLaden = beiStimmenLaden,
+                        beiAufnehmen = beiStimmeAufnehmen,
+                        beiLoeschen = beiStimmeLoeschen,
+                    )
+
+                    TtsProvider.GERAET -> Erklaerung(
+                        "Es spricht, was Android mitbringt — ohne Netz, ohne Schlüssel.",
+                    )
                 }
-                Spacer(Modifier.height(14.dp))
+
+                Spacer(Modifier.height(16.dp))
                 GeranderterKnopf(
                     beschriftung = if (probeLaeuft) "Probe anhalten" else "Probe hören",
                     beiDruck = beiProbe,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -259,7 +334,7 @@ fun EinstellungenBildschirm(
             Gruppe("Sicherung") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Nach Google Drive sichern", style = schrift.einstellung, color = farben.textMittel)
+                        Text("In einen Ordner sichern", style = schrift.einstellung, color = farben.textMittel)
                         Text(
                             if (letzteSicherung > 0) {
                                 "zuletzt ${Repository.zeitpunkt(letzteSicherung)} · ${letzteGroesse / 1024} kB"
@@ -283,6 +358,7 @@ fun EinstellungenBildschirm(
                     )
                 }
                 if (driveAn) {
+                    Erklaerung("Wähle beim ersten Sichern deinen Google-Drive-Ordner — dann liegt die Sicherung dort.")
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GeranderterKnopf("Jetzt sichern", beiJetztSichern)
@@ -302,6 +378,90 @@ fun EinstellungenBildschirm(
             }
 
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * **„Meine Stimme" (F-18).**
+ *
+ * Drei Dinge an einer Stelle: die vorhandenen Stimmen wählen, eine neue aufnehmen, eine
+ * löschen. Ohne Schlüssel steht statt der Liste der eine Satz, der sagt, was fehlt — und wo
+ * es einzutragen ist.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun EigeneStimme(
+    schluesselDa: Boolean,
+    stimmen: List<ClonedVoice>,
+    gewaehlt: String,
+    laden: Boolean,
+    nimmtAuf: Boolean,
+    beiWahl: (String) -> Unit,
+    beiLaden: () -> Unit,
+    beiAufnehmen: () -> Unit,
+    beiLoeschen: (String) -> Unit,
+) {
+    val farben = Farben
+
+    if (!schluesselDa) {
+        Hinweis("Trag oben unter „Zugänge\" den Alibaba-Schlüssel ein — danach erscheinen deine Stimmen hier.")
+        return
+    }
+
+    Beschriftung("Deine Stimmen")
+    when {
+        laden -> Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = farben.akzent)
+            Spacer(Modifier.width(10.dp))
+            Erklaerung("wird geladen …")
+        }
+
+        stimmen.isEmpty() -> Erklaerung("Noch keine Stimme aufgenommen.")
+
+        else -> StimmListe(
+            eintraege = stimmen.map { it.id to it.name },
+            gewaehlt = gewaehlt,
+            beiWahl = beiWahl,
+        )
+    }
+
+    Spacer(Modifier.height(14.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        GeranderterKnopf(
+            beschriftung = if (nimmtAuf) "Aufnahme beenden" else "Neue Stimme aufnehmen",
+            farbe = if (nimmtAuf) farben.fehler else farben.akzent,
+            beiDruck = beiAufnehmen,
+        )
+        IconButton(onClick = beiLaden) {
+            Icon(Icons.Outlined.Refresh, "Stimmen neu laden", Modifier.size(20.dp), tint = farben.textMittel)
+        }
+        if (gewaehlt.isNotBlank() && stimmen.any { it.id == gewaehlt }) {
+            IconButton(onClick = { beiLoeschen(gewaehlt) }) {
+                Icon(Icons.Outlined.Delete, "Gewählte Stimme löschen", Modifier.size(20.dp), tint = farben.fehler)
+            }
+        }
+    }
+    if (nimmtAuf) {
+        Spacer(Modifier.height(8.dp))
+        Erklaerung("Sprich einige Sätze in normalem Tempo — je mehr, desto ähnlicher wird der Klang.")
+    }
+}
+
+/** Eine Stimmliste als umbrechende Wahlfelder — sie kann dreissig Einträge lang werden. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StimmListe(
+    eintraege: List<Pair<String, String>>,
+    gewaehlt: String,
+    beiWahl: (String) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        eintraege.forEach { (kennung, name) ->
+            Wahlfeld(name, kennung == gewaehlt) { beiWahl(kennung) }
         }
     }
 }
@@ -330,23 +490,58 @@ private fun Gruppe(titel: String, inhalt: @Composable () -> Unit) {
 
 @Composable
 private fun Beschriftung(text: String) =
-    Text(text, style = Schriften.einstellung, color = Farben.textMittel, modifier = Modifier.padding(bottom = 6.dp))
+    Text(text, style = Schriften.einstellung, color = Farben.textMittel, modifier = Modifier.padding(bottom = 4.dp))
 
 @Composable
-private fun Erklaerung(text: String) =
-    Text(text, style = Schriften.einstellungErklaerung, color = Farben.textSchwach, modifier = Modifier.padding(vertical = 4.dp))
+private fun Erklaerung(text: String) = Text(
+    text,
+    style = Schriften.einstellungErklaerung,
+    color = Farben.textSchwach,
+    modifier = Modifier.padding(bottom = 6.dp),
+)
+
+/** Ein Hinweis, der sagt, was fehlt — in der Fehlerfarbe, damit er nicht überlesen wird. */
+@Composable
+private fun Hinweis(text: String) = Text(
+    text,
+    style = Schriften.einstellungErklaerung,
+    color = Farben.fehler,
+    modifier = Modifier.padding(bottom = 8.dp),
+)
 
 /**
- * Ein Schlüsselfeld: verdeckt, mit Augensymbol zum Anzeigen. Fehlt der Schlüssel, trägt das
- * Feld einen Rand in der Fehlerfarbe — sonst sucht man den Grund an der falschen Stelle.
+ * Ein Schlüsselfeld: verdeckt, mit Augensymbol zum Anzeigen.
+ *
+ * Fehlt der Schlüssel, trägt das Feld einen Rand in der Fehlerfarbe. Steht er, ein Häkchen —
+ * sonst weiss man nach dem Eintragen nicht, ob er wirklich angekommen ist.
  */
 @Composable
-private fun Schluesselfeld(beschriftung: String, wert: String, beiAenderung: (String) -> Unit) {
+private fun Schluesselfeld(
+    beschriftung: String,
+    zweck: String,
+    wert: String,
+    beiAenderung: (String) -> Unit,
+) {
     val farben = Farben
     val schrift = Schriften
     var sichtbar by remember { mutableStateOf(false) }
     Column {
-        Beschriftung(beschriftung)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(beschriftung, style = schrift.einstellung, color = farben.textMittel)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "· $zweck",
+                style = schrift.einstellungErklaerung,
+                color = farben.textSchwach,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (wert.isNotBlank()) {
+                Icon(Icons.Outlined.Check, "hinterlegt", Modifier.size(16.dp), tint = farben.erfolg)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -406,9 +601,7 @@ private fun Erscheinungskachel(
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(Masse.profilRadius))
-                .background(
-                    Brush.linearGradient(listOf(ihre.hintergrund, ihre.hintergrundErhoben)),
-                )
+                .background(Brush.linearGradient(listOf(ihre.hintergrund, ihre.hintergrundErhoben)))
                 .border(
                     if (gewaehlt) 2.dp else 1.dp,
                     if (gewaehlt) farben.akzent else farben.rand,
@@ -432,10 +625,8 @@ private fun Erscheinungskachel(
             erscheinung.label,
             style = Schriften.zeitstempel,
             color = if (gewaehlt) farben.akzent else farben.textSchwach,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
-
-/** Ein Dienst ohne Schlüssel ist ausgegraut — und bleibt es, bis der Schlüssel da ist. */
-private fun Modifier.alphaWennFehlt(fehlt: Boolean): Modifier =
-    if (fehlt) this.alpha(0.45f) else this

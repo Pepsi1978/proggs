@@ -78,6 +78,10 @@ interface NotizDao {
     )
     suspend fun wartende(hoechstversuche: Int): List<Notiz>
 
+    /** Was am fehlenden Groq-Schlüssel gescheitert ist — sobald er da ist, läuft es nach. */
+    @Query("SELECT * FROM notiz WHERE zustand = 'KEIN_SCHLUESSEL' ORDER BY erstelltAm ASC")
+    suspend fun ohneSchluessel(): List<Notiz>
+
     /** Notizen ohne Überschrift, die eine bekommen sollen (F-05, Fehlerfall: beim nächsten Start). */
     @Query("SELECT * FROM notiz WHERE zustand = 'FERTIG' AND ueberschrift IS NULL ORDER BY erstelltAm ASC LIMIT 20")
     suspend fun ohneUeberschrift(): List<Notiz>

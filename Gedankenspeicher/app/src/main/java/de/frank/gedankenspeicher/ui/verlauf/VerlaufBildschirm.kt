@@ -35,6 +35,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Mic
@@ -78,8 +80,10 @@ import de.frank.gedankenspeicher.ui.theme.sinktEin
 @Composable
 fun VerlaufBildschirm(
     zustand: Verlaufszustand,
+    istDunkel: Boolean,
     beiSchublade: () -> Unit,
     beiSuche: () -> Unit,
+    beiErscheinungUmschalten: () -> Unit,
     beiEinstellungen: () -> Unit,
     beiEntwurf: (String) -> Unit,
     beiSenden: () -> Unit,
@@ -97,10 +101,23 @@ fun VerlaufBildschirm(
     val listenzustand = rememberLazyListState()
 
     // Der Verlauf steht an seinem Ende: die neueste Notiz ist die, die interessiert.
-    LaunchedEffect(zustand.eintraege.size, zustand.sitzung?.id) {
-        if (zustand.eintraege.isNotEmpty()) {
-            listenzustand.animateScrollToItem(zustand.eintraege.size - 1 + if (zustand.wertetAus) 1 else 0)
+    //
+    // **Ausser** nach einem Sprung aus der Suche: dann gilt das Sprungziel. Ohne diese
+    // Ausnahme überfuhr der Auto-Scroll den Treffer und landete wieder unten — die Karte
+    // leuchtete auf, aber ausserhalb des Bildes.
+    LaunchedEffect(zustand.eintraege.size, zustand.sitzung?.id, zustand.hebeHervor) {
+        if (zustand.eintraege.isEmpty()) return@LaunchedEffect
+        val ziel = zustand.hebeHervor
+        if (ziel != null) {
+            val stelle = zustand.eintraege.indexOfFirst {
+                it is Verlaufseintrag.NotizEintrag && it.notiz.id == ziel
+            }
+            if (stelle >= 0) {
+                listenzustand.animateScrollToItem(stelle)
+                return@LaunchedEffect
+            }
         }
+        listenzustand.animateScrollToItem(zustand.eintraege.size - 1 + if (zustand.wertetAus) 1 else 0)
     }
 
     Column(Modifier.fillMaxSize().background(farben.hintergrund)) {
@@ -128,6 +145,16 @@ fun VerlaufBildschirm(
             )
             IconButton(onClick = beiSuche) {
                 Icon(Icons.Outlined.Search, "Suchen", tint = farben.textMittel)
+            }
+            // Zwischen Lupe und Zahnrad: hell ↔ dunkel, ohne den Umweg über die
+            // Einstellungen. Das Symbol zeigt, wohin es geht, nicht wo man steht —
+            // ein Mond bei Tag heisst „hier wird es dunkel".
+            IconButton(onClick = beiErscheinungUmschalten) {
+                Icon(
+                    if (istDunkel) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                    if (istDunkel) "Auf hell umschalten" else "Auf dunkel umschalten",
+                    tint = farben.textMittel,
+                )
             }
             IconButton(onClick = beiEinstellungen) {
                 Icon(Icons.Outlined.Settings, "Einstellungen", tint = farben.textMittel)

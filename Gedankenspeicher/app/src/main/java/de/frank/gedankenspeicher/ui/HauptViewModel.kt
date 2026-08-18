@@ -19,7 +19,11 @@ import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.data.Verlaufseintrag
 import de.frank.gedankenspeicher.data.settings.Einstellungen
 import de.frank.gedankenspeicher.data.settings.Websuche
+import de.frank.gedankenspeicher.ui.theme.Erscheinung
 import de.frank.gedankenspeicher.auth.CodexAuthManager
+import de.frank.gedankenspeicher.tts.ClonedVoice
+import de.frank.gedankenspeicher.tts.QwenVoiceDirectory
+import de.frank.gedankenspeicher.tts.QwenVoiceEnrollment
 import de.frank.gedankenspeicher.tts.TtsProvider
 import de.frank.gedankenspeicher.tts.Vorleser
 import java.io.File
@@ -76,6 +80,37 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     // Bildschirm anzeigt, in einen beobachtbaren Fluss — geschrieben wird weiterhin dorthin.
     private val _groq = MutableStateFlow(einstellungen.groqSchluessel)
     val groqSchluessel: StateFlow<String> = _groq
+
+    // Diese drei fehlten als Fluss — der Einstellungs-Bildschirm las sie direkt aus den
+    // Einstellungen. Ein gewöhnlicher Lesezugriff löst in Compose aber **keine** neue
+    // Zeichnung aus: die Wahl wurde gespeichert und wirkte auch, aber die Oberfläche zeigte
+    // weiter die alte. Es sah aus, als liesse sich nichts umstellen.
+    private val _codexModell = MutableStateFlow(einstellungen.codexModell)
+    val codexModell: StateFlow<String> = _codexModell
+
+    private val _codexEffort = MutableStateFlow(einstellungen.codexEffort)
+    val codexEffort: StateFlow<String> = _codexEffort
+
+    private val _websucheGrundhaltung = MutableStateFlow(einstellungen.websucheGrundhaltung)
+    val websucheGrundhaltung: StateFlow<String> = _websucheGrundhaltung
+
+    /** Ob Codex verbunden ist — als Fluss, damit B-04 den Wechsel sofort zeigt. */
+    private val _codexVerbunden = MutableStateFlow(codex.isConnected)
+    val codexVerbunden: StateFlow<Boolean> = _codexVerbunden
+
+    private val _codexKonto = MutableStateFlow(codex.email)
+    val codexKonto: StateFlow<String?> = _codexKonto
+
+    // --- Die eigenen Stimmen bei Alibaba (F-18) ------------------------------------------
+    private val _eigeneStimmen = MutableStateFlow<List<ClonedVoice>>(emptyList())
+    val eigeneStimmen: StateFlow<List<ClonedVoice>> = _eigeneStimmen
+
+    private val _stimmenLaden = MutableStateFlow(false)
+    val stimmenLaden: StateFlow<Boolean> = _stimmenLaden
+
+    /** Läuft gerade die Aufnahme einer neuen eigenen Stimme? */
+    private val _nimmtStimmeAuf = MutableStateFlow(false)
+    val nimmtStimmeAuf: StateFlow<Boolean> = _nimmtStimmeAuf
 
     private val _ttsAnbieter = MutableStateFlow(einstellungen.ttsAnbieter)
     val ttsAnbieter: StateFlow<String> = _ttsAnbieter
@@ -143,7 +178,27 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 if (!laeuft) _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
             }
         }
+        beobachteNetz()
     }
+
+    /**
+     * F-04, Schritt 2 — auf die Rückkehr des Netzes warten und dann nachreichen.
+     *
+     * Ohne diesen Beobachter blieb eine im Funkloch gesprochene Notiz liegen, bis die App
+     * einmal in den Hintergrund und wieder nach vorn kam. Wer die App offen liess und
+     * weiterging, bis das Netz zurückkam, sah seine Notiz stundenlang auf „Wartet auf Netz".
+     */
+    private fun beobachteNetz() {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return
+        netzWaechter = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                reicheWartendeNach()
+            }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(netzWaechter!!) }
+    }
+
+    private var netzWaechter: ConnectivityManager.NetworkCallback? = null
 
     // --- Sitzungen ---------------------------------------------------------------------------
 
@@ -240,6 +295,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun starteAufnahme() {
         if (_verlauf.value.sitzung == null) return
+        // Es gibt nur ein Mikrofon. Läuft gerade eine Stimmprobe, hat sie Vorrang — sonst
+        // landete sie als Notiz im Verlauf.
+        if (_nimmtStimmeAuf.value) {
+            melde("Erst die Stimmaufnahme beenden.")
+            return
+        }
         // Es spricht immer nur einer: die laufende Sprachausgabe endet hier (F-01, Regeln).
         vorleser.halteAn()
         if (!mikrofon.start(viewModelScope)) {
@@ -700,6 +761,24 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _erscheinung.value = id
     }
 
+    /**
+     * Der Umschalter in der Kopfleiste: hell ↔ dunkel, **innerhalb derselben Familie**.
+     *
+     * Gold bleibt Gold, Neutral bleibt Neutral. Wer sich für die goldene Welt entschieden
+     * hat, will beim Umschalten am Abend nicht plötzlich in der blauen landen — er will es
+     * nur dunkler haben.
+     */
+    fun erscheinungUmschalten() {
+        setzeErscheinung(
+            when (Erscheinung.vonId(einstellungen.erscheinung)) {
+                Erscheinung.HELL -> Erscheinung.DUNKEL
+                Erscheinung.DUNKEL -> Erscheinung.HELL
+                Erscheinung.GOLD_HELL -> Erscheinung.GOLD_DUNKEL
+                Erscheinung.GOLD_DUNKEL -> Erscheinung.GOLD_HELL
+            }.id,
+        )
+    }
+
     // --- Export (F-16) ---------------------------------------------------------------------------------
 
     /** Bereitet die Datei vor; das Teilen selbst löst die Oberfläche aus (sie hat die Activity). */
@@ -720,6 +799,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun anmeldungErfolgreich(email: String?) {
         _anmeldung.update { it.copy(wartet = false, erfolgreich = true) }
+        _codexVerbunden.value = codex.isConnected
+        _codexKonto.value = codex.email
         melde(email?.let { "Codex verbunden als " + it } ?: "Codex verbunden.")
         // Was beim letzten Mal ohne Verbindung liegenblieb, wird jetzt nachgeholt.
         holeFehlendeUeberschriften()
@@ -732,21 +813,49 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun trenneCodex() {
         codex.logout()
+        _codexVerbunden.value = false
+        _codexKonto.value = null
         _anmeldung.value = Anmeldezustand()
         melde("Codex getrennt.")
     }
 
     // --- Einstellungen schreiben ------------------------------------------------------------------
 
-    fun setzeModell(apiId: String) { einstellungen.codexModell = apiId }
+    fun setzeModell(apiId: String) {
+        einstellungen.codexModell = apiId
+        _codexModell.value = apiId
+    }
 
-    fun setzeEffort(apiValue: String) { einstellungen.codexEffort = apiValue }
+    fun setzeEffort(apiValue: String) {
+        einstellungen.codexEffort = apiValue
+        _codexEffort.value = apiValue
+    }
 
-    fun setzeWebsucheGrundhaltung(id: String) { einstellungen.websucheGrundhaltung = id }
+    fun setzeWebsucheGrundhaltung(id: String) {
+        einstellungen.websucheGrundhaltung = id
+        _websucheGrundhaltung.value = id
+    }
 
     fun setzeGroqSchluessel(wert: String) {
         einstellungen.groqSchluessel = wert.trim()
         _groq.value = wert.trim()
+        // Was am fehlenden Schlüssel gescheitert ist, bekommt jetzt seine zweite Chance.
+        if (wert.isNotBlank()) holeLiegengebliebeneNach()
+    }
+
+    /**
+     * Notizen, die mangels Schlüssel nicht transkribiert wurden, in die Warteschlange
+     * zurückholen. Sie stehen dann als „Wartet auf Netz" da und laufen von selbst durch.
+     */
+    private fun holeLiegengebliebeneNach() {
+        viewModelScope.launch {
+            val offene = repo.notizenOhneSchluessel()
+            if (offene.isEmpty()) return@launch
+            offene.forEach { notiz ->
+                repo.aendere(notiz.copy(zustand = Notizzustand.WARTET_AUF_TRANSKRIPTION))
+            }
+            reicheWartendeNach()
+        }
     }
 
     fun setzeGoogleSchluessel(wert: String) {
@@ -757,6 +866,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeQwenSchluessel(wert: String) {
         einstellungen.qwenSchluessel = wert.trim()
         _qwen.value = wert.trim()
+        // Mit dem Schlüssel kommen die Stimmen: sonst müsste Frank raten, ob er richtig ist,
+        // bis er das nächste Mal etwas vorlesen lässt.
+        if (wert.isNotBlank()) ladeEigeneStimmen()
     }
 
     fun setzeTtsAnbieter(id: String) {
@@ -790,6 +902,122 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         vorleser.merkeQuelle("probe")
         vorleser.lies(PROBESATZ) { fehler -> melde(fehler) }
+    }
+
+    /**
+     * F-18 — die bei Alibaba hinterlegten eigenen Stimmen holen.
+     *
+     * Ohne Schlüssel gar nicht erst versuchen: der Aufruf käme mit einem Anmeldefehler
+     * zurück, und der sähe aus wie ein Fehler der App.
+     */
+    fun ladeEigeneStimmen() {
+        val schluessel = einstellungen.qwenSchluessel
+        if (schluessel.isBlank()) {
+            _eigeneStimmen.value = emptyList()
+            return
+        }
+        if (_stimmenLaden.value) return
+        _stimmenLaden.value = true
+        viewModelScope.launch {
+            val verzeichnis = QwenVoiceDirectory()
+            try {
+                val liste = verzeichnis.list(schluessel)
+                _eigeneStimmen.value = liste
+                // Steht noch keine Stimme fest, wird die jüngste vorbelegt — sonst zeigt die
+                // Auswahl eine leere Kennung, obwohl Stimmen vorhanden sind.
+                if (einstellungen.stimmeQwen.isBlank() && liste.isNotEmpty()) {
+                    setzeTtsStimme(liste.first().id)
+                }
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                melde(fehler.message ?: "Die Stimmen liessen sich nicht laden.")
+            } finally {
+                verzeichnis.shutdown()
+                _stimmenLaden.value = false
+            }
+        }
+    }
+
+    /**
+     * F-18 — eine neue eigene Stimme aufnehmen und bei Alibaba registrieren.
+     *
+     * Aufgenommen wird mit 44,1 kHz statt der 16 kHz der Diktate: der Stimmklon braucht die
+     * höhere Auflösung, sonst klingt die erzeugte Stimme dumpf.
+     */
+    fun nimmStimmeAuf() {
+        if (_nimmtStimmeAuf.value) {
+            beendeStimmaufnahme()
+            return
+        }
+        // Dasselbe von der anderen Seite: eine laufende Notiz-Aufnahme darf die Stimmprobe
+        // nicht überschreiben.
+        if (_verlauf.value.nimmtAuf) {
+            melde("Erst die Notiz-Aufnahme beenden.")
+            return
+        }
+        if (einstellungen.qwenSchluessel.isBlank()) {
+            melde("Für die eigene Stimme fehlt der Alibaba-Schlüssel.")
+            return
+        }
+        vorleser.halteAn()
+        if (!mikrofon.start(viewModelScope, requestedSampleRate = 44_100)) {
+            melde("Die Aufnahme liess sich nicht starten.")
+            return
+        }
+        _nimmtStimmeAuf.value = true
+    }
+
+    private fun beendeStimmaufnahme() {
+        _nimmtStimmeAuf.value = false
+        viewModelScope.launch {
+            val wav = mikrofon.stop()
+            if (wav == null || wav.size < MINDESTGROESSE_STIMMPROBE) {
+                melde("Zu kurz — sprich einige Sätze, damit die Stimme etwas hergibt.")
+                return@launch
+            }
+            val enrollment = QwenVoiceEnrollment()
+            try {
+                _stimmenLaden.value = true
+                val kennung = enrollment.create(einstellungen.qwenSchluessel, STIMMNAME, wav)
+                setzeTtsStimme(kennung)
+                setzeTtsAnbieter(TtsProvider.QWEN_CLONE.id)
+                melde("Deine Stimme ist angelegt.")
+                ladeEigeneStimmen()
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                melde(fehler.message ?: "Die Stimme liess sich nicht anlegen.")
+            } finally {
+                enrollment.shutdown()
+                _stimmenLaden.value = false
+            }
+        }
+    }
+
+    /** F-18 — eine registrierte Stimme wieder löschen. */
+    fun loescheEigeneStimme(kennung: String) {
+        if (kennung.isBlank()) return
+        viewModelScope.launch {
+            val enrollment = QwenVoiceEnrollment()
+            try {
+                enrollment.delete(einstellungen.qwenSchluessel, kennung)
+                if (einstellungen.stimmeQwen == kennung) {
+                    // Ausdrücklich die Qwen-Stimme, nicht „die Stimme des gewählten
+                    // Anbieters": beides fällt nur zufällig zusammen.
+                    einstellungen.stimmeQwen = ""
+                    if (einstellungen.ttsAnbieter == TtsProvider.QWEN_CLONE.id) _ttsStimme.value = ""
+                }
+                melde("Stimme gelöscht.")
+                ladeEigeneStimmen()
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                melde(fehler.message ?: "Die Stimme liess sich nicht löschen.")
+            } finally {
+                enrollment.shutdown()
+            }
+        }
     }
 
     // --- Profile (F-10) ---------------------------------------------------------------------------
@@ -848,22 +1076,22 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { fuehreSicherungAus(uri) }
     }
 
-    private suspend fun fuehreSicherungAus(ordner: Uri) {
+    private suspend fun fuehreSicherungAus(ordner: Uri, still: Boolean = false) {
         try {
             val quelle = repo.datenbankdatei()
             if (!quelle.exists()) {
-                melde("Es gibt noch nichts zu sichern.")
+                if (!still) melde("Es gibt noch nichts zu sichern.")
                 return
             }
             val baum = DocumentFile.fromTreeUri(ctx, ordner)
             if (baum == null) {
-                melde("Auf den Ordner kann nicht zugegriffen werden.")
+                if (!still) melde("Auf den Ordner kann nicht zugegriffen werden.")
                 return
             }
             val name = "gedankenspeicher-" + System.currentTimeMillis() + ".db"
             val ziel = baum.createFile("application/octet-stream", name)
             if (ziel == null) {
-                melde("Die Sicherungsdatei liess sich nicht anlegen.")
+                if (!still) melde("Die Sicherungsdatei liess sich nicht anlegen.")
                 return
             }
             withContext(Dispatchers.IO) {
@@ -879,11 +1107,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 .sortedByDescending { it.name }
                 .drop(5)
                 .forEach { runCatching { it.delete() } }
-            melde("Gesichert.")
+            if (!still) melde("Gesichert.")
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
-            melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
+            if (!still) melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
         }
     }
 
@@ -954,10 +1182,24 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun inDenHintergrund() {
         if (_verlauf.value.nimmtAuf) beendeAufnahme()
+        // Auch die Stimmprobe: sie lief bisher im Hintergrund weiter und hielt das
+        // Mikrofon besetzt, bis die App wiederkam.
+        if (_nimmtStimmeAuf.value) beendeStimmaufnahme()
         vorleser.halteAn()
+        // F-17: die Sicherung läuft beim Schliessen, sofern sie eingeschaltet ist und ein
+        // Ordner feststeht. Ohne diesen Aufruf war der Schalter eine blosse Absichtserklärung
+        // — gesichert wurde nur auf ausdrücklichen Knopfdruck.
+        if (einstellungen.driveSicherungAn && einstellungen.sicherungsordner.isNotBlank()) {
+            viewModelScope.launch { fuehreSicherungAus(Uri.parse(einstellungen.sicherungsordner), still = true) }
+        }
     }
 
     override fun onCleared() {
+        netzWaechter?.let { waechter ->
+            runCatching {
+                ctx.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(waechter)
+            }
+        }
         vorleser.schliesse()
         mikrofon.release()
         super.onCleared()
@@ -968,6 +1210,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
         /** Der feste Beispielsatz des Probe-Knopfs (F-18). */
         const val PROBESATZ = "So klinge ich, wenn ich dir deine Notizen vorlese."
+
+        /** Eine Stimmprobe unter zwei Sekunden gibt keinen brauchbaren Klon her. */
+        const val MINDESTGROESSE_STIMMPROBE = 44 + 44_100 * 2 * 2
+
+        /** Der Name, unter dem eine neue eigene Stimme bei Alibaba steht. */
+        const val STIMMNAME = "gedankenspeicher"
 
         /** Unter etwa 0,4 s bei 16 kHz Mono ist nichts Verwertbares dabei (F-01, Fehlerfall). */
         const val MINDESTGROESSE_WAV = 44 + 16_000 * 2 * 4 / 10

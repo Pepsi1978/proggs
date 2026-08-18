@@ -170,6 +170,8 @@ class Repository(
 
     suspend fun notizenOhneUeberschrift(): List<Notiz> = db.notizen().ohneUeberschrift()
 
+    suspend fun notizenOhneSchluessel(): List<Notiz> = db.notizen().ohneSchluessel()
+
     // --- KI (F-05, F-07, F-09, F-12) --------------------------------------------------------
 
     private fun modell(): CodexModel = CodexModel.fromLabel(einstellungen.codexModell)
