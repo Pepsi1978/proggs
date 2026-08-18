@@ -1,5 +1,6 @@
 package de.frank.gedankenspeicher.ui
 
+import androidx.compose.ui.text.input.TextFieldValue
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.Sitzung
@@ -32,6 +33,15 @@ data class Verlaufszustand(
     val meldung: String? = null,
     /** Sprungziel aus der Suche: diese Notiz leuchtet einmal auf (M-11). */
     val hebeHervor: Long? = null,
+    /**
+     * Die Notiz, die gerade **in ihrer Karte** bearbeitet wird — null, wenn keine.
+     *
+     * Der Zustand liegt im ViewModel und nicht in der Karte, damit er das Drehen und das
+     * Auf- und Zuklappen übersteht: sonst wäre der halb getippte Satz beim Klappen weg.
+     */
+    val bearbeiteteNotiz: Long? = null,
+    /** Der Stand des Feldes samt Cursorstelle. */
+    val bearbeitungsEntwurf: TextFieldValue = TextFieldValue(),
 )
 
 /** Der Zustand des KI-Blattes (B-03). */

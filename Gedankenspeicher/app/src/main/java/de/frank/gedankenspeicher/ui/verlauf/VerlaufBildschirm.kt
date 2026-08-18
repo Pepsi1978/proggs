@@ -93,6 +93,9 @@ fun VerlaufBildschirm(
     beiVerbessern: (Notiz) -> Unit,
     beiRueckgaengig: (Notiz) -> Unit,
     beiNotizMenue: (Notiz) -> Unit,
+    beiTippenImText: (Notiz, Int) -> Unit,
+    beiKartenEntwurf: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
+    beiBearbeitenFertig: () -> Unit,
     beiAntwortMenue: (de.frank.gedankenspeicher.data.KiAntwort) -> Unit,
     beiWiederholen: (Notiz) -> Unit,
 ) {
@@ -194,12 +197,17 @@ fun VerlaufBildschirm(
                                     vorleseAbsatz = zustand.vorleseAbsatz,
                                     verbessertGerade = notiz.id in zustand.verbessertGerade,
                                     hervorgehoben = zustand.hebeHervor == notiz.id,
+                                    bearbeitet = zustand.bearbeiteteNotiz == notiz.id,
+                                    entwurf = zustand.bearbeitungsEntwurf,
                                     beiVorlesen = { beiVorlesen(kennung, notiz.text) },
                                     beiVerbessern = { beiVerbessern(notiz) },
                                     beiRueckgaengig = { beiRueckgaengig(notiz) },
                                     beiMenue = { beiNotizMenue(notiz) },
                                     beiWiederholen = { beiWiederholen(notiz) },
                                     beiEinstellungen = beiEinstellungen,
+                                    beiTippenImText = { stelle -> beiTippenImText(notiz, stelle) },
+                                    beiEntwurf = beiKartenEntwurf,
+                                    beiFertig = beiBearbeitenFertig,
                                 )
                             }
 
