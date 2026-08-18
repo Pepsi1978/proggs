@@ -582,3 +582,54 @@ durchprobiert. Im Werkzeug `Werkzeuge/zeigefinger` ist das als `screenshot()` um
 
 **Status:** Verhalten von Android 17 / One UI 9 auf Multi-Display-Geräten, kein Fehler im engeren
 Sinn — aber eine sichere Falle für jedes Werkzeug, das nur am Emulator entwickelt wurde.
+
+
+## 26. „Activity class does not exist" — bei JEDER App, auch der installierten Nachbar-App
+
+**Symptom:** Eine frisch installierte App lässt sich nicht starten:
+
+```
+$ adb shell am start -n de.frank.gedankenspeicher/.MainActivity
+Starting: Intent { cmp=de.frank.gedankenspeicher/.MainActivity }
+Error type 3
+Error: Activity class {de.frank.gedankenspeicher/de.frank.gedankenspeicher.MainActivity} does not exist.
+
+$ adb shell monkey -p de.frank.gedankenspeicher -c android.intent.category.LAUNCHER 1
+** No activities found to run, monkey aborted.
+```
+
+Dabei ist **alles in Ordnung**: `adb install` meldet `Success`, `pm list packages` führt das Paket,
+`dumpsys package` zeigt die Activity in der Resolver Table mit `android.intent.action.MAIN` und
+`android.intent.category.LAUNCHER`, das gemergte Manifest ist korrekt, und die Klasse steckt
+nachweislich im DEX.
+
+**Die eine Prüfung, die das Rätsel löst — eine bereits vorher installierte App starten:**
+
+```
+$ adb shell am start -n de.frank.experimente/.MainActivity
+Error: Activity class {de.frank.experimente/de.frank.experimente.MainActivity} does not exist.
+```
+
+Auch sie startet nicht. **Der Fehler liegt nicht an der neuen App, sondern am Emulator.** Der
+Package-Manager im laufenden Emulator ist in einem Zustand, in dem er neu registrierte Activities
+nicht mehr auflöst — beobachtet nach längerer Laufzeit mit mehreren Installationen und nach
+Snapshot-Wiederherstellung.
+
+**Fix:** Emulator wirklich beenden und **kalt** neu starten:
+
+```powershell
+adb emu kill
+Get-Process -Name "qemu*","emulator*" -ErrorAction SilentlyContinue | Stop-Process -Force
+.\Start-Fold8.ps1 -Projekt <App> -Kaltstart
+```
+
+`-Kaltstart` allein reicht **nicht**, wenn der Emulator noch läuft: `Start-Fold8.ps1` meldet dann
+„Emulator laeuft bereits" und übernimmt den kaputten Zustand. Erst `adb emu kill` (plus
+`Stop-Process` als Nachdruck, denn `adb emu kill` beendet den QEMU-Prozess nicht immer), dann neu
+starten. Danach startet die App auf Anhieb.
+
+**Warum das leicht in die Irre führt:** Alle Anzeichen deuten auf die eigene App — frisch gebaut,
+frisch installiert, viele DEX-Dateien, ein neues Manifest. Man sucht im Manifest, im Paketnamen,
+in ProGuard, in Multidex. Der Vergleichstest mit einer **anderen, vorher funktionierenden App**
+kostet dreißig Sekunden und schneidet die halbe Fehlersuche ab. Beobachtet am 18.08.2026 auf
+`Fold8_Cover` (API 37).

@@ -40,3 +40,4 @@
 | 22c | Eine von vier Lagen bleibt falsch (500×790) | 180°: Emulator-Rahmen hochkant, Android quer → Lage per `emu rotate` überspringen |
 | 23 | Startet aufgeklappt statt zugeklappt | Standard ist `Fold8_Cover`; läuft die falsche AVD, wird gewechselt; im Betrieb `Klappen.ps1 -Auf`/`-Zu` |
 | 25 | Screenshot-Einlesen scheitert NUR am echten Fold 8, nicht am Emulator | Zwei Displays → `screencap` schreibt 347 Byte Warntext **vor** das PNG (auf stdout) → Signatur `\x89PNG` **suchen** statt `startswith`; Maße gegen `wm size` prüfen, sonst `screencap -d <id>` aus `dumpsys SurfaceFlinger --display-id` |
+| 26 | "Activity class does not exist" trotz korrektem Manifest, Install `Success` und Klasse im DEX | **Gegenprobe: eine andere, vorher laufende App starten** — geht die auch nicht, ist der Package-Manager des Emulators kaputt, nicht die App → `adb emu kill` + `Stop-Process qemu*`, dann `-Kaltstart`; `-Kaltstart` allein greift nicht, solange der Emulator noch läuft |
