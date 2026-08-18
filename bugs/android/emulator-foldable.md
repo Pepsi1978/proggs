@@ -633,3 +633,39 @@ frisch installiert, viele DEX-Dateien, ein neues Manifest. Man sucht im Manifest
 in ProGuard, in Multidex. Der Vergleichstest mit einer **anderen, vorher funktionierenden App**
 kostet dreißig Sekunden und schneidet die halbe Fehlersuche ab. Beobachtet am 18.08.2026 auf
 `Fold8_Cover` (API 37).
+
+
+## 27. `monkey` zum Starten einer App verstellt nebenbei ihre Einstellungen
+
+**Symptom:** Eine frisch installierte App startet in der falschen Erscheinung, ein Schalter
+steht anders als vorbelegt, oder ein Wert hat sich „von selbst" geändert. Beim nächsten Start
+ist es wieder anders. Die Vorbelegung im Code ist nachweislich richtig — bei gelöschten
+App-Daten (`pm clear`) startet die App korrekt.
+
+**Ursache:** Der Startbefehl war
+
+```
+adb shell monkey -p de.frank.gedankenspeicher -c android.intent.category.LAUNCHER 1
+```
+
+Die `1` am Ende ist **keine** Wiederholungszahl für den Start, sondern die **Zahl der
+zufälligen Ereignisse**, die der Monkey schickt. Er startet die App und tippt dann einmal an
+eine zufällige Stelle. Landet dieser Tipp auf einer Kachel, einem Schalter oder einem
+Häkchen, ist die Einstellung verändert — und niemand sucht die Ursache beim Startbefehl.
+
+**Fix:** Zum Starten immer den ausdrücklichen Intent nehmen:
+
+```
+adb shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER \
+  -n de.frank.gedankenspeicher/.MainActivity
+```
+
+`monkey` ist ein Testwerkzeug für zufällige Bedienung, kein Startbefehl. Es ist nur dann die
+richtige Wahl, wenn `am start` scheitert (siehe #26) — und dann weiss man, dass die App
+danach angetippt wurde.
+
+**Warum das teuer wird:** Auf einem Testgerät fällt es kaum auf. Auf dem **echten Gerät des
+Benutzers** verstellt es dessen Einstellungen, und die Suche beginnt im eigenen Code — bei
+der Vorbelegung, beim Speichern, bei `EncryptedSharedPreferences` —, obwohl dort alles in
+Ordnung ist. Beobachtet am 18.08.2026 auf SM-F971B: die App startete in „Hell" statt in
+„Gold-Dunkel", weil der Monkey-Tipp die Erscheinungs-Kachel getroffen hatte.
