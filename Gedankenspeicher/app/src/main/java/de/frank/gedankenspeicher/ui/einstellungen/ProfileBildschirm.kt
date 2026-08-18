@@ -46,6 +46,7 @@ import de.frank.gedankenspeicher.ui.ki.GefuellterKnopf
 import de.frank.gedankenspeicher.ui.ki.GeranderterKnopf
 import de.frank.gedankenspeicher.ui.theme.Dauern
 import de.frank.gedankenspeicher.ui.theme.Farben
+import de.frank.gedankenspeicher.ui.theme.blattgrund
 import de.frank.gedankenspeicher.ui.theme.Kurven
 import de.frank.gedankenspeicher.ui.theme.Masse
 import de.frank.gedankenspeicher.ui.theme.Schriften
@@ -214,7 +215,7 @@ fun ProfilEditor(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                farben.hintergrundGlas,
+                farben.blattgrund,
                 RoundedCornerShape(topStart = Masse.blattRadius, topEnd = Masse.blattRadius),
             )
             .border(

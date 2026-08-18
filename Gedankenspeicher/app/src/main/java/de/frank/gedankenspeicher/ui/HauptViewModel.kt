@@ -96,12 +96,29 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val _sicherungsordnerFehlt = MutableStateFlow(false)
     val sicherungsordnerFehlt: StateFlow<Boolean> = _sicherungsordnerFehlt
 
+    /** Meldet der Oberfläche, dass sie den Datei-Wähler für die Wiederherstellung öffnen soll. */
+    private val _sucheSicherungsdatei = MutableStateFlow(false)
+    val sucheSicherungsdatei: StateFlow<Boolean> = _sucheSicherungsdatei
+
+    /** Steht auf true, wenn die App nach einer Wiederherstellung neu starten muss. */
+    private val _neustartNoetig = MutableStateFlow(false)
+    val neustartNoetig: StateFlow<Boolean> = _neustartNoetig
+
     /** Die sechs Profile (F-10). */
     val profile = repo.profile
 
     private var verlaufJob: Job? = null
     private var aufnahmeJob: Job? = null
     private var auswertungJob: Job? = null
+
+    /**
+     * Wohin das nächste Transkript geht.
+     *
+     * Dieselbe Aufnahme- und Transkriptionskette bedient zwei Ziele: den Verlauf (F-01) und
+     * das Antwortfeld im KI-Blatt (F-09, Schritt 5). Getrennte Ketten wären zweimal derselbe
+     * Code — und damit zwei Stellen, an denen die Halluzinations-Abwehr auseinanderlaufen kann.
+     */
+    private var aufnahmeGehtInsKiBlatt = false
 
     init {
         viewModelScope.launch {
@@ -198,7 +215,27 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Ein Tipp startet, ein zweiter beendet — es wird nicht gehalten (F-01, Auslöser). */
     fun aufnahmeUmschalten() {
-        if (_verlauf.value.nimmtAuf) beendeAufnahme() else starteAufnahme()
+        if (_verlauf.value.nimmtAuf) {
+            beendeAufnahme()
+        } else {
+            aufnahmeGehtInsKiBlatt = false
+            starteAufnahme()
+        }
+    }
+
+    /**
+     * F-09, Schritt 5: die Antwort auf die Rückfrage einsprechen.
+     *
+     * Das Transkript landet im Antwortfeld des Blattes, nicht als Notiz im Verlauf — sonst
+     * stünde die Antwort auf eine Auswertung selbst wieder als auszuwertende Notiz da.
+     */
+    fun antwortAufnahmeUmschalten() {
+        if (_verlauf.value.nimmtAuf) {
+            beendeAufnahme()
+        } else {
+            aufnahmeGehtInsKiBlatt = true
+            starteAufnahme()
+        }
     }
 
     private fun starteAufnahme() {
@@ -236,6 +273,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             val wav = mikrofon.stop()
             if (wav == null || wav.size < MINDESTGROESSE_WAV) {
                 melde("Zu kurz — dabei ist nichts angekommen.")
+                aufnahmeGehtInsKiBlatt = false
+                return@launch
+            }
+            if (aufnahmeGehtInsKiBlatt) {
+                aufnahmeGehtInsKiBlatt = false
+                schreibeInsAntwortfeld(wav)
                 return@launch
             }
             if (!hatNetz()) {
@@ -291,6 +334,40 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                     versucheTranskription = notiz.versucheTranskription + 1,
                 ),
             )
+        } finally {
+            transkriber.shutdown()
+        }
+    }
+
+    /**
+     * Transkribiert und hängt das Ergebnis an das Antwortfeld des KI-Blattes an.
+     *
+     * Angehängt, nicht ersetzt: wer schon etwas getippt hat und dann noch etwas nachspricht,
+     * soll nicht sein Getipptes verlieren.
+     */
+    private suspend fun schreibeInsAntwortfeld(wav: ByteArray) {
+        val transkriber = repo.transkriber()
+        if (!transkriber.isConfigured) {
+            _kiBlatt.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
+            return
+        }
+        try {
+            val text = transkriber.transcribe(wav)
+            if (text.isBlank()) {
+                _kiBlatt.update { it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") }
+                return
+            }
+            _kiBlatt.update { blatt ->
+                val bisher = blatt.antwort.trim()
+                blatt.copy(
+                    antwort = if (bisher.isEmpty()) text else "$bisher $text",
+                    fehler = null,
+                )
+            }
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (fehler: Exception) {
+            _kiBlatt.update { it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.") }
         } finally {
             transkriber.shutdown()
         }
@@ -477,6 +554,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Vor der Antwort geschlossen: nichts wird gespeichert, die Notizen bleiben
         // unausgewertet (F-09, Fehlerfall). Genau so ist es gewollt.
         codex.cancelQuestionGeneration()
+        // Eine laufende Antwort-Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon
+        // weiter und ihr Transkript käme in ein Feld, das es nicht mehr gibt.
+        if (_verlauf.value.nimmtAuf && aufnahmeGehtInsKiBlatt) {
+            aufnahmeGehtInsKiBlatt = false
+            beendeAufnahme()
+        }
         _kiBlatt.value = KiBlattzustand()
     }
 
@@ -804,13 +887,51 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Das Wiederherstellen ersetzt den gesamten Datenbestand und muss dafür die Datenbank
-     * schliessen und neu öffnen. Solange das nicht gebaut ist, sagt die App das offen,
-     * statt einen Knopf anzubieten, der nichts tut.
-     */
+    /** Der Knopf „Wiederherstellen" — er öffnet den Datei-Wähler. */
     fun stelleWiederHer() {
-        melde("Wiederherstellen ist noch nicht eingebaut. Die Sicherungen liegen im gewählten Ordner.")
+        _sucheSicherungsdatei.value = true
+    }
+
+    fun dateiwahlErledigt() { _sucheSicherungsdatei.value = false }
+
+    /**
+     * Ersetzt den gesamten Datenbestand durch die gewählte Sicherung.
+     *
+     * Der Ablauf ist unbequem, aber der einzige sichere: alles anhalten, die Datenbank
+     * schliessen, die Dateien austauschen, die App neu starten lassen. Room hält offene
+     * Verbindungen und einen Journal-Puffer; würde man die Datei unter der laufenden
+     * Datenbank tauschen, schriebe Room seinen alten Puffer in die neue Datei.
+     *
+     * Auch `-wal` und `-shm` müssen weg: bleiben sie von der alten Datenbank stehen, hält
+     * SQLite sie für den gültigen jüngsten Stand und überschreibt die wiederhergestellte
+     * Datei damit — die Wiederherstellung sähe dann aus, als wäre nichts passiert.
+     */
+    fun stelleWiederHerAus(uri: Uri) {
+        _sucheSicherungsdatei.value = false
+        viewModelScope.launch {
+            try {
+                vorleser.halteAn()
+                if (_verlauf.value.nimmtAuf) beendeAufnahme()
+                auswertungJob?.cancel()
+                verlaufJob?.cancel()
+
+                val ziel = repo.datenbankdatei()
+                withContext(Dispatchers.IO) {
+                    Datenbank.schliesse()
+                    listOf("-wal", "-shm").forEach { anhang ->
+                        runCatching { java.io.File(ziel.absolutePath + anhang).delete() }
+                    }
+                    ctx.contentResolver.openInputStream(uri)?.use { ein ->
+                        ziel.outputStream().use { aus -> ein.copyTo(aus) }
+                    } ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht lesen.")
+                }
+                _neustartNoetig.value = true
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                melde(fehler.message ?: "Die Wiederherstellung ist fehlgeschlagen.")
+            }
+        }
     }
 
     // --- Kleinkram -------------------------------------------------------------------------------------

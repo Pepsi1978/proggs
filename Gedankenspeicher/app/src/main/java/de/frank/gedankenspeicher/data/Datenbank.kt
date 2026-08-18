@@ -41,6 +41,19 @@ abstract class Datenbank : RoomDatabase() {
             ).build().also { vorhanden = it }
         }
 
+        /**
+         * Schliesst die Datenbank, damit ihre Datei ersetzt werden kann (F-17,
+         * Wiederherstellen).
+         *
+         * Ohne das Schliessen schreibt Room seinen Journal-Puffer nach dem Austausch in die
+         * **neue** Datei und macht sie damit unbrauchbar — der Wiederherstellungsversuch
+         * zerstörte dann genau den Stand, den er retten sollte.
+         */
+        fun schliesse() = synchronized(this) {
+            vorhanden?.close()
+            vorhanden = null
+        }
+
         /** Für die Sicherung nach Drive (F-17) — sie kopiert genau diese Datei. */
         const val DATEINAME = "gedankenspeicher.db"
     }

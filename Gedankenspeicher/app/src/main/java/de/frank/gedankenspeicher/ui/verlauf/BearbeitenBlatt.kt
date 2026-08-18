@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.ui.Bearbeitungszustand
 import de.frank.gedankenspeicher.ui.theme.Farben
+import de.frank.gedankenspeicher.ui.theme.blattgrund
 import de.frank.gedankenspeicher.ui.theme.Masse
 import de.frank.gedankenspeicher.ui.theme.Schriften
 
@@ -51,7 +52,7 @@ fun BearbeitenBlatt(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                farben.hintergrundGlas,
+                farben.blattgrund,
                 RoundedCornerShape(topStart = Masse.blattRadius, topEnd = Masse.blattRadius),
             )
             .border(
@@ -166,7 +167,7 @@ fun MenueBlatt(titel: String?, inhalt: @Composable () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                farben.hintergrundGlas,
+                farben.blattgrund,
                 RoundedCornerShape(topStart = Masse.blattRadius, topEnd = Masse.blattRadius),
             )
             .navigationBarsPadding()

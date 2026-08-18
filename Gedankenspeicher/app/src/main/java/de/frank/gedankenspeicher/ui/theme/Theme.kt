@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -94,6 +95,17 @@ fun GedankenspeicherTheme(
         MaterialTheme(colorScheme = schema, content = inhalt)
     }
 }
+
+/**
+ * Der Grundton eines Blattes: der Glaston, aber **deckend**.
+ *
+ * Compose kann die Fläche hinter einem Bottom Sheet nicht wirklich unscharf zeichnen — das
+ * halbdurchsichtige Glas liess deshalb die Knöpfe der Fussleiste ungeblurrt durch das Blatt
+ * scheinen, mitten in den Text hinein. Hier wird derselbe Glaston über den Grund gelegt und
+ * das Ergebnis deckend gezeichnet: die Farbe bleibt die gemessene, das Durchscheinen ist weg.
+ */
+val Farbrollen.blattgrund: Color
+    get() = hintergrundGlas.compositeOver(hintergrund)
 
 /** Kurzzugriff, damit in den Bildschirmen `Farben.akzent` statt `LocalFarben.current.akzent` steht. */
 val Farben: Farbrollen

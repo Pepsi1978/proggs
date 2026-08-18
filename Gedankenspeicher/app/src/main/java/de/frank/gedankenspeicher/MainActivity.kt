@@ -115,6 +115,37 @@ class MainActivity : ComponentActivity() {
         modell.merkeSicherungsordner(uri)
     }
 
+    private val antwortMikrofonFrage =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
+            if (erlaubt) {
+                modell.mikrofonErlaubt()
+                modell.antwortAufnahmeUmschalten()
+            } else {
+                modell.mikrofonAbgelehnt()
+                modell.melde("Ohne Mikrofon kann ich dich nicht hören.")
+            }
+        }
+
+    /** F-17 — die Sicherungsdatei, aus der wiederhergestellt wird. */
+    private val dateiWahl = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) modell.dateiwahlErledigt() else modell.stelleWiederHerAus(uri)
+    }
+
+    /**
+     * Nach dem Austausch der Datenbankdatei startet die App neu.
+     *
+     * Ein Neustart des Prozesses, nicht nur der Activity: die Room-Instanz, die Flows und
+     * das ViewModel hängen alle an der alten Datei. Ein halber Neustart liesse Reste davon
+     * stehen — und die zeigten weiter die Daten, die gerade ersetzt wurden.
+     */
+    fun starteNeu() {
+        val absicht = packageManager.getLaunchIntentForPackage(packageName)
+            ?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(absicht)
+        finish()
+        Runtime.getRuntime().exit(0)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -131,6 +162,9 @@ class MainActivity : ComponentActivity() {
                     beiAnmelden = { starteAnmeldung(vm) },
                     beiTeilen = { sitzung -> teileSitzung(vm, sitzung) },
                     beiOrdnerwahl = { ordnerWahl.launch(null) },
+                    beiAntwortMikrofon = { starteAntwortAufnahmeMitRecht(vm) },
+                    beiDateiwahl = { dateiWahl.launch(arrayOf("*/*")) },
+                    beiNeustart = { starteNeu() },
                 )
             }
         }
@@ -157,6 +191,22 @@ class MainActivity : ComponentActivity() {
         val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         if (hat) vm.aufnahmeUmschalten() else mikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    /**
+     * F-09, Schritt 5 — die Antwort auf die Rückfrage einsprechen.
+     *
+     * Dasselbe Recht, derselbe Weg wie beim Notiz-Mikrofon: die Frage nach `RECORD_AUDIO`
+     * kommt beim ersten Druck, nicht beim Start.
+     */
+    private fun starteAntwortAufnahmeMitRecht(vm: HauptViewModel) {
+        val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (hat) {
+            vm.antwortAufnahmeUmschalten()
+        } else {
+            antwortMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     /** F-11 — der Gerätecode-Ablauf. Der Browser wird von `CodexAuthManager` selbst geöffnet. */
@@ -214,6 +264,9 @@ private fun Oberflaeche(
     beiAnmelden: () -> Unit,
     beiTeilen: (Sitzung) -> Unit,
     beiOrdnerwahl: () -> Unit,
+    beiAntwortMikrofon: () -> Unit,
+    beiDateiwahl: () -> Unit,
+    beiNeustart: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val verlauf by vm.verlauf.collectAsStateWithLifecycle()
@@ -251,6 +304,13 @@ private fun Oberflaeche(
     LaunchedEffect(ordnerFehlt) {
         if (ordnerFehlt) beiOrdnerwahl()
     }
+
+    val sucheDatei by vm.sucheSicherungsdatei.collectAsStateWithLifecycle()
+    LaunchedEffect(sucheDatei) {
+        if (sucheDatei) beiDateiwahl()
+    }
+
+    val neustartNoetig by vm.neustartNoetig.collectAsStateWithLifecycle()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Ab 400 dp ist das Innendisplay aufgeklappt — dann bekommt die Schublade ihre
@@ -416,7 +476,7 @@ private fun Oberflaeche(
                     beiWebsuche = vm::setzeWebsuche,
                     beiWebsucheKi = vm::setzeWebsucheKiEntscheidet,
                     beiAntwort = vm::setzeKiAntwort,
-                    beiAntwortEinsprechen = { vm.melde("Sprich deine Antwort in das Feld — tippe dazu den Mikrofonknopf.") },
+                    beiAntwortEinsprechen = beiAntwortMikrofon,
                     beiProfil = {
                         vm.schliesseKiBlatt()
                         ziel = Ziel.PROFILE
@@ -604,6 +664,18 @@ private fun Oberflaeche(
                     umbenennen = null
                 },
                 beiNein = { umbenennen = null },
+            )
+        }
+
+        if (neustartNoetig) {
+            Rueckfrage(
+                titel = "Wiederhergestellt",
+                text = "Die App startet jetzt neu, damit die wiederhergestellten Notizen geladen werden.",
+                bestaetigung = "Neu starten",
+                beiJa = beiNeustart,
+                // Kein Weg daran vorbei: die Datenbankdatei ist schon ausgetauscht, die
+                // laufende App zeigt einen Stand, den es nicht mehr gibt.
+                beiNein = beiNeustart,
             )
         }
 

@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.ui.KiBlattzustand
 import de.frank.gedankenspeicher.ui.theme.Farben
+import de.frank.gedankenspeicher.ui.theme.blattgrund
 import de.frank.gedankenspeicher.ui.theme.Masse
 import de.frank.gedankenspeicher.ui.theme.Schriften
 import de.frank.gedankenspeicher.ui.theme.merkeDruck
@@ -71,7 +72,7 @@ fun KiBlatt(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                farben.hintergrundGlas,
+                farben.blattgrund,
                 RoundedCornerShape(topStart = Masse.blattRadius, topEnd = Masse.blattRadius),
             )
             .border(
