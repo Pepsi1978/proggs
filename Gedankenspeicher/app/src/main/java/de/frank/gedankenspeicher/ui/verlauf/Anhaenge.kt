@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -147,6 +146,9 @@ private val Stiftfarben = listOf(0xFF1A1A1A, 0xFFD32F2F, 0xFF1565C0, 0xFF2E7D32,
 private const val SPALTE_STANDARD = 132
 private const val SPALTE_MIN = 64
 private const val SPALTE_MAX = 400
+
+/** Feste Hoehe einer Tabellenzeile in dp — im Editor wie in der Karte dieselbe. */
+private const val ZEILENHOEHE = 46
 
 // ------------------------------------------------------------------ Plus-Knopf
 
@@ -811,21 +813,27 @@ private fun Tabellenanhang(anhang: Anhang) {
             .horizontalScroll(rememberScrollState()),
     ) {
         zeilen.forEachIndexed { nummer, zeile ->
+            // Dieselbe feste Zeilenhoehe wie im Editor — so sieht die gespeicherte
+            // Tabelle genauso aus wie beim Bearbeiten, und die Intrinsic-Messung,
+            // die im Vollbild-Editor den Fuss verdraengt hat, entfaellt auch hier.
             Row(
                 Modifier.background(if (nummer == 0) farben.hintergrundErhoben else Color.Transparent)
-                    .height(IntrinsicSize.Min),
+                    .height(ZEILENHOEHE.dp),
             ) {
                 (0 until spalten).forEach { spalte ->
                     Box(
                         Modifier
                             .width((anhang.spaltenbreiten.getOrNull(spalte) ?: SPALTE_STANDARD).dp)
                             .fillMaxHeight()
-                            .padding(horizontal = 10.dp, vertical = 9.dp),
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
                     ) {
                         Text(
                             zeile.getOrNull(spalte).orEmpty(),
                             style = if (nummer == 0) Schriften.kartenUeberschrift else Schriften.einstellung,
                             color = if (nummer == 0) farben.textStark else farben.textMittel,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     if (spalte < spalten - 1) {
@@ -921,32 +929,74 @@ private fun ZeichenBlatt(
         onDismissRequest = beiAbbruch,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Column(
-            Modifier.fillMaxSize().background(farben.hintergrund)
-                .statusBarsPadding().navigationBarsPadding().imePadding()
-                .padding(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
-                Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                        .clickable { if (striche.isNotEmpty()) striche.removeAt(striche.lastIndex) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Undo, "Letzten Strich zurücknehmen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+        VollbildBlatt(
+            kopf = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                            .clickable { if (striche.isNotEmpty()) striche.removeAt(striche.lastIndex) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Undo, "Letzten Strich zurücknehmen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+                    }
+                    Box(
+                        Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                            .clickable { striche.clear() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Delete, "Alles löschen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+                    }
                 }
-                Box(
-                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                        .clickable { striche.clear() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Delete, "Alles löschen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+            },
+            fuss = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Stiftfarben.forEach { wert ->
+                            Box(
+                                Modifier.padding(end = 8.dp)
+                                    .size(if (wert == farbe) 32.dp else 26.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(wert))
+                                    .border(if (wert == farbe) 2.dp else 0.dp, farben.akzent, RoundedCornerShape(50))
+                                    .clickable { farbe = wert },
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        listOf(3f, 6f, 12f, 20f).forEach { wert ->
+                            Box(
+                                Modifier.padding(start = 10.dp).size((wert + 14).dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (wert == staerke) farben.akzent else farben.textSchwach)
+                                    .clickable { staerke = wert },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Blattknoepfe(
+                        beiAbbruch = beiAbbruch,
+                        bestaetigungAktiv = true,
+                        beiBestaetigen = {
+                            if (striche.isEmpty() || flaeche.width == 0) {
+                                beiAbbruch()
+                            } else {
+                                val fertig = striche.toList()
+                                val breite = flaeche.width
+                                val hoehe = flaeche.height
+                                bereich.launch {
+                                    runCatching { speichereZeichnung(speicher, fertig, breite, hoehe) }
+                                        .onSuccess(beiFertig)
+                                        .onFailure { beiFehler(it.message ?: "Die Zeichnung konnte nicht gespeichert werden.") }
+                                }
+                            }
+                        },
+                    )
                 }
-            }
-            Spacer(Modifier.height(10.dp))
+            },
+        ) { platz ->
             Box(
-                Modifier.fillMaxWidth().weight(1f)
+                platz
                     .clip(RoundedCornerShape(Masse.gruppeRadius))
                     .background(Color.White)
                     .border(1.dp, farben.rand, RoundedCornerShape(Masse.gruppeRadius))
@@ -977,47 +1027,6 @@ private fun ZeichenBlatt(
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Stiftfarben.forEach { wert ->
-                    Box(
-                        Modifier.padding(end = 8.dp)
-                            .size(if (wert == farbe) 32.dp else 26.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(wert))
-                            .border(if (wert == farbe) 2.dp else 0.dp, farben.akzent, RoundedCornerShape(50))
-                            .clickable { farbe = wert },
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                listOf(3f, 6f, 12f, 20f).forEach { wert ->
-                    Box(
-                        Modifier.padding(start = 10.dp).size((wert + 14).dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(if (wert == staerke) farben.akzent else farben.textSchwach)
-                            .clickable { staerke = wert },
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Blattknoepfe(
-                beiAbbruch = beiAbbruch,
-                bestaetigungAktiv = true,
-                beiBestaetigen = {
-                    if (striche.isEmpty() || flaeche.width == 0) {
-                        beiAbbruch()
-                    } else {
-                        val fertig = striche.toList()
-                        val breite = flaeche.width
-                        val hoehe = flaeche.height
-                        bereich.launch {
-                            runCatching { speichereZeichnung(speicher, fertig, breite, hoehe) }
-                                .onSuccess(beiFertig)
-                                .onFailure { beiFehler(it.message ?: "Die Zeichnung konnte nicht gespeichert werden.") }
-                        }
-                    }
-                },
-            )
         }
     }
 }
@@ -1161,131 +1170,173 @@ fun TabellenBlatt(vorlage: Anhang?, beiAbbruch: () -> Unit, beiFertig: (Anhang) 
         onDismissRequest = beiAbbruch,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Column(
-            Modifier.fillMaxSize().background(farben.hintergrund)
-                .statusBarsPadding().navigationBarsPadding().imePadding()
-                .padding(12.dp),
-        ) {
-            Text(
-                if (vorlage == null) "Tabelle" else "Tabelle bearbeiten",
-                style = Schriften.bildschirmtitel, color = farben.textStark,
-            )
-            Text(
-                "Erste Zeile ist die Kopfzeile · Trennlinien ziehen ändert die Spaltenbreite",
-                style = Schriften.zeitstempel, color = farben.textSchwach,
-            )
-            Spacer(Modifier.height(12.dp))
-
-            Row(Modifier.weight(1f)) {
-                Column(
-                    Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                ) {
-                    Row(Modifier.horizontalScroll(rememberScrollState())) {
-                        Column {
-                            zeilen.forEachIndexed { zeilennummer, zeile ->
-                                Row(Modifier.height(IntrinsicSize.Min)) {
-                                    zeile.indices.forEach { spalte ->
-                                        Box(
-                                            Modifier
-                                                .width(breiten.getOrElse(spalte) { SPALTE_STANDARD.toFloat() }.dp)
-                                                .fillMaxHeight()
-                                                .background(
-                                                    if (zeilennummer == 0) farben.hintergrundErhoben
-                                                    else farben.hintergrundGlas,
-                                                )
-                                                .border(1.dp, farben.rand)
-                                                .padding(horizontal = 10.dp, vertical = 10.dp),
-                                        ) {
-                                            if (zeile[spalte].isEmpty()) {
-                                                Text(
-                                                    if (zeilennummer == 0) "Spalte ${spalte + 1}" else "",
-                                                    style = Schriften.einstellung, color = farben.textSchwach,
+        VollbildBlatt(
+            kopf = {
+                Column {
+                    Text(
+                        if (vorlage == null) "Tabelle" else "Tabelle bearbeiten",
+                        style = Schriften.bildschirmtitel, color = farben.textStark,
+                    )
+                    Text(
+                        "Erste Zeile ist die Kopfzeile · Trennlinien ziehen ändert die Spaltenbreite",
+                        style = Schriften.zeitstempel, color = farben.textSchwach,
+                    )
+                }
+            },
+            fuss = {
+                Blattknoepfe(
+                    beiAbbruch = beiAbbruch,
+                    bestaetigungAktiv = true,
+                    beiBestaetigen = {
+                        val inhalt = zeilen.joinToString("\n") { zeile -> zeile.joinToString("\t") { it.trim() } }
+                        beiFertig(
+                            (vorlage ?: Anhang(art = Anhangsart.TABELLE, name = "Tabelle")).copy(
+                                art = Anhangsart.TABELLE,
+                                name = "Tabelle",
+                                text = inhalt,
+                                spaltenbreiten = breiten.map { it.toInt() },
+                            ),
+                        )
+                    },
+                )
+            },
+        ) { flaeche ->
+            Column(flaeche) {
+                Row(Modifier.weight(1f)) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            Column {
+                                zeilen.forEachIndexed { zeilennummer, zeile ->
+                                    // Feste Zeilenhöhe statt `IntrinsicSize.Min`: eine Messung
+                                    // nach der Wunschhöhe schlägt aus einem scrollbaren Bereich
+                                    // heraus auf das ganze Blatt durch und drückt den Fuß hinaus.
+                                    Row(Modifier.height(ZEILENHOEHE.dp)) {
+                                        zeile.indices.forEach { spalte ->
+                                            Box(
+                                                Modifier
+                                                    .width(breiten.getOrElse(spalte) { SPALTE_STANDARD.toFloat() }.dp)
+                                                    .fillMaxHeight()
+                                                    .background(
+                                                        if (zeilennummer == 0) farben.hintergrundErhoben
+                                                        else farben.hintergrundGlas,
+                                                    )
+                                                    .border(1.dp, farben.rand)
+                                                    .padding(horizontal = 10.dp),
+                                                contentAlignment = Alignment.CenterStart,
+                                            ) {
+                                                if (zeile[spalte].isEmpty()) {
+                                                    Text(
+                                                        if (zeilennummer == 0) "Spalte ${spalte + 1}" else "",
+                                                        style = Schriften.einstellung, color = farben.textSchwach,
+                                                    )
+                                                }
+                                                BasicTextField(
+                                                    value = zeile[spalte],
+                                                    onValueChange = { eingabe ->
+                                                        zeilen[zeilennummer][spalte] =
+                                                            eingabe.replace('\t', ' ').replace('\n', ' ')
+                                                    },
+                                                    singleLine = true,
+                                                    textStyle = (
+                                                        if (zeilennummer == 0) Schriften.kartenUeberschrift
+                                                        else Schriften.einstellung
+                                                        ).copy(color = farben.textStark),
+                                                    cursorBrush = SolidColor(farben.akzent),
+                                                    modifier = Modifier.fillMaxWidth(),
                                                 )
                                             }
-                                            BasicTextField(
-                                                value = zeile[spalte],
-                                                onValueChange = { eingabe ->
-                                                    zeilen[zeilennummer][spalte] =
-                                                        eingabe.replace('\t', ' ').replace('\n', ' ')
-                                                },
-                                                singleLine = true,
-                                                textStyle = (
-                                                    if (zeilennummer == 0) Schriften.kartenUeberschrift
-                                                    else Schriften.einstellung
-                                                    ).copy(color = farben.textStark),
-                                                cursorBrush = SolidColor(farben.akzent),
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                        }
-                                        // Der Griff auf der Trennlinie: ziehen macht die
-                                        // Spalte breiter oder schmaler.
-                                        Box(
-                                            Modifier.width(10.dp).fillMaxHeight()
-                                                .pointerInput(spalte) {
-                                                    detectDragGestures { aenderung, verschiebung ->
-                                                        aenderung.consume()
-                                                        val schritt = with(dichte) { verschiebung.x.toDp().value }
-                                                        breiten[spalte] = (breiten[spalte] + schritt)
-                                                            .coerceIn(SPALTE_MIN.toFloat(), SPALTE_MAX.toFloat())
-                                                    }
-                                                },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
+                                            // Der Griff auf der Trennlinie: ziehen macht die
+                                            // Spalte breiter oder schmaler.
                                             Box(
-                                                Modifier.width(3.dp).fillMaxHeight()
-                                                    .background(farben.akzent.copy(alpha = 0.35f)),
-                                            )
+                                                Modifier.width(10.dp).fillMaxHeight()
+                                                    .pointerInput(spalte) {
+                                                        detectDragGestures { aenderung, verschiebung ->
+                                                            aenderung.consume()
+                                                            val schritt = with(dichte) { verschiebung.x.toDp().value }
+                                                            breiten[spalte] = (breiten[spalte] + schritt)
+                                                                .coerceIn(SPALTE_MIN.toFloat(), SPALTE_MAX.toFloat())
+                                                        }
+                                                    },
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Box(
+                                                    Modifier.width(3.dp).fillMaxHeight()
+                                                        .background(farben.akzent.copy(alpha = 0.35f)),
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                // Rechts: Spalte hinzu oder weg.
-                Column(
-                    Modifier.padding(start = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Randknopf(Icons.Outlined.Add, "Spalte hinzufügen") {
-                        zeilen.forEach { it.add("") }
-                        breiten.add(SPALTE_STANDARD.toFloat())
-                    }
-                    Randknopf(Icons.Outlined.Remove, "Letzte Spalte entfernen") {
-                        if (zeilen.first().size > 1) {
-                            zeilen.forEach { it.removeAt(it.lastIndex) }
-                            breiten.removeAt(breiten.lastIndex)
+                    // Rechts: Spalte hinzu oder weg.
+                    Column(
+                        Modifier.padding(start = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Randknopf(Icons.Outlined.Add, "Spalte hinzufügen") {
+                            zeilen.forEach { it.add("") }
+                            breiten.add(SPALTE_STANDARD.toFloat())
+                        }
+                        Randknopf(Icons.Outlined.Remove, "Letzte Spalte entfernen") {
+                            if (zeilen.first().size > 1) {
+                                zeilen.forEach { it.removeAt(it.lastIndex) }
+                                breiten.removeAt(breiten.lastIndex)
+                            }
                         }
                     }
                 }
-            }
-
-            // Unten: Zeile hinzu oder weg.
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Randknopf(Icons.Outlined.Add, "Zeile hinzufügen") {
-                    zeilen.add(List(zeilen.first().size) { "" }.toMutableStateList())
+                // Unten: Zeile hinzu oder weg.
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Randknopf(Icons.Outlined.Add, "Zeile hinzufügen") {
+                        zeilen.add(List(zeilen.first().size) { "" }.toMutableStateList())
+                    }
+                    Randknopf(Icons.Outlined.Remove, "Letzte Zeile entfernen") {
+                        if (zeilen.size > 1) zeilen.removeAt(zeilen.lastIndex)
+                    }
                 }
-                Randknopf(Icons.Outlined.Remove, "Letzte Zeile entfernen") {
-                    if (zeilen.size > 1) zeilen.removeAt(zeilen.lastIndex)
-                }
             }
+        }
+    }
+}
 
+/**
+ * Das Gerüst der Vollbild-Blätter (Zeichnung, Tabelle).
+ *
+ * Die Fußleiste liegt **nicht** im Layoutfluss, sondern klebt über [Box]-Ausrichtung am
+ * unteren Rand; der Inhalt bekommt darüber den Rest. Damit kann kein noch so hoher Inhalt
+ * die Knöpfe aus dem Bild schieben — genau das war der Fehler, als die Leiste als letztes
+ * Kind einer Column hing und eine Innenmessung mehr Höhe beanspruchte als der Bildschirm hat.
+ */
+@Composable
+private fun VollbildBlatt(
+    kopf: @Composable () -> Unit,
+    fuss: @Composable () -> Unit,
+    inhalt: @Composable (Modifier) -> Unit,
+) {
+    val farben = Farben
+    var fusshoehe by remember { mutableStateOf(0) }
+    val dichte = LocalDensity.current
+    Box(
+        Modifier.fillMaxSize().background(farben.hintergrund)
+            .statusBarsPadding().navigationBarsPadding().imePadding(),
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp)) {
+            kopf()
             Spacer(Modifier.height(12.dp))
-            Blattknoepfe(
-                beiAbbruch = beiAbbruch,
-                bestaetigungAktiv = true,
-                beiBestaetigen = {
-                    val inhalt = zeilen.joinToString("\n") { zeile -> zeile.joinToString("\t") { it.trim() } }
-                    beiFertig(
-                        (vorlage ?: Anhang(art = Anhangsart.TABELLE, name = "Tabelle")).copy(
-                            art = Anhangsart.TABELLE,
-                            name = "Tabelle",
-                            text = inhalt,
-                            spaltenbreiten = breiten.map { it.toInt() },
-                        ),
-                    )
-                },
+            inhalt(
+                Modifier.fillMaxWidth().weight(1f)
+                    .padding(bottom = with(dichte) { fusshoehe.toDp() }),
             )
+        }
+        Box(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .background(farben.hintergrund)
+                .onSizeChanged { fusshoehe = it.height }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            fuss()
         }
     }
 }
