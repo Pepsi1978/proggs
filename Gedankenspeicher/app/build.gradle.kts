@@ -17,7 +17,7 @@ android {
         versionName = "0.4.7"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:33 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:36 Uhr\"")
     }
 
     buildTypes {
