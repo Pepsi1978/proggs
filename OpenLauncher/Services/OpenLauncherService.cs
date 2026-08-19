@@ -722,6 +722,12 @@ try {
 
         var modelId = modelString[(LmStudioService.ProviderId.Length + 1)..];
         return $$"""
+# Die rund 70 externen Skills aus ~/.claude/skills werden mit ihrer kompletten Beschreibung in
+# JEDE Anfrage eingebettet und kosten gemessene ~14000 Token. Bei Cloud-Modellen faellt das kaum
+# auf: dort liegt der Block im Prompt-Cache und das Fenster ist 200k oder groesser. Ein lokales
+# Modell hat weder Cache noch Platz - dort waeren zwei Drittel des Fensters belegt, bevor die
+# erste Frage gestellt ist. Prozess-lokale Variable, sie gilt nur fuer dieses eine Terminal.
+$env:OPENCODE_DISABLE_EXTERNAL_SKILLS = '1'
 $lms = Join-Path $env:USERPROFILE '.lmstudio\bin\lms.exe'
 if (Test-Path -LiteralPath $lms) {
     $lmsModel = {{PowerShellLiteral(modelId)}}
