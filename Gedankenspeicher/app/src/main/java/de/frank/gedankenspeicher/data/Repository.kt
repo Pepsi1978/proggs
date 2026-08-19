@@ -55,7 +55,9 @@ class Repository(
 
     suspend fun neueSitzung(): Sitzung {
         val jetzt = System.currentTimeMillis()
-        val id = db.sitzungen().einfuegen(Sitzung(erstelltAm = jetzt, zuletztGeoeffnet = jetzt))
+        val id = db.sitzungen().einfuegen(
+            Sitzung(erstelltAm = jetzt, zuletztGeoeffnet = jetzt, zuletztGeaendert = jetzt),
+        )
         einstellungen.offeneSitzung = id
         return db.sitzungen().eine(id)!!
     }
@@ -68,7 +70,15 @@ class Repository(
     suspend fun benenneSitzungUm(id: Long, titel: String) {
         // Von Hand vergeben — ab jetzt fasst die KI den Titel nicht mehr an (F-12, Regeln).
         db.sitzungen().setzeTitel(id, titel.trim().take(80), vonHand = true)
+        merkeAenderung(id)
     }
+
+    /**
+     * Hält fest, dass sich an dieser Sitzung wirklich etwas geändert hat — davon hängt ihr
+     * Platz in der Seitenleiste ab. Blosses Öffnen ruft das bewusst nicht auf.
+     */
+    private suspend fun merkeAenderung(sitzungId: Long) =
+        db.sitzungen().merkeAenderung(sitzungId, System.currentTimeMillis())
 
     /**
      * Löscht die Sitzung samt Notizen und Antworten. War es die letzte, entsteht sofort eine
@@ -162,7 +172,7 @@ class Repository(
                 zustand = Notizzustand.FERTIG,
                 anhaengeJson = anhaenge.alsJson(),
             ),
-        )
+        ).also { merkeAenderung(sitzungId) }
 
     /** Die Karte entsteht sofort nach dem Aufnahmeende — noch ohne Text (F-01, Schritt 4). */
     suspend fun legeGesprocheneNotizAn(sitzungId: Long, zustand: Notizzustand, audioPfad: String?): Long =
@@ -174,11 +184,14 @@ class Repository(
                 zustand = zustand,
                 audioPfad = audioPfad,
             ),
-        )
+        ).also { merkeAenderung(sitzungId) }
 
     suspend fun notiz(id: Long): Notiz? = db.notizen().eine(id)
 
-    suspend fun aendere(notiz: Notiz) = db.notizen().aendern(notiz)
+    suspend fun aendere(notiz: Notiz) {
+        db.notizen().aendern(notiz)
+        merkeAenderung(notiz.sitzungId)
+    }
 
     suspend fun loescheNotiz(notiz: Notiz) {
         notiz.audioPfad?.let { runCatching { File(it).delete() } }
@@ -186,13 +199,20 @@ class Repository(
         // Aufnahmen und PDFs als Karteileichen im App-Speicher liegen.
         Anhangsspeicher(ctx).loesche(anhaengeAusJson(notiz.anhaengeJson))
         db.notizen().loeschen(notiz)
+        merkeAenderung(notiz.sitzungId)
     }
 
     /** Verschieben lässt den Zeitstempel unangetastet (F-08) — die Notiz bleibt, wann sie war. */
-    suspend fun verschiebeNotiz(notiz: Notiz, zielSitzung: Long) =
+    suspend fun verschiebeNotiz(notiz: Notiz, zielSitzung: Long) {
         db.notizen().aendern(notiz.copy(sitzungId = zielSitzung))
+        // Beide Sitzungen haben sich geändert: der einen fehlt die Notiz, die andere hat
+        // sie dazubekommen.
+        merkeAenderung(notiz.sitzungId)
+        merkeAenderung(zielSitzung)
+    }
 
-    suspend fun bearbeiteNotiz(notiz: Notiz, ueberschrift: String, text: String) =
+    suspend fun bearbeiteNotiz(notiz: Notiz, ueberschrift: String, text: String) {
+        merkeAenderung(notiz.sitzungId)
         db.notizen().aendern(
             notiz.copy(
                 text = text.trim(),
@@ -201,6 +221,7 @@ class Repository(
                 ueberschriftVonHand = ueberschrift.trim() != notiz.ueberschrift?.trim(),
             ),
         )
+    }
 
     suspend fun angefangeneAufraeumen() {
         // Eine Notiz im Zustand AUFNEHMEND hat den App-Start nicht überlebt: die Aufnahme ist
@@ -278,9 +299,13 @@ class Repository(
         "[$kopf]\n${notiz.text}"
     }
 
-    suspend fun speichereAntwort(antwort: KiAntwort): Long = db.antworten().einfuegen(antwort)
+    suspend fun speichereAntwort(antwort: KiAntwort): Long =
+        db.antworten().einfuegen(antwort).also { merkeAenderung(antwort.sitzungId) }
 
-    suspend fun loescheAntwort(antwort: KiAntwort) = db.antworten().loeschen(antwort)
+    suspend fun loescheAntwort(antwort: KiAntwort) {
+        db.antworten().loeschen(antwort)
+        merkeAenderung(antwort.sitzungId)
+    }
 
     // --- Profile (F-10) ----------------------------------------------------------------------
 

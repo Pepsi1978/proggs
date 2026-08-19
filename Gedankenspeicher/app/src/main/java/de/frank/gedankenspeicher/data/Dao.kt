@@ -11,8 +11,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SitzungDao {
 
-    /** Zuletzt benutzte oben (`01-FUNKTIONS-SPEC.md` F-12, Regeln). */
-    @Query("SELECT * FROM sitzung ORDER BY zuletztGeoeffnet DESC")
+    /**
+     * Zuletzt **geänderte** oben.
+     *
+     * Nicht die zuletzt geöffnete: sonst sortierte sich die Liste schon um, wenn man eine
+     * Notiz nur aufschlägt und wieder zumacht.
+     */
+    @Query("SELECT * FROM sitzung ORDER BY zuletztGeaendert DESC, erstelltAm DESC")
     fun alle(): Flow<List<Sitzung>>
 
     @Query("SELECT * FROM sitzung WHERE id = :id")
@@ -48,6 +53,10 @@ interface SitzungDao {
 
     @Query("UPDATE sitzung SET zuletztGeoeffnet = :zeit WHERE id = :id")
     suspend fun merkeOeffnung(id: Long, zeit: Long)
+
+    /** Jede echte Änderung am Inhalt hebt die Sitzung in der Liste nach oben. */
+    @Query("UPDATE sitzung SET zuletztGeaendert = :zeit WHERE id = :id")
+    suspend fun merkeAenderung(id: Long, zeit: Long)
 
     @Query("UPDATE sitzung SET titel = :titel, titelVonHand = :vonHand WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, vonHand: Boolean)

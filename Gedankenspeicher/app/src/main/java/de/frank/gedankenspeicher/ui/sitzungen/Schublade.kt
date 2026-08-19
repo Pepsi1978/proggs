@@ -408,7 +408,7 @@ private fun Sitzungszeile(
             }
             Text(
                 listOfNotNull(
-                    de.frank.gedankenspeicher.data.Repository.zeitpunkt(sitzung.zuletztGeoeffnet),
+                    de.frank.gedankenspeicher.data.Repository.zeitpunkt(sitzung.zuletztGeaendert),
                     ordnername,
                 ).joinToString(" · "),
                 style = schrift.zeitstempel,

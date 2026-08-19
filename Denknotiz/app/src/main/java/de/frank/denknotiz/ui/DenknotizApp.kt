@@ -181,7 +181,9 @@ fun DenknotizApp(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     DenknotizTheme(state.settings.theme) {
-        val drawer = rememberDrawerState(DrawerValue.Closed)
+        // Beim Start steht die Auswahl offen: die App fängt bei den Notizen an, nicht in
+        // einer davon.
+        val drawer = rememberDrawerState(DrawerValue.Open)
         val scope = rememberCoroutineScope()
         val snackbar = remember { SnackbarHostState() }
         BackHandler(enabled = state.interaction.section == AppSection.SETTINGS) {
@@ -615,7 +617,11 @@ private fun Workbench(
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 WorkbenchTopBar(state, vm, openDrawer, onToggleTheme = vm::toggleTheme, requestFingerprint = requestFingerprint)
                 val bundle = state.bundle
-                if (bundle == null) {
+                if (state.interaction.selectedSessionId == null) {
+                    // Das Eingabefeld bleibt stehen: wer lostippt, bekommt eine neue Notiz.
+                    NoSessionScreen(state.settings.reducedMotion, openDrawer, Modifier.weight(1f))
+                    Composer(state, vm, requestMicrophone, requestNotifications)
+                } else if (bundle == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else {
                     // Solange die Notiz zu ist, bekommt die Zeitleiste **keine** Einträge.
@@ -650,6 +656,34 @@ private fun Workbench(
             onUnlock = { requestFingerprint("Geschützte Notiz öffnen") { vm.unlockSecured(offeneFrisch.id) } },
             onOverview = openDrawer,
         )
+    }
+}
+
+/** Der Anfangsbildschirm: die App startet bei der Auswahl, nicht in einer Notiz. */
+@Composable
+private fun NoSessionScreen(reducedMotion: Boolean, openDrawer: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 32.dp)) {
+            Icon(
+                Icons.Default.Menu, null, modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+            Spacer(Modifier.height(18.dp))
+            Text("Such dir eine Notiz aus.", style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Links in der Seitenleiste stehen alle Notizen. Oder tipp einfach los — dann entsteht eine neue.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(20.dp))
+            GoldActionButton(
+                text = "Notizen zeigen",
+                icon = Icons.Default.Menu,
+                reducedMotion = reducedMotion,
+                onClick = openDrawer,
+            )
+        }
     }
 }
 

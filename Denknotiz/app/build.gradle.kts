@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.denknotiz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.6"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:57 Uhr\"")
+        versionCode = 8
+        versionName = "0.1.7"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 13:25 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 

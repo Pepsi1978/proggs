@@ -34,11 +34,17 @@ interface SessionDao {
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun delete(id: String)
 
-    @Query("UPDATE sessions SET pinned = CASE pinned WHEN 1 THEN 0 ELSE 1 END, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun togglePinned(id: String, updatedAt: Long)
+    // Anpinnen und Archivieren rühren `updatedAt` **nicht** an: die Liste ist nach der
+    // letzten Änderung sortiert, und weder das eine noch das andere ändert etwas am Inhalt.
+    @Query("UPDATE sessions SET pinned = CASE pinned WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
+    suspend fun togglePinned(id: String)
 
-    @Query("UPDATE sessions SET archived = :archived, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun setArchived(id: String, archived: Boolean, updatedAt: Long)
+    @Query("UPDATE sessions SET archived = :archived WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean)
+
+    /** Hält fest, dass sich am Inhalt der Notiz etwas geändert hat — davon hängt ihr Platz ab. */
+    @Query("UPDATE sessions SET updatedAt = :updatedAt WHERE id = :id")
+    suspend fun touch(id: String, updatedAt: Long)
 
     @Query("UPDATE sessions SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun toggleFavorite(id: String)

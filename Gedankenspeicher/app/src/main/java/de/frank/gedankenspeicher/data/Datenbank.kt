@@ -21,7 +21,7 @@ class Wandler {
 
 @Database(
     entities = [Sitzung::class, Notiz::class, KiAntwort::class, Auswertungsprofil::class, Ordner::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -41,7 +41,7 @@ abstract class Datenbank : RoomDatabase() {
                 ctx.applicationContext,
                 Datenbank::class.java,
                 DATEINAME,
-            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3).build().also { vorhanden = it }
+            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3, WANDERUNG_3_4).build().also { vorhanden = it }
         }
 
         /** Die Anhänge kamen mit dem Plus-Menü dazu; alte Notizen haben schlicht keine. */
@@ -66,6 +66,18 @@ abstract class Datenbank : RoomDatabase() {
                         "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " +
                         "name TEXT NOT NULL, erstelltAm INTEGER NOT NULL)",
                 )
+            }
+        }
+
+        /**
+         * Die Sortierung haengt jetzt am Aendern, nicht mehr am Oeffnen. Bestehende
+         * Sitzungen starten mit dem Zeitpunkt, den sie bisher hatten — damit bleibt die
+         * gewohnte Reihenfolge beim ersten Start nach dem Umbau erhalten.
+         */
+        private val WANDERUNG_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sitzung ADD COLUMN zuletztGeaendert INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE sitzung SET zuletztGeaendert = zuletztGeoeffnet")
             }
         }
 

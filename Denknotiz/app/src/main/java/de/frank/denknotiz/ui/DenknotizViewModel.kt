@@ -139,11 +139,14 @@ class DenknotizViewModel(
         viewModelScope.launch { repository.recoverInterruptedEvaluations() }
         viewModelScope.launch {
             repository.sessions.collect { sessions ->
-                val selected = interaction.value.selectedSessionId
-                if (selected == null || sessions.none { it.id == selected }) {
+                // **Beim Start wird bewusst keine Notiz geöffnet** — die Seitenleiste steht
+                // offen, und die Auswahl trifft Frank. Nachgefasst wird nur, wenn die
+                // gerade offene Notiz verschwindet: dann darf der Bildschirm nicht auf
+                // etwas zeigen, das es nicht mehr gibt.
+                val selected = interaction.value.selectedSessionId ?: return@collect
+                if (sessions.none { it.id == selected }) {
                     val id = sessions.firstOrNull { !it.archived && it.deletedAt == null && !it.secured }?.id
-                        ?: repository.createSession()
-                    activateSession(id)
+                    if (id == null) update { copy(selectedSessionId = null) } else activateSession(id)
                 }
             }
         }
@@ -257,10 +260,13 @@ class DenknotizViewModel(
 
     fun sendDraft() {
         val text = interaction.value.draft.trim()
-        val sessionId = interaction.value.selectedSessionId ?: return
         val anhaenge = interaction.value.attachments
         if (text.isBlank() && anhaenge.isEmpty()) return
         launchAction {
+            // Wer ohne offene Notiz lostippt, bekommt eine neue — der leere Anfangs-
+            // bildschirm soll keine Sackgasse sein.
+            val sessionId = interaction.value.selectedSessionId
+                ?: repository.createSession().also { activateSession(it) }
             val entry = repository.addNote(sessionId, text, anhaenge)
             if (interaction.value.selectedSessionId == sessionId && interaction.value.draft.trim() == text) {
                 drafts[sessionId] = ""

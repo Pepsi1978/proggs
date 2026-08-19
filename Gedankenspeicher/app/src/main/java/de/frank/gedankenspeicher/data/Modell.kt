@@ -22,7 +22,18 @@ data class Sitzung(
     /** Ein von Hand vergebener Titel wird nie wieder von der KI überschrieben (F-12). */
     val titelVonHand: Boolean = false,
     val erstelltAm: Long,
+    /** Wann zuletzt geöffnet — merkt sich nur, wo Frank war, und sortiert nichts. */
     val zuletztGeoeffnet: Long,
+    /**
+     * Wann zuletzt wirklich etwas an der Sitzung geändert wurde — danach sortiert die
+     * Seitenleiste.
+     *
+     * Bewusst getrennt vom Öffnen: sortierte die Liste nach dem Öffnen, spränge jede Notiz
+     * schon vom blossen Hineinschauen nach oben, und die Reihenfolge sagte nichts mehr
+     * darüber aus, wo zuletzt gearbeitet wurde. Favorit, Schutz und Ordner zählen nicht
+     * als Änderung — sie ändern nichts am Inhalt.
+     */
+    val zuletztGeaendert: Long = 0,
     /** Als Favorit markiert — erscheint im Reiter „Favoriten". */
     val favorit: Boolean = false,
     /** Geschützt — liegt im Reiter „Geschützte Notizen" und öffnet sich nur per Fingerabdruck. */

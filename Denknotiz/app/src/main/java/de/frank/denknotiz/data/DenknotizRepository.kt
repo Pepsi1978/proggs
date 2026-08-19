@@ -37,8 +37,18 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
     }
 
     suspend fun updateSession(session: SessionEntity) = db.sessionDao().update(session.copy(updatedAt = System.currentTimeMillis()))
-    suspend fun togglePinned(id: String) = db.sessionDao().togglePinned(id, System.currentTimeMillis())
-    suspend fun setArchived(id: String, archived: Boolean) = db.sessionDao().setArchived(id, archived, System.currentTimeMillis())
+    suspend fun togglePinned(id: String) = db.sessionDao().togglePinned(id)
+    suspend fun setArchived(id: String, archived: Boolean) = db.sessionDao().setArchived(id, archived)
+
+    /**
+     * Hält fest, dass sich am Inhalt einer Notiz etwas geändert hat — davon hängt ihr Platz
+     * in der Seitenleiste ab.
+     *
+     * Blosses Öffnen ruft das bewusst nicht auf: sortierte die Liste nach dem Öffnen,
+     * spränge jede Notiz schon vom Hineinschauen nach oben. Favorit, Schutz, Ordner,
+     * Anpinnen und Archivieren zählen aus demselben Grund nicht mit.
+     */
+    private suspend fun touch(sessionId: String) = db.sessionDao().touch(sessionId, System.currentTimeMillis())
     suspend fun firstVisibleSessionExcept(id: String): SessionEntity? = db.sessionDao().firstVisibleExcept(id)
     suspend fun deleteSession(id: String) = db.sessionDao().delete(id)
 
@@ -91,6 +101,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         require(current.type == EntryType.NOTE)
         db.entryDao().update(current.copy(text = text.trim(), updatedAt = System.currentTimeMillis()))
         db.entryDao().markResponsesHistorical(id)
+        touch(current.sessionId)
     }
 
     suspend fun editNoteTitle(id: String, title: String) {
@@ -101,6 +112,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
             titleManual = true,
             updatedAt = System.currentTimeMillis(),
         ))
+        touch(current.sessionId)
     }
 
     suspend fun duplicateNote(id: String): EntryEntity {
@@ -118,6 +130,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
             updatedAt = System.currentTimeMillis(),
         ))
         db.entryDao().markResponsesHistorical(id)
+        touch(current.sessionId)
     }
 
     suspend fun restoreNote(id: String) = db.withTransaction {
@@ -125,12 +138,14 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         val original = current.originalText ?: return@withTransaction
         db.entryDao().update(current.copy(text = original, originalText = null, updatedAt = System.currentTimeMillis()))
         db.entryDao().markResponsesHistorical(id)
+        touch(current.sessionId)
     }
 
     suspend fun deleteEntry(id: String) = db.withTransaction {
         val entry = db.entryDao().get(id) ?: return@withTransaction
         if (entry.type == EntryType.NOTE) db.entryDao().markResponsesHistorical(id)
         db.entryDao().delete(id)
+        touch(entry.sessionId)
     }
 
     suspend fun createSnapshot(
