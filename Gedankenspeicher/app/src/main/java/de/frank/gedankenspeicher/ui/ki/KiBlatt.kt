@@ -35,6 +35,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
+import de.frank.gedankenspeicher.auth.CodexModel
+import de.frank.gedankenspeicher.auth.ReasoningEffort
 import de.frank.gedankenspeicher.ui.KiBlattzustand
 import de.frank.gedankenspeicher.ui.theme.Farben
 import de.frank.gedankenspeicher.ui.theme.blattgrund
@@ -55,10 +57,13 @@ import de.frank.gedankenspeicher.ui.verlauf.WanderndePunkte
 fun KiBlatt(
     zustand: KiBlattzustand,
     nimmtAntwortAuf: Boolean,
+    codexModell: String,
+    codexEffort: String,
     beiWebsuche: (Boolean) -> Unit,
     beiWebsucheKi: () -> Unit,
     beiAntwort: (String) -> Unit,
     beiAntwortEinsprechen: () -> Unit,
+    beiAuswertungEinstellungen: () -> Unit,
     beiProfil: () -> Unit,
     beiAuswerten: () -> Unit,
     beiVerbinden: () -> Unit,
@@ -100,6 +105,23 @@ fun KiBlatt(
         )
 
         Spacer(Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Masse.profilRadius))
+                .clickable(onClick = beiAuswertungEinstellungen)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "${CodexModel.fromLabel(codexModell).label} · Effort ${ReasoningEffort.fromLabel(codexEffort).label}",
+                style = schrift.einstellung,
+                color = farben.textMittel,
+                modifier = Modifier.weight(1f),
+            )
+            Text("ändern", style = schrift.zeitstempel, color = farben.akzent)
+        }
 
         // Steht die Grundhaltung auf „KI entscheidet", zeigt die Zeile drei Wahlfelder statt
         // eines Schalters (`02-UI-SPEC.md` B-03, Punkt 3).

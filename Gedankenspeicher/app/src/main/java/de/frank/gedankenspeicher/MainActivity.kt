@@ -774,10 +774,16 @@ private fun Oberflaeche(
                 KiBlatt(
                     zustand = kiBlatt,
                     nimmtAntwortAuf = verlauf.nimmtAuf,
+                    codexModell = codexModell,
+                    codexEffort = codexEffort,
                     beiWebsuche = vm::setzeWebsuche,
                     beiWebsucheKi = vm::setzeWebsucheKiEntscheidet,
                     beiAntwort = vm::setzeKiAntwort,
                     beiAntwortEinsprechen = beiAntwortMikrofon,
+                    beiAuswertungEinstellungen = {
+                        vm.schliesseKiBlatt()
+                        ziel = Ziel.EINSTELLUNGEN
+                    },
                     beiProfil = {
                         vm.schliesseKiBlatt()
                         ziel = Ziel.PROFILE
