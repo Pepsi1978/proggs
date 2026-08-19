@@ -752,6 +752,41 @@ if (Test-Path -LiteralPath $lms) {
             Write-Host "Automatisches Laden fehlgeschlagen - LM Studio laedt das Modell bei der ersten Anfrage selbst." -ForegroundColor Yellow
         }
     }
+
+    # Das Kontextfenster in der opencode-Konfig muss exakt der Ladeeinstellung in LM Studio
+    # entsprechen. Sonst rechnet OpenCode gegen eine falsche Obergrenze: bei zu kleinem Wert
+    # meldet es sofort einen fast vollen Kontext und komprimiert endlos im Kreis.
+    $ctx = 0
+    try {
+        $running = & $lms ps --json 2>$null | ConvertFrom-Json
+        $entry = @($running | Where-Object { $_.identifier -eq $lmsModel -or $_.modelKey -eq $lmsModel })[0]
+        if ($entry) { $ctx = [int]$entry.contextLength }
+    } catch { $ctx = 0 }
+
+    if ($ctx -gt 0) {
+        $cfgPath = Join-Path $env:USERPROFILE '.config\opencode\opencode.jsonc'
+        if (-not (Test-Path -LiteralPath $cfgPath)) {
+            $cfgPath = Join-Path $env:USERPROFILE '.config\opencode\opencode.json'
+        }
+        if (Test-Path -LiteralPath $cfgPath) {
+            try {
+                $cfg = Get-Content -LiteralPath $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $entryNode = $cfg.provider.lmstudio.models.$lmsModel
+                if ($entryNode) {
+                    $out = [Math]::Min(32768, [Math]::Max(4096, [int]($ctx / 4)))
+                    if ($entryNode.limit.context -ne $ctx) {
+                        $entryNode.limit.context = $ctx
+                        $entryNode.limit.output = $out
+                        $json = $cfg | ConvertTo-Json -Depth 40
+                        [System.IO.File]::WriteAllText($cfgPath, $json, (New-Object System.Text.UTF8Encoding $false))
+                        Write-Host "Kontextfenster aus LM Studio uebernommen: $ctx Tokens." -ForegroundColor DarkGray
+                    }
+                }
+            } catch {
+                Write-Host "Kontextfenster konnte nicht in die opencode-Konfig geschrieben werden: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+    }
 }
 """;
     }
@@ -1035,6 +1070,9 @@ if (-not $env:NVIDIA_API_KEY) {
     /// Traegt den LM-Studio-Provider (OpenAI-kompatibel, lokal) samt gewaehltem Modell in die
     /// globale opencode-Konfig ein. Bestehende Eintraege bleiben erhalten, es wird nur ergaenzt.
     /// </summary>
+    /// <summary>Kontextlaenge, mit der ein noch nicht geladenes LM-Studio-Modell geladen wird.</summary>
+    private const int DefaultLmStudioContext = 65_536;
+
     private static JsonNode PatchLmStudioModel(JsonNode root, string slug, string modelDisplayName)
     {
         var rootObject = JsonExtensions.EnsureObject(root);
@@ -1050,11 +1088,17 @@ if (-not $env:NVIDIA_API_KEY) {
         var modelNode = provider.GetOrAddObject("models").GetOrAddObject(slug);
         modelNode["name"] = modelDisplayName;
         modelNode["tool_call"] = true;
+
+        // Das Kontextfenster MUSS der Ladeeinstellung in LM Studio entsprechen. Steht hier eine
+        // kleinere Zahl, haelt OpenCode den Kontext fuer fast voll, startet sofort die
+        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte. Ist das Modell
+        // noch nicht geladen, gilt vorlaeufig der Wert, mit dem das Startskript laedt — es
+        // korrigiert den Eintrag danach auf den tatsaechlichen Wert.
+        var loadedContext = LmStudioService.GetLoadedContextLength(slug);
+        var context = loadedContext > 0 ? loadedContext : DefaultLmStudioContext;
         var limit = modelNode.GetOrAddObject("limit");
-        // Kontext-Obergrenze der LM-Studio-Ladeeinstellung; groessere Werte wuerden nur zu
-        // abgeschnittenen Anfragen fuehren. 128k passt zu allen aktuell lokal geladenen Modellen.
-        if (limit["context"] == null) limit["context"] = 131072;
-        if (limit["output"] == null) limit["output"] = 32768;
+        limit["context"] = context;
+        limit["output"] = LmStudioService.OutputLimitFor(context);
         return rootObject;
     }
 

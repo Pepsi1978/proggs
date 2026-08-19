@@ -58,6 +58,55 @@ public sealed class LmStudioService
     }
 
     /// <summary>
+    /// Kontextlaenge, mit der das Modell in LM Studio gerade geladen ist — also exakt die
+    /// Einstellung, die der Benutzer dort gewaehlt hat. 0 bedeutet: nicht geladen. OpenCode
+    /// rechnet seine Auslastung gegen diesen Wert; steht in der Konfig eine kleinere Zahl,
+    /// meldet die Oberflaeche viel zu frueh einen vollen Kontext und komprimiert endlos.
+    /// </summary>
+    public static int GetLoadedContextLength(string modelId)
+    {
+        if (!IsInstalled || string.IsNullOrWhiteSpace(modelId)) return 0;
+        try
+        {
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = LmsPath,
+                Arguments = "ps --json",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+            if (proc == null) return 0;
+            var json = proc.StandardOutput.ReadToEnd();
+            proc.WaitForExit(30_000);
+            if (string.IsNullOrWhiteSpace(json)) return 0;
+
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return 0;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                var identifier = item.TryGetProperty("identifier", out var idNode) ? idNode.GetString() : null;
+                var modelKey = item.TryGetProperty("modelKey", out var keyNode) ? keyNode.GetString() : null;
+                if (!string.Equals(identifier, modelId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(modelKey, modelId, StringComparison.OrdinalIgnoreCase)) continue;
+                return item.TryGetProperty("contextLength", out var ctx) && ctx.TryGetInt32(out var value) ? value : 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("LmStudioService", "GetLoadedContextLength", $"lms ps nicht lesbar: {ex.Message}");
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// Ausgabe-Obergrenze passend zur Kontextlaenge: ein Viertel des Fensters, gedeckelt, damit
+    /// fuer Verlauf und Werkzeugausgaben genug uebrig bleibt.
+    /// </summary>
+    public static int OutputLimitFor(int contextLength) => Math.Clamp(contextLength / 4, 4_096, 32_768);
+
+    /// <summary>
     /// Holt die Modell-IDs vom laufenden Server. Embedding-Modelle werden aussortiert, sie
     /// taugen nicht als Chat-Modell für OpenCode. Leere Liste = Server aus oder keine Modelle.
     /// </summary>
