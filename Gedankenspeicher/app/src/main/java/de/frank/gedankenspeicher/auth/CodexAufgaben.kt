@@ -31,9 +31,10 @@ internal const val SITZUNGSTITEL_AUFTRAG =
         "Anführungszeichen, kein Punkt am Ende, keine Zeilenumbrüche."
 
 internal const val RUECKFRAGE_AUFTRAG =
-    "Du bekommst gesammelte Notizen. Stelle GENAU EINE Rückfrage, bevor du sie auswertest: " +
+    "Du bekommst den vollständigen Verlauf einer Sitzung aus Notizen und früheren KI-Dialogen. " +
+        "Stelle GENAU EINE Rückfrage, bevor du ihn auswertest: " +
         "worauf sollst du dich konzentrieren? Die Frage muss sich erkennbar auf den Inhalt " +
-        "dieser Notizen beziehen und die Spannung benennen, die in ihnen steckt — nenne ruhig " +
+        "dieses Verlaufs beziehen und die Spannung benennen, die darin steckt — nenne ruhig " +
         "zwei konkrete Richtungen zur Auswahl. Eine allgemeine Frage wie „Worauf soll ich mich " +
         "konzentrieren?\" ist ausdrücklich unerwünscht. Höchstens zwei Sätze, keine Aufzählung, " +
         "keine Einleitung, keine Zeilenumbrüche."
@@ -51,8 +52,9 @@ internal const val VERBESSERUNG_AUFTRAG =
  * unabhängig vom Profil gilt.
  */
 internal const val AUSWERTUNG_GRUNDAUFTRAG =
-    "Du bekommst gesammelte Notizen einer Person, dazu die Rückfrage, die du vorher gestellt " +
-        "hast, und ihre Antwort darauf. Werte die Notizen im Licht dieser Antwort aus.\n\n" +
+    "Du bekommst den vollständigen Sitzungsverlauf einer Person aus Notizen und früheren " +
+        "KI-Dialogen, dazu die Rückfrage, die du vorher gestellt hast, und ihre Antwort darauf. " +
+        "Werte den gesamten Verlauf im Licht dieser Antwort aus.\n\n" +
         "Aufbau der Antwort, unabhängig von allem Weiteren:\n" +
         "— Schreibe in Absätzen. Jeder Absatz umfasst 6 bis 15 Zeilen und steht durch eine " +
         "Leerzeile vom nächsten getrennt. Das ist keine Formsache: die Antwort wird Absatz für " +
@@ -61,7 +63,7 @@ internal const val AUSWERTUNG_GRUNDAUFTRAG =
         "Fließtext.\n" +
         "— Keine Einleitung darüber, was du gleich tun wirst, und keine Zusammenfassung am " +
         "Ende darüber, was du getan hast.\n" +
-        "— Beziehe dich auf das, was wirklich in den Notizen steht. Erfinde keine Tatsachen dazu."
+        "— Beziehe dich auf das, was wirklich im Verlauf steht. Erfinde keine Tatsachen dazu."
 
 /** Der Auftrag für die kurzen Einzeiler — ein Feld, ein Satz. */
 internal fun kurztextPayload(
@@ -106,7 +108,7 @@ internal fun rueckfragePayload(
     effort: ReasoningEffort,
 ): JSONObject = kurztextPayload(
     RUECKFRAGE_AUFTRAG,
-    "Die gesammelten Notizen:\n\n${notizen.trim()}",
+    "Der vollständige Sitzungsverlauf:\n\n${notizen.trim()}",
     model,
     effort,
 )
@@ -149,7 +151,7 @@ internal fun auswertungsPayload(
         }
     }
     val eingabe = buildString {
-        append("Die gesammelten Notizen:\n\n")
+        append("Der vollständige Sitzungsverlauf:\n\n")
         append(notizen.trim())
         append("\n\n---\n\nDeine Rückfrage war:\n")
         append(rueckfrage.trim())

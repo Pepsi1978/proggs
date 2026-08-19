@@ -245,7 +245,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         verlaufJob = viewModelScope.launch {
             repo.verlauf(sitzung.id).collectLatest { eintraege ->
-                _verlauf.update { it.copy(eintraege = eintraege, laedt = false) }
+                val kontext = repo.alsKontext(
+                    eintraege.filterNot {
+                        it is Verlaufseintrag.NotizEintrag && it.notiz.zustand != Notizzustand.FERTIG
+                    },
+                )
+                _verlauf.update {
+                    it.copy(
+                        eintraege = eintraege,
+                        kontextZeilen = if (kontext.isBlank()) 0 else kontext.lineSequence().count(),
+                        kontextWoerter = WORT.findAll(kontext).count(),
+                        kontextTokens = if (kontext.isBlank()) 0 else (kontext.length + 3) / 4,
+                        laedt = false,
+                    )
+                }
             }
         }
     }
@@ -954,7 +967,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         )
         viewModelScope.launch {
             _kiBlatt.update { it.copy(profil = repo.holeAktivesProfil()) }
-            ladeKontextUndFrage(sitzung.id, ganzeSitzung = false)
+            ladeKontextUndFrage(sitzung.id)
         }
     }
 
@@ -970,12 +983,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _kiBlatt.value = KiBlattzustand()
     }
 
-    fun setzeGanzeSitzung(an: Boolean) {
-        val sitzung = _verlauf.value.sitzung ?: return
-        _kiBlatt.update { it.copy(ganzeSitzung = an) }
-        viewModelScope.launch { ladeKontextUndFrage(sitzung.id, an) }
-    }
-
     fun setzeWebsuche(an: Boolean) = _kiBlatt.update { it.copy(websuche = an, websucheKiEntscheidet = false) }
 
     fun setzeWebsucheKiEntscheidet() =
@@ -983,24 +990,23 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setzeKiAntwort(text: String) = _kiBlatt.update { it.copy(antwort = text) }
 
-    private suspend fun ladeKontextUndFrage(sitzungId: Long, ganzeSitzung: Boolean) {
-        val notizen = repo.kontextNotizen(sitzungId, ganzeSitzung)
+    private suspend fun ladeKontextUndFrage(sitzungId: Long) {
+        val eintraege = repo.kontextEintraege(sitzungId)
         _kiBlatt.update {
             it.copy(
-                kontextzahl = notizen.size,
-                nichtsNeues = notizen.isEmpty() && !ganzeSitzung,
+                kontextzahl = eintraege.size,
                 rueckfrage = "",
                 fehler = null,
             )
         }
-        if (notizen.isEmpty()) return
+        if (eintraege.isEmpty()) return
         if (!codex.isConnected) {
             _kiBlatt.update { it.copy(codexFehlt = true, holtFrage = false) }
             return
         }
         _kiBlatt.update { it.copy(holtFrage = true, codexFehlt = false) }
         try {
-            val frage = repo.holeRueckfrage(repo.alsKontext(notizen))
+            val frage = repo.holeRueckfrage(repo.alsKontext(eintraege))
             _kiBlatt.update { it.copy(rueckfrage = frage, holtFrage = false) }
         } catch (abbruch: CancellationException) {
             throw abbruch
@@ -1013,7 +1019,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun holeRueckfrageErneut() {
         val sitzung = _verlauf.value.sitzung ?: return
-        viewModelScope.launch { ladeKontextUndFrage(sitzung.id, _kiBlatt.value.ganzeSitzung) }
+        viewModelScope.launch { ladeKontextUndFrage(sitzung.id) }
     }
 
     /** Der Knopf „Auswerten" — ab hier läuft es im Verlauf weiter, das Blatt schließt sich. */
@@ -1025,7 +1031,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             _kiBlatt.update { it.copy(fehler = "Sag noch, worauf ich mich konzentrieren soll.") }
             return
         }
-        val ganzeSitzung = blatt.ganzeSitzung
         val websuche = blatt.websuche || blatt.websucheKiEntscheidet
         val rueckfrage = blatt.rueckfrage
         _kiBlatt.value = KiBlattzustand()
@@ -1033,10 +1038,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
         auswertungJob = viewModelScope.launch {
             try {
-                val notizen = repo.kontextNotizen(sitzung.id, ganzeSitzung)
+                val eintraege = repo.kontextEintraege(sitzung.id)
                 val profil = repo.holeAktivesProfil()
                 val text = repo.holeAuswertung(
-                    notizen = repo.alsKontext(notizen),
+                    notizen = repo.alsKontext(eintraege),
                     rueckfrage = rueckfrage,
                     antwort = antwort,
                     profilAnweisung = profil?.anweisung.orEmpty(),
@@ -1057,7 +1062,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         modell = einstellungen.codexModell,
                         effort = einstellungen.codexEffort,
                         websucheAn = websuche,
-                        ganzeSitzung = ganzeSitzung,
+                        ganzeSitzung = true,
                     ),
                 )
             } catch (abbruch: CancellationException) {
@@ -1575,6 +1580,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private companion object {
+        val WORT = Regex("\\S+")
         const val HOECHSTDAUER_MS = 10 * 60_000L
 
         /** Der feste Beispielsatz des Probe-Knopfs (F-18). */

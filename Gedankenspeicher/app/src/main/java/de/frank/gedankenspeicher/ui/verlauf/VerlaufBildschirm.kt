@@ -243,6 +243,18 @@ fun VerlaufBildschirm(
         ) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
 
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = "${zustand.kontextZeilen} Zeilen · ${zustand.kontextWoerter} Wörter · ≈ ${zustand.kontextTokens} Tokens",
+                    style = schrift.zeitstempel,
+                    color = farben.textSchwach,
+                )
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
+
             // Über der Leiste: die laufende Aufnahmedauer.
             if (zustand.nimmtAuf) {
                 Row(

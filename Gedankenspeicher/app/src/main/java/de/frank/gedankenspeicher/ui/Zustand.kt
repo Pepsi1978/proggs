@@ -35,6 +35,9 @@ data class Verlaufszustand(
     val freigegebeneSitzung: Long? = null,
     val fingerabdruckAn: Boolean = false,
     val eintraege: List<Verlaufseintrag> = emptyList(),
+    val kontextZeilen: Int = 0,
+    val kontextWoerter: Int = 0,
+    val kontextTokens: Int = 0,
     val laedt: Boolean = true,
     val nimmtAuf: Boolean = false,
     val aufnahmeDauerMs: Long = 0,
@@ -58,7 +61,6 @@ data class Verlaufszustand(
 data class KiBlattzustand(
     val offen: Boolean = false,
     val kontextzahl: Int = 0,
-    val ganzeSitzung: Boolean = false,
     val websuche: Boolean = false,
     val websucheKiEntscheidet: Boolean = false,
     val profil: Auswertungsprofil? = null,
@@ -68,8 +70,6 @@ data class KiBlattzustand(
     val nimmtAntwortAuf: Boolean = false,
     val codexFehlt: Boolean = false,
     val fehler: String? = null,
-    /** Steht auf true, wenn seit der letzten Auswertung nichts Neues dazugekommen ist. */
-    val nichtsNeues: Boolean = false,
 )
 
 /** Der Zustand der Suche (B-07). */

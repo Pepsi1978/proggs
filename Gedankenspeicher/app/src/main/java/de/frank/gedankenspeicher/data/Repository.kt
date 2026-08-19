@@ -279,24 +279,30 @@ class Repository(
 
     // --- Der Auswertungs-Kontext (F-09, Schritt 1) ------------------------------------------
 
-    /**
-     * Die Notizen, die in die nächste Auswertung gehen.
-     *
-     * Ohne [ganzeSitzung] sind es genau die, die **nach** der letzten KI-Antwort entstanden
-     * sind — das ist der Kern der App: was einmal ausgewertet wurde, kommt nicht wieder.
-     */
-    suspend fun kontextNotizen(sitzungId: Long, ganzeSitzung: Boolean): List<Notiz> {
-        if (ganzeSitzung) return db.notizen().alleFertigen(sitzungId)
-        val grenze = db.antworten().letzteZeit(sitzungId) ?: return db.notizen().alleFertigen(sitzungId)
-        return db.notizen().seit(sitzungId, grenze)
-    }
+    /** Die vollständige Sitzung in ihrer wirklichen Reihenfolge. */
+    suspend fun kontextEintraege(sitzungId: Long): List<Verlaufseintrag> = verlaufEinmal(sitzungId)
 
-    /** Der Kontext als Text, so wie ihn Codex bekommt. */
-    fun alsKontext(notizen: List<Notiz>): String = notizen.joinToString("\n\n") { notiz ->
-        val kopf = notiz.ueberschrift?.takeIf(String::isNotBlank)
-            ?.let { "$it (${zeitpunkt(notiz.erstelltAm)})" }
-            ?: zeitpunkt(notiz.erstelltAm)
-        "[$kopf]\n${notiz.text}"
+    /** Der vollständige Sitzungskontext als Text, so wie ihn Codex bekommt. */
+    fun alsKontext(eintraege: List<Verlaufseintrag>): String = eintraege.joinToString("\n\n") { eintrag ->
+        when (eintrag) {
+            is Verlaufseintrag.NotizEintrag -> {
+                val notiz = eintrag.notiz
+                val kopf = notiz.ueberschrift?.takeIf(String::isNotBlank)
+                    ?.let { "$it (${zeitpunkt(notiz.erstelltAm)})" }
+                    ?: zeitpunkt(notiz.erstelltAm)
+                "[Notiz: $kopf]\n${notiz.text}"
+            }
+
+            is Verlaufseintrag.AntwortEintrag -> {
+                val antwort = eintrag.antwort
+                buildString {
+                    append("[KI-Auswertung: ").append(zeitpunkt(antwort.erstelltAm)).append("]\n")
+                    append("Rückfrage: ").append(antwort.rueckfrage).append('\n')
+                    append("Antwort des Nutzers: ").append(antwort.antwortDesNutzers).append('\n')
+                    append("KI-Antwort: ").append(antwort.text)
+                }
+            }
+        }
     }
 
     suspend fun speichereAntwort(antwort: KiAntwort): Long =

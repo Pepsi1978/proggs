@@ -768,7 +768,6 @@ private fun Oberflaeche(
                 KiBlatt(
                     zustand = kiBlatt,
                     nimmtAntwortAuf = verlauf.nimmtAuf,
-                    beiGanzeSitzung = vm::setzeGanzeSitzung,
                     beiWebsuche = vm::setzeWebsuche,
                     beiWebsucheKi = vm::setzeWebsucheKiEntscheidet,
                     beiAntwort = vm::setzeKiAntwort,

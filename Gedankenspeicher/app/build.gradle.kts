@@ -13,11 +13,11 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.5.5"
+        versionCode = 21
+        versionName = "0.5.6"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 13:43 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 18:31 Uhr\"")
     }
 
     buildTypes {

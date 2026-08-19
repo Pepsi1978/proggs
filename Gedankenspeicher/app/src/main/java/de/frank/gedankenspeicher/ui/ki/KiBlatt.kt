@@ -55,7 +55,6 @@ import de.frank.gedankenspeicher.ui.verlauf.WanderndePunkte
 fun KiBlatt(
     zustand: KiBlattzustand,
     nimmtAntwortAuf: Boolean,
-    beiGanzeSitzung: (Boolean) -> Unit,
     beiWebsuche: (Boolean) -> Unit,
     beiWebsucheKi: () -> Unit,
     beiAntwort: (String) -> Unit,
@@ -95,22 +94,12 @@ fun KiBlatt(
         Text("Auswertung", style = schrift.bildschirmtitel, color = farben.textStark)
         Spacer(Modifier.height(4.dp))
         Text(
-            if (zustand.nichtsNeues) {
-                "Seit der letzten Auswertung sind keine neuen Notizen dazugekommen."
-            } else {
-                "${zustand.kontextzahl} ${if (zustand.kontextzahl == 1) "Notiz" else "Notizen"} " +
-                    if (zustand.ganzeSitzung) "aus der ganzen Sitzung" else "seit der letzten Auswertung"
-            },
+            "${zustand.kontextzahl} ${if (zustand.kontextzahl == 1) "Eintrag" else "Einträge"} aus der ganzen Sitzung",
             style = schrift.einstellungErklaerung,
-            color = if (zustand.nichtsNeues) farben.textMittel else farben.textSchwach,
+            color = farben.textSchwach,
         )
 
         Spacer(Modifier.height(16.dp))
-        Schalterzeile(
-            beschriftung = "Ganze Sitzung einbeziehen",
-            an = zustand.ganzeSitzung,
-            beiAenderung = beiGanzeSitzung,
-        )
 
         // Steht die Grundhaltung auf „KI entscheidet", zeigt die Zeile drei Wahlfelder statt
         // eines Schalters (`02-UI-SPEC.md` B-03, Punkt 3).
@@ -154,10 +143,6 @@ fun KiBlatt(
                 TextButton(onClick = beiVerbinden) {
                     Text("Jetzt verbinden", style = schrift.knopf, color = farben.akzent)
                 }
-            }
-
-            zustand.nichtsNeues -> TextButton(onClick = { beiGanzeSitzung(true) }) {
-                Text("Ganze Sitzung auswerten", style = schrift.knopf, color = farben.akzent)
             }
 
             zustand.holtFrage -> Column {
