@@ -262,7 +262,12 @@ class Repository(
         codex.sitzungstitelFuer(ersteNotiz, modell(), effort())
 
     suspend fun verbessere(text: String): String =
-        codex.verbessereText(text, verbesserungsModell(), verbesserungsEffort())
+        codex.verbessereText(
+            text,
+            einstellungen.verbesserungPrompt,
+            verbesserungsModell(),
+            verbesserungsEffort(),
+        )
 
     suspend fun holeRueckfrage(notizen: String): String =
         codex.stelleRueckfrage(notizen, modell(), effort())

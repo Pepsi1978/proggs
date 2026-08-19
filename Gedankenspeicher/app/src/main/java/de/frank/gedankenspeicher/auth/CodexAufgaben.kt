@@ -116,6 +116,7 @@ internal fun rueckfragePayload(
 /** F-07. Reiner Text zurück — ein Schema würde die Absätze nur einsperren. */
 internal fun verbesserungsPayload(
     text: String,
+    auftrag: String,
     model: CodexModel,
     effort: ReasoningEffort,
 ): JSONObject = JSONObject()
@@ -123,7 +124,7 @@ internal fun verbesserungsPayload(
     .put("service_tier", "priority")
     .put("stream", true)
     .put("store", false)
-    .put("instructions", VERBESSERUNG_AUFTRAG)
+    .put("instructions", auftrag)
     .put("input", JSONArray().put(JSONObject().put("role", "user").put("content", text.trim())))
     .put("reasoning", JSONObject().put("effort", effort.apiValue))
 

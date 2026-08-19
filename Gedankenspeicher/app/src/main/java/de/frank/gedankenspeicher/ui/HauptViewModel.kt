@@ -106,6 +106,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val _verbesserungEffort = MutableStateFlow(einstellungen.verbesserungEffort)
     val verbesserungEffort: StateFlow<String> = _verbesserungEffort
 
+    private val _verbesserungPrompt = MutableStateFlow(einstellungen.verbesserungPrompt)
+    val verbesserungPrompt: StateFlow<String> = _verbesserungPrompt
+
     private val _websucheGrundhaltung = MutableStateFlow(einstellungen.websucheGrundhaltung)
     val websucheGrundhaltung: StateFlow<String> = _websucheGrundhaltung
 
@@ -1212,6 +1215,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeVerbesserungEffort(apiValue: String) {
         einstellungen.verbesserungEffort = apiValue
         _verbesserungEffort.value = apiValue
+    }
+
+    fun setzeVerbesserungPrompt(text: String) {
+        val prompt = text.trim()
+        if (prompt.isEmpty()) return
+        einstellungen.verbesserungPrompt = prompt
+        _verbesserungPrompt.value = prompt
     }
 
     fun setzeWebsucheGrundhaltung(id: String) {

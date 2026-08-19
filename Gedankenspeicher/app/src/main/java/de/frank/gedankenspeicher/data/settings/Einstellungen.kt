@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
 import de.frank.gedankenspeicher.tts.TtsProvider
 
 /**
@@ -61,6 +62,10 @@ class Einstellungen(ctx: Context) {
     var verbesserungEffort: String
         get() = p.getString(VERBESSERUNG_EFFORT, "low")!!
         set(v) { p.edit().putString(VERBESSERUNG_EFFORT, v).commit() }
+
+    var verbesserungPrompt: String
+        get() = p.getString(VERBESSERUNG_PROMPT, VERBESSERUNG_AUFTRAG)!!
+        set(v) { p.edit().putString(VERBESSERUNG_PROMPT, v).commit() }
 
     /**
      * Die Grundhaltung zur Websuche: `aus` · `immer` · `kiEntscheidet`.
@@ -149,6 +154,7 @@ class Einstellungen(ctx: Context) {
         const val CODEX_EFFORT = "codex_effort"
         const val VERBESSERUNG_MODELL = "verbesserung_modell"
         const val VERBESSERUNG_EFFORT = "verbesserung_effort"
+        const val VERBESSERUNG_PROMPT = "verbesserung_prompt"
         const val WEBSUCHE = "websuche_grundhaltung"
         const val TTS_ANBIETER = "tts_anbieter"
         const val STIMME_EDGE = "stimme_edge"

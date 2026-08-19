@@ -261,11 +261,12 @@ class CodexAuthManager(context: Context) {
     /** F-07: derselbe Inhalt, sauber geschrieben. */
     suspend fun verbessereText(
         text: String,
+        auftrag: String,
         model: CodexModel,
         effort: ReasoningEffort,
     ): String = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext ""
-        requestCodexResponse(verbesserungsPayload(text, model, effort), false).trim()
+        requestCodexResponse(verbesserungsPayload(text, auftrag, model, effort), false).trim()
     }
 
     /**

@@ -22,11 +22,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -36,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +87,7 @@ fun EinstellungenBildschirm(
     codexEffort: String,
     verbesserungModell: String,
     verbesserungEffort: String,
+    verbesserungPrompt: String,
     websucheGrundhaltung: String,
     groqSchluessel: String,
     ttsAnbieter: String,
@@ -105,6 +109,7 @@ fun EinstellungenBildschirm(
     beiEffort: (String) -> Unit,
     beiVerbesserungModell: (String) -> Unit,
     beiVerbesserungEffort: (String) -> Unit,
+    beiVerbesserungPrompt: (String) -> Unit,
     beiWebsuche: (String) -> Unit,
     beiProfile: () -> Unit,
     beiGroq: (String) -> Unit,
@@ -124,6 +129,8 @@ fun EinstellungenBildschirm(
 ) {
     val farben = Farben
     val schrift = Schriften
+    var bearbeitetVerbesserungPrompt by remember { mutableStateOf(false) }
+    var verbesserungPromptEntwurf by remember(verbesserungPrompt) { mutableStateOf(verbesserungPrompt) }
 
     Column(Modifier.fillMaxSize().background(farben.hintergrund)) {
         Row(
@@ -228,6 +235,7 @@ fun EinstellungenBildschirm(
                     style = schrift.einstellungErklaerung,
                     color = farben.akzent,
                 )
+
             }
 
             // 2b — Textverbesserung · Codex (F-07)
@@ -274,6 +282,73 @@ fun EinstellungenBildschirm(
                     style = schrift.einstellungErklaerung,
                     color = farben.akzent,
                 )
+
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Beschriftung("Prompt für die Textverbesserung")
+                    Spacer(Modifier.weight(1f))
+                    IconButton(
+                        onClick = {
+                            verbesserungPromptEntwurf = verbesserungPrompt
+                            bearbeitetVerbesserungPrompt = true
+                        },
+                    ) {
+                        Icon(Icons.Outlined.Edit, "Prompt bearbeiten", tint = farben.akzent)
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Masse.eingabeRadius))
+                        .background(farben.hintergrundErhoben)
+                        .border(1.dp, farben.rand, RoundedCornerShape(Masse.eingabeRadius))
+                        .padding(14.dp),
+                ) {
+                    if (bearbeitetVerbesserungPrompt) {
+                        BasicTextField(
+                            value = verbesserungPromptEntwurf,
+                            onValueChange = { verbesserungPromptEntwurf = it },
+                            textStyle = schrift.einstellungErklaerung.copy(color = farben.textStark),
+                            cursorBrush = SolidColor(farben.akzent),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        SelectionContainer {
+                            Text(
+                                verbesserungPrompt,
+                                style = schrift.einstellungErklaerung,
+                                color = farben.textMittel,
+                            )
+                        }
+                    }
+                }
+                if (bearbeitetVerbesserungPrompt) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                verbesserungPromptEntwurf = verbesserungPrompt
+                                bearbeitetVerbesserungPrompt = false
+                            },
+                        ) {
+                            Text("Abbrechen", color = farben.textMittel)
+                        }
+                        TextButton(
+                            enabled = verbesserungPromptEntwurf.isNotBlank(),
+                            onClick = {
+                                beiVerbesserungPrompt(verbesserungPromptEntwurf)
+                                bearbeitetVerbesserungPrompt = false
+                            },
+                        ) {
+                            Text(
+                                "Speichern",
+                                color = if (verbesserungPromptEntwurf.isNotBlank()) farben.akzent else farben.textSchwach,
+                            )
+                        }
+                    }
+                }
             }
 
             // 3 — Auswertungsprofile (F-10)
