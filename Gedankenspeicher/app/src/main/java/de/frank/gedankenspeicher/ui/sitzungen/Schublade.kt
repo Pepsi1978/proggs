@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Notes
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
@@ -69,6 +70,11 @@ val Favoritengold = Color(0xFFF5B72A)
  * Sie ist zweigeteilt: oben die Reiter (Alle Notizen, Favoriten, Geschützte Notizen,
  * Papierkorb, Ordner) — das ist die Auswahl. Unter dem Strich die Notizen der gewählten
  * Ansicht, die neueste zuoberst — das ist der Verlauf.
+ *
+ * **Was der Schutz verbirgt, ist der Inhalt, nicht der Name.** Eine geschützte Notiz steht
+ * mit ihrem Schloss ganz normal unter „Alle Notizen", in ihrem Ordner und, wenn sie eine ist,
+ * unter „Favoriten" — nur öffnen lässt sie sich erst nach dem Fingerabdruck. Ein Reiter,
+ * der die Notiz ganz verschwinden lässt, wäre kein Schutz, sondern nur ein Versteck.
  */
 @androidx.compose.foundation.ExperimentalFoundationApi
 @Composable
@@ -78,15 +84,13 @@ fun Schublade(
     ansicht: Schubladenansicht,
     gewaehlterOrdner: Long?,
     geschuetztFrei: Boolean,
-    fingerabdruckAn: Boolean,
     offeneSitzung: Long?,
     breit: Boolean,
-    beiWahl: (Long) -> Unit,
+    beiWahl: (Sitzung) -> Unit,
     beiNeue: () -> Unit,
     beiMenue: (Sitzung) -> Unit,
     beiAnsicht: (Schubladenansicht) -> Unit,
     beiOrdnerwahl: (Long) -> Unit,
-    beiGeschuetzteOeffnen: () -> Unit,
     beiOrdnerVerwalten: () -> Unit,
     beiPapierkorbLeeren: () -> Unit,
     beiEinstellungen: () -> Unit,
@@ -95,17 +99,18 @@ fun Schublade(
     val schrift = Schriften
     var ordnerOffen by rememberSaveable { mutableStateOf(false) }
 
-    val frei = geschuetztFrei || !fingerabdruckAn
-    val alle = sitzungen.filter { it.geloeschtAm == null && !it.geschuetzt }
+    // „Alle Notizen" heißt alle: geschützte sind mitgezählt und mit aufgelistet, nur ihr
+    // Inhalt bleibt bis zum Fingerabdruck zu. Draußen ist einzig, was im Papierkorb liegt.
+    val alle = sitzungen.filter { it.geloeschtAm == null }
     val favoriten = alle.filter { it.favorit }
-    val geschuetzte = sitzungen.filter { it.geloeschtAm == null && it.geschuetzt }
+    val geschuetzte = alle.filter { it.geschuetzt }
     val papierkorb = sitzungen.filter { it.geloeschtAm != null }
     val offenerOrdner = ordner.firstOrNull { it.id == gewaehlterOrdner }
 
     val liste = when (ansicht) {
         Schubladenansicht.ALLE -> alle
         Schubladenansicht.FAVORITEN -> favoriten
-        Schubladenansicht.GESCHUETZT -> if (frei) geschuetzte else emptyList()
+        Schubladenansicht.GESCHUETZT -> geschuetzte
         Schubladenansicht.PAPIERKORB -> papierkorb
         Schubladenansicht.ORDNER -> alle.filter { it.ordnerId == offenerOrdner?.id }
     }
@@ -166,7 +171,7 @@ fun Schublade(
             symbolfarbe = Favoritengold,
         ) { beiAnsicht(Schubladenansicht.FAVORITEN) }
         Reiter(Icons.Outlined.Lock, "Geschützte Notizen", geschuetzte.size, ansicht == Schubladenansicht.GESCHUETZT) {
-            if (frei) beiAnsicht(Schubladenansicht.GESCHUETZT) else beiGeschuetzteOeffnen()
+            beiAnsicht(Schubladenansicht.GESCHUETZT)
         }
         Reiter(Icons.Outlined.Delete, "Papierkorb", papierkorb.size, ansicht == Schubladenansicht.PAPIERKORB) {
             beiAnsicht(Schubladenansicht.PAPIERKORB)
@@ -253,39 +258,30 @@ fun Schublade(
         }
         Spacer(Modifier.height(6.dp))
 
-        if (ansicht == Schubladenansicht.GESCHUETZT && !frei) {
-            Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(Icons.Outlined.Lock, null, Modifier.size(24.dp), tint = farben.textSchwach)
-                Spacer(Modifier.height(8.dp))
-                Text("Mit Fingerabdruck freigeben.", style = schrift.zeitstempel, color = farben.textSchwach)
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(liste, key = { it.id }) { sitzung ->
+                Sitzungszeile(
+                    sitzung = sitzung,
+                    offen = sitzung.id == offeneSitzung,
+                    ordnername = ordner.firstOrNull { it.id == sitzung.ordnerId }?.name,
+                    zugesperrt = sitzung.geschuetzt && !geschuetztFrei,
+                    // Aus dem Papierkorb wird nichts geöffnet — dort führt nur der lange
+                    // Druck weiter, zum Wiederherstellen oder endgültigen Löschen.
+                    beiWahl = { if (ansicht != Schubladenansicht.PAPIERKORB) beiWahl(sitzung) },
+                    beiMenue = { beiMenue(sitzung) },
+                )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(liste, key = { it.id }) { sitzung ->
-                    Sitzungszeile(
-                        sitzung = sitzung,
-                        offen = sitzung.id == offeneSitzung,
-                        ordnername = ordner.firstOrNull { it.id == sitzung.ordnerId }?.name,
-                        beiWahl = { if (ansicht != Schubladenansicht.PAPIERKORB) beiWahl(sitzung.id) },
-                        beiMenue = { beiMenue(sitzung) },
+            if (liste.isEmpty()) {
+                item {
+                    Text(
+                        "Hier liegt noch keine Notiz.",
+                        style = schrift.zeitstempel,
+                        color = farben.textSchwach,
+                        modifier = Modifier.padding(10.dp),
                     )
-                }
-                if (liste.isEmpty()) {
-                    item {
-                        Text(
-                            "Hier liegt noch keine Notiz.",
-                            style = schrift.zeitstempel,
-                            color = farben.textSchwach,
-                            modifier = Modifier.padding(10.dp),
-                        )
-                    }
                 }
             }
         }
@@ -359,6 +355,7 @@ private fun Sitzungszeile(
     sitzung: Sitzung,
     offen: Boolean,
     ordnername: String?,
+    zugesperrt: Boolean,
     beiWahl: () -> Unit,
     beiMenue: () -> Unit,
 ) {
@@ -392,7 +389,12 @@ private fun Sitzungszeile(
                     Spacer(Modifier.width(4.dp))
                 }
                 if (sitzung.geschuetzt) {
-                    Icon(Icons.Outlined.Lock, "Geschützt", Modifier.size(14.dp), tint = farben.textMittel)
+                    Icon(
+                        if (zugesperrt) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                        if (zugesperrt) "Geschützt" else "Geschützt und freigegeben",
+                        Modifier.size(14.dp),
+                        tint = farben.textMittel,
+                    )
                     Spacer(Modifier.width(4.dp))
                 }
                 Text(
@@ -435,4 +437,71 @@ fun Abdunklung(staerke: Float, beiDruck: () -> Unit) {
                 onClick = beiDruck,
             ),
     )
+}
+
+/**
+ * Die Sperrschicht über dem Verlauf einer geschützten Sitzung.
+ *
+ * Sie deckt den Inhalt zu, statt die Sitzung zu schliessen: wer den Fingerabdruck gibt,
+ * steht danach genau da, wo er hinwollte. Der zweite Knopf führt in die Schublade zurück,
+ * damit man aus einer zugesperrten Sitzung auch ohne Fingerabdruck wieder herauskommt.
+ */
+@Composable
+fun Sperrschicht(titel: String, beiOeffnen: () -> Unit, beiUebersicht: () -> Unit) {
+    val farben = Farben
+    val schrift = Schriften
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(farben.hintergrund)
+            .clickable(
+                interactionSource = androidx.compose.runtime.remember {
+                    androidx.compose.foundation.interaction.MutableInteractionSource()
+                },
+                indication = null,
+                onClick = {},
+            )
+            .padding(horizontal = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(Icons.Outlined.Lock, null, Modifier.size(40.dp), tint = farben.akzent)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            titel,
+            style = schrift.bildschirmtitel,
+            color = farben.textStark,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Diese Notiz ist geschützt. Ihr Inhalt erscheint erst nach dem Fingerabdruck.",
+            style = schrift.zeitstempel,
+            color = farben.textSchwach,
+        )
+        Spacer(Modifier.height(24.dp))
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(Masse.profilRadius))
+                .border(1.dp, farben.akzent, RoundedCornerShape(Masse.profilRadius))
+                .clickable(onClick = beiOeffnen)
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.LockOpen, null, Modifier.size(20.dp), tint = farben.akzent)
+            Spacer(Modifier.width(10.dp))
+            Text("Mit Fingerabdruck öffnen", style = schrift.knopf, color = farben.akzent)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Zu den Notizen",
+            style = schrift.sitzungsname,
+            color = farben.textMittel,
+            modifier = Modifier
+                .clip(RoundedCornerShape(Masse.profilRadius))
+                .clickable(onClick = beiUebersicht)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        )
+    }
 }

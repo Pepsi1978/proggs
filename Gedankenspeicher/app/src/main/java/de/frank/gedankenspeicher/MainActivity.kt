@@ -63,6 +63,7 @@ import de.frank.gedankenspeicher.ui.einstellungen.ProfileBildschirm
 import de.frank.gedankenspeicher.ui.ki.KiBlatt
 import de.frank.gedankenspeicher.ui.sitzungen.Abdunklung
 import de.frank.gedankenspeicher.ui.sitzungen.Schublade
+import de.frank.gedankenspeicher.ui.sitzungen.Sperrschicht
 import de.frank.gedankenspeicher.ui.suche.SucheBildschirm
 import de.frank.gedankenspeicher.ui.theme.Dauern
 import de.frank.gedankenspeicher.ui.theme.Erscheinung
@@ -524,6 +525,23 @@ private fun Oberflaeche(
             beiFehler = vm::meldeFehler,
         )
 
+        // ---- Die Sperrschicht über einer geschützten Sitzung
+        //
+        // Sie liegt über dem Verlauf, aber unter der Schublade: der Inhalt ist zu, die
+        // Auswahl bleibt bedienbar. Die offene Sitzung wird frisch aus der Liste geholt,
+        // weil der Kopf im Zustand ein Abzug von vorhin ist — sonst bliebe die Schicht
+        // aus, wenn man die gerade offene Notiz eben erst geschützt hat.
+        val offeneFrisch = verlauf.sitzungen.firstOrNull { it.id == verlauf.sitzung?.id } ?: verlauf.sitzung
+        if (ziel == Ziel.VERLAUF && offeneFrisch?.geschuetzt == true && !verlauf.geschuetztFrei) {
+            Sperrschicht(
+                titel = offeneFrisch.titel,
+                beiOeffnen = {
+                    beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibGeschuetzteFrei() }
+                },
+                beiUebersicht = { schubladeOffen = true },
+            )
+        }
+
         // ---- Schublade (M-02)
         AnimatedVisibility(
             visible = schubladeOffen,
@@ -543,12 +561,21 @@ private fun Oberflaeche(
                 ansicht = verlauf.ansicht,
                 gewaehlterOrdner = verlauf.gewaehlterOrdner,
                 geschuetztFrei = verlauf.geschuetztFrei,
-                fingerabdruckAn = verlauf.fingerabdruckAn,
                 offeneSitzung = verlauf.sitzung?.id,
                 breit = breit,
-                beiWahl = { id ->
-                    vm.wechsleSitzung(id)
-                    schubladeOffen = false
+                beiWahl = { sitzung ->
+                    // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck — aus
+                    // jedem Reiter heraus, nicht nur aus „Geschützte Notizen".
+                    if (sitzung.geschuetzt && !verlauf.geschuetztFrei) {
+                        beiFingerabdruck("Geschützte Notiz öffnen") {
+                            vm.gibGeschuetzteFrei()
+                            vm.wechsleSitzung(sitzung.id)
+                            schubladeOffen = false
+                        }
+                    } else {
+                        vm.wechsleSitzung(sitzung.id)
+                        schubladeOffen = false
+                    }
                 },
                 beiNeue = {
                     vm.neueSitzung()
@@ -557,9 +584,6 @@ private fun Oberflaeche(
                 beiMenue = { sitzungsMenue = it },
                 beiAnsicht = vm::waehleAnsicht,
                 beiOrdnerwahl = vm::waehleOrdner,
-                beiGeschuetzteOeffnen = {
-                    beiFingerabdruck("Geschützte Notizen öffnen") { vm.gibGeschuetzteFrei() }
-                },
                 beiOrdnerVerwalten = { ordnerVerwalten = true },
                 beiPapierkorbLeeren = { papierkorbLeerfrage = true },
                 beiEinstellungen = {
@@ -821,15 +845,18 @@ private fun Oberflaeche(
                             vm.favoritUmschalten(sitzung)
                             sitzungsMenue = null
                         }
-                        Menueeintrag(if (sitzung.geschuetzt) "Schutz aufheben" else "Notiz schützen") {
-                            sitzungsMenue = null
-                            val schuetzen = !sitzung.geschuetzt
-                            if (verlauf.fingerabdruckAn) {
+                        // Schützen und Freigeben gehen beide nur über den Fingerabdruck —
+                        // sonst könnte jeder, der das Gerät in der Hand hält, den Schutz
+                        // in zwei Tipps wieder abnehmen. Angeboten wird das Schützen erst,
+                        // wenn der Fingerabdruck in den Einstellungen eingeschaltet ist;
+                        // das Aufheben steht immer da, damit nichts zugesperrt liegen bleibt.
+                        if (sitzung.geschuetzt || verlauf.fingerabdruckAn) {
+                            Menueeintrag(if (sitzung.geschuetzt) "Schutz aufheben" else "Notiz schützen") {
+                                sitzungsMenue = null
+                                val schuetzen = !sitzung.geschuetzt
                                 beiFingerabdruck(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
                                     vm.setzeSchutz(sitzung, schuetzen)
                                 }
-                            } else {
-                                vm.setzeSchutz(sitzung, schuetzen)
                             }
                         }
                         Menueeintrag("In Ordner verschieben") {
@@ -841,8 +868,17 @@ private fun Oberflaeche(
                             sitzungsMenue = null
                         }
                         Menueeintrag("Als Markdown exportieren") {
-                            beiTeilen(sitzung)
                             sitzungsMenue = null
+                            // Der Export gibt den Inhalt aus der Hand — bei einer
+                            // geschützten Notiz also dieselbe Hürde wie beim Öffnen.
+                            if (sitzung.geschuetzt && !verlauf.geschuetztFrei) {
+                                beiFingerabdruck("Geschützte Notiz exportieren") {
+                                    vm.gibGeschuetzteFrei()
+                                    beiTeilen(sitzung)
+                                }
+                            } else {
+                                beiTeilen(sitzung)
+                            }
                         }
                         Menueeintrag("In den Papierkorb", gefaehrlich = true) {
                             vm.inPapierkorb(sitzung)

@@ -21,6 +21,7 @@ import de.frank.gedankenspeicher.data.Notizzustand
 import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.Sitzung
+import de.frank.gedankenspeicher.data.Suchtreffer
 import de.frank.gedankenspeicher.data.Verlaufseintrag
 import de.frank.gedankenspeicher.data.settings.Einstellungen
 import de.frank.gedankenspeicher.data.settings.Websuche
@@ -273,18 +274,23 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Der Fingerabdruck wurde, falls verlangt, vorher in der Oberfläche geprüft. */
+    /**
+     * Schaltet den Schutz um. Der Fingerabdruck wurde vorher in der Oberfläche geprüft —
+     * und weil er gerade gegeben wurde, bleibt die Notiz danach offen statt sich vor den
+     * Augen dessen zuzusperren, der sie eben geschützt hat.
+     */
     fun setzeSchutz(sitzung: Sitzung, geschuetzt: Boolean) {
         viewModelScope.launch {
             repo.setzeSchutz(sitzung.id, geschuetzt)
-            if (geschuetzt && sitzung.id == _verlauf.value.sitzung?.id &&
-                _verlauf.value.ansicht != Schubladenansicht.GESCHUETZT
-            ) {
-                beobachteSitzung(repo.naechsteSichtbare())
-            } else {
-                frischeOffeneSitzung(sitzung.id)
-            }
-            melde(if (geschuetzt) "Die Notiz liegt jetzt unter „Geschützte Notizen“." else "Der Schutz wurde aufgehoben.")
+            frischeOffeneSitzung(sitzung.id)
+            if (geschuetzt) _verlauf.update { it.copy(geschuetztFrei = true) }
+            melde(
+                if (geschuetzt) {
+                    "Geschützt. Ab dem nächsten Öffnen braucht sie den Fingerabdruck."
+                } else {
+                    "Der Schutz wurde aufgehoben."
+                },
+            )
         }
     }
 
@@ -347,20 +353,23 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         it.copy(ansicht = Schubladenansicht.ORDNER, gewaehlterOrdner = id)
     }
 
-    /** Nach erfolgreichem Fingerabdruck: den Reiter „Geschützte Notizen" freigeben. */
-    fun gibGeschuetzteFrei() = _verlauf.update {
-        it.copy(ansicht = Schubladenansicht.GESCHUETZT, gewaehlterOrdner = null, geschuetztFrei = true)
-    }
+    /**
+     * Nach erfolgreichem Fingerabdruck: geschützte Notizen sind lesbar.
+     *
+     * Die Freigabe gilt, bis die App in den Hintergrund geht (siehe [inDenHintergrund]) —
+     * sonst wäre sie nach dem ersten Fingerabdruck bis zum nächsten Neustart aufgehoben,
+     * und das Handy aus der Hand zu geben hätte den Schutz stillschweigend ausgeschaltet.
+     */
+    fun gibGeschuetzteFrei() = _verlauf.update { it.copy(geschuetztFrei = true) }
 
+    /**
+     * Der Schalter in den Einstellungen entscheidet, ob neue Notizen geschützt werden
+     * dürfen. Bereits geschützte bleiben geschützt: ein Schalter, der den Schutz
+     * stillschweigend abräumt, wäre selbst die grösste Lücke.
+     */
     fun setzeFingerabdruck(an: Boolean) {
         repo.einstellungen.fingerabdruckAn = an
-        _verlauf.update {
-            it.copy(
-                fingerabdruckAn = an,
-                geschuetztFrei = if (an) false else it.geschuetztFrei,
-                ansicht = if (!an || it.ansicht != Schubladenansicht.GESCHUETZT) it.ansicht else Schubladenansicht.ALLE,
-            )
-        }
+        _verlauf.update { it.copy(fingerabdruckAn = an) }
     }
 
     /** Nach einer Änderung an der offenen Sitzung deren Kopf im Zustand nachziehen. */
@@ -1022,11 +1031,24 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             if (_suche.value.begriff != begriff) return@launch
             val treffer = repo.suche(begriff)
             if (_suche.value.begriff != begriff) return@launch
-            _suche.update { it.copy(treffer = treffer, sucht = false) }
+            _suche.update { it.copy(treffer = ohneGesperrte(treffer), sucht = false) }
         }
     }
 
     fun leereSuche() { _suche.value = Suchzustand() }
+
+    /**
+     * Nimmt Treffer aus geschützten Sitzungen heraus, solange der Fingerabdruck aussteht.
+     *
+     * Ohne das wäre der Schutz über die Suche zu umgehen: der Trefferausschnitt zeigt den
+     * Notiztext, und genau der soll ja zu bleiben.
+     */
+    private fun ohneGesperrte(treffer: List<Suchtreffer>): List<Suchtreffer> {
+        val z = _verlauf.value
+        if (z.geschuetztFrei) return treffer
+        val gesperrt = z.sitzungen.filter { it.geschuetzt }.map { it.id }.toSet()
+        return treffer.filterNot { it.sitzungId in gesperrt }
+    }
 
     /** Sprung aus der Suche: Sitzung öffnen und die Notiz einmal aufleuchten lassen (M-11). */
     fun springeZu(sitzungId: Long, notizId: Long) {
@@ -1468,6 +1490,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * läuft weiter — sie hängt am ViewModel, nicht am Bildschirm.
      */
     fun inDenHintergrund() {
+        // Der Schutz schliesst sich wieder, sobald die App aus dem Blick ist. Ohne das
+        // gälte ein einziger Fingerabdruck bis zum nächsten Neustart der App.
+        _verlauf.update { it.copy(geschuetztFrei = false) }
         // B-09: die Notiz-Aufnahme läuft bewusst weiter. Wer etwas nachschlagen geht, während
         // er spricht, soll weitersprechen können; beendet wird sie in der App oder über die
         // Benachrichtigung. Der Vordergrunddienst hält das Mikrofon so lange offen.

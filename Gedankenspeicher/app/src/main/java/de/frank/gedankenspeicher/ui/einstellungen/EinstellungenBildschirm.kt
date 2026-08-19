@@ -338,7 +338,7 @@ fun EinstellungenBildschirm(
                     Column(Modifier.weight(1f)) {
                         Text("Fingerabdruck", style = schrift.einstellung, color = farben.textMittel)
                         Text(
-                            "Geschützte Notizen öffnen, schützen und freigeben nur nach dem Fingerabdruck.",
+                            "Erlaubt es, Notizen zu schützen. Öffnen, Schützen und Freigeben gehen dann nur noch über den Fingerabdruck.",
                             style = schrift.einstellungErklaerung,
                             color = farben.textSchwach,
                         )
@@ -356,7 +356,7 @@ fun EinstellungenBildschirm(
                     )
                 }
                 if (!fingerabdruckAn) {
-                    Erklaerung("Ohne Fingerabdruck bleiben geschützte Notizen im eigenen Reiter, aber ohne Abfrage.")
+                    Erklaerung("Bereits geschützte Notizen bleiben geschützt und brauchen weiter den Fingerabdruck — nur neue lassen sich nicht mehr schützen.")
                 }
             }
 
