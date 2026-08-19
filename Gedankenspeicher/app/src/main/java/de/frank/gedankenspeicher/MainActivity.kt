@@ -75,7 +75,9 @@ import de.frank.gedankenspeicher.ui.theme.Erscheinung
 import de.frank.gedankenspeicher.ui.theme.GedankenspeicherTheme
 import de.frank.gedankenspeicher.ui.theme.Kurven
 import de.frank.gedankenspeicher.ui.theme.dauer
+import de.frank.gedankenspeicher.ui.verlauf.AntwortBearbeitenBlatt
 import de.frank.gedankenspeicher.ui.verlauf.BearbeitenBlatt
+import de.frank.gedankenspeicher.ui.verlauf.Reichtext
 import de.frank.gedankenspeicher.ui.verlauf.MenueBlatt
 import de.frank.gedankenspeicher.ui.verlauf.Menueeintrag
 import de.frank.gedankenspeicher.ui.verlauf.VerlaufBildschirm
@@ -459,6 +461,7 @@ private fun Oberflaeche(
     val anwendungskontext = LocalContext.current.applicationContext
     val anhangsspeicher = remember { de.frank.gedankenspeicher.data.Anhangsspeicher(anwendungskontext) }
     var antwortMenue by remember { mutableStateOf<KiAntwort?>(null) }
+    var antwortBearbeiten by remember { mutableStateOf<KiAntwort?>(null) }
     var sitzungsMenue by remember { mutableStateOf<Sitzung?>(null) }
     var verschiebeNotiz by remember { mutableStateOf<Notiz?>(null) }
     var loeschfrage by remember { mutableStateOf<Notiz?>(null) }
@@ -831,6 +834,24 @@ private fun Oberflaeche(
             }
         }
 
+        antwortBearbeiten?.let { antwort ->
+            ModalBottomSheet(
+                onDismissRequest = { antwortBearbeiten = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                dragHandle = null,
+            ) {
+                AntwortBearbeitenBlatt(
+                    antwort = antwort,
+                    beiAbbrechen = { antwortBearbeiten = null },
+                    beiSpeichern = { geaendert ->
+                        vm.aendereAntwort(geaendert)
+                        antwortBearbeiten = null
+                    },
+                )
+            }
+        }
+
         profilEditor?.let { profil ->
             var name by remember(profil.nummer) { mutableStateOf(profil.name) }
             var anweisung by remember(profil.nummer) { mutableStateOf(profil.anweisung) }
@@ -905,10 +926,39 @@ private fun Oberflaeche(
                 dragHandle = null,
             ) {
                 MenueBlatt(titel = "Auswertung") {
+                    // Einzelne Sätze lassen sich direkt auf der Karte markieren; diese
+                    // Einträge sind für das Ganze auf einmal.
                     Menueeintrag("Text kopieren") {
-                        val ablage = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        ablage.setPrimaryClip(ClipData.newPlainText("Auswertung", antwort.text))
+                        kopiere(ctx, "Auswertung", Reichtext.vorlesetext(antwort.text))
                         vm.melde("Text kopiert.")
+                        antwortMenue = null
+                    }
+                    Menueeintrag("Text mit Aufbau kopieren") {
+                        kopiere(ctx, "Auswertung", antwort.text)
+                        vm.melde("Text samt Tabellen und Zeichnungen kopiert.")
+                        antwortMenue = null
+                    }
+                    if (antwort.rueckfrage.isNotBlank()) {
+                        Menueeintrag("Rückfrage kopieren") {
+                            kopiere(ctx, "Rückfrage", antwort.rueckfrage)
+                            vm.melde("Rückfrage kopiert.")
+                            antwortMenue = null
+                        }
+                    }
+                    if (antwort.antwortDesNutzers.isNotBlank()) {
+                        Menueeintrag("Deine Antwort kopieren") {
+                            kopiere(ctx, "Antwort", antwort.antwortDesNutzers)
+                            vm.melde("Antwort kopiert.")
+                            antwortMenue = null
+                        }
+                    }
+                    Menueeintrag("Alles kopieren") {
+                        kopiere(ctx, "Auswertung", alsGanzes(antwort))
+                        vm.melde("Rückfrage, Antwort und Auswertung kopiert.")
+                        antwortMenue = null
+                    }
+                    Menueeintrag("Bearbeiten") {
+                        antwortBearbeiten = antwort
                         antwortMenue = null
                     }
                     Menueeintrag("Auswertung löschen", gefaehrlich = true) {
@@ -1164,4 +1214,21 @@ private fun SchiebtVonRechts(sichtbar: Boolean, inhalt: @Composable () -> Unit) 
     ) {
         inhalt()
     }
+}
+
+/** Legt einen Text in die Zwischenablage — der eine Weg für alle Kopier-Einträge. */
+private fun kopiere(ctx: android.content.Context, name: String, text: String) {
+    val ablage = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    ablage.setPrimaryClip(ClipData.newPlainText(name, text))
+}
+
+/** Die ganze Karte als Text: Rückfrage, eigene Antwort, Auswertung — in dieser Reihenfolge. */
+private fun alsGanzes(antwort: de.frank.gedankenspeicher.data.KiAntwort): String = buildString {
+    if (antwort.rueckfrage.isNotBlank()) {
+        appendLine("Rückfrage der KI:").appendLine(antwort.rueckfrage).appendLine()
+    }
+    if (antwort.antwortDesNutzers.isNotBlank()) {
+        appendLine("Meine Antwort:").appendLine(antwort.antwortDesNutzers).appendLine()
+    }
+    append(antwort.text)
 }

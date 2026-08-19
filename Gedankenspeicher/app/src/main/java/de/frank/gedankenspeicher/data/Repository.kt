@@ -322,6 +322,12 @@ class Repository(
     suspend fun speichereAntwort(antwort: KiAntwort): Long =
         db.antworten().einfuegen(antwort).also { merkeAenderung(antwort.sitzungId) }
 
+    /** Eine Auswertung von Hand richtiggestellt (Rückfrage, eigene Antwort, Text). */
+    suspend fun aendereAntwort(antwort: KiAntwort) {
+        db.antworten().aendern(antwort)
+        merkeAenderung(antwort.sitzungId)
+    }
+
     suspend fun loescheAntwort(antwort: KiAntwort) {
         db.antworten().loeschen(antwort)
         merkeAenderung(antwort.sitzungId)

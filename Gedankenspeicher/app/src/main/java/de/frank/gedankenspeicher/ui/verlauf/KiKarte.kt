@@ -21,11 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
@@ -62,6 +64,13 @@ import de.frank.gedankenspeicher.ui.theme.wanderndesLeuchten
  * Rückfrage und Antwort stehen seit Fassung 0.5.12 zusammengeklappt in einer eigenen Zeile.
  * Sie sind der Anlass der Auswertung, nicht ihr Inhalt — offen geschoben sie das Ergebnis
  * bei jedem Blick auf die Karte ein Stück weiter nach unten.
+ *
+ * Der ganze Inhalt liegt in einem `SelectionContainer`: jeder Satz lässt sich mit langem
+ * Druck markieren und herauskopieren — die Rückfrage und die eigene Antwort im aufgeklappten
+ * Bereich genauso wie die Auswertung selbst. Weil das lange Drücken damit der Auswahl
+ * gehört, trägt die Fußzeile einen sichtbaren Menüknopf: über ihn geht es zum Kopieren im
+ * Ganzen, zum Bearbeiten und zum Löschen. Vorher lag das Menü allein auf dem langen Druck —
+ * und dieser Weg wäre mit der Textauswahl verschwunden.
  */
 @androidx.compose.foundation.ExperimentalFoundationApi
 @Composable
@@ -102,14 +111,18 @@ fun KiKarte(
             }
 
             Spacer(Modifier.height(12.dp))
-            Aufklappbar(rueckfrage = antwort.rueckfrage, antwort = antwort.antwortDesNutzers)
+            SelectionContainer {
+                Column {
+                    Aufklappbar(rueckfrage = antwort.rueckfrage, antwort = antwort.antwortDesNutzers)
 
-            Spacer(Modifier.height(14.dp))
-            ReichtextAnsicht(
-                text = antwort.text,
-                hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
-                stil = schrift.kiAntworttext,
-            )
+                    Spacer(Modifier.height(14.dp))
+                    ReichtextAnsicht(
+                        text = antwort.text,
+                        hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
+                        stil = schrift.kiAntworttext,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,6 +147,12 @@ fun KiKarte(
                     beschreibung = if (liestVor) "Vorlesen anhalten" else "Auswertung vorlesen",
                     farbe = if (liestVor) farben.akzent else farben.textMittel,
                     beiDruck = beiVorlesen,
+                )
+                Kartenknopf(
+                    symbol = Icons.Outlined.MoreVert,
+                    beschreibung = "Menü der Auswertung",
+                    farbe = farben.textMittel,
+                    beiDruck = beiMenue,
                 )
             }
         }
@@ -166,10 +185,14 @@ private fun Aufklappbar(rueckfrage: String, antwort: String) {
             .clip(RoundedCornerShape(12.dp))
             .background(farben.akzentGedeckt.copy(alpha = farben.akzentGedeckt.alpha * 0.6f))
             .border(1.dp, farben.rand, RoundedCornerShape(12.dp))
-            .clickable { offen = !offen }
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Der Schalter sitzt allein auf der Kopfzeile, nicht auf dem ganzen Kasten: sonst
+        // klappte jeder Griff nach einem Wort im aufgeklappten Text ihn wieder zu.
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { offen = !offen },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(
                 Icons.Outlined.QuestionAnswer,
                 null,

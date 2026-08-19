@@ -1443,6 +1443,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.setzeProfilZurueck(profil.nummer, profil.istAktiv) }
     }
 
+    /**
+     * Eine Auswertung nachträglich bearbeiten. Läuft sie gerade als Vorlesung, hört diese
+     * auf: der gesprochene Text wäre sonst ein anderer als der, der auf der Karte steht.
+     */
+    fun aendereAntwort(antwort: KiAntwort) {
+        if (_verlauf.value.liestVor == "antwort:" + antwort.id) {
+            vorleser.halteAn()
+            _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
+        }
+        viewModelScope.launch { repo.aendereAntwort(antwort) }
+    }
+
     fun loescheAntwort(antwort: KiAntwort) {
         if (_verlauf.value.liestVor == "antwort:" + antwort.id) vorleser.halteAn()
         viewModelScope.launch { repo.loescheAntwort(antwort) }
