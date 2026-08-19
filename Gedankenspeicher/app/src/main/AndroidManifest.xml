@@ -9,6 +9,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- B-09: die Aufnahme läuft weiter, wenn Frank die App verlässt. Android gibt einer App
+         im Hintergrund das Mikrofon nur über einen Vordergrunddienst vom Typ `microphone`;
+         POST_NOTIFICATIONS macht dessen Anzeige sichtbar (auf Android 13+ sonst stumm). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".GedankenspeicherApp"
         android:allowBackup="false"
@@ -31,6 +38,12 @@
             </intent-filter>
         </activity>
 
+
+        <!-- B-09: hält das Mikrofon am Leben, solange eine andere App vorn ist. -->
+        <service
+            android:name=".audio.AufnahmeDienst"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- F-16: nur der Export-Ordner im Cache wird freigegeben, nichts sonst. -->
         <provider

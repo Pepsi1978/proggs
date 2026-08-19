@@ -7,6 +7,8 @@ import android.net.Uri
 import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import de.frank.gedankenspeicher.audio.AufnahmeDienst
+import de.frank.gedankenspeicher.audio.AufnahmeFernbedienung
 import de.frank.gedankenspeicher.audio.MicRecorder
 import androidx.documentfile.provider.DocumentFile
 import de.frank.gedankenspeicher.data.Auswertungsprofil
@@ -181,6 +183,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 if (!laeuft) _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
             }
         }
+        viewModelScope.launch {
+            // B-09: der Stopp-Knopf der Aufnahme-Benachrichtigung. Er kommt aus dem Dienst,
+            // der die Aufnahme selbst nicht kennt — beendet wird sie immer nur hier.
+            AufnahmeFernbedienung.stopp.collect { if (_verlauf.value.nimmtAuf) beendeAufnahme() }
+        }
         beobachteNetz()
     }
 
@@ -326,7 +333,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Es spricht immer nur einer: die laufende Sprachausgabe endet hier (F-01, Regeln).
         vorleser.halteAn()
+        // B-09: erst der Vordergrunddienst, dann das Mikrofon. Andersherum nähme Android der
+        // App das Mikrofon in dem Moment, in dem Frank die App verlässt.
+        AufnahmeDienst.starte(ctx)
         if (!mikrofon.start(viewModelScope)) {
+            AufnahmeDienst.beende(ctx)
             melde("Die Aufnahme ließ sich nicht starten.")
             return
         }
@@ -351,6 +362,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun beendeAufnahme() {
         if (!_verlauf.value.nimmtAuf) return
         val sitzung = _verlauf.value.sitzung ?: return
+        AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
         aufnahmeJob?.cancel()
@@ -395,6 +407,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun verwirfAufnahme() {
         if (!_verlauf.value.nimmtAuf) return
+        AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
         aufnahmeziel = Aufnahmeziel.VERLAUF
@@ -1326,7 +1339,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * läuft weiter — sie hängt am ViewModel, nicht am Bildschirm.
      */
     fun inDenHintergrund() {
-        if (_verlauf.value.nimmtAuf) beendeAufnahme()
+        // B-09: die Notiz-Aufnahme läuft bewusst weiter. Wer etwas nachschlagen geht, während
+        // er spricht, soll weitersprechen können; beendet wird sie in der App oder über die
+        // Benachrichtigung. Der Vordergrunddienst hält das Mikrofon so lange offen.
         // Auch die Stimmprobe: sie lief bisher im Hintergrund weiter und hielt das
         // Mikrofon besetzt, bis die App wiederkam.
         if (_nimmtStimmeAuf.value) beendeStimmaufnahme()
@@ -1347,6 +1362,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         vorleser.schliesse()
         mikrofon.release()
+        // Stirbt das ViewModel, gibt es niemanden mehr, der die Aufnahme beenden könnte —
+        // die Benachrichtigung bliebe sonst als Geist stehen.
+        AufnahmeDienst.beende(ctx)
         super.onCleared()
     }
 

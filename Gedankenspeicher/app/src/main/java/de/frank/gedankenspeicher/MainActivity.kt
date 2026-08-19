@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -74,11 +75,13 @@ import kotlinx.coroutines.launch
 /** Die Anwendungsklasse — sie hält nichts, existiert aber für das Manifest. */
 class GedankenspeicherApp : Application()
 
+/** B-09: das Benachrichtigungsrecht wird höchstens einmal je Prozesslauf nachgefragt. */
+private var benachrichtigungGefragt = false
+
 /** Welcher Bildschirm gerade oben liegt. */
 private enum class Ziel { VERLAUF, EINSTELLUNGEN, PROFILE, ANMELDUNG, SUCHE }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@androidx.compose.foundation.ExperimentalFoundationApi
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 class MainActivity : ComponentActivity() {
 
     private lateinit var modell: HauptViewModel
@@ -92,6 +95,16 @@ class MainActivity : ComponentActivity() {
             modell.melde("Ohne Mikrofon kann ich dich nicht hören.")
         }
     }
+
+    /**
+     * B-09 — das Recht, die Aufnahme-Benachrichtigung zu zeigen.
+     *
+     * Gefragt wird erst, wenn das Mikrofonrecht schon steht (`00-PROJEKT.md` §3, O-03: keine
+     * Rechtefrage beim Start). Ohne das Recht läuft die Hintergrundaufnahme zwar weiter, nur
+     * sieht Frank nichts davon — und hat keinen Stopp-Knopf ausserhalb der App.
+     */
+    private val benachrichtigungsFrage =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     /**
      * F-17 — der Ordner, in den gesichert wird.
@@ -206,6 +219,23 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // F-04: wartende Aufnahmen nachreichen, sobald die App wieder vorn ist.
         if (::modell.isInitialized) modell.reicheWartendeNach()
+        frageBenachrichtigungsrechtWennNoetig()
+    }
+
+    /**
+     * Holt das Benachrichtigungsrecht nach — einmal je Prozesslauf und nur, wenn Frank das
+     * Mikrofon bereits erlaubt hat. So bleibt der erste Start der App frei von Rechtefragen,
+     * und die Aufnahme-Benachrichtigung ist trotzdem da, wenn sie zum ersten Mal gebraucht wird.
+     */
+    private fun frageBenachrichtigungsrechtWennNoetig() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || benachrichtigungGefragt) return
+        val hatMikrofon = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        val hatBenachrichtigung = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!hatMikrofon || hatBenachrichtigung) return
+        benachrichtigungGefragt = true
+        runCatching { benachrichtigungsFrage.launch(Manifest.permission.POST_NOTIFICATIONS) }
     }
 
     /**
