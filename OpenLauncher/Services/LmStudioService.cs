@@ -101,10 +101,13 @@ public sealed class LmStudioService
     }
 
     /// <summary>
-    /// Ausgabe-Obergrenze passend zur Kontextlaenge: ein Viertel des Fensters, gedeckelt, damit
-    /// fuer Verlauf und Werkzeugausgaben genug uebrig bleibt.
+    /// Ausgabe-Obergrenze. OpenCode reserviert diesen Wert im Kontextbudget und zeigt ihn als
+    /// bereits verbraucht an — eine grosszuegige Obergrenze frisst also sichtbar Kontext, ohne
+    /// dass ein einziges Token geschrieben waere. 8192 reicht fuer jede realistische Antwort
+    /// inklusive Werkzeugaufrufen; bei kleinen Fenstern wird anteilig gedeckelt.
     /// </summary>
-    public static int OutputLimitFor(int contextLength) => Math.Clamp(contextLength / 4, 4_096, 32_768);
+    public static int OutputLimitFor(int contextLength) =>
+        Math.Clamp(Math.Min(8_192, contextLength / 8), 2_048, 8_192);
 
     /// <summary>
     /// Holt die Modell-IDs vom laufenden Server. Embedding-Modelle werden aussortiert, sie

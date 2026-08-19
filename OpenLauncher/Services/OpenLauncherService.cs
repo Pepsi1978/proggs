@@ -773,7 +773,7 @@ if (Test-Path -LiteralPath $lms) {
                 $cfg = Get-Content -LiteralPath $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
                 $entryNode = $cfg.provider.lmstudio.models.$lmsModel
                 if ($entryNode) {
-                    $out = [Math]::Min(32768, [Math]::Max(4096, [int]($ctx / 4)))
+                    $out = [Math]::Min(8192, [Math]::Max(2048, [int]($ctx / 8)))
                     if ($entryNode.limit.context -ne $ctx) {
                         $entryNode.limit.context = $ctx
                         $entryNode.limit.output = $out
