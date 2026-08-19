@@ -57,6 +57,8 @@ import de.frank.gedankenspeicher.BuildConfig
 import de.frank.gedankenspeicher.auth.CodexModel
 import de.frank.gedankenspeicher.auth.ReasoningEffort
 import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
+import de.frank.gedankenspeicher.data.Auslieferungsprofile
+import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.settings.Websuche
 import de.frank.gedankenspeicher.tts.ClonedVoice
@@ -90,6 +92,7 @@ fun EinstellungenBildschirm(
     verbesserungEffort: String,
     verbesserungPrompt: String,
     websucheGrundhaltung: String,
+    profile: List<Auswertungsprofil>,
     groqSchluessel: String,
     ttsAnbieter: String,
     ttsStimme: String,
@@ -112,6 +115,9 @@ fun EinstellungenBildschirm(
     beiVerbesserungEffort: (String) -> Unit,
     beiVerbesserungPrompt: (String) -> Unit,
     beiWebsuche: (String) -> Unit,
+    beiProfilWahl: (Auswertungsprofil) -> Unit,
+    beiOhneProfil: () -> Unit,
+    beiProfilSpeichern: (Auswertungsprofil) -> Unit,
     beiProfile: () -> Unit,
     beiGroq: (String) -> Unit,
     beiAnbieter: (String) -> Unit,
@@ -130,9 +136,6 @@ fun EinstellungenBildschirm(
 ) {
     val farben = Farben
     val schrift = Schriften
-    var bearbeitetVerbesserungPrompt by remember { mutableStateOf(false) }
-    var verbesserungPromptEntwurf by remember(verbesserungPrompt) { mutableStateOf(verbesserungPrompt) }
-
     Column(Modifier.fillMaxSize().background(farben.hintergrund)) {
         Row(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().height(Masse.kopfleiste).padding(horizontal = 4.dp),
@@ -224,6 +227,7 @@ fun EinstellungenBildschirm(
                 }
 
                 Spacer(Modifier.height(14.dp))
+                val aktivesProfil = profile.firstOrNull { it.istAktiv }
                 // Was wirklich benutzt wird, steht hier ausgeschrieben — nicht nur als
                 // hervorgehobenes Feld irgendwo darüber.
                 Text(
@@ -232,11 +236,69 @@ fun EinstellungenBildschirm(
                         append(CodexModel.fromLabel(codexModell).label)
                         append(" · Effort ").append(ReasoningEffort.fromLabel(codexEffort).label)
                         append(" · Websuche ").append(Websuche.vonId(websucheGrundhaltung).label)
+                        append(" · ").append(aktivesProfil?.name ?: "ohne Profil")
                     },
                     style = schrift.einstellungErklaerung,
                     color = farben.akzent,
                 )
 
+                // --- Das Auswertungsprofil (F-10) steht hier, nicht mehr in einer eigenen
+                // Gruppe weiter unten: es gehört zur Auswertung wie Modell und Effort, und
+                // sein Text ist genauso ein Prompt wie der der Textverbesserung.
+                Spacer(Modifier.height(18.dp))
+                Beschriftung("Auswertungsprofil")
+                Erklaerung(
+                    "Bestimmt Machart und Länge der Auswertung. Ohne Profil entscheidet die " +
+                        "KI selbst, wie sie antwortet.",
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Wahlfeld("ohne Profil", aktivesProfil == null) { beiOhneProfil() }
+                    // Ein Profil ohne Text hat der KI nichts zu sagen — es steht deshalb
+                    // erst zur Wahl, wenn im Editor etwas darin steht.
+                    profile.filter { it.anweisung.isNotBlank() }.forEach { p ->
+                        Wahlfeld(p.name, p.istAktiv) {
+                            if (p.istAktiv) beiOhneProfil() else beiProfilWahl(p)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                if (aktivesProfil == null) {
+                    Blase {
+                        Text(
+                            "Kein Profil aktiv — die KI hat freie Hand über Machart, Länge " +
+                                "und Aufbau der Auswertung.",
+                            style = schrift.einstellungErklaerung,
+                            color = farben.textMittel,
+                        )
+                    }
+                } else {
+                    Promptblase(
+                        titel = "Anweisung von „${aktivesProfil.name}\"",
+                        prompt = aktivesProfil.anweisung,
+                        vorbelegung = Auslieferungsprofile.vorlage(aktivesProfil.nummer).anweisung,
+                        beiSpeichern = { neuerText ->
+                            beiProfilSpeichern(aktivesProfil.copy(anweisung = neuerText))
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = beiProfile).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Alle sechs Profile bearbeiten",
+                        style = schrift.einstellung,
+                        color = farben.textMittel,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text("öffnen", style = schrift.zeitstempel, color = farben.akzent)
+                }
             }
 
             // 2b — Textverbesserung · Codex (F-07)
@@ -285,97 +347,12 @@ fun EinstellungenBildschirm(
                 )
 
                 Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Beschriftung("Prompt für die Textverbesserung")
-                    Spacer(Modifier.weight(1f))
-                    IconButton(
-                        onClick = {
-                            verbesserungPromptEntwurf = verbesserungPrompt
-                            bearbeitetVerbesserungPrompt = true
-                        },
-                    ) {
-                        Icon(Icons.Outlined.Edit, "Prompt bearbeiten", tint = farben.akzent)
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(Masse.eingabeRadius))
-                        .background(farben.hintergrundErhoben)
-                        .border(1.dp, farben.rand, RoundedCornerShape(Masse.eingabeRadius))
-                        .padding(14.dp),
-                ) {
-                    if (bearbeitetVerbesserungPrompt) {
-                        BasicTextField(
-                            value = verbesserungPromptEntwurf,
-                            onValueChange = { verbesserungPromptEntwurf = it },
-                            textStyle = schrift.einstellungErklaerung.copy(color = farben.textStark),
-                            cursorBrush = SolidColor(farben.akzent),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        // Der Auftrag ist lang. Ungekürzt schöbe er alles Weitere so weit
-                        // nach unten, dass die Einstellungen darunter nicht mehr auffindbar
-                        // wären — zum Lesen und Ändern gibt es den Stift.
-                        SelectionContainer {
-                            Text(
-                                verbesserungPrompt,
-                                style = schrift.einstellungErklaerung,
-                                color = farben.textMittel,
-                                maxLines = 6,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-                if (bearbeitetVerbesserungPrompt) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        TextButton(
-                            onClick = { verbesserungPromptEntwurf = VERBESSERUNG_AUFTRAG },
-                        ) {
-                            Text("Zurücksetzen", color = farben.textSchwach)
-                        }
-                        TextButton(
-                            onClick = {
-                                verbesserungPromptEntwurf = verbesserungPrompt
-                                bearbeitetVerbesserungPrompt = false
-                            },
-                        ) {
-                            Text("Abbrechen", color = farben.textMittel)
-                        }
-                        TextButton(
-                            enabled = verbesserungPromptEntwurf.isNotBlank(),
-                            onClick = {
-                                beiVerbesserungPrompt(verbesserungPromptEntwurf)
-                                bearbeitetVerbesserungPrompt = false
-                            },
-                        ) {
-                            Text(
-                                "Speichern",
-                                color = if (verbesserungPromptEntwurf.isNotBlank()) farben.akzent else farben.textSchwach,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 3 — Auswertungsprofile (F-10)
-            Gruppe("Auswertungsprofile") {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = beiProfile).padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "Sechs Profile — genau eines ist aktiv",
-                        style = schrift.einstellung,
-                        color = farben.textMittel,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("öffnen", style = schrift.zeitstempel, color = farben.akzent)
-                }
+                Promptblase(
+                    titel = "Prompt für die Textverbesserung",
+                    prompt = verbesserungPrompt,
+                    vorbelegung = VERBESSERUNG_AUFTRAG,
+                    beiSpeichern = beiVerbesserungPrompt,
+                )
             }
 
             // 4 — Zugänge: alle drei Schlüssel, immer erreichbar
@@ -655,6 +632,106 @@ private fun Gruppe(titel: String, inhalt: @Composable () -> Unit) {
         ) {
             inhalt()
         }
+    }
+}
+
+/**
+ * **Eine Promptblase.**
+ *
+ * Derselbe Baustein für den Auftrag der Textverbesserung und für die Anweisung des aktiven
+ * Auswertungsprofils: zugeklappt sechs Zeilen zum Überfliegen, der Stift öffnet das Feld.
+ * Beide Prompts sind lang — ungekürzt schöben sie alles Weitere so weit nach unten, dass
+ * die Einstellungen darunter nicht mehr auffindbar wären.
+ *
+ * [vorbelegung] ist der Auslieferungstext, auf den „Zurücksetzen" zurückfällt.
+ */
+@Composable
+private fun Promptblase(
+    titel: String,
+    prompt: String,
+    vorbelegung: String,
+    beiSpeichern: (String) -> Unit,
+) {
+    val farben = Farben
+    val schrift = Schriften
+    var bearbeitet by remember(titel) { mutableStateOf(false) }
+    var entwurf by remember(titel, prompt) { mutableStateOf(prompt) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Beschriftung(titel)
+        Spacer(Modifier.weight(1f))
+        IconButton(
+            onClick = {
+                entwurf = prompt
+                bearbeitet = true
+            },
+        ) {
+            Icon(Icons.Outlined.Edit, "Prompt bearbeiten", tint = farben.akzent)
+        }
+    }
+    Blase {
+        if (bearbeitet) {
+            BasicTextField(
+                value = entwurf,
+                onValueChange = { entwurf = it },
+                textStyle = schrift.einstellungErklaerung.copy(color = farben.textStark),
+                cursorBrush = SolidColor(farben.akzent),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            SelectionContainer {
+                Text(
+                    prompt,
+                    style = schrift.einstellungErklaerung,
+                    color = farben.textMittel,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+    if (bearbeitet) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { entwurf = vorbelegung }) {
+                Text("Zurücksetzen", color = farben.textSchwach)
+            }
+            TextButton(
+                onClick = {
+                    entwurf = prompt
+                    bearbeitet = false
+                },
+            ) {
+                Text("Abbrechen", color = farben.textMittel)
+            }
+            TextButton(
+                enabled = entwurf.isNotBlank(),
+                onClick = {
+                    beiSpeichern(entwurf)
+                    bearbeitet = false
+                },
+            ) {
+                Text(
+                    "Speichern",
+                    color = if (entwurf.isNotBlank()) farben.akzent else farben.textSchwach,
+                )
+            }
+        }
+    }
+}
+
+/** Der umrandete Kasten, in dem ein Prompt oder ein Hinweis steht. */
+@Composable
+private fun Blase(inhalt: @Composable () -> Unit) {
+    val farben = Farben
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Masse.eingabeRadius))
+            .background(farben.hintergrundErhoben)
+            .border(1.dp, farben.rand, RoundedCornerShape(Masse.eingabeRadius))
+            .padding(14.dp),
+    ) {
+        inhalt()
     }
 }
 

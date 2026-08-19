@@ -55,13 +55,16 @@ import de.frank.gedankenspeicher.ui.theme.dauer
 /**
  * **B-06 — die sechs Auswertungsprofile.**
  *
- * Die Zahl sechs ist fest: keines lässt sich hinzufügen, keines löschen. Genau eines trägt
- * das Häkchen — es ist zu keinem Zeitpunkt möglich, zwei zu setzen oder gar keines zu haben.
+ * Die Zahl sechs ist fest: keines lässt sich hinzufügen, keines löschen. Höchstens eines
+ * trägt das Häkchen — zwei zugleich sind ausgeschlossen. Seit Fassung 0.5.12 darf es auch
+ * **keines** sein: die Zeile „Ohne Profil" ganz oben lässt der KI freie Hand über Machart
+ * und Länge. Vorher war immer eines gesetzt, und es gab keinen Weg, sie loszulassen.
  */
 @Composable
 fun ProfileBildschirm(
     profile: List<Auswertungsprofil>,
     beiAktivieren: (Auswertungsprofil) -> Unit,
+    beiOhneProfil: () -> Unit,
     beiBearbeiten: (Auswertungsprofil) -> Unit,
     beiZurueck: () -> Unit,
 ) {
@@ -84,13 +87,51 @@ fun ProfileBildschirm(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(Masse.seitenrand),
             verticalArrangement = Arrangement.spacedBy(Masse.kartenAbstand),
         ) {
+            item(key = "ohne-profil") {
+                OhneProfilZeile(gesetzt = profile.none { it.istAktiv }, beiDruck = beiOhneProfil)
+            }
             items(profile, key = { it.nummer }) { profil ->
                 Profilzeile(
                     profil = profil,
-                    beiAktivieren = { beiAktivieren(profil) },
+                    // Ein zweiter Druck auf das gesetzte Häkchen nimmt es wieder weg —
+                    // sonst käme man ohne Umweg nicht zurück zu „ohne Profil".
+                    beiAktivieren = { if (profil.istAktiv) beiOhneProfil() else beiAktivieren(profil) },
                     beiBearbeiten = { beiBearbeiten(profil) },
                 )
             }
+        }
+    }
+}
+
+/** „Ohne Profil" — dieselbe Zeile wie ein Profil, nur ohne Text und ohne Stift. */
+@Composable
+private fun OhneProfilZeile(gesetzt: Boolean, beiDruck: () -> Unit) {
+    val farben = Farben
+    val schrift = Schriften
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Masse.profilRadius))
+            .background(if (gesetzt) farben.akzentGedeckt else farben.hintergrundErhoben)
+            .border(
+                if (gesetzt) 1.5.dp else 1.dp,
+                if (gesetzt) farben.akzent else farben.rand,
+                RoundedCornerShape(Masse.profilRadius),
+            )
+            .clickable(onClick = beiDruck)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Haekchenfeld(gesetzt = gesetzt, gesperrt = false, beiDruck = beiDruck)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Ohne Profil", style = schrift.kartenUeberschrift, color = farben.textStark)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Die KI entscheidet selbst über Machart, Länge und Aufbau",
+                style = schrift.einstellungErklaerung,
+                color = farben.textSchwach,
+            )
         }
     }
 }

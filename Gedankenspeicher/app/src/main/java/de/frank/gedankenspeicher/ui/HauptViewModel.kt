@@ -34,6 +34,7 @@ import de.frank.gedankenspeicher.tts.QwenVoiceDirectory
 import de.frank.gedankenspeicher.tts.QwenVoiceEnrollment
 import de.frank.gedankenspeicher.tts.TtsProvider
 import de.frank.gedankenspeicher.tts.Vorleser
+import de.frank.gedankenspeicher.ui.verlauf.Reichtext
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -1050,12 +1051,16 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val eintraege = repo.kontextEintraege(sitzung.id)
                 val profil = repo.holeAktivesProfil()
-                val text = repo.holeAuswertung(
-                    notizen = repo.alsKontext(eintraege),
-                    rueckfrage = rueckfrage,
-                    antwort = antwort,
-                    profilAnweisung = profil?.anweisung.orEmpty(),
-                    websuche = websuche,
+                // Quellenangaben werden hier gestrichen, nicht erst beim Anzeigen: was
+                // gespeichert ist, ist auch das, was exportiert und vorgelesen wird.
+                val text = Reichtext.ohneQuellen(
+                    repo.holeAuswertung(
+                        notizen = repo.alsKontext(eintraege),
+                        rueckfrage = rueckfrage,
+                        antwort = antwort,
+                        profilAnweisung = profil?.anweisung.orEmpty(),
+                        websuche = websuche,
+                    ),
                 )
                 if (text.isBlank()) {
                     melde("Die Auswertung kam leer zurück.")
@@ -1417,14 +1422,19 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun aktiviereProfil(profil: Auswertungsprofil): Boolean = repo.aktiviereProfil(profil)
 
+    /** „Ohne Profil": die Auswertung läuft allein mit dem Grundauftrag. */
+    fun deaktiviereProfile() {
+        viewModelScope.launch { repo.deaktiviereProfile() }
+    }
+
     fun speichereProfil(profil: Auswertungsprofil) {
         viewModelScope.launch {
             repo.speichereProfil(profil)
-            // Wird dem aktiven Profil der Text genommen, kann es nicht aktiv bleiben —
-            // sonst liefe die nächste Auswertung ohne jede Anweisung.
+            // Wird dem aktiven Profil der Text genommen, hat es der KI nichts mehr zu
+            // sagen — dann steht die Auswertung eben ohne Profil da.
             if (profil.istAktiv && profil.anweisung.isBlank()) {
-                repo.setzeProfilZurueck(profil.nummer, warAktiv = true)
-                melde("Ein Profil ohne Text kann nicht aktiv sein.")
+                repo.deaktiviereProfile()
+                melde("Ein Profil ohne Text kann nicht aktiv sein — die KI hat jetzt freie Hand.")
             }
         }
     }

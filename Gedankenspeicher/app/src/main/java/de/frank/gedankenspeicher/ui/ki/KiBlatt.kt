@@ -148,7 +148,7 @@ fun KiBlatt(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Profil: ${zustand.profil?.name ?: "—"}",
+                "Profil: ${zustand.profil?.name ?: "ohne Profil"}",
                 style = schrift.einstellung,
                 color = farben.textMittel,
                 modifier = Modifier.weight(1f),

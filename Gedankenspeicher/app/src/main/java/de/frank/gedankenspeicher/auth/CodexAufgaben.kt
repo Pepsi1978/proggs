@@ -149,23 +149,100 @@ internal const val VERBESSERUNG_AUFTRAG_ALT =
         "verbesserten Text — ohne Vorrede, ohne Anführungszeichen, ohne Kommentar."
 
 /**
- * Der feste Teil des Auswertungsauftrags. Die Machart und die Länge kommen aus dem aktiven
- * Auswertungsprofil (F-10) und werden dahinter gehängt — deshalb steht hier nur, was
- * unabhängig vom Profil gilt.
+ * **Der feste Teil des Auswertungsauftrags.**
+ *
+ * Die Machart und die Länge kommen aus dem aktiven Auswertungsprofil (F-10) und werden
+ * dahinter gehängt — hier steht nur, was unabhängig vom Profil gilt.
+ *
+ * Bis Fassung 0.5.11 verbot dieser Auftrag jede Form ausser Fließtext. Das war der Grund,
+ * warum eine ausdrücklich verlangte Tabelle als Absatzkette zurückkam. Seitdem ist es
+ * umgekehrt: die Auswertung darf alles bauen, was die Karte darstellen kann — Tabellen,
+ * Listen, Überschriften, gezeichnete Infografiken —, und die Form richtet sich danach, was
+ * der Nutzer in seiner Antwort verlangt hat.
  */
-internal const val AUSWERTUNG_GRUNDAUFTRAG =
-    "Du bekommst den vollständigen Sitzungsverlauf einer Person aus Notizen und früheren " +
-        "KI-Dialogen, dazu die Rückfrage, die du vorher gestellt hast, und ihre Antwort darauf. " +
-        "Werte den gesamten Verlauf im Licht dieser Antwort aus.\n\n" +
-        "Aufbau der Antwort, unabhängig von allem Weiteren:\n" +
-        "— Schreibe in Absätzen. Jeder Absatz umfasst 6 bis 15 Zeilen und steht durch eine " +
-        "Leerzeile vom nächsten getrennt. Das ist keine Formsache: die Antwort wird Absatz für " +
-        "Absatz vorgelesen, und ein einzelner Block ohne Leerzeilen lässt sich nicht vorlesen.\n" +
-        "— Keine Aufzählungszeichen, keine Überschriften, keine Nummerierung, kein Markdown. " +
-        "Fließtext.\n" +
-        "— Keine Einleitung darüber, was du gleich tun wirst, und keine Zusammenfassung am " +
-        "Ende darüber, was du getan hast.\n" +
-        "— Beziehe dich auf das, was wirklich im Verlauf steht. Erfinde keine Tatsachen dazu."
+internal val AUSWERTUNG_GRUNDAUFTRAG = """
+Du bekommst den vollständigen Sitzungsverlauf einer Person aus Notizen und früheren
+KI-Dialogen, dazu die Rückfrage, die du vorher gestellt hast, und ihre Antwort darauf.
+Werte den gesamten Verlauf im Licht dieser Antwort aus.
+
+## Deine Gestaltungsfreiheit
+
+Du entscheidest selbst, in welcher Form die Auswertung erscheint. Reiner Fließtext ist
+eine Möglichkeit unter vielen, nicht die Vorgabe. Diese Mittel stehen dir zur Verfügung,
+einzeln und in beliebiger Reihenfolge gemischt — Infografik, dann Text, dann Tabelle, dann
+wieder Text, so wie es der Sache dient:
+
+— **Überschriften** mit `#`, `##` oder `###`, um die Auswertung zu gliedern.
+— **Fließtext** in Absätzen.
+— **Aufzählungen** mit `- ` am Zeilenanfang, **nummerierte Listen** mit `1. `.
+— **Zitatblöcke** mit `> ` für das, was herausstechen soll.
+— **Trennlinien** aus `---` in einer eigenen Zeile.
+— **Tabellen** im Strichformat: erste Zeile `| Spalte | Spalte |`, zweite Zeile
+  `| --- | --- |`, danach die Datenzeilen. Jede Zeile beginnt und endet mit `|`. Höchstens
+  vier Spalten, sonst wird es auf einem Telefon unlesbar.
+— **Infografiken, Diagramme, Illustrationen und Zeichnungen** als eingebettetes SVG:
+  ein Block, der in einer eigenen Zeile mit `<svg ...>` beginnt und mit `</svg>` endet.
+  Balkenvergleiche, Anteilsringe, Zeitstrahlen, Ablaufskizzen, Beziehungsgeflechte,
+  Kennzahlkacheln — alles, was ein Bild besser zeigt als ein Satz.
+— **Hervorhebungen** im Text mit `**fett**`, `*kursiv*` und `` `wörtlich` ``.
+
+Wähle die Form nach der Aufgabe: Verlangt die Antwort des Nutzers eine Tabelle, baue eine
+Tabelle. Verlangt sie ein Bild, zeichne eines. Verlangt sie eine Übersicht, gliedere mit
+Überschriften. Sagt sie nichts dazu, wähle die Form, die den Inhalt am klarsten trägt —
+und traue dich, mehr als nur Text zu bauen.
+
+## Regeln für Zeichnungen
+
+— Immer eine `viewBox="0 0 B H"` angeben; daran hängt die Höhe, in der die Zeichnung auf
+  der Karte erscheint. Bewährt: Breite 400, Höhe zwischen 150 und 500.
+— Keine `width`- oder `height`-Angabe am `<svg>`-Element selbst: es füllt die volle Breite.
+— Nichts von außen: keine Bilddateien, keine Schriften, keine Adressen, kein `<script>`.
+— Farben: `currentColor` für alles Neutrale, `var(--akzent)` für das Wichtige,
+  `var(--mittel)` und `var(--schwach)` für Nebensächliches, `var(--rand)` für Linien,
+  `var(--gedeckt)` für zurückhaltende Flächen. Diese Werte kommen aus der Erscheinung der
+  App und passen sich Hell und Dunkel von selbst an. Feste Farbwerte nur dort, wo eine
+  Farbe wirklich etwas bedeutet.
+— Beschriftungen gehören ins Bild: Schriftgröße mindestens 12 bei einer viewBox-Breite von
+  400. Eine Zeichnung ohne Beschriftung sagt nichts.
+
+## Der Text wird vorgelesen — schreibe fürs Ohr
+
+Jede Auswertung kann mit einem Knopfdruck vorgelesen werden, und genau so wird sie meistens
+aufgenommen: gehört, nicht gelesen. Schreibe den Fließtext deshalb von vornherein so, dass
+eine Sprachausgabe ihn sauber spricht und ein Zuhörer ihm ohne Anstrengung folgt.
+
+— Ein Fließtext-Absatz umfasst 5 bis 14 Zeilen. Kürzer zerhackt das Zuhören, länger verliert
+  man den Faden.
+— Sprachniveau: verständlich für eine Elftklässlerin an einer Realschule. Klar und
+  erwachsen, aber ohne akademisches Vokabular.
+— Kurze Hauptsätze. Höchstens ein Nebensatz je Satz, keine Schachtelsätze, keine
+  Einschübe in Gedankenstrichen mitten im Satz.
+— Alltagswörter statt Fachwörter und Fremdwörter. Braucht ein Fachwort seinen Platz, erkläre
+  es beim ersten Mal in einem Halbsatz.
+— Keine Abkürzungen ausser den ganz geläufigen: schreibe „zum Beispiel" statt „z. B.",
+  „das heißt" statt „d. h.", „und so weiter" statt „usw.".
+— Keine Zeichen, die eine Sprachausgabe stolpern lässt: keine Klammern mitten im Satz,
+  keine Schrägstriche zwischen Wörtern, keine Sternchen, keine Pfeile, keine Emojis.
+— Zahlen und Einheiten ausschreiben, wo sie gesprochen werden: „achtzig Prozent" statt
+  „80 %", „drei Kilometer" statt „3 km". In Tabellen und Zeichnungen dürfen Ziffern stehen.
+— Aktiv statt passiv, Verben statt Substantivketten. Sag „wir prüfen das", nicht „eine
+  Prüfung findet statt".
+
+Für Überschriften, Tabellenzellen und Beschriftungen in Zeichnungen gilt das nicht — die
+werden nicht am Stück vorgelesen und dürfen knapp bleiben.
+
+## Was immer gilt
+
+— Zwischen zwei Blöcken steht eine Leerzeile. Das ist keine Formsache: die Auswertung wird
+  Block für Block vorgelesen, und ohne Leerzeilen läuft alles zu einem Klumpen zusammen.
+— **Keine Quellenangaben, nirgends.** Keine Links, keine Adressen, keine Fußnoten, keine
+  Namen von Webseiten, kein „Quelle:", keine Klammern mit Herkunftsangabe. Auch dann
+  nicht, wenn du im Web gesucht hast: das Ergebnis steht als deine Aussage da, nicht als
+  Zitat.
+— Keine Einleitung darüber, was du gleich tun wirst, und keine Zusammenfassung am Ende
+  darüber, was du getan hast.
+— Beziehe dich auf das, was wirklich im Verlauf steht. Erfinde keine Tatsachen dazu.
+""".trimIndent().trim()
 
 /** Der Auftrag für die kurzen Einzeiler — ein Feld, ein Satz. */
 internal fun kurztextPayload(

@@ -219,7 +219,12 @@ fun VerlaufBildschirm(
                                     antwort = antwort,
                                     liestVor = zustand.liestVor == kennung,
                                     vorleseAbsatz = zustand.vorleseAbsatz,
-                                    beiVorlesen = { beiVorlesen(kennung, antwort.text) },
+                                    // Vorgelesen wird, was gesprochen werden kann: Tabellen
+                                    // werden zu Sätzen, Zeichnungen schweigen (siehe
+                                    // `Reichtext`).
+                                    beiVorlesen = {
+                                        beiVorlesen(kennung, Reichtext.vorlesetext(antwort.text))
+                                    },
                                     beiMenue = { beiAntwortMenue(antwort) },
                                 )
                             }

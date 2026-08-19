@@ -1,17 +1,17 @@
 {
   "anthropic/claude-opus-5[1m]": {
-    "ProfileId": "standard",
-    "WorkModeId": "frei",
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high"
   },
   "anthropic/claude-fable-5[1m]": {
-    "ProfileId": "standard",
-    "WorkModeId": "frei",
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high"
   },
   "openai/gpt-5.6-sol": {
-    "ProfileId": "standard",
-    "WorkModeId": "frei",
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high"
   }
 }

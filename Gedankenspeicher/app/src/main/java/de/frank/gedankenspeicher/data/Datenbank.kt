@@ -113,21 +113,25 @@ object Auslieferungsprofile {
         Auswertungsprofil(
             nummer = 1,
             name = "Kurz",
-            anweisung = "Antworte in höchstens zwei Absätzen. Nur das Wesentliche, keine Einleitung.",
+            anweisung = "Antworte knapp: höchstens zwei Absätze, ersatzweise eine kleine " +
+                "Tabelle. Nur das Wesentliche, keine Einleitung.",
             istAktiv = false,
         ),
         Auswertungsprofil(
             nummer = 2,
             name = "Normal",
-            anweisung = "Antworte in drei bis fünf Absätzen zu je 6–10 Zeilen. Ordne die Notizen, " +
-                "benenne Zusammenhänge.",
+            anweisung = "Antworte in drei bis fünf Absätzen zu je 6–10 Zeilen. Ordne die " +
+                "Notizen, benenne Zusammenhänge. Setze eine Tabelle oder eine Zeichnung " +
+                "dort ein, wo sie mehr sagt als ein weiterer Absatz.",
             istAktiv = true,
         ),
         Auswertungsprofil(
             nummer = 3,
             name = "Ausführlich",
-            anweisung = "Denke gründlich nach. Antworte in mindestens sechs Absätzen zu je 8–15 " +
-                "Zeilen, mit Herleitung, Gegenargumenten und konkreten nächsten Schritten.",
+            anweisung = "Denke gründlich nach. Antworte in mindestens sechs Absätzen zu je " +
+                "8–14 Zeilen, mit Herleitung, Gegenargumenten und konkreten nächsten " +
+                "Schritten. Gliedere mit Überschriften und baue mindestens eine Übersicht " +
+                "als Tabelle oder als Infografik ein.",
             istAktiv = false,
         ),
         Auswertungsprofil(nummer = 4, name = "Eigenes Profil 1", anweisung = "", istAktiv = false),

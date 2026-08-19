@@ -252,7 +252,7 @@
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [],
-    "IsExpanded": false
+    "IsExpanded": true
   },
   {
     "Id": "openrouter-free",
@@ -266,16 +266,7 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "z-ai/glm-5.2:free",
-        "DisplayName": "Z.ai: GLM 5.2 (free)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "poolside/laguna-xs-2.1:free",
-        "DisplayName": "Poolside Laguna XS 2.1 Free",
+        "DisplayName": "Z.ai GLM 5.2 Free",
         "IsHidden": false
       },
       {
@@ -286,6 +277,24 @@
         "Slug": "nvidia/nemotron-3-ultra-550b-a55b:free",
         "DisplayName": "NVIDIA Nemotron 3 Ultra Free",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-lightning:free",
+        "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-xs-2.1:free",
+        "DisplayName": "Poolside Laguna XS 2.1 Free",
+        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
@@ -313,15 +322,6 @@
         "Slug": "poolside/laguna-s-2.1:free",
         "DisplayName": "Poolside Laguna S 2.1 Free",
         "IsHidden": true
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "nvidia/nemotron-3.5-lightning:free",
-        "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
-        "IsHidden": false
       },
       {
         "HasCustomDisplayName": false,
@@ -394,6 +394,15 @@
         "ProviderName": "OpenRouter",
         "Slug": "moonshotai/kimi-k3",
         "DisplayName": "Kimi K3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": true,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.3",
+        "DisplayName": "Z.ai: GLM 5.3",
         "IsHidden": false
       },
       {

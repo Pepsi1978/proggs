@@ -336,8 +336,9 @@ class Repository(
     suspend fun holeAktivesProfil(): Auswertungsprofil? = db.profile().aktives()
 
     /**
-     * Setzt das Häkchen. Ein Profil ohne Anweisungstext lässt sich nicht aktivieren —
-     * sonst liefe die Auswertung ohne jede Vorgabe (F-10, Fehlerfall).
+     * Setzt das Häkchen. Ein Profil ohne Anweisungstext lässt sich nicht aktivieren — es
+     * hätte der KI nichts zu sagen. Wer gar keine Vorgabe will, wählt „ohne Profil"
+     * ([deaktiviereProfile]) statt ein leeres.
      *
      * @return true, wenn das Häkchen wirklich umgesprungen ist
      */
@@ -347,19 +348,25 @@ class Repository(
         return true
     }
 
+    /**
+     * **Kein Profil aktiv.**
+     *
+     * Seit Fassung 0.5.12 ein gültiger Zustand und keine Panne mehr: die Auswertung läuft
+     * dann allein mit dem Grundauftrag, und die KI entscheidet über Machart und Länge
+     * selbst. Vorher war immer genau eines gesetzt — es gab keinen Weg, ihr freie Hand zu
+     * lassen.
+     */
+    suspend fun deaktiviereProfile() = db.profile().alleAbwaehlen()
+
     suspend fun speichereProfil(profil: Auswertungsprofil) = db.profile().aendern(profil)
 
     /**
-     * Stellt den Auslieferungstext wieder her — behält aber, ob dieses Profil gerade aktiv ist.
-     * Sonst stünde die App nach einem Zurücksetzen ohne aktives Profil da.
+     * Stellt den Auslieferungstext wieder her — behält aber, ob dieses Profil gerade aktiv
+     * ist. Ist die Vorlage leer (die drei eigenen Profile), bleibt schlicht keines aktiv.
      */
     suspend fun setzeProfilZurueck(nummer: Int, warAktiv: Boolean) {
         val vorlage = Auslieferungsprofile.vorlage(nummer)
         db.profile().aendern(vorlage.copy(istAktiv = warAktiv && vorlage.anweisung.isNotBlank()))
-        if (warAktiv && vorlage.anweisung.isBlank()) {
-            // Ein leeres Profil kann nicht aktiv bleiben: das Häkchen wandert zurück auf „Normal".
-            db.profile().setzeAktiv(2)
-        }
     }
 
     suspend fun legeProfileAnWennNoetig() {

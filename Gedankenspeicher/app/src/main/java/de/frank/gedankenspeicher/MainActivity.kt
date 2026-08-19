@@ -667,6 +667,7 @@ private fun Oberflaeche(
                 verbesserungEffort = verbesserungEffort,
                 verbesserungPrompt = verbesserungPrompt,
                 websucheGrundhaltung = websuche,
+                profile = profile,
                 groqSchluessel = groq,
                 ttsAnbieter = ttsAnbieter,
                 ttsStimme = ttsStimme,
@@ -692,6 +693,15 @@ private fun Oberflaeche(
                 beiVerbesserungEffort = vm::setzeVerbesserungEffort,
                 beiVerbesserungPrompt = vm::setzeVerbesserungPrompt,
                 beiWebsuche = vm::setzeWebsucheGrundhaltung,
+                beiProfilWahl = { p ->
+                    bereich.launch {
+                        if (!vm.aktiviereProfil(p)) {
+                            vm.melde("Ein leeres Profil lässt sich nicht aktivieren.")
+                        }
+                    }
+                },
+                beiOhneProfil = vm::deaktiviereProfile,
+                beiProfilSpeichern = vm::speichereProfil,
                 beiProfile = { ziel = Ziel.PROFILE },
                 beiGroq = vm::setzeGroqSchluessel,
                 beiAnbieter = vm::setzeTtsAnbieter,
@@ -723,6 +733,7 @@ private fun Oberflaeche(
                         }
                     }
                 },
+                beiOhneProfil = vm::deaktiviereProfile,
                 beiBearbeiten = { profilEditor = it },
                 beiZurueck = { ziel = Ziel.EINSTELLUNGEN },
             )
