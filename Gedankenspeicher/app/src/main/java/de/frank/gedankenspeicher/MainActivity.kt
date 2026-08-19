@@ -63,6 +63,9 @@ import de.frank.gedankenspeicher.ui.einstellungen.ProfileBildschirm
 import de.frank.gedankenspeicher.ui.ki.KiBlatt
 import de.frank.gedankenspeicher.ui.sitzungen.Abdunklung
 import de.frank.gedankenspeicher.ui.sitzungen.Schublade
+import de.frank.gedankenspeicher.data.Anhangsart
+import de.frank.gedankenspeicher.data.anhaengeAusJson
+import de.frank.gedankenspeicher.ui.verlauf.TabellenBlatt
 import de.frank.gedankenspeicher.ui.sitzungen.Sperrschicht
 import de.frank.gedankenspeicher.ui.suche.SucheBildschirm
 import de.frank.gedankenspeicher.ui.theme.Dauern
@@ -437,6 +440,8 @@ private fun Oberflaeche(
     var ziel by remember { mutableStateOf(Ziel.VERLAUF) }
     var schubladeOffen by remember { mutableStateOf(false) }
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
+    /** Die Notiz und die Tabelle, die gerade im Tabelleneditor liegt. */
+    var tabellenBearbeitung by remember { mutableStateOf<Pair<Notiz, de.frank.gedankenspeicher.data.Anhang>?>(null) }
     var antwortMenue by remember { mutableStateOf<KiAntwort?>(null) }
     var sitzungsMenue by remember { mutableStateOf<Sitzung?>(null) }
     var verschiebeNotiz by remember { mutableStateOf<Notiz?>(null) }
@@ -497,13 +502,22 @@ private fun Oberflaeche(
     }
     BackHandler(enabled = schubladeOffen && ziel == Ziel.VERLAUF) { schubladeOffen = false }
 
+    // Die offene Sitzung frisch aus der Liste holen: der Kopf im Zustand ist ein Abzug von
+    // vorhin, und ohne das bliebe die Sperre aus, wenn man die gerade offene Notiz eben
+    // erst geschuetzt hat.
+    val offeneFrisch = verlauf.sitzungen.firstOrNull { it.id == verlauf.sitzung?.id } ?: verlauf.sitzung
+    val gesperrt = offeneFrisch?.geschuetzt == true && offeneFrisch.id != verlauf.freigegebeneSitzung
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Ab 400 dp ist das Innendisplay aufgeklappt — dann bekommt die Schublade ihre
         // breitere Fassung (320 statt 280 dp).
         val breit = maxWidth >= 400.dp
 
         VerlaufBildschirm(
-            zustand = verlauf,
+            // Solange die Sitzung zu ist, bekommt der Verlauf **keine** Eintraege. Die
+            // Sperrschicht darueber ist nur der sichtbare Teil; gaebe es sie einmal nicht,
+            // stuende der Inhalt sonst trotzdem da.
+            zustand = if (gesperrt) verlauf.copy(eintraege = emptyList()) else verlauf,
             istDunkel = Erscheinung.vonId(erscheinungId).farben.istDunkel,
             beiSchublade = { schubladeOffen = true },
             beiSuche = { ziel = Ziel.SUCHE },
@@ -523,7 +537,20 @@ private fun Oberflaeche(
             beiAnhangEntfernen = vm::entferneAnhang,
             beiAnhangsmikrofon = beiAnhangsmikrofon,
             beiFehler = vm::meldeFehler,
+            beiAnhangTitel = vm::aendereAnhang,
         )
+
+        // ---- Der Tabelleneditor aus dem Notiz-Menü
+        tabellenBearbeitung?.let { (notiz, tabelle) ->
+            TabellenBlatt(
+                vorlage = tabelle,
+                beiAbbruch = { tabellenBearbeitung = null },
+                beiFertig = { geaendert ->
+                    tabellenBearbeitung = null
+                    vm.aendereAnhang(notiz, geaendert)
+                },
+            )
+        }
 
         // ---- Die Sperrschicht über einer geschützten Sitzung
         //
@@ -531,12 +558,17 @@ private fun Oberflaeche(
         // Auswahl bleibt bedienbar. Die offene Sitzung wird frisch aus der Liste geholt,
         // weil der Kopf im Zustand ein Abzug von vorhin ist — sonst bliebe die Schicht
         // aus, wenn man die gerade offene Notiz eben erst geschützt hat.
-        val offeneFrisch = verlauf.sitzungen.firstOrNull { it.id == verlauf.sitzung?.id } ?: verlauf.sitzung
-        if (ziel == Ziel.VERLAUF && offeneFrisch?.geschuetzt == true && !verlauf.geschuetztFrei) {
+        if (ziel == Ziel.VERLAUF && gesperrt) {
+            // Der Fingerabdruck wird von selbst abgefragt, sobald die Schicht erscheint —
+            // wer aus einer Dateiauswahl zurückkommt, soll nicht erst einen Knopf suchen.
+            // Der Knopf bleibt für den zweiten Versuch nach einem Abbruch.
+            LaunchedEffect(offeneFrisch?.id) {
+                offeneFrisch?.let { s -> beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibFrei(s.id) } }
+            }
             Sperrschicht(
-                titel = offeneFrisch.titel,
+                titel = offeneFrisch?.titel.orEmpty(),
                 beiOeffnen = {
-                    beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibGeschuetzteFrei() }
+                    offeneFrisch?.let { s -> beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibFrei(s.id) } }
                 },
                 beiUebersicht = { schubladeOffen = true },
             )
@@ -560,15 +592,15 @@ private fun Oberflaeche(
                 ordner = verlauf.ordner,
                 ansicht = verlauf.ansicht,
                 gewaehlterOrdner = verlauf.gewaehlterOrdner,
-                geschuetztFrei = verlauf.geschuetztFrei,
+                freigegebeneSitzung = verlauf.freigegebeneSitzung,
                 offeneSitzung = verlauf.sitzung?.id,
                 breit = breit,
                 beiWahl = { sitzung ->
                     // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck — aus
                     // jedem Reiter heraus, nicht nur aus „Geschützte Notizen".
-                    if (sitzung.geschuetzt && !verlauf.geschuetztFrei) {
+                    if (sitzung.geschuetzt && sitzung.id != verlauf.freigegebeneSitzung) {
                         beiFingerabdruck("Geschützte Notiz öffnen") {
-                            vm.gibGeschuetzteFrei()
+                            vm.gibFrei(sitzung.id)
                             vm.wechsleSitzung(sitzung.id)
                             schubladeOffen = false
                         }
@@ -781,6 +813,17 @@ private fun Oberflaeche(
                 dragHandle = null,
             ) {
                 MenueBlatt(titel = notiz.ueberschrift) {
+                    // Steckt eine Tabelle in der Notiz, führt der Eintrag in den
+                    // Tabelleneditor statt in das Textfeld — dort wäre sie nur eine
+                    // Reihe von Tabulatoren.
+                    val tabelle = anhaengeAusJson(notiz.anhaengeJson)
+                        .firstOrNull { it.art == Anhangsart.TABELLE }
+                    if (tabelle != null) {
+                        Menueeintrag("Tabelle bearbeiten") {
+                            tabellenBearbeitung = notiz to tabelle
+                            notizMenue = null
+                        }
+                    }
                     Menueeintrag("Text bearbeiten") {
                         vm.oeffneBearbeitung(notiz)
                         notizMenue = null
@@ -871,9 +914,9 @@ private fun Oberflaeche(
                             sitzungsMenue = null
                             // Der Export gibt den Inhalt aus der Hand — bei einer
                             // geschützten Notiz also dieselbe Hürde wie beim Öffnen.
-                            if (sitzung.geschuetzt && !verlauf.geschuetztFrei) {
+                            if (sitzung.geschuetzt && sitzung.id != verlauf.freigegebeneSitzung) {
                                 beiFingerabdruck("Geschützte Notiz exportieren") {
-                                    vm.gibGeschuetzteFrei()
+                                    vm.gibFrei(sitzung.id)
                                     beiTeilen(sitzung)
                                 }
                             } else {

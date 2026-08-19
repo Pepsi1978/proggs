@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.anhaengeAusJson
 import de.frank.gedankenspeicher.data.Notizzustand
@@ -81,6 +82,7 @@ fun Notizkarte(
     beiMenue: () -> Unit,
     beiWiederholen: () -> Unit,
     beiEinstellungen: () -> Unit,
+    beiAnhangTitel: (Anhang) -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -156,7 +158,9 @@ fun Notizkarte(
             val anhaenge = remember(notiz.anhaengeJson) { anhaengeAusJson(notiz.anhaengeJson) }
             if (anhaenge.isNotEmpty()) {
                 Spacer(Modifier.height(if (notiz.text.isBlank()) 2.dp else 10.dp))
-                Anhangsliste(anhaenge)
+                Anhangsliste(anhaenge, beiTitel = { anhang, titel ->
+                    beiAnhangTitel(anhang.copy(name = titel.ifBlank { anhang.beschriftung }))
+                })
             }
 
             if (notiz.zustand == Notizzustand.FERTIG) {

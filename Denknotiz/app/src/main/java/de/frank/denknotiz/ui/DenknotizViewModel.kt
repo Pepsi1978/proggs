@@ -76,8 +76,15 @@ data class InteractionState(
     val loadingVoices: Boolean = false,
     val drawerView: DrawerView = DrawerView.ALL,
     val selectedFolderId: String? = null,
-    /** Geschützte Notizen sind für diese Sitzung per Fingerabdruck freigegeben. */
-    val securedUnlocked: Boolean = false,
+    /**
+     * Die eine Notiz, die der Fingerabdruck gerade freigegeben hat — sonst null.
+     *
+     * Bewusst **eine** und kein Schalter für alle: eine pauschale Freigabe hiesse, dass ein
+     * einziger Fingerabdruck jede geschützte Notiz aufsperrt, auch die, die man nie
+     * angefasst hat. Sie fällt beim Wechsel in eine andere Notiz und wenn die App aus dem
+     * Blick gerät.
+     */
+    val unlockedSessionId: String? = null,
 )
 
 data class DenknotizUiState(
@@ -190,7 +197,9 @@ class DenknotizViewModel(
     fun setSecured(session: SessionEntity, secured: Boolean) = launchAction {
         repository.setSecured(session.id, secured)
         if (secured) {
-            update { copy(securedUnlocked = true) }
+            // Wer gerade den Fingerabdruck gegeben hat, um zu schützen, soll nicht im
+            // selben Augenblick vor seiner eigenen Notiz stehen.
+            update { copy(unlockedSessionId = session.id) }
             message("Geschützt. Ab dem nächsten Öffnen braucht sie den Fingerabdruck.")
         } else message("Der Schutz wurde aufgehoben.")
     }
@@ -231,8 +240,13 @@ class DenknotizViewModel(
      * Lebenslauf der Activity) — sonst wäre sie nach dem ersten Fingerabdruck bis zum
      * nächsten Neustart aufgehoben.
      */
-    fun unlockSecured() = update { copy(securedUnlocked = true) }
-    fun lockSecured() = update { copy(securedUnlocked = false) }
+    /**
+     * Gibt genau diese Notiz frei — nach erfolgreichem Fingerabdruck. Die Freigabe hängt an
+     * der Kennung, nicht an einem Schalter: sie endet von selbst, sobald eine andere Notiz
+     * geöffnet wird, und spätestens im Hintergrund.
+     */
+    fun unlockSecured(id: String) = update { copy(unlockedSessionId = id) }
+    fun lockSecured() = update { copy(unlockedSessionId = null) }
     fun fingerprintUnavailable(reason: String) = message(reason)
     /**
      * Der Schalter entscheidet, ob neue Notizen geschützt werden dürfen. Bereits geschützte
@@ -574,6 +588,9 @@ class DenknotizViewModel(
         current.selectedSessionId?.let { draftAttachments[it] = current.attachments }
         interaction.value = current.copy(
             selectedSessionId = id,
+            // Wer die Notiz wechselt, lässt die Freigabe hinter sich: die geschützte Notiz
+            // von vorhin ist danach wieder zu.
+            unlockedSessionId = current.unlockedSessionId?.takeIf { it == id },
             section = AppSection.WORKBENCH,
             draft = drafts[id].orEmpty(),
             attachments = draftAttachments[id].orEmpty(),

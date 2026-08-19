@@ -286,7 +286,6 @@ private fun NoteLibrary(
     var renameTarget by remember { mutableStateOf<SessionEntity?>(null) }
 
     val view = state.interaction.drawerView
-    val unlocked = state.interaction.securedUnlocked
     // „Alle Notizen“ heißt alle: geschützte sind mitgezählt und mit aufgelistet, nur ihr
     // Inhalt bleibt bis zum Fingerabdruck zu. Draußen ist einzig, was im Papierkorb liegt.
     val alleNotizen = state.sessions.filter { it.deletedAt == null }
@@ -412,14 +411,14 @@ private fun NoteLibrary(
                         expanded = true,
                         inTrash = view == DrawerView.TRASH,
                         folderName = state.folders.firstOrNull { it.id == session.folderId }?.name,
-                        locked = session.secured && !unlocked,
+                        locked = session.secured && session.id != state.interaction.unlockedSessionId,
                         onClick = {
                             // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck —
                             // aus jedem Reiter heraus, nicht nur aus „Geschützte Notizen“.
                             if (view == DrawerView.TRASH) Unit
-                            else if (session.secured && !unlocked) {
+                            else if (session.secured && session.id != state.interaction.unlockedSessionId) {
                                 requestFingerprint("Geschützte Notiz öffnen") {
-                                    vm.unlockSecured(); selectSession(session.id)
+                                    vm.unlockSecured(session.id); selectSession(session.id)
                                 }
                             } else selectSession(session.id)
                         },
@@ -619,9 +618,13 @@ private fun Workbench(
                 if (bundle == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else {
+                    // Solange die Notiz zu ist, bekommt die Zeitleiste **keine** Einträge.
+                    // Die Sperrschicht darüber ist nur der sichtbare Teil; gäbe es sie
+                    // einmal nicht, stünde der Inhalt sonst trotzdem da.
+                    val zu = bundle.session.secured && bundle.session.id != state.interaction.unlockedSessionId
                     Timeline(
-                        bundle.entries,
-                        bundle.snapshots,
+                        if (zu) emptyList() else bundle.entries,
+                        if (zu) emptyList() else bundle.snapshots,
                         bundle.boundary?.lastIncludedOrdinal ?: 0,
                         vm,
                         evaluating = state.interaction.evaluating,
@@ -640,11 +643,11 @@ private fun Workbench(
     // vorhin, und ohne das bliebe die Sperrschicht aus, wenn man die gerade offene Notiz
     // eben erst geschützt hat.
     val offeneFrisch = state.sessions.firstOrNull { it.id == state.interaction.selectedSessionId }
-    if (offeneFrisch?.secured == true && !state.interaction.securedUnlocked) {
+    if (offeneFrisch?.secured == true && offeneFrisch.id != state.interaction.unlockedSessionId) {
         LockedOverlay(
             title = offeneFrisch.title,
             reducedMotion = state.settings.reducedMotion,
-            onUnlock = { requestFingerprint("Geschützte Notiz öffnen") { vm.unlockSecured() } },
+            onUnlock = { requestFingerprint("Geschützte Notiz öffnen") { vm.unlockSecured(offeneFrisch.id) } },
             onOverview = openDrawer,
         )
     }

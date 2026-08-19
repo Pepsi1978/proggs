@@ -13,6 +13,8 @@ import de.frank.gedankenspeicher.audio.MicRecorder
 import androidx.documentfile.provider.DocumentFile
 import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Anhangsspeicher
+import de.frank.gedankenspeicher.data.alsJson
+import de.frank.gedankenspeicher.data.anhaengeAusJson
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Datenbank
 import de.frank.gedankenspeicher.data.KiAntwort
@@ -230,6 +232,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Gibt genau diese Sitzung frei — nach erfolgreichem Fingerabdruck.
+     *
+     * Die Freigabe hängt an der Kennung, nicht an einem Schalter: sie endet von selbst,
+     * sobald eine andere Sitzung geöffnet wird, und spätestens im Hintergrund.
+     */
+    fun gibFrei(id: Long) = _verlauf.update { it.copy(freigegebeneSitzung = id) }
+
+    /** Ist der Inhalt dieser Sitzung gerade zu? */
+    fun istGesperrt(sitzung: Sitzung?): Boolean =
+        sitzung != null && sitzung.geschuetzt && _verlauf.value.freigegebeneSitzung != sitzung.id
+
     fun wechsleSitzung(id: Long) {
         // Während einer Aufnahme oder Auswertung ist der Wechsel gesperrt (F-13, Fehlerfall):
         // ein halb aufgenommener Gedanke landete sonst in der falschen Sitzung.
@@ -237,6 +251,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
         if (z.wertetAus) return melde("Die Auswertung läuft noch.")
         viewModelScope.launch {
+            // Wer die Sitzung wechselt, laesst die Freigabe hinter sich: die geschuetzte
+            // Notiz von vorhin ist danach wieder zu.
+            _verlauf.update { it.copy(freigegebeneSitzung = it.freigegebeneSitzung?.takeIf { frei -> frei == id }) }
             repo.oeffneSitzung(id)
             repo.offeneSitzung().let(::beobachteSitzung)
         }
@@ -283,7 +300,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.setzeSchutz(sitzung.id, geschuetzt)
             frischeOffeneSitzung(sitzung.id)
-            if (geschuetzt) _verlauf.update { it.copy(geschuetztFrei = true) }
+            // Wer gerade den Fingerabdruck gegeben hat, um zu schuetzen, soll nicht im
+            // selben Augenblick vor seiner eigenen Notiz stehen.
+            if (geschuetzt) _verlauf.update { it.copy(freigegebeneSitzung = sitzung.id) }
             melde(
                 if (geschuetzt) {
                     "Geschützt. Ab dem nächsten Öffnen braucht sie den Fingerabdruck."
@@ -353,14 +372,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         it.copy(ansicht = Schubladenansicht.ORDNER, gewaehlterOrdner = id)
     }
 
-    /**
-     * Nach erfolgreichem Fingerabdruck: geschützte Notizen sind lesbar.
-     *
-     * Die Freigabe gilt, bis die App in den Hintergrund geht (siehe [inDenHintergrund]) —
-     * sonst wäre sie nach dem ersten Fingerabdruck bis zum nächsten Neustart aufgehoben,
-     * und das Handy aus der Hand zu geben hätte den Schutz stillschweigend ausgeschaltet.
-     */
-    fun gibGeschuetzteFrei() = _verlauf.update { it.copy(geschuetztFrei = true) }
+
 
     /**
      * Der Schalter in den Einstellungen entscheidet, ob neue Notizen geschützt werden
@@ -395,6 +407,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun meldeFehler(text: String) = _verlauf.update { it.copy(meldung = text) }
+
+    /**
+     * Ersetzt einen Anhang in einer schon gespeicherten Notiz — für den eigenen Titel einer
+     * Sprachaufnahme und für die nachträglich bearbeitete Tabelle.
+     */
+    fun aendereAnhang(notiz: Notiz, anhang: Anhang) {
+        viewModelScope.launch {
+            val vorhanden = repo.notiz(notiz.id) ?: return@launch
+            val neue = anhaengeAusJson(vorhanden.anhaengeJson).map { einer ->
+                if (einer.id == anhang.id) anhang else einer
+            }
+            repo.aendere(vorhanden.copy(anhaengeJson = neue.alsJson()))
+        }
+    }
 
     fun sendeEntwurf() {
         val text = _verlauf.value.entwurf.trim()
@@ -1045,8 +1071,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun ohneGesperrte(treffer: List<Suchtreffer>): List<Suchtreffer> {
         val z = _verlauf.value
-        if (z.geschuetztFrei) return treffer
-        val gesperrt = z.sitzungen.filter { it.geschuetzt }.map { it.id }.toSet()
+        val gesperrt = z.sitzungen
+            .filter { it.geschuetzt && it.id != z.freigegebeneSitzung }
+            .map { it.id }
+            .toSet()
         return treffer.filterNot { it.sitzungId in gesperrt }
     }
 
@@ -1492,7 +1520,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun inDenHintergrund() {
         // Der Schutz schliesst sich wieder, sobald die App aus dem Blick ist. Ohne das
         // gälte ein einziger Fingerabdruck bis zum nächsten Neustart der App.
-        _verlauf.update { it.copy(geschuetztFrei = false) }
+        _verlauf.update { it.copy(freigegebeneSitzung = null) }
         // B-09: die Notiz-Aufnahme läuft bewusst weiter. Wer etwas nachschlagen geht, während
         // er spricht, soll weitersprechen können; beendet wird sie in der App oder über die
         // Benachrichtigung. Der Vordergrunddienst hält das Mikrofon so lange offen.

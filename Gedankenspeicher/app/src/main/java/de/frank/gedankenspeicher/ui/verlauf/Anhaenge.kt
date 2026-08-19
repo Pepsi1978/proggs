@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
@@ -19,16 +20,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,6 +41,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
@@ -44,6 +49,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MusicNote
@@ -52,6 +58,7 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.Undo
@@ -77,22 +84,29 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
+import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Anhangsart
 import de.frank.gedankenspeicher.data.Anhangsspeicher
@@ -104,9 +118,11 @@ import de.frank.gedankenspeicher.ui.theme.schwebendeKarte
 import de.frank.gedankenspeicher.ui.theme.sinktEin
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
 /**
@@ -123,6 +139,11 @@ private val Haftfarben = listOf(0xFFFFF3B0, 0xFFFFD6C9, 0xFFCDEBC5, 0xFFC9E4FF, 
 
 /** Die Stiftfarben der Zeichenfläche. */
 private val Stiftfarben = listOf(0xFF1A1A1A, 0xFFD32F2F, 0xFF1565C0, 0xFF2E7D32, 0xFFF9A825, 0xFF6A1B9A)
+
+/** Standardbreite einer Tabellenspalte in dp. */
+private const val SPALTE_STANDARD = 132
+private const val SPALTE_MIN = 64
+private const val SPALTE_MAX = 400
 
 // ------------------------------------------------------------------ Plus-Knopf
 
@@ -150,6 +171,7 @@ fun Anhangsknopf(
     var tabelle by remember { mutableStateOf(false) }
     var sprachaufnahme by remember { mutableStateOf(false) }
     var kameradatei by remember { mutableStateOf<File?>(null) }
+    var erkenntGerade by remember { mutableStateOf(false) }
 
     fun uebernimm(uri: Uri?, art: Anhangsart) {
         if (uri == null) return
@@ -157,6 +179,35 @@ fun Anhangsknopf(
             runCatching { speicher.uebernimm(uri, art) }
                 .onSuccess(beiAnhang)
                 .onFailure { beiFehler(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
+        }
+    }
+
+    /** Aus einem Bild wird der reine Text — das ist der Sinn des Dokumentenscans. */
+    fun erkenneText(quellen: List<Uri>) {
+        if (quellen.isEmpty()) return
+        erkenntGerade = true
+        bereich.launch {
+            try {
+                val seiten = quellen.mapIndexedNotNull { nummer, uri ->
+                    val text = runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim()
+                    if (text.isBlank()) null else if (quellen.size > 1) "— Seite ${nummer + 1} —\n$text" else text
+                }
+                if (seiten.isEmpty()) {
+                    beiFehler("Auf der Vorlage war kein Text zu erkennen.")
+                } else {
+                    val text = seiten.joinToString("\n\n")
+                    beiAnhang(
+                        Anhang(
+                            art = Anhangsart.SCAN,
+                            name = text.lineSequence().first { it.isNotBlank() }.take(40).ifBlank { "Dokumentenscan" },
+                            text = text,
+                            seiten = quellen.size,
+                        ),
+                    )
+                }
+            } finally {
+                erkenntGerade = false
+            }
         }
     }
 
@@ -178,16 +229,22 @@ fun Anhangsknopf(
             datei?.delete()
         }
     }
+    // Ersatzweg für den Dokumentenscan: wenn der Scanner nicht startet, wird die Vorlage
+    // schlicht abfotografiert und daraus derselbe Text gelesen.
+    var scandatei by remember { mutableStateOf<File?>(null) }
+    val scanKamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
+        val datei = scandatei
+        scandatei = null
+        if (geklappt && datei != null && datei.length() > 0) {
+            erkenneText(listOf(Uri.fromFile(datei)))
+        } else {
+            datei?.delete()
+        }
+    }
     val scanner = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { ergebnis ->
         val seiten = GmsDocumentScanningResult.fromActivityResultIntent(ergebnis.data)?.pages.orEmpty()
         if (ergebnis.resultCode == Activity.RESULT_OK && seiten.isNotEmpty()) {
-            bereich.launch {
-                seiten.forEachIndexed { nummer, seite ->
-                    runCatching { speicher.uebernimm(seite.imageUri, Anhangsart.SCAN) }
-                        .onSuccess { anhang -> beiAnhang(anhang.copy(name = "Scan Seite ${nummer + 1}")) }
-                        .onFailure { beiFehler(it.message ?: "Der Scan konnte nicht übernommen werden.") }
-                }
-            }
+            erkenneText(seiten.map { it.imageUri })
         }
     }
 
@@ -227,8 +284,19 @@ fun Anhangsknopf(
                 },
                 beiScan = {
                     val activity = ctx.findeActivity()
+                    val ersatzweg = {
+                        val datei = speicher.neueDatei("-scan.jpg")
+                        scandatei = datei
+                        runCatching {
+                            scanKamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
+                        }.onFailure {
+                            scandatei = null; datei.delete()
+                            beiFehler("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
+                        }
+                        Unit
+                    }
                     if (activity == null) {
-                        beiFehler("Der Dokumentenscan ist hier nicht verfügbar.")
+                        ersatzweg()
                     } else {
                         val optionen = GmsDocumentScannerOptions.Builder()
                             .setGalleryImportAllowed(true)
@@ -238,11 +306,10 @@ fun Anhangsknopf(
                             .build()
                         GmsDocumentScanning.getClient(optionen).getStartScanIntent(activity)
                             .addOnSuccessListener { absender ->
-                                scanner.launch(IntentSenderRequest.Builder(absender).build())
+                                runCatching { scanner.launch(IntentSenderRequest.Builder(absender).build()) }
+                                    .onFailure { ersatzweg() }
                             }
-                            .addOnFailureListener { fehler ->
-                                beiFehler(fehler.message ?: "Der Dokumentenscanner konnte nicht gestartet werden.")
-                            }
+                            .addOnFailureListener { ersatzweg() }
                     }
                 },
                 beiAudio = {
@@ -256,6 +323,7 @@ fun Anhangsknopf(
         }
     }
 
+    if (erkenntGerade) Texterkennungsblatt()
     if (zeichnung) {
         ZeichenBlatt(
             speicher = speicher,
@@ -265,7 +333,11 @@ fun Anhangsknopf(
         )
     }
     if (haftnotiz) HaftnotizBlatt({ haftnotiz = false }) { anhang -> haftnotiz = false; beiAnhang(anhang) }
-    if (tabelle) TabellenBlatt({ tabelle = false }) { anhang -> tabelle = false; beiAnhang(anhang) }
+    if (tabelle) {
+        TabellenBlatt(vorlage = null, beiAbbruch = { tabelle = false }) { anhang ->
+            tabelle = false; beiAnhang(anhang)
+        }
+    }
     if (sprachaufnahme) {
         AufnahmeBlatt(
             speicher = speicher,
@@ -337,6 +409,22 @@ private fun Menuezeile(text: String, symbol: ImageVector, beiDruck: () -> Unit) 
     }
 }
 
+/** Solange die Texterkennung läuft, bleibt der Bildschirm nicht stumm. */
+@Composable
+private fun Texterkennungsblatt() {
+    val farben = Farben
+    Dialog(onDismissRequest = { }) {
+        Row(
+            Modifier.schwebendeKarte(farben, Masse.blattRadius).padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.DocumentScanner, null, Modifier.size(24.dp), tint = farben.akzent)
+            Spacer(Modifier.width(14.dp))
+            Text("Text wird gelesen …", style = Schriften.einstellung, color = farben.textStark)
+        }
+    }
+}
+
 // ------------------------------------------------------------ Anhänge am Entwurf
 
 /** Die noch nicht gesendeten Anhänge als Reihe kleiner Marken über der Fußleiste. */
@@ -383,21 +471,32 @@ fun Entwurfsanhaenge(anhaenge: List<Anhang>, beiEntfernen: (Anhang) -> Unit) {
 
 // ------------------------------------------------------------- Anhänge in der Karte
 
-/** Die Anhänge einer fertigen Notiz, unter ihrem Text. */
+/**
+ * Die Anhänge einer fertigen Notiz, unter ihrem Text.
+ *
+ * [beiTitel] ist gesetzt, wenn der Anhang umbenannt werden darf — bei einer gespeicherten
+ * Notiz also, nicht im Entwurf.
+ */
 @Composable
-fun Anhangsliste(anhaenge: List<Anhang>, modifier: Modifier = Modifier) {
+fun Anhangsliste(
+    anhaenge: List<Anhang>,
+    modifier: Modifier = Modifier,
+    beiTitel: ((Anhang, String) -> Unit)? = null,
+) {
     if (anhaenge.isEmpty()) return
     val ctx = LocalContext.current
     var vollbild by remember { mutableStateOf<Anhang?>(null) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         anhaenge.forEach { anhang ->
-            when (anhang.art) {
-                Anhangsart.BILD, Anhangsart.SCAN, Anhangsart.ZEICHNUNG ->
-                    Bildanhang(anhang) { vollbild = anhang }
-                Anhangsart.PDF -> Pdfanhang(anhang) { ctx.oeffneAlsPdf(anhang) }
-                Anhangsart.SPRACHAUFNAHME, Anhangsart.AUDIO -> Tonanhang(anhang)
-                Anhangsart.HAFTNOTIZ -> Haftnotizanhang(anhang)
-                Anhangsart.TABELLE -> Tabellenanhang(anhang)
+            when {
+                anhang.art == Anhangsart.PDF -> Pdfanhang(anhang) { ctx.oeffneAlsPdf(anhang) }
+                anhang.art == Anhangsart.SPRACHAUFNAHME || anhang.art == Anhangsart.AUDIO ->
+                    Tonanhang(anhang, beiTitel)
+                anhang.art == Anhangsart.HAFTNOTIZ -> Haftnotizanhang(anhang)
+                anhang.art == Anhangsart.TABELLE -> Tabellenanhang(anhang)
+                // Ein Scan ist seit der Texterkennung Text; ältere Scans sind noch Bilder.
+                anhang.art == Anhangsart.SCAN && anhang.datei == null -> Scananhang(anhang)
+                else -> Bildanhang(anhang) { vollbild = anhang }
             }
         }
     }
@@ -422,12 +521,41 @@ private fun Bildanhang(anhang: Anhang, beiDruck: () -> Unit) {
                 Text(anhang.name.ifBlank { anhang.beschriftung }, style = Schriften.einstellung, color = farben.textMittel)
             }
         } else {
+            // `Fit` statt `FillWidth`: ein querformatiges Bild soll quer bleiben und
+            // nicht auf Kartenbreite hochgezogen und oben und unten abgeschnitten werden.
             Image(
                 bitmap = bild,
                 contentDescription = anhang.name.ifBlank { anhang.beschriftung },
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
             )
+        }
+    }
+}
+
+/** Der Dokumentenscan: erkannter Text, im Umbruch der Vorlage. */
+@Composable
+private fun Scananhang(anhang: Anhang) {
+    val farben = Farben
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(Masse.gruppeRadius))
+            .background(farben.hintergrundGlas)
+            .border(1.dp, farben.rand, RoundedCornerShape(Masse.gruppeRadius))
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.DocumentScanner, null, Modifier.size(18.dp), tint = farben.akzent)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (anhang.seiten > 1) "Dokumentenscan · ${anhang.seiten} Seiten" else "Dokumentenscan",
+                style = Schriften.zeitstempel,
+                color = farben.textSchwach,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        SelectionContainer {
+            Text(anhang.text, style = Schriften.notiztext, color = farben.textStark)
         }
     }
 }
@@ -447,7 +575,7 @@ private fun Pdfanhang(anhang: Anhang, beiOeffnen: () -> Unit) {
             Image(
                 bitmap = bild,
                 contentDescription = anhang.name,
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
             )
         }
@@ -469,65 +597,182 @@ private fun Pdfanhang(anhang: Anhang, beiOeffnen: () -> Unit) {
     }
 }
 
+/**
+ * Sprachaufnahme und Audiodatei: Abspielen, Verlaufsbalken zum Spulen und — bei einer
+ * gespeicherten Notiz — ein Stift für den eigenen Titel.
+ */
 @Composable
-private fun Tonanhang(anhang: Anhang) {
+private fun Tonanhang(anhang: Anhang, beiTitel: ((Anhang, String) -> Unit)?) {
     val farben = Farben
     var spielt by remember { mutableStateOf(false) }
+    var stelle by remember { mutableStateOf(0f) }
+    var schiebtGerade by remember { mutableStateOf(false) }
+    var titelBlatt by remember { mutableStateOf(false) }
     val spieler = remember { mutableStateOf<MediaPlayer?>(null) }
+    val gesamt = anhang.dauerMs.coerceAtLeast(1L).toFloat()
+
     DisposableEffect(anhang.id) {
         onDispose { spieler.value?.release(); spieler.value = null }
     }
-    Row(
-        modifier = Modifier.fillMaxWidth()
+    // Der Balken läuft mit, solange gespielt wird — aber nicht, während der Finger zieht.
+    LaunchedEffect(spielt) {
+        while (spielt) {
+            delay(120)
+            if (!schiebtGerade) spieler.value?.let { stelle = it.currentPosition.toFloat() }
+        }
+    }
+
+    /** Der eigene Titel steht unter der Art, mit Gedankenstrich davor. */
+    val eigenerTitel = anhang.name.trim()
+        .takeIf { it.isNotBlank() && !it.equals(anhang.beschriftung, ignoreCase = true) }
+
+    Column(
+        Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(Masse.gruppeRadius))
             .background(farben.hintergrundGlas)
             .border(1.dp, farben.rand, RoundedCornerShape(Masse.gruppeRadius))
             .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                .clickable {
-                    val laufend = spieler.value
-                    if (spielt && laufend != null) {
-                        laufend.release(); spieler.value = null; spielt = false
-                    } else {
-                        val datei = anhang.datei
-                        if (datei != null) {
-                            spieler.value?.release()
-                            spieler.value = runCatching {
-                                MediaPlayer().apply {
-                                    setDataSource(datei.absolutePath)
-                                    setOnCompletionListener { p ->
-                                        p.release(); spieler.value = null; spielt = false
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                    .clickable {
+                        val laufend = spieler.value
+                        if (spielt && laufend != null) {
+                            stelle = laufend.currentPosition.toFloat()
+                            laufend.pause()
+                            spielt = false
+                        } else {
+                            val vorhanden = spieler.value
+                            if (vorhanden != null) {
+                                vorhanden.start(); spielt = true
+                            } else {
+                                val datei = anhang.datei ?: return@clickable
+                                spieler.value = runCatching {
+                                    MediaPlayer().apply {
+                                        setDataSource(datei.absolutePath)
+                                        setOnCompletionListener {
+                                            spielt = false
+                                            stelle = 0f
+                                            runCatching { seekTo(0) }
+                                        }
+                                        prepare()
+                                        if (stelle > 0f) seekTo(stelle.toInt())
+                                        start()
                                     }
-                                    prepare(); start()
-                                }
-                            }.getOrNull()
-                            spielt = spieler.value != null
+                                }.getOrNull()
+                                spielt = spieler.value != null
+                            }
                         }
-                    }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                if (spielt) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                if (spielt) "Wiedergabe anhalten" else "Anhang abspielen",
-                Modifier.size(Masse.kartenSymbol),
-                tint = if (spielt) farben.akzent else farben.textMittel,
-            )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (spielt) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                    if (spielt) "Wiedergabe anhalten" else "Anhang abspielen",
+                    Modifier.size(Masse.kartenSymbol),
+                    tint = if (spielt) farben.akzent else farben.textMittel,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(anhang.beschriftung, style = Schriften.einstellung, color = farben.textStark)
+                if (eigenerTitel != null) {
+                    Text(
+                        "— $eigenerTitel",
+                        style = Schriften.notiztext,
+                        color = farben.textMittel,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (beiTitel != null) {
+                Box(
+                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                        .clickable { titelBlatt = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Edit, "Titel bearbeiten", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+                }
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text(
-                anhang.name.ifBlank { anhang.beschriftung },
-                style = Schriften.einstellung, color = farben.textStark,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                if (anhang.dauerMs > 0) laufzeitText(anhang.dauerMs) else anhang.beschriftung,
-                style = Schriften.zeitstempel, color = farben.textSchwach,
-            )
+
+        Spacer(Modifier.height(8.dp))
+        Verlaufsbalken(
+            stelle = stelle,
+            gesamt = gesamt,
+            beiZiehenBeginn = { schiebtGerade = true },
+            beiZiehen = { wert -> stelle = wert },
+            beiZiehenEnde = { wert ->
+                schiebtGerade = false
+                stelle = wert
+                spieler.value?.let { runCatching { it.seekTo(wert.toInt()) } }
+            },
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(laufzeitText(stelle.toLong()), style = Schriften.zeitstempel, color = farben.textSchwach)
+            Text(laufzeitText(anhang.dauerMs), style = Schriften.zeitstempel, color = farben.textSchwach)
+        }
+    }
+
+    if (titelBlatt && beiTitel != null) {
+        Titelblatt(
+            vorhanden = eigenerTitel.orEmpty(),
+            beiAbbruch = { titelBlatt = false },
+            beiFertig = { titel -> titelBlatt = false; beiTitel(anhang, titel) },
+        )
+    }
+}
+
+/** Der Verlaufsbalken der Wiedergabe — antippen springt, ziehen spult. */
+@Composable
+private fun Verlaufsbalken(
+    stelle: Float,
+    gesamt: Float,
+    beiZiehenBeginn: () -> Unit,
+    beiZiehen: (Float) -> Unit,
+    beiZiehenEnde: (Float) -> Unit,
+) {
+    val farben = Farben
+    var breite by remember { mutableStateOf(1) }
+    val anteil = (stelle / gesamt).coerceIn(0f, 1f)
+    Box(
+        Modifier.fillMaxWidth().height(28.dp)
+            .onSizeChanged { breite = it.width.coerceAtLeast(1) }
+            .pointerInput(gesamt) {
+                detectTapGestures { punkt -> beiZiehenEnde((punkt.x / breite).coerceIn(0f, 1f) * gesamt) }
+            }
+            .pointerInput(gesamt) {
+                // Während des Ziehens läuft nur der Balken mit; gespult wird erst beim
+                // Loslassen — sonst ruckelt die Wiedergabe bei jedem Zwischenschritt.
+                var letzte = 0f
+                detectDragGestures(
+                    onDragStart = { punkt ->
+                        beiZiehenBeginn()
+                        letzte = (punkt.x / breite).coerceIn(0f, 1f) * gesamt
+                        beiZiehen(letzte)
+                    },
+                    onDragEnd = { beiZiehenEnde(letzte) },
+                    onDragCancel = { beiZiehenEnde(letzte) },
+                    onDrag = { aenderung, _ ->
+                        aenderung.consume()
+                        letzte = (aenderung.position.x / breite).coerceIn(0f, 1f) * gesamt
+                        beiZiehen(letzte)
+                    },
+                )
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(farben.rand))
+        Box(
+            Modifier.fillMaxWidth(anteil).height(4.dp).clip(RoundedCornerShape(50)).background(farben.akzent),
+        )
+        Box(
+            Modifier.fillMaxWidth(anteil).fillMaxHeight(),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Box(Modifier.size(13.dp).clip(RoundedCornerShape(50)).background(farben.akzent))
         }
     }
 }
@@ -547,11 +792,15 @@ private fun Haftnotizanhang(anhang: Anhang) {
     }
 }
 
+/** Die fertige Tabelle — mit den Spaltenbreiten, die im Editor eingestellt wurden. */
 @Composable
 private fun Tabellenanhang(anhang: Anhang) {
     val farben = Farben
-    val zeilen = remember(anhang.text) { anhang.text.split("\n").map { it.split("\t") } }
+    val zeilen = remember(anhang.text) {
+        anhang.text.split("\n").map { it.split("\t") }
+    }
     if (zeilen.isEmpty()) return
+    val spalten = zeilen.maxOf { it.size }
     Column(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(Masse.gruppeRadius))
@@ -560,17 +809,25 @@ private fun Tabellenanhang(anhang: Anhang) {
     ) {
         zeilen.forEachIndexed { nummer, zeile ->
             Row(
-                Modifier.background(
-                    if (nummer == 0) farben.hintergrundErhoben else Color.Transparent,
-                ),
+                Modifier.background(if (nummer == 0) farben.hintergrundErhoben else Color.Transparent)
+                    .height(IntrinsicSize.Min),
             ) {
-                zeile.forEach { zelle ->
-                    Text(
-                        zelle,
-                        style = if (nummer == 0) Schriften.kartenUeberschrift else Schriften.einstellung,
-                        color = if (nummer == 0) farben.textStark else farben.textMittel,
-                        modifier = Modifier.width(132.dp).padding(horizontal = 10.dp, vertical = 9.dp),
-                    )
+                (0 until spalten).forEach { spalte ->
+                    Box(
+                        Modifier
+                            .width((anhang.spaltenbreiten.getOrNull(spalte) ?: SPALTE_STANDARD).dp)
+                            .fillMaxHeight()
+                            .padding(horizontal = 10.dp, vertical = 9.dp),
+                    ) {
+                        Text(
+                            zeile.getOrNull(spalte).orEmpty(),
+                            style = if (nummer == 0) Schriften.kartenUeberschrift else Schriften.einstellung,
+                            color = if (nummer == 0) farben.textStark else farben.textMittel,
+                        )
+                    }
+                    if (spalte < spalten - 1) {
+                        Box(Modifier.width(1.dp).fillMaxHeight().background(farben.rand))
+                    }
                 }
             }
             if (nummer < zeilen.lastIndex) {
@@ -580,38 +837,59 @@ private fun Tabellenanhang(anhang: Anhang) {
     }
 }
 
+// ------------------------------------------------------------------ Bild im Vollbild
+
+/**
+ * Ein Bild bildschirmfüllend, mit zwei Fingern zoombar und verschiebbar; ein Doppeltipp
+ * springt zwischen ganzer Ansicht und zweieinhalbfacher Vergrösserung.
+ */
 @Composable
 private fun Bildschau(anhang: Anhang, beiSchliessen: () -> Unit) {
-    val farben = Farben
-    val bild = merkeBild(anhang.pfad, 2400)
-    Dialog(onDismissRequest = beiSchliessen) {
-        Column(
-            Modifier.schwebendeKarte(farben, Masse.blattRadius).padding(12.dp),
+    val bild = merkeBild(anhang.pfad, 3000)
+    var skala by remember { mutableStateOf(1f) }
+    var versatz by remember { mutableStateOf(Offset.Zero) }
+    Dialog(
+        onDismissRequest = beiSchliessen,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    anhang.name.ifBlank { anhang.beschriftung },
-                    style = Schriften.kartenUeberschrift, color = farben.textStark,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(start = 6.dp),
-                )
-                Box(
-                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                        .clickable(onClick = beiSchliessen),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Close, "Schließen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
             bild?.let {
                 Image(
                     bitmap = it,
-                    contentDescription = anhang.name,
+                    contentDescription = anhang.name.ifBlank { anhang.beschriftung },
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp)
-                        .clip(RoundedCornerShape(Masse.gruppeRadius)),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, verschiebung, vergroesserung, _ ->
+                                skala = (skala * vergroesserung).coerceIn(1f, 8f)
+                                versatz = if (skala <= 1.01f) Offset.Zero else versatz + verschiebung
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    if (skala > 1.01f) { skala = 1f; versatz = Offset.Zero } else skala = 2.5f
+                                },
+                            )
+                        }
+                        .graphicsLayer(
+                            scaleX = skala, scaleY = skala,
+                            translationX = versatz.x, translationY = versatz.y,
+                        ),
                 )
+            }
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(12.dp).size(44.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(onClick = beiSchliessen),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Close, "Schließen", Modifier.size(22.dp), tint = Color.White)
             }
         }
     }
@@ -621,6 +899,7 @@ private fun Bildschau(anhang: Anhang, beiSchliessen: () -> Unit) {
 
 private data class Strich(val punkte: SnapshotStateList<Offset>, val farbe: Long, val staerke: Float)
 
+/** Die Zeichenfläche füllt den Bildschirm — auf einem Briefmarkenfeld zeichnet niemand. */
 @Composable
 private fun ZeichenBlatt(
     speicher: Anhangsspeicher,
@@ -635,12 +914,34 @@ private fun ZeichenBlatt(
     var flaeche by remember { mutableStateOf(IntSize.Zero) }
     val bereich = rememberCoroutineScope()
 
-    Dialog(onDismissRequest = beiAbbruch) {
-        Column(Modifier.schwebendeKarte(farben, Masse.blattRadius).padding(16.dp)) {
-            Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
-            Spacer(Modifier.height(12.dp))
+    Dialog(
+        onDismissRequest = beiAbbruch,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            Modifier.fillMaxSize().background(farben.hintergrund).padding(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                        .clickable { if (striche.isNotEmpty()) striche.removeAt(striche.lastIndex) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Undo, "Letzten Strich zurücknehmen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+                }
+                Box(
+                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
+                        .clickable { striche.clear() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Delete, "Alles löschen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
             Box(
-                Modifier.fillMaxWidth().aspectRatio(0.82f)
+                Modifier.fillMaxWidth().weight(1f)
                     .clip(RoundedCornerShape(Masse.gruppeRadius))
                     .background(Color.White)
                     .border(1.dp, farben.rand, RoundedCornerShape(Masse.gruppeRadius))
@@ -676,45 +977,24 @@ private fun ZeichenBlatt(
                 Stiftfarben.forEach { wert ->
                     Box(
                         Modifier.padding(end = 8.dp)
-                            .size(if (wert == farbe) 30.dp else 24.dp)
+                            .size(if (wert == farbe) 32.dp else 26.dp)
                             .clip(RoundedCornerShape(50))
                             .background(Color(wert))
-                            .border(
-                                if (wert == farbe) 2.dp else 0.dp,
-                                farben.akzent,
-                                RoundedCornerShape(50),
-                            )
+                            .border(if (wert == farbe) 2.dp else 0.dp, farben.akzent, RoundedCornerShape(50))
                             .clickable { farbe = wert },
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                        .clickable { if (striche.isNotEmpty()) striche.removeAt(striche.lastIndex) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Undo, "Letzten Strich zurücknehmen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
-                }
-                Box(
-                    Modifier.size(Masse.kartenSymbolFlaeche).clip(RoundedCornerShape(50))
-                        .clickable { striche.clear() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Delete, "Alles löschen", Modifier.size(Masse.kartenSymbol), tint = farben.textMittel)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
                 listOf(3f, 6f, 12f, 20f).forEach { wert ->
                     Box(
-                        Modifier.padding(end = 12.dp).size((wert + 14).dp)
+                        Modifier.padding(start = 10.dp).size((wert + 14).dp)
                             .clip(RoundedCornerShape(50))
                             .background(if (wert == staerke) farben.akzent else farben.textSchwach)
                             .clickable { staerke = wert },
                     )
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             Blattknoepfe(
                 beiAbbruch = beiAbbruch,
                 bestaetigungAktiv = true,
@@ -844,67 +1124,157 @@ private fun HaftnotizBlatt(beiAbbruch: () -> Unit, beiFertig: (Anhang) -> Unit) 
 
 // ------------------------------------------------------------------------ Tabelle
 
+/**
+ * Der Tabelleneditor — auch zum Nachbearbeiten einer schon gespeicherten Tabelle.
+ *
+ * Neue Zeilen und Spalten kommen über das Plus am Rand dazu; die Trennlinien zwischen den
+ * Spalten lassen sich ziehen wie in einer Tabellenkalkulation.
+ */
 @Composable
-private fun TabellenBlatt(beiAbbruch: () -> Unit, beiFertig: (Anhang) -> Unit) {
+fun TabellenBlatt(vorlage: Anhang?, beiAbbruch: () -> Unit, beiFertig: (Anhang) -> Unit) {
     val farben = Farben
-    val zeilen = remember {
-        mutableStateListOf(listOf("", "").toMutableStateList(), listOf("", "").toMutableStateList())
+    val dichte = LocalDensity.current
+    val zeilen = remember(vorlage?.id) {
+        val eingelesen = vorlage?.text?.split("\n")?.map { it.split("\t") }?.filter { it.isNotEmpty() }
+        if (eingelesen.isNullOrEmpty()) {
+            mutableStateListOf(listOf("", "").toMutableStateList(), listOf("", "").toMutableStateList())
+        } else {
+            val spalten = eingelesen.maxOf { it.size }
+            eingelesen.map { zeile ->
+                List(spalten) { stelle -> zeile.getOrNull(stelle).orEmpty() }.toMutableStateList()
+            }.toMutableStateList()
+        }
     }
-    Dialog(onDismissRequest = beiAbbruch) {
-        Column(Modifier.schwebendeKarte(farben, Masse.blattRadius).padding(16.dp)) {
-            Text("Tabelle", style = Schriften.bildschirmtitel, color = farben.textStark)
-            Text("Die erste Zeile ist die Kopfzeile.", style = Schriften.zeitstempel, color = farben.textSchwach)
+    val breiten = remember(vorlage?.id) {
+        val spalten = zeilen.first().size
+        List(spalten) { stelle ->
+            (vorlage?.spaltenbreiten?.getOrNull(stelle) ?: SPALTE_STANDARD).toFloat()
+        }.toMutableStateList()
+    }
+
+    Dialog(
+        onDismissRequest = beiAbbruch,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(Modifier.fillMaxSize().background(farben.hintergrund).padding(12.dp)) {
+            Text(
+                if (vorlage == null) "Tabelle" else "Tabelle bearbeiten",
+                style = Schriften.bildschirmtitel, color = farben.textStark,
+            )
+            Text(
+                "Erste Zeile ist die Kopfzeile · Trennlinien ziehen ändert die Spaltenbreite",
+                style = Schriften.zeitstempel, color = farben.textSchwach,
+            )
             Spacer(Modifier.height(12.dp))
-            Column(
-                Modifier.heightIn(max = 300.dp)
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(rememberScrollState()),
-            ) {
-                zeilen.forEachIndexed { zeilennummer, zeile ->
-                    Row {
-                        zeile.forEachIndexed { spaltennummer, zelle ->
-                            Box(
-                                Modifier.padding(2.dp).width(140.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(farben.hintergrundErhoben)
-                                    .border(1.dp, farben.rand, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 10.dp, vertical = 9.dp),
-                            ) {
-                                if (zelle.isEmpty()) {
-                                    Text(
-                                        if (zeilennummer == 0) "Spalte ${spaltennummer + 1}" else "…",
-                                        style = Schriften.einstellung, color = farben.textSchwach,
-                                    )
+
+            Row(Modifier.weight(1f)) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                ) {
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        Column {
+                            zeilen.forEachIndexed { zeilennummer, zeile ->
+                                Row(Modifier.height(IntrinsicSize.Min)) {
+                                    zeile.indices.forEach { spalte ->
+                                        Box(
+                                            Modifier
+                                                .width(breiten.getOrElse(spalte) { SPALTE_STANDARD.toFloat() }.dp)
+                                                .fillMaxHeight()
+                                                .background(
+                                                    if (zeilennummer == 0) farben.hintergrundErhoben
+                                                    else farben.hintergrundGlas,
+                                                )
+                                                .border(1.dp, farben.rand)
+                                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                                        ) {
+                                            if (zeile[spalte].isEmpty()) {
+                                                Text(
+                                                    if (zeilennummer == 0) "Spalte ${spalte + 1}" else "",
+                                                    style = Schriften.einstellung, color = farben.textSchwach,
+                                                )
+                                            }
+                                            BasicTextField(
+                                                value = zeile[spalte],
+                                                onValueChange = { eingabe ->
+                                                    zeilen[zeilennummer][spalte] =
+                                                        eingabe.replace('\t', ' ').replace('\n', ' ')
+                                                },
+                                                singleLine = true,
+                                                textStyle = (
+                                                    if (zeilennummer == 0) Schriften.kartenUeberschrift
+                                                    else Schriften.einstellung
+                                                    ).copy(color = farben.textStark),
+                                                cursorBrush = SolidColor(farben.akzent),
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                        // Der Griff auf der Trennlinie: ziehen macht die
+                                        // Spalte breiter oder schmaler.
+                                        Box(
+                                            Modifier.width(10.dp).fillMaxHeight()
+                                                .pointerInput(spalte) {
+                                                    detectDragGestures { aenderung, verschiebung ->
+                                                        aenderung.consume()
+                                                        val schritt = with(dichte) { verschiebung.x.toDp().value }
+                                                        breiten[spalte] = (breiten[spalte] + schritt)
+                                                            .coerceIn(SPALTE_MIN.toFloat(), SPALTE_MAX.toFloat())
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Box(
+                                                Modifier.width(3.dp).fillMaxHeight()
+                                                    .background(farben.akzent.copy(alpha = 0.35f)),
+                                            )
+                                        }
+                                    }
                                 }
-                                BasicTextField(
-                                    value = zelle,
-                                    onValueChange = { eingabe ->
-                                        zeilen[zeilennummer][spaltennummer] =
-                                            eingabe.replace('\t', ' ').replace('\n', ' ')
-                                    },
-                                    singleLine = true,
-                                    textStyle = Schriften.einstellung.copy(color = farben.textStark),
-                                    cursorBrush = SolidColor(farben.akzent),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
                             }
                         }
                     }
                 }
+                // Rechts: Spalte hinzu oder weg.
+                Column(
+                    Modifier.padding(start = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Randknopf(Icons.Outlined.Add, "Spalte hinzufügen") {
+                        zeilen.forEach { it.add("") }
+                        breiten.add(SPALTE_STANDARD.toFloat())
+                    }
+                    Randknopf(Icons.Outlined.Remove, "Letzte Spalte entfernen") {
+                        if (zeilen.first().size > 1) {
+                            zeilen.forEach { it.removeAt(it.lastIndex) }
+                            breiten.removeAt(breiten.lastIndex)
+                        }
+                    }
+                }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Zusatzknopf("Zeile") { zeilen.add(List(zeilen.first().size) { "" }.toMutableStateList()) }
-                Spacer(Modifier.width(8.dp))
-                Zusatzknopf("Spalte") { zeilen.forEach { it.add("") } }
+
+            // Unten: Zeile hinzu oder weg.
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Randknopf(Icons.Outlined.Add, "Zeile hinzufügen") {
+                    zeilen.add(List(zeilen.first().size) { "" }.toMutableStateList())
+                }
+                Randknopf(Icons.Outlined.Remove, "Letzte Zeile entfernen") {
+                    if (zeilen.size > 1) zeilen.removeAt(zeilen.lastIndex)
+                }
             }
-            Spacer(Modifier.height(14.dp))
+
+            Spacer(Modifier.height(12.dp))
             Blattknoepfe(
                 beiAbbruch = beiAbbruch,
                 bestaetigungAktiv = true,
                 beiBestaetigen = {
                     val inhalt = zeilen.joinToString("\n") { zeile -> zeile.joinToString("\t") { it.trim() } }
-                    beiFertig(Anhang(art = Anhangsart.TABELLE, name = "Tabelle", text = inhalt))
+                    beiFertig(
+                        (vorlage ?: Anhang(art = Anhangsart.TABELLE, name = "Tabelle")).copy(
+                            art = Anhangsart.TABELLE,
+                            name = "Tabelle",
+                            text = inhalt,
+                            spaltenbreiten = breiten.map { it.toInt() },
+                        ),
+                    )
                 },
             )
         }
@@ -912,18 +1282,16 @@ private fun TabellenBlatt(beiAbbruch: () -> Unit, beiFertig: (Anhang) -> Unit) {
 }
 
 @Composable
-private fun Zusatzknopf(text: String, beiDruck: () -> Unit) {
+private fun Randknopf(symbol: ImageVector, beschreibung: String, beiDruck: () -> Unit) {
     val farben = Farben
-    Row(
-        Modifier.clip(RoundedCornerShape(50))
+    Box(
+        Modifier.size(40.dp).clip(RoundedCornerShape(50))
             .border(1.dp, farben.rand, RoundedCornerShape(50))
-            .clickable(onClick = beiDruck)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .background(farben.hintergrundErhoben)
+            .clickable(onClick = beiDruck),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Outlined.Add, null, Modifier.size(16.dp), tint = farben.textMittel)
-        Spacer(Modifier.width(6.dp))
-        Text(text, style = Schriften.knopf, color = farben.textMittel)
+        Icon(symbol, beschreibung, Modifier.size(20.dp), tint = farben.textMittel)
     }
 }
 
@@ -1024,6 +1392,44 @@ private fun AufnahmeBlatt(
     }
 }
 
+/** Der eigene Titel einer Sprachaufnahme — mehrzeilig erlaubt. */
+@Composable
+private fun Titelblatt(vorhanden: String, beiAbbruch: () -> Unit, beiFertig: (String) -> Unit) {
+    val farben = Farben
+    var text by remember { mutableStateOf(vorhanden) }
+    Dialog(onDismissRequest = beiAbbruch) {
+        Column(Modifier.schwebendeKarte(farben, Masse.blattRadius).padding(16.dp)) {
+            Text("Titel der Sprachaufnahme", style = Schriften.bildschirmtitel, color = farben.textStark)
+            Spacer(Modifier.height(12.dp))
+            Box(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(Masse.eingabeRadius))
+                    .background(farben.hintergrundErhoben)
+                    .border(1.dp, farben.rand, RoundedCornerShape(Masse.eingabeRadius))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                if (text.isEmpty()) {
+                    Text("Worum geht es in der Aufnahme?", style = Schriften.notiztext, color = farben.textSchwach)
+                }
+                BasicTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    textStyle = Schriften.notiztext.copy(color = farben.textStark),
+                    cursorBrush = SolidColor(farben.akzent),
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Blattknoepfe(
+                beiAbbruch = beiAbbruch,
+                bestaetigungAktiv = true,
+                beiBestaetigen = { beiFertig(text.trim()) },
+            )
+        }
+    }
+}
+
 // -------------------------------------------------------------------------- Helfer
 
 /** Die zwei Knöpfe am Fuß jedes Anhangsblatts — überall gleich angeordnet. */
@@ -1064,7 +1470,7 @@ fun Anhangsart.symbol(): ImageVector = when (this) {
 }
 
 private fun laufzeitText(ms: Long): String {
-    val sekunden = ms / 1000
+    val sekunden = (ms / 1000).coerceAtLeast(0)
     return "%d:%02d".format(sekunden / 60, sekunden % 60)
 }
 
@@ -1094,9 +1500,36 @@ private fun Context.oeffneAlsPdf(anhang: Anhang) {
 }
 
 /**
- * Lädt ein Bild verkleinert und außerhalb des Hauptfadens.
+ * Liest den Text einer Vorlage — die Texterkennung von ML Kit läuft auf dem Gerät.
  *
- * Ohne die Verkleinerung reißt eine 12-Megapixel-Aufnahme in einer Liste den Speicher auf.
+ * Die Blöcke werden von oben nach unten zusammengesetzt, damit der Umbruch der Vorlage
+ * erhalten bleibt und nicht alles zu einem Fließtext verschmilzt.
+ */
+private suspend fun leseText(ctx: Context, uri: Uri): String {
+    val eingabe = withContext(Dispatchers.IO) { InputImage.fromFilePath(ctx, uri) }
+    val erkenner = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    return suspendCancellableCoroutine { fortsetzung ->
+        erkenner.process(eingabe)
+            .addOnSuccessListener { ergebnis ->
+                val text = ergebnis.textBlocks
+                    .sortedBy { it.boundingBox?.top ?: 0 }
+                    .joinToString("\n\n") { block ->
+                        block.lines
+                            .sortedBy { it.boundingBox?.top ?: 0 }
+                            .joinToString("\n") { it.text }
+                    }
+                fortsetzung.resume(text)
+            }
+            .addOnFailureListener { fortsetzung.resume("") }
+    }
+}
+
+/**
+ * Lädt ein Bild verkleinert, gedreht und außerhalb des Hauptfadens.
+ *
+ * Ohne die Verkleinerung reißt eine 12-Megapixel-Aufnahme in einer Liste den Speicher auf;
+ * ohne die EXIF-Drehung liegt jede Hochformat-Aufnahme quer, weil die Kamera den Sensor
+ * nicht dreht, sondern nur vermerkt, wie das Bild gemeint war.
  */
 @Composable
 private fun merkeBild(pfad: String?, maxKante: Int = 1400): ImageBitmap? {
@@ -1116,5 +1549,32 @@ private fun ladeBild(pfad: String, maxKante: Int): android.graphics.Bitmap? {
     if (masse.outWidth <= 0) return null
     var faktor = 1
     while (masse.outWidth / faktor > maxKante || masse.outHeight / faktor > maxKante) faktor *= 2
-    return BitmapFactory.decodeFile(pfad, BitmapFactory.Options().apply { inSampleSize = faktor })
+    val roh = BitmapFactory.decodeFile(pfad, BitmapFactory.Options().apply { inSampleSize = faktor })
+        ?: return null
+    return drehNachExif(roh, pfad)
+}
+
+/** Wendet die im Bild vermerkte Ausrichtung wirklich an. */
+private fun drehNachExif(bild: android.graphics.Bitmap, pfad: String): android.graphics.Bitmap {
+    val ausrichtung = runCatching {
+        ExifInterface(pfad).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+    if (ausrichtung == ExifInterface.ORIENTATION_NORMAL || ausrichtung == ExifInterface.ORIENTATION_UNDEFINED) {
+        return bild
+    }
+    val matrix = Matrix()
+    when (ausrichtung) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+        ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+        else -> return bild
+    }
+    return runCatching {
+        android.graphics.Bitmap.createBitmap(bild, 0, 0, bild.width, bild.height, matrix, true)
+            .also { gedreht -> if (gedreht !== bild) bild.recycle() }
+    }.getOrDefault(bild)
 }

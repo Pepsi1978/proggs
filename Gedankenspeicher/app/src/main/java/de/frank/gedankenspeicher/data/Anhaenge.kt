@@ -37,6 +37,8 @@ data class Anhang(
     val farbe: Int = 0,
     val dauerMs: Long = 0L,
     val seiten: Int = 0,
+    /** Spaltenbreiten einer Tabelle in dp — leer heisst: überall die Standardbreite. */
+    val spaltenbreiten: List<Int> = emptyList(),
     val erstelltAm: Long = System.currentTimeMillis(),
 ) {
     val datei: File? get() = pfad.takeIf(String::isNotBlank)?.let(::File)?.takeIf(File::exists)
@@ -57,6 +59,7 @@ data class Anhang(
         .put("id", id).put("art", art.name).put("name", name).put("pfad", pfad)
         .put("vorschauPfad", vorschauPfad).put("text", text).put("farbe", farbe)
         .put("dauerMs", dauerMs).put("seiten", seiten).put("erstelltAm", erstelltAm)
+        .put("spaltenbreiten", JSONArray(spaltenbreiten))
 }
 
 fun List<Anhang>.alsJson(): String = JSONArray(map(Anhang::json)).toString()
@@ -77,6 +80,9 @@ fun anhaengeAusJson(roh: String): List<Anhang> = runCatching {
             dauerMs = eintrag.optLong("dauerMs"),
             seiten = eintrag.optInt("seiten"),
             erstelltAm = eintrag.optLong("erstelltAm", System.currentTimeMillis()),
+            spaltenbreiten = eintrag.optJSONArray("spaltenbreiten")?.let { feld ->
+                (0 until feld.length()).map(feld::optInt)
+            }.orEmpty(),
         )
     }
 }.getOrDefault(emptyList())

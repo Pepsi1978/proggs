@@ -24,8 +24,15 @@ data class Verlaufszustand(
     val ordner: List<Ordner> = emptyList(),
     val ansicht: Schubladenansicht = Schubladenansicht.ALLE,
     val gewaehlterOrdner: Long? = null,
-    /** Geschützte Notizen sind für diesen App-Lauf per Fingerabdruck freigegeben. */
-    val geschuetztFrei: Boolean = false,
+    /**
+     * Die eine Sitzung, die der Fingerabdruck gerade freigegeben hat — sonst null.
+     *
+     * Bewusst **eine** und kein Schalter für alle: eine pauschale Freigabe hiess, dass ein
+     * einziger Fingerabdruck jede geschützte Notiz aufsperrt, auch die, die man nie
+     * angefasst hat. Sie fällt beim Wechsel in eine andere Sitzung und wenn die App aus
+     * dem Blick gerät.
+     */
+    val freigegebeneSitzung: Long? = null,
     val fingerabdruckAn: Boolean = false,
     val eintraege: List<Verlaufseintrag> = emptyList(),
     val laedt: Boolean = true,

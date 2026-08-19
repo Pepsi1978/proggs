@@ -99,6 +99,7 @@ fun VerlaufBildschirm(
     beiAnhangEntfernen: (de.frank.gedankenspeicher.data.Anhang) -> Unit,
     beiAnhangsmikrofon: (() -> Unit) -> Unit,
     beiFehler: (String) -> Unit,
+    beiAnhangTitel: (Notiz, de.frank.gedankenspeicher.data.Anhang) -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -200,6 +201,7 @@ fun VerlaufBildschirm(
                                     hervorgehoben = zustand.hebeHervor == notiz.id,
                                     beiVorlesen = { beiVorlesen(kennung, notiz.text) },
                                     beiVerbessern = { beiVerbessern(notiz) },
+                                    beiAnhangTitel = { anhang -> beiAnhangTitel(notiz, anhang) },
                                     beiRueckgaengig = { beiRueckgaengig(notiz) },
                                     beiMenue = { beiNotizMenue(notiz) },
                                     beiWiederholen = { beiWiederholen(notiz) },

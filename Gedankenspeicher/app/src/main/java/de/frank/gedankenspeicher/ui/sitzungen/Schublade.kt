@@ -83,7 +83,7 @@ fun Schublade(
     ordner: List<Ordner>,
     ansicht: Schubladenansicht,
     gewaehlterOrdner: Long?,
-    geschuetztFrei: Boolean,
+    freigegebeneSitzung: Long?,
     offeneSitzung: Long?,
     breit: Boolean,
     beiWahl: (Sitzung) -> Unit,
@@ -267,7 +267,7 @@ fun Schublade(
                     sitzung = sitzung,
                     offen = sitzung.id == offeneSitzung,
                     ordnername = ordner.firstOrNull { it.id == sitzung.ordnerId }?.name,
-                    zugesperrt = sitzung.geschuetzt && !geschuetztFrei,
+                    zugesperrt = sitzung.geschuetzt && sitzung.id != freigegebeneSitzung,
                     // Aus dem Papierkorb wird nichts geöffnet — dort führt nur der lange
                     // Druck weiter, zum Wiederherstellen oder endgültigen Löschen.
                     beiWahl = { if (ansicht != Schubladenansicht.PAPIERKORB) beiWahl(sitzung) },
