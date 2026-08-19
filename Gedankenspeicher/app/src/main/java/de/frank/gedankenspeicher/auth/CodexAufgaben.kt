@@ -211,6 +211,12 @@ Jede Auswertung kann mit einem Knopfdruck vorgelesen werden, und genau so wird s
 aufgenommen: gehört, nicht gelesen. Schreibe den Fließtext deshalb von vornherein so, dass
 eine Sprachausgabe ihn sauber spricht und ein Zuhörer ihm ohne Anstrengung folgt.
 
+Vorgelesen werden **nur die Fließtext-Absätze und die Zitatblöcke**. Überschriften,
+Aufzählungen, Tabellen und Zeichnungen bleiben beim Vorlesen stumm — sie sind zum Ansehen
+da. Daraus folgt: Was wirklich wichtig ist, muss im Fließtext stehen. Eine Tabelle darf eine
+Aussage ordnen und zuspitzen, aber sie darf nicht der einzige Ort sein, an dem sie steht.
+Wer nur zuhört, soll die vollständige Auswertung mitbekommen.
+
 — Ein Fließtext-Absatz umfasst 5 bis 14 Zeilen. Kürzer zerhackt das Zuhören, länger verliert
   man den Faden.
 — Sprachniveau: verständlich für eine Elftklässlerin an einer Realschule. Klar und
@@ -234,7 +240,7 @@ werden nicht am Stück vorgelesen und dürfen knapp bleiben.
 ## Was immer gilt
 
 — Zwischen zwei Blöcken steht eine Leerzeile. Das ist keine Formsache: die Auswertung wird
-  Block für Block vorgelesen, und ohne Leerzeilen läuft alles zu einem Klumpen zusammen.
+  Absatz für Absatz vorgelesen, und ohne Leerzeilen läuft alles zu einem Klumpen zusammen.
 — **Keine Quellenangaben, nirgends.** Keine Links, keine Adressen, keine Fußnoten, keine
   Namen von Webseiten, kein „Quelle:", keine Klammern mit Herkunftsangabe. Auch dann
   nicht, wenn du im Web gesucht hast: das Ergebnis steht als deine Aussage da, nicht als

@@ -300,24 +300,31 @@ object Reichtext {
 
     // --- Vorlesen ---------------------------------------------------------------------------
 
-    /** Der Text, der wirklich gesprochen wird — ohne Zeichnungen, ohne Strichsalat. */
+    /**
+     * **Der Text, der wirklich gesprochen wird — der Fließtext und sonst nichts.**
+     *
+     * Vorgelesen wird nur, was als zusammenhängender Text geschrieben ist: Absätze und
+     * Zitatblöcke. Überschriften, Aufzählungen, Tabellen, Zeichnungen, Codeblöcke und
+     * Trennlinien schweigen. Sie sind zum Ansehen gemacht, nicht zum Anhören — eine
+     * vorgelesene Tabelle ist eine Kette aus Wortfetzen, und eine dazwischengesprochene
+     * Überschrift reißt den Faden auseinander, statt ihn zu ordnen.
+     */
     fun vorlesetext(roh: String): String =
         zerlege(roh).mapNotNull(::gesprochen).joinToString("\n\n")
 
     /** Was ein Baustein beiträgt, wenn er vorgelesen wird. Null heißt: er schweigt. */
     private fun gesprochen(baustein: Baustein): String? = when (baustein) {
         is Baustein.Absatz -> ohneZeichen(baustein.text)
-        is Baustein.Ueberschrift -> ohneZeichen(baustein.text)
         is Baustein.Zitat -> ohneZeichen(baustein.text)
-        is Baustein.Punkte -> baustein.eintraege.joinToString(". ") { ohneZeichen(it).trimEnd('.') }
-        is Baustein.Tabelle -> buildString {
-            append(baustein.kopf.filter { it.isNotBlank() }.joinToString(", "))
-            baustein.zeilen.forEach { zeile ->
-                append(". ").append(zeile.filter { it.isNotBlank() }.joinToString(", "))
-            }
-        }
 
-        is Baustein.Grafik, is Baustein.Seite, is Baustein.Code, Baustein.Trennlinie -> null
+        is Baustein.Ueberschrift,
+        is Baustein.Punkte,
+        is Baustein.Tabelle,
+        is Baustein.Grafik,
+        is Baustein.Seite,
+        is Baustein.Code,
+        Baustein.Trennlinie,
+        -> null
     }?.takeIf { it.isNotBlank() }
 
     /** Nimmt die Auszeichnungszeichen weg — vorgelesen würden sie sonst mitgesprochen. */
