@@ -5,6 +5,34 @@ import {
   workModeInstruction,
 } from "./token-cost-sidebar/dist/work-mode.ts"
 
+/**
+ * Modelle wie Qwen3.8 lehnen ueber ihr Jinja-Chat-Template jede System-Nachricht ab, die nicht die
+ * erste ist ("System message must be at the beginning"). Bei lokalen LM-Studio-Modellen wird der
+ * Modus-Text deshalb in den vorhandenen System-Block eingefuegt statt als zweiter angehaengt.
+ * Cloud-Modelle behalten getrennte Bloecke: dort haelt der stabile erste Block den Prompt-Cache.
+ */
+function istLokalesModell(input) {
+  const kandidaten = [
+    input?.providerID,
+    input?.provider?.id,
+    input?.model?.providerID,
+    input?.model?.provider,
+    process.env.OPENLAUNCHER_MODEL,
+  ]
+  return kandidaten.some((wert) => typeof wert === "string" && wert.toLowerCase().startsWith("lmstudio"))
+}
+
+function applySystemInstruction(input, output, instruction) {
+  if (!instruction) return
+  if (!istLokalesModell(input)) {
+    output.system.push(instruction)
+    return
+  }
+  const zusammengefasst = [...output.system, instruction].filter(Boolean).join("\n\n")
+  output.system.length = 0
+  output.system.push(zusammengefasst)
+}
+
 export const WorkModePlugin = async ({ client }) => ({
   "experimental.chat.system.transform": async (input, output) => {
     let mode = initialWorkMode()
@@ -37,6 +65,6 @@ export const WorkModePlugin = async ({ client }) => ({
         },
       }).catch(() => undefined)
     }
-    if (instruction) output.system.push(instruction)
+    if (instruction) applySystemInstruction(input, output, instruction)
   },
 })
