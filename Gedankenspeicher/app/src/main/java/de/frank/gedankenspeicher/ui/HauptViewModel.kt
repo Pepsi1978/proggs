@@ -224,7 +224,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun beobachteSitzung(sitzung: Sitzung) {
         verlaufJob?.cancel()
-        _verlauf.update { it.copy(sitzung = sitzung, laedt = true, eintraege = emptyList()) }
+        // Sitzung und Freigabe wechseln in **einem** Zug.
+        //
+        // Getrennt zu setzen hiess, dass es einen Augenblick lang die alte, geschuetzte
+        // Sitzung ohne ihre Freigabe gab — und in genau diesem Augenblick fuhr die Sperre
+        // hoch und fragte nach dem Fingerabdruck, obwohl man laengst in einer offenen
+        // Sitzung war. Die Freigabe ueberlebt nur, wenn sie zu genau dieser Sitzung gehoert.
+        _verlauf.update {
+            it.copy(
+                sitzung = sitzung,
+                laedt = true,
+                eintraege = emptyList(),
+                freigegebeneSitzung = it.freigegebeneSitzung?.takeIf { frei -> frei == sitzung.id },
+            )
+        }
         verlaufJob = viewModelScope.launch {
             repo.verlauf(sitzung.id).collectLatest { eintraege ->
                 _verlauf.update { it.copy(eintraege = eintraege, laedt = false) }
@@ -251,9 +264,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
         if (z.wertetAus) return melde("Die Auswertung läuft noch.")
         viewModelScope.launch {
-            // Wer die Sitzung wechselt, laesst die Freigabe hinter sich: die geschuetzte
-            // Notiz von vorhin ist danach wieder zu.
-            _verlauf.update { it.copy(freigegebeneSitzung = it.freigegebeneSitzung?.takeIf { frei -> frei == id }) }
             repo.oeffneSitzung(id)
             repo.offeneSitzung().let(::beobachteSitzung)
         }

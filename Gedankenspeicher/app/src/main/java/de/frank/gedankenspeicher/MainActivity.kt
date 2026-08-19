@@ -559,12 +559,12 @@ private fun Oberflaeche(
         // weil der Kopf im Zustand ein Abzug von vorhin ist — sonst bliebe die Schicht
         // aus, wenn man die gerade offene Notiz eben erst geschützt hat.
         if (ziel == Ziel.VERLAUF && gesperrt) {
-            // Der Fingerabdruck wird von selbst abgefragt, sobald die Schicht erscheint —
-            // wer aus einer Dateiauswahl zurückkommt, soll nicht erst einen Knopf suchen.
-            // Der Knopf bleibt für den zweiten Versuch nach einem Abbruch.
-            LaunchedEffect(offeneFrisch?.id) {
-                offeneFrisch?.let { s -> beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibFrei(s.id) } }
-            }
+            // Die Abfrage startet **nicht** von selbst, sondern nur auf den Knopf.
+            //
+            // Von selbst hiess: jeder Zwischenzustand beim Sitzungswechsel konnte einen
+            // Fingerabdruck-Dialog aufziehen, auch wenn die Sitzung, in der man landete,
+            // gar kein Schloss trug. Gefragt wird jetzt dort, wo man hingeht: beim
+            // Antippen einer geschuetzten Sitzung in der Seitenleiste.
             Sperrschicht(
                 titel = offeneFrisch?.titel.orEmpty(),
                 beiOeffnen = {
