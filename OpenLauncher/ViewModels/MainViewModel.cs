@@ -15,6 +15,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
+    private readonly LmStudioService _lmStudio = new();
     private readonly OpenLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
     private readonly InstructionProfileService _profiles = new();
@@ -89,6 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
         SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
         _ = RefreshOpenRouterFreeModelsAsync();
+        _ = RefreshLmStudioModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
@@ -288,6 +290,30 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Logger.Instance.Warn("MainViewModel", "RefreshOpenRouterFreeModelsAsync", $"OpenRouterFree bleibt bei Fallback-Liste: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Liest beim Start die lokal in LM Studio geladenen/verfuegbaren Modelle und fuellt damit
+    /// den Reiter "LM Studio". Ist LM Studio nicht installiert oder der Server aus, bleibt die
+    /// zuletzt bekannte Liste stehen — der Launcher startet trotzdem normal.
+    /// </summary>
+    private async Task RefreshLmStudioModelsAsync()
+    {
+        try
+        {
+            if (!LmStudioService.IsInstalled) return;
+
+            var localModels = await _lmStudio.GetLocalModelsWithServerAsync();
+            if (localModels.Count == 0) return;
+
+            _registry.SyncLmStudioModels(localModels);
+            var group = ModelGroups.FirstOrDefault(g => string.Equals(g.Id, "lmstudio", StringComparison.OrdinalIgnoreCase));
+            group?.RefreshHeaderText();
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("MainViewModel", "RefreshLmStudioModelsAsync", $"LM-Studio-Modelle nicht abrufbar: {ex.Message}");
         }
     }
 

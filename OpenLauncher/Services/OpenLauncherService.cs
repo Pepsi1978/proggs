@@ -134,6 +134,24 @@ $env:Path = $pathEntries -join ';'
         var modelString = model.ModelString;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
 
+        if (string.Equals(model.ProviderId, LmStudioService.ProviderId, StringComparison.OrdinalIgnoreCase))
+        {
+            // Lokales Modell: OpenCode kennt LM Studio nicht von Haus aus. Der Provider-Block
+            // (OpenAI-kompatibler Endpunkt auf localhost:1234) wird deshalb hier in die globale
+            // Konfig geschrieben, und der LM-Studio-Server wird gestartet. Das Modell selbst
+            // laedt LM Studio per JIT-Loading bei der ersten Anfrage.
+            var root = ReadConfig();
+            root = PatchLmStudioModel(root, model.Slug, model.DisplayName);
+            WriteConfig(root);
+            var serverOk = LmStudioService.EnsureServerRunning();
+            // Das Modell selbst wird NICHT hier geladen: ein 26B-Modell braucht dafuer Minuten und
+            // wuerde die Oberflaeche einfrieren, bevor das Terminal ueberhaupt aufgeht. Das
+            // Laden mit ausreichend Kontext passiert sichtbar im Startskript des Terminals.
+            log.Info("OpenLauncherService", "ConfigureProvider", "LM-Studio-Modell gesetzt",
+                new { model = modelString, serverOk });
+            return modelString;
+        }
+
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
             var usesPriorityServiceTier = UsesPriorityServiceTier(model.ProviderId, model.Slug);
@@ -692,6 +710,52 @@ try {
     /// wt-Argumentliste und ist damit immun — dieselbe Technik wie der Claude-Code-Weg.
     /// $env:OPENCODE_CONFIG und der opencode-Aufruf stehen auf getrennten Zeilen (kein ';').
     /// </summary>
+    /// <summary>
+    /// Sorgt im Terminal-Fenster dafuer, dass ein lokales LM-Studio-Modell mit agent-tauglichem
+    /// Kontext geladen ist, bevor OpenCode startet. Sichtbar statt im UI-Thread: das Laden eines
+    /// grossen Modells dauert Minuten. Fuer alle anderen Provider ist das Ergebnis leer.
+    /// </summary>
+    private static string BuildLmStudioPreloadScript(string modelString)
+    {
+        if (!modelString.StartsWith($"{LmStudioService.ProviderId}/", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        var modelId = modelString[(LmStudioService.ProviderId.Length + 1)..];
+        return $$"""
+$lms = Join-Path $env:USERPROFILE '.lmstudio\bin\lms.exe'
+if (Test-Path -LiteralPath $lms) {
+    $lmsModel = {{PowerShellLiteral(modelId)}}
+    & $lms server start | Out-Null
+    $loaded = $null
+    try {
+        $running = & $lms ps --json 2>$null | ConvertFrom-Json
+        $loaded = @($running | Where-Object { $_.identifier -eq $lmsModel -or $_.modelKey -eq $lmsModel })[0]
+    } catch { $loaded = $null }
+
+    if ($loaded) {
+        # Selbst geladenes Modell: die in LM Studio eingestellten Parameter gelten unangetastet.
+        # Es wird NICHT neu geladen, auch nicht mit anderer Kontextlaenge.
+        Write-Host "Lokales Modell $lmsModel ist bereits geladen - deine LM-Studio-Einstellungen gelten ($($loaded.contextLength) Tokens Kontext)." -ForegroundColor DarkGray
+        # OpenCode schickt allein als Systemprompt rund 22k Tokens; darunter bricht die erste
+        # Anfrage mit exceed_context_size_error ab. Nur Hinweis, kein Eingriff.
+        if ([int]$loaded.contextLength -lt 32768) {
+            Write-Host "Achtung: $($loaded.contextLength) Tokens sind fuer OpenCode knapp - der Systemprompt allein braucht rund 22000. Bei Abbruch in LM Studio mit groesserem Kontext neu laden." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "Lade lokales Modell $lmsModel mit grossem Kontext - das kann einige Minuten dauern ..." -ForegroundColor Cyan
+        & $lms load $lmsModel --context-length 65536 -y
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "65536 Tokens haben nicht gepasst - versuche 32768 ..." -ForegroundColor Yellow
+            & $lms load $lmsModel --context-length 32768 -y
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Automatisches Laden fehlgeschlagen - LM Studio laedt das Modell bei der ersten Anfrage selbst." -ForegroundColor Yellow
+        }
+    }
+}
+""";
+    }
+
     private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode)
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -730,6 +794,7 @@ Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
 {{InheritedAgentEnvScrubScript}}
 {{BuildNvidiaKeyScript(modelString)}}
+{{BuildLmStudioPreloadScript(modelString)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 $env:OPENLAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
 $env:OPENLAUNCHER_SOURCE = 'OpenLauncher'
@@ -963,6 +1028,33 @@ if (-not $env:NVIDIA_API_KEY) {
         modelNode["name"] = $"{modelDisplayName} via {chosen.ProviderName}";
         modelNode["options"] = optionsBlock;
 
+        return rootObject;
+    }
+
+    /// <summary>
+    /// Traegt den LM-Studio-Provider (OpenAI-kompatibel, lokal) samt gewaehltem Modell in die
+    /// globale opencode-Konfig ein. Bestehende Eintraege bleiben erhalten, es wird nur ergaenzt.
+    /// </summary>
+    private static JsonNode PatchLmStudioModel(JsonNode root, string slug, string modelDisplayName)
+    {
+        var rootObject = JsonExtensions.EnsureObject(root);
+        var provider = rootObject.GetOrAddObject("provider").GetOrAddObject(LmStudioService.ProviderId);
+        provider["npm"] = "@ai-sdk/openai-compatible";
+        provider["name"] = "LM Studio (lokal)";
+
+        var options = provider.GetOrAddObject("options");
+        options["baseURL"] = LmStudioService.BaseUrl;
+        // LM Studio prueft keinen Schluessel, das SDK verlangt aber einen nicht-leeren Wert.
+        options["apiKey"] = "lm-studio";
+
+        var modelNode = provider.GetOrAddObject("models").GetOrAddObject(slug);
+        modelNode["name"] = modelDisplayName;
+        modelNode["tool_call"] = true;
+        var limit = modelNode.GetOrAddObject("limit");
+        // Kontext-Obergrenze der LM-Studio-Ladeeinstellung; groessere Werte wuerden nur zu
+        // abgeschnittenen Anfragen fuehren. 128k passt zu allen aktuell lokal geladenen Modellen.
+        if (limit["context"] == null) limit["context"] = 131072;
+        if (limit["output"] == null) limit["output"] = 32768;
         return rootObject;
     }
 

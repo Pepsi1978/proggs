@@ -352,9 +352,20 @@ public sealed class ModelRegistry
         Logger.Instance.Info("ModelRegistry", "ReplaceGroupModels", $"{group.Title}: {group.Models.Count} Modelle aktualisiert");
     }
 
-    public void SyncOpenRouterFreeModels(IEnumerable<ModelEntry> remoteModels)
+    public void SyncOpenRouterFreeModels(IEnumerable<ModelEntry> remoteModels) =>
+        SyncGroupModels("openrouter-free", remoteModels);
+
+    /// <summary>
+    /// Gleicht die Gruppe "LM Studio" mit den Modellen ab, die der lokale LM-Studio-Server
+    /// gerade anbietet. Entfernte Modelle wandern in die Ausgeblendet-Liste, eigene Eintraege
+    /// und Umbenennungen bleiben erhalten — gleiche Regeln wie beim OpenRouterFree-Sync.
+    /// </summary>
+    public void SyncLmStudioModels(IEnumerable<ModelEntry> localModels) =>
+        SyncGroupModels("lmstudio", localModels);
+
+    private void SyncGroupModels(string groupId, IEnumerable<ModelEntry> remoteModels)
     {
-        var group = Groups.FirstOrDefault(g => string.Equals(g.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase));
+        var group = Groups.FirstOrDefault(g => string.Equals(g.Id, groupId, StringComparison.OrdinalIgnoreCase));
         if (group == null) return;
 
         var remote = remoteModels
@@ -410,7 +421,7 @@ public sealed class ModelRegistry
 
         Save();
         group.RefreshHeaderText();
-        Logger.Instance.Info("ModelRegistry", "SyncOpenRouterFreeModels", $"{group.Models.Count} sichtbare, {group.HiddenModelSlugs.Count} ausgeblendete OpenRouterFree-Modelle");
+        Logger.Instance.Info("ModelRegistry", "SyncGroupModels", $"{group.Title}: {group.Models.Count} sichtbare, {group.HiddenModelSlugs.Count} ausgeblendete Modelle");
     }
 
     private void RepairAndNormalize()
@@ -593,6 +604,11 @@ public sealed class ModelRegistry
             Model("qwen3.7-plus", "Qwen3.7 Plus", "opencode-go", "OpenCode-Go"),
         }),
         CreateGroup("nvidia", "NVIDIA", NvidiaProviderId, NvidiaProviderName, NvidiaFreeModels),
+        // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
+        // (SyncLmStudioModels); die Vorgabe hier ist nur der Platzhalter, damit der Reiter
+        // auch ohne laufenden Server existiert.
+        CreateGroup("lmstudio", "LM Studio", LmStudioService.ProviderId, LmStudioService.ProviderName,
+            Array.Empty<ModelEntry>()),
     };
 
     /// <summary>
