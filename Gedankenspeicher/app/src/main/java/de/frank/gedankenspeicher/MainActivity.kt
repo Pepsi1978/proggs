@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -438,7 +439,10 @@ private fun Oberflaeche(
     val driveAn by vm.driveAn.collectAsStateWithLifecycle()
 
     var ziel by remember { mutableStateOf(Ziel.VERLAUF) }
-    var schubladeOffen by remember { mutableStateOf(false) }
+    // Beim Start steht die Auswahl offen: die App faengt bei den Notizen an, nicht in
+    // einer davon. `rememberSaveable` haelt eine spaeter geschlossene Schublade auch
+    // ueber ein Auf- und Zuklappen des Geraets geschlossen.
+    var schubladeOffen by rememberSaveable { mutableStateOf(true) }
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
     /** Die Notiz und die Tabelle, die gerade im Tabelleneditor liegt. */
     var tabellenBearbeitung by remember { mutableStateOf<Pair<Notiz, de.frank.gedankenspeicher.data.Anhang>?>(null) }

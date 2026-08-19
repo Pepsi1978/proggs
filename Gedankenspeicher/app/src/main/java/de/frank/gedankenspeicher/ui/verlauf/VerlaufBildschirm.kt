@@ -141,7 +141,7 @@ fun VerlaufBildschirm(
                 Icon(Icons.Outlined.Menu, "Sitzungen", tint = farben.textMittel)
             }
             Text(
-                text = zustand.sitzung?.titel.orEmpty(),
+                text = zustand.sitzung?.titel ?: "Gedankenspeicher",
                 style = schrift.bildschirmtitel,
                 color = farben.textStark,
                 maxLines = 1,
@@ -170,6 +170,7 @@ fun VerlaufBildschirm(
         // ---- Der Verlauf
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
+                zustand.sitzung == null -> KeineSitzung(beiSchublade)
                 zustand.laedt -> LadendeListe()
                 zustand.eintraege.isEmpty() && !zustand.wertetAus -> LeererVerlauf()
                 else -> LazyColumn(
@@ -411,6 +412,40 @@ private fun Aufnahmeknopf(
                 )
             }
         }
+    }
+}
+
+/** Der Anfangsbildschirm: die App startet bei der Auswahl, nicht in einer Notiz. */
+@Composable
+private fun KeineSitzung(beiSchublade: () -> Unit) {
+    val farben = Farben
+    val schrift = Schriften
+    Column(
+        modifier = Modifier.fillMaxSize().padding(Masse.seitenrand * 2),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(Icons.Outlined.Menu, null, Modifier.size(56.dp), tint = farben.textSchwach.copy(alpha = 0.5f))
+        Spacer(Modifier.height(20.dp))
+        Text("Such dir eine Notiz aus.", style = schrift.bildschirmtitel, color = farben.textMittel)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Links in der Seitenleiste stehen alle Notizen. Oder sprich einfach los — dann entsteht eine neue.",
+            style = schrift.einstellungErklaerung,
+            color = farben.textSchwach,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Notizen zeigen",
+            style = schrift.knopf,
+            color = farben.akzent,
+            modifier = Modifier
+                .clip(RoundedCornerShape(Masse.profilRadius))
+                .border(1.dp, farben.akzent, RoundedCornerShape(Masse.profilRadius))
+                .clickable(onClick = beiSchublade)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        )
     }
 }
 

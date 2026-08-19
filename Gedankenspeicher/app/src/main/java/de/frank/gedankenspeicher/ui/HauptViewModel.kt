@@ -171,8 +171,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.legeProfileAnWennNoetig()
             repo.angefangeneAufraeumen()
-            val sitzung = repo.offeneSitzung()
-            beobachteSitzung(sitzung)
+            // **Beim Start wird bewusst keine Sitzung geöffnet.**
+            //
+            // Die App fing bisher dort an, wo sie zuletzt aufgehört hat (F-13). Bei einer
+            // geschützten Sitzung hiess das: der erste Bildschirm ist eine Fingerabdruck-
+            // Abfrage für etwas, das man vielleicht gar nicht wollte. Jetzt steht die
+            // Auswahl offen, und die Sitzung sucht sich Frank selbst aus.
+            _verlauf.update { it.copy(sitzung = null, laedt = false, eintraege = emptyList()) }
             reicheWartendeNach()
             holeFehlendeUeberschriften()
         }
@@ -434,11 +439,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sendeEntwurf() {
         val text = _verlauf.value.entwurf.trim()
-        val sitzung = _verlauf.value.sitzung ?: return
         val anhaenge = _verlauf.value.anhaenge
         if (text.isEmpty() && anhaenge.isEmpty()) return
         _verlauf.update { it.copy(entwurf = "", anhaenge = emptyList()) }
         viewModelScope.launch {
+            // Wer ohne offene Sitzung lostippt, bekommt eine neue — der leere Anfangs-
+            // bildschirm soll keine Sackgasse sein.
+            val sitzung = _verlauf.value.sitzung ?: repo.neueSitzung().also(::beobachteSitzung)
             val id = repo.legeGetippteNotizAn(sitzung.id, text, anhaenge)
             // Überschrift und Sitzungstitel entstehen aus dem Text; ohne Text gibt es
             // nichts zu benennen — die Anhänge sprechen dann für sich.
@@ -456,6 +463,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun aufnahmeUmschalten() {
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
+        } else if (_verlauf.value.sitzung == null) {
+            // Dasselbe beim Mikrofon: erst eine Sitzung, dann läuft die Aufnahme.
+            viewModelScope.launch {
+                beobachteSitzung(repo.neueSitzung())
+                aufnahmeziel = Aufnahmeziel.VERLAUF
+                starteAufnahme()
+            }
         } else {
             aufnahmeziel = Aufnahmeziel.VERLAUF
             starteAufnahme()
