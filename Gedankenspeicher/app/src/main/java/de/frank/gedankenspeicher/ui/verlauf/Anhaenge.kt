@@ -163,6 +163,8 @@ fun Anhangsknopf(
     beiAnhang: (Anhang) -> Unit,
     beiFehler: (String) -> Unit,
     beiMikrofon: (() -> Unit) -> Unit,
+    beiZeichnung: () -> Unit,
+    beiTabelle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val farben = Farben
@@ -171,9 +173,7 @@ fun Anhangsknopf(
     val bereich = rememberCoroutineScope()
     val druck = merkeDruck()
     var menue by remember { mutableStateOf(false) }
-    var zeichnung by remember { mutableStateOf(false) }
     var haftnotiz by remember { mutableStateOf(false) }
-    var tabelle by remember { mutableStateOf(false) }
     var sprachaufnahme by remember { mutableStateOf(false) }
     var kameradatei by remember { mutableStateOf<File?>(null) }
     var erkenntGerade by remember { mutableStateOf(false) }
@@ -321,28 +321,15 @@ fun Anhangsknopf(
                     runCatching { audioWahl.launch(arrayOf("audio/*")) }
                         .onFailure { beiFehler("Es wurde keine Dateiauswahl gefunden.") }
                 },
-                beiZeichnung = { zeichnung = true },
+                beiZeichnung = beiZeichnung,
                 beiHaftnotiz = { haftnotiz = true },
-                beiTabelle = { tabelle = true },
+                beiTabelle = beiTabelle,
             )
         }
     }
 
     if (erkenntGerade) Texterkennungsblatt()
-    if (zeichnung) {
-        ZeichenBlatt(
-            speicher = speicher,
-            beiAbbruch = { zeichnung = false },
-            beiFertig = { anhang -> zeichnung = false; beiAnhang(anhang) },
-            beiFehler = beiFehler,
-        )
-    }
     if (haftnotiz) HaftnotizBlatt({ haftnotiz = false }) { anhang -> haftnotiz = false; beiAnhang(anhang) }
-    if (tabelle) {
-        TabellenBlatt(vorlage = null, beiAbbruch = { tabelle = false }) { anhang ->
-            tabelle = false; beiAnhang(anhang)
-        }
-    }
     if (sprachaufnahme) {
         AufnahmeBlatt(
             speicher = speicher,
@@ -912,7 +899,7 @@ private data class Strich(val punkte: SnapshotStateList<Offset>, val farbe: Long
 
 /** Die Zeichenfläche füllt den Bildschirm — auf einem Briefmarkenfeld zeichnet niemand. */
 @Composable
-private fun ZeichenBlatt(
+fun ZeichenBlatt(
     speicher: Anhangsspeicher,
     beiAbbruch: () -> Unit,
     beiFertig: (Anhang) -> Unit,
@@ -925,11 +912,7 @@ private fun ZeichenBlatt(
     var flaeche by remember { mutableStateOf(IntSize.Zero) }
     val bereich = rememberCoroutineScope()
 
-    Dialog(
-        onDismissRequest = beiAbbruch,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        VollbildBlatt(
+    VollbildBlatt(
             kopf = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
@@ -1028,7 +1011,6 @@ private fun ZeichenBlatt(
                 }
             }
         }
-    }
 }
 
 private suspend fun speichereZeichnung(
@@ -1166,11 +1148,7 @@ fun TabellenBlatt(vorlage: Anhang?, beiAbbruch: () -> Unit, beiFertig: (Anhang) 
         }.toMutableStateList()
     }
 
-    Dialog(
-        onDismissRequest = beiAbbruch,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        VollbildBlatt(
+    VollbildBlatt(
             kopf = {
                 Column {
                     Text(
@@ -1298,7 +1276,6 @@ fun TabellenBlatt(vorlage: Anhang?, beiAbbruch: () -> Unit, beiFertig: (Anhang) 
                 }
             }
         }
-    }
 }
 
 /**

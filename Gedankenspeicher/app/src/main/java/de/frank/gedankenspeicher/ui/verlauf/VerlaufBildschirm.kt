@@ -100,6 +100,8 @@ fun VerlaufBildschirm(
     beiAnhangsmikrofon: (() -> Unit) -> Unit,
     beiFehler: (String) -> Unit,
     beiAnhangTitel: (Notiz, de.frank.gedankenspeicher.data.Anhang) -> Unit,
+    beiZeichnung: () -> Unit,
+    beiTabelle: () -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -271,6 +273,8 @@ fun VerlaufBildschirm(
                     beiAnhang = beiAnhang,
                     beiFehler = beiFehler,
                     beiMikrofon = beiAnhangsmikrofon,
+                    beiZeichnung = beiZeichnung,
+                    beiTabelle = beiTabelle,
                 )
                 Spacer(Modifier.width(8.dp))
                 KiKnopf(aktiv = zustand.wertetAus, beiDruck = beiKi)

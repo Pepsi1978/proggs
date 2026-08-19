@@ -67,6 +67,7 @@ import de.frank.gedankenspeicher.ui.sitzungen.Schublade
 import de.frank.gedankenspeicher.data.Anhangsart
 import de.frank.gedankenspeicher.data.anhaengeAusJson
 import de.frank.gedankenspeicher.ui.verlauf.TabellenBlatt
+import de.frank.gedankenspeicher.ui.verlauf.ZeichenBlatt
 import de.frank.gedankenspeicher.ui.sitzungen.Sperrschicht
 import de.frank.gedankenspeicher.ui.suche.SucheBildschirm
 import de.frank.gedankenspeicher.ui.theme.Dauern
@@ -444,8 +445,16 @@ private fun Oberflaeche(
     // ueber ein Auf- und Zuklappen des Geraets geschlossen.
     var schubladeOffen by rememberSaveable { mutableStateOf(true) }
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
-    /** Die Notiz und die Tabelle, die gerade im Tabelleneditor liegt. */
-    var tabellenBearbeitung by remember { mutableStateOf<Pair<Notiz, de.frank.gedankenspeicher.data.Anhang>?>(null) }
+    /**
+     * Der offene Tabelleneditor: links die Notiz (null = neue Tabelle für den Entwurf),
+     * rechts die Vorlage (null = leere Tabelle). `null` als Ganzes heisst: zu.
+     */
+    var tabellenBearbeitung by remember {
+        mutableStateOf<Pair<Notiz?, de.frank.gedankenspeicher.data.Anhang?>?>(null)
+    }
+    var zeichenblatt by remember { mutableStateOf(false) }
+    val anwendungskontext = LocalContext.current.applicationContext
+    val anhangsspeicher = remember { de.frank.gedankenspeicher.data.Anhangsspeicher(anwendungskontext) }
     var antwortMenue by remember { mutableStateOf<KiAntwort?>(null) }
     var sitzungsMenue by remember { mutableStateOf<Sitzung?>(null) }
     var verschiebeNotiz by remember { mutableStateOf<Notiz?>(null) }
@@ -542,17 +551,31 @@ private fun Oberflaeche(
             beiAnhangsmikrofon = beiAnhangsmikrofon,
             beiFehler = vm::meldeFehler,
             beiAnhangTitel = vm::aendereAnhang,
+            beiZeichnung = { zeichenblatt = true },
+            beiTabelle = { tabellenBearbeitung = null to null },
         )
 
-        // ---- Der Tabelleneditor aus dem Notiz-Menü
+        // ---- Die Vollbild-Blätter: Zeichnung und Tabelle
+        //
+        // Sie liegen bewusst im Haupt-Baum und nicht in einem `Dialog`: nur hier melden die
+        // Fensterabstände (Status- und Navigationsleiste) ihre echten Werte, sodass die
+        // Knopfleiste am unteren Rand sichtbar bleibt.
         tabellenBearbeitung?.let { (notiz, tabelle) ->
             TabellenBlatt(
                 vorlage = tabelle,
                 beiAbbruch = { tabellenBearbeitung = null },
                 beiFertig = { geaendert ->
                     tabellenBearbeitung = null
-                    vm.aendereAnhang(notiz, geaendert)
+                    if (notiz != null) vm.aendereAnhang(notiz, geaendert) else vm.fuegeAnhangHinzu(geaendert)
                 },
+            )
+        }
+        if (zeichenblatt) {
+            ZeichenBlatt(
+                speicher = anhangsspeicher,
+                beiAbbruch = { zeichenblatt = false },
+                beiFertig = { anhang -> zeichenblatt = false; vm.fuegeAnhangHinzu(anhang) },
+                beiFehler = vm::meldeFehler,
             )
         }
 
