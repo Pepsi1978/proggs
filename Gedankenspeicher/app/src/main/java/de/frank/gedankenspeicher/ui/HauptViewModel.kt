@@ -99,6 +99,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val _codexEffort = MutableStateFlow(einstellungen.codexEffort)
     val codexEffort: StateFlow<String> = _codexEffort
 
+    // F-07 hat sein eigenes Modell: die Textverbesserung soll schnell sein, die Auswertung gründlich.
+    private val _verbesserungModell = MutableStateFlow(einstellungen.verbesserungModell)
+    val verbesserungModell: StateFlow<String> = _verbesserungModell
+
+    private val _verbesserungEffort = MutableStateFlow(einstellungen.verbesserungEffort)
+    val verbesserungEffort: StateFlow<String> = _verbesserungEffort
+
     private val _websucheGrundhaltung = MutableStateFlow(einstellungen.websucheGrundhaltung)
     val websucheGrundhaltung: StateFlow<String> = _websucheGrundhaltung
 
@@ -1195,6 +1202,16 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeEffort(apiValue: String) {
         einstellungen.codexEffort = apiValue
         _codexEffort.value = apiValue
+    }
+
+    fun setzeVerbesserungModell(apiId: String) {
+        einstellungen.verbesserungModell = apiId
+        _verbesserungModell.value = apiId
+    }
+
+    fun setzeVerbesserungEffort(apiValue: String) {
+        einstellungen.verbesserungEffort = apiValue
+        _verbesserungEffort.value = apiValue
     }
 
     fun setzeWebsucheGrundhaltung(id: String) {

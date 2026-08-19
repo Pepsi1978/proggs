@@ -246,6 +246,15 @@ class Repository(
 
     private fun effort(): ReasoningEffort = ReasoningEffort.fromLabel(einstellungen.codexEffort)
 
+    /**
+     * Die Textverbesserung (F-07) läuft auf ihrem eigenen Modell — sie räumt einen Text auf,
+     * statt ihn auszuwerten. Alles andere hier bleibt am Auswertungsmodell.
+     */
+    private fun verbesserungsModell(): CodexModel = CodexModel.fromLabel(einstellungen.verbesserungModell)
+
+    private fun verbesserungsEffort(): ReasoningEffort =
+        ReasoningEffort.fromLabel(einstellungen.verbesserungEffort)
+
     suspend fun holeUeberschrift(text: String): String =
         codex.ueberschriftFuer(text, modell(), effort())
 
@@ -253,7 +262,7 @@ class Repository(
         codex.sitzungstitelFuer(ersteNotiz, modell(), effort())
 
     suspend fun verbessere(text: String): String =
-        codex.verbessereText(text, modell(), effort())
+        codex.verbessereText(text, verbesserungsModell(), verbesserungsEffort())
 
     suspend fun holeRueckfrage(notizen: String): String =
         codex.stelleRueckfrage(notizen, modell(), effort())

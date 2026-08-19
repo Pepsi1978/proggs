@@ -82,6 +82,8 @@ fun EinstellungenBildschirm(
     codexKonto: String?,
     codexModell: String,
     codexEffort: String,
+    verbesserungModell: String,
+    verbesserungEffort: String,
     websucheGrundhaltung: String,
     groqSchluessel: String,
     ttsAnbieter: String,
@@ -101,6 +103,8 @@ fun EinstellungenBildschirm(
     beiTrennen: () -> Unit,
     beiModell: (String) -> Unit,
     beiEffort: (String) -> Unit,
+    beiVerbesserungModell: (String) -> Unit,
+    beiVerbesserungEffort: (String) -> Unit,
     beiWebsuche: (String) -> Unit,
     beiProfile: () -> Unit,
     beiGroq: (String) -> Unit,
@@ -154,8 +158,8 @@ fun EinstellungenBildschirm(
                 }
             }
 
-            // 2 — Codex (F-11)
-            Gruppe("Codex") {
+            // 2 — Auswertung · Codex (F-11)
+            Gruppe("Auswertung — Codex") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Verbindung", style = schrift.einstellung, color = farben.textMittel)
@@ -220,6 +224,52 @@ fun EinstellungenBildschirm(
                         append(CodexModel.fromLabel(codexModell).label)
                         append(" · Effort ").append(ReasoningEffort.fromLabel(codexEffort).label)
                         append(" · Websuche ").append(Websuche.vonId(websucheGrundhaltung).label)
+                    },
+                    style = schrift.einstellungErklaerung,
+                    color = farben.akzent,
+                )
+            }
+
+            // 2b — Textverbesserung · Codex (F-07)
+            //
+            // Ein eigener Bereich, weil die Textverbesserung etwas anderes tut als die
+            // Auswertung: sie räumt einen Text auf, statt ihn zu durchdenken. Dafür zählt
+            // Tempo, nicht Tiefe — und genau das lässt sich hier getrennt einstellen.
+            Gruppe("Textverbesserung — Codex") {
+                Erklaerung(
+                    "Gilt für den Knopf „Text verbessern\" an einer Notiz — überall in der App. " +
+                        "Die Auswertung bleibt davon unberührt.",
+                )
+
+                Spacer(Modifier.height(14.dp))
+                Beschriftung("Modell")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    CodexModel.entries.forEach { m ->
+                        Wahlfeld(m.label, m.apiId == verbesserungModell) { beiVerbesserungModell(m.apiId) }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Beschriftung("Effort")
+                Erklaerung("Wie gründlich das Modell nachdenkt, bevor es antwortet.")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    ReasoningEffort.entries.forEach { e ->
+                        Wahlfeld(e.label, e.apiValue == verbesserungEffort) { beiVerbesserungEffort(e.apiValue) }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = buildString {
+                        append("Es läuft: ")
+                        append(CodexModel.fromLabel(verbesserungModell).label)
+                        append(" · Effort ").append(ReasoningEffort.fromLabel(verbesserungEffort).label)
                     },
                     style = schrift.einstellungErklaerung,
                     color = farben.akzent,

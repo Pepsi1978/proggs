@@ -48,6 +48,20 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(CODEX_EFFORT, "medium")!!
         set(v) { p.edit().putString(CODEX_EFFORT, v).commit() }
 
+    // --- F-07: Textverbesserung ------------------------------------------------------------
+    /**
+     * Die Textverbesserung bekommt ein **eigenes** Modell. Sie tut etwas anderes als die
+     * Auswertung: sie denkt nicht nach, sie räumt auf. Dafür zählt Tempo, nicht Tiefe —
+     * deshalb ist hier Luna vorbelegt, während die Auswertung beim grossen Modell bleiben darf.
+     */
+    var verbesserungModell: String
+        get() = p.getString(VERBESSERUNG_MODELL, "gpt-5.6-luna")!!
+        set(v) { p.edit().putString(VERBESSERUNG_MODELL, v).commit() }
+
+    var verbesserungEffort: String
+        get() = p.getString(VERBESSERUNG_EFFORT, "low")!!
+        set(v) { p.edit().putString(VERBESSERUNG_EFFORT, v).commit() }
+
     /**
      * Die Grundhaltung zur Websuche: `aus` · `immer` · `kiEntscheidet`.
      *
@@ -133,6 +147,8 @@ class Einstellungen(ctx: Context) {
         const val ERSCHEINUNG = "erscheinung"
         const val CODEX_MODELL = "codex_modell"
         const val CODEX_EFFORT = "codex_effort"
+        const val VERBESSERUNG_MODELL = "verbesserung_modell"
+        const val VERBESSERUNG_EFFORT = "verbesserung_effort"
         const val WEBSUCHE = "websuche_grundhaltung"
         const val TTS_ANBIETER = "tts_anbieter"
         const val STIMME_EDGE = "stimme_edge"

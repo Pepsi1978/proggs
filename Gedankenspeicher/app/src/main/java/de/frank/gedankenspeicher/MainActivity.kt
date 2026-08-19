@@ -428,6 +428,8 @@ private fun Oberflaeche(
     val codexKonto by vm.codexKonto.collectAsStateWithLifecycle()
     val codexModell by vm.codexModell.collectAsStateWithLifecycle()
     val codexEffort by vm.codexEffort.collectAsStateWithLifecycle()
+    val verbesserungModell by vm.verbesserungModell.collectAsStateWithLifecycle()
+    val verbesserungEffort by vm.verbesserungEffort.collectAsStateWithLifecycle()
     val websuche by vm.websucheGrundhaltung.collectAsStateWithLifecycle()
     val groq by vm.groqSchluessel.collectAsStateWithLifecycle()
     val ttsAnbieter by vm.ttsAnbieter.collectAsStateWithLifecycle()
@@ -660,6 +662,8 @@ private fun Oberflaeche(
                 codexKonto = codexKonto,
                 codexModell = codexModell,
                 codexEffort = codexEffort,
+                verbesserungModell = verbesserungModell,
+                verbesserungEffort = verbesserungEffort,
                 websucheGrundhaltung = websuche,
                 groqSchluessel = groq,
                 ttsAnbieter = ttsAnbieter,
@@ -682,6 +686,8 @@ private fun Oberflaeche(
                 beiTrennen = vm::trenneCodex,
                 beiModell = vm::setzeModell,
                 beiEffort = vm::setzeEffort,
+                beiVerbesserungModell = vm::setzeVerbesserungModell,
+                beiVerbesserungEffort = vm::setzeVerbesserungEffort,
                 beiWebsuche = vm::setzeWebsucheGrundhaltung,
                 beiProfile = { ziel = Ziel.PROFILE },
                 beiGroq = vm::setzeGroqSchluessel,

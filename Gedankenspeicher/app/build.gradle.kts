@@ -14,10 +14,10 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 21
-        versionName = "0.5.6"
+        versionName = "0.5.7"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 18:31 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 18:34 Uhr\"")
     }
 
     buildTypes {
