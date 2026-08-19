@@ -11,11 +11,14 @@ import de.frank.gedankenspeicher.audio.AufnahmeDienst
 import de.frank.gedankenspeicher.audio.AufnahmeFernbedienung
 import de.frank.gedankenspeicher.audio.MicRecorder
 import androidx.documentfile.provider.DocumentFile
+import de.frank.gedankenspeicher.data.Anhang
+import de.frank.gedankenspeicher.data.Anhangsspeicher
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Datenbank
 import de.frank.gedankenspeicher.data.KiAntwort
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.Notizzustand
+import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.data.Verlaufseintrag
@@ -161,6 +164,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private enum class Aufnahmeziel { VERLAUF, KI_BLATT, BEARBEITUNG }
 
     init {
+        _verlauf.update { it.copy(fingerabdruckAn = repo.einstellungen.fingerabdruckAn) }
         viewModelScope.launch {
             repo.legeProfileAnWennNoetig()
             repo.angefangeneAufraeumen()
@@ -171,6 +175,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             repo.sitzungen.collectLatest { liste -> _verlauf.update { it.copy(sitzungen = liste) } }
+        }
+        viewModelScope.launch {
+            repo.ordner.collectLatest { liste -> _verlauf.update { it.copy(ordner = liste) } }
         }
         viewModelScope.launch {
             mikrofon.pegel.collectLatest { p -> _verlauf.update { it.copy(pegel = p) } }
@@ -257,18 +264,140 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // --- Favoriten, Schutz, Papierkorb und Ordner ----------------------------------------------
+
+    fun favoritUmschalten(sitzung: Sitzung) {
+        viewModelScope.launch {
+            repo.favoritUmschalten(sitzung.id)
+            frischeOffeneSitzung(sitzung.id)
+        }
+    }
+
+    /** Der Fingerabdruck wurde, falls verlangt, vorher in der Oberfläche geprüft. */
+    fun setzeSchutz(sitzung: Sitzung, geschuetzt: Boolean) {
+        viewModelScope.launch {
+            repo.setzeSchutz(sitzung.id, geschuetzt)
+            if (geschuetzt && sitzung.id == _verlauf.value.sitzung?.id &&
+                _verlauf.value.ansicht != Schubladenansicht.GESCHUETZT
+            ) {
+                beobachteSitzung(repo.naechsteSichtbare())
+            } else {
+                frischeOffeneSitzung(sitzung.id)
+            }
+            melde(if (geschuetzt) "Die Notiz liegt jetzt unter „Geschützte Notizen“." else "Der Schutz wurde aufgehoben.")
+        }
+    }
+
+    fun inPapierkorb(sitzung: Sitzung) {
+        val z = _verlauf.value
+        if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
+        if (z.wertetAus) return melde("Die Auswertung läuft noch.")
+        viewModelScope.launch {
+            repo.setzePapierkorb(sitzung.id, true)
+            if (sitzung.id == _verlauf.value.sitzung?.id) beobachteSitzung(repo.naechsteSichtbare())
+            melde("Die Notiz liegt im Papierkorb.")
+        }
+    }
+
+    fun ausPapierkorb(sitzung: Sitzung) {
+        viewModelScope.launch {
+            repo.setzePapierkorb(sitzung.id, false)
+            melde("Die Notiz wurde wiederhergestellt.")
+        }
+    }
+
+    fun leerePapierkorb() {
+        viewModelScope.launch {
+            repo.leerePapierkorb()
+            melde("Der Papierkorb ist geleert.")
+        }
+    }
+
+    fun verschiebeInOrdner(sitzung: Sitzung, ordnerId: Long?) {
+        viewModelScope.launch {
+            repo.verschiebeInOrdner(sitzung.id, ordnerId)
+            frischeOffeneSitzung(sitzung.id)
+        }
+    }
+
+    fun legeOrdnerAn(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch { repo.legeOrdnerAn(name) }
+    }
+
+    fun benenneOrdnerUm(ordner: Ordner, name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch { repo.benenneOrdnerUm(ordner, name) }
+    }
+
+    fun loescheOrdner(ordner: Ordner) {
+        viewModelScope.launch {
+            repo.loescheOrdner(ordner.id)
+            if (_verlauf.value.gewaehlterOrdner == ordner.id) {
+                _verlauf.update { it.copy(ansicht = Schubladenansicht.ALLE, gewaehlterOrdner = null) }
+            }
+        }
+    }
+
+    fun waehleAnsicht(ansicht: Schubladenansicht) = _verlauf.update {
+        it.copy(ansicht = ansicht, gewaehlterOrdner = if (ansicht == Schubladenansicht.ORDNER) it.gewaehlterOrdner else null)
+    }
+
+    fun waehleOrdner(id: Long) = _verlauf.update {
+        it.copy(ansicht = Schubladenansicht.ORDNER, gewaehlterOrdner = id)
+    }
+
+    /** Nach erfolgreichem Fingerabdruck: den Reiter „Geschützte Notizen" freigeben. */
+    fun gibGeschuetzteFrei() = _verlauf.update {
+        it.copy(ansicht = Schubladenansicht.GESCHUETZT, gewaehlterOrdner = null, geschuetztFrei = true)
+    }
+
+    fun setzeFingerabdruck(an: Boolean) {
+        repo.einstellungen.fingerabdruckAn = an
+        _verlauf.update {
+            it.copy(
+                fingerabdruckAn = an,
+                geschuetztFrei = if (an) false else it.geschuetztFrei,
+                ansicht = if (!an || it.ansicht != Schubladenansicht.GESCHUETZT) it.ansicht else Schubladenansicht.ALLE,
+            )
+        }
+    }
+
+    /** Nach einer Änderung an der offenen Sitzung deren Kopf im Zustand nachziehen. */
+    private suspend fun frischeOffeneSitzung(id: Long) {
+        if (id != _verlauf.value.sitzung?.id) return
+        repo.offeneSitzung().let { s -> _verlauf.update { it.copy(sitzung = s) } }
+    }
+
     // --- Notiz tippen (F-02) -------------------------------------------------------------------
 
     fun setzeEntwurf(text: String) = _verlauf.update { it.copy(entwurf = text) }
 
+    // --- Anhänge (Plus-Menü) -------------------------------------------------------------------
+
+    /** Nimmt einen fertigen Anhang in den Entwurf auf. */
+    fun fuegeAnhangHinzu(anhang: Anhang) =
+        _verlauf.update { it.copy(anhaenge = it.anhaenge + anhang) }
+
+    /** Nimmt einen Anhang aus dem Entwurf und räumt seine Datei gleich mit weg. */
+    fun entferneAnhang(anhang: Anhang) {
+        _verlauf.update { it.copy(anhaenge = it.anhaenge.filterNot { vorhanden -> vorhanden.id == anhang.id }) }
+        Anhangsspeicher(ctx).loesche(listOf(anhang))
+    }
+
+    fun meldeFehler(text: String) = _verlauf.update { it.copy(meldung = text) }
+
     fun sendeEntwurf() {
         val text = _verlauf.value.entwurf.trim()
         val sitzung = _verlauf.value.sitzung ?: return
-        if (text.isEmpty()) return
-        _verlauf.update { it.copy(entwurf = "") }
+        val anhaenge = _verlauf.value.anhaenge
+        if (text.isEmpty() && anhaenge.isEmpty()) return
+        _verlauf.update { it.copy(entwurf = "", anhaenge = emptyList()) }
         viewModelScope.launch {
-            val id = repo.legeGetippteNotizAn(sitzung.id, text)
-            versorgeNeueNotiz(id, sitzung.id, text)
+            val id = repo.legeGetippteNotizAn(sitzung.id, text, anhaenge)
+            // Überschrift und Sitzungstitel entstehen aus dem Text; ohne Text gibt es
+            // nichts zu benennen — die Anhänge sprechen dann für sich.
+            if (text.isNotEmpty()) versorgeNeueNotiz(id, sitzung.id, text)
         }
     }
 

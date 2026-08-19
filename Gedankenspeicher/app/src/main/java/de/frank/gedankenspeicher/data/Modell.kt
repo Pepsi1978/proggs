@@ -23,6 +23,22 @@ data class Sitzung(
     val titelVonHand: Boolean = false,
     val erstelltAm: Long,
     val zuletztGeoeffnet: Long,
+    /** Als Favorit markiert — erscheint im Reiter „Favoriten". */
+    val favorit: Boolean = false,
+    /** Geschützt — liegt im Reiter „Geschützte Notizen" und öffnet sich nur per Fingerabdruck. */
+    val geschuetzt: Boolean = false,
+    /** Zeitpunkt der Verschiebung in den Papierkorb; null = nicht gelöscht. */
+    val geloeschtAm: Long? = null,
+    /** Zugehöriger Ordner; null = in keinem Ordner. */
+    val ordnerId: Long? = null,
+)
+
+/** Ein Ordner der Seitenleiste (Ordner verwalten). */
+@Entity(tableName = "ordner")
+data class Ordner(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val erstelltAm: Long,
 )
 
 /** Der Zustand einer Notiz (`01-FUNKTIONS-SPEC.md` §4). */
@@ -69,6 +85,8 @@ data class Notiz(
     val audioPfad: String? = null,
     val istVerbessert: Boolean = false,
     val versucheTranskription: Int = 0,
+    /** Die Anhänge der Notiz als JSON-Feld (siehe [Anhang]). */
+    val anhaengeJson: String = "[]",
 )
 
 @Entity(

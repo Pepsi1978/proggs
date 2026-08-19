@@ -1,7 +1,9 @@
 package de.frank.gedankenspeicher.ui
 
+import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Notiz
+import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.data.Suchtreffer
 import de.frank.gedankenspeicher.data.Verlaufseintrag
@@ -13,9 +15,18 @@ import de.frank.gedankenspeicher.data.Verlaufseintrag
  * schließen einander teilweise aus (es wird nicht gleichzeitig aufgenommen und ausgewertet),
  * und das lässt sich nur an einer Stelle sicherstellen.
  */
+/** Die Reiter der Schublade über dem Trennstrich. */
+enum class Schubladenansicht { ALLE, FAVORITEN, GESCHUETZT, PAPIERKORB, ORDNER }
+
 data class Verlaufszustand(
     val sitzung: Sitzung? = null,
     val sitzungen: List<Sitzung> = emptyList(),
+    val ordner: List<Ordner> = emptyList(),
+    val ansicht: Schubladenansicht = Schubladenansicht.ALLE,
+    val gewaehlterOrdner: Long? = null,
+    /** Geschützte Notizen sind für diesen App-Lauf per Fingerabdruck freigegeben. */
+    val geschuetztFrei: Boolean = false,
+    val fingerabdruckAn: Boolean = false,
     val eintraege: List<Verlaufseintrag> = emptyList(),
     val laedt: Boolean = true,
     val nimmtAuf: Boolean = false,
@@ -23,6 +34,8 @@ data class Verlaufszustand(
     val pegel: Float = 0f,
     val mikrofonAbgelehnt: Boolean = false,
     val entwurf: String = "",
+    /** Anhänge, die mit dem nächsten Senden zur Notiz werden (Plus-Menü). */
+    val anhaenge: List<Anhang> = emptyList(),
     /** Kennung dessen, was gerade vorgelesen wird: `notiz:12` oder `antwort:3`. */
     val liestVor: String? = null,
     val vorleseAbsatz: Int = -1,

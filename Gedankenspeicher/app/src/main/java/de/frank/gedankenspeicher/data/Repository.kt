@@ -32,6 +32,8 @@ class Repository(
 
     val sitzungen: Flow<List<Sitzung>> = db.sitzungen().alle()
 
+    val ordner: Flow<List<Ordner>> = db.ordner().alle()
+
     /**
      * Sorgt dafür, dass immer mindestens eine Sitzung da ist, und liefert die offene.
      *
@@ -41,7 +43,9 @@ class Repository(
      */
     suspend fun offeneSitzung(): Sitzung {
         val gemerkt = einstellungen.offeneSitzung
-        db.sitzungen().eine(gemerkt)?.let { return it }
+        // Eine Sitzung im Papierkorb wird nicht wieder geöffnet — sonst stünde sie beim
+        // nächsten Start wieder da, obwohl Frank sie weggeräumt hat.
+        db.sitzungen().eine(gemerkt)?.takeIf { it.geloeschtAm == null }?.let { return it }
         db.sitzungen().zuletztGeoeffnete()?.let {
             einstellungen.offeneSitzung = it.id
             return it
@@ -78,6 +82,41 @@ class Repository(
         return naechste
     }
 
+    // --- Favoriten, Schutz, Papierkorb und Ordner ------------------------------------------
+
+    suspend fun favoritUmschalten(id: Long) = db.sitzungen().favoritUmschalten(id)
+
+    suspend fun setzeSchutz(id: Long, geschuetzt: Boolean) = db.sitzungen().setzeSchutz(id, geschuetzt)
+
+    /** Verschiebt eine Sitzung in den Papierkorb bzw. holt sie wieder heraus. */
+    suspend fun setzePapierkorb(id: Long, drin: Boolean) =
+        db.sitzungen().setzePapierkorb(id, if (drin) System.currentTimeMillis() else null)
+
+    suspend fun leerePapierkorb() = db.sitzungen().leerePapierkorb()
+
+    suspend fun verschiebeInOrdner(id: Long, ordnerId: Long?) = db.sitzungen().setzeOrdner(id, ordnerId)
+
+    suspend fun legeOrdnerAn(name: String): Long =
+        db.ordner().einfuegen(Ordner(name = name.trim().take(60).ifBlank { "Neuer Ordner" }, erstelltAm = System.currentTimeMillis()))
+
+    suspend fun benenneOrdnerUm(ordner: Ordner, name: String) =
+        db.ordner().aendern(ordner.copy(name = name.trim().take(60).ifBlank { ordner.name }))
+
+    /** Löscht den Ordner; die Sitzungen darin bleiben erhalten und liegen danach ausserhalb. */
+    suspend fun loescheOrdner(id: Long) {
+        db.ordner().loeseSitzungen(id)
+        db.ordner().loeschen(id)
+    }
+
+    /** Die nächste sichtbare Sitzung, wenn die offene weggeräumt oder geschützt wurde. */
+    suspend fun naechsteSichtbare(): Sitzung {
+        db.sitzungen().zuletztGeoeffnete()?.let {
+            einstellungen.offeneSitzung = it.id
+            return it
+        }
+        return neueSitzung()
+    }
+
     fun notizzahl(sitzungId: Long): Flow<Int> = db.sitzungen().notizzahl(sitzungId)
 
     fun letzteNotizzeit(sitzungId: Long): Flow<Long?> = db.sitzungen().letzteNotizzeit(sitzungId)
@@ -109,7 +148,11 @@ class Repository(
 
     // --- Notizen anlegen (F-01, F-02, F-04) ------------------------------------------------
 
-    suspend fun legeGetippteNotizAn(sitzungId: Long, text: String): Long =
+    suspend fun legeGetippteNotizAn(
+        sitzungId: Long,
+        text: String,
+        anhaenge: List<Anhang> = emptyList(),
+    ): Long =
         db.notizen().einfuegen(
             Notiz(
                 sitzungId = sitzungId,
@@ -117,6 +160,7 @@ class Repository(
                 text = text.trim(),
                 quelle = Notizquelle.GETIPPT,
                 zustand = Notizzustand.FERTIG,
+                anhaengeJson = anhaenge.alsJson(),
             ),
         )
 
@@ -138,6 +182,9 @@ class Repository(
 
     suspend fun loescheNotiz(notiz: Notiz) {
         notiz.audioPfad?.let { runCatching { File(it).delete() } }
+        // Mit der Notiz verschwinden auch ihre Anhangsdateien — sonst bleiben Bilder,
+        // Aufnahmen und PDFs als Karteileichen im App-Speicher liegen.
+        Anhangsspeicher(ctx).loesche(anhaengeAusJson(notiz.anhaengeJson))
         db.notizen().loeschen(notiz)
     }
 

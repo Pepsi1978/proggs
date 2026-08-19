@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Notiz
+import de.frank.gedankenspeicher.data.anhaengeAusJson
 import de.frank.gedankenspeicher.data.Notizzustand
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.tts.Absaetze
@@ -144,10 +145,18 @@ fun Notizkarte(
                     }
                 }
 
-                Notizzustand.FERTIG -> AbsatzText(
-                    text = notiz.text,
-                    hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
-                )
+                Notizzustand.FERTIG -> if (notiz.text.isNotBlank()) {
+                    AbsatzText(
+                        text = notiz.text,
+                        hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
+                    )
+                }
+            }
+
+            val anhaenge = remember(notiz.anhaengeJson) { anhaengeAusJson(notiz.anhaengeJson) }
+            if (anhaenge.isNotEmpty()) {
+                Spacer(Modifier.height(if (notiz.text.isBlank()) 2.dp else 10.dp))
+                Anhangsliste(anhaenge)
             }
 
             if (notiz.zustand == Notizzustand.FERTIG) {

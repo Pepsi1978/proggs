@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 class Wandler {
     @TypeConverter fun zustandHin(v: Notizzustand): String = v.name
@@ -18,8 +20,8 @@ class Wandler {
 }
 
 @Database(
-    entities = [Sitzung::class, Notiz::class, KiAntwort::class, Auswertungsprofil::class],
-    version = 1,
+    entities = [Sitzung::class, Notiz::class, KiAntwort::class, Auswertungsprofil::class, Ordner::class],
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -29,6 +31,7 @@ abstract class Datenbank : RoomDatabase() {
     abstract fun antworten(): KiAntwortDao
     abstract fun profile(): ProfilDao
     abstract fun suche(): SucheDao
+    abstract fun ordner(): OrdnerDao
 
     companion object {
         @Volatile private var vorhanden: Datenbank? = null
@@ -38,7 +41,32 @@ abstract class Datenbank : RoomDatabase() {
                 ctx.applicationContext,
                 Datenbank::class.java,
                 DATEINAME,
-            ).build().also { vorhanden = it }
+            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3).build().also { vorhanden = it }
+        }
+
+        /** Die Anhänge kamen mit dem Plus-Menü dazu; alte Notizen haben schlicht keine. */
+        private val WANDERUNG_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notiz ADD COLUMN anhaengeJson TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
+
+        /**
+         * Favoriten, Schutz, Papierkorb und Ordner kamen mit der Seitenleiste dazu.
+         * Alte Sitzungen sind schlicht keins von beidem und liegen in keinem Ordner.
+         */
+        private val WANDERUNG_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sitzung ADD COLUMN favorit INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sitzung ADD COLUMN geschuetzt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sitzung ADD COLUMN geloeschtAm INTEGER")
+                db.execSQL("ALTER TABLE sitzung ADD COLUMN ordnerId INTEGER")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS ordner (" +
+                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " +
+                        "name TEXT NOT NULL, erstelltAm INTEGER NOT NULL)",
+                )
+            }
         }
 
         /**

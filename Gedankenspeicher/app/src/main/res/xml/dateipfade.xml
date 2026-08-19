@@ -2,4 +2,6 @@
 <paths>
     <!-- F-16: die Export-Datei liegt im Cache und wird von dort geteilt. -->
     <cache-path name="export" path="export/" />
+    <!-- Plus-Menü: Kameraaufnahmen entstehen hier, PDFs werden von hier geöffnet. -->
+    <files-path name="anhaenge" path="anhaenge/" />
 </paths>

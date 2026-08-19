@@ -102,6 +102,15 @@ class Einstellungen(ctx: Context) {
         get() = p.getLong(OFFENE_SITZUNG, 0L)
         set(v) { p.edit().putLong(OFFENE_SITZUNG, v).commit() }
 
+    // --- Fingerabdruck ---------------------------------------------------------------------
+    /**
+     * Ist er an, verlangen geschützte Notizen den Fingerabdruck — zum Öffnen des Reiters
+     * ebenso wie zum Schützen und zum Aufheben des Schutzes.
+     */
+    var fingerabdruckAn: Boolean
+        get() = p.getBoolean(FINGERABDRUCK, false)
+        set(v) { p.edit().putBoolean(FINGERABDRUCK, v).commit() }
+
     // --- F-17: Sicherung -------------------------------------------------------------------
     var driveSicherungAn: Boolean
         get() = p.getBoolean(DRIVE_AN, false)
@@ -134,6 +143,7 @@ class Einstellungen(ctx: Context) {
         const val GOOGLE_TTS = "google_tts_schluessel"
         const val QWEN = "qwen_schluessel"
         const val OFFENE_SITZUNG = "offene_sitzung"
+        const val FINGERABDRUCK = "fingerabdruck_an"
         const val DRIVE_AN = "drive_an"
         const val DRIVE_ORDNER = "drive_ordner"
         const val DRIVE_ZEIT = "drive_zeit"

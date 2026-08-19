@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -40,7 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -48,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.KiAntwort
 import de.frank.gedankenspeicher.data.Notiz
+import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.ui.Anmeldezustand
 import de.frank.gedankenspeicher.ui.Eingabefrage
@@ -82,7 +85,7 @@ private var benachrichtigungGefragt = false
 private enum class Ziel { VERLAUF, EINSTELLUNGEN, PROFILE, ANMELDUNG, SUCHE }
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var modell: HauptViewModel
 
@@ -113,6 +116,14 @@ class MainActivity : ComponentActivity() {
      * dort der Drive-Ordner, landet die Sicherung in Drive, ohne dass die App eine zweite
      * Anmeldung und ein zweites Zugriffsrecht braucht.
      */
+    /** Wartet auf das Mikrofonrecht für eine Sprachaufnahme aus dem Plus-Menü. */
+    private var nachAnhangsrecht: (() -> Unit)? = null
+    private val anhangMikrofonFrage =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
+            if (erlaubt) nachAnhangsrecht?.invoke()
+            nachAnhangsrecht = null
+        }
+
     private val ordnerWahl = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) {
             modell.ordnerwahlErledigt()
@@ -195,6 +206,7 @@ class MainActivity : ComponentActivity() {
                 Oberflaeche(
                     vm = vm,
                     beiMikrofon = { starteAufnahmeMitRecht(vm) },
+                    beiAnhangsmikrofon = ::mitMikrofonrecht,
                     beiAnmelden = { starteAnmeldung(vm) },
                     beiTeilen = { sitzung -> teileSitzung(vm, sitzung) },
                     beiOrdnerwahl = { ordnerWahl.launch(null) },
@@ -203,6 +215,7 @@ class MainActivity : ComponentActivity() {
                     beiDateiwahl = { dateiWahl.launch(arrayOf("*/*")) },
                     beiNeustart = { starteNeu() },
                     beiStimmMikrofon = { starteStimmaufnahmeMitRecht(vm) },
+                    beiFingerabdruck = ::mitFingerabdruck,
                 )
             }
         }
@@ -275,11 +288,62 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Die Sprachaufnahme aus dem Plus-Menü braucht dasselbe Recht wie jedes andere
+     * Mikrofon der App — gefragt wird auch hier erst beim Druck.
+     */
+    private fun mitMikrofonrecht(danach: () -> Unit) {
+        val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (hat) danach() else { nachAnhangsrecht = danach; anhangMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO) }
+    }
+
     /** F-18 — eine eigene Stimme aufnehmen. Dasselbe Recht, derselbe Weg. */
     private fun starteStimmaufnahmeMitRecht(vm: HauptViewModel) {
         val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         if (hat) vm.nimmStimmeAuf() else stimmMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    /**
+     * Fragt den Fingerabdruck ab und ruft erst danach die Aktion auf.
+     *
+     * Ist kein Fingerabdruck registriert, springt die Abfrage auf die Bildschirmsperre —
+     * sonst wären geschützte Notizen auf so einem Gerät gar nicht mehr erreichbar.
+     */
+    private fun mitFingerabdruck(titel: String, danach: () -> Unit) {
+        val pruefer = BiometricManager.from(this)
+        val bauer = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(titel)
+            .setSubtitle("Bitte mit dem Fingerabdruck bestätigen.")
+        when {
+            pruefer.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) ==
+                BiometricManager.BIOMETRIC_SUCCESS ->
+                bauer.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                    .setNegativeButtonText("Abbrechen")
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                pruefer.canAuthenticate(BiometricManager.Authenticators.DEVICE_CREDENTIAL) ==
+                BiometricManager.BIOMETRIC_SUCCESS ->
+                bauer.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            else -> {
+                modell.melde("Auf diesem Gerät ist kein Fingerabdruck und keine Bildschirmsperre eingerichtet.")
+                return
+            }
+        }
+        val abfrage = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(ergebnis: BiometricPrompt.AuthenticationResult) = danach()
+
+                override fun onAuthenticationError(code: Int, meldung: CharSequence) {
+                    if (code != BiometricPrompt.ERROR_USER_CANCELED && code != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                        modell.melde(meldung.toString())
+                    }
+                }
+            },
+        )
+        abfrage.authenticate(bauer.build())
     }
 
     /** F-11 — der Gerätecode-Ablauf. Der Browser wird von `CodexAuthManager` selbst geöffnet. */
@@ -334,6 +398,7 @@ class MainActivity : ComponentActivity() {
 private fun Oberflaeche(
     vm: HauptViewModel,
     beiMikrofon: () -> Unit,
+    beiAnhangsmikrofon: (() -> Unit) -> Unit,
     beiAnmelden: () -> Unit,
     beiTeilen: (Sitzung) -> Unit,
     beiOrdnerwahl: () -> Unit,
@@ -342,6 +407,7 @@ private fun Oberflaeche(
     beiDateiwahl: () -> Unit,
     beiNeustart: () -> Unit,
     beiStimmMikrofon: () -> Unit,
+    beiFingerabdruck: (String, () -> Unit) -> Unit,
 ) {
     val ctx = LocalContext.current
     val verlauf by vm.verlauf.collectAsStateWithLifecycle()
@@ -376,6 +442,11 @@ private fun Oberflaeche(
     var loeschfrage by remember { mutableStateOf<Notiz?>(null) }
     var sitzungLoeschfrage by remember { mutableStateOf<Sitzung?>(null) }
     var umbenennen by remember { mutableStateOf<Sitzung?>(null) }
+    var verschiebeSitzung by remember { mutableStateOf<Sitzung?>(null) }
+    var ordnerVerwalten by remember { mutableStateOf(false) }
+    var ordnerUmbenennen by remember { mutableStateOf<Ordner?>(null) }
+    var ordnerLoeschfrage by remember { mutableStateOf<Ordner?>(null) }
+    var papierkorbLeerfrage by remember { mutableStateOf(false) }
     var profilEditor by remember { mutableStateOf<Auswertungsprofil?>(null) }
     val meldungen = remember { SnackbarHostState() }
     val bereich = androidx.compose.runtime.rememberCoroutineScope()
@@ -447,6 +518,10 @@ private fun Oberflaeche(
             beiNotizMenue = { notizMenue = it },
             beiAntwortMenue = { antwortMenue = it },
             beiWiederholen = vm::versucheTranskriptionErneut,
+            beiAnhang = vm::fuegeAnhangHinzu,
+            beiAnhangEntfernen = vm::entferneAnhang,
+            beiAnhangsmikrofon = beiAnhangsmikrofon,
+            beiFehler = vm::meldeFehler,
         )
 
         // ---- Schublade (M-02)
@@ -464,6 +539,11 @@ private fun Oberflaeche(
         ) {
             Schublade(
                 sitzungen = verlauf.sitzungen,
+                ordner = verlauf.ordner,
+                ansicht = verlauf.ansicht,
+                gewaehlterOrdner = verlauf.gewaehlterOrdner,
+                geschuetztFrei = verlauf.geschuetztFrei,
+                fingerabdruckAn = verlauf.fingerabdruckAn,
                 offeneSitzung = verlauf.sitzung?.id,
                 breit = breit,
                 beiWahl = { id ->
@@ -475,6 +555,13 @@ private fun Oberflaeche(
                     schubladeOffen = false
                 },
                 beiMenue = { sitzungsMenue = it },
+                beiAnsicht = vm::waehleAnsicht,
+                beiOrdnerwahl = vm::waehleOrdner,
+                beiGeschuetzteOeffnen = {
+                    beiFingerabdruck("Geschützte Notizen öffnen") { vm.gibGeschuetzteFrei() }
+                },
+                beiOrdnerVerwalten = { ordnerVerwalten = true },
+                beiPapierkorbLeeren = { papierkorbLeerfrage = true },
                 beiEinstellungen = {
                     schubladeOffen = false
                     ziel = Ziel.EINSTELLUNGEN
@@ -500,6 +587,7 @@ private fun Oberflaeche(
                 stimmenLaden = stimmenLaden,
                 nimmtStimmeAuf = nimmtStimmeAuf,
                 probeLaeuft = liestVor,
+                fingerabdruckAn = verlauf.fingerabdruckAn,
                 driveAn = driveAn,
                 letzteSicherung = vm.einstellungen.letzteSicherungZeit,
                 letzteGroesse = vm.einstellungen.letzteSicherungGroesse,
@@ -522,6 +610,10 @@ private fun Oberflaeche(
                 beiStimmeAufnehmen = beiStimmMikrofon,
                 beiStimmeLoeschen = vm::loescheEigeneStimme,
                 beiProbe = vm::spieleProbe,
+                beiFingerabdruck = { an ->
+                    if (an) beiFingerabdruck("Fingerabdruck einrichten") { vm.setzeFingerabdruck(true) }
+                    else beiFingerabdruck("Fingerabdruck abschalten") { vm.setzeFingerabdruck(false) }
+                },
                 beiDrive = vm::setzeDrive,
                 beiJetztSichern = vm::sichereJetzt,
                 beiWiederherstellen = vm::stelleWiederHer,
@@ -715,17 +807,47 @@ private fun Oberflaeche(
                 dragHandle = null,
             ) {
                 MenueBlatt(titel = sitzung.titel) {
-                    Menueeintrag("Umbenennen") {
-                        umbenennen = sitzung
-                        sitzungsMenue = null
-                    }
-                    Menueeintrag("Als Markdown exportieren") {
-                        beiTeilen(sitzung)
-                        sitzungsMenue = null
-                    }
-                    Menueeintrag("Sitzung löschen", gefaehrlich = true) {
-                        sitzungLoeschfrage = sitzung
-                        sitzungsMenue = null
+                    if (sitzung.geloeschtAm != null) {
+                        Menueeintrag("Wiederherstellen") {
+                            vm.ausPapierkorb(sitzung)
+                            sitzungsMenue = null
+                        }
+                        Menueeintrag("Endgültig löschen", gefaehrlich = true) {
+                            sitzungLoeschfrage = sitzung
+                            sitzungsMenue = null
+                        }
+                    } else {
+                        Menueeintrag(if (sitzung.favorit) "Favorit entfernen" else "Als Favorit markieren") {
+                            vm.favoritUmschalten(sitzung)
+                            sitzungsMenue = null
+                        }
+                        Menueeintrag(if (sitzung.geschuetzt) "Schutz aufheben" else "Notiz schützen") {
+                            sitzungsMenue = null
+                            val schuetzen = !sitzung.geschuetzt
+                            if (verlauf.fingerabdruckAn) {
+                                beiFingerabdruck(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
+                                    vm.setzeSchutz(sitzung, schuetzen)
+                                }
+                            } else {
+                                vm.setzeSchutz(sitzung, schuetzen)
+                            }
+                        }
+                        Menueeintrag("In Ordner verschieben") {
+                            verschiebeSitzung = sitzung
+                            sitzungsMenue = null
+                        }
+                        Menueeintrag("Umbenennen") {
+                            umbenennen = sitzung
+                            sitzungsMenue = null
+                        }
+                        Menueeintrag("Als Markdown exportieren") {
+                            beiTeilen(sitzung)
+                            sitzungsMenue = null
+                        }
+                        Menueeintrag("In den Papierkorb", gefaehrlich = true) {
+                            vm.inPapierkorb(sitzung)
+                            sitzungsMenue = null
+                        }
                     }
                 }
             }
@@ -743,6 +865,57 @@ private fun Oberflaeche(
                             vm.verschiebeNotiz(notiz, s.id)
                             verschiebeNotiz = null
                         }
+                    }
+                }
+            }
+        }
+
+        verschiebeSitzung?.let { sitzung ->
+            ModalBottomSheet(
+                onDismissRequest = { verschiebeSitzung = null },
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                dragHandle = null,
+            ) {
+                MenueBlatt(titel = "In welchen Ordner?") {
+                    Menueeintrag("Kein Ordner", gesperrt = sitzung.ordnerId == null) {
+                        vm.verschiebeInOrdner(sitzung, null)
+                        verschiebeSitzung = null
+                    }
+                    verlauf.ordner.forEach { einer ->
+                        Menueeintrag(einer.name, gesperrt = sitzung.ordnerId == einer.id) {
+                            vm.verschiebeInOrdner(sitzung, einer.id)
+                            verschiebeSitzung = null
+                        }
+                    }
+                    if (verlauf.ordner.isEmpty()) {
+                        Menueeintrag("Erst einen Ordner anlegen …") {
+                            verschiebeSitzung = null
+                            ordnerVerwalten = true
+                        }
+                    }
+                }
+            }
+        }
+
+        if (ordnerVerwalten) {
+            ModalBottomSheet(
+                onDismissRequest = { ordnerVerwalten = false },
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                dragHandle = null,
+            ) {
+                MenueBlatt(titel = "Ordner verwalten") {
+                    Menueeintrag("Neuen Ordner anlegen") {
+                        ordnerVerwalten = false
+                        ordnerUmbenennen = Ordner(id = 0, name = "", erstelltAm = 0)
+                    }
+                    verlauf.ordner.forEach { einer ->
+                        Menueeintrag(einer.name + " — umbenennen") { ordnerUmbenennen = einer }
+                        Menueeintrag(einer.name + " — löschen", gefaehrlich = true) {
+                            ordnerLoeschfrage = einer
+                        }
+                    }
+                    if (verlauf.ordner.isEmpty()) {
+                        Menueeintrag("Noch kein Ordner angelegt.", gesperrt = true) { }
                     }
                 }
             }
@@ -773,6 +946,47 @@ private fun Oberflaeche(
                     sitzungLoeschfrage = null
                 },
                 beiNein = { sitzungLoeschfrage = null },
+            )
+        }
+
+        ordnerUmbenennen?.let { einer ->
+            var name by remember(einer.id) { mutableStateOf(einer.name) }
+            Eingabefrage(
+                titel = if (einer.id == 0L) "Neuer Ordner" else "Ordner umbenennen",
+                wert = name,
+                beiAenderung = { name = it },
+                beiJa = {
+                    if (einer.id == 0L) vm.legeOrdnerAn(name) else vm.benenneOrdnerUm(einer, name)
+                    ordnerUmbenennen = null
+                },
+                beiNein = { ordnerUmbenennen = null },
+            )
+        }
+
+        ordnerLoeschfrage?.let { einer ->
+            Rueckfrage(
+                titel = "Ordner „" + einer.name + "“ löschen?",
+                text = "Die Notizen darin bleiben erhalten und liegen danach in keinem Ordner.",
+                bestaetigung = "Löschen",
+                beiJa = {
+                    vm.loescheOrdner(einer)
+                    ordnerLoeschfrage = null
+                    ordnerVerwalten = false
+                },
+                beiNein = { ordnerLoeschfrage = null },
+            )
+        }
+
+        if (papierkorbLeerfrage) {
+            Rueckfrage(
+                titel = "Papierkorb leeren?",
+                text = "Alle Notizen im Papierkorb werden endgültig gelöscht.",
+                bestaetigung = "Leeren",
+                beiJa = {
+                    vm.leerePapierkorb()
+                    papierkorbLeerfrage = false
+                },
+                beiNein = { papierkorbLeerfrage = false },
             )
         }
 

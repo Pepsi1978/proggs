@@ -16,6 +16,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Kamera und Dokumentenscan aus dem Plus-Menü laufen über fremde Apps
+         (ACTION_IMAGE_CAPTURE, ML-Kit-Scanner) — ein eigenes CAMERA-Recht braucht
+         die App dafür nicht. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:name=".GedankenspeicherApp"
         android:allowBackup="false"

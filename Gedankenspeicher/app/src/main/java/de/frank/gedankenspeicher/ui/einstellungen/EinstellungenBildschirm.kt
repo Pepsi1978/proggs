@@ -92,6 +92,7 @@ fun EinstellungenBildschirm(
     stimmenLaden: Boolean,
     nimmtStimmeAuf: Boolean,
     probeLaeuft: Boolean,
+    fingerabdruckAn: Boolean,
     driveAn: Boolean,
     letzteSicherung: Long,
     letzteGroesse: Long,
@@ -111,6 +112,7 @@ fun EinstellungenBildschirm(
     beiStimmeAufnehmen: () -> Unit,
     beiStimmeLoeschen: (String) -> Unit,
     beiProbe: () -> Unit,
+    beiFingerabdruck: (Boolean) -> Unit,
     beiDrive: (Boolean) -> Unit,
     beiJetztSichern: () -> Unit,
     beiWiederherstellen: () -> Unit,
@@ -328,6 +330,34 @@ fun EinstellungenBildschirm(
                     beiDruck = beiProbe,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            // 5b — Sicherheit: der Fingerabdruck für geschützte Notizen
+            Gruppe("Sicherheit") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Fingerabdruck", style = schrift.einstellung, color = farben.textMittel)
+                        Text(
+                            "Geschützte Notizen öffnen, schützen und freigeben nur nach dem Fingerabdruck.",
+                            style = schrift.einstellungErklaerung,
+                            color = farben.textSchwach,
+                        )
+                    }
+                    Switch(
+                        checked = fingerabdruckAn,
+                        onCheckedChange = beiFingerabdruck,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = farben.hintergrund,
+                            checkedTrackColor = farben.akzent,
+                            uncheckedThumbColor = farben.textSchwach,
+                            uncheckedTrackColor = farben.hintergrundErhoben,
+                            uncheckedBorderColor = farben.rand,
+                        ),
+                    )
+                }
+                if (!fingerabdruckAn) {
+                    Erklaerung("Ohne Fingerabdruck bleiben geschützte Notizen im eigenen Reiter, aber ohne Abfrage.")
+                }
             }
 
             // 6 — Sicherung (F-17)

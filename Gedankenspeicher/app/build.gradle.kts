@@ -13,11 +13,11 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.4.6"
+        versionCode = 12
+        versionName = "0.4.7"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:23 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:33 Uhr\"")
     }
 
     buildTypes {
@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.compose.foundation)
     implementation(libs.core.ktx)
     implementation(libs.documentfile)
+    implementation(libs.dokumentenscanner)
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
@@ -66,6 +67,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.okhttp)
     implementation(libs.security.crypto)
+    implementation(libs.biometric)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 

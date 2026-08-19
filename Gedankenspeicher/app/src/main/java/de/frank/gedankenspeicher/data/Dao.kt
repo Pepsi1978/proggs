@@ -18,10 +18,14 @@ interface SitzungDao {
     @Query("SELECT * FROM sitzung WHERE id = :id")
     suspend fun eine(id: Long): Sitzung?
 
-    @Query("SELECT * FROM sitzung ORDER BY zuletztGeoeffnet DESC LIMIT 1")
+    /** Die zuletzt benutzte sichtbare Sitzung: nicht im Papierkorb, nicht geschützt. */
+    @Query(
+        "SELECT * FROM sitzung WHERE geloeschtAm IS NULL AND geschuetzt = 0 " +
+            "ORDER BY zuletztGeoeffnet DESC LIMIT 1",
+    )
     suspend fun zuletztGeoeffnete(): Sitzung?
 
-    @Query("SELECT COUNT(*) FROM sitzung")
+    @Query("SELECT COUNT(*) FROM sitzung WHERE geloeschtAm IS NULL AND geschuetzt = 0")
     suspend fun anzahl(): Int
 
     @Query("SELECT COUNT(*) FROM notiz WHERE sitzungId = :sitzungId")
@@ -47,6 +51,41 @@ interface SitzungDao {
 
     @Query("UPDATE sitzung SET titel = :titel, titelVonHand = :vonHand WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, vonHand: Boolean)
+
+    @Query("UPDATE sitzung SET favorit = CASE favorit WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
+    suspend fun favoritUmschalten(id: Long)
+
+    @Query("UPDATE sitzung SET geschuetzt = :geschuetzt WHERE id = :id")
+    suspend fun setzeSchutz(id: Long, geschuetzt: Boolean)
+
+    @Query("UPDATE sitzung SET geloeschtAm = :zeit WHERE id = :id")
+    suspend fun setzePapierkorb(id: Long, zeit: Long?)
+
+    @Query("UPDATE sitzung SET ordnerId = :ordnerId WHERE id = :id")
+    suspend fun setzeOrdner(id: Long, ordnerId: Long?)
+
+    @Query("DELETE FROM sitzung WHERE geloeschtAm IS NOT NULL")
+    suspend fun leerePapierkorb()
+}
+
+@Dao
+interface OrdnerDao {
+
+    @Query("SELECT * FROM ordner ORDER BY name COLLATE NOCASE")
+    fun alle(): Flow<List<Ordner>>
+
+    @Insert
+    suspend fun einfuegen(ordner: Ordner): Long
+
+    @Update
+    suspend fun aendern(ordner: Ordner)
+
+    @Query("DELETE FROM ordner WHERE id = :id")
+    suspend fun loeschen(id: Long)
+
+    /** Beim Löschen eines Ordners bleiben die Sitzungen erhalten und landen ausserhalb. */
+    @Query("UPDATE sitzung SET ordnerId = NULL WHERE ordnerId = :id")
+    suspend fun loeseSitzungen(id: Long)
 }
 
 @Dao

@@ -95,6 +95,10 @@ fun VerlaufBildschirm(
     beiNotizMenue: (Notiz) -> Unit,
     beiAntwortMenue: (de.frank.gedankenspeicher.data.KiAntwort) -> Unit,
     beiWiederholen: (Notiz) -> Unit,
+    beiAnhang: (de.frank.gedankenspeicher.data.Anhang) -> Unit,
+    beiAnhangEntfernen: (de.frank.gedankenspeicher.data.Anhang) -> Unit,
+    beiAnhangsmikrofon: (() -> Unit) -> Unit,
+    beiFehler: (String) -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -244,6 +248,8 @@ fun VerlaufBildschirm(
                 }
             }
 
+            Entwurfsanhaenge(zustand.anhaenge, beiAnhangEntfernen)
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -258,14 +264,22 @@ fun VerlaufBildschirm(
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
+                Anhangsknopf(
+                    beiAnhang = beiAnhang,
+                    beiFehler = beiFehler,
+                    beiMikrofon = beiAnhangsmikrofon,
+                )
+                Spacer(Modifier.width(8.dp))
                 KiKnopf(aktiv = zustand.wertetAus, beiDruck = beiKi)
                 Spacer(Modifier.width(8.dp))
                 Aufnahmeknopf(
                     nimmtAuf = zustand.nimmtAuf,
-                    hatText = zustand.entwurf.isNotBlank(),
+                    hatText = zustand.entwurf.isNotBlank() || zustand.anhaenge.isNotEmpty(),
                     gesperrt = zustand.mikrofonAbgelehnt && zustand.entwurf.isBlank(),
                     pegel = zustand.pegel,
-                    beiDruck = { if (zustand.entwurf.isNotBlank()) beiSenden() else beiAufnahme() },
+                    beiDruck = {
+                        if (zustand.entwurf.isNotBlank() || zustand.anhaenge.isNotEmpty()) beiSenden() else beiAufnahme()
+                    },
                 )
             }
         }
