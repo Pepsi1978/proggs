@@ -286,10 +286,12 @@ private fun NoteLibrary(
     var renameTarget by remember { mutableStateOf<SessionEntity?>(null) }
 
     val view = state.interaction.drawerView
-    val unlocked = state.interaction.securedUnlocked || !state.settings.fingerprintLock
-    val alleNotizen = state.sessions.filter { it.deletedAt == null && !it.secured }
+    val unlocked = state.interaction.securedUnlocked
+    // „Alle Notizen“ heißt alle: geschützte sind mitgezählt und mit aufgelistet, nur ihr
+    // Inhalt bleibt bis zum Fingerabdruck zu. Draußen ist einzig, was im Papierkorb liegt.
+    val alleNotizen = state.sessions.filter { it.deletedAt == null }
     val favoriten = alleNotizen.filter { it.favorite }
-    val geschuetzte = state.sessions.filter { it.deletedAt == null && it.secured }
+    val geschuetzte = alleNotizen.filter { it.secured }
     val papierkorb = state.sessions.filter { it.deletedAt != null }
     val ordner = state.folders
     val gewaehlterOrdner = ordner.firstOrNull { it.id == state.interaction.selectedFolderId }
@@ -297,7 +299,7 @@ private fun NoteLibrary(
     val liste = when (view) {
         DrawerView.ALL -> alleNotizen
         DrawerView.FAVORITES -> favoriten
-        DrawerView.SECURED -> if (unlocked) geschuetzte else emptyList()
+        DrawerView.SECURED -> geschuetzte
         DrawerView.TRASH -> papierkorb
         DrawerView.FOLDER -> alleNotizen.filter { it.folderId == gewaehlterOrdner?.id }
     }.filter { search.isBlank() || it.title.contains(search, true) }
@@ -340,8 +342,7 @@ private fun NoteLibrary(
         LibraryTab(Icons.Default.Star, "Favoriten", favoriten.size, view == DrawerView.FAVORITES,
             iconTint = FavoriteGold) { vm.selectView(DrawerView.FAVORITES) }
         LibraryTab(Icons.Default.Lock, "Geschützte Notizen", geschuetzte.size, view == DrawerView.SECURED) {
-            if (state.interaction.securedUnlocked || !state.settings.fingerprintLock) vm.selectView(DrawerView.SECURED)
-            else requestFingerprint("Geschützte Notizen öffnen") { vm.unlockSecured() }
+            vm.selectView(DrawerView.SECURED)
         }
         LibraryTab(Icons.Default.Delete, "Papierkorb", papierkorb.size, view == DrawerView.TRASH) {
             vm.selectView(DrawerView.TRASH)
@@ -402,21 +403,7 @@ private fun NoteLibrary(
                 TextButton({ emptyTrash = true }) { Text("Leeren") }
             }
         }
-        if (view == DrawerView.SECURED && !unlocked) {
-            Column(
-                Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    "Mit Fingerabdruck freigeben.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            }
-        } else {
+        run {
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(liste, key = SessionEntity::id) { session ->
                     SessionItem(
@@ -425,15 +412,27 @@ private fun NoteLibrary(
                         expanded = true,
                         inTrash = view == DrawerView.TRASH,
                         folderName = state.folders.firstOrNull { it.id == session.folderId }?.name,
-                        onClick = { if (view != DrawerView.TRASH) selectSession(session.id) },
+                        locked = session.secured && !unlocked,
+                        onClick = {
+                            // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck —
+                            // aus jedem Reiter heraus, nicht nur aus „Geschützte Notizen“.
+                            if (view == DrawerView.TRASH) Unit
+                            else if (session.secured && !unlocked) {
+                                requestFingerprint("Geschützte Notiz öffnen") {
+                                    vm.unlockSecured(); selectSession(session.id)
+                                }
+                            } else selectSession(session.id)
+                        },
                         onToggleFavorite = { vm.toggleFavorite(session) },
+                        // Schützen und Freigeben gehen beide nur über den Fingerabdruck —
+                        // sonst nähme ihn jeder, der das Gerät in der Hand hält, in zwei
+                        // Tipps wieder ab.
+                        canSecure = session.secured || state.settings.fingerprintLock,
                         onSecure = {
                             val schuetzen = !session.secured
-                            if (state.settings.fingerprintLock) {
-                                requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
-                                    vm.setSecured(session, schuetzen)
-                                }
-                            } else vm.setSecured(session, schuetzen)
+                            requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
+                                vm.setSecured(session, schuetzen)
+                            }
                         },
                         onMove = { moveTarget = session },
                         onRename = { renameTarget = session },
@@ -637,6 +636,55 @@ private fun Workbench(
         }
     }
     if (focus) FocusDialog(state, vm, { focus = false }) { vm.evaluate(); focus = false }
+    // Die offene Sitzung frisch aus der Liste holen: der Kopf im Zustand ist ein Abzug von
+    // vorhin, und ohne das bliebe die Sperrschicht aus, wenn man die gerade offene Notiz
+    // eben erst geschützt hat.
+    val offeneFrisch = state.sessions.firstOrNull { it.id == state.interaction.selectedSessionId }
+    if (offeneFrisch?.secured == true && !state.interaction.securedUnlocked) {
+        LockedOverlay(
+            title = offeneFrisch.title,
+            reducedMotion = state.settings.reducedMotion,
+            onUnlock = { requestFingerprint("Geschützte Notiz öffnen") { vm.unlockSecured() } },
+            onOverview = openDrawer,
+        )
+    }
+}
+
+/**
+ * Die Sperrschicht über der Werkbank einer geschützten Notiz.
+ *
+ * Sie deckt den Inhalt zu, statt die Notiz zu schließen: wer den Fingerabdruck gibt, steht
+ * danach genau da, wo er hinwollte. Der zweite Weg führt in die Seitenleiste zurück, damit
+ * man aus einer zugesperrten Notiz auch ohne Fingerabdruck wieder herauskommt.
+ */
+@Composable
+private fun LockedOverlay(title: String, reducedMotion: Boolean, onUnlock: () -> Unit, onOverview: () -> Unit) {
+    Box(
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 32.dp)) {
+            Icon(Icons.Default.Lock, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(16.dp))
+            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Diese Notiz ist geschützt. Ihr Inhalt erscheint erst nach dem Fingerabdruck.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(24.dp))
+            GoldActionButton(
+                text = "Mit Fingerabdruck öffnen",
+                icon = Icons.Default.LockOpen,
+                reducedMotion = reducedMotion,
+                onClick = onUnlock,
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(onOverview) { Text("Zu den Notizen") }
+        }
+    }
 }
 
 @Composable
@@ -664,6 +712,8 @@ private fun SessionItem(
     expanded: Boolean,
     inTrash: Boolean = false,
     folderName: String? = null,
+    locked: Boolean = false,
+    canSecure: Boolean = true,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit = {},
     onSecure: () -> Unit = {},
@@ -700,7 +750,8 @@ private fun SessionItem(
                             modifier = Modifier.size(15.dp).padding(end = 3.dp), tint = FavoriteGold,
                         )
                         if (session.secured) Icon(
-                            Icons.Default.Lock, "Geschützt",
+                            if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
+                            if (locked) "Geschützt" else "Geschützt und freigegeben",
                             modifier = Modifier.size(15.dp).padding(end = 3.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
@@ -734,7 +785,7 @@ private fun SessionItem(
                             Icon(if (session.favorite) Icons.Default.Star else Icons.Default.StarBorder, null, tint = FavoriteGold)
                         },
                     )
-                    DropdownMenuItem(
+                    if (canSecure) DropdownMenuItem(
                         { Text(if (session.secured) "Schutz aufheben" else "Notiz schützen") },
                         { menu = false; onSecure() },
                         leadingIcon = { Icon(if (session.secured) Icons.Default.LockOpen else Icons.Default.Lock, null) },
@@ -791,17 +842,15 @@ private fun WorkbenchTopBar(
                         Icon(if (session?.favorite == true) Icons.Default.Star else Icons.Default.StarBorder, null, tint = FavoriteGold)
                     },
                 )
-                DropdownMenuItem(
+                if (session?.secured == true || state.settings.fingerprintLock) DropdownMenuItem(
                     { Text(if (session?.secured == true) "Schutz aufheben" else "Notiz schützen") },
                     {
                         menu = false
                         session?.let { aktuelle ->
                             val schuetzen = !aktuelle.secured
-                            if (state.settings.fingerprintLock) {
-                                requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
-                                    vm.setSecured(aktuelle, schuetzen)
-                                }
-                            } else vm.setSecured(aktuelle, schuetzen)
+                            requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
+                                vm.setSecured(aktuelle, schuetzen)
+                            }
                         }
                     },
                     leadingIcon = { Icon(if (session?.secured == true) Icons.Default.LockOpen else Icons.Default.Lock, null) },
@@ -1221,7 +1270,7 @@ private fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text("Fingerabdruck")
                         Text(
-                            "Geschützte Notizen lassen sich nur nach dem Fingerabdruck öffnen, schützen und wieder freigeben.",
+                            "Erlaubt es, Notizen zu schützen. Öffnen, Schützen und Freigeben gehen dann nur noch über den Fingerabdruck.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -1234,7 +1283,7 @@ private fun SettingsScreen(
                     )
                 }
                 Text(
-                    "Ohne Fingerabdruck bleiben geschützte Notizen im eigenen Reiter, aber ohne Abfrage.",
+                    "Bereits geschützte Notizen bleiben geschützt und brauchen weiter den Fingerabdruck — nur neue lassen sich nicht mehr schützen.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )

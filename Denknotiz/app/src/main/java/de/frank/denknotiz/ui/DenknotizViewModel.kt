@@ -182,15 +182,16 @@ class DenknotizViewModel(
 
     fun toggleFavorite(session: SessionEntity) = launchAction { repository.toggleFavorite(session.id) }
 
-    /** Schützt eine Notiz bzw. hebt den Schutz auf; der Fingerabdruck wurde vorher in der Oberfläche geprüft. */
+    /**
+     * Schützt eine Notiz bzw. hebt den Schutz auf; der Fingerabdruck wurde vorher in der
+     * Oberfläche geprüft — und weil er gerade gegeben wurde, bleibt die Notiz danach offen,
+     * statt sich vor den Augen dessen zuzusperren, der sie eben geschützt hat.
+     */
     fun setSecured(session: SessionEntity, secured: Boolean) = launchAction {
         repository.setSecured(session.id, secured)
         if (secured) {
-            if (interaction.value.selectedSessionId == session.id && interaction.value.drawerView != DrawerView.SECURED) {
-                val next = repository.firstVisibleSessionExcept(session.id)?.id ?: repository.createSession()
-                activateSession(next)
-            }
-            message("Die Notiz liegt jetzt unter „Geschützte Notizen“.")
+            update { copy(securedUnlocked = true) }
+            message("Geschützt. Ab dem nächsten Öffnen braucht sie den Fingerabdruck.")
         } else message("Der Schutz wurde aufgehoben.")
     }
 
@@ -223,9 +224,21 @@ class DenknotizViewModel(
         copy(drawerView = view, selectedFolderId = if (view == DrawerView.FOLDER) selectedFolderId else null)
     }
     fun selectFolder(id: String) = update { copy(drawerView = DrawerView.FOLDER, selectedFolderId = id) }
-    fun unlockSecured() = update { copy(drawerView = DrawerView.SECURED, selectedFolderId = null, securedUnlocked = true) }
-    fun lockSecured() = update { copy(securedUnlocked = false, drawerView = if (drawerView == DrawerView.SECURED) DrawerView.ALL else drawerView) }
+    /**
+     * Nach erfolgreichem Fingerabdruck: geschützte Notizen sind lesbar.
+     *
+     * Die Freigabe gilt, bis die App aus dem Blick gerät ([lockSecured] hängt am
+     * Lebenslauf der Activity) — sonst wäre sie nach dem ersten Fingerabdruck bis zum
+     * nächsten Neustart aufgehoben.
+     */
+    fun unlockSecured() = update { copy(securedUnlocked = true) }
+    fun lockSecured() = update { copy(securedUnlocked = false) }
     fun fingerprintUnavailable(reason: String) = message(reason)
+    /**
+     * Der Schalter entscheidet, ob neue Notizen geschützt werden dürfen. Bereits geschützte
+     * bleiben geschützt: ein Schalter, der den Schutz stillschweigend abräumt, wäre selbst
+     * die größte Lücke.
+     */
     fun setFingerprintLock(value: Boolean) = saveSettings { copy(fingerprintLock = value) }
 
     fun sendDraft() {

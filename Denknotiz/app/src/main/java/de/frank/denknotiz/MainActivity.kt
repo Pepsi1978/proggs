@@ -81,6 +81,15 @@ class MainActivity : FragmentActivity() {
         prompt.authenticate(builder.build())
     }
 
+    /**
+     * Der Schutz schliesst sich wieder, sobald die App aus dem Blick ist. Ohne das gälte ein
+     * einziger Fingerabdruck bis zum nächsten Neustart der App.
+     */
+    override fun onStop() {
+        super.onStop()
+        viewModel.lockSecured()
+    }
+
     private fun withMicrophonePermission(action: () -> Unit) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) action()
         else { afterMicrophonePermission = action; microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }
