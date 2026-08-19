@@ -524,8 +524,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Setzt [einschub] an der gemerkten Stelle ein und schiebt den Cursor dahinter.
      *
-     * Die Leerzeichen entstehen hier und nicht beim Transkribieren: ob eines davor gehört,
-     * hängt vom Zeichen links vom Cursor ab, nicht vom Gesprochenen.
+     * Die Trennzeichen entstehen hier und nicht beim Transkribieren: ob und was davor
+     * gehört, hängt von der Stelle ab, nicht vom Gesprochenen.
+     *
+     * Steht der Cursor am Textende — also auch, wenn gar keiner gesetzt wurde und man
+     * direkt aufs Mikrofon drückt —, ist das Gesprochene ein **Nachtrag** und bekommt eine
+     * Leerzeile zum Bisherigen. Mitten im Text bleibt es ein Einschub und bekommt nur ein
+     * Leerzeichen; ein Absatz risse dort den Satz auseinander.
      */
     private fun setzeEin(z: Bearbeitungszustand, einschub: String): Bearbeitungszustand {
         val laenge = z.text.length
@@ -533,14 +538,22 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val bis = z.auswahlEnde.coerceIn(von, laenge)
         val davor = z.text.substring(0, von)
         val danach = z.text.substring(bis)
+        // Nachtrag: hinter der Stelle steht nichts mehr (auch kein blosser Leerraum). Das
+        // ist auch der Fall, wenn gar kein Cursor gesetzt wurde — der steht dann am Ende.
+        val nachtrag = danach.isBlank() && davor.isNotBlank()
+        val kopf = if (nachtrag) davor.trimEnd() else davor
+        val rest = if (nachtrag) "" else danach
         val fuege = buildString {
-            if (davor.isNotEmpty() && !davor.last().isWhitespace()) append(' ')
+            when {
+                nachtrag -> append("\n\n")
+                kopf.isNotEmpty() && !kopf.last().isWhitespace() -> append(' ')
+            }
             append(einschub.trim())
-            if (danach.isNotEmpty() && !danach.first().isWhitespace()) append(' ')
+            if (!nachtrag && rest.isNotEmpty() && !rest.first().isWhitespace()) append(' ')
         }
-        val cursor = davor.length + fuege.length
+        val cursor = kopf.length + fuege.length
         return z.copy(
-            text = davor + fuege + danach,
+            text = kopf + fuege + rest,
             auswahlStart = cursor,
             auswahlEnde = cursor,
             einfuegeMarke = z.einfuegeMarke + 1,

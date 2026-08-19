@@ -294,7 +294,7 @@
         "ProviderName": "OpenRouter",
         "Slug": "nvidia/nemotron-3-super-120b-a12b:free",
         "DisplayName": "NVIDIA Nemotron 3 Super Free",
-        "IsHidden": false
+        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
@@ -312,7 +312,7 @@
         "ProviderName": "OpenRouter",
         "Slug": "poolside/laguna-s-2.1:free",
         "DisplayName": "Poolside Laguna S 2.1 Free",
-        "IsHidden": false
+        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
