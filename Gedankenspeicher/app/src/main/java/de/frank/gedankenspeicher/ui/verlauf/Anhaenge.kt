@@ -34,8 +34,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -850,7 +853,7 @@ private fun Bildschau(anhang: Anhang, beiSchliessen: () -> Unit) {
     var versatz by remember { mutableStateOf(Offset.Zero) }
     Dialog(
         onDismissRequest = beiSchliessen,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(
             Modifier.fillMaxSize().background(Color.Black),
@@ -883,7 +886,7 @@ private fun Bildschau(anhang: Anhang, beiSchliessen: () -> Unit) {
                 )
             }
             Box(
-                Modifier.align(Alignment.TopEnd).padding(12.dp).size(44.dp)
+                Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).size(44.dp)
                     .clip(RoundedCornerShape(50))
                     .background(Color.Black.copy(alpha = 0.45f))
                     .clickable(onClick = beiSchliessen),
@@ -916,10 +919,12 @@ private fun ZeichenBlatt(
 
     Dialog(
         onDismissRequest = beiAbbruch,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Column(
-            Modifier.fillMaxSize().background(farben.hintergrund).padding(12.dp),
+            Modifier.fillMaxSize().background(farben.hintergrund)
+                .statusBarsPadding().navigationBarsPadding().imePadding()
+                .padding(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Zeichnung", style = Schriften.bildschirmtitel, color = farben.textStark)
@@ -1154,9 +1159,13 @@ fun TabellenBlatt(vorlage: Anhang?, beiAbbruch: () -> Unit, beiFertig: (Anhang) 
 
     Dialog(
         onDismissRequest = beiAbbruch,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Column(Modifier.fillMaxSize().background(farben.hintergrund).padding(12.dp)) {
+        Column(
+            Modifier.fillMaxSize().background(farben.hintergrund)
+                .statusBarsPadding().navigationBarsPadding().imePadding()
+                .padding(12.dp),
+        ) {
             Text(
                 if (vorlage == null) "Tabelle" else "Tabelle bearbeiten",
                 style = Schriften.bildschirmtitel, color = farben.textStark,
