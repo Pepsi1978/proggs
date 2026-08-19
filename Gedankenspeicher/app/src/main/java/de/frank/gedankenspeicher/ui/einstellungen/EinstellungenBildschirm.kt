@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.BuildConfig
 import de.frank.gedankenspeicher.auth.CodexModel
 import de.frank.gedankenspeicher.auth.ReasoningEffort
+import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.settings.Websuche
 import de.frank.gedankenspeicher.tts.ClonedVoice
@@ -313,11 +314,16 @@ fun EinstellungenBildschirm(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
+                        // Der Auftrag ist lang. Ungekürzt schöbe er alles Weitere so weit
+                        // nach unten, dass die Einstellungen darunter nicht mehr auffindbar
+                        // wären — zum Lesen und Ändern gibt es den Stift.
                         SelectionContainer {
                             Text(
                                 verbesserungPrompt,
                                 style = schrift.einstellungErklaerung,
                                 color = farben.textMittel,
+                                maxLines = 6,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -327,6 +333,11 @@ fun EinstellungenBildschirm(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                     ) {
+                        TextButton(
+                            onClick = { verbesserungPromptEntwurf = VERBESSERUNG_AUFTRAG },
+                        ) {
+                            Text("Zurücksetzen", color = farben.textSchwach)
+                        }
                         TextButton(
                             onClick = {
                                 verbesserungPromptEntwurf = verbesserungPrompt

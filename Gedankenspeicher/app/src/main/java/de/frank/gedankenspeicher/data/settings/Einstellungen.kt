@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
+import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG_ALT
 import de.frank.gedankenspeicher.tts.TtsProvider
 
 /**
@@ -63,8 +64,16 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(VERBESSERUNG_EFFORT, "low")!!
         set(v) { p.edit().putString(VERBESSERUNG_EFFORT, v).commit() }
 
+    /**
+     * Der Auftrag, mit dem die Textverbesserung arbeitet — von Hand änderbar (B-04).
+     *
+     * Wer noch den alten Auftrag gespeichert hat, ohne ihn je angefasst zu haben, bekommt
+     * den neuen. Sonst bliebe eine unveränderte Vorbelegung für immer die alte, und der
+     * neue Auftrag käme nur bei einer frischen Installation an.
+     */
     var verbesserungPrompt: String
         get() = p.getString(VERBESSERUNG_PROMPT, VERBESSERUNG_AUFTRAG)!!
+            .let { if (it.trim() == VERBESSERUNG_AUFTRAG_ALT.trim()) VERBESSERUNG_AUFTRAG else it }
         set(v) { p.edit().putString(VERBESSERUNG_PROMPT, v).commit() }
 
     /**
