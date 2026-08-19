@@ -64,6 +64,27 @@ data class Bearbeitungszustand(
     val notiz: Notiz? = null,
     val ueberschrift: String = "",
     val text: String = "",
+    /**
+     * Wo der Cursor im Textfeld steht — die Stelle, an der ein Transkript eingesetzt wird.
+     *
+     * Die Oberfläche meldet jede Cursorbewegung hierher, weil das Mikrofon im ViewModel
+     * sitzt: ohne diese Angabe wüsste es nicht, wohin das Gesprochene gehört, und hänge
+     * es wie früher stumpf ans Ende.
+     */
+    val auswahlStart: Int = 0,
+    val auswahlEnde: Int = 0,
+    /**
+     * Zählt jedes von aussen eingesetzte Transkript hoch.
+     *
+     * Das Textfeld hält seinen eigenen Wert (sonst zerbricht die Tastatur-Vervollständigung
+     * beim Tippen). Diese Marke ist das Signal, den Wert ausnahmsweise doch zu übernehmen.
+     */
+    val einfuegeMarke: Int = 0,
+    /** Läuft gerade eine Aufnahme für dieses Blatt? */
+    val nimmtAuf: Boolean = false,
+    /** Läuft gerade die Transkription des Gesprochenen? */
+    val transkribiert: Boolean = false,
+    val fehler: String? = null,
 ) {
     val geaendert: Boolean
         get() = notiz != null &&

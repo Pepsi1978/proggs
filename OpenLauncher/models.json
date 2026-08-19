@@ -265,6 +265,15 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.2:free",
+        "DisplayName": "Z.ai: GLM 5.2 (free)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
         "Slug": "poolside/laguna-xs-2.1:free",
         "DisplayName": "Poolside Laguna XS 2.1 Free",
         "IsHidden": false
@@ -310,15 +319,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "liquid/lfm-2.5-2.6b:free",
-        "DisplayName": "LiquidAI LFM2.5-2.6B Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "nvidia/nemotron-3.5-lightning:free",
         "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
         "IsHidden": false
@@ -337,8 +337,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "z-ai/glm-5.2:free",
-        "DisplayName": "Z.ai GLM 5.2 Free",
+        "Slug": "liquid/lfm-2.5-2.6b:free",
+        "DisplayName": "LiquidAI LFM2.5-2.6B Free",
         "IsHidden": false
       }
     ],
@@ -379,7 +379,7 @@
       "poolside/laguna-xs-2.1:free",
       "z-ai/glm-5.2:free"
     ],
-    "IsExpanded": false
+    "IsExpanded": true
   },
   {
     "Id": "openrouter",

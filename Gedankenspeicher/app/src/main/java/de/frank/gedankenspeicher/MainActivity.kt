@@ -127,6 +127,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val bearbeitenMikrofonFrage =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
+            if (erlaubt) {
+                modell.mikrofonErlaubt()
+                modell.bearbeitungsAufnahmeUmschalten()
+            } else {
+                modell.mikrofonAbgelehnt()
+                modell.melde("Ohne Mikrofon kann ich dich nicht hören.")
+            }
+        }
+
     private val stimmMikrofonFrage =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
             if (erlaubt) {
@@ -175,6 +186,7 @@ class MainActivity : ComponentActivity() {
                     beiTeilen = { sitzung -> teileSitzung(vm, sitzung) },
                     beiOrdnerwahl = { ordnerWahl.launch(null) },
                     beiAntwortMikrofon = { starteAntwortAufnahmeMitRecht(vm) },
+                    beiBearbeitenMikrofon = { starteBearbeitenAufnahmeMitRecht(vm) },
                     beiDateiwahl = { dateiWahl.launch(arrayOf("*/*")) },
                     beiNeustart = { starteNeu() },
                     beiStimmMikrofon = { starteStimmaufnahmeMitRecht(vm) },
@@ -219,6 +231,17 @@ class MainActivity : ComponentActivity() {
             vm.antwortAufnahmeUmschalten()
         } else {
             antwortMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    /** B-08 — Text in die offene Notiz nachsprechen. Dasselbe Recht, derselbe Weg. */
+    private fun starteBearbeitenAufnahmeMitRecht(vm: HauptViewModel) {
+        val hat = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (hat) {
+            vm.bearbeitungsAufnahmeUmschalten()
+        } else {
+            bearbeitenMikrofonFrage.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
@@ -285,6 +308,7 @@ private fun Oberflaeche(
     beiTeilen: (Sitzung) -> Unit,
     beiOrdnerwahl: () -> Unit,
     beiAntwortMikrofon: () -> Unit,
+    beiBearbeitenMikrofon: () -> Unit,
     beiDateiwahl: () -> Unit,
     beiNeustart: () -> Unit,
     beiStimmMikrofon: () -> Unit,
@@ -569,6 +593,8 @@ private fun Oberflaeche(
                 BearbeitenBlatt(
                     zustand = bearbeitung,
                     beiAenderung = vm::setzeBearbeitung,
+                    beiText = vm::setzeBearbeitungText,
+                    beiEinsprechen = beiBearbeitenMikrofon,
                     beiAbbrechen = vm::schliesseBearbeitung,
                     beiSpeichern = vm::speichereBearbeitung,
                 )

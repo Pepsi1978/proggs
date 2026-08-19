@@ -149,11 +149,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Wohin das nächste Transkript geht.
      *
-     * Dieselbe Aufnahme- und Transkriptionskette bedient zwei Ziele: den Verlauf (F-01) und
-     * das Antwortfeld im KI-Blatt (F-09, Schritt 5). Getrennte Ketten wären zweimal derselbe
-     * Code — und damit zwei Stellen, an denen die Halluzinations-Abwehr auseinanderlaufen kann.
+     * Dieselbe Aufnahme- und Transkriptionskette bedient drei Ziele: den Verlauf (F-01), das
+     * Antwortfeld im KI-Blatt (F-09, Schritt 5) und das Textfeld des Bearbeiten-Blattes
+     * (B-08). Getrennte Ketten wären dreimal derselbe Code — und damit drei Stellen, an
+     * denen die Halluzinations-Abwehr auseinanderlaufen kann.
      */
-    private var aufnahmeGehtInsKiBlatt = false
+    private var aufnahmeziel = Aufnahmeziel.VERLAUF
+
+    private enum class Aufnahmeziel { VERLAUF, KI_BLATT, BEARBEITUNG }
 
     init {
         viewModelScope.launch {
@@ -273,7 +276,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
         } else {
-            aufnahmeGehtInsKiBlatt = false
+            aufnahmeziel = Aufnahmeziel.VERLAUF
             starteAufnahme()
         }
     }
@@ -288,8 +291,28 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
         } else {
-            aufnahmeGehtInsKiBlatt = true
+            aufnahmeziel = Aufnahmeziel.KI_BLATT
             starteAufnahme()
+        }
+    }
+
+    /**
+     * B-08 — Text in die Notiz **nachsprechen**, statt ihn tippen zu müssen.
+     *
+     * Spracherkennung ist schneller als eine Bildschirmtastatur, und wer eine Notiz ohnehin
+     * eingesprochen hat, will sie auch mit der Stimme ergänzen. Das Transkript landet genau
+     * an der Cursorstelle — nicht am Ende, sonst müsste man es dorthin schieben, wo es
+     * hingehört.
+     */
+    fun bearbeitungsAufnahmeUmschalten() {
+        if (_bearbeitung.value.notiz == null) return
+        if (_verlauf.value.nimmtAuf) {
+            beendeAufnahme()
+        } else {
+            aufnahmeziel = Aufnahmeziel.BEARBEITUNG
+            _bearbeitung.update { it.copy(fehler = null) }
+            starteAufnahme()
+            _bearbeitung.update { it.copy(nimmtAuf = _verlauf.value.nimmtAuf) }
         }
     }
 
@@ -329,17 +352,26 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (!_verlauf.value.nimmtAuf) return
         val sitzung = _verlauf.value.sitzung ?: return
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
+        _bearbeitung.update { it.copy(nimmtAuf = false) }
         aufnahmeJob?.cancel()
+        val ziel = aufnahmeziel
+        aufnahmeziel = Aufnahmeziel.VERLAUF
         viewModelScope.launch {
             val wav = mikrofon.stop()
             if (wav == null || wav.size < MINDESTGROESSE_WAV) {
-                melde("Zu kurz — dabei ist nichts angekommen.")
-                aufnahmeGehtInsKiBlatt = false
+                if (ziel == Aufnahmeziel.BEARBEITUNG) {
+                    _bearbeitung.update { it.copy(fehler = "Zu kurz — dabei ist nichts angekommen.") }
+                } else {
+                    melde("Zu kurz — dabei ist nichts angekommen.")
+                }
                 return@launch
             }
-            if (aufnahmeGehtInsKiBlatt) {
-                aufnahmeGehtInsKiBlatt = false
+            if (ziel == Aufnahmeziel.KI_BLATT) {
                 schreibeInsAntwortfeld(wav)
+                return@launch
+            }
+            if (ziel == Aufnahmeziel.BEARBEITUNG) {
+                schreibeInsBearbeitungsfeld(wav)
                 return@launch
             }
             if (!hatNetz()) {
@@ -352,6 +384,22 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             val id = repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.TRANSKRIBIERT_GERADE, null)
             transkribiere(id, sitzung.id, wav, null)
         }
+    }
+
+    /**
+     * Bricht eine laufende Aufnahme ab, ohne dass etwas davon übrig bleibt.
+     *
+     * Wird das Blatt geschlossen, für das gesprochen wurde, gibt es kein Ziel mehr. Ohne
+     * diesen Weg landete das Gesprochene ersatzweise als Notiz im Verlauf — eine Karte, die
+     * niemand angelegt hat.
+     */
+    private fun verwirfAufnahme() {
+        if (!_verlauf.value.nimmtAuf) return
+        _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
+        _bearbeitung.update { it.copy(nimmtAuf = false) }
+        aufnahmeziel = Aufnahmeziel.VERLAUF
+        aufnahmeJob?.cancel()
+        viewModelScope.launch { mikrofon.stop() }
     }
 
     private fun puffere(wav: ByteArray): File {
@@ -432,6 +480,72 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         } finally {
             transkriber.shutdown()
         }
+    }
+
+    /**
+     * Transkribiert und setzt das Ergebnis an der Cursorstelle des Bearbeiten-Blattes ein.
+     *
+     * Eingesetzt, nicht angehängt: der Sinn des Nachsprechens ist, mitten im Text etwas zu
+     * ergänzen. Steht etwas ausgewählt, ersetzt das Gesprochene die Auswahl — so verhält
+     * sich auch das Einfügen aus der Zwischenablage.
+     */
+    private suspend fun schreibeInsBearbeitungsfeld(wav: ByteArray) {
+        if (_bearbeitung.value.notiz == null) return
+        val transkriber = repo.transkriber()
+        if (!transkriber.isConfigured) {
+            _bearbeitung.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
+            return
+        }
+        _bearbeitung.update { it.copy(transkribiert = true, fehler = null) }
+        try {
+            val text = transkriber.transcribe(wav)
+            if (text.isBlank()) {
+                _bearbeitung.update { it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") }
+                return
+            }
+            _bearbeitung.update { z ->
+                // Das Blatt kann zwischenzeitlich geschlossen worden sein; dann gibt es
+                // keine Stelle mehr, an die etwas gehört.
+                if (z.notiz == null) return@update z
+                setzeEin(z, text)
+            }
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (fehler: Exception) {
+            _bearbeitung.update {
+                it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.")
+            }
+        } finally {
+            _bearbeitung.update { it.copy(transkribiert = false) }
+            transkriber.shutdown()
+        }
+    }
+
+    /**
+     * Setzt [einschub] an der gemerkten Stelle ein und schiebt den Cursor dahinter.
+     *
+     * Die Leerzeichen entstehen hier und nicht beim Transkribieren: ob eines davor gehört,
+     * hängt vom Zeichen links vom Cursor ab, nicht vom Gesprochenen.
+     */
+    private fun setzeEin(z: Bearbeitungszustand, einschub: String): Bearbeitungszustand {
+        val laenge = z.text.length
+        val von = z.auswahlStart.coerceIn(0, laenge)
+        val bis = z.auswahlEnde.coerceIn(von, laenge)
+        val davor = z.text.substring(0, von)
+        val danach = z.text.substring(bis)
+        val fuege = buildString {
+            if (davor.isNotEmpty() && !davor.last().isWhitespace()) append(' ')
+            append(einschub.trim())
+            if (danach.isNotEmpty() && !danach.first().isWhitespace()) append(' ')
+        }
+        val cursor = davor.length + fuege.length
+        return z.copy(
+            text = davor + fuege + danach,
+            auswahlStart = cursor,
+            auswahlEnde = cursor,
+            einfuegeMarke = z.einfuegeMarke + 1,
+            fehler = null,
+        )
     }
 
     /** Der Wiederholen-Knopf an einer fehlgeschlagenen Karte. */
@@ -576,13 +690,32 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun oeffneBearbeitung(notiz: Notiz) {
-        _bearbeitung.value = Bearbeitungszustand(notiz, notiz.ueberschrift ?: "", notiz.text)
+        _bearbeitung.value = Bearbeitungszustand(
+            notiz = notiz,
+            ueberschrift = notiz.ueberschrift ?: "",
+            text = notiz.text,
+            // Der Cursor steht anfangs am Ende: das ist die Stelle, an der ohne weiteres
+            // Zutun weitergesprochen wird.
+            auswahlStart = notiz.text.length,
+            auswahlEnde = notiz.text.length,
+        )
     }
 
     fun setzeBearbeitung(ueberschrift: String, text: String) =
         _bearbeitung.update { it.copy(ueberschrift = ueberschrift, text = text) }
 
-    fun schliesseBearbeitung() { _bearbeitung.value = Bearbeitungszustand() }
+    /** Meldet jede Änderung im Textfeld samt Cursorstelle (B-08, Nachsprechen). */
+    fun setzeBearbeitungText(text: String, auswahlStart: Int, auswahlEnde: Int) =
+        _bearbeitung.update {
+            it.copy(text = text, auswahlStart = auswahlStart, auswahlEnde = auswahlEnde)
+        }
+
+    fun schliesseBearbeitung() {
+        // Eine laufende Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon weiter und
+        // ihr Transkript käme in ein Feld, das es nicht mehr gibt.
+        if (_verlauf.value.nimmtAuf && aufnahmeziel == Aufnahmeziel.BEARBEITUNG) verwirfAufnahme()
+        _bearbeitung.value = Bearbeitungszustand()
+    }
 
     fun speichereBearbeitung() {
         val z = _bearbeitung.value
@@ -617,9 +750,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         codex.cancelQuestionGeneration()
         // Eine laufende Antwort-Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon
         // weiter und ihr Transkript käme in ein Feld, das es nicht mehr gibt.
-        if (_verlauf.value.nimmtAuf && aufnahmeGehtInsKiBlatt) {
-            aufnahmeGehtInsKiBlatt = false
-            beendeAufnahme()
+        if (_verlauf.value.nimmtAuf && aufnahmeziel == Aufnahmeziel.KI_BLATT) {
+            verwirfAufnahme()
         }
         _kiBlatt.value = KiBlattzustand()
     }

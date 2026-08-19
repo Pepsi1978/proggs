@@ -5,5 +5,10 @@
       "PowerShell(Get-ChildItem -Force \"C:\\\\Users\\\\barwa\\\\proggs\" | Select-Object Mode,Name | Format-Table -AutoSize; \"---WINGET---\"; \\(Get-Command winget -ErrorAction SilentlyContinue\\).Source)",
       "PowerShell(winget install *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "second-brain"
+  ],
+  "outputStyle": "Proactive",
+  "enableAllProjectMcpServers": true
 }

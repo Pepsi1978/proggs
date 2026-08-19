@@ -16,12 +16,26 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.ui.Bearbeitungszustand
@@ -41,6 +55,8 @@ import de.frank.gedankenspeicher.ui.theme.Schriften
 fun BearbeitenBlatt(
     zustand: Bearbeitungszustand,
     beiAenderung: (String, String) -> Unit,
+    beiText: (String, Int, Int) -> Unit,
+    beiEinsprechen: () -> Unit,
     beiAbbrechen: () -> Unit,
     beiSpeichern: () -> Unit,
 ) {
@@ -97,12 +113,10 @@ fun BearbeitenBlatt(
             beiAenderung = { beiAenderung(it, zustand.text) },
         )
         Spacer(Modifier.height(10.dp))
-        Feld(
-            wert = zustand.text,
-            platzhalter = "Text der Notiz",
-            einzeilig = false,
-            beiAenderung = { beiAenderung(zustand.ueberschrift, it) },
-        )
+        Textfeld(zustand = zustand, beiText = beiText)
+
+        Spacer(Modifier.height(12.dp))
+        Mikrofonzeile(zustand = zustand, beiEinsprechen = beiEinsprechen)
 
         Spacer(Modifier.height(10.dp))
         Text(
@@ -111,6 +125,104 @@ fun BearbeitenBlatt(
             color = farben.textSchwach,
         )
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Das Textfeld der Notiz — mit gemerkter Cursorstelle.
+ *
+ * Der Wert liegt hier lokal und nicht im Zustand: ein von aussen durchgereichter Wert
+ * zerreisst bei jedem Anschlag die Vervollständigung der Bildschirmtastatur. Nur wenn ein
+ * Transkript eingesetzt wurde ([Bearbeitungszustand.einfuegeMarke] zählt hoch), wird der
+ * Wert von aussen übernommen — samt der neuen Cursorstelle hinter dem Eingesetzten.
+ */
+@Composable
+private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -> Unit) {
+    val farben = Farben
+    val schrift = Schriften
+    var feld by remember(zustand.notiz?.id) {
+        mutableStateOf(TextFieldValue(zustand.text, TextRange(zustand.text.length)))
+    }
+    LaunchedEffect(zustand.einfuegeMarke) {
+        if (zustand.einfuegeMarke > 0) {
+            feld = TextFieldValue(zustand.text, TextRange(zustand.auswahlStart, zustand.auswahlEnde))
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 160.dp)
+            .background(farben.hintergrundErhoben, RoundedCornerShape(Masse.profilRadius))
+            .border(1.dp, farben.rand, RoundedCornerShape(Masse.profilRadius))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        if (feld.text.isEmpty()) {
+            Text("Text der Notiz", style = schrift.eingabefeld, color = farben.textSchwach)
+        }
+        BasicTextField(
+            value = feld,
+            onValueChange = {
+                feld = it
+                beiText(it.text, it.selection.start, it.selection.end)
+            },
+            textStyle = schrift.eingabefeld.copy(color = farben.textStark),
+            cursorBrush = SolidColor(farben.akzent),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * Der Mikrofonknopf unter dem Textfeld.
+ *
+ * Er sitzt unter der Blase und nicht darin, weil das Feld mehrzeilig ist und mitwächst: ein
+ * Knopf im Feld wanderte mit jeder Zeile mit und wäre bei langem Text ausserhalb des Blicks.
+ */
+@Composable
+private fun Mikrofonzeile(zustand: Bearbeitungszustand, beiEinsprechen: () -> Unit) {
+    val farben = Farben
+    val schrift = Schriften
+    Column {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(Masse.tippflaeche)
+                .clip(RoundedCornerShape(50))
+                .background(if (zustand.nimmtAuf) farben.akzent else farben.hintergrundErhoben)
+                .border(
+                    1.dp,
+                    if (zustand.nimmtAuf) farben.akzent else farben.rand,
+                    RoundedCornerShape(50),
+                )
+                .clickable(enabled = !zustand.transkribiert, onClick = beiEinsprechen),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (zustand.transkribiert) {
+                CircularProgressIndicator(Modifier.size(18.dp), color = farben.akzent, strokeWidth = 2.dp)
+            } else {
+                Icon(
+                    if (zustand.nimmtAuf) Icons.Filled.Stop else Icons.Outlined.Mic,
+                    if (zustand.nimmtAuf) "Aufnahme beenden" else "Text einsprechen",
+                    Modifier.size(22.dp),
+                    tint = if (zustand.nimmtAuf) farben.hintergrund else farben.textMittel,
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            when {
+                zustand.transkribiert -> "Wird geschrieben …"
+                zustand.nimmtAuf -> "Ich höre zu — nochmal tippen zum Beenden"
+                else -> "Einsprechen — landet an der Cursorstelle"
+            },
+            style = schrift.zeitstempel,
+            color = if (zustand.nimmtAuf) farben.akzent else farben.textSchwach,
+        )
+    }
+    zustand.fehler?.let {
+        Spacer(Modifier.height(8.dp))
+        Text(it, style = schrift.zeitstempel, color = farben.fehler)
+    }
     }
 }
 
