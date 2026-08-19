@@ -18,6 +18,21 @@ data class SessionEntity(
     val archived: Boolean = false,
     val titleManual: Boolean = false,
     val titleGenerated: Boolean = false,
+    /** Als Favorit markiert – erscheint im Reiter "Favoriten". */
+    val favorite: Boolean = false,
+    /** Geschützt – nur nach Fingerabdruck sichtbar, liegt im Reiter "Geschützte Notizen". */
+    val secured: Boolean = false,
+    /** Zeitpunkt der Verschiebung in den Papierkorb; null = nicht gelöscht. */
+    val deletedAt: Long? = null,
+    /** Zugehöriger Ordner; null = kein Ordner. */
+    val folderId: String? = null,
+)
+
+@Entity(tableName = "folders")
+data class FolderEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val createdAt: Long,
 )
 
 @Entity(
@@ -45,6 +60,7 @@ data class EntryEntity(
     val titleManual: Boolean = false,
     val titleGenerated: Boolean = false,
     val originalText: String? = null,
+    val attachmentsJson: String = "[]",
 )
 
 @Entity(

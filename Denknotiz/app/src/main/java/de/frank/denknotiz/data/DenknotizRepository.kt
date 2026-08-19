@@ -6,6 +6,7 @@ import de.frank.denknotiz.data.local.DenknotizDatabase
 import de.frank.denknotiz.data.local.EntryEntity
 import de.frank.denknotiz.data.local.EntryType
 import de.frank.denknotiz.data.local.EvaluationSnapshotEntity
+import de.frank.denknotiz.data.local.FolderEntity
 import de.frank.denknotiz.data.local.SessionBundle
 import de.frank.denknotiz.data.local.SessionEntity
 import de.frank.denknotiz.data.local.SnapshotStatus
@@ -17,6 +18,7 @@ import org.json.JSONObject
 
 class DenknotizRepository(private val db: DenknotizDatabase) {
     val sessions: Flow<List<SessionEntity>> = db.sessionDao().observeAll()
+    val folders: Flow<List<FolderEntity>> = db.folderDao().observeAll()
 
     fun observeBundle(sessionId: String): Flow<SessionBundle?> = combine(
         db.sessionDao().observe(sessionId),
@@ -40,13 +42,41 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
     suspend fun firstVisibleSessionExcept(id: String): SessionEntity? = db.sessionDao().firstVisibleExcept(id)
     suspend fun deleteSession(id: String) = db.sessionDao().delete(id)
 
-    suspend fun addNote(sessionId: String, text: String): EntryEntity = db.withTransaction {
+    suspend fun toggleFavorite(id: String) = db.sessionDao().toggleFavorite(id)
+    suspend fun setSecured(id: String, secured: Boolean) = db.sessionDao().setSecured(id, secured)
+    /** Verschiebt eine Notiz in den Papierkorb bzw. holt sie wieder heraus. */
+    suspend fun setTrashed(id: String, trashed: Boolean) =
+        db.sessionDao().setDeletedAt(id, if (trashed) System.currentTimeMillis() else null)
+    suspend fun emptyTrash() = db.sessionDao().emptyTrash()
+    suspend fun moveToFolder(id: String, folderId: String?) = db.sessionDao().setFolder(id, folderId)
+
+    suspend fun createFolder(name: String): String {
+        val id = UUID.randomUUID().toString()
+        db.folderDao().upsert(FolderEntity(id, name.trim().ifBlank { "Neuer Ordner" }, System.currentTimeMillis()))
+        return id
+    }
+
+    suspend fun renameFolder(folder: FolderEntity, name: String) =
+        db.folderDao().upsert(folder.copy(name = name.trim().ifBlank { folder.name }))
+
+    /** Löscht den Ordner; enthaltene Notizen bleiben erhalten und landen wieder ohne Ordner. */
+    suspend fun deleteFolder(id: String) = db.withTransaction {
+        db.folderDao().detachSessions(id)
+        db.folderDao().delete(id)
+    }
+
+    suspend fun addNote(
+        sessionId: String,
+        text: String,
+        attachments: List<Attachment> = emptyList(),
+    ): EntryEntity = db.withTransaction {
         val clean = text.trim()
-        require(clean.isNotBlank())
+        require(clean.isNotBlank() || attachments.isNotEmpty())
         val now = System.currentTimeMillis()
         val ordinal = db.entryDao().maxOrdinal(sessionId) + 1
-        val localTitle = localTitle(clean)
-        val entry = EntryEntity(UUID.randomUUID().toString(), sessionId, ordinal, EntryType.NOTE, localTitle, clean, now, now)
+        val localTitle = if (clean.isNotBlank()) localTitle(clean) else attachmentTitle(attachments)
+        val entry = EntryEntity(UUID.randomUUID().toString(), sessionId, ordinal, EntryType.NOTE, localTitle, clean, now, now,
+            attachmentsJson = attachments.toAttachmentJson())
         db.entryDao().insert(entry)
         val session = db.sessionDao().get(sessionId) ?: error("Sitzung nicht gefunden")
         db.sessionDao().update(session.copy(
@@ -201,7 +231,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
     suspend fun backup(profileNames: Map<String, String>, profileInstructions: Map<String, String>): BackupPayload = db.withTransaction {
         BackupPayload(
             db.sessionDao().all(), db.entryDao().all(), db.evaluationDao().all(), db.boundaryDao().all(),
-            profileNames, profileInstructions,
+            profileNames, profileInstructions, db.folderDao().all(),
         )
     }
 
@@ -213,6 +243,7 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
             }
         }
         var imported = 0
+        payload.folders.forEach { if (db.folderDao().insertIfMissing(it) != -1L) imported++ }
         payload.sessions.forEach { if (db.sessionDao().insert(it) != -1L) imported++ }
         payload.entries.forEach { if (db.entryDao().insert(it) != -1L) imported++ }
         payload.snapshots.forEach { if (db.evaluationDao().insert(it) != -1L) imported++ }
@@ -252,6 +283,22 @@ class DenknotizRepository(private val db: DenknotizDatabase) {
         if (db.boundaryDao().insertIfMissing(boundary) == -1L) {
             db.boundaryDao().advance(snapshot.sessionId, snapshot.upperOrdinalInclusive, responseId, now)
         }
+    }
+
+    /** Anhänge ohne Text bekommen ihre Überschrift aus der Art des ersten Anhangs. */
+    private fun attachmentTitle(attachments: List<Attachment>): String {
+        val first = attachments.firstOrNull() ?: return "Neue Notiz"
+        val bezeichnung = when (first.kind) {
+            AttachmentKind.PDF -> "PDF"
+            AttachmentKind.VOICE -> "Sprachaufnahme"
+            AttachmentKind.IMAGE -> "Bild"
+            AttachmentKind.SCAN -> "Dokumentenscan"
+            AttachmentKind.AUDIO -> "Audiodatei"
+            AttachmentKind.DRAWING -> "Zeichnung"
+            AttachmentKind.STICKY -> "Haftnotiz"
+            AttachmentKind.TABLE -> "Tabelle"
+        }
+        return if (attachments.size > 1) "$bezeichnung und ${attachments.size - 1} weitere" else bezeichnung
     }
 
     private fun localTitle(text: String): String = text.lineSequence().first().trim()

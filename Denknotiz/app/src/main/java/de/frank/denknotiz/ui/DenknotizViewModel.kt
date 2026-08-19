@@ -11,6 +11,9 @@ import de.frank.denknotiz.audio.GroqTranscriber
 import de.frank.denknotiz.audio.MicRecorder
 import de.frank.denknotiz.audio.RecordingForegroundService
 import de.frank.denknotiz.data.AppTheme
+import de.frank.denknotiz.data.Attachment
+import de.frank.denknotiz.data.AttachmentStore
+import de.frank.denknotiz.data.attachmentsFromJson
 import de.frank.denknotiz.data.BackupPayload
 import de.frank.denknotiz.data.CodexModel
 import de.frank.denknotiz.data.DenknotizRepository
@@ -19,6 +22,7 @@ import de.frank.denknotiz.data.SettingsSnapshot
 import de.frank.denknotiz.data.TtsProvider
 import de.frank.denknotiz.data.local.EntryEntity
 import de.frank.denknotiz.data.local.EvaluationSnapshotEntity
+import de.frank.denknotiz.data.local.FolderEntity
 import de.frank.denknotiz.data.local.SessionBundle
 import de.frank.denknotiz.data.local.SessionEntity
 import de.frank.denknotiz.domain.AnalysisProfiles
@@ -47,11 +51,16 @@ import org.json.JSONArray
 
 enum class AppSection { WORKBENCH, SETTINGS }
 
+/** Reiter der Seitenleiste über dem Trennstrich. */
+enum class DrawerView { ALL, FAVORITES, SECURED, TRASH, FOLDER }
+
 data class InteractionState(
     val section: AppSection = AppSection.WORKBENCH,
     val selectedSessionId: String? = null,
     val draft: String = "",
     val undoDraft: String? = null,
+    /** Anhänge, die mit dem nächsten Senden zur Notiz werden. */
+    val attachments: List<Attachment> = emptyList(),
     val focusQuestion: String = "",
     val webEnabled: Boolean = false,
     val evaluating: Boolean = false,
@@ -65,10 +74,15 @@ data class InteractionState(
     val connectingCodex: Boolean = false,
     val qwenVoices: List<QwenVoice> = emptyList(),
     val loadingVoices: Boolean = false,
+    val drawerView: DrawerView = DrawerView.ALL,
+    val selectedFolderId: String? = null,
+    /** Geschützte Notizen sind für diese Sitzung per Fingerabdruck freigegeben. */
+    val securedUnlocked: Boolean = false,
 )
 
 data class DenknotizUiState(
     val sessions: List<SessionEntity> = emptyList(),
+    val folders: List<FolderEntity> = emptyList(),
     val bundle: SessionBundle? = null,
     val settings: SettingsSnapshot = SettingsSnapshot(),
     val interaction: InteractionState = InteractionState(),
@@ -91,6 +105,8 @@ class DenknotizViewModel(
     private var previewPlayer: MediaPlayer? = null
     private val voices = QwenVoiceManager()
     private val drafts = mutableMapOf<String, String>()
+    private val attachmentStore = AttachmentStore(container.application)
+    private val draftAttachments = mutableMapOf<String, List<Attachment>>()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val bundle = interaction.map { state: InteractionState -> state.selectedSessionId }
@@ -99,14 +115,16 @@ class DenknotizViewModel(
             sessionId?.let(repository::observeBundle) ?: flowOf<SessionBundle?>(null)
     }
 
+    private val library = combine(repository.sessions, repository.folders) { sessions, folders -> sessions to folders }
+
     val uiState = combine(
-        repository.sessions,
+        library,
         bundle,
         container.settings.state,
         interaction,
         speechController.state,
-    ) { sessions, selectedBundle, settings, currentInteraction, speech ->
-        DenknotizUiState(sessions, selectedBundle, settings, currentInteraction, speech,
+    ) { (sessions, folders), selectedBundle, settings, currentInteraction, speech ->
+        DenknotizUiState(sessions, folders, selectedBundle, settings, currentInteraction, speech,
             container.codex.isConnected, container.codex.email)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DenknotizUiState())
 
@@ -116,7 +134,8 @@ class DenknotizViewModel(
             repository.sessions.collect { sessions ->
                 val selected = interaction.value.selectedSessionId
                 if (selected == null || sessions.none { it.id == selected }) {
-                    val id = sessions.firstOrNull { !it.archived }?.id ?: repository.createSession()
+                    val id = sessions.firstOrNull { !it.archived && it.deletedAt == null && !it.secured }?.id
+                        ?: repository.createSession()
                     activateSession(id)
                 }
             }
@@ -139,7 +158,13 @@ class DenknotizViewModel(
     fun setWeb(value: Boolean) = update { copy(webEnabled = value) }
     fun consumeMessage() = update { copy(message = null) }
 
-    fun newSession() = launchAction { selectSession(repository.createSession()) }
+    fun newSession() = launchAction {
+        val id = repository.createSession()
+        // Im Ordner-Reiter legt der Knopf die Notiz gleich in diesem Ordner an.
+        val folder = interaction.value.selectedFolderId
+        if (interaction.value.drawerView == DrawerView.FOLDER && folder != null) repository.moveToFolder(id, folder)
+        selectSession(id)
+    }
 
     fun renameSession(session: SessionEntity, title: String) = launchAction {
         repository.updateSession(session.copy(title = title.trim().ifBlank { session.title }, titleManual = true))
@@ -155,16 +180,67 @@ class DenknotizViewModel(
     }
     fun deleteSession(session: SessionEntity) = launchAction { repository.deleteSession(session.id) }
 
+    fun toggleFavorite(session: SessionEntity) = launchAction { repository.toggleFavorite(session.id) }
+
+    /** Schützt eine Notiz bzw. hebt den Schutz auf; der Fingerabdruck wurde vorher in der Oberfläche geprüft. */
+    fun setSecured(session: SessionEntity, secured: Boolean) = launchAction {
+        repository.setSecured(session.id, secured)
+        if (secured) {
+            if (interaction.value.selectedSessionId == session.id && interaction.value.drawerView != DrawerView.SECURED) {
+                val next = repository.firstVisibleSessionExcept(session.id)?.id ?: repository.createSession()
+                activateSession(next)
+            }
+            message("Die Notiz liegt jetzt unter „Geschützte Notizen“.")
+        } else message("Der Schutz wurde aufgehoben.")
+    }
+
+    fun trashSession(session: SessionEntity) = launchAction {
+        repository.setTrashed(session.id, true)
+        if (interaction.value.selectedSessionId == session.id) {
+            val next = repository.firstVisibleSessionExcept(session.id)?.id ?: repository.createSession()
+            activateSession(next)
+        }
+        message("Die Notiz liegt im Papierkorb.")
+    }
+
+    fun restoreSession(session: SessionEntity) = launchAction {
+        repository.setTrashed(session.id, false)
+        message("Die Notiz wurde wiederhergestellt.")
+    }
+
+    fun emptyTrash() = launchAction { repository.emptyTrash(); message("Der Papierkorb ist geleert.") }
+
+    fun moveToFolder(session: SessionEntity, folderId: String?) = launchAction { repository.moveToFolder(session.id, folderId) }
+
+    fun createFolder(name: String) = launchAction { repository.createFolder(name) }
+    fun renameFolder(folder: FolderEntity, name: String) = launchAction { repository.renameFolder(folder, name) }
+    fun deleteFolder(folder: FolderEntity) = launchAction {
+        repository.deleteFolder(folder.id)
+        if (interaction.value.selectedFolderId == folder.id) update { copy(drawerView = DrawerView.ALL, selectedFolderId = null) }
+    }
+
+    fun selectView(view: DrawerView) = update {
+        copy(drawerView = view, selectedFolderId = if (view == DrawerView.FOLDER) selectedFolderId else null)
+    }
+    fun selectFolder(id: String) = update { copy(drawerView = DrawerView.FOLDER, selectedFolderId = id) }
+    fun unlockSecured() = update { copy(drawerView = DrawerView.SECURED, selectedFolderId = null, securedUnlocked = true) }
+    fun lockSecured() = update { copy(securedUnlocked = false, drawerView = if (drawerView == DrawerView.SECURED) DrawerView.ALL else drawerView) }
+    fun fingerprintUnavailable(reason: String) = message(reason)
+    fun setFingerprintLock(value: Boolean) = saveSettings { copy(fingerprintLock = value) }
+
     fun sendDraft() {
         val text = interaction.value.draft.trim()
         val sessionId = interaction.value.selectedSessionId ?: return
-        if (text.isBlank()) return
+        val anhaenge = interaction.value.attachments
+        if (text.isBlank() && anhaenge.isEmpty()) return
         launchAction {
-            val entry = repository.addNote(sessionId, text)
+            val entry = repository.addNote(sessionId, text, anhaenge)
             if (interaction.value.selectedSessionId == sessionId && interaction.value.draft.trim() == text) {
                 drafts[sessionId] = ""
-                update { copy(draft = "", undoDraft = null) }
+                draftAttachments[sessionId] = emptyList()
+                update { copy(draft = "", undoDraft = null, attachments = emptyList()) }
             }
+            if (text.isBlank()) return@launchAction
             val settings = container.settings.state.value
             if (container.codex.isConnected) {
                 runCatching { container.codex.title(text, settings.model, "") }
@@ -182,7 +258,10 @@ class DenknotizViewModel(
         repository.improveNote(entry.id, improved)
     }
     fun restoreNote(entry: EntryEntity) = launchAction { repository.restoreNote(entry.id) }
-    fun deleteEntry(entry: EntryEntity) = launchAction { repository.deleteEntry(entry.id) }
+    fun deleteEntry(entry: EntryEntity) = launchAction {
+        attachmentStore.deleteAll(attachmentsFromJson(entry.attachmentsJson))
+        repository.deleteEntry(entry.id)
+    }
     fun responseAsNote(entry: EntryEntity) = launchAction { repository.responseAsNote(entry.id) }
 
     fun improveDraft() {
@@ -199,6 +278,23 @@ class DenknotizViewModel(
             }
         }
     }
+
+    /** Nimmt einen im Plus-Menü erzeugten Anhang in den Entwurf auf. */
+    fun addAttachment(attachment: Attachment) {
+        val liste = interaction.value.attachments + attachment
+        interaction.value.selectedSessionId?.let { draftAttachments[it] = liste }
+        update { copy(attachments = liste) }
+    }
+
+    /** Entfernt einen Anhang aus dem Entwurf und löscht seine Datei wieder. */
+    fun removeAttachment(attachment: Attachment) {
+        val liste = interaction.value.attachments.filterNot { it.id == attachment.id }
+        interaction.value.selectedSessionId?.let { draftAttachments[it] = liste }
+        update { copy(attachments = liste) }
+        attachmentStore.deleteAll(listOf(attachment))
+    }
+
+    fun reportMessage(text: String) = message(text)
 
     fun undoImprovement() {
         val old = interaction.value.undoDraft ?: return
@@ -383,6 +479,10 @@ class DenknotizViewModel(
     fun disconnectCodex() { container.codex.disconnect(); update { copy(message = "Codex wurde getrennt.") } }
 
     fun setTheme(value: AppTheme) = saveSettings { copy(theme = value) }
+    fun toggleTheme() = saveSettings {
+        val neu = if (theme == AppTheme.LIGHT || theme == AppTheme.GOLD_LIGHT) AppTheme.DARK else AppTheme.LIGHT
+        copy(theme = neu)
+    }
     fun setModel(value: CodexModel) = saveSettings { copy(model = value) }
     fun setReasoning(value: ReasoningEffort) = saveSettings { copy(reasoning = value) }
     fun setProfile(value: String) = saveSettings { copy(profileId = value) }
@@ -458,10 +558,12 @@ class DenknotizViewModel(
     private fun activateSession(id: String) {
         val current = interaction.value
         current.selectedSessionId?.let { drafts[it] = current.draft }
+        current.selectedSessionId?.let { draftAttachments[it] = current.attachments }
         interaction.value = current.copy(
             selectedSessionId = id,
             section = AppSection.WORKBENCH,
             draft = drafts[id].orEmpty(),
+            attachments = draftAttachments[id].orEmpty(),
             undoDraft = null,
             focusQuestion = "",
             webEnabled = false,

@@ -6,7 +6,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -42,8 +44,23 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GraphicEq
@@ -108,6 +125,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -126,9 +144,11 @@ import de.frank.denknotiz.data.DenknotizRepository
 import de.frank.denknotiz.data.ReasoningEffort
 import de.frank.denknotiz.data.SettingsSnapshot
 import de.frank.denknotiz.data.TtsProvider
+import de.frank.denknotiz.data.attachmentsFromJson
 import de.frank.denknotiz.data.local.EntryEntity
 import de.frank.denknotiz.data.local.EntryType
 import de.frank.denknotiz.data.local.EvaluationSnapshotEntity
+import de.frank.denknotiz.data.local.FolderEntity
 import de.frank.denknotiz.data.local.SessionEntity
 import de.frank.denknotiz.data.local.SnapshotStatus
 import de.frank.denknotiz.domain.AnalysisProfiles
@@ -146,6 +166,9 @@ import org.json.JSONArray
 
 private val MotionEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
+/** Gelb des Favoritensterns – in beiden Themes gleich gut lesbar. */
+private val FavoriteGold = Color(0xFFF5B72A)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DenknotizApp(
@@ -154,6 +177,7 @@ fun DenknotizApp(
     requestNotifications: () -> Unit,
     createBackup: () -> Unit,
     openBackup: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") requestFingerprint: (String, () -> Unit) -> Unit = { _, aktion -> aktion() },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     DenknotizTheme(state.settings.theme) {
@@ -175,6 +199,7 @@ fun DenknotizApp(
                 SessionDrawer(
                     state = state,
                     vm = viewModel,
+                    requestFingerprint = requestFingerprint,
                     selectSession = { id -> viewModel.selectSession(id); scope.launch { drawer.close() } },
                     openSettings = { viewModel.selectSection(AppSection.SETTINGS); scope.launch { drawer.close() } },
                     closeDrawer = { scope.launch { drawer.close() } },
@@ -197,11 +222,13 @@ fun DenknotizApp(
                         AppSection.WORKBENCH -> Workbench(
                             state, viewModel, openDrawer = { scope.launch { drawer.open() } },
                             requestMicrophone = requestMicrophone, requestNotifications = requestNotifications,
+                            requestFingerprint = requestFingerprint,
                         )
                         AppSection.SETTINGS -> SettingsScreen(
                             state, viewModel, openDrawer = { scope.launch { drawer.open() } },
                             requestMicrophone = requestMicrophone, requestNotifications = requestNotifications,
                             createBackup = createBackup, openBackup = openBackup,
+                            requestFingerprint = requestFingerprint,
                         )
                     }
                 }
@@ -214,60 +241,362 @@ fun DenknotizApp(
 private fun SessionDrawer(
     state: DenknotizUiState,
     vm: DenknotizViewModel,
+    requestFingerprint: (String, () -> Unit) -> Unit,
     selectSession: (String) -> Unit,
     openSettings: () -> Unit,
     closeDrawer: () -> Unit,
 ) {
-    var search by rememberSaveable { mutableStateOf("") }
-    var showArchived by rememberSaveable { mutableStateOf(false) }
-    val sessions = state.sessions.filter { it.archived == showArchived && (search.isBlank() || it.title.contains(search, true)) }
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.width(330.dp),
+        modifier = Modifier.width(340.dp),
     ) {
-        Column(Modifier.fillMaxHeight().statusBarsPadding().navigationBarsPadding().padding(18.dp)) {
-            Text("DENKNOTIZ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            Text("Sitzungen", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
-            GoldActionButton(
-                text = "Neue Sitzung",
-                icon = Icons.Default.Add,
-                reducedMotion = state.settings.reducedMotion,
-                onClick = { vm.newSession(); closeDrawer() },
-                modifier = Modifier.fillMaxWidth(),
+        NoteLibrary(
+            state = state,
+            vm = vm,
+            requestFingerprint = requestFingerprint,
+            selectSession = selectSession,
+            openSettings = openSettings,
+            closeDrawer = closeDrawer,
+            modifier = Modifier.fillMaxHeight().statusBarsPadding().navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        )
+    }
+}
+
+/**
+ * Zweigeteilte Bibliothek: oben die Reiter (Alle Notizen, Favoriten, Geschützte Notizen,
+ * Papierkorb, Ordner), darunter hinter einem Trennstrich die Notizen der gewählten Ansicht,
+ * die neueste zuoberst.
+ */
+@Composable
+private fun NoteLibrary(
+    state: DenknotizUiState,
+    vm: DenknotizViewModel,
+    requestFingerprint: (String, () -> Unit) -> Unit,
+    selectSession: (String) -> Unit,
+    openSettings: (() -> Unit)? = null,
+    closeDrawer: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    var search by rememberSaveable { mutableStateOf("") }
+    var foldersOpen by rememberSaveable { mutableStateOf(false) }
+    var manageFolders by remember { mutableStateOf(false) }
+    var moveTarget by remember { mutableStateOf<SessionEntity?>(null) }
+    var emptyTrash by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<SessionEntity?>(null) }
+
+    val view = state.interaction.drawerView
+    val unlocked = state.interaction.securedUnlocked || !state.settings.fingerprintLock
+    val alleNotizen = state.sessions.filter { it.deletedAt == null && !it.secured }
+    val favoriten = alleNotizen.filter { it.favorite }
+    val geschuetzte = state.sessions.filter { it.deletedAt == null && it.secured }
+    val papierkorb = state.sessions.filter { it.deletedAt != null }
+    val ordner = state.folders
+    val gewaehlterOrdner = ordner.firstOrNull { it.id == state.interaction.selectedFolderId }
+
+    val liste = when (view) {
+        DrawerView.ALL -> alleNotizen
+        DrawerView.FAVORITES -> favoriten
+        DrawerView.SECURED -> if (unlocked) geschuetzte else emptyList()
+        DrawerView.TRASH -> papierkorb
+        DrawerView.FOLDER -> alleNotizen.filter { it.folderId == gewaehlterOrdner?.id }
+    }.filter { search.isBlank() || it.title.contains(search, true) }
+
+    val ueberschrift = when (view) {
+        DrawerView.ALL -> "Alle Notizen"
+        DrawerView.FAVORITES -> "Favoriten"
+        DrawerView.SECURED -> "Geschützte Notizen"
+        DrawerView.TRASH -> "Papierkorb"
+        DrawerView.FOLDER -> gewaehlterOrdner?.name ?: "Ordner"
+    }
+
+    Column(modifier) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("DENKNOTIZ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text("Notizen", style = MaterialTheme.typography.headlineSmall)
+            }
+            if (openSettings != null) IconButton(openSettings) { Icon(Icons.Default.Settings, "Einstellungen") }
+        }
+        GoldActionButton(
+            text = "Neue Notiz",
+            icon = Icons.Default.Add,
+            reducedMotion = state.settings.reducedMotion,
+            onClick = { vm.newSession(); closeDrawer() },
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        )
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            label = { Text("Notizen durchsuchen") },
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        )
+        LibraryTab(Icons.Default.Notes, "Alle Notizen", alleNotizen.size, view == DrawerView.ALL) {
+            vm.selectView(DrawerView.ALL)
+        }
+        LibraryTab(Icons.Default.Star, "Favoriten", favoriten.size, view == DrawerView.FAVORITES,
+            iconTint = FavoriteGold) { vm.selectView(DrawerView.FAVORITES) }
+        LibraryTab(Icons.Default.Lock, "Geschützte Notizen", geschuetzte.size, view == DrawerView.SECURED) {
+            if (state.interaction.securedUnlocked || !state.settings.fingerprintLock) vm.selectView(DrawerView.SECURED)
+            else requestFingerprint("Geschützte Notizen öffnen") { vm.unlockSecured() }
+        }
+        LibraryTab(Icons.Default.Delete, "Papierkorb", papierkorb.size, view == DrawerView.TRASH) {
+            vm.selectView(DrawerView.TRASH)
+        }
+        Divider(
+            Modifier.padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        )
+        LibraryTab(
+            icon = Icons.Default.Folder,
+            label = "Ordner",
+            count = ordner.size,
+            selected = view == DrawerView.FOLDER,
+            trailing = {
+                Icon(
+                    if (foldersOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                    null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) { foldersOpen = !foldersOpen }
+        if (foldersOpen) {
+            Column(Modifier.padding(start = 14.dp)) {
+                TextButton({ manageFolders = true }, Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.CreateNewFolder, null, modifier = Modifier.size(18.dp))
+                    Text("Ordner verwalten", Modifier.padding(start = 8.dp).weight(1f))
+                }
+                if (ordner.isEmpty()) {
+                    Text(
+                        "Noch kein Ordner angelegt.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
+                    )
+                }
+                ordner.forEach { folder ->
+                    LibraryTab(
+                        icon = Icons.Default.FolderOpen,
+                        label = folder.name,
+                        count = alleNotizen.count { it.folderId == folder.id },
+                        selected = view == DrawerView.FOLDER && gewaehlterOrdner?.id == folder.id,
+                    ) { vm.selectFolder(folder.id) }
+                }
+            }
+        }
+        Divider(
+            Modifier.padding(top = 10.dp, bottom = 8.dp),
+            thickness = 2.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+        )
+        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                ueberschrift.uppercase(Locale.GERMAN),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
             )
-            OutlinedTextField(
-                value = search,
-                onValueChange = { search = it },
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                label = { Text("Sitzungen durchsuchen") },
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            )
-            FilterChip(
-                selected = showArchived,
-                onClick = { showArchived = !showArchived },
-                label = { Text(if (showArchived) "Archiv wird angezeigt" else "Archiv anzeigen") },
-                leadingIcon = { Icon(Icons.Default.Archive, null) },
-                modifier = Modifier.padding(bottom = 10.dp),
-            )
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(sessions, key = SessionEntity::id) { session ->
-                    SessionItem(session, state.interaction.selectedSessionId == session.id, expanded = true) {
-                        selectSession(session.id)
+            if (view == DrawerView.TRASH && papierkorb.isNotEmpty()) {
+                TextButton({ emptyTrash = true }) { Text("Leeren") }
+            }
+        }
+        if (view == DrawerView.SECURED && !unlocked) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Mit Fingerabdruck freigeben.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        } else {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(liste, key = SessionEntity::id) { session ->
+                    SessionItem(
+                        session = session,
+                        selected = state.interaction.selectedSessionId == session.id,
+                        expanded = true,
+                        inTrash = view == DrawerView.TRASH,
+                        folderName = state.folders.firstOrNull { it.id == session.folderId }?.name,
+                        onClick = { if (view != DrawerView.TRASH) selectSession(session.id) },
+                        onToggleFavorite = { vm.toggleFavorite(session) },
+                        onSecure = {
+                            val schuetzen = !session.secured
+                            if (state.settings.fingerprintLock) {
+                                requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
+                                    vm.setSecured(session, schuetzen)
+                                }
+                            } else vm.setSecured(session, schuetzen)
+                        },
+                        onMove = { moveTarget = session },
+                        onRename = { renameTarget = session },
+                        onTrash = { vm.trashSession(session) },
+                        onRestore = { vm.restoreSession(session) },
+                        onDeleteForever = { vm.deleteSession(session) },
+                    )
+                }
+                if (liste.isEmpty()) {
+                    item {
+                        Text(
+                            if (search.isBlank()) "Hier liegt noch keine Notiz." else "Keine Notiz gefunden.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(12.dp),
+                        )
                     }
                 }
             }
-            NavigationDrawerItem(
-                label = { Text("Einstellungen") },
-                icon = { Icon(Icons.Default.Settings, null) },
-                selected = state.interaction.section == AppSection.SETTINGS,
-                onClick = openSettings,
-            )
-            Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp))
         }
     }
+
+    if (manageFolders) FolderManagerDialog(state, vm) { manageFolders = false }
+    moveTarget?.let { session -> MoveToFolderDialog(session, state, vm) { moveTarget = null } }
+    renameTarget?.let { session ->
+        RenameDialog(session.title, { renameTarget = null }) { vm.renameSession(session, it); renameTarget = null }
+    }
+    if (emptyTrash) ConfirmDialog(
+        "Papierkorb leeren?",
+        "Alle Notizen im Papierkorb werden endgültig gelöscht.",
+        { emptyTrash = false },
+    ) { vm.emptyTrash(); emptyTrash = false }
+}
+
+@Composable
+private fun LibraryTab(
+    icon: ImageVector,
+    label: String,
+    count: Int,
+    selected: Boolean,
+    iconTint: Color? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    Surface(
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                icon, null, modifier = Modifier.size(20.dp),
+                tint = iconTint
+                    ?: if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(start = 12.dp),
+            )
+            if (count > 0) Text(
+                count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 6.dp),
+            )
+            trailing?.invoke()
+        }
+    }
+}
+
+@Composable
+private fun FolderManagerDialog(state: DenknotizUiState, vm: DenknotizViewModel, dismiss: () -> Unit) {
+    var neu by remember { mutableStateOf("") }
+    var umbenennen by remember { mutableStateOf<FolderEntity?>(null) }
+    var loeschen by remember { mutableStateOf<FolderEntity?>(null) }
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text("Ordner verwalten") },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = neu,
+                        onValueChange = { neu = it },
+                        singleLine = true,
+                        label = { Text("Neuer Ordner") },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton({ if (neu.isNotBlank()) { vm.createFolder(neu); neu = "" } }) {
+                        Icon(Icons.Default.Add, "Ordner anlegen")
+                    }
+                }
+                Divider(Modifier.padding(vertical = 10.dp))
+                if (state.folders.isEmpty()) {
+                    Text(
+                        "Noch kein Ordner angelegt.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    state.folders.forEach { folder ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Folder, null, modifier = Modifier.size(18.dp))
+                            Text(
+                                folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f).padding(start = 10.dp),
+                            )
+                            IconButton({ umbenennen = folder }) { Icon(Icons.Default.Edit, "Umbenennen", Modifier.size(18.dp)) }
+                            IconButton({ loeschen = folder }) { Icon(Icons.Default.Delete, "Löschen", Modifier.size(18.dp)) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(dismiss) { Text("Fertig") } },
+    )
+    umbenennen?.let { folder ->
+        EditDialog(folder.name, { umbenennen = null }, { vm.renameFolder(folder, it); umbenennen = null }, "Ordner umbenennen")
+    }
+    loeschen?.let { folder ->
+        ConfirmDialog(
+            "Ordner löschen?",
+            "Die Notizen bleiben erhalten und liegen danach in keinem Ordner.",
+            { loeschen = null },
+        ) { vm.deleteFolder(folder); loeschen = null }
+    }
+}
+
+@Composable
+private fun MoveToFolderDialog(session: SessionEntity, state: DenknotizUiState, vm: DenknotizViewModel, dismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text("In Ordner verschieben") },
+        text = {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                LibraryTab(Icons.Default.Notes, "Kein Ordner", 0, session.folderId == null) {
+                    vm.moveToFolder(session, null); dismiss()
+                }
+                state.folders.forEach { folder ->
+                    LibraryTab(Icons.Default.Folder, folder.name, 0, session.folderId == folder.id) {
+                        vm.moveToFolder(session, folder.id); dismiss()
+                    }
+                }
+                if (state.folders.isEmpty()) {
+                    Text(
+                        "Erst über „Ordner verwalten“ einen Ordner anlegen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(dismiss) { Text("Abbrechen") } },
+    )
 }
 
 @Composable
@@ -277,20 +606,29 @@ private fun Workbench(
     openDrawer: () -> Unit,
     requestMicrophone: (() -> Unit) -> Unit,
     requestNotifications: () -> Unit,
+    requestFingerprint: (String, () -> Unit) -> Unit,
 ) {
     LaunchedEffect(state.speech.active) { if (state.speech.active) requestNotifications() }
+    var focus by remember { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
         val expanded = maxWidth >= 840.dp
         Row(Modifier.fillMaxSize()) {
-            if (expanded) SessionRail(state, vm)
+            if (expanded) SessionRail(state, vm, requestFingerprint)
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                WorkbenchTopBar(state, vm, openDrawer)
+                WorkbenchTopBar(state, vm, openDrawer, onToggleTheme = vm::toggleTheme, requestFingerprint = requestFingerprint)
                 val bundle = state.bundle
                 if (bundle == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else {
-                    Timeline(bundle.entries, bundle.snapshots, bundle.boundary?.lastIncludedOrdinal ?: 0, vm,
-                        modifier = Modifier.weight(1f).fillMaxWidth())
+                    Timeline(
+                        bundle.entries,
+                        bundle.snapshots,
+                        bundle.boundary?.lastIncludedOrdinal ?: 0,
+                        vm,
+                        evaluating = state.interaction.evaluating,
+                        onEvaluate = { focus = true },
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                    )
                     SpeechBar(state, vm)
                     RejectedAudioBar(state, vm)
                     Composer(state, vm, requestMicrophone, requestNotifications)
@@ -298,52 +636,48 @@ private fun Workbench(
             }
         }
     }
+    if (focus) FocusDialog(state, vm, { focus = false }) { vm.evaluate(); focus = false }
 }
 
 @Composable
-private fun SessionRail(state: DenknotizUiState, vm: DenknotizViewModel) {
-    var search by rememberSaveable { mutableStateOf("") }
-    var showArchived by rememberSaveable { mutableStateOf(false) }
-    val sessions = state.sessions.filter { it.archived == showArchived && (search.isBlank() || it.title.contains(search, true)) }
+private fun SessionRail(state: DenknotizUiState, vm: DenknotizViewModel, requestFingerprint: (String, () -> Unit) -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         tonalElevation = 5.dp,
-        modifier = Modifier.width(286.dp).fillMaxHeight(),
+        modifier = Modifier.width(300.dp).fillMaxHeight(),
     ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp)) {
-            GoldActionButton(
-                text = "Neue Sitzung",
-                icon = Icons.Default.Add,
-                reducedMotion = state.settings.reducedMotion,
-                onClick = vm::newSession,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = search, onValueChange = { search = it }, singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, null) }, label = { Text("Suchen") },
-                shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            )
-            FilterChip(
-                selected = showArchived,
-                onClick = { showArchived = !showArchived },
-                label = { Text(if (showArchived) "Archiv" else "Aktiv") },
-                leadingIcon = { Icon(Icons.Default.Archive, null) },
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(sessions, key = SessionEntity::id) { session ->
-                    SessionItem(session, state.interaction.selectedSessionId == session.id, true) { vm.selectSession(session.id) }
-                }
-            }
-        }
+        NoteLibrary(
+            state = state,
+            vm = vm,
+            requestFingerprint = requestFingerprint,
+            selectSession = vm::selectSession,
+            modifier = Modifier.fillMaxHeight().padding(horizontal = 12.dp, vertical = 14.dp),
+        )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SessionItem(session: SessionEntity, selected: Boolean, expanded: Boolean, onClick: () -> Unit) {
+private fun SessionItem(
+    session: SessionEntity,
+    selected: Boolean,
+    expanded: Boolean,
+    inTrash: Boolean = false,
+    folderName: String? = null,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit = {},
+    onSecure: () -> Unit = {},
+    onMove: () -> Unit = {},
+    onRename: () -> Unit = {},
+    onTrash: () -> Unit = {},
+    onRestore: () -> Unit = {},
+    onDeleteForever: () -> Unit = {},
+) {
+    var menu by remember { mutableStateOf(false) }
     Surface(
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-        shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = { menu = true }),
     ) {
         Row(Modifier.padding(if (expanded) 13.dp else 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -351,23 +685,85 @@ private fun SessionItem(session: SessionEntity, selected: Boolean, expanded: Boo
                     if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, CircleShape,
                 ),
                 contentAlignment = Alignment.Center,
-            ) { Text(session.title.take(1).uppercase(), fontWeight = FontWeight.Bold, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant) }
+            ) {
+                Text(
+                    session.title.take(1).uppercase(),
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (expanded) {
-                Text(session.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f).padding(start = 10.dp))
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (session.favorite) Icon(
+                            Icons.Default.Star, "Favorit",
+                            modifier = Modifier.size(15.dp).padding(end = 3.dp), tint = FavoriteGold,
+                        )
+                        if (session.secured) Icon(
+                            Icons.Default.Lock, "Geschützt",
+                            modifier = Modifier.size(15.dp).padding(end = 3.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            session.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
+                        )
+                    }
+                    val untertitel = listOfNotNull(folderName, session.deletedAt?.let { "Im Papierkorb" }).joinToString(" · ")
+                    if (untertitel.isNotBlank()) Text(
+                        untertitel, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (session.pinned) Icon(Icons.Default.PushPin, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+            DropdownMenu(
+                menu, { menu = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 10.dp, shadowElevation = 12.dp, shape = RoundedCornerShape(16.dp),
+            ) {
+                if (inTrash) {
+                    DropdownMenuItem({ Text("Wiederherstellen") }, { menu = false; onRestore() },
+                        leadingIcon = { Icon(Icons.Default.Restore, null) })
+                    DropdownMenuItem({ Text("Endgültig löschen") }, { menu = false; onDeleteForever() },
+                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) })
+                } else {
+                    DropdownMenuItem(
+                        { Text(if (session.favorite) "Favorit entfernen" else "Als Favorit markieren") },
+                        { menu = false; onToggleFavorite() },
+                        leadingIcon = {
+                            Icon(if (session.favorite) Icons.Default.Star else Icons.Default.StarBorder, null, tint = FavoriteGold)
+                        },
+                    )
+                    DropdownMenuItem(
+                        { Text(if (session.secured) "Schutz aufheben" else "Notiz schützen") },
+                        { menu = false; onSecure() },
+                        leadingIcon = { Icon(if (session.secured) Icons.Default.LockOpen else Icons.Default.Lock, null) },
+                    )
+                    DropdownMenuItem({ Text("In Ordner verschieben") }, { menu = false; onMove() },
+                        leadingIcon = { Icon(Icons.Default.DriveFileMove, null) })
+                    DropdownMenuItem({ Text("Umbenennen") }, { menu = false; onRename() },
+                        leadingIcon = { Icon(Icons.Default.Edit, null) })
+                    DropdownMenuItem({ Text("In den Papierkorb") }, { menu = false; onTrash() },
+                        leadingIcon = { Icon(Icons.Default.Delete, null) })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun WorkbenchTopBar(state: DenknotizUiState, vm: DenknotizViewModel, openDrawer: () -> Unit) {
+private fun WorkbenchTopBar(
+    state: DenknotizUiState,
+    vm: DenknotizViewModel,
+    openDrawer: () -> Unit,
+    onToggleTheme: () -> Unit,
+    requestFingerprint: (String, () -> Unit) -> Unit,
+) {
     val session = state.bundle?.session
     var menu by remember { mutableStateOf(false) }
     var rename by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
-    var focus by remember { mutableStateOf(false) }
+    var move by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -377,28 +773,53 @@ private fun WorkbenchTopBar(state: DenknotizUiState, vm: DenknotizViewModel, ope
             Text(session?.title ?: "Denknotiz", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("CHRONOLOGISCHE WERKBANK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
-        OutlinedButton(onClick = { focus = true }, enabled = !state.interaction.evaluating) {
-            if (state.interaction.evaluating) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            else Icon(Icons.Default.AutoAwesome, null)
-            Text("Auswerten", modifier = Modifier.padding(start = 7.dp))
+        IconButton({ vm.selectSection(AppSection.SETTINGS) }) { Icon(Icons.Default.Settings, "Einstellungen") }
+        val theme = state.settings.theme
+        val istHell = theme == AppTheme.LIGHT || theme == AppTheme.GOLD_LIGHT
+        IconButton(onClick = onToggleTheme) {
+            Icon(if (istHell) Icons.Default.DarkMode else Icons.Default.LightMode, "Zwischen Hell- und Dunkelmodus wechseln")
         }
         Box {
             IconButton(onClick = { menu = true }, enabled = session != null) { Icon(Icons.Default.MoreVert, "Sitzungsmenü") }
             DropdownMenu(menu, { menu = false }, containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 10.dp, shadowElevation = 12.dp, shape = RoundedCornerShape(16.dp)) {
                 DropdownMenuItem({ Text("Umbenennen") }, { menu = false; rename = true }, leadingIcon = { Icon(Icons.Default.Edit, null) })
+                DropdownMenuItem(
+                    { Text(if (session?.favorite == true) "Favorit entfernen" else "Als Favorit markieren") },
+                    { menu = false; session?.let(vm::toggleFavorite) },
+                    leadingIcon = {
+                        Icon(if (session?.favorite == true) Icons.Default.Star else Icons.Default.StarBorder, null, tint = FavoriteGold)
+                    },
+                )
+                DropdownMenuItem(
+                    { Text(if (session?.secured == true) "Schutz aufheben" else "Notiz schützen") },
+                    {
+                        menu = false
+                        session?.let { aktuelle ->
+                            val schuetzen = !aktuelle.secured
+                            if (state.settings.fingerprintLock) {
+                                requestFingerprint(if (schuetzen) "Notiz schützen" else "Schutz aufheben") {
+                                    vm.setSecured(aktuelle, schuetzen)
+                                }
+                            } else vm.setSecured(aktuelle, schuetzen)
+                        }
+                    },
+                    leadingIcon = { Icon(if (session?.secured == true) Icons.Default.LockOpen else Icons.Default.Lock, null) },
+                )
+                DropdownMenuItem({ Text("In Ordner verschieben") }, { menu = false; move = true },
+                    leadingIcon = { Icon(Icons.Default.DriveFileMove, null) })
                 DropdownMenuItem({ Text(if (session?.pinned == true) "Lösen" else "Anpinnen") }, { menu = false; session?.let(vm::togglePin) }, leadingIcon = { Icon(Icons.Default.PushPin, null) })
-                DropdownMenuItem({ Text(if (session?.archived == true) "Wiederherstellen" else "Archivieren") },
-                    { menu = false; session?.let(vm::toggleArchive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
-                DropdownMenuItem({ Text("Löschen") }, { menu = false; delete = true }, leadingIcon = { Icon(Icons.Default.Delete, null) })
+                DropdownMenuItem({ Text("In den Papierkorb") }, { menu = false; session?.let(vm::trashSession) },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) })
+                DropdownMenuItem({ Text("Endgültig löschen") }, { menu = false; delete = true }, leadingIcon = { Icon(Icons.Default.DeleteForever, null) })
             }
         }
     }
     if (rename && session != null) RenameDialog(session.title, { rename = false }) { vm.renameSession(session, it); rename = false }
+    if (move && session != null) MoveToFolderDialog(session, state, vm) { move = false }
     if (delete && session != null) ConfirmDialog("Sitzung löschen?", "Alle Notizen und Auswertungen dieser Sitzung werden gelöscht.", { delete = false }) {
         vm.deleteSession(session); delete = false
     }
-    if (focus) FocusDialog(state, vm, { focus = false }) { vm.evaluate(); focus = false }
 }
 
 @Composable
@@ -407,14 +828,17 @@ private fun Timeline(
     snapshots: List<EvaluationSnapshotEntity>,
     boundary: Long,
     vm: DenknotizViewModel,
+    evaluating: Boolean,
+    onEvaluate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (entries.isEmpty() && snapshots.none { it.status == SnapshotStatus.FAILED }) {
         Box(modifier, contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Ein ruhiger Ort für unfertige Gedanken.", style = MaterialTheme.typography.headlineMedium)
-                Text("Schreibe oder diktiere eine erste Notiz.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
-            }
+            Text(
+                "Schreibe oder diktiere eine erste Notiz.",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         return
     }
@@ -425,6 +849,20 @@ private fun Timeline(
             if (boundary > 0 && entry.ordinal == boundary) BoundaryMarker()
         }
         items(failures, key = EvaluationSnapshotEntity::id) { snapshot -> FailedSnapshot(snapshot, vm) }
+        item("auswerten") {
+            OutlinedButton(
+                onClick = onEvaluate,
+                enabled = !evaluating,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (evaluating) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.AutoAwesome, null)
+                }
+                Text("Auswerten", modifier = Modifier.padding(start = 7.dp))
+            }
+        }
         item { Spacer(Modifier.height(4.dp)) }
     }
 }
@@ -476,7 +914,10 @@ private fun EntryCard(entry: EntryEntity, vm: DenknotizViewModel) {
             }
             Text(formatTimestamp(entry.createdAt), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
-            SelectionContainer { Text(entry.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 10.dp)) }
+            if (entry.text.isNotBlank()) {
+                SelectionContainer { Text(entry.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 10.dp)) }
+            }
+            AttachmentGallery(attachmentsFromJson(entry.attachmentsJson), Modifier.padding(top = 10.dp))
             citationList(entry.citationsJson).forEach { source ->
                 Text(source.second, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clickable { uri.openUri(source.first) })
@@ -524,12 +965,18 @@ private fun Composer(
 ) {
     Surface(tonalElevation = 8.dp, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(14.dp)) {
+            PendingAttachments(state.interaction.attachments, vm::removeAttachment)
             OutlinedTextField(
                 value = state.interaction.draft, onValueChange = vm::setDraft,
                 placeholder = { Text("Gedanke, Beobachtung oder offene Frage …") },
                 shape = RoundedCornerShape(16.dp), minLines = 2, maxLines = 7, modifier = Modifier.fillMaxWidth(),
             )
             Row(Modifier.fillMaxWidth().padding(top = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                AttachmentMenuButton(
+                    onAttachment = vm::addAttachment,
+                    onError = vm::reportMessage,
+                    requestMicrophone = requestMicrophone,
+                )
                 TextButton(onClick = vm::improveDraft, enabled = state.interaction.draft.isNotBlank() && !state.interaction.improving) {
                     if (state.interaction.improving) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Default.AutoAwesome, null)
@@ -554,7 +1001,9 @@ private fun Composer(
                 }
                 GoldActionButton(
                     text = "Senden", icon = Icons.Default.Send, reducedMotion = state.settings.reducedMotion,
-                    onClick = vm::sendDraft, enabled = state.interaction.draft.isNotBlank(), modifier = Modifier.padding(start = 9.dp),
+                    onClick = vm::sendDraft,
+                    enabled = state.interaction.draft.isNotBlank() || state.interaction.attachments.isNotEmpty(),
+                    modifier = Modifier.padding(start = 9.dp),
                 )
             }
         }
@@ -638,6 +1087,7 @@ private fun SettingsScreen(
     requestNotifications: () -> Unit,
     createBackup: () -> Unit,
     openBackup: () -> Unit,
+    requestFingerprint: (String, () -> Unit) -> Unit,
 ) {
     var showSecrets by rememberSaveable { mutableStateOf(false) }
     var groq by remember(state.settings.groqKey) { mutableStateOf(state.settings.groqKey) }
@@ -765,8 +1215,32 @@ private fun SettingsScreen(
                     Switch(state.settings.reducedMotion, vm::setReducedMotion)
                 }
             }
+            SettingsCard("Sicherheit") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Fingerprint, null, modifier = Modifier.padding(end = 10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Fingerabdruck")
+                        Text(
+                            "Geschützte Notizen lassen sich nur nach dem Fingerabdruck öffnen, schützen und wieder freigeben.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Switch(
+                        checked = state.settings.fingerprintLock,
+                        onCheckedChange = { an ->
+                            if (an) requestFingerprint("Fingerabdruck einrichten") { vm.setFingerprintLock(true) }
+                            else requestFingerprint("Fingerabdruck abschalten") { vm.setFingerprintLock(false); vm.lockSecured() }
+                        },
+                    )
+                }
+                Text(
+                    "Ohne Fingerabdruck bleiben geschützte Notizen im eigenen Reiter, aber ohne Abfrage.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             SettingsCard("Daten") {
-                Text("JSON enthält Sitzungen, Notizen, Snapshots und Grenzen, aber keine Zugangsdaten.")
+                Text("JSON enthält Sitzungen, Notizen, Ordner, Snapshots und Grenzen, aber keine Zugangsdaten.")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(createBackup) { Text("Exportieren") }
                     OutlinedButton(openBackup) { Text("Importieren und mergen") }

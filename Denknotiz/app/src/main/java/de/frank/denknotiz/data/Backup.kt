@@ -6,6 +6,7 @@ import de.frank.denknotiz.data.local.ContextBoundaryEntity
 import de.frank.denknotiz.data.local.EntryEntity
 import de.frank.denknotiz.data.local.EntryType
 import de.frank.denknotiz.data.local.EvaluationSnapshotEntity
+import de.frank.denknotiz.data.local.FolderEntity
 import de.frank.denknotiz.data.local.SessionEntity
 import de.frank.denknotiz.data.local.SnapshotStatus
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ data class BackupPayload(
     val boundaries: List<ContextBoundaryEntity>,
     val profileNames: Map<String, String> = emptyMap(),
     val profileInstructions: Map<String, String> = emptyMap(),
+    val folders: List<FolderEntity> = emptyList(),
 ) {
     fun toJson(): String = JSONObject().apply {
         put("formatVersion", FORMAT_VERSION)
@@ -30,10 +32,11 @@ data class BackupPayload(
         put("boundaries", JSONArray(boundaries.map { it.json() }))
         put("profileNames", JSONObject(profileNames.toMap<String, Any>()))
         put("profileInstructions", JSONObject(profileInstructions.toMap<String, Any>()))
+        put("folders", JSONArray(folders.map { it.json() }))
     }.toString(2)
 
     companion object {
-        const val FORMAT_VERSION = 2
+        const val FORMAT_VERSION = 4
         const val FILE_NAME = "denknotiz-sicherung.json"
 
         fun fromJson(raw: String): BackupPayload {
@@ -43,14 +46,17 @@ data class BackupPayload(
             return BackupPayload(
                 sessions = root.objects("sessions").map {
                     SessionEntity(it.string("id"), it.string("title"), it.long("createdAt"), it.long("updatedAt"),
-                        it.optBoolean("pinned"), it.optBoolean("archived"), it.optBoolean("titleManual"), it.optBoolean("titleGenerated"))
+                        it.optBoolean("pinned"), it.optBoolean("archived"), it.optBoolean("titleManual"), it.optBoolean("titleGenerated"),
+                        it.optBoolean("favorite"), it.optBoolean("secured"), it.optLong("deletedAt").takeIf { value -> value > 0 },
+                        it.optString("folderId").takeIf(String::isNotBlank))
                 },
                 entries = root.objects("entries").map {
                     EntryEntity(it.string("id"), it.string("sessionId"), it.long("ordinal"), EntryType.valueOf(it.string("type")),
                         it.optString("title").ifBlank { if (it.string("type") == EntryType.AI_RESPONSE.name) "KI-Auswertung" else "Notiz" },
                         it.string("text"), it.long("createdAt"), it.long("updatedAt"), it.optString("snapshotId").takeIf(String::isNotBlank),
                         it.optBoolean("historical"), it.optString("citationsJson", "[]"), it.optBoolean("titleManual"),
-                        it.optBoolean("titleGenerated"), it.optString("originalText").takeIf(String::isNotBlank))
+                        it.optBoolean("titleGenerated"), it.optString("originalText").takeIf(String::isNotBlank),
+                        it.optString("attachmentsJson", "[]").ifBlank { "[]" })
                 },
                 snapshots = root.objects("snapshots").map {
                     EvaluationSnapshotEntity(it.string("id"), it.string("sessionId"), it.long("lowerOrdinalExclusive"),
@@ -66,6 +72,7 @@ data class BackupPayload(
                 },
                 profileNames = root.stringMap("profileNames"),
                 profileInstructions = root.stringMap("profileInstructions", keepBlank = true),
+                folders = root.objects("folders").map { FolderEntity(it.string("id"), it.string("name"), it.long("createdAt")) },
             )
         }
     }
@@ -86,11 +93,14 @@ class SafBackup(private val context: Context) {
 
 private fun SessionEntity.json() = JSONObject().put("id", id).put("title", title).put("createdAt", createdAt)
     .put("updatedAt", updatedAt).put("pinned", pinned).put("archived", archived).put("titleManual", titleManual)
-    .put("titleGenerated", titleGenerated)
+    .put("titleGenerated", titleGenerated).put("favorite", favorite).put("secured", secured)
+    .put("deletedAt", deletedAt ?: 0).put("folderId", folderId ?: "")
+private fun FolderEntity.json() = JSONObject().put("id", id).put("name", name).put("createdAt", createdAt)
 private fun EntryEntity.json() = JSONObject().put("id", id).put("sessionId", sessionId).put("ordinal", ordinal)
     .put("type", type.name).put("title", title).put("text", text).put("createdAt", createdAt).put("updatedAt", updatedAt)
     .put("snapshotId", snapshotId ?: "").put("historical", historical).put("citationsJson", citationsJson)
     .put("titleManual", titleManual).put("titleGenerated", titleGenerated).put("originalText", originalText ?: "")
+    .put("attachmentsJson", attachmentsJson)
 private fun EvaluationSnapshotEntity.json() = JSONObject().put("id", id).put("sessionId", sessionId)
     .put("lowerOrdinalExclusive", lowerOrdinalExclusive).put("upperOrdinalInclusive", upperOrdinalInclusive)
     .put("sourceNoteIdsJson", sourceNoteIdsJson).put("focusQuestion", focusQuestion).put("profileId", profileId)

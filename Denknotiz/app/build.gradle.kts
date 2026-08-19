@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.denknotiz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.2"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"18.08.2026, 21:48 Uhr\"")
+        versionCode = 5
+        versionName = "0.1.4"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"19.08.2026, 12:22 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -62,4 +62,6 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.document.scanner)
+    implementation(libs.biometric)
 }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SessionDao {
-    @Query("SELECT * FROM sessions ORDER BY pinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM sessions ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<SessionEntity>>
 
     @Query("SELECT * FROM sessions WHERE id = :id")
@@ -22,7 +22,7 @@ interface SessionDao {
     @Query("SELECT * FROM sessions WHERE id = :id")
     suspend fun get(id: String): SessionEntity?
 
-    @Query("SELECT * FROM sessions WHERE archived = 0 AND id != :excludedId ORDER BY pinned DESC, updatedAt DESC LIMIT 1")
+    @Query("SELECT * FROM sessions WHERE archived = 0 AND deletedAt IS NULL AND secured = 0 AND id != :excludedId ORDER BY updatedAt DESC LIMIT 1")
     suspend fun firstVisibleExcept(excludedId: String): SessionEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -39,6 +39,42 @@ interface SessionDao {
 
     @Query("UPDATE sessions SET archived = :archived, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setArchived(id: String, archived: Boolean, updatedAt: Long)
+
+    @Query("UPDATE sessions SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
+    suspend fun toggleFavorite(id: String)
+
+    @Query("UPDATE sessions SET secured = :secured WHERE id = :id")
+    suspend fun setSecured(id: String, secured: Boolean)
+
+    @Query("UPDATE sessions SET deletedAt = :deletedAt WHERE id = :id")
+    suspend fun setDeletedAt(id: String, deletedAt: Long?)
+
+    @Query("UPDATE sessions SET folderId = :folderId WHERE id = :id")
+    suspend fun setFolder(id: String, folderId: String?)
+
+    @Query("DELETE FROM sessions WHERE deletedAt IS NOT NULL")
+    suspend fun emptyTrash()
+}
+
+@Dao
+interface FolderDao {
+    @Query("SELECT * FROM folders ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders")
+    suspend fun all(): List<FolderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(folder: FolderEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfMissing(folder: FolderEntity): Long
+
+    @Query("DELETE FROM folders WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("UPDATE sessions SET folderId = NULL WHERE folderId = :id")
+    suspend fun detachSessions(id: String)
 }
 
 @Dao

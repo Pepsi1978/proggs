@@ -3,18 +3,20 @@ package de.frank.denknotiz
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import de.frank.denknotiz.audio.MicRecorder
 import de.frank.denknotiz.tts.SpeechController
 import de.frank.denknotiz.ui.DenknotizApp
 import de.frank.denknotiz.ui.DenknotizViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var afterMicrophonePermission: (() -> Unit)? = null
     private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) afterMicrophonePermission?.invoke()
@@ -46,8 +48,37 @@ class MainActivity : ComponentActivity() {
                 },
                 createBackup = { createBackup.launch("denknotiz-sicherung.json") },
                 openBackup = { openBackup.launch(arrayOf("application/json", "text/json", "text/plain")) },
+                requestFingerprint = ::withFingerprint,
             )
         }
+    }
+
+    /** Fragt den Fingerabdruck ab (ersatzweise die Bildschirmsperre) und ruft danach die Aktion auf. */
+    private fun withFingerprint(title: String, onConfirmed: () -> Unit) {
+        val manager = BiometricManager.from(this)
+        val builder = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle("Bitte mit dem Fingerabdruck bestätigen.")
+        when {
+            manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS ->
+                builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK).setNegativeButtonText("Abbrechen")
+            android.os.Build.VERSION.SDK_INT >= 30 &&
+                manager.canAuthenticate(BiometricManager.Authenticators.DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS ->
+                builder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            else -> {
+                viewModel.fingerprintUnavailable("Auf diesem Gerät ist kein Fingerabdruck und keine Bildschirmsperre eingerichtet.")
+                return
+            }
+        }
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onConfirmed()
+            override fun onAuthenticationError(code: Int, message: CharSequence) {
+                if (code != BiometricPrompt.ERROR_USER_CANCELED && code != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                    viewModel.fingerprintUnavailable(message.toString())
+                }
+            }
+        })
+        prompt.authenticate(builder.build())
     }
 
     private fun withMicrophonePermission(action: () -> Unit) {

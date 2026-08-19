@@ -52,6 +52,8 @@ data class SettingsSnapshot(
     val qwenVoiceNames: Map<String, String> = emptyMap(),
     val speechRate: Float = 1f,
     val reducedMotion: Boolean = false,
+    /** Geschützte Notizen erst nach Fingerabdruck freigeben. */
+    val fingerprintLock: Boolean = false,
 )
 
 class SecureSettings(context: Context) {
@@ -85,6 +87,7 @@ class SecureSettings(context: Context) {
             .putString("qwen_names", JSONObject(next.qwenVoiceNames.toMap<String, Any>()).toString())
             .putFloat("speech_rate", next.speechRate.coerceIn(0.7f, 1.3f))
             .putBoolean("reduced_motion", next.reducedMotion)
+            .putBoolean("fingerprint_lock", next.fingerprintLock)
             .apply()
     }
 
@@ -112,6 +115,7 @@ class SecureSettings(context: Context) {
             qwenVoiceNames = names,
             speechRate = preferences.getFloat("speech_rate", 1f).coerceIn(0.7f, 1.3f),
             reducedMotion = preferences.getBoolean("reduced_motion", false),
+            fingerprintLock = preferences.getBoolean("fingerprint_lock", false),
         )
     }
 
