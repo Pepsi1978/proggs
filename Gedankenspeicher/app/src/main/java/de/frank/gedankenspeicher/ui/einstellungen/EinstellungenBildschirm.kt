@@ -513,7 +513,11 @@ fun EinstellungenBildschirm(
                     )
                 }
                 if (driveAn) {
-                    Erklaerung("Wähle beim ersten Sichern deinen Google-Drive-Ordner — dann liegt die Sicherung dort.")
+                    Erklaerung(
+                        "Wähle beim ersten Sichern deinen Google-Drive-Ordner — dann liegt die Sicherung " +
+                            "dort. Im Ordner stehen immer genau zwei Dateien: die neueste Sicherung und " +
+                            "die davor. Jede neue überschreibt die ältere von beiden.",
+                    )
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GeranderterKnopf("Jetzt sichern", beiJetztSichern)

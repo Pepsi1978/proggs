@@ -1469,6 +1469,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { fuehreSicherungAus(uri) }
     }
 
+    /**
+     * Es gibt genau **zwei** Sicherungen: die neueste und die davor.
+     *
+     * Beide haben einen festen Namen. Ein Zeitstempel im Namen hiesse, dass jede Sicherung
+     * eine neue Datei anlegt und der Bestand nur durch nachträgliches Löschen begrenzt bleibt
+     * — und weil die Sicherung bei jedem Schliessen der App läuft, häuften sich die Dateien
+     * genau dann, wenn das Löschen im Drive-Ordner einmal nicht durchkam. Mit festen Namen
+     * kann sich nichts anhäufen: es wird immer in dieselben zwei Dateien geschrieben.
+     */
     private suspend fun fuehreSicherungAus(ordner: Uri, still: Boolean = false) {
         try {
             val quelle = repo.datenbankdatei()
@@ -1481,30 +1490,68 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 if (!still) melde("Auf den Ordner kann nicht zugegriffen werden.")
                 return
             }
-            val name = "gedankenspeicher-" + System.currentTimeMillis() + ".db"
-            val ziel = baum.createFile("application/octet-stream", name)
-            if (ziel == null) {
-                if (!still) melde("Die Sicherungsdatei liess sich nicht anlegen.")
-                return
-            }
+
             withContext(Dispatchers.IO) {
-                ctx.contentResolver.openOutputStream(ziel.uri)?.use { aus ->
-                    quelle.inputStream().use { ein -> ein.copyTo(aus) }
+                // Erst rutscht die bisherige Sicherung eine Stelle nach hinten: ihr Inhalt
+                // wird in die vorige kopiert. Kopiert, nicht umbenannt — Umbenennen ist im
+                // Drive-Ordner der unzuverlässigste Handgriff von allen, und schlüge es fehl,
+                // stünde der Name für die neue Sicherung noch besetzt da.
+                val bisher = baum.findFile(SICHERUNG_AKTUELL)
+                if (bisher != null && bisher.length() > 0) {
+                    val vorher = baum.findFile(SICHERUNG_VORHER)
+                        ?: baum.createFile("application/octet-stream", SICHERUNG_VORHER)
+                    if (vorher != null) {
+                        schreibe(vorher.uri) { aus ->
+                            ctx.contentResolver.openInputStream(bisher.uri)?.use { ein -> ein.copyTo(aus) }
+                        }
+                    }
                 }
+
+                val ziel = bisher ?: baum.createFile("application/octet-stream", SICHERUNG_AKTUELL)
+                    ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht anlegen.")
+                schreibe(ziel.uri) { aus -> quelle.inputStream().use { ein -> ein.copyTo(aus) } }
+                raeumeAlteSicherungenWeg(baum)
             }
+
             einstellungen.letzteSicherungZeit = System.currentTimeMillis()
             einstellungen.letzteSicherungGroesse = quelle.length()
-            // Fünf Stände werden vorgehalten, der älteste fällt heraus (F-17, Regeln).
-            baum.listFiles()
-                .filter { it.name?.startsWith("gedankenspeicher-") == true }
-                .sortedByDescending { it.name }
-                .drop(5)
-                .forEach { runCatching { it.delete() } }
             if (!still) melde("Gesichert.")
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
             if (!still) melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
+        }
+    }
+
+    /**
+     * Schreibt in eine bestehende Datei — mit `"wt"`, also **abschneidend**.
+     *
+     * Der blosse Modus `"w"` kürzt bei manchen Anbietern nicht: wird eine kleinere Datenbank
+     * über eine grössere geschrieben, bliebe der Rest der alten am Ende stehen. Die Sicherung
+     * sähe heil aus und wäre beim Wiederherstellen unbrauchbar.
+     */
+    private fun schreibe(ziel: Uri, inhalt: (java.io.OutputStream) -> Unit) {
+        val strom = ctx.contentResolver.openOutputStream(ziel, "wt")
+            ?: ctx.contentResolver.openOutputStream(ziel)
+            ?: throw IllegalStateException("In die Sicherungsdatei liess sich nicht schreiben.")
+        strom.use(inhalt)
+    }
+
+    /**
+     * Räumt die Sicherungen aus der Zeit der Zeitstempel-Namen weg — einmalig, sobald zum
+     * ersten Mal auf die neue Art gesichert wurde. Ohne das bliebe der alte Haufen für immer
+     * im Ordner liegen, denn nach ihm greift niemand mehr.
+     */
+    private fun raeumeAlteSicherungenWeg(baum: DocumentFile) {
+        runCatching {
+            baum.listFiles()
+                .filter { datei ->
+                    val name = datei.name.orEmpty()
+                    name.startsWith("gedankenspeicher-") &&
+                        name != SICHERUNG_AKTUELL &&
+                        name != SICHERUNG_VORHER
+                }
+                .forEach { runCatching { it.delete() } }
         }
     }
 
@@ -1621,5 +1668,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
         /** Unter etwa 0,4 s bei 16 kHz Mono ist nichts Verwertbares dabei (F-01, Fehlerfall). */
         const val MINDESTGROESSE_WAV = 44 + 16_000 * 2 * 4 / 10
+
+        /** F-17: die beiden Sicherungen — die neueste und die davor. Mehr werden es nie. */
+        const val SICHERUNG_AKTUELL = "gedankenspeicher-aktuell.db"
+        const val SICHERUNG_VORHER = "gedankenspeicher-vorher.db"
     }
 }
