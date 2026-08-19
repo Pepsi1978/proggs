@@ -177,52 +177,55 @@ private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -
  *
  * Er sitzt unter der Blase und nicht darin, weil das Feld mehrzeilig ist und mitwächst: ein
  * Knopf im Feld wanderte mit jeder Zeile mit und wäre bei langem Text ausserhalb des Blicks.
+ * Rechts aussen, weil dort der Daumen liegt — und weil alle anderen Mikrofonknöpfe der App
+ * am rechten Rand ihrer Zeile sitzen.
  */
 @Composable
 private fun Mikrofonzeile(zustand: Bearbeitungszustand, beiEinsprechen: () -> Unit) {
     val farben = Farben
     val schrift = Schriften
     Column {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(Masse.tippflaeche)
-                .clip(RoundedCornerShape(50))
-                .background(if (zustand.nimmtAuf) farben.akzent else farben.hintergrundErhoben)
-                .border(
-                    1.dp,
-                    if (zustand.nimmtAuf) farben.akzent else farben.rand,
-                    RoundedCornerShape(50),
-                )
-                .clickable(enabled = !zustand.transkribiert, onClick = beiEinsprechen),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (zustand.transkribiert) {
-                CircularProgressIndicator(Modifier.size(18.dp), color = farben.akzent, strokeWidth = 2.dp)
-            } else {
-                Icon(
-                    if (zustand.nimmtAuf) Icons.Filled.Stop else Icons.Outlined.Mic,
-                    if (zustand.nimmtAuf) "Aufnahme beenden" else "Text einsprechen",
-                    Modifier.size(22.dp),
-                    tint = if (zustand.nimmtAuf) farben.hintergrund else farben.textMittel,
-                )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                when {
+                    zustand.transkribiert -> "Wird geschrieben …"
+                    zustand.nimmtAuf -> "Ich höre zu — nochmal tippen zum Beenden"
+                    else -> "Einsprechen — landet an der Cursorstelle"
+                },
+                style = schrift.zeitstempel,
+                color = if (zustand.nimmtAuf) farben.akzent else farben.textSchwach,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(Masse.tippflaeche)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (zustand.nimmtAuf) farben.akzent else farben.hintergrundErhoben)
+                    .border(
+                        1.dp,
+                        if (zustand.nimmtAuf) farben.akzent else farben.rand,
+                        RoundedCornerShape(50),
+                    )
+                    .clickable(enabled = !zustand.transkribiert, onClick = beiEinsprechen),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (zustand.transkribiert) {
+                    CircularProgressIndicator(Modifier.size(18.dp), color = farben.akzent, strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        if (zustand.nimmtAuf) Icons.Filled.Stop else Icons.Outlined.Mic,
+                        if (zustand.nimmtAuf) "Aufnahme beenden" else "Text einsprechen",
+                        Modifier.size(22.dp),
+                        tint = if (zustand.nimmtAuf) farben.hintergrund else farben.textMittel,
+                    )
+                }
             }
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            when {
-                zustand.transkribiert -> "Wird geschrieben …"
-                zustand.nimmtAuf -> "Ich höre zu — nochmal tippen zum Beenden"
-                else -> "Einsprechen — landet an der Cursorstelle"
-            },
-            style = schrift.zeitstempel,
-            color = if (zustand.nimmtAuf) farben.akzent else farben.textSchwach,
-        )
-    }
-    zustand.fehler?.let {
-        Spacer(Modifier.height(8.dp))
-        Text(it, style = schrift.zeitstempel, color = farben.fehler)
-    }
+        zustand.fehler?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, style = schrift.zeitstempel, color = farben.fehler)
+        }
     }
 }
 
