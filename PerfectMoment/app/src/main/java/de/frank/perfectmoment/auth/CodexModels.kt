@@ -31,6 +31,7 @@ enum class ReasoningEffort(val label: String, val apiValue: String) {
 enum class QuestionPerspective(val id: String, val label: String) {
     FIRST_PERSON("first_person", "Ich-Person"),
     SECOND_PERSON("second_person", "Du-Person"),
+    NEUTRAL_PERSON("neutral_person", "Man-Person"),
     ;
 
     companion object {

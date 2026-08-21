@@ -1704,6 +1704,12 @@ private fun QuestionPerspectiveSetting(viewModel: AppViewModel) {
                 { viewModel.updateQuestionPerspective(QuestionPerspective.SECOND_PERSON) },
                 Modifier.weight(1f),
             )
+            Segment(
+                "Man-Person",
+                viewModel.questionPerspective == QuestionPerspective.NEUTRAL_PERSON,
+                { viewModel.updateQuestionPerspective(QuestionPerspective.NEUTRAL_PERSON) },
+                Modifier.weight(1f),
+            )
         }
     }
 }

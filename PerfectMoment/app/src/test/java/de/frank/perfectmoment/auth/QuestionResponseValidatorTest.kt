@@ -149,6 +149,23 @@ class QuestionResponseValidatorTest {
     }
 
     @Test
+    fun neutralPersonUsesManForm() {
+        val payload = codexQuestionsPayload(
+            CodexQuestionRequest(
+                topic = "Mein Thema",
+                skillText = "Skill",
+                operatingModeText = "Sprich den Hörer mit du an.",
+                perspective = QuestionPerspective.NEUTRAL_PERSON,
+            ),
+        )
+
+        val instructions = payload.getString("instructions")
+        assertTrue(instructions.contains("Vorrang"))
+        assertTrue(instructions.contains("Man-Person"))
+        assertTrue(instructions.contains("Warum genießt man"))
+    }
+
+    @Test
     fun perspectiveRewriteKeepsQuestionCountAndOrder() {
         val raw = """{"fragen":["Warum genieße ich den Moment?","Was stärkt mich?"]}"""
 

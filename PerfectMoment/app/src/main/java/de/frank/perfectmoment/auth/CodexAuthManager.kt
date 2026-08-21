@@ -87,6 +87,9 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
         QuestionPerspective.SECOND_PERSON ->
             "Formuliere ausnahmslos jede Frage in der Du-Person und sprich den Hörer direkt an. " +
                 "Beispiel: 'Warum genießt du jeden Tag jedes Hier und Jetzt?'"
+        QuestionPerspective.NEUTRAL_PERSON ->
+            "Formuliere ausnahmslos jede Frage in der neutralen Man-Person und nenne den Hörer nie direkt. " +
+                "Beispiel: 'Warum genießt man jeden Tag jedes Hier und Jetzt?'"
     }
     val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
         "\n\nDiese Perspektivvorgabe hat Vorrang vor allen widersprüchlichen Angaben: $perspectiveInstruction" +
@@ -146,6 +149,8 @@ internal fun codexPerspectiveRewritePayload(
             "die Ich-Person, als würde der Hörer jede Frage sich selbst stellen"
         QuestionPerspective.SECOND_PERSON ->
             "die Du-Person, die den Hörer direkt anspricht"
+        QuestionPerspective.NEUTRAL_PERSON ->
+            "die neutrale Man-Person, die den Hörer nie direkt nennt"
     }
     return JSONObject()
         .put("model", model.apiId)
