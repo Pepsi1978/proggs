@@ -41,11 +41,11 @@ final class ProfileSectionView: NSView {
         contextLabel.lineBreakMode = .byTruncatingTail
         defaultSummaryLabel.lineBreakMode = .byTruncatingTail
 
-        let headerLeft = NSStackView(views: [title, contextLabel, defaultSummaryLabel])
-        headerLeft.orientation = .vertical
-        headerLeft.alignment = .leading
-        headerLeft.spacing = 3
-        headerLeft.translatesAutoresizingMaskIntoConstraints = false
+        // Nur die Ueberschrift steht neben den Schaltern. Die Info-Zeile darunter bekommt die GANZE
+        // Kartenbreite: "★ Standard: Minimal · Schnellmodus · High" ist laenger als der Platz neben
+        // drei Schaltern und wurde sonst mitten im Wort abgeschnitten. Den dafuer noetigen Platz
+        // liefern die flacheren Kacheln weiter unten.
+        title.translatesAutoresizingMaskIntoConstraints = false
 
         let headerRight = NSStackView(views: [editProfileButton, editWorkModeButton, defaultButton])
         headerRight.orientation = .horizontal
@@ -64,31 +64,45 @@ final class ProfileSectionView: NSView {
         workModeRow.spacing = 8
         workModeRow.translatesAutoresizingMaskIntoConstraints = false
 
-        for view in [headerLeft, headerRight, profileRow, modeTitle, workModeRow] as [NSView] {
+        for view in [title, headerRight, contextLabel, defaultSummaryLabel,
+                     profileRow, modeTitle, workModeRow] as [NSView] {
             addSubview(view)
         }
         modeTitle.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            headerLeft.topAnchor.constraint(equalTo: topAnchor),
-            headerLeft.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            headerLeft.trailingAnchor.constraint(lessThanOrEqualTo: headerRight.leadingAnchor, constant: -12),
+            title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            title.centerYAnchor.constraint(equalTo: headerRight.centerYAnchor),
 
             headerRight.topAnchor.constraint(equalTo: topAnchor),
             headerRight.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            headerRight.leadingAnchor.constraint(greaterThanOrEqualTo: title.trailingAnchor, constant: 12),
 
-            profileRow.topAnchor.constraint(equalTo: headerLeft.bottomAnchor, constant: 12),
+            // Info-Zeile ueber die volle Kartenbreite - beide Beschriftungen teilen sich denselben
+            // Platz (nur eine ist jeweils sichtbar), damit die Kacheln nicht verrutschen.
+            contextLabel.topAnchor.constraint(equalTo: headerRight.bottomAnchor, constant: 6),
+            contextLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            contextLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+
+            defaultSummaryLabel.topAnchor.constraint(equalTo: contextLabel.topAnchor),
+            defaultSummaryLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            defaultSummaryLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+
+            profileRow.topAnchor.constraint(equalTo: contextLabel.bottomAnchor, constant: 10),
             profileRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             profileRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
-            profileRow.heightAnchor.constraint(equalToConstant: 108),
+            // Deutlich flacher als unter Windows (dort 108). Moeglich wird das durch die jetzt
+            // erzwungene Mindestbreite der mittleren Spalte: die Beschreibungen brauchen dadurch nur
+            // noch zwei Zeilen statt drei.
+            profileRow.heightAnchor.constraint(equalToConstant: 76),
 
-            modeTitle.topAnchor.constraint(equalTo: profileRow.bottomAnchor, constant: 12),
+            modeTitle.topAnchor.constraint(equalTo: profileRow.bottomAnchor, constant: 10),
             modeTitle.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
 
             workModeRow.topAnchor.constraint(equalTo: modeTitle.bottomAnchor, constant: 4),
             workModeRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             workModeRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
-            workModeRow.heightAnchor.constraint(equalToConstant: 78),
+            workModeRow.heightAnchor.constraint(equalToConstant: 64),
             workModeRow.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
@@ -110,18 +124,17 @@ final class ProfileSectionView: NSView {
             let name = UI.label(entry.displayName, size: 15, weight: .semibold)
             let description = UI.label(entry.descriptionText, size: 11, role: .dim)
             description.lineBreakMode = .byWordWrapping
-            description.maximumNumberOfLines = 3
-            description.preferredMaxLayoutWidth = 120
+            description.maximumNumberOfLines = 2
             tile.addSubview(name)
             tile.addSubview(description)
             NSLayoutConstraint.activate([
-                name.topAnchor.constraint(equalTo: tile.topAnchor, constant: 12),
+                name.topAnchor.constraint(equalTo: tile.topAnchor, constant: 9),
                 name.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 12),
                 name.trailingAnchor.constraint(lessThanOrEqualTo: tile.trailingAnchor, constant: -12),
-                description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 7),
+                description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 5),
                 description.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 12),
                 description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -12),
-                description.bottomAnchor.constraint(lessThanOrEqualTo: tile.bottomAnchor, constant: -12)
+                description.bottomAnchor.constraint(lessThanOrEqualTo: tile.bottomAnchor, constant: -9)
             ])
             profileRow.addArrangedSubview(tile)
             profileTiles.append((entry, tile))
@@ -133,23 +146,28 @@ final class ProfileSectionView: NSView {
             tile.setAccessibilityLabel("Modus \(entry.displayName)")
             tile.onClick = { [weak self] in self?.viewModel?.selectedWorkMode = entry }
 
-            let name = UI.label(entry.displayName, size: 13, weight: .semibold)
+            // Selbst-verkleinernd: "Gründlichkeitsmodus" ist ein einziges langes Wort und wuerde
+            // sonst mitten im Wort umbrechen, sobald die mittlere Spalte schmal wird.
+            let name = AutoShrinkLabel(labelWithString: entry.displayName)
+            name.translatesAutoresizingMaskIntoConstraints = false
+            name.maximumFontSize = 13
+            name.font = .systemFont(ofSize: 13, weight: .semibold)
+            name.applyTheme()
             name.lineBreakMode = .byWordWrapping
             name.maximumNumberOfLines = 2
             let description = UI.label(entry.descriptionText, size: 10, role: .dim)
             description.lineBreakMode = .byWordWrapping
             description.maximumNumberOfLines = 3
-            description.preferredMaxLayoutWidth = 100
             tile.addSubview(name)
             tile.addSubview(description)
             NSLayoutConstraint.activate([
-                name.topAnchor.constraint(equalTo: tile.topAnchor, constant: 8),
-                name.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 10),
-                name.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -10),
-                description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 4),
-                description.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 10),
-                description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -10),
-                description.bottomAnchor.constraint(lessThanOrEqualTo: tile.bottomAnchor, constant: -8)
+                name.topAnchor.constraint(equalTo: tile.topAnchor, constant: 7),
+                name.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 8),
+                name.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -8),
+                description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 3),
+                description.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 8),
+                description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -8),
+                description.bottomAnchor.constraint(lessThanOrEqualTo: tile.bottomAnchor, constant: -7)
             ])
             workModeRow.addArrangedSubview(tile)
             workModeTiles.append((entry, tile))

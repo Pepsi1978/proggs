@@ -15,13 +15,14 @@ final class CardView: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.masksToBounds = false
-        shadow = {
-            let shadow = NSShadow()
-            shadow.shadowBlurRadius = 30
-            shadow.shadowOffset = NSSize(width: 0, height: -10)
-            shadow.shadowColor = NSColor.black.withAlphaComponent(0.28)
-            return shadow
-        }()
+        // Schatten direkt auf der Ebene statt ueber NSView.shadow: nur so laesst sich der
+        // Schattenumriss vorgeben. Mit NSView.shadow zeichnet AppKit ihn nach dem RECHTECK der
+        // Ansicht - hinter den runden Ecken blitzte dadurch eine eckige Flaeche hervor, als laege
+        // ein zweites Rechteck darunter.
+        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowOpacity = 0.28
+        layer?.shadowRadius = 15
+        layer?.shadowOffset = CGSize(width: 0, height: -5)
         applyTheme()
         NotificationCenter.default.addObserver(self, selector: #selector(applyTheme),
                                                name: ThemeManager.themeChangedNotification, object: nil)
@@ -31,12 +32,20 @@ final class CardView: NSView {
 
     deinit { NotificationCenter.default.removeObserver(self) }
 
+    /// Schattenumriss den runden Ecken nachfuehren - sonst bleibt er rechteckig.
+    override func layout() {
+        super.layout()
+        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: cornerRadius,
+                                   cornerHeight: cornerRadius, transform: nil)
+    }
+
     @objc func applyTheme() {
         let palette = ThemeManager.palette
         layer?.cornerRadius = cornerRadius
         layer?.borderWidth = 1
         layer?.backgroundColor = palette.panelBg.flattened(over: ThemeManager.flattenBase).cgColor
         layer?.borderColor = palette.glassBorder.cgColor
+        needsLayout = true
     }
 }
 
@@ -180,6 +189,15 @@ class StyledButton: NSControl {
         trackingAreaRef = area
     }
 
+    override func layout() {
+        super.layout()
+        // Groesse geaendert -> Schattenumriss neu setzen.
+        if style == .accent, layer?.shadowOpacity ?? 0 > 0 {
+            layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: 12,
+                                       cornerHeight: 12, transform: nil)
+        }
+    }
+
     override func mouseEntered(with event: NSEvent) { if isEnabled { isHovered = true } }
     override func mouseExited(with event: NSEvent) { isHovered = false; isPressed = false }
 
@@ -213,7 +231,7 @@ class StyledButton: NSControl {
         let palette = ThemeManager.palette
         let base = ThemeManager.flattenBase
         layer?.borderWidth = 0
-        shadow = nil
+        layer?.shadowOpacity = 0
 
         switch style {
         case .accent:
@@ -230,13 +248,14 @@ class StyledButton: NSControl {
                 else { fill = palette.accentGradientBottom }
                 layer?.backgroundColor = fill.cgColor
                 label.textColor = .white
-                shadow = {
-                    let shadow = NSShadow()
-                    shadow.shadowBlurRadius = 26
-                    shadow.shadowOffset = NSSize(width: 0, height: -8)
-                    shadow.shadowColor = NSColor.wpf("#7C6CF5").withAlphaComponent(0.58)
-                    return shadow
-                }()
+                // Schatten auf der Ebene mit rundem Umriss (siehe CardView) - NSView.shadow
+                // zeichnete hier einen eckigen Schein um den runden Knopf.
+                layer?.shadowColor = NSColor.wpf("#7C6CF5").cgColor
+                layer?.shadowOpacity = 0.58
+                layer?.shadowRadius = 13
+                layer?.shadowOffset = CGSize(width: 0, height: -4)
+                layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: 12,
+                                           cornerHeight: 12, transform: nil)
             }
         case .ghost:
             layer?.cornerRadius = 9
@@ -423,6 +442,71 @@ enum UI {
     }
 }
 
+/// Eigene Titelleiste. Sie liegt ueber der (transparenten) Systemtitelleiste und wuerde deren
+/// Verhalten sonst schlucken: Doppelklick zum Maximieren und Ziehen zum Verschieben muessen deshalb
+/// hier selbst behandelt werden.
+final class TitleBarView: NSView {
+    var onDoubleClick: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount >= 2 {
+            onDoubleClick?()
+            return
+        }
+        // Einfacher Klick: Fenster am Hintergrund ziehen - wie an einer echten Titelleiste.
+        window?.performDrag(with: event)
+    }
+}
+
+/// Beschriftung, die ihre Schriftgroesse so weit verkleinert, bis der Text in die verfuegbare
+/// Breite passt (bis zu einer Untergrenze).
+///
+/// Hintergrund: Die vier Modus-Kacheln stehen nebeneinander und tragen lange deutsche Komposita
+/// ("Gründlichkeitsmodus"). Passt ein solches Wort nicht in die Kachel, bricht AppKit es MITTEN IM
+/// WORT um - "Gründlichke / itsmodus". Ein fester Schriftgrad kann das nicht loesen, weil die
+/// Kachelbreite vom Splitter abhaengt. Deshalb wird die Groesse hier zur Laufzeit passend gewaehlt.
+final class AutoShrinkLabel: ThemedLabel {
+    /// Groesse, mit der begonnen wird (und die bei genug Platz erhalten bleibt).
+    var maximumFontSize: CGFloat = 12
+    /// Untergrenze - darunter wird nicht verkleinert, lieber umgebrochen.
+    var minimumFontSize: CGFloat = 9.5
+    var fontWeight: NSFont.Weight = .semibold
+
+    private var lastFittedWidth: CGFloat = -1
+
+    override func layout() {
+        super.layout()
+        fitFontToWidth()
+    }
+
+    override var stringValue: String {
+        didSet {
+            lastFittedWidth = -1
+            fitFontToWidth()
+        }
+    }
+
+    private func fitFontToWidth() {
+        let available = bounds.width
+        guard available > 1, available != lastFittedWidth else { return }
+        lastFittedWidth = available
+
+        // Das laengste einzelne Wort entscheidet: nur daran kann AppKit mitten im Wort umbrechen.
+        let longestWord = stringValue.split(separator: " ").map(String.init)
+            .max(by: { $0.count < $1.count }) ?? stringValue
+        guard !longestWord.isEmpty else { return }
+
+        var size = maximumFontSize
+        while size > minimumFontSize {
+            let candidate = NSFont.systemFont(ofSize: size, weight: fontWeight)
+            let width = (longestWord as NSString).size(withAttributes: [.font: candidate]).width
+            if width <= available { break }
+            size -= 0.5
+        }
+        font = NSFont.systemFont(ofSize: size, weight: fontWeight)
+    }
+}
+
 /// Dokument-Ansicht fuer NSScrollView. AppKit rechnet standardmaessig von UNTEN nach oben - der
 /// Inhalt einer Liste begaenne dadurch am unteren Rand und die Liste waere beim Start ans Ende
 /// gescrollt. `isFlipped = true` dreht die Achse auf die von WPF gewohnte Richtung.
@@ -431,7 +515,7 @@ final class FlippedView: NSView {
 }
 
 /// NSTextField, das seine Farbe beim Design-Wechsel selbst nachzieht.
-final class ThemedLabel: NSTextField {
+class ThemedLabel: NSTextField {
     var role: UI.TextRole = .normal { didSet { applyTheme() } }
 
     override init(frame frameRect: NSRect) {

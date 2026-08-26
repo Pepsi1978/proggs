@@ -50,6 +50,20 @@ Die macOS-Profile enthalten dieselben Inhalte mit `bash … .sh`-Hooks und `/Use
 Der Inhalt (`rules/ agents/ commands/ skills/`, Profiltexte, Modus-Prompts) ist ansonsten wortgleich
 übernommen, einschließlich der Verweise auf `~/SK`, `~/proggs/best-practices` und `~/proggs/bugs`.
 
+## Symbol auf dem Schreibtisch
+
+```bash
+bash ~/proggs/OpenLauncherMac/tools/install-desktop-icon.sh
+```
+
+Legt `~/Desktop/OpenLauncher.app` an — **ohne Verknüpfungspfeil**. Weder ein Alias noch ein Symlink
+kann das: Finder stempelt beiden das kleine Pfeil-Abzeichen auf. Stattdessen entsteht ein winziges
+eigenes Programm, das nur eine Zeile enthält („öffne den echten OpenLauncher"). Es trägt kein
+Abzeichen und bleibt nach jedem Neubau aktuell, statt zu veralten.
+
+Das App-Symbol selbst wird per `tools/make-icon.sh` aus dem Windows-Symbol `OpenLauncher/app.ico`
+erzeugt — beide Fassungen tragen damit exakt dasselbe Bild.
+
 ## Terminal
 
 Gestartet wird im **Standard-Terminal von macOS** (Terminal.app). Ob dabei ein neues Fenster oder
@@ -74,6 +88,13 @@ und bei Claude Code färbt zusätzlich `/color <name>` die Oberfläche selbst, g
 | `lms.exe` | `~/.lmstudio/bin/lms` |
 | Einzelinstanz per Mutex | Einzelinstanz per `NSRunningApplication` |
 | Registry-PATH nachladen | `path_helper` + `.zprofile`/`.zshrc` |
+
+## Fenster
+
+Der Launcher startet **bildschirmfüllend** — bis an Menüleiste und Dock heran, ohne Zwischenraum.
+Ein Doppelklick auf die Titelleiste schaltet zwischen dieser Größe und der vorherigen um, wie bei
+jeder macOS-App. Die Position des Teilers zwischen Modell- und Provider-Spalte wird gemerkt und beim
+nächsten Start wiederhergestellt.
 
 ## Eine bewusste Abweichung in der Oberfläche
 

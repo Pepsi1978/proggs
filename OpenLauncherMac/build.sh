@@ -63,6 +63,12 @@ swiftc \
 
 cp "$SRC_DIR/OpenLauncher.entitlements" "$APP_BUNDLE/Contents/Resources/"
 
+# App-Symbol. Fehlt es, wird es aus dem Windows-Symbol erzeugt - beide Fassungen tragen dasselbe Bild.
+if [ ! -f "$SRC_DIR/Resources/AppIcon.icns" ]; then
+    bash "$PROJECT_DIR/tools/make-icon.sh"
+fi
+cp "$SRC_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
+
 # Signieren ZULETZT (nach der finalen Info.plist - sonst verweigert TCC still, Almanach §H4).
 # KEIN --deep: das Bundle hat keine verschachtelten Bundles, und --deep gilt als fehleranfaellig.
 SIGNING_IDENTITY="Frank Local Dev"

@@ -13,6 +13,8 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
     private var rows: [ProviderEntry] = []
     private var sortColumn: String = ""
     private var sortAscending = true
+    /// Zuletzt verteilte Breite - verhindert, dass jede Layout-Runde die Spalten neu setzt.
+    private var lastFittedWidth: CGFloat = -1
 
     private struct Column {
         let identifier: String
@@ -26,13 +28,13 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
     // verkleinert ein DataGrid mit "Auto"-Spalten von selbst, NSTableView nicht - mit festen
     // Breiten (Summe 1170) waere die letzte Spalte in einem 1050 breiten Fenster abgeschnitten.
     private static let columns: [Column] = [
-        Column(identifier: "provider", title: "Provider", width: 280, minWidth: 110, flexible: true),
-        Column(identifier: "input", title: "Input $/1M", width: 150, minWidth: 80, flexible: true),
-        Column(identifier: "output", title: "Output $/1M", width: 150, minWidth: 80, flexible: true),
-        Column(identifier: "cache", title: "Cache $/1M", width: 150, minWidth: 80, flexible: true),
-        Column(identifier: "context", title: "Kontext", width: 140, minWidth: 80, flexible: true),
-        Column(identifier: "throughput", title: "Throughput", width: 140, minWidth: 90, flexible: true),
-        Column(identifier: "status", title: "Status", width: 160, minWidth: 120, flexible: true)
+        Column(identifier: "provider", title: "Provider", width: 280, minWidth: 70, flexible: true),
+        Column(identifier: "input", title: "Input $/1M", width: 150, minWidth: 58, flexible: true),
+        Column(identifier: "output", title: "Output $/1M", width: 150, minWidth: 58, flexible: true),
+        Column(identifier: "cache", title: "Cache $/1M", width: 150, minWidth: 58, flexible: true),
+        Column(identifier: "context", title: "Kontext", width: 140, minWidth: 58, flexible: true),
+        Column(identifier: "throughput", title: "Throughput", width: 140, minWidth: 66, flexible: true),
+        Column(identifier: "status", title: "Status", width: 160, minWidth: 76, flexible: true)
     ]
 
     init(viewModel: MainViewModel) {
@@ -40,7 +42,13 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        tableView.style = .plain
+        // .fullWidth statt .plain: der .plain-Stil legt links und rechts einen breiten Rand an und
+        // setzt zusaetzlich 17 Punkt Zwischenraum je Spalte - bei sieben Spalten gehen dadurch allein
+        // 119 Punkt verloren, und die Status-Spalte passte nicht mehr ins Bild.
+        tableView.style = .fullWidth
+        // Der Zellen-Innenabstand wird in den Zell-Ansichten selbst gezeichnet (12 Punkt, wie in
+        // XAML). Ein zusaetzlicher Zwischenraum von AppKit waere doppelt.
+        tableView.intercellSpacing = NSSize(width: 0, height: 2)
         tableView.rowHeight = 44
         tableView.headerView = ThemedTableHeaderView()
         tableView.headerView?.frame.size.height = 38
@@ -50,11 +58,12 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
         tableView.selectionHighlightStyle = .regular
         tableView.allowsMultipleSelection = false
         tableView.allowsColumnReordering = false
-        // CanUserResizeColumns="False" in XAML - die Breiten kommen aus der Spaltendefinition.
-        // Der Nutzer soll nicht ziehen duerfen (CanUserResizeColumns="False" in XAML), die Tabelle
-        // selbst verteilt die Breite aber gleichmaessig auf die Fensterbreite.
+        // Der Nutzer soll nicht ziehen duerfen (CanUserResizeColumns="False" in XAML).
         tableView.allowsColumnResizing = false
-        tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        // AppKit darf die Breiten NICHT selbst nachziehen: es wuerde die in fitColumnsToWidth
+        // gesetzten Werte beim naechsten Resize wieder ueberschreiben - dabei rutschte die letzte
+        // Spalte (Status) regelmaessig aus dem sichtbaren Bereich.
+        tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.dataSource = self
         tableView.delegate = self
         tableView.target = self
@@ -86,10 +95,20 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
+        // Auf die tatsaechliche Groessenaenderung des sichtbaren Bereichs hoeren. Ein Neuberechnen
+        // nur in layout() greift zu frueh: dort steht die endgueltige Breite des Scroll-Bereichs
+        // noch nicht fest, und die letzte Spalte (Status) landete ausserhalb des Sichtfensters.
+        scrollView.contentView.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(self, selector: #selector(visibleWidthChanged),
+                                               name: NSView.frameDidChangeNotification,
+                                               object: scrollView.contentView)
+
         applyTheme()
         NotificationCenter.default.addObserver(self, selector: #selector(applyTheme),
                                                name: ThemeManager.themeChangedNotification, object: nil)
     }
+
+    @objc private func visibleWidthChanged() { fitColumnsToWidth() }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
     deinit { NotificationCenter.default.removeObserver(self) }
@@ -120,21 +139,36 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
     /// ein WPF-DataGrid - nicht von selbst: mit den Vorgabebreiten (Summe 1170) waere die
     /// Status-Spalte in einem schmaleren Fenster einfach abgeschnitten und unsichtbar.
     private func fitColumnsToWidth() {
-        let available = scrollView.contentSize.width
-        guard available > 50 else { return }
+        // Massgeblich ist die Breite des Sichtfensters (Clip-View) - contentSize kann waehrend des
+        // Aufbaus noch veraltet sein.
+        let available = scrollView.contentView.bounds.width
+        guard available > 50, tableView.tableColumns.count == Self.columns.count else { return }
+        guard available != lastFittedWidth else { return }
+        lastFittedWidth = available
+
+        // NSTableView zieht zwischen den Spalten je einen Zwischenraum (intercellSpacing) ein - der
+        // muss vom verteilbaren Platz abgezogen werden, sonst ist die Summe genau um diese Punkte zu
+        // breit und die letzte Spalte (Status) rutscht aus dem Bild.
+        let spacing = tableView.intercellSpacing.width * CGFloat(Self.columns.count)
+        let distributable = available - spacing
         let total = Self.columns.reduce(0) { $0 + $1.width }
-        guard total > 0 else { return }
+        guard distributable > 0, total > 0 else { return }
 
         var used: CGFloat = 0
         for (index, column) in Self.columns.enumerated() {
-            guard index < tableView.tableColumns.count else { break }
             let tableColumn = tableView.tableColumns[index]
             let share = index == Self.columns.count - 1
-                ? Swift.max(column.minWidth, available - used)
-                : Swift.max(column.minWidth, (column.width / total) * available)
+                ? Swift.max(column.minWidth, distributable - used)
+                : Swift.max(column.minWidth, ((column.width / total) * distributable).rounded(.down))
             tableColumn.width = share
             used += share
         }
+
+        // Die Tabelle selbst auf die Sichtbreite setzen und die letzte Spalte von AppKit exakt
+        // einpassen lassen. Ohne das bleibt die Tabelle breiter als ihr Sichtfenster und die
+        // Status-Spalte steht rechts ausserhalb.
+        tableView.setFrameSize(NSSize(width: available, height: tableView.frame.height))
+        tableView.sizeLastColumnToFit()
     }
 
     private func restoreSelection() {
@@ -230,8 +264,8 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
         label.lineBreakMode = .byTruncatingTail
         container.addSubview(label)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8),
             label.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
         return container

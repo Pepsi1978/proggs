@@ -15,7 +15,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let layoutSettings: LayoutSettings
 
     private let rootView = GradientBackgroundView()
-    private let titleBar = NSView()
+    private let titleBar = TitleBarView()
     private let versionChip = SurfaceView(cornerRadius: 8)
     private let versionLabel = UI.label("", size: 12, role: .dim)
     private let themeButton = StyledButton(style: .theme, title: "☀︎")
@@ -46,10 +46,19 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let statusLabel = UI.label("Bereit.", size: 13, role: .dim)
     private let startButton = StyledButton(style: .accent, title: "▶ Start")
 
+    /// Breite der Effort-/Thinking-Spalte (Width="210" in XAML).
+    static let thinkingColumnWidth: CGFloat = 210
+
     /// Layout-Speicherung wird gebuendelt: Bewegen/Groessenaenderung feuert sehr haeufig - ohne
     /// Verzoegerung loeste jedes Pixel eine JSON-Schreiboperation aus (wie der DispatcherTimer
     /// unter Windows).
     private var layoutSaveWorkItem: DispatchWorkItem?
+
+    /// Erst wenn die gespeicherte Teilerposition wirklich gesetzt ist, darf sie wieder
+    /// mitgeschrieben werden. Ohne diese Sperre ueberschreiben die Layout-Durchlaeufe waehrend des
+    /// Fensteraufbaus den gemerkten Wert mit einem Zwischenstand - die Position "vergaesse" sich
+    /// dann bei jedem Start.
+    private var didRestoreSplitPosition = false
 
     init(viewModel: MainViewModel, layoutSettings: LayoutSettings) {
         self.viewModel = viewModel
@@ -117,6 +126,9 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private func buildTitleBar() {
         titleBar.translatesAutoresizingMaskIntoConstraints = false
         titleBar.wantsLayer = true
+        // Doppelklick auf die Leiste maximiert - wie bei jeder macOS-App. Ohne das schluckt die
+        // eigene Leiste die Klicks, weil sie ueber der (transparenten) Systemtitelleiste liegt.
+        titleBar.onDoubleClick = { [weak self] in self?.zoomToScreen() }
         rootView.addSubview(titleBar)
 
         let badge = LogoBadgeView()
@@ -185,6 +197,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         removeModelButton.target = self
         removeModelButton.action = #selector(removeModel)
 
+        // Ueberschrift vor den Schaltern schuetzen: ohne das staucht NSStackView bei schmaler
+        // Modell-Spalte zuerst den Text ("MODELLE" wurde zu "MOD").
+        modelTitle.setContentCompressionResistancePriority(.required, for: .horizontal)
+        modelTitle.setContentHuggingPriority(.required, for: .horizontal)
+        for button in [hiddenModelsButton, addModelButton] {
+            button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        }
         let modelHeader = NSStackView(views: [modelTitle, UI.spacer(), hiddenModelsButton, addModelButton])
         modelHeader.orientation = .horizontal
         modelHeader.spacing = 8
@@ -288,12 +307,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             thinkingCard.topAnchor.constraint(equalTo: rightContainer.topAnchor),
             thinkingCard.trailingAnchor.constraint(equalTo: rightContainer.trailingAnchor),
             thinkingCard.bottomAnchor.constraint(equalTo: rightContainer.bottomAnchor),
-            thinkingCard.widthAnchor.constraint(equalToConstant: 210)
+            thinkingCard.widthAnchor.constraint(equalToConstant: Self.thinkingColumnWidth)
         ])
 
         splitView.addArrangedSubview(modelCard)
         splitView.addArrangedSubview(rightContainer)
-        splitView.setPosition(layoutSettings.modelPaneWidth, ofDividerAt: 0)
+        // Die endgueltige Position wird erst in showWindow gesetzt: hier steht die Breite des
+        // Splitters noch nicht fest, und AppKit wuerde den Wert beim ersten Layout verwerfen.
     }
 
     private func buildFooter() -> NSView {
@@ -413,6 +433,29 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 
     // MARK: - Fenster-Layout
 
+    /// Zeigt das Fenster bildschirmfuellend an (wie ein Doppelklick auf die Titelleiste) und stellt
+    /// danach die gemerkte Teilerposition wieder her.
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        guard let window else { return }
+
+        // Bildschirmfuellend starten - exakt bis an Menueleiste und Dock heran.
+        if !window.isZoomed { zoomToScreen() }
+
+        // Erst nach dem Zoomen steht die Breite des Splitters fest; vorher gesetzte Positionen
+        // verwirft AppKit beim naechsten Layout-Durchlauf.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let splitView = self.window != nil ? self.splitView : nil else { return }
+            splitView.setPosition(self.layoutSettings.modelPaneWidth, ofDividerAt: 0)
+            self.didRestoreSplitPosition = true
+        }
+    }
+
+    /// Maximiert bzw. stellt wieder her (wie der gruene Knopf und der Doppelklick auf die Leiste).
+    private func zoomToScreen() {
+        window?.zoom(nil)
+    }
+
     private func restoreWindowLayout() {
         guard let window else { return }
         // NaN-Sentinel = noch nie gespeichert. Echte negative Koordinaten (linker/oberer Monitor)
@@ -471,6 +514,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     }
 
     // MARK: - NSWindowDelegate
+
+    /// Legt fest, welchen Rahmen "Maximieren" verwendet. Ohne diese Antwort waehlt AppKit einen
+    /// eigenen "besten" Rahmen und laesst unten einen Streifen zum Dock frei. `visibleFrame` ist
+    /// exakt der Bereich zwischen Menueleiste und Dock - damit klebt das Fenster fugenlos daran.
+    func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame newFrame: NSRect) -> NSRect {
+        (window.screen ?? NSScreen.main)?.visibleFrame ?? newFrame
+    }
 
     func windowDidResize(_ notification: Notification) { queueSaveWindowLayout() }
     func windowDidMove(_ notification: Notification) { queueSaveWindowLayout() }
@@ -591,10 +641,18 @@ extension MainWindowController: NSSplitViewDelegate {
 
     func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat,
                    ofSubviewAt dividerIndex: Int) -> CGFloat {
-        Swift.min(760, proposedMaximumPosition)   // MaxWidth der Modell-Spalte aus XAML
+        // MaxWidth der Modell-Spalte aus XAML (760) UND die dort ebenfalls gesetzte MinWidth der
+        // Provider-/Profil-Spalte (540). Ohne die zweite Grenze liesse sich die mittlere Spalte
+        // beliebig schmal ziehen - dann brechen Schalterbeschriftungen und Kacheltexte um.
+        let rightMinimum = 540 + splitView.dividerThickness + Self.thinkingColumnWidth
+        let maximumForRight = splitView.bounds.width - splitView.dividerThickness - rightMinimum
+        return Swift.min(760, maximumForRight, proposedMaximumPosition)
     }
 
     func splitViewDidResizeSubviews(_ notification: Notification) {
+        // Waehrend des Fensteraufbaus feuert das mehrfach mit Zwischenwerten - die duerfen die
+        // gemerkte Position nicht ueberschreiben (siehe didRestoreSplitPosition).
+        guard didRestoreSplitPosition, modelCard.frame.width > 1 else { return }
         layoutSettings.modelPaneWidth = modelCard.frame.width
         queueSaveWindowLayout()
     }
