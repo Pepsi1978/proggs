@@ -467,6 +467,19 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Hängt einen frischen Anhang an eine **schon gespeicherte** Notiz — das Plus an der
+     * Karte. Dieselbe Technik wie beim Entwurf: die Datei liegt im App-Speicher, die Notiz
+     * merkt sich nur ihre Beschreibung.
+     */
+    fun fuegeAnhangZuNotiz(notiz: Notiz, anhang: Anhang) {
+        viewModelScope.launch {
+            val vorhanden = repo.notiz(notiz.id) ?: return@launch
+            val neue = anhaengeAusJson(vorhanden.anhaengeJson) + anhang
+            repo.aendere(vorhanden.copy(anhaengeJson = neue.alsJson()))
+        }
+    }
+
     fun sendeEntwurf() {
         val text = _verlauf.value.entwurf.trim()
         val anhaenge = _verlauf.value.anhaenge

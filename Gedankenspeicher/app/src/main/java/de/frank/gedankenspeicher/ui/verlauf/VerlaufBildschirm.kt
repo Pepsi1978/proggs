@@ -106,6 +106,7 @@ fun VerlaufBildschirm(
     beiVerschieben: (Notiz) -> Unit,
     beiKopieren: (Notiz) -> Unit,
     beiLoeschen: (Notiz) -> Unit,
+    beiAnhangPlus: (Notiz) -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -218,6 +219,7 @@ fun VerlaufBildschirm(
                                     beiVerschieben = { beiVerschieben(notiz) },
                                     beiKopieren = { beiKopieren(notiz) },
                                     beiLoeschen = { beiLoeschen(notiz) },
+                                    beiAnhangPlus = { beiAnhangPlus(notiz) },
                                 )
                             }
 

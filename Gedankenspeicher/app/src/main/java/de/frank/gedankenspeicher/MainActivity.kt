@@ -80,6 +80,7 @@ import de.frank.gedankenspeicher.ui.verlauf.BearbeitenBlatt
 import de.frank.gedankenspeicher.ui.verlauf.Reichtext
 import de.frank.gedankenspeicher.ui.verlauf.MenueBlatt
 import de.frank.gedankenspeicher.ui.verlauf.Menueeintrag
+import de.frank.gedankenspeicher.ui.verlauf.NotizAnhangsmenue
 import de.frank.gedankenspeicher.ui.verlauf.VerlaufBildschirm
 import kotlinx.coroutines.launch
 
@@ -450,6 +451,8 @@ private fun Oberflaeche(
     // ueber ein Auf- und Zuklappen des Geraets geschlossen.
     var schubladeOffen by rememberSaveable { mutableStateOf(true) }
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
+    /** Die Notiz, deren Plus-Menü für Anhänge gerade offen ist. */
+    var notizAnhangMenue by remember { mutableStateOf<Notiz?>(null) }
     /**
      * Der offene Tabelleneditor: links die Notiz (null = neue Tabelle für den Entwurf),
      * rechts die Vorlage (null = leere Tabelle). `null` als Ganzes heisst: zu.
@@ -457,7 +460,9 @@ private fun Oberflaeche(
     var tabellenBearbeitung by remember {
         mutableStateOf<Pair<Notiz?, de.frank.gedankenspeicher.data.Anhang?>?>(null)
     }
-    var zeichenblatt by remember { mutableStateOf(false) }
+    var zeichenblattOffen by remember { mutableStateOf(false) }
+    /** Für wen die Zeichnung bestimmt ist: null = der Entwurf, sonst die gespeicherte Notiz. */
+    var zeichnungFuer by remember { mutableStateOf<Notiz?>(null) }
     val anwendungskontext = LocalContext.current.applicationContext
     val anhangsspeicher = remember { de.frank.gedankenspeicher.data.Anhangsspeicher(anwendungskontext) }
     var antwortMenue by remember { mutableStateOf<KiAntwort?>(null) }
@@ -557,7 +562,7 @@ private fun Oberflaeche(
             beiAnhangsmikrofon = beiAnhangsmikrofon,
             beiFehler = vm::meldeFehler,
             beiAnhangTitel = vm::aendereAnhang,
-            beiZeichnung = { zeichenblatt = true },
+            beiZeichnung = { zeichenblattOffen = true; zeichnungFuer = null },
             beiTabelle = { tabellenBearbeitung = null to null },
             // Die Schnellaktionen an jeder Karte — derselbe Weg wie im Langdruck-Menü,
             // nur ohne den Umweg dorthin. Der Nachtrag öffnet das Bearbeiten-Blatt und
@@ -574,6 +579,7 @@ private fun Oberflaeche(
                 vm.melde("Text kopiert.")
             },
             beiLoeschen = { loeschfrage = it },
+            beiAnhangPlus = { notizAnhangMenue = it },
         )
 
         // ---- Die Vollbild-Blätter: Zeichnung und Tabelle
@@ -587,15 +593,26 @@ private fun Oberflaeche(
                 beiAbbruch = { tabellenBearbeitung = null },
                 beiFertig = { geaendert ->
                     tabellenBearbeitung = null
-                    if (notiz != null) vm.aendereAnhang(notiz, geaendert) else vm.fuegeAnhangHinzu(geaendert)
+                    when {
+                        // Eine bestehende Tabelle wird ersetzt; eine neue ohne Vorlage
+                        // hängt je nach Ziel an der Notiz oder am Entwurf.
+                        notiz != null && tabelle != null -> vm.aendereAnhang(notiz, geaendert)
+                        notiz != null -> vm.fuegeAnhangZuNotiz(notiz, geaendert)
+                        else -> vm.fuegeAnhangHinzu(geaendert)
+                    }
                 },
             )
         }
-        if (zeichenblatt) {
+        if (zeichenblattOffen) {
             ZeichenBlatt(
                 speicher = anhangsspeicher,
-                beiAbbruch = { zeichenblatt = false },
-                beiFertig = { anhang -> zeichenblatt = false; vm.fuegeAnhangHinzu(anhang) },
+                beiAbbruch = { zeichenblattOffen = false },
+                beiFertig = { anhang ->
+                    zeichenblattOffen = false
+                    val ziel = zeichnungFuer
+                    zeichnungFuer = null
+                    if (ziel != null) vm.fuegeAnhangZuNotiz(ziel, anhang) else vm.fuegeAnhangHinzu(anhang)
+                },
                 beiFehler = vm::meldeFehler,
             )
         }
@@ -892,6 +909,28 @@ private fun Oberflaeche(
                     },
                 )
             }
+        }
+
+        // Das Plus-Menü an einer fertigen Notiz: dieselben Anhänge wie im Entwurf, nur
+        // ohne Sprachaufnahme — das Mikrofon steht an der Karte ohnehin daneben.
+        notizAnhangMenue?.let { notiz ->
+            NotizAnhangsmenue(
+                beiSchliessen = { notizAnhangMenue = null },
+                beiAnhang = {
+                    vm.fuegeAnhangZuNotiz(notiz, it)
+                    notizAnhangMenue = null
+                },
+                beiFehler = vm::meldeFehler,
+                beiZeichnung = {
+                    zeichnungFuer = notiz
+                    zeichenblattOffen = true
+                    notizAnhangMenue = null
+                },
+                beiTabelle = {
+                    tabellenBearbeitung = notiz to null
+                    notizAnhangMenue = null
+                },
+            )
         }
 
         // ---- Menüs zum langen Druck (F-08, F-12)

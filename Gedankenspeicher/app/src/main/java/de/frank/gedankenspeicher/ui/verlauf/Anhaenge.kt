@@ -345,7 +345,7 @@ fun Anhangsknopf(
 private fun Anhangsmenue(
     beiSchliessen: () -> Unit,
     beiPdf: () -> Unit,
-    beiSprachaufnahme: () -> Unit,
+    beiSprachaufnahme: (() -> Unit)? = null,
     beiBild: () -> Unit,
     beiKamera: () -> Unit,
     beiScan: () -> Unit,
@@ -368,7 +368,11 @@ private fun Anhangsmenue(
                 .padding(vertical = 8.dp),
         ) {
             Menuezeile("PDF", Icons.Outlined.PictureAsPdf) { beiSchliessen(); beiPdf() }
-            Menuezeile("Sprachaufnahme", Icons.Outlined.Mic) { beiSchliessen(); beiSprachaufnahme() }
+            // Die Sprachaufnahme gibt es nur im Entwurf — an einer fertigen Notiz ist das
+            // Mikrofon ohnehin sichtbar, der Eintrag wäre doppelt.
+            if (beiSprachaufnahme != null) {
+                Menuezeile("Sprachaufnahme", Icons.Outlined.Mic) { beiSchliessen(); beiSprachaufnahme() }
+            }
             Box(
                 Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     .fillMaxWidth().height(1.dp).background(farben.rand),
@@ -382,6 +386,169 @@ private fun Anhangsmenue(
             Menuezeile("Tabelle", Icons.Outlined.TableChart) { beiSchliessen(); beiTabelle() }
         }
     }
+}
+
+// ------------------------------------------------------- Anhänge an einer fertigen Notiz
+
+/**
+ * Das Plus-Menü **an einer gespeicherten Notiz** (der Plus-Knopf in ihrer Aktionsreihe).
+ *
+ * Dieselben Wege wie der Entwurfs-Anhangsknopf — PDF, Bild, Kamera, Dokumentenscan,
+ * Audiodatei, Zeichnung, Haftnotiz und Tabelle; nur die Sprachaufnahme fehlt, weil das
+ * Mikrofon an der Karte ohnehin sichtbar ist. Was hier fertig wird, hängt direkt an der
+ * Notiz statt am Entwurf.
+ */
+@Composable
+fun NotizAnhangsmenue(
+    beiSchliessen: () -> Unit,
+    beiAnhang: (Anhang) -> Unit,
+    beiFehler: (String) -> Unit,
+    beiZeichnung: () -> Unit,
+    beiTabelle: () -> Unit,
+) {
+    val farben = Farben
+    val ctx = LocalContext.current
+    val speicher = remember(ctx) { Anhangsspeicher(ctx.applicationContext) }
+    val bereich = rememberCoroutineScope()
+    var haftnotiz by remember { mutableStateOf(false) }
+    var kameradatei by remember { mutableStateOf<File?>(null) }
+    var erkenntGerade by remember { mutableStateOf(false) }
+
+    fun uebernimm(uri: Uri?, art: Anhangsart) {
+        if (uri == null) return
+        bereich.launch {
+            runCatching { speicher.uebernimm(uri, art) }
+                .onSuccess(beiAnhang)
+                .onFailure { beiFehler(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
+        }
+    }
+
+    /** Aus einem Bild wird der reine Text — das ist der Sinn des Dokumentenscans. */
+    fun erkenneText(quellen: List<Uri>) {
+        if (quellen.isEmpty()) return
+        erkenntGerade = true
+        bereich.launch {
+            try {
+                val seiten = quellen.mapIndexedNotNull { nummer, uri ->
+                    val text = runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim()
+                    if (text.isBlank()) null else if (quellen.size > 1) "— Seite ${nummer + 1} —\n$text" else text
+                }
+                if (seiten.isEmpty()) {
+                    beiFehler("Auf der Vorlage war kein Text zu erkennen.")
+                } else {
+                    val text = seiten.joinToString("\n\n")
+                    beiAnhang(
+                        Anhang(
+                            art = Anhangsart.SCAN,
+                            name = text.lineSequence().first { it.isNotBlank() }.take(40).ifBlank { "Dokumentenscan" },
+                            text = text,
+                            seiten = quellen.size,
+                        ),
+                    )
+                }
+            } finally {
+                erkenntGerade = false
+            }
+        }
+    }
+
+    val pdfWahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uebernimm(it, Anhangsart.PDF)
+    }
+    val bildWahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uebernimm(it, Anhangsart.BILD)
+    }
+    val audioWahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uebernimm(it, Anhangsart.AUDIO)
+    }
+    val kamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
+        val datei = kameradatei
+        kameradatei = null
+        if (geklappt && datei != null && datei.length() > 0) {
+            beiAnhang(speicher.beschreibe(datei, Anhangsart.BILD, "Kameraaufnahme"))
+        } else {
+            datei?.delete()
+        }
+    }
+    // Ersatzweg für den Dokumentenscan: wenn der Scanner nicht startet, wird die Vorlage
+    // schlicht abfotografiert und daraus derselbe Text gelesen.
+    var scandatei by remember { mutableStateOf<File?>(null) }
+    val scanKamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
+        val datei = scandatei
+        scandatei = null
+        if (geklappt && datei != null && datei.length() > 0) {
+            erkenneText(listOf(Uri.fromFile(datei)))
+        } else {
+            datei?.delete()
+        }
+    }
+    val scanner = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { ergebnis ->
+        val seiten = GmsDocumentScanningResult.fromActivityResultIntent(ergebnis.data)?.pages.orEmpty()
+        if (ergebnis.resultCode == Activity.RESULT_OK && seiten.isNotEmpty()) {
+            erkenneText(seiten.map { it.imageUri })
+        }
+    }
+
+    Anhangsmenue(
+        beiSchliessen = beiSchliessen,
+        beiPdf = {
+            runCatching { pdfWahl.launch(arrayOf("application/pdf")) }
+                .onFailure { beiFehler("Es wurde keine Dateiauswahl gefunden.") }
+        },
+        beiBild = {
+            runCatching { bildWahl.launch(arrayOf("image/*")) }
+                .onFailure { beiFehler("Es wurde keine Bildauswahl gefunden.") }
+        },
+        beiKamera = {
+            val datei = speicher.neueDatei(".jpg")
+            kameradatei = datei
+            runCatching {
+                kamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
+            }.onFailure {
+                kameradatei = null; datei.delete(); beiFehler("Es wurde keine Kamera-App gefunden.")
+            }
+        },
+        beiScan = {
+            val activity = ctx.findeActivity()
+            val ersatzweg = {
+                val datei = speicher.neueDatei("-scan.jpg")
+                scandatei = datei
+                runCatching {
+                    scanKamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
+                }.onFailure {
+                    scandatei = null; datei.delete()
+                    beiFehler("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
+                }
+                Unit
+            }
+            if (activity == null) {
+                ersatzweg()
+            } else {
+                val optionen = GmsDocumentScannerOptions.Builder()
+                    .setGalleryImportAllowed(true)
+                    .setPageLimit(20)
+                    .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                    .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                    .build()
+                GmsDocumentScanning.getClient(optionen).getStartScanIntent(activity)
+                    .addOnSuccessListener { absender ->
+                        runCatching { scanner.launch(IntentSenderRequest.Builder(absender).build()) }
+                            .onFailure { ersatzweg() }
+                    }
+                    .addOnFailureListener { ersatzweg() }
+            }
+        },
+        beiAudio = {
+            runCatching { audioWahl.launch(arrayOf("audio/*")) }
+                .onFailure { beiFehler("Es wurde keine Dateiauswahl gefunden.") }
+        },
+        beiZeichnung = beiZeichnung,
+        beiHaftnotiz = { haftnotiz = true },
+        beiTabelle = beiTabelle,
+    )
+
+    if (erkenntGerade) Texterkennungsblatt()
+    if (haftnotiz) HaftnotizBlatt({ haftnotiz = false }) { anhang -> haftnotiz = false; beiAnhang(anhang) }
 }
 
 @Composable

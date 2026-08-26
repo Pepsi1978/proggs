@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -93,6 +94,7 @@ fun Notizkarte(
     beiVerschieben: () -> Unit = {},
     beiKopieren: () -> Unit = {},
     beiLoeschen: () -> Unit = {},
+    beiAnhangPlus: () -> Unit = {},
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -233,6 +235,13 @@ fun Notizkarte(
                         beschreibung = "Notiz löschen",
                         farbe = farben.textMittel,
                         beiDruck = beiLoeschen,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Kartenknopf(
+                        symbol = Icons.Outlined.Add,
+                        beschreibung = "Anhang hinzufügen",
+                        farbe = farben.textMittel,
+                        beiDruck = beiAnhangPlus,
                     )
                 }
             }
