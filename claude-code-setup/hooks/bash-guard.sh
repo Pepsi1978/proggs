@@ -108,7 +108,12 @@ check_forbidden() {
         fi
     done
     # Wenn die while-Subshell mit exit 2 beendet hat, ist $? = 2
-    [ $? -eq 2 ] && exit 2
+    # FIX 2026-08-26: Der Test war der LETZTE Befehl der Funktion -> im Normalfall
+    # (nichts blockiert) gab die Funktion 1 zurueck. Der ERR-Trap aus hook-log.sh
+    # wertete das als Fehler -> 138 Falschmeldungen pro Session im Hook-Log, echte
+    # Fehler gingen darin unter. Explizites return 0 macht den Rueckgabewert bewusst.
+    if [ $? -eq 2 ]; then exit 2; fi
+    return 0
 }
 
 # ============================================================

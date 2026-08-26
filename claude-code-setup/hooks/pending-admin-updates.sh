@@ -18,10 +18,10 @@ if [ "$(uname)" = "Darwin" ]; then
             hook_log "found $count brew updates: $update_list"
             # whiteboard insert is best-effort — don't fail the hook if section is missing
             replace_whiteboard_entry "Systemzustand" "Pending Admin Updates" "- **Pending Admin Updates ($count):** $update_list" 2>/dev/null || true
-            echo "Pending-Admin-Updates: $count brew Updates verfuegbar."
+            echo "Pending-Admin-Updates: $count brew Updates verfuegbar." || true
         else
             hook_log "no pending brew updates"
-            echo "Pending-Admin-Updates: Keine ausstehenden Updates."
+            echo "Pending-Admin-Updates: Keine ausstehenden Updates." || true
         fi
     else
         hook_log "brew not installed — skipped"
@@ -35,10 +35,10 @@ else
             update_list=$(apt list --upgradable 2>/dev/null | grep upgradable | awk -F'/' '{print $1}' | tr '\n' ', ' | sed 's/, $//')
             hook_log "found $updates apt updates: $update_list"
             replace_whiteboard_entry "Systemzustand" "Pending Admin Updates" "- **Pending Admin Updates ($updates):** $update_list" 2>/dev/null || true
-            echo "Pending-Admin-Updates: $updates apt Updates verfuegbar."
+            echo "Pending-Admin-Updates: $updates apt Updates verfuegbar." || true
         else
             hook_log "no pending apt updates"
-            echo "Pending-Admin-Updates: Keine ausstehenden Updates."
+            echo "Pending-Admin-Updates: Keine ausstehenden Updates." || true
         fi
     else
         hook_log "apt not installed — skipped"

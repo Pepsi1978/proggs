@@ -52,7 +52,13 @@ export BUG_CASES_PATH="$bug_cases"
 # unterdruecken. Python-Code ist durch try/except abgesichert, sollte nie
 # selbst crashen. Timeout-Kill-Meldungen sind akzeptabler Noise.
 # Bug aus Loop 2 Audit 2026-04-20 gefixt.
-timeout 2 python3 <<'PYEOF' || true
+# Timeout-Kommando plattformabhaengig waehlen: "timeout" ist GNU-coreutils und fehlt
+# auf macOS. Ohne Fallback schluckte "|| true" den rc=127 und der Python-Block lief NIE.
+# Ist keins von beiden da, laeuft Python OHNE Zeitlimit — Logik laeuft, statt auszufallen.
+if command -v timeout > /dev/null 2>&1; then _TO="timeout 2"
+elif command -v gtimeout > /dev/null 2>&1; then _TO="gtimeout 2"
+else _TO=""; fi
+$_TO python3 <<'PYEOF' || true
 import os, json, sys, re
 
 stdin_input = os.environ.get('STDIN_INPUT', '')

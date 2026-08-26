@@ -10,6 +10,7 @@
 #   3. doctor-lite       — Cloud-MCP, .mcp.json, sequential-thinking
 #   5. mcp-auth-check    — MCP-Server-Authentifizierung pruefen
 #   6. mirror-check      — Mirror-Ledger ausstehende Eintraege
+#   7. hook-paths        — registrierte Hook-Pfade existieren (Poka-Yoke, s. u.)
 #
 # ROBUSTNESS: Non-critical. Jeder Fehler → weitermachen. Am Ende immer exit 0.
 
@@ -156,6 +157,112 @@ check_mirror_ledger() {
 }
 
 # ============================================================
+# CHECK 7: Hook-Pfade existieren (Poka-Yoke, 2026-08-26)
+# ============================================================
+# Ausloeser: In proggs/.claude/settings.json stand ein PreToolUse-Hook mit dem
+# WINDOWS-Pfad "C:/Users/barwa/...". Auf macOS existiert der nicht -> pwsh brach
+# mit rc=64 ab und schrieb 976 Zeichen Nicht-JSON auf stdout — bei JEDEM einzelnen
+# Bash-Aufruf. Das ist der Almanach-Fall bugs/claude-tooling/claude-hooks.md §16.5.
+# Niemand hat es gemeldet, weil kein Mechanismus die registrierten Pfade prueft.
+# Dieser Check macht genau das: er faengt die ganze Fehlerklasse ab, nicht nur den Fall.
+check_hook_paths() {
+    local out
+    out=$(python3 <<'HOOKPATHS_PY' 2>/dev/null
+import json
+import os
+import re
+from pathlib import Path
+
+HOME = Path.home()
+PROJEKT = Path(os.environ.get('CLAUDE_PROJECT_DIR', os.getcwd()))
+
+# Alle Settings-Dateien, aus denen Claude Code Hooks laedt.
+QUELLEN = [
+    HOME / '.claude' / 'settings.json',
+    HOME / '.claude' / 'settings.local.json',
+    PROJEKT / '.claude' / 'settings.json',
+    PROJEKT / '.claude' / 'settings.local.json',
+]
+
+# Dateiendungen, die auf ein Hook-Skript hindeuten.
+SKRIPT = re.compile(r'[^\s"\']+\.(?:sh|ps1|py|ts|js|cjs|mjs)\b')
+
+
+def entfalten(pfad: str) -> Path:
+    """$HOME / ~ / $CLAUDE_PROJECT_DIR aufloesen, wie es die Shell tun wuerde."""
+    p = pfad.strip('"\'')
+    p = p.replace('$CLAUDE_PROJECT_DIR', PROJEKT.as_posix())
+    p = p.replace('${CLAUDE_PROJECT_DIR}', PROJEKT.as_posix())
+    p = p.replace('$HOME', HOME.as_posix()).replace('${HOME}', HOME.as_posix())
+    p = p.replace('$USERPROFILE', HOME.as_posix())
+    return Path(os.path.expanduser(p))
+
+
+probleme = []
+geprueft = 0
+
+for quelle in QUELLEN:
+    if not quelle.is_file():
+        continue
+    try:
+        # utf-8-sig: eine BOM-behaftete settings.json wuerde sonst hier scheitern.
+        daten = json.loads(quelle.read_text(encoding='utf-8-sig'))
+    except (json.JSONDecodeError, OSError) as e:
+        probleme.append(f"{quelle.name} ist nicht lesbar/valide ({type(e).__name__}) "
+                        f"— eine kaputte Settings-Datei killt ALLE Hooks still")
+        continue
+
+    for event, gruppen in (daten.get('hooks') or {}).items():
+        for gruppe in gruppen or []:
+            for hook in gruppe.get('hooks') or []:
+                teile = [hook.get('command') or '']
+                teile += [str(a) for a in (hook.get('args') or [])]
+                # Enthaelt der Command eine Plattform-Weiche (uname), ist der Zweig der
+                # ANDEREN Plattform hier absichtlich tot — das ist kein Fehler, sondern
+                # genau die richtige Loesung fuer eine geteilte settings.json im Repo.
+                weiche = 'uname' in (hook.get('command') or '')
+                for teil in teile:
+                    for treffer in SKRIPT.findall(teil):
+                        windows = bool(re.match(r'^[A-Za-z]:[\\/]', treffer))
+                        if weiche and windows and os.name != 'nt':
+                            continue
+                        if weiche and not windows and os.name == 'nt':
+                            continue
+                        geprueft += 1
+                        ziel = entfalten(treffer)
+                        if ziel.exists():
+                            continue
+                        # Windows-Pfad auf macOS/Linux ist der haeufigste Fall —
+                        # klar benennen, sonst sucht man an der falschen Stelle.
+                        art = "WINDOWS-Pfad auf dieser Plattform" if windows else "Datei fehlt"
+                        probleme.append(f"Hook-Pfad tot ({event}, {quelle.name}): "
+                                        f"{treffer} — {art}")
+
+for p in probleme:
+    print(p)
+print(f"__GEPRUEFT__{geprueft}")
+HOOKPATHS_PY
+    ) || out=""
+
+    local anzahl=0
+    while IFS= read -r zeile; do
+        case "$zeile" in
+            __GEPRUEFT__*) anzahl="${zeile#__GEPRUEFT__}" ;;
+            "") ;;
+            *) warnings+=("$zeile") ;;
+        esac
+    done <<< "$out"
+
+    if [ -n "$anzahl" ] && [ "$anzahl" -gt 0 ] 2>/dev/null; then
+        case "$out" in
+            *"Hook-Pfad tot"*|*"nicht lesbar"*) ;;
+            *) ok_checks+=("Hook-Pfade: $anzahl/$anzahl vorhanden") ;;
+        esac
+    fi
+    return 0
+}
+
+# ============================================================
 # MAIN: Alle Checks ausfuehren
 # ============================================================
 
@@ -164,6 +271,7 @@ check_disk_space
 check_path_health
 check_doctor_lite
 check_mirror_ledger
+check_hook_paths
 check_mcp_auth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
 
 # ============================================================

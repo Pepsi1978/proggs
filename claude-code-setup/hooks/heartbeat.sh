@@ -167,7 +167,13 @@ check_brew_outdated() {
     # brew outdated can trigger brew update (30+ seconds, needs network).
     # HOMEBREW_NO_AUTO_UPDATE prevents that. timeout kills if stuck.
     local count
-    count=$(HOMEBREW_NO_AUTO_UPDATE=1 timeout 30 /opt/homebrew/bin/brew outdated --quiet 2>/dev/null | wc -l | tr -d ' ')
+    # "timeout" ist GNU-coreutils und fehlt auf macOS -> count blieb leer -> der Check
+    # meldete IMMER "0 outdated". Fallback auf gtimeout, sonst ohne Zeitlimit laufen
+    # lassen (HOMEBREW_NO_AUTO_UPDATE verhindert ohnehin den langsamen Auto-Update-Pfad).
+    local _to=""
+    if command -v timeout > /dev/null 2>&1; then _to="timeout 30"
+    elif command -v gtimeout > /dev/null 2>&1; then _to="gtimeout 30"; fi
+    count=$(HOMEBREW_NO_AUTO_UPDATE=1 $_to /opt/homebrew/bin/brew outdated --quiet 2>/dev/null | wc -l | tr -d ' ')
     # If timeout killed it, count will be empty or 0
     if [ -z "$count" ]; then count=0; fi
 

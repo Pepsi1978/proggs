@@ -7,12 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh",
-            "args": [
-              "-NoProfile",
-              "-File",
-              "C:/Users/barwa/proggs/.claude/hooks/openlauncher-deploy-guard.ps1"
-            ],
+            "command": "if [ \"$(uname -s)\" = \"Darwin\" ] || [ \"$(uname -s)\" = \"Linux\" ]; then bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/openlauncher-deploy-guard.sh\"; else pwsh -NoProfile -File \"C:/Users/barwa/proggs/.claude/hooks/openlauncher-deploy-guard.ps1\"; fi",
             "timeout": 15,
             "statusMessage": "Prüfe OpenLauncher-Deploy-Weg …"
           }
