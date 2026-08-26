@@ -120,10 +120,11 @@ fun BearbeitenBlatt(
 
         Spacer(Modifier.height(10.dp))
         Text(
-            // Ein Nachtrag datiert die Notiz auf jetzt um und schiebt sie im Verlauf ans
-            // Ende — das steht hier, bevor gespeichert wird, und nicht erst danach.
+            // Ein Nachtrag bekommt beim Speichern seine eigene Überschriftenzeile mit
+            // eigenem Zeitpunkt — das steht hier, bevor gespeichert wird, nicht erst danach.
             if (zustand.nachgetragen) {
-                Repository.zeitpunkt(notiz.erstelltAm) + " · Nachtrag — rückt beim Speichern ans Ende"
+                Repository.zeitpunkt(notiz.letzteTaetigkeit) +
+                    " · Nachtrag — bekommt beim Speichern seine eigene Zeitangabe"
             } else {
                 Repository.zeitpunkt(notiz.erstelltAm)
             },

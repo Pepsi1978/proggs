@@ -134,11 +134,12 @@ class Repository(
     // --- Verlauf (B-01) --------------------------------------------------------------------
 
     /**
-     * Notizen und KI-Antworten als **eine** Liste, nach Zeit sortiert.
+     * Notizen und KI-Antworten als **eine** Liste, neueste zuerst.
      *
      * Die Trennung in zwei Tabellen darf man dem Verlauf nicht ansehen — deshalb werden sie
      * hier zusammengeführt und nicht erst in der Oberfläche, wo zwei Listen unweigerlich
-     * irgendwann verschieden sortiert würden.
+     * irgendwann verschieden sortiert würden. Der Jüngste steht oben: so steht der frischeste
+     * Gedanke direkt da, ohne dass man eine lange Notizseite hinunterrollen muss.
      */
     fun verlauf(sitzungId: Long): Flow<List<Verlaufseintrag>> =
         combine(
@@ -146,7 +147,7 @@ class Repository(
             db.antworten().ausSitzung(sitzungId),
         ) { notizen, antworten ->
             (notizen.map(Verlaufseintrag::NotizEintrag) + antworten.map(Verlaufseintrag::AntwortEintrag))
-                .sortedBy { it.zeit }
+                .sortedByDescending { it.zeit }
         }
 
     /** Der Verlauf als einmalige Momentaufnahme — für den Export (F-16). */
@@ -214,26 +215,33 @@ class Repository(
     /**
      * Eine Notiz richtigstellen — oder um einen Nachtrag ergänzen.
      *
-     * Ist [nachgetragen] gesetzt, wurde etwas ans Ende gesprochen. Dann ist die Notiz kein
-     * korrigierter alter Gedanke mehr, sondern ein frischer: sie bekommt den jetzigen
-     * Zeitstempel und rutscht im Verlauf ans Ende, wo der zuletzt gedachte Gedanke steht.
-     * Beim blossen Richtigstellen bleibt der Zeitstempel unangetastet — er sagt, wann der
-     * Gedanke da war, nicht wann er zuletzt getippt wurde.
+     * Sind [neueNachtragZeiten] gesetzt, sind das die Zeitpunkte der frischen Nachträge;
+     * ihre Überschriftenzeilen stehen längst im Text (siehe [Nachtraege]). Jeder Nachtrag
+     * behält seinen eigenen Zeitpunkt, und die Notiz rückt über [Notiz.letzteTaetigkeit]
+     * im Verlauf dorthin, wo sie gedanklich hingehört. Ihr Entstehungszeitstempel bleibt
+     * dagegen stehen — er sagt, wann der erste Gedanke da war.
      */
     suspend fun bearbeiteNotiz(
         notiz: Notiz,
         ueberschrift: String,
         text: String,
         nachgetragen: Boolean = false,
+        neueNachtragZeiten: List<Long> = emptyList(),
     ) {
         merkeAenderung(notiz.sitzungId)
         db.notizen().aendern(
             notiz.copy(
-                erstelltAm = if (nachgetragen) System.currentTimeMillis() else notiz.erstelltAm,
                 text = text.trim(),
                 ueberschrift = ueberschrift.trim().takeIf(String::isNotBlank),
                 // Wer die Überschrift anfasst, hat sie ab jetzt selbst in der Hand.
                 ueberschriftVonHand = ueberschrift.trim() != notiz.ueberschrift?.trim(),
+                nachtragzeitenJson = if (neueNachtragZeiten.isEmpty()) {
+                    notiz.nachtragzeitenJson
+                } else {
+                    Nachtraege.zeitenAlsJson(
+                        Nachtraege.zeitenAusJson(notiz.nachtragzeitenJson) + neueNachtragZeiten,
+                    )
+                },
             ),
         )
     }

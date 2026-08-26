@@ -21,7 +21,7 @@ class Wandler {
 
 @Database(
     entities = [Sitzung::class, Notiz::class, KiAntwort::class, Auswertungsprofil::class, Ordner::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -41,7 +41,7 @@ abstract class Datenbank : RoomDatabase() {
                 ctx.applicationContext,
                 Datenbank::class.java,
                 DATEINAME,
-            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3, WANDERUNG_3_4).build().also { vorhanden = it }
+            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3, WANDERUNG_3_4, WANDERUNG_4_5).build().also { vorhanden = it }
         }
 
         /** Die Anhänge kamen mit dem Plus-Menü dazu; alte Notizen haben schlicht keine. */
@@ -78,6 +78,16 @@ abstract class Datenbank : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE sitzung ADD COLUMN zuletztGeaendert INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("UPDATE sitzung SET zuletztGeaendert = zuletztGeoeffnet")
+            }
+        }
+
+        /**
+         * Nachtraege bekamen ihre eigenen Zeitpunkte. Alte Notizen haben schlicht keine —
+         * die Liste bleibt leer, und der Zeitstempel oben rechts bleibt der alte.
+         */
+        private val WANDERUNG_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notiz ADD COLUMN nachtragzeitenJson TEXT NOT NULL DEFAULT '[]'")
             }
         }
 

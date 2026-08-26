@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Notes
 import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.anhaengeAusJson
+import de.frank.gedankenspeicher.data.Nachtraege
 import de.frank.gedankenspeicher.data.Notizzustand
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.tts.Absaetze
@@ -148,9 +150,10 @@ fun Notizkarte(
                 }
 
                 Notizzustand.FERTIG -> if (notiz.text.isNotBlank()) {
-                    AbsatzText(
+                    NachtragsAbschnitte(
                         text = notiz.text,
-                        hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
+                        liestVor = liestVor,
+                        vorleseAbsatz = vorleseAbsatz,
                     )
                 }
             }
@@ -232,7 +235,62 @@ private fun Kopfzeile(notiz: Notiz, farbeUeberschrift: Color, farbeZeit: Color) 
             }
         }
         Spacer(Modifier.width(8.dp))
-        Text(Repository.zeitpunkt(notiz.erstelltAm), style = schrift.zeitstempel, color = farbeZeit)
+        Text(Repository.zeitpunkt(notiz.letzteTaetigkeit), style = schrift.zeitstempel, color = farbeZeit)
+    }
+}
+
+/**
+ * Der Notiztext in seinen Abschnitten: der Ursprung zuerst, dann jeder Nachtrag unter
+ * seiner kleinen Überschrift mit Trennstrich — so sieht man auf einen Blick, wo der
+ * Nachtrag beginnt und wann er gesprochen wurde.
+ *
+ * Die Absatzzählung des Vorlesers läuft über den **ganzen** Text, Überschriftenzeilen
+ * eingerechnet; hier wird derselbe Zähler abschnittsweise weitergeführt, damit die
+ * Hervorhebung des gesprochenen Absatzes an der richtigen Stelle leuchtet.
+ */
+@Composable
+private fun NachtragsAbschnitte(text: String, liestVor: Boolean, vorleseAbsatz: Int) {
+    val farben = Farben
+    val schrift = Schriften
+    val abschnitte = remember(text) { Nachtraege.abschnitte(text) }
+    var zaehler = 0
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        abschnitte.forEach { abschnitt ->
+            if (abschnitt.nachtragVom != null) {
+                Column {
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Notes,
+                            null,
+                            Modifier.size(14.dp),
+                            tint = farben.akzent,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Nachtrag vom ${abschnitt.nachtragVom}",
+                            style = schrift.zeitstempel,
+                            color = farben.akzent,
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
+                }
+                // Die Überschriftenzeile ist für den Vorleser ein eigener Absatz.
+                zaehler += 1
+            }
+            val absaetze = remember(abschnitt.text) { Absaetze.teile(abschnitt.text) }
+            AbsatzText(
+                text = abschnitt.text,
+                hervorgehobenerAbsatz =
+                    if (liestVor && vorleseAbsatz in zaehler until zaehler + absaetze.size) {
+                        vorleseAbsatz - zaehler
+                    } else {
+                        -1
+                    },
+            )
+            zaehler += absaetze.size
+        }
     }
 }
 

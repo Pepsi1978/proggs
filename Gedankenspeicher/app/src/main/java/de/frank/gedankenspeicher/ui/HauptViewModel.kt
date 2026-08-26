@@ -20,6 +20,7 @@ import de.frank.gedankenspeicher.data.Datenbank
 import de.frank.gedankenspeicher.data.KiAntwort
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.Notizzustand
+import de.frank.gedankenspeicher.data.Nachtraege
 import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.Sitzung
@@ -785,6 +786,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // Einmal nachgetragen bleibt nachgetragen — auch wenn danach noch mitten im
             // Text etwas eingeschoben wird.
             nachgetragen = z.nachgetragen || nachtrag,
+            // Jeder Nachtrag merkt sich, wo er beginnt und wann er gesprochen wurde —
+            // daraus entsteht beim Speichern seine eigene Überschriftenzeile.
+            nachtragsStellen =
+                if (nachtrag) {
+                    z.nachtragsStellen + (kopf.length + 2 to System.currentTimeMillis())
+                } else {
+                    z.nachtragsStellen
+                },
             fehler = null,
         )
     }
@@ -962,7 +971,21 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _bearbeitung.value
         val notiz = z.notiz ?: return
         viewModelScope.launch {
-            repo.bearbeiteNotiz(notiz, z.ueberschrift, z.text, nachgetragen = z.nachgetragen)
+            // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile. Von hinten nach
+            // vorn einsetzen, damit die gemerkten Stellen beim Einfügen nicht verrutschen.
+            var text = z.text
+            val zeiten = mutableListOf<Long>()
+            for ((stelle, zeit) in z.nachtragsStellen.sortedByDescending { it.first }) {
+                if (stelle > text.length) continue
+                // Nur wenn wirklich etwas dasteht: ein leerer Nachtrag bekommt keine Zeile.
+                val naechste = z.nachtragsStellen.map { it.first }.filter { it < stelle }.maxOrNull()
+                    ?: text.length
+                if (text.substring(stelle, naechste.coerceAtMost(text.length)).isBlank()) continue
+                text = text.substring(0, stelle) + Nachtraege.zeile(zeit) + "\n" +
+                    text.substring(stelle)
+                zeiten += zeit
+            }
+            repo.bearbeiteNotiz(notiz, z.ueberschrift, text, neueNachtragZeiten = zeiten)
             schliesseBearbeitung()
         }
     }

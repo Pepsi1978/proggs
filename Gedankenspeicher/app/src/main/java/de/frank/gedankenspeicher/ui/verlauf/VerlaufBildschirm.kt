@@ -73,8 +73,8 @@ import de.frank.gedankenspeicher.ui.theme.sinktEin
 /**
  * **B-01 — der Verlauf.** Der Startbildschirm und der Ort, an dem die App lebt.
  *
- * Aufbau: Glas-Kopfleiste, darunter die scrollende Liste (neueste unten, wie ein Chat),
- * darunter die Glas-Fußleiste mit Textfeld, KI-Knopf und Aufnahmeknopf.
+ * Aufbau: Glas-Kopfleiste, darunter die scrollende Liste (neueste oben), darunter die
+ * Glas-Fußleiste mit Textfeld, KI-Knopf und Aufnahmeknopf.
  */
 @androidx.compose.foundation.ExperimentalFoundationApi
 @Composable
@@ -107,10 +107,11 @@ fun VerlaufBildschirm(
     val schrift = Schriften
     val listenzustand = rememberLazyListState()
 
-    // Der Verlauf steht an seinem Ende: die neueste Notiz ist die, die interessiert.
+    // Der Verlauf zeigt den Jüngsten ganz oben: die neueste Notiz ist die, die interessiert,
+    // und sie steht direkt da, ohne Scrollen.
     //
     // **Ausser** nach einem Sprung aus der Suche: dann gilt das Sprungziel. Ohne diese
-    // Ausnahme überfuhr der Auto-Scroll den Treffer und landete wieder unten — die Karte
+    // Ausnahme überfuhr der Auto-Scroll den Treffer und landete wieder oben — die Karte
     // leuchtete auf, aber ausserhalb des Bildes.
     LaunchedEffect(zustand.eintraege.size, zustand.sitzung?.id, zustand.hebeHervor) {
         if (zustand.eintraege.isEmpty()) return@LaunchedEffect
@@ -124,7 +125,7 @@ fun VerlaufBildschirm(
                 return@LaunchedEffect
             }
         }
-        listenzustand.animateScrollToItem(zustand.eintraege.size - 1 + if (zustand.wertetAus) 1 else 0)
+        listenzustand.animateScrollToItem(0)
     }
 
     Column(Modifier.fillMaxSize().background(farben.hintergrund)) {

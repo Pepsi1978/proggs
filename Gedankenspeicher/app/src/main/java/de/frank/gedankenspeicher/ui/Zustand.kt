@@ -103,11 +103,18 @@ data class Bearbeitungszustand(
     /**
      * Wurde in diesem Blatt etwas ans Ende **nachgetragen**?
      *
-     * Ein Nachtrag ist ein neuer Gedanke, kein Richtigstellen von Getipptem: er datiert die
-     * Notiz auf jetzt um, damit sie im Verlauf dort steht, wo sie gedanklich hingehört —
-     * ganz unten. Ein Einschub mitten im Text lässt den Zeitstempel dagegen stehen.
+     * Ein Nachtrag ist ein neuer Gedanke, kein Richtigstellen von Getipptem: er bekommt
+     * beim Speichern eine eigene Überschriftenzeile mit eigenem Zeitpunkt und lässt die
+     * Notiz im Verlauf nach vorne rücken. Ein Einschub mitten im Text bleibt dagegen ein
+     * Richtigstellen.
      */
     val nachgetragen: Boolean = false,
+    /**
+     * Die frischen Nachträge dieses Blattes: Textstelle, an der der Nachtrag beginnt, plus
+     * der Zeitpunkt, wann er gesprochen wurde (jeder Nachtrag seinen eigenen). Aus diesen
+     * Stellen entstehen beim Speichern die Überschriftenzeilen.
+     */
+    val nachtragsStellen: List<Pair<Int, Long>> = emptyList(),
     /** Läuft gerade eine Aufnahme für dieses Blatt? */
     val nimmtAuf: Boolean = false,
     /** Läuft gerade die Transkription des Gesprochenen? */

@@ -98,7 +98,20 @@ data class Notiz(
     val versucheTranskription: Int = 0,
     /** Die Anhänge der Notiz als JSON-Feld (siehe [Anhang]). */
     val anhaengeJson: String = "[]",
-)
+    /**
+     * Wann Nachträge hinzugekommen sind, als JSON-Feld (siehe [Nachtraege]). Die
+     * Überschriftenzeilen selbst stehen im Text; diese Liste hält nur die rohen
+     * Zeitpunkte fest, damit niemand sie aus dem Text zurückparsen muss.
+     */
+    val nachtragzeitenJson: String = "[]",
+) {
+    /**
+     * Wann die Notiz zuletzt gedacht wurde: der letzte Nachtrag oder die Entstehung.
+     * Danach zeigt die Karte ihren Zeitstempel oben rechts — und nach dem sortiert der
+     * Verlauf, denn ein Nachtrag ist ein frischer Gedanke, kein alter.
+     */
+    val letzteTaetigkeit: Long get() = maxOf(erstelltAm, Nachtraege.letzter(this) ?: 0L)
+}
 
 @Entity(
     tableName = "ki_antwort",
@@ -144,7 +157,7 @@ sealed interface Verlaufseintrag {
     val zeit: Long
 
     data class NotizEintrag(val notiz: Notiz) : Verlaufseintrag {
-        override val zeit: Long get() = notiz.erstelltAm
+        override val zeit: Long get() = notiz.letzteTaetigkeit
     }
 
     data class AntwortEintrag(val antwort: KiAntwort) : Verlaufseintrag {
