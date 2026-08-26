@@ -318,6 +318,14 @@ LF erwartet.
 geschrieben, alter Inhalt komplett weg. Kritische Configs/JSON danach unlesbar.
 **Ursache:** Mode `'w'` truncatet das Ziel beim Oeffnen sofort auf 0 Bytes, BEVOR etwas
 geschrieben wird. `with open(...)` garantiert nur `close()` (kein Leak) — **NICHT** Atomizitaet.
+**Verschaerfung (eigener Vorfall 2026-08-26):** Der Truncate passiert auch, wenn der
+`open()`-Aufruf SELBST scheitert. `io.open(p,'w',encoding='utf-8',newline='\\n')` — ein in einem
+quoted Bash-Heredoc verdoppelter Backslash — wirft `ValueError: illegal newline value`, aber
+ERST NACHDEM die Datei auf 0 Bytes gesetzt wurde. Ergebnis: leere Datei, kein Write ausgefuehrt,
+Exception im Traceback. Merksatz: **die Zieldatei niemals im `'w'`-Modus oeffnen, bevor der neue
+Inhalt vollstaendig als String vorliegt** — das Atomic-Pattern unten schuetzt auch hiergegen, weil
+es die temp-Datei oeffnet und das Ziel erst per `os.replace` anfasst. Gilt fuer JEDE Datei, die man
+nicht verlieren will, nicht nur fuer "kritische" Configs (hier traf es ein Hook-Skript).
 **Versionen:** per Design, alle CPython.
 **FIX (das eine sichere Pattern):**
 ```python
