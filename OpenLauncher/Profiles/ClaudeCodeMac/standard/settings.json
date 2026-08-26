@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "macOS-Fassung des Standard-Profils. 1:1 aus Profiles/ClaudeCode/standard/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript.",
+  "model": "opus[1m]",
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh",
+    "refreshInterval": 10
+  },
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true,
+  "claudeMdExcludes": [
+    "**/.claude/rules/**"
+  ],
+  "theme": "dark",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/emulator-start-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

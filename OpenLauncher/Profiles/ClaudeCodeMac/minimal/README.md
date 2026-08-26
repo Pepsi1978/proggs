@@ -1,8 +1,10 @@
-# macOS · Minimal-Profil (Geruest)
+# macOS · Minimal-Profil
 
-Regelfreies Profil. Auf macOS zu befuellen:
-- `settings.json` mit macOS-Pfaden (falls gewuenscht)
-- Skills per Symlink `skills -> ~/.claude/skills` einblenden (nicht versionieren) — auf macOS via
-  `ln -s "$HOME/.claude/skills" skills` (statt der Windows-Junction).
+Regelfreies Profil. Es trägt bewusst KEINE versionierten Regeln, Agents oder Commands.
 
-Rules/Hooks/Memory bleiben hier bewusst aussen vor (Minimal = isoliert).
+Die Skills blendet der Launcher zur Laufzeit als **Symlink** auf `~/.claude/skills` ein
+(`skills -> /Users/frank/.claude/skills`) — so sind im sonst isolierten Minimal-Profil alle Skills
+verfügbar, ohne die übrige `~/.claude`-Umgebung (Rules/Hooks/Memory/Agents) hereinzuholen.
+Der Symlink bleibt lokal: die `.gitignore` schließt `skills/` bewusst nicht wieder ein.
+
+Der Profiltext steht in `../sources/minimal.md`, die `settings.json` daneben.

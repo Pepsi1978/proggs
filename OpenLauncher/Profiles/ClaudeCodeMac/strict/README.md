@@ -1,10 +1,8 @@
-# macOS · Strikt-Profil (Geruest)
+# macOS · Strikt-Profil
 
-Wie das macOS-Standard-Profil (versionierte `skills/ rules/ agents/ commands/`), plus spaeter die
-Hook-Aktivierung mit **macOS-Pfaden**.
+Wie das Standard-Profil, zusätzlich mit der **vollständigen Hook-Kette**: die `settings.json`
+trägt alle bash-Hooks aus `claude-code-setup/hooks-macos.json` (SessionStart, UserPromptSubmit,
+PreToolUse, PostToolUse, Stop, SubagentStop, SessionEnd u. a.).
 
-Auf macOS zu befuellen:
-- Inhalte wie beim Standard-Profil.
-- `settings.json` mit Hook-Konfiguration, die auf die macOS-Hooks zeigt (z. B. `bash`/`zsh` unter
-  `/Users/<name>/.claude/hooks/...` oder — voll autark — in einen `hooks/`-Ordner hier).
-- `GITHUB_PERSONAL_ACCESS_TOKEN` und andere Secrets NIEMALS ins Repo (bleiben lokal, per .gitignore).
+Alle übrigen Einstellungen sind 1:1 aus `Profiles/ClaudeCode/strict/settings.json` (Windows)
+übernommen. Der Profiltext steht in `../sources/strict.md`.

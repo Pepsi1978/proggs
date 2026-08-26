@@ -1,0 +1,9 @@
+# Python-Bytecode-Cache nie ins Repo
+__pycache__/
+*.pyc
+*.pyo
+
+# Output-Dateien vom Skript-Lauf (gehoeren in die App-Wurzel, nicht hier)
+*-export.json
+*-checkpoint.json
+*-initial-scan.md

@@ -1,25 +1,42 @@
-# Claude-Code-Profile fuer macOS
+# Claude-Code-Profile für macOS
 
-Dieser Bereich ist das **macOS-Pendant** zu `Profiles/ClaudeCode/` (Windows). Er wird von der
-kuenftigen macOS-Variante des Launchers (Swift/AppKit) als `CLAUDE_CONFIG_DIR` je Profil genutzt.
+Dieser Bereich ist das **macOS-Pendant** zu `Profiles/ClaudeCode/` (Windows). Die macOS-Fassung des
+Launchers (`~/proggs/OpenLauncherMac`) setzt einen dieser Ordner beim Start als `CLAUDE_CONFIG_DIR`.
 
 ## Warum getrennt von Windows?
 
-Die Windows-Profile enthalten absolute Pfade (`C:\Users\barwa\...`) und PowerShell-Hooks, die auf
-macOS nicht funktionieren. Statt einen bruechigen „kleinsten gemeinsamen Nenner" zu bauen, bekommt
-macOS **eigene** Profile mit macOS-Pfaden (`/Users/barwa/...`, `bash`/`zsh` statt `pwsh`).
+Die Windows-Profile enthalten absolute Pfade (`C:\Users\barwa\…`) und PowerShell-Hooks
+(`pwsh … .ps1`), die auf macOS nicht funktionieren. Statt einen brüchigen „kleinsten gemeinsamen
+Nenner" zu bauen, hat macOS **eigene** Profile mit macOS-Pfaden (`/Users/frank/…`) und
+`bash … .sh`-Hooks.
+
+Inhaltlich sind sie **wortgleich** mit den Windows-Profilen: dieselben Regeln, Agents, Commands und
+Skills, dieselben Profiltexte. Nur Pfade und Hook-Aufrufe sind übersetzt.
 
 ## Struktur (analog Windows)
 
-- `minimal/`  — regelfrei; Skills koennen per Symlink auf `~/.claude/skills` eingeblendet werden
-- `standard/` — versionierte, frei bearbeitbare `skills/ rules/ agents/ commands/` + `settings.json`
-- `strict/`   — wie Standard, plus (spaeter) Hook-Aktivierung mit macOS-Pfaden
+| Ordner | Inhalt |
+|--------|--------|
+| `sources/` | Die drei Profiltexte (`minimal.md`, `standard.md`, `strict.md`). Ihr Inhalt landet beim Start in der aktiven `CLAUDE.md` des gewählten Profils. |
+| `minimal/` | Regelfrei. Die Skills blendet der Launcher zur Laufzeit per **Symlink** auf `~/.claude/skills` ein (Windows braucht dafür eine Junction). |
+| `standard/` | Versionierte, frei bearbeitbare `skills/ rules/ agents/ commands/` + `settings.json`. |
+| `strict/` | Wie Standard, zusätzlich mit der vollständigen Hook-Kette aus `claude-code-setup/hooks-macos.json`. |
 
-## Noch zu befuellen (auf macOS)
+## Was wo herkommt
 
-Dieses Geruest ist bewusst leer. Auf macOS:
-1. `skills/ rules/ agents/ commands/` aus dem dortigen `~/.claude` kopieren (portable Inhalte).
-2. `settings.json` mit macOS-Pfaden anlegen (Hooks als `bash`/`zsh`, `/Users/...`).
-3. Login-Token bleibt lokal (per `.gitignore` nie im Repo).
+- **Profiltexte** (`sources/*.md`) — aus `Profiles/ClaudeCode/sources/`, Pfade auf macOS übersetzt
+  (`C:\Users\barwa\SK` → `/Users/frank/SK` usw.).
+- **`rules/ agents/ commands/ skills/`** — 1:1 aus dem jeweiligen Windows-Profil.
+- **`settings.json`** — alle Einstellungen 1:1 aus Windows; **nur** der `hooks`-Block ist
+  ausgetauscht: Strikt bekommt die bash-Hooks aus `claude-code-setup/hooks-macos.json`,
+  Minimal und Standard den Emulator-Wächter als `.sh`.
+- **Arbeitsmodi** liegen NICHT hier, sondern in `Profiles/WorkModes/` — die sind plattformneutral
+  und werden mit Windows **geteilt**.
 
-Die `.gitignore` in jedem Profil haelt Laufzeit/Secrets vom Repo fern und ist schon vorbereitet.
+## Sicherheit
+
+Die `.gitignore` jedes Profils ignoriert erst **alles** und schließt dann gezielt nur das
+Versionierte wieder ein. Der Login-Token (`.credentials.json`), `projects/`, `sessions/` und
+`cache/` werden dadurch garantiert nie eingecheckt. Die aktive `CLAUDE.md` ist bewusst nicht
+eingeschlossen — sie ist eine Laufzeitdatei, die der Launcher bei jedem Start neu aus
+`sources/<id>.md` befüllt.

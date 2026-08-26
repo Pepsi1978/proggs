@@ -1,0 +1,46 @@
+{
+  "eval_id": 0,
+  "eval_name": "sound-search-basis",
+  "prompt": "portiere sound-search zu cowork",
+  "assertions": [
+    {
+      "text": "SKILL.md existiert"
+    },
+    {
+      "text": "description einzeilig in Quotes"
+    },
+    {
+      "text": "description <= 200 Zeichen"
+    },
+    {
+      "text": "description ohne spitze Klammern"
+    },
+    {
+      "text": "description ohne URL"
+    },
+    {
+      "text": "Titel '(Cowork-Fassung)'"
+    },
+    {
+      "text": "Block ## 0. (Ablage relativ)"
+    },
+    {
+      "text": "Block ## 0a. (Mount/Git-Fallen)"
+    },
+    {
+      "text": "keine festen ~/proggs-Pfade (ausser cowork-git.sh)"
+    },
+    {
+      "text": "Sichern via cowork-git.sh"
+    },
+    {
+      "text": "ZIP existiert"
+    },
+    {
+      "text": "ZIP-Wurzel = <name>/, SKILL.md enthalten"
+    },
+    {
+      "text": "ZIP forward-slash (kein Backslash)"
+    }
+  ]
+}

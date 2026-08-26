@@ -1,7 +1,8 @@
-# macOS · Standard-Profil (Geruest)
+# macOS · Standard-Profil
 
-Versioniertes Profil mit eigenem Kontext. Auf macOS zu befuellen:
-- `skills/ rules/ agents/ commands/` aus dem macOS-`~/.claude` kopieren (portable Inhalte).
-- `settings.json` mit macOS-Pfaden (Statusline/Hooks als `bash`/`zsh`, `/Users/...`).
+Versionierte, frei bearbeitbare Profil-Inhalte: `rules/ agents/ commands/ skills/` plus
+`settings.json`. Inhaltlich 1:1 aus `Profiles/ClaudeCode/standard/` (Windows) übernommen, mit auf
+macOS übersetzten Pfaden und dem Emulator-Wächter als bash-Hook.
 
-Die Inhalte sind frei bearbeitbar und wirken direkt ueber den (macOS-)Launcher.
+Der Profiltext steht in `../sources/standard.md`. Änderungen hier wirken beim nächsten Start des
+Standard-Profils über den OpenLauncher.

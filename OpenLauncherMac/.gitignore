@@ -1,0 +1,3 @@
+# Build-Ergebnis und Test-Binaries gehoeren nicht ins Repo.
+build/
+tests/.build/

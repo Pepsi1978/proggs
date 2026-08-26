@@ -1,0 +1,69 @@
+{
+  "expectations": [
+    {
+      "text": "SKILL.md existiert",
+      "passed": true,
+      "evidence": "C:\\Users\\barwa\\.claude\\skills\\cowork-portierung-workspace\\iteration-1\\eval-1-undo-changes\\with_skill\\outputs\\skills-src\\undo-changes\\SKILL.md"
+    },
+    {
+      "text": "description einzeilig in Quotes",
+      "passed": true,
+      "evidence": "ja"
+    },
+    {
+      "text": "description <= 200 Zeichen",
+      "passed": true,
+      "evidence": "191 Zeichen"
+    },
+    {
+      "text": "description ohne spitze Klammern",
+      "passed": true,
+      "evidence": "ok"
+    },
+    {
+      "text": "description ohne URL",
+      "passed": true,
+      "evidence": "ok"
+    },
+    {
+      "text": "Titel '(Cowork-Fassung)'",
+      "passed": true,
+      "evidence": "vorhanden"
+    },
+    {
+      "text": "Block ## 0. (Ablage relativ)",
+      "passed": true,
+      "evidence": "vorhanden"
+    },
+    {
+      "text": "Block ## 0a. (Mount/Git-Fallen)",
+      "passed": true,
+      "evidence": "vorhanden"
+    },
+    {
+      "text": "keine festen ~/proggs-Pfade (ausser cowork-git.sh)",
+      "passed": true,
+      "evidence": "ok"
+    },
+    {
+      "text": "Sichern via cowork-git.sh",
+      "passed": true,
+      "evidence": "vorhanden"
+    },
+    {
+      "text": "ZIP existiert",
+      "passed": true,
+      "evidence": "C:\\Users\\barwa\\.claude\\skills\\cowork-portierung-workspace\\iteration-1\\eval-1-undo-changes\\with_skill\\outputs\\undo-changes.zip"
+    },
+    {
+      "text": "ZIP-Wurzel = <name>/, SKILL.md enthalten",
+      "passed": true,
+      "evidence": "ok"
+    },
+    {
+      "text": "ZIP forward-slash (kein Backslash)",
+      "passed": true,
+      "evidence": "ok"
+    }
+  ]
+}
