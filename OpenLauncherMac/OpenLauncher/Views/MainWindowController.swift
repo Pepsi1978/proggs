@@ -109,9 +109,12 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             titleBar.topAnchor.constraint(equalTo: rootView.topAnchor),
             titleBar.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
             titleBar.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
-            titleBar.heightAnchor.constraint(equalToConstant: 58),
+            // Flacher als unter Windows (dort 58): auf macOS liegen die Ampel-Knoepfe ohnehin in
+            // dieser Leiste, und der freie Streifen darueber war ungenutzt.
+            titleBar.heightAnchor.constraint(equalToConstant: 44),
 
-            splitView.topAnchor.constraint(equalTo: titleBar.bottomAnchor, constant: 16),
+            // Karten ruecken dicht an die Leiste heran - der Platz gehoert dem Inhalt.
+            splitView.topAnchor.constraint(equalTo: titleBar.bottomAnchor, constant: 6),
             splitView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 16),
             splitView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -16),
             splitView.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -16),

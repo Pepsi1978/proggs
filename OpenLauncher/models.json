@@ -116,145 +116,6 @@
     "IsExpanded": true
   },
   {
-    "Id": "opencode-go",
-    "Title": "OpenCode-Go",
-    "ProviderId": "opencode-go",
-    "ProviderName": "OpenCode-Go",
-    "Models": [
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "minimax-m3",
-        "DisplayName": "MiniMax M3",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "deepseek-v4-flash",
-        "DisplayName": "DeepSeek V4 Flash",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "deepseek-v4-pro",
-        "DisplayName": "DeepSeek V4 Pro",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "glm-5.2",
-        "DisplayName": "GLM 5.2",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "kimi-k2.6",
-        "DisplayName": "Kimi K2.6",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "kimi-k2.7-code",
-        "DisplayName": "Kimi K2.7 Code",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "mimo-v2.5",
-        "DisplayName": "MiMo V2.5",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "mimo-v2.5-pro",
-        "DisplayName": "MiMo V2.5 Pro",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "qwen3.7-max",
-        "DisplayName": "Qwen3.7 Max",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode-go",
-        "ProviderName": "OpenCode-Go",
-        "Slug": "qwen3.7-plus",
-        "DisplayName": "Qwen3.7 Plus",
-        "IsHidden": false
-      }
-    ],
-    "HiddenModelSlugs": [],
-    "KnownSyncedModelSlugs": [],
-    "IsExpanded": false
-  },
-  {
-    "Id": "opencode-zen-free",
-    "Title": "OpenCode Zen Free",
-    "ProviderId": "opencode",
-    "ProviderName": "OpenCode Zen",
-    "Models": [
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "deepseek-v4-flash-free",
-        "DisplayName": "DeepSeek V4 Flash Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "mimo-v2.5-free",
-        "DisplayName": "MiMo V2.5 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "nemotron-3-ultra-free",
-        "DisplayName": "Nemotron 3 Ultra Free",
-        "IsHidden": false
-      }
-    ],
-    "HiddenModelSlugs": [],
-    "KnownSyncedModelSlugs": [],
-    "IsExpanded": true
-  },
-  {
     "Id": "openrouter-free",
     "Title": "OpenRouterFree",
     "ProviderId": "openrouter",
@@ -416,6 +277,145 @@
       "z-ai/glm-5.2:free"
     ],
     "IsExpanded": true
+  },
+  {
+    "Id": "opencode-go",
+    "Title": "OpenCode-Go",
+    "ProviderId": "opencode-go",
+    "ProviderName": "OpenCode-Go",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "minimax-m3",
+        "DisplayName": "MiniMax M3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "deepseek-v4-flash",
+        "DisplayName": "DeepSeek V4 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "deepseek-v4-pro",
+        "DisplayName": "DeepSeek V4 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "glm-5.2",
+        "DisplayName": "GLM 5.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "kimi-k2.6",
+        "DisplayName": "Kimi K2.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "kimi-k2.7-code",
+        "DisplayName": "Kimi K2.7 Code",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "mimo-v2.5",
+        "DisplayName": "MiMo V2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "mimo-v2.5-pro",
+        "DisplayName": "MiMo V2.5 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "qwen3.7-max",
+        "DisplayName": "Qwen3.7 Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode-go",
+        "ProviderName": "OpenCode-Go",
+        "Slug": "qwen3.7-plus",
+        "DisplayName": "Qwen3.7 Plus",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
+  },
+  {
+    "Id": "opencode-zen-free",
+    "Title": "OpenCode Zen Free",
+    "ProviderId": "opencode",
+    "ProviderName": "OpenCode Zen",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "deepseek-v4-flash-free",
+        "DisplayName": "DeepSeek V4 Flash Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "mimo-v2.5-free",
+        "DisplayName": "MiMo V2.5 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "nemotron-3-ultra-free",
+        "DisplayName": "Nemotron 3 Ultra Free",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
+    "IsExpanded": false
   },
   {
     "Id": "openrouter",
@@ -879,6 +879,6 @@
       "mistralai/ministral-3-14b-reasoning",
       "openai/gpt-oss-20b"
     ],
-    "IsExpanded": true
+    "IsExpanded": false
   }
 ]

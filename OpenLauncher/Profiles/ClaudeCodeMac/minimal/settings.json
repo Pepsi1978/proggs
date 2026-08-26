@@ -1,8 +1,21 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein.",
   "permissions": {
     "defaultMode": "default"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/emulator-start-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   },
   "statusLine": {
     "type": "command",
@@ -23,18 +36,5 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/emulator-start-guard.sh\"",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
+  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein."
 }
