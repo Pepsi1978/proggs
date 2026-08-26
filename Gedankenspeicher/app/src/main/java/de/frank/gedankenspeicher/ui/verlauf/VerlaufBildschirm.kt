@@ -192,12 +192,25 @@ fun VerlaufBildschirm(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Masse.kartenAbstand),
                 ) {
-                    items(zustand.eintraege, key = { eintrag ->
-                        when (eintrag) {
-                            is Verlaufseintrag.NotizEintrag -> "n${eintrag.notiz.id}"
-                            is Verlaufseintrag.AntwortEintrag -> "a${eintrag.antwort.id}"
-                        }
-                    }) { eintrag ->
+                    items(
+                        items = zustand.eintraege,
+                        key = { eintrag ->
+                            when (eintrag) {
+                                is Verlaufseintrag.NotizEintrag -> "n${eintrag.notiz.id}"
+                                is Verlaufseintrag.AntwortEintrag -> "a${eintrag.antwort.id}"
+                            }
+                        },
+                        // Die Art des Eintrags sagt der Liste, welchen alten Aufbau sie
+                        // wiederverwenden darf. Ohne diese Angabe hält sie jeden Eintrag
+                        // für dasselbe und wirft beim Wechsel von Notiz zu Auswertung den
+                        // ganzen Aufbau weg, statt ihn neu zu füllen.
+                        contentType = { eintrag ->
+                            when (eintrag) {
+                                is Verlaufseintrag.NotizEintrag -> "notiz"
+                                is Verlaufseintrag.AntwortEintrag -> "antwort"
+                            }
+                        },
+                    ) { eintrag ->
                         when (eintrag) {
                             is Verlaufseintrag.NotizEintrag -> {
                                 val notiz = eintrag.notiz

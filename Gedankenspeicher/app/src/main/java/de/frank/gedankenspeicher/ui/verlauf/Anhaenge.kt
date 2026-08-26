@@ -5,8 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
@@ -83,10 +81,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,7 +99,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.FileProvider
-import androidx.exifinterface.media.ExifInterface
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -1747,59 +1742,4 @@ private suspend fun leseText(ctx: Context, uri: Uri): String {
             }
             .addOnFailureListener { fortsetzung.resume("") }
     }
-}
-
-/**
- * Lädt ein Bild verkleinert, gedreht und außerhalb des Hauptfadens.
- *
- * Ohne die Verkleinerung reißt eine 12-Megapixel-Aufnahme in einer Liste den Speicher auf;
- * ohne die EXIF-Drehung liegt jede Hochformat-Aufnahme quer, weil die Kamera den Sensor
- * nicht dreht, sondern nur vermerkt, wie das Bild gemeint war.
- */
-@Composable
-private fun merkeBild(pfad: String?, maxKante: Int = 1400): ImageBitmap? {
-    var bild by remember(pfad) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(pfad, maxKante) {
-        bild = if (pfad.isNullOrBlank()) null else withContext(Dispatchers.IO) {
-            runCatching { ladeBild(pfad, maxKante)?.asImageBitmap() }.getOrNull()
-        }
-    }
-    return bild
-}
-
-private fun ladeBild(pfad: String, maxKante: Int): android.graphics.Bitmap? {
-    if (!File(pfad).exists()) return null
-    val masse = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeFile(pfad, masse)
-    if (masse.outWidth <= 0) return null
-    var faktor = 1
-    while (masse.outWidth / faktor > maxKante || masse.outHeight / faktor > maxKante) faktor *= 2
-    val roh = BitmapFactory.decodeFile(pfad, BitmapFactory.Options().apply { inSampleSize = faktor })
-        ?: return null
-    return drehNachExif(roh, pfad)
-}
-
-/** Wendet die im Bild vermerkte Ausrichtung wirklich an. */
-private fun drehNachExif(bild: android.graphics.Bitmap, pfad: String): android.graphics.Bitmap {
-    val ausrichtung = runCatching {
-        ExifInterface(pfad).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
-    if (ausrichtung == ExifInterface.ORIENTATION_NORMAL || ausrichtung == ExifInterface.ORIENTATION_UNDEFINED) {
-        return bild
-    }
-    val matrix = Matrix()
-    when (ausrichtung) {
-        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-        ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
-        ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
-        else -> return bild
-    }
-    return runCatching {
-        android.graphics.Bitmap.createBitmap(bild, 0, 0, bild.width, bild.height, matrix, true)
-            .also { gedreht -> if (gedreht !== bild) bild.recycle() }
-    }.getOrDefault(bild)
 }

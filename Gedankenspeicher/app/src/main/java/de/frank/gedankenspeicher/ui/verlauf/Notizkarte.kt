@@ -44,6 +44,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +100,20 @@ fun Notizkarte(
 ) {
     val farben = Farben
     val schrift = Schriften
+
+    // **Der Riegel für die Absatz-Animationen.**
+    //
+    // Jeder Absatz einer Notiz trug bisher seinen eigenen Animationslauf für die
+    // Vorlese-Hervorhebung — auch dann, wenn nie vorgelesen wurde. Bei einer Notiz mit
+    // dreissig Absätzen sind das dreissig Läufe, die beim Scrollen mit jeder Karte neu
+    // entstehen und wieder vergehen.
+    //
+    // Der Riegel fällt beim ersten Vorlesen und bleibt für die Lebensdauer der Karte
+    // gefallen: das Einblenden der Hervorhebung läuft damit vom ersten Absatz an, das
+    // Ausblenden am Ende ebenso. Sichtbar ändert sich nichts — nur die Karten, an denen
+    // nie vorgelesen wurde, sparen sich die Arbeit.
+    var wurdeVorgelesen by remember(notiz.id) { mutableStateOf(false) }
+    if (liestVor && !wurdeVorgelesen) wurdeVorgelesen = true
 
     // M-11: der Suchtreffer leuchtet einmal auf.
     val hebung by animateFloatAsState(
@@ -164,11 +180,16 @@ fun Notizkarte(
                         text = notiz.text,
                         liestVor = liestVor,
                         vorleseAbsatz = vorleseAbsatz,
+                        animiert = wurdeVorgelesen,
                     )
                 }
             }
 
-            val anhaenge = remember(notiz.anhaengeJson) { anhaengeAusJson(notiz.anhaengeJson) }
+            // Aus dem Zwischenspeicher: beim Scrollen wird dieselbe Karte oft neu gebaut,
+            // und das JSON-Feld jedes Mal neu zu lesen kostet je Notiz spürbar Zeit.
+            val anhaenge = remember(notiz.anhaengeJson) {
+                Zwischenspeicher.anhaenge.hole(notiz.anhaengeJson, ::anhaengeAusJson)
+            }
             if (anhaenge.isNotEmpty()) {
                 Spacer(Modifier.height(if (notiz.text.isBlank()) 2.dp else 10.dp))
                 Anhangsliste(anhaenge, beiTitel = { anhang, titel ->
@@ -297,10 +318,15 @@ private fun Kopfzeile(notiz: Notiz, farbeUeberschrift: Color, farbeZeit: Color) 
  * Hervorhebung des gesprochenen Absatzes an der richtigen Stelle leuchtet.
  */
 @Composable
-private fun NachtragsAbschnitte(text: String, liestVor: Boolean, vorleseAbsatz: Int) {
+private fun NachtragsAbschnitte(
+    text: String,
+    liestVor: Boolean,
+    vorleseAbsatz: Int,
+    animiert: Boolean,
+) {
     val farben = Farben
     val schrift = Schriften
-    val abschnitte = remember(text) { Nachtraege.abschnitte(text) }
+    val abschnitte = remember(text) { Zwischenspeicher.abschnitte.hole(text, Nachtraege::abschnitte) }
     var zaehler = 0
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         abschnitte.forEach { abschnitt ->
@@ -327,7 +353,9 @@ private fun NachtragsAbschnitte(text: String, liestVor: Boolean, vorleseAbsatz: 
                 // Die Überschriftenzeile ist für den Vorleser ein eigener Absatz.
                 zaehler += 1
             }
-            val absaetze = remember(abschnitt.text) { Absaetze.teile(abschnitt.text) }
+            val absaetze = remember(abschnitt.text) {
+                Zwischenspeicher.absaetze.hole(abschnitt.text, Absaetze::teile)
+            }
             AbsatzText(
                 text = abschnitt.text,
                 hervorgehobenerAbsatz =
@@ -336,6 +364,7 @@ private fun NachtragsAbschnitte(text: String, liestVor: Boolean, vorleseAbsatz: 
                     } else {
                         -1
                     },
+                animiert = animiert,
             )
             zaehler += absaetze.size
         }
@@ -354,34 +383,57 @@ fun AbsatzText(
     text: String,
     hervorgehobenerAbsatz: Int,
     stil: androidx.compose.ui.text.TextStyle = Schriften.notiztext,
+    animiert: Boolean = true,
 ) {
     val farben = Farben
     // Nur neu zerlegen, wenn sich der Text ändert — nicht bei jedem Scrollschritt und
-    // nicht bei jedem Wechsel des vorgelesenen Absatzes.
-    val absaetze = remember(text) { Absaetze.teile(text) }
+    // nicht bei jedem Wechsel des vorgelesenen Absatzes. Der Zwischenspeicher trägt das
+    // Ergebnis über das Wegwerfen der Karte hinaus.
+    val absaetze = remember(text) { Zwischenspeicher.absaetze.hole(text, Absaetze::teile) }
     if (absaetze.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         absaetze.forEachIndexed { nr, absatz ->
-            val hervor = nr == hervorgehobenerAbsatz
-            val staerke by animateFloatAsState(
-                targetValue = if (hervor) 1f else 0f,
-                animationSpec = tween(dauer(Dauern.STANDARD), easing = Kurven.standard),
-                label = "absatz$nr",
-            )
-            Text(
-                text = absatz,
-                style = stil,
-                color = farben.textStark,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        farben.akzentGedeckt.copy(alpha = farben.akzentGedeckt.alpha * staerke),
-                        RoundedCornerShape(8.dp),
-                    )
-                    .padding(horizontal = if (staerke > 0f) 6.dp else 0.dp, vertical = if (staerke > 0f) 4.dp else 0.dp),
-            )
+            if (animiert) {
+                val staerke by animateFloatAsState(
+                    targetValue = if (nr == hervorgehobenerAbsatz) 1f else 0f,
+                    animationSpec = tween(dauer(Dauern.STANDARD), easing = Kurven.standard),
+                    label = "absatz$nr",
+                )
+                Absatzzeile(absatz, stil, staerke, farben)
+            } else {
+                // Solange an dieser Karte nie vorgelesen wurde, ist die Hervorhebung
+                // durchgehend aus — dann braucht es weder Animationslauf noch die
+                // Fläche und die Abstände, die sie zeichnen würde.
+                Absatzzeile(absatz, stil, 0f, farben)
+            }
         }
     }
+}
+
+/** Eine Textzeile mit der Vorlese-Hervorhebung in der gegebenen Stärke. */
+@Composable
+private fun Absatzzeile(
+    absatz: String,
+    stil: androidx.compose.ui.text.TextStyle,
+    staerke: Float,
+    farben: de.frank.gedankenspeicher.ui.theme.Farbrollen,
+) {
+    Text(
+        text = absatz,
+        style = stil,
+        color = farben.textStark,
+        modifier = if (staerke > 0f) {
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    farben.akzentGedeckt.copy(alpha = farben.akzentGedeckt.alpha * staerke),
+                    RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+        } else {
+            Modifier.fillMaxWidth()
+        },
+    )
 }
 
 @Composable

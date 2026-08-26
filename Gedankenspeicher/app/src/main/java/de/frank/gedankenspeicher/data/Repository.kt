@@ -473,13 +473,29 @@ class Repository(
         /** Nach drei Fehlversuchen wird nicht mehr von selbst nachgereicht (F-04, Fehlerfall). */
         const val HOECHSTVERSUCHE = 3
 
-        private val zeitformat = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMAN)
+        // `SimpleDateFormat` ist nicht threadsicher — je Faden ein eigenes. Vorher teilten
+        // sich Oberfläche und Hintergrundfäden dasselbe Objekt; das konnte im ungünstigen
+        // Fall einen verstümmelten Zeitstempel liefern.
+        private val zeitformat = ThreadLocal.withInitial {
+            SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMAN)
+        }
 
-        fun zeitpunkt(ms: Long): String = zeitformat.format(Date(ms))
+        private val uhrzeitformat = ThreadLocal.withInitial {
+            SimpleDateFormat("HH:mm", Locale.GERMAN)
+        }
 
-        private val uhrzeitformat = SimpleDateFormat("HH:mm", Locale.GERMAN)
+        // Jede Karte im Verlauf formatiert ihren Zeitstempel bei jedem Neuaufbau neu, und
+        // beim Scrollen ist das ständig. Dieselbe Millisekunde ergibt immer denselben Text,
+        // also wird er behalten statt erneut aus einem `Calendar` zusammengesetzt.
+        private val gemerkt = object : android.util.LruCache<Long, String>(512) {}
+
+        fun zeitpunkt(ms: Long): String = gemerkt.get(ms)
+            ?: zeitformat.get()!!.format(Date(ms)).also { gemerkt.put(ms, it) }
+
+        private val gemerkteUhrzeit = object : android.util.LruCache<Long, String>(256) {}
 
         /** Der Platzhalter, der steht, bis die KI-Überschrift da ist (F-05, Schritt 1). */
-        fun uhrzeit(ms: Long): String = uhrzeitformat.format(Date(ms))
+        fun uhrzeit(ms: Long): String = gemerkteUhrzeit.get(ms)
+            ?: uhrzeitformat.get()!!.format(Date(ms)).also { gemerkteUhrzeit.put(ms, it) }
     }
 }

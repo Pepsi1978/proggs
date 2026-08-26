@@ -327,11 +327,18 @@ object Reichtext {
         -> null
     }?.takeIf { it.isNotBlank() }
 
+    private val auszeichnung = Regex("\\*\\*|__|~~|`|\\*")
+    private val einzelnerStrich = Regex("(?<!\\w)_|_(?!\\w)")
+    private val mehrfachLeerraum = Regex("\\s{2,}")
+
+    // Die Muster werden hier einmal gebaut statt bei jedem Aufruf neu: `Regex(...)` im
+    // Rumpf einer Funktion uebersetzt das Muster jedes Mal von neuem, und diese Funktion
+    // laeuft in jeder Tabellenzelle jeder Auswertung.
     /** Nimmt die Auszeichnungszeichen weg — vorgelesen würden sie sonst mitgesprochen. */
     fun ohneZeichen(text: String): String = text
-        .replace(Regex("\\*\\*|__|~~|`|\\*"), "")
-        .replace(Regex("(?<!\\w)_|_(?!\\w)"), "")
-        .replace(Regex("\\s{2,}"), " ")
+        .replace(auszeichnung, "")
+        .replace(einzelnerStrich, "")
+        .replace(mehrfachLeerraum, " ")
         .trim()
 
     /**
@@ -353,19 +360,24 @@ fun ReichtextAnsicht(
     hervorgehobenerAbsatz: Int,
     stil: TextStyle = Schriften.kiAntworttext,
     modifier: Modifier = Modifier,
+    animiert: Boolean = true,
 ) {
-    val bausteine = remember(text) { Reichtext.zerlege(text) }
+    // Aus dem Zwischenspeicher: eine lange Auswertung wird beim Scrollen sonst bei
+    // jedem Wiederauftauchen der Karte von neuem zerlegt.
+    val bausteine = remember(text) { Zwischenspeicher.bausteine.hole(text, Reichtext::zerlege) }
     if (bausteine.isEmpty()) return
 
     // Von welcher Absatznummer an ein Baustein spricht — einmal ausgerechnet, nicht bei
     // jedem Wechsel des vorgelesenen Absatzes neu.
-    val grenzen = remember(bausteine) {
-        var laufend = 0
-        bausteine.map { baustein ->
-            val anzahl = Reichtext.vorleseAnzahl(baustein)
-            val von = laufend
-            laufend += anzahl
-            von until (von + anzahl)
+    val grenzen = remember(text) {
+        Zwischenspeicher.grenzen.hole(text) {
+            var laufend = 0
+            bausteine.map { baustein ->
+                val anzahl = Reichtext.vorleseAnzahl(baustein)
+                val von = laufend
+                laufend += anzahl
+                von until (von + anzahl)
+            }
         }
     }
 
@@ -375,30 +387,44 @@ fun ReichtextAnsicht(
                 baustein = baustein,
                 hervor = hervorgehobenerAbsatz in grenzen[nr],
                 stil = stil,
+                animiert = animiert,
             )
         }
     }
 }
 
 @Composable
-private fun BausteinAnsicht(baustein: Baustein, hervor: Boolean, stil: TextStyle) {
+private fun BausteinAnsicht(
+    baustein: Baustein,
+    hervor: Boolean,
+    stil: TextStyle,
+    animiert: Boolean = true,
+) {
     val farben = Farben
     val schrift = Schriften
-    val staerke by animateFloatAsState(
-        targetValue = if (hervor) 1f else 0f,
-        animationSpec = tween(dauer(Dauern.STANDARD), easing = Kurven.standard),
-        label = "baustein",
-    )
-    val hervorhebung = Modifier
-        .fillMaxWidth()
-        .background(
-            farben.akzentGedeckt.copy(alpha = farben.akzentGedeckt.alpha * staerke),
-            RoundedCornerShape(8.dp),
+    // Solange an dieser Auswertung nie vorgelesen wurde, gibt es nichts zu animieren —
+    // und dann braucht auch kein Animationslauf je Baustein zu entstehen.
+    val staerke = if (animiert) {
+        val lauf by animateFloatAsState(
+            targetValue = if (hervor) 1f else 0f,
+            animationSpec = tween(dauer(Dauern.STANDARD), easing = Kurven.standard),
+            label = "baustein",
         )
-        .padding(
-            horizontal = if (staerke > 0f) 6.dp else 0.dp,
-            vertical = if (staerke > 0f) 4.dp else 0.dp,
-        )
+        lauf
+    } else {
+        0f
+    }
+    val hervorhebung = if (staerke > 0f) {
+        Modifier
+            .fillMaxWidth()
+            .background(
+                farben.akzentGedeckt.copy(alpha = farben.akzentGedeckt.alpha * staerke),
+                RoundedCornerShape(8.dp),
+            )
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+    } else {
+        Modifier.fillMaxWidth()
+    }
 
     when (baustein) {
         is Baustein.Absatz -> Text(
@@ -576,6 +602,36 @@ private fun Freiseite(html: String) {
     }
 }
 
+/**
+ * Die Ansicht hinter [AbgeschotteteSeite].
+ *
+ * Sie merkt sich, **was** sie geladen hat, und wem sie ihre Höhe melden soll. Beides ist der
+ * Grund, warum sie eine eigene Klasse ist und kein nacktes `WebView`: eine `WebView` in
+ * einer scrollenden Liste darf weder bei jedem Neuaufbau der Karte ihren Inhalt neu laden
+ * noch bei jedem Wiederauftauchen neu entstehen — beides kostet ein Vielfaches eines Bildes.
+ */
+private class Seitenansicht(kontext: android.content.Context) : WebView(kontext) {
+    /** Der zuletzt wirklich geladene Text. Ist er derselbe, wird nicht neu geladen. */
+    var geladen: String? = null
+
+    /** Wohin die gemessene Höhe geht — wird beim Wiederverwenden neu gesetzt. */
+    var melder: ((Float) -> Unit)? = null
+}
+
+/**
+ * Eine eingebettete Seite (Zeichnung oder freier HTML-Baustein), abgeschottet vom Netz.
+ *
+ * Zwei Dinge halten sie beim Scrollen flüssig:
+ *
+ * 1. **Geladen wird nur, was neu ist.** Vorher stand das Laden im `update`-Zweig, und der
+ *    läuft bei *jedem* Neuaufbau — jede Auswertung mit einer Grafik stiess damit beim
+ *    Scrollen laufend vollständige Seitenaufbauten an. Bei der Freiseite kam es noch dicker:
+ *    die geladene Seite meldete ihre Höhe, die Höhe löste einen Neuaufbau aus, der Neuaufbau
+ *    lud wieder — eine Schleife, die nie zur Ruhe kam.
+ * 2. **Die Ansicht wird wiederverwendet.** Mit `onReset` legt Compose sie beim
+ *    Hinausscrollen in seinen Vorrat, statt sie wegzuwerfen; beim Zurückscrollen kommt sie
+ *    von dort. Eine `WebView` neu anzulegen kostet je nach Gerät mehrere Bilder.
+ */
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
 @Composable
 private fun AbgeschotteteSeite(
@@ -586,7 +642,7 @@ private fun AbgeschotteteSeite(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            WebView(ctx).apply {
+            Seitenansicht(ctx).apply {
                 setBackgroundColor(AndroidColor.TRANSPARENT)
                 isVerticalScrollBarEnabled = false
                 isHorizontalScrollBarEnabled = false
@@ -596,7 +652,7 @@ private fun AbgeschotteteSeite(
                     ereignis.action == android.view.MotionEvent.ACTION_MOVE
                 }
                 settings.apply {
-                    javaScriptEnabled = beiHoehe != null
+                    javaScriptEnabled = true
                     allowFileAccess = false
                     allowContentAccess = false
                     domStorageEnabled = false
@@ -616,7 +672,7 @@ private fun AbgeschotteteSeite(
                     ): Boolean = true
 
                     override fun onPageFinished(view: WebView, url: String?) {
-                        val melde = beiHoehe ?: return
+                        val melde = (view as? Seitenansicht)?.melder ?: return
                         view.evaluateJavascript("document.body.scrollHeight") { wert ->
                             wert.trim('"').toFloatOrNull()?.let { melde(it.coerceIn(24f, 2000f)) }
                         }
@@ -624,7 +680,23 @@ private fun AbgeschotteteSeite(
                 }
             }
         },
-        update = { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) },
+        onReset = { ansicht ->
+            // Zurück auf Anfang, damit die nächste Karte nicht kurz die vorige sieht.
+            ansicht.melder = null
+            ansicht.geladen = null
+            ansicht.loadUrl("about:blank")
+        },
+        onRelease = { ansicht ->
+            ansicht.melder = null
+            ansicht.destroy()
+        },
+        update = { ansicht ->
+            ansicht.melder = beiHoehe
+            if (ansicht.geladen != html) {
+                ansicht.geladen = html
+                ansicht.loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+            }
+        },
     )
 }
 
@@ -676,7 +748,24 @@ a{color:var(--akzent);text-decoration:none;}
  * Von Hand gelesen statt mit einem regulären Ausdruck: verschachtelte Auszeichnungen
  * (`**fett und *kursiv* zugleich**`) fielen sonst auseinander.
  */
-private fun inline(roh: String, akzent: Color): AnnotatedString = buildAnnotatedString {
+/**
+ * Die Auszeichnungen **innerhalb** einer Zeile — fett, kursiv, durchgestrichen, Code.
+ *
+ * Der Aufbau des [AnnotatedString] läuft Zeichen für Zeichen durch den Text. Das ist für
+ * einen Absatz nicht viel, für eine Auswertung mit fünfzig Absätzen aber fünfzigmal so viel
+ * — und das bei *jedem* Neuaufbau der Karte, also bei jedem Scrollen. Das Ergebnis hängt
+ * allein am Text und an der Akzentfarbe; beides ändert sich nicht beim Scrollen, also wird
+ * es behalten.
+ */
+private val ausgezeichnet = object : android.util.LruCache<String, AnnotatedString>(512) {}
+
+private fun inline(roh: String, akzent: Color): AnnotatedString {
+    val schluessel = "${akzent.value}|$roh"
+    ausgezeichnet.get(schluessel)?.let { return it }
+    return baueInline(roh, akzent).also { ausgezeichnet.put(schluessel, it) }
+}
+
+private fun baueInline(roh: String, akzent: Color): AnnotatedString = buildAnnotatedString {
     var fett = false
     var kursiv = false
     var gestrichen = false

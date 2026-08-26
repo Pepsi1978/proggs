@@ -84,6 +84,13 @@ fun KiKarte(
     val farben = Farben
     val schrift = Schriften
 
+    // Derselbe Riegel wie an der Notizkarte: die Vorlese-Hervorhebung bekommt erst dann
+    // einen Animationslauf je Baustein, wenn an dieser Auswertung wirklich vorgelesen wird.
+    // Eine lange Auswertung hat leicht fünfzig Bausteine — das sind fünfzig Läufe, die beim
+    // Scrollen sonst mit jeder Karte entstehen und wieder vergehen.
+    var wurdeVorgelesen by remember(antwort.id) { mutableStateOf(false) }
+    if (liestVor && !wurdeVorgelesen) wurdeVorgelesen = true
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,6 +127,7 @@ fun KiKarte(
                         text = antwort.text,
                         hervorgehobenerAbsatz = if (liestVor) vorleseAbsatz else -1,
                         stil = schrift.kiAntworttext,
+                        animiert = wurdeVorgelesen,
                     )
                 }
             }
