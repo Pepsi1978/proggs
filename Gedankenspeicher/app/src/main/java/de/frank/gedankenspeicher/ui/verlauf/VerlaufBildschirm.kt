@@ -102,6 +102,10 @@ fun VerlaufBildschirm(
     beiAnhangTitel: (Notiz, de.frank.gedankenspeicher.data.Anhang) -> Unit,
     beiZeichnung: () -> Unit,
     beiTabelle: () -> Unit,
+    beiNachtrag: (Notiz) -> Unit,
+    beiVerschieben: (Notiz) -> Unit,
+    beiKopieren: (Notiz) -> Unit,
+    beiLoeschen: (Notiz) -> Unit,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -210,6 +214,10 @@ fun VerlaufBildschirm(
                                     beiMenue = { beiNotizMenue(notiz) },
                                     beiWiederholen = { beiWiederholen(notiz) },
                                     beiEinstellungen = beiEinstellungen,
+                                    beiNachtrag = { beiNachtrag(notiz) },
+                                    beiVerschieben = { beiVerschieben(notiz) },
+                                    beiKopieren = { beiKopieren(notiz) },
+                                    beiLoeschen = { beiLoeschen(notiz) },
                                 )
                             }
 

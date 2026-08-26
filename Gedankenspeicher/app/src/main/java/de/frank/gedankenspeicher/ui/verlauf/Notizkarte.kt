@@ -30,6 +30,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Notes
 import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material.icons.outlined.VolumeUp
@@ -85,6 +89,10 @@ fun Notizkarte(
     beiWiederholen: () -> Unit,
     beiEinstellungen: () -> Unit,
     beiAnhangTitel: (Anhang) -> Unit,
+    beiNachtrag: () -> Unit = {},
+    beiVerschieben: () -> Unit = {},
+    beiKopieren: () -> Unit = {},
+    beiLoeschen: () -> Unit = {},
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -194,6 +202,43 @@ fun Notizkarte(
                         beschreibung = if (liestVor) "Vorlesen anhalten" else "Notiz vorlesen",
                         farbe = if (liestVor) farben.akzent else farben.textMittel,
                         beiDruck = beiVorlesen,
+                    )
+                }
+
+                // Die zweite Reihe: die häufigsten Aktionen aus dem Langdruck-Menü, direkt
+                // an der Karte. Der Nachtrag ist der wichtigste Weg — ein Tipp, und das
+                // Mikrofon läuft, ohne erst durchs Menü zu müssen.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Kartenknopf(
+                        symbol = Icons.Outlined.Mic,
+                        beschreibung = "Nachtrag einsprechen",
+                        farbe = farben.akzent,
+                        beiDruck = beiNachtrag,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Kartenknopf(
+                        symbol = Icons.Outlined.DriveFileMove,
+                        beschreibung = "In andere Sitzung verschieben",
+                        farbe = farben.textMittel,
+                        beiDruck = beiVerschieben,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Kartenknopf(
+                        symbol = Icons.Outlined.ContentCopy,
+                        beschreibung = "Text kopieren",
+                        farbe = farben.textMittel,
+                        beiDruck = beiKopieren,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Kartenknopf(
+                        symbol = Icons.Outlined.DeleteOutline,
+                        beschreibung = "Notiz löschen",
+                        farbe = farben.textSchwach,
+                        beiDruck = beiLoeschen,
                     )
                 }
             }

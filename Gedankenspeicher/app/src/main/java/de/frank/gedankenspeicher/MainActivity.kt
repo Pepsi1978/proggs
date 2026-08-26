@@ -559,6 +559,21 @@ private fun Oberflaeche(
             beiAnhangTitel = vm::aendereAnhang,
             beiZeichnung = { zeichenblatt = true },
             beiTabelle = { tabellenBearbeitung = null to null },
+            // Die Schnellaktionen an jeder Karte — derselbe Weg wie im Langdruck-Menü,
+            // nur ohne den Umweg dorthin. Der Nachtrag öffnet das Bearbeiten-Blatt und
+            // startet sofort das Mikrofon: der Cursor steht am Ende, das Gesprochene
+            // landet also als Nachtrag.
+            beiNachtrag = { notiz ->
+                vm.oeffneBearbeitung(notiz)
+                beiBearbeitenMikrofon()
+            },
+            beiVerschieben = { verschiebeNotiz = it },
+            beiKopieren = { notiz ->
+                val ablage = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                ablage.setPrimaryClip(ClipData.newPlainText("Notiz", notiz.text))
+                vm.melde("Text kopiert.")
+            },
+            beiLoeschen = { loeschfrage = it },
         )
 
         // ---- Die Vollbild-Blätter: Zeichnung und Tabelle
