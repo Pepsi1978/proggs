@@ -41,6 +41,12 @@ $five_h_resets = 0
 $week_used = $null
 $week_resets = 0
 $transcript_path = ''
+# Zeile-2-Felder aus Claude Code 2.1.246 (Frank 2026-08-26) — jedes EINZELN optional
+$cost_cents = $null
+$lines_added = $null
+$lines_removed = $null
+$duration_s = $null
+$cli_version = ''
 
 if ($obj) {
     # Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
@@ -93,6 +99,24 @@ if ($obj) {
     }
     if ($obj.transcript_path) {
         $transcript_path = [string]$obj.transcript_path
+    }
+    # Neue Felder aus 2.1.246. Kosten werden als GANZZAHL in Cent gehalten und erst
+    # bei der Ausgabe zu $X.YY zusammengesetzt — so kann kein Float-Formatierungs- oder
+    # Dezimaltrennzeichen-Problem (de-DE-Komma!) die Anzeige verfaelschen.
+    if ($obj.cost.total_cost_usd -ne $null) {
+        try { $cost_cents = [long][Math]::Round([double]$obj.cost.total_cost_usd * 100) } catch { $cost_cents = $null }
+    }
+    if ($obj.cost.total_lines_added -ne $null) {
+        try { $lines_added = [long]$obj.cost.total_lines_added } catch { $lines_added = $null }
+    }
+    if ($obj.cost.total_lines_removed -ne $null) {
+        try { $lines_removed = [long]$obj.cost.total_lines_removed } catch { $lines_removed = $null }
+    }
+    if ($obj.cost.total_duration_ms -ne $null) {
+        try { $duration_s = [long][Math]::Floor([double]$obj.cost.total_duration_ms / 1000) } catch { $duration_s = $null }
+    }
+    if ($obj.version) {
+        $cli_version = [string]$obj.version
     }
 }
 
@@ -524,6 +548,7 @@ $PACE   = "$ESC[38;2;45;212;191m"   # Teal — Pacing-Feature 5h (Symbol + slow/
 $PACE7  = "$ESC[38;2;255;120;180m"  # Pink/Rosa — Pacing-Feature 7d (Symbol + slow/fast)
 $MIDLINE = "$ESC[1m" + "$ESC[38;2;240;240;250m"  # Hellweiss fett — Pacing-Ziellinie (Mittelstrich). NICHT $MID nennen: PowerShell ist case-insensitiv, $MID kollidiert mit der lokalen Positionsvariable $mid in Get-PaceBar.
 $TIMECOL= "$ESC[38;2;220;180;100m"
+$COSTCOL= "$ESC[38;2;255;200;90m"   # Gold — Session-Kosten (Zeile 2)
 $DIM    = "$ESC[38;2;90;95;115m"
 $SEPCOL = "$ESC[38;2;235;70;70m"    # Rot — Bereichs-Trenner (dick)
 $TRACK  = "$ESC[38;2;55;58;75m"
@@ -604,6 +629,11 @@ $ICON_5H     = '⏱'
 $ICON_7D     = '📅'
 $ICON_CTX    = '🧠'
 $ICON_TIME   = '🕐'
+# Zeile-2-Icons (Frank 2026-08-26, neue Felder aus Claude Code 2.1.246)
+$ICON_COST   = '💰'   # Session-Kosten
+$ICON_LINES  = '✏️'   # Zeilen-Bilanz (+/-)
+$ICON_DUR    = '⏳'   # Session-Dauer
+$ICON_VER    = '🏷️'   # Claude-Code-Version
 $ICON_PACE   = '🎯'
 
 # Ausgabe
@@ -698,9 +728,43 @@ $out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 # unsichtbar. Er bekommt jetzt eine eigene Zeile und wird dort praktisch ungekuerzt
 # gezeigt (maxLen 100 nur als Notbremse). Zeilenumbruch mit "`n" (LF) — identisch
 # zur statusline.sh, damit beide Plattformen dieselbe zweizeilige Leiste rendern.
-if ($cwd) {
-    $out += "`n${P}${ICON_DIR} ${cwd}${R}"
+# ERWEITERT (Frank 2026-08-26, Claude Code 2.1.246): Zeile 2 hat reichlich Platz,
+# waehrend Zeile 1 randvoll ist. Die neuen stdin-Felder (cost.*, version) landen
+# deshalb hier. Jedes Feld ist EINZELN optional: fehlt es (aeltere CLI), wird es
+# stillschweigend weggelassen — die Zeile bleibt heil. Identisch zu statusline.sh.
+$line2 = ''
+if ($cwd) { $line2 = "${P}${ICON_DIR} ${cwd}${R}" }
+
+# 💰 Session-Kosten — aus Cent-Ganzzahl, invariant formatiert (kein de-DE-Komma)
+if ($cost_cents -ne $null -and $cost_cents -ge 0) {
+    $costTxt = ([string][long][Math]::Floor($cost_cents / 100)) + '.' + ($cost_cents % 100).ToString('00')
+    $line2 += "   ${COSTCOL}${ICON_COST} `$${costTxt}${R}"
 }
+
+# ✏ Zeilen-Bilanz — nur wenn in dieser Session ueberhaupt etwas geaendert wurde
+if (($lines_added -ne $null -and $lines_added -gt 0) -or ($lines_removed -ne $null -and $lines_removed -gt 0)) {
+    $la = if ($lines_added -ne $null) { $lines_added } else { 0 }
+    $lr = if ($lines_removed -ne $null) { $lines_removed } else { 0 }
+    $line2 += "   ${DIM}${ICON_LINES} ${R}${GREEN}+${la}${R}${DIM}/${R}${RED}-${lr}${R}"
+}
+
+# ⏳ Session-Dauer — ab 1h "1h05m", darunter "3m02s", unter 1min "42s"
+if ($duration_s -ne $null -and $duration_s -ge 0) {
+    if ($duration_s -ge 3600) {
+        $durTxt = ([string][long][Math]::Floor($duration_s / 3600)) + 'h' + ([long][Math]::Floor(($duration_s % 3600) / 60)).ToString('00') + 'm'
+    } elseif ($duration_s -ge 60) {
+        $durTxt = ([string][long][Math]::Floor($duration_s / 60)) + 'm' + ([long]($duration_s % 60)).ToString('00') + 's'
+    } else {
+        $durTxt = "${duration_s}s"
+    }
+    $line2 += "   ${DIM}${ICON_DUR} ${durTxt}${R}"
+}
+
+# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code veraltet ist (Ausloeser:
+# 2026-08-26 lief 2.1.196 statt 2.1.246, ohne dass es irgendwo auffiel)
+if ($cli_version) { $line2 += "   ${DIM}${ICON_VER} v${cli_version}${R}" }
+
+if ($line2) { $out += "`n" + $line2 }
 
 [Console]::Out.Write($out)
 

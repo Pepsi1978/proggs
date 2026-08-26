@@ -134,6 +134,39 @@
   - `context_window` — Objekt mit `used_percentage` (und weiteren Feldern)
   - `cost` — Objekt mit `total_cost_usd`, `total_duration_ms`, `total_api_duration_ms`, `total_lines_added`, `total_lines_removed`
   - `vim` — Vim-Mode-Status
+- **GEMESSENES Vollschema (Claude Code 2.1.246, Stand 2026-08-26)** — direkt aus dem echten
+  stdin abgegriffen, nicht aus der Doku uebernommen. Die offizielle Feldliste oben ist
+  unvollstaendig; diese Felder kommen tatsaechlich an:
+  ```
+  session_id · transcript_path · cwd · prompt_id · session_name · version
+  effort.level                          -> "low"|"medium"|"high"|"xhigh" (LIVE-Wert von /effort,
+                                           NICHT der Default aus settings.json)
+  model.id · model.display_name
+  workspace.current_dir · workspace.project_dir
+  workspace.repo.host · .owner · .name  -> Git-Remote, z.B. github.com / Pepsi1978 / proggs
+  output_style.name                     -> z.B. "Proactive"
+  thinking.enabled                      -> true/false
+  cost.total_cost_usd                   -> Float, z.B. 1.8090355 (siehe Float-Warnung unten)
+  cost.total_duration_ms · cost.total_api_duration_ms
+  cost.total_lines_added · cost.total_lines_removed
+  context_window.total_input_tokens · .total_output_tokens · .context_window_size
+  context_window.current_usage.{input,output,cache_creation_input,cache_read_input}_tokens
+  context_window.used_percentage · .remaining_percentage
+  rate_limits.five_hour.used_percentage · .resets_at   (Unix-Sekunden)
+  rate_limits.seven_day.used_percentage · .resets_at   (Unix-Sekunden)
+  ```
+  - **Selbst nachmessen** (wenn eine neue CLI-Version neue Felder bringt): im Statusline-Script
+    einmalig `[ -f /tmp/sl.dump ] || printf "%s" "$input" > /tmp/sl.dump` direkt nach
+    `input=$(cat)` einfuegen, 1 s warten, dann
+    `jq -r 'paths(scalars) as $p | "\($p|join("."))"' /tmp/sl.dump` — und die Zeile
+    **sofort wieder entfernen**.
+  - ⚠️ **`rate_limits` fehlt beim allerersten Aufruf einer Session** (kommt erst nach dem ersten
+    API-Response). Wer daraus einen Cross-Session-State baut, muss diesen Zustand abfangen —
+    sonst gewinnen alte State-Dateien die Aggregation (siehe `bugs/claude-tooling/claude-hooks.md` §13.8).
+  - ⚠️ **Float-Warnung:** `cost.total_cost_usd` und `used_percentage` kommen als Float mit
+    Artefakten (`55.00000000000001`). Die bash-3.2-builtin `printf "%.2f"` auf macOS scheitert
+    daran und gibt **0** aus (§13.5). Loesung: in jq zu einer Ganzzahl runden (Cent bzw. Prozent)
+    und in der Shell nur mit Integer-Arithmetik formatieren.
 - **NEU ab v2.1.153 — COLUMNS und LINES Umgebungsvariablen:**
   - Claude Code setzt jetzt `COLUMNS` und `LINES` als Umgebungsvariablen **bevor** dein Script ausgeführt wird.
   - Hintergrund: Da Claude Code die Script-Ausgabe abfängt (statt das Script direkt mit dem Terminal zu verbinden), funktionieren `tput cols` und sprachebenenweite Breiten-Erkennung **nicht** von innen aus dem Script.
@@ -156,7 +189,7 @@
 - **refreshInterval:** Optionales Feld — lässt das Script alle N Sekunden zusätzlich zu Event-getriggerten Updates neu laufen. Nützlich für Uhranzeigen oder wenn Hintergrund-Subagenten den Git-Status ändern.
 - **hideVimModeIndicator:** `true` unterdrückt den eingebauten `-- INSERT --`-Text falls dein Script `vim.mode` selbst rendert.
 - **Quelle:** https://code.claude.com/docs/en/statusline (offiziell), https://cld-docs.onlinetool.cc/en/docs/claude-code/statusline.html (extern)
-- **Stand:** 2026-05-28 (COLUMNS/LINES neu in v2.1.153)
+- **Stand:** 2026-08-26 (Vollschema gemessen an Claude Code 2.1.246; COLUMNS/LINES seit v2.1.153)
 
 ---
 

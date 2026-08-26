@@ -51,9 +51,14 @@ parsed=$(echo "$input" | jq -r '[
     .rate_limits.seven_day.resets_at // "",
     .session_id // "unknown",
     .transcript_path // "",
-    .context_window.used_percentage // ""
+    .context_window.used_percentage // "",
+    (if (.cost.total_cost_usd // null) != null then ((.cost.total_cost_usd * 100) | round | tostring) else "" end),
+    (if (.cost.total_lines_added // null) != null then (.cost.total_lines_added | tostring) else "" end),
+    (if (.cost.total_lines_removed // null) != null then (.cost.total_lines_removed | tostring) else "" end),
+    (if (.cost.total_duration_ms // null) != null then ((.cost.total_duration_ms / 1000) | floor | tostring) else "" end),
+    .version // ""
 ] | join("")' 2>/dev/null)
-IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct <<< "$parsed"
+IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct cost_cents lines_added lines_removed duration_s cli_version <<< "$parsed"
 
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
@@ -595,6 +600,7 @@ PACE7='\033[38;2;255;120;180m' # Pink/Rosa  — Pacing-Feature 7d (Symbol + slow
 MID='\033[1m\033[38;2;240;240;250m' # Hellweiss fett — Pacing-Ziellinie (Mittelstrich)
 T='\033[38;2;130;135;160m'   # Grau         — Commit, Modell-Name
 TIMECOL='\033[38;2;220;180;100m' # Amber    — Uhrzeit
+COSTCOL='\033[38;2;255;200;90m' # Gold     — Session-Kosten (Zeile 2)
 DIM='\033[38;2;90;95;115m'   # Dunkelgrau   — (alt) Trennzeichen
 SEPCOL='\033[38;2;235;70;70m' # Rot         — Bereichs-Trenner (dick)
 R='\033[0m'                  # Reset
@@ -706,6 +712,11 @@ ICON_5H="⏱"
 ICON_7D="📅"
 ICON_CTX="🧠"
 ICON_TIME="🕐"
+# Zeile-2-Icons (Frank 2026-08-26, neue Felder aus Claude Code 2.1.246)
+ICON_COST="💰"   # Session-Kosten
+ICON_LINES="✏️"   # Zeilen-Bilanz (+/-)
+ICON_DUR="⏳"    # Session-Dauer
+ICON_VER="🏷️"    # Claude-Code-Version
 ICON_PACE="🎯"
 
 # Effort-Farbe nach Level
@@ -817,6 +828,52 @@ echo
 # Der Pfad wird als printf-ARGUMENT (%s) uebergeben, nicht in den Format-String
 # interpoliert — so koennen Backslashes/Prozentzeichen im Pfad nie als Escape wirken
 # (vgl. Windows-Pfad-Bug 2026-07-08, wo "\b" gedruckte Segmente wieder loeschte).
-[ -n "$cwd" ] && printf "${P}${ICON_DIR} %s${R}\n" "$cwd"
+# ERWEITERT (Frank 2026-08-26, Claude Code 2.1.246): Zeile 2 hat reichlich Platz,
+# waehrend Zeile 1 randvoll ist. Die neuen stdin-Felder von 2.1.246 (cost.*, version)
+# landen deshalb hier. Jedes Feld ist EINZELN optional: fehlt es (aeltere CLI liefert
+# .cost/.version nicht), wird es stillschweigend weggelassen — die Zeile bleibt heil.
+# Alle Zahlen werden mit reiner INTEGER-Arithmetik formatiert, NIE mit printf "%.2f":
+# die bash-3.2-builtin printf auf macOS scheitert an langen Float-Artefakten und gibt
+# dann 0 aus (siehe bugs/claude-tooling/claude-hooks.md 13.5). jq liefert deshalb
+# bereits gerundete Ganzzahlen (Cents bzw. Sekunden).
+line2=""
+[ -n "$cwd" ] && line2=$(printf "${P}${ICON_DIR} %s${R}" "$cwd")
+
+# 💰 Session-Kosten — jq liefert Cents als Ganzzahl, hier zu $X.YY zusammengesetzt
+case "$cost_cents" in
+    ''|*[!0-9]*) ;;
+    *) line2="${line2}   $(printf "${COSTCOL}${ICON_COST} \$%d.%02d${R}" "$((cost_cents / 100))" "$((cost_cents % 100))")" ;;
+esac
+
+# ✏ Zeilen-Bilanz — nur zeigen wenn in dieser Session ueberhaupt etwas geaendert wurde
+_la="$lines_added"; _lr="$lines_removed"
+case "$_la" in ''|*[!0-9]*) _la="" ;; esac
+case "$_lr" in ''|*[!0-9]*) _lr="" ;; esac
+if [ -n "$_la" ] || [ -n "$_lr" ]; then
+    if [ "${_la:-0}" -gt 0 ] 2>/dev/null || [ "${_lr:-0}" -gt 0 ] 2>/dev/null; then
+        line2="${line2}   $(printf "${DIM}${ICON_LINES} ${R}${GREEN}+%s${R}${DIM}/${R}${RED}-%s${R}" "${_la:-0}" "${_lr:-0}")"
+    fi
+fi
+
+# ⏳ Session-Dauer — ab 1h als "1h05m", darunter "3m02s", unter 1min "42s"
+case "$duration_s" in
+    ''|*[!0-9]*) ;;
+    *)
+        if [ "$duration_s" -ge 3600 ]; then
+            _dur=$(printf "%dh%02dm" "$((duration_s / 3600))" "$(((duration_s % 3600) / 60))")
+        elif [ "$duration_s" -ge 60 ]; then
+            _dur=$(printf "%dm%02ds" "$((duration_s / 60))" "$((duration_s % 60))")
+        else
+            _dur="${duration_s}s"
+        fi
+        line2="${line2}   $(printf "${DIM}${ICON_DUR} %s${R}" "$_dur")"
+        ;;
+esac
+
+# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code veraltet ist (Ausloeser:
+# 2026-08-26 lief 2.1.196 statt 2.1.246, ohne dass es irgendwo auffiel)
+[ -n "$cli_version" ] && line2="${line2}   $(printf "${DIM}${ICON_VER} v%s${R}" "$cli_version")"
+
+[ -n "$line2" ] && printf "%s\n" "$line2"
 
 exit 0
