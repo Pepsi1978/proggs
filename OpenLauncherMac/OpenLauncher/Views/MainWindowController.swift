@@ -247,6 +247,12 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 
         for card in [providerCard, profileCard, thinkingCard] { rightContainer.addSubview(card) }
 
+        // Alle Karten sollen gleich eng aneinander liegen. Der Abstand zwischen Modell- und
+        // Provider-Karte entsteht durch den Trenner des Splitters - genau dessen Breite wird hier
+        // auch fuer die uebrigen Fugen verwendet, statt einen festen Wert zu raten. So bleiben die
+        // Abstaende auch dann identisch, wenn macOS den Trenner anders zeichnet.
+        let gap = splitView.dividerThickness
+
         NSLayoutConstraint.activate([
             providerHeader.topAnchor.constraint(equalTo: providerCard.topAnchor, constant: 15),
             providerHeader.leadingAnchor.constraint(equalTo: providerCard.leadingAnchor, constant: 18),
@@ -268,14 +274,14 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             thinkingListView.bottomAnchor.constraint(equalTo: thinkingCard.bottomAnchor, constant: -12),
 
             // Spalten: Provider/Profil links (flexibel), Thinking rechts mit fester Breite 210
-            // (MinWidth 190, MaxWidth 260 in XAML) und 14 Punkt Abstand.
+            // (MinWidth 190, MaxWidth 260 in XAML).
             providerCard.topAnchor.constraint(equalTo: rightContainer.topAnchor),
             providerCard.leadingAnchor.constraint(equalTo: rightContainer.leadingAnchor),
-            providerCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -14),
+            providerCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -gap),
 
-            profileCard.topAnchor.constraint(equalTo: providerCard.bottomAnchor, constant: 14),
+            profileCard.topAnchor.constraint(equalTo: providerCard.bottomAnchor, constant: gap),
             profileCard.leadingAnchor.constraint(equalTo: rightContainer.leadingAnchor),
-            profileCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -14),
+            profileCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -gap),
             profileCard.bottomAnchor.constraint(equalTo: rightContainer.bottomAnchor),
             profileCard.heightAnchor.constraint(equalTo: providerCard.heightAnchor),
 
