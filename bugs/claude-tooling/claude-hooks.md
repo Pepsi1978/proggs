@@ -47,6 +47,10 @@
 | 21 | Tool-Hook soll im Subagent feuern | PreToolUse/PostToolUse feuern NICHT fuer Tool-Calls IN Subagents — SubagentStart/Stop nutzen | §16.3 |
 | 22 | Windows: `.sh`-Hook-Pfad mit Leerzeichen | Pfad in settings.json `"..."` quoten + Forward-Slashes + voller Interpreter-Pfad (sonst Arg-Splitting) | §16.6 |
 | 23 | Statusline zeigt nach langer Pause falsche 5h/7d-Werte | Uralte `state/rate-limits-*.json` gewinnen das MAX. Beim LESEN Eintraege mit **abgelaufenem** 5h-Fenster verwerfen + Cleanup deterministisch per Marker statt Modulo-Lotterie | §13.8 |
+| 24 | Hook laeuft rc=0, tut aber NICHTS | `timeout` fehlt auf macOS (GNU-coreutils); `\|\| true` schluckt rc=127 → ganzer Block tot | §13.9 |
+| 25 | Log voll `ERROR … command failed at line N` | Letzter Befehl einer Funktion ist ein Test → Funktion gibt 1 zurueck; `return 0` ergaenzen | §13.10 |
+| 26 | `echo` scheitert in async SessionEnd-Hook | stdout schon zu → EPIPE ist der Normalfall; `echo … \|\| true` | §13.11 |
+| 27 | Geteilte Projekt-`settings.json`, zwei Plattformen | NIE absoluten Plattform-Pfad hart kodieren — `uname`-Weiche im `command` | §16.5 |
 
 ---
 
@@ -665,6 +669,98 @@ done
 
 ---
 
+### 13.9 `timeout` fehlt auf macOS — `|| true` macht daraus einen STILLEN Totalausfall  ⭐ KRITISCH
+
+**Symptom:** Ein Hook laeuft scheinbar fehlerfrei (rc=0, kein stderr, kein Log-Eintrag), tut
+aber faktisch NICHTS. Kein Fehler, keine Warnung, nichts im Transcript — der Hook ist tot und
+niemand merkt es. Typischer Verlauf: Der Hook wurde auf Windows/Linux geschrieben und getestet,
+auf macOS lief er nie.
+
+**Ursache:** `timeout` ist Teil der **GNU coreutils** und auf macOS **NICHT vorhanden**
+(`command -v timeout` liefert nichts; auch `gtimeout` nur nach `brew install coreutils`).
+Der Aufruf scheitert mit `timeout: command not found` und rc=127. Steht dahinter — wie in
+Hook-Code ueblich, um den Hook fail-open zu halten — ein `|| true`, wird aus "das Programm
+existiert nicht" ein sauberes "alles in Ordnung". Bei einem Heredoc-Aufruf
+(`timeout 2 python3 <<'PYEOF'`) faellt damit der **komplette** nachfolgende Codeblock aus,
+nicht nur das Zeitlimit.
+
+**Versionen:** macOS (jede), per Design. Auf Linux/Git-Bash-Windows unauffaellig — deshalb
+faellt es beim Cross-Platform-Portieren regelmaessig durch.
+
+**FIX (funktionserhaltend):** Timeout-Kommando erkennen statt voraussetzen. Ohne Zeitlimit
+laufen ist immer besser als gar nicht laufen:
+```bash
+if command -v timeout  > /dev/null 2>&1; then _TO="timeout 2"
+elif command -v gtimeout > /dev/null 2>&1; then _TO="gtimeout 2"
+else _TO=""; fi
+$_TO python3 <<'PYEOF' || true
+```
+`reindex-codebase.sh` macht das seit jeher vorbildlich — die Vorlage stand also im selben Ordner.
+
+**Erkennen (Diagnose in einem Befehl):**
+```bash
+cd ~/.claude/hooks && grep -ln '(^|[^g])timeout ' *.sh | while read -r f; do
+  grep -q 'command -v timeout' "$f" || echo "UNGESICHERT: $f"
+done
+```
+
+**Eigener Vorfall (2026-08-26):** `antigen-matcher.sh` (`timeout 2 python3 <<'PYEOF' || true`)
+— der gesamte Matcher lief auf macOS nie. `heartbeat.sh` (`timeout 30 brew outdated`) — `count`
+blieb leer, wurde auf 0 gesetzt, der Check meldete IMMER "0 outdated"; real waren es 91 Pakete.
+Beide gefixt und per `bash -x` verifiziert (vorher `+ timeout 2 python3`, nachher `+ python3`).
+
+---
+
+### 13.10 ERR-Trap meldet Falschfehler, wenn der letzte Befehl einer Funktion ein Test ist  ⭐
+
+**Symptom:** Das Hook-Log fuellt sich mit `ERROR <hook>: command failed at line N — [ $? -eq 2 ]`
+— bei JEDEM Aufruf, obwohl der Hook mit rc=0 endet und im Transcript nichts erscheint. Echte
+Fehler gehen in der Masse unter (lokal 138 Falschmeldungen pro Session gegen ~12 echte).
+
+**Ursache:** `hook-log.sh` registriert `trap '_hook_log_trap_handler $LINENO' ERR`. In bash gibt
+eine Funktion den Exit-Code ihres LETZTEN Befehls zurueck. Endet sie auf einem Test wie
+`[ $? -eq 2 ] && exit 2`, liefert sie im Normalfall (Bedingung nicht erfuellt) **1** — semantisch
+"Fehler", gemeint war "alles gut". Der Trap hat also recht: der Rueckgabewert IST falsch. Nicht
+die Sonde ist kaputt, sondern der Code, den sie misst.
+
+**Versionen:** bash per Design (Funktions-Rueckgabewert = letzter Befehl).
+
+**FIX (funktionserhaltend):** Den Trap NICHT abschwaechen (er ist die Observability-Schicht),
+sondern den Rueckgabewert bewusst machen:
+```bash
+    if [ $? -eq 2 ]; then exit 2; fi
+    return 0          # <- macht den Erfolgsfall explizit
+}
+```
+Gilt fuer JEDE Funktion in einem Hook, der `hook-log.sh` sourct (lokal 36 Dateien). Faustregel:
+endet eine Hook-Funktion auf `[ ... ]`, `grep`, `test` oder `[[ ... ]]`, gehoert ein `return 0`
+darunter.
+
+**Eigener Vorfall (2026-08-26):** `bash-guard.sh` / `check_forbidden`. Funktionalitaets-Diff nach
+dem Fix: 9/9 Testfaelle unveraendert (4 harmlos frei, 5 gefaehrlich blockiert), Falschmeldungen 0.
+
+---
+
+### 13.11 `echo` in einem async SessionEnd-Hook bekommt EPIPE → Falschfehler im Log
+
+**Symptom:** Ein SessionEnd-Hook loggt `ERROR <hook>: command failed at line N — echo "..."`.
+Ein `echo` kann eigentlich nicht scheitern — hier schon.
+
+**Ursache:** Bei `async: true` auf `SessionEnd` laeuft der Hook weiter, waehrend die Session
+bereits abgebaut wird. Ist stdout dann geschlossen, liefert `echo` EPIPE und damit non-zero →
+der ERR-Trap aus `hook-log.sh` (s. 13.10) meldet es als Fehler. Bei SessionEnd wird stdout
+ohnehin nicht mehr angezeigt, der EPIPE ist also der ERWARTETE Normalfall.
+
+**Versionen:** macOS/Linux, per Design.
+
+**FIX (funktionserhaltend):** Die Ausgabe NICHT entfernen (sie greift, solange stdout lebt),
+sondern den erwarteten EPIPE entschaerfen: `echo "..." || true`.
+
+**Eigener Vorfall (2026-08-26):** `pending-admin-updates.sh`, 4 `echo`-Aufrufe, 12 Falschmeldungen
+pro Session.
+
+---
+
 ## 14. Security-Fallen
 
 ### 14.1 MCP-Tool als Hook fuer Policy-Enforcement = umgehbar
@@ -739,6 +835,24 @@ darin verschachteln; `hookEventName` im `hookSpecificOutput` bleibt Pflicht fuer
 **Ursache:** Die GLOBALE `settings.json` referenziert einen projekt-lokalen Hook-Pfad, der im
 aktuellen Projekt nicht existiert.
 **Versionen:** Issue #54743 **OPEN**.
+**Eigener Vorfall (2026-08-26) — die haeufigere Variante: geteilte PROJEKT-settings.json.**
+`proggs/.claude/settings.json` liegt im Repo und wird von macOS UND Windows gelesen. Darin stand
+ein PreToolUse-Hook (`matcher: Bash|PowerShell`) in Exec-Form mit dem absoluten Windows-Pfad
+`C:/Users/barwa/.../openlauncher-deploy-guard.ps1`. Auf macOS: rc=**64**, 976 Zeichen pwsh-Usage-
+Banner auf **stdout** (kein JSON!), Fehler auf stderr — bei JEDEM Bash-Aufruf. Das erzeugt genau
+das Bild "ganz viele PreToolUse-Hooks werfen Fehler". Wochenlang unbemerkt, weil NICHTS die
+registrierten Hook-Pfade prueft.
+**FIX (funktionserhaltend, beide Plattformen unveraendert lauffaehig):** Plattform-Weiche im
+`command`-String statt Exec-Form (`args` kennt keine Shell-Expansion):
+```json
+"command": "if [ \"$(uname -s)\" = \"Darwin\" ] || [ \"$(uname -s)\" = \"Linux\" ]; then bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.sh\"; else pwsh -NoProfile -File \"C:/.../guard.ps1\"; fi"
+```
+Windows behaelt exakt denselben pwsh-Aufruf; macOS nimmt die gleichwertige `.sh`.
+**PRAEVENTION (Poka-Yoke Stufe 2):** `startup-checks.sh` Check 7 liest beim Session-Start alle
+settings-Dateien, extrahiert jeden Hook-Pfad (auch aus `args`), loest `$HOME`/`~`/
+`$CLAUDE_PROJECT_DIR` auf und meldet tote Pfade — Plattform-Weichen erkennt er an `uname` und
+ignoriert den fremden Zweig. Verifiziert: haette den Bug beim ersten Start gemeldet.
+
 **FIX (funktionserhaltend):** Hook-Pfade in der globalen settings.json absolut + existenz-robust
 halten; projekt-spezifische Hooks via `$CLAUDE_PROJECT_DIR` und in der PROJEKT-settings.json, nicht
 global. Der Hook selbst sollte bei fehlender Datei graceful `exit 0`.

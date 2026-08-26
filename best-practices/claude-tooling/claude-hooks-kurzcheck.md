@@ -30,3 +30,7 @@
 | 17 | Bash-`.sh`-Hook | `+x`, LF (kein CRLF), `set -e` mit `\|\| true` / `exit 0` im `trap` | §13.3, §13.4 |
 | 18 | Cross-Platform | `.ps1` UND `.sh` mit identischer Logik (Drift = Bug) | §13.7 |
 | 19 | Tool-Hook im Subagent erwartet | Feuert NICHT für Subagent-interne Tool-Calls → `SubagentStart`/`SubagentStop` | §16.3 |
+| 20 | Unix-Tool im `.sh`-Hook nutzen | `timeout`/`gdate`/`gsed` gibt es auf macOS NICHT — `command -v` prüfen; mit `\|\| true` sonst stiller Totalausfall | §13.9 |
+| 21 | Funktion in einem Hook schreiben | Endet sie auf einem Test (`[ … ]`, `grep`), gibt sie 1 zurück → `return 0` ans Ende | §13.10 |
+| 22 | `echo` in async `SessionEnd` | stdout ist dort oft schon zu → `echo … \|\| true` (EPIPE ist der Normalfall) | §13.11 |
+| 23 | Geteilte Projekt-`settings.json` | NIE absoluten Plattform-Pfad hart kodieren → `uname`-Weiche im `command` (nicht `args`) | §16.5 |

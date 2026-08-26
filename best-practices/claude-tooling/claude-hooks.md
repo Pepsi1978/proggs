@@ -117,6 +117,25 @@
 - `.sh` mit `+x` und **LF** (CRLF → „bad interpreter: …^M"). `set -e` vorsichtig: harmlose non-zero Exits mit `|| true`
   abfangen, im `trap` `… ; exit 0` (graceful). Kein zwingendes `jq` (fehlt oft) — Python-`json` nutzen.
 - Dot-sourced Libs ohne top-level `exit` (siehe §1).
+- **Kein Unix-Tool ungeprüft voraussetzen.** `timeout` ist GNU-coreutils und auf macOS **nicht vorhanden**.
+  In Verbindung mit `|| true` wird daraus ein stiller Totalausfall: `timeout 2 python3 <<'PYEOF' || true`
+  scheitert mit rc=127, `|| true` schluckt es, der ganze Heredoc-Block läuft nie — bei rc=0 und leerem stderr.
+  Richtig ist erkennen statt voraussetzen (ohne Zeitlimit laufen schlägt gar nicht laufen):
+  ```bash
+  if command -v timeout > /dev/null 2>&1; then _TO="timeout 2"
+  elif command -v gtimeout > /dev/null 2>&1; then _TO="gtimeout 2"
+  else _TO=""; fi
+  $_TO python3 <<'PYEOF' || true
+  ```
+  Gleiches Prinzip für `gdate`, `gsed`, `realpath`, `sha256sum`. Almanach §13.9.
+- **Jede Hook-Funktion endet mit einem bewussten Rückgabewert.** In bash gibt eine Funktion den Exit-Code
+  ihres letzten Befehls zurück — endet sie auf einem Test (`[ $? -eq 2 ] && exit 2`), liefert sie im
+  Normalfall `1`. Der ERR-Trap aus `hook-log.sh` meldet das (zu Recht) als Fehler und flutet das Log.
+  Faustregel: endet eine Funktion auf `[ … ]`, `grep`, `test` oder `[[ … ]]`, gehört ein `return 0` darunter.
+  Den Trap dafür **nicht** abschwächen — er ist die Observability-Schicht. Almanach §13.10.
+- **Ausgaben in async `SessionEnd`-Hooks absichern:** dort ist stdout beim Lauf oft schon geschlossen,
+  `echo` liefert EPIPE und damit non-zero. `echo "…" || true` erhält die Ausgabe, solange stdout lebt,
+  und macht den erwarteten EPIPE zu keinem Fehler. Almanach §13.11.
 
 ## §8 Cross-Platform & Wartung
 
@@ -124,6 +143,18 @@
   ggf. in eine `.py` auslagern, die beide Wrapper aufrufen, wie `bug-almanac-hint`).
 - **Config ist gecacht:** Hook-Änderungen greifen erst nach Session-Neustart — beim Debuggen ZUERST ausschließen.
 - settings.json nach jeder Änderung mit `python3 -m json.tool` validieren (ein Syntaxfehler killt ALLE Hooks still).
+- **Geteilte Projekt-`settings.json` niemals mit einem plattformspezifischen absoluten Pfad bestücken.**
+  Die Datei liegt im Repo und wird von macOS *und* Windows gelesen; ein hart kodierter `C:/Users/…`-Pfad
+  lässt den Hook auf der anderen Plattform bei **jedem** Tool-Aufruf scheitern (rc≠0 + Nicht-JSON auf stdout).
+  Lösung ist eine `uname`-Weiche im `command`-String — die `args`-Exec-Form kennt keine Shell-Expansion und
+  scheidet daher aus:
+  ```json
+  "command": "if [ \"$(uname -s)\" = \"Darwin\" ]; then bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/g.sh\"; else pwsh -NoProfile -File \"C:/…/g.ps1\"; fi"
+  ```
+  So bleibt jede Plattform bei genau ihrem bisherigen Aufruf. Almanach §16.5.
+- **Registrierte Hook-Pfade beim Session-Start verifizieren** (Poka-Yoke Stufe 2): `startup-checks.sh` Check 7
+  liest alle settings-Dateien, löst `$HOME`/`~`/`$CLAUDE_PROJECT_DIR` auf und meldet tote Pfade. Ohne diesen
+  Check bleibt ein toter Hook-Pfad beliebig lange unentdeckt — es gibt sonst keine Instanz, die ihn prüft.
 - Neue/geänderte Hooks über den **`hook-forge`-Skill** bauen (Template hat `exit 0`, try/catch, Input-Guard eingebaut
   → Poka-Yoke Stufe 3).
 
