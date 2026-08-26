@@ -100,6 +100,14 @@ data class Bearbeitungszustand(
      * beim Tippen). Diese Marke ist das Signal, den Wert ausnahmsweise doch zu übernehmen.
      */
     val einfuegeMarke: Int = 0,
+    /**
+     * Wurde in diesem Blatt etwas ans Ende **nachgetragen**?
+     *
+     * Ein Nachtrag ist ein neuer Gedanke, kein Richtigstellen von Getipptem: er datiert die
+     * Notiz auf jetzt um, damit sie im Verlauf dort steht, wo sie gedanklich hingehört —
+     * ganz unten. Ein Einschub mitten im Text lässt den Zeitstempel dagegen stehen.
+     */
+    val nachgetragen: Boolean = false,
     /** Läuft gerade eine Aufnahme für dieses Blatt? */
     val nimmtAuf: Boolean = false,
     /** Läuft gerade die Transkription des Gesprochenen? */

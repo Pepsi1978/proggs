@@ -782,6 +782,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             auswahlStart = cursor,
             auswahlEnde = cursor,
             einfuegeMarke = z.einfuegeMarke + 1,
+            // Einmal nachgetragen bleibt nachgetragen — auch wenn danach noch mitten im
+            // Text etwas eingeschoben wird.
+            nachgetragen = z.nachgetragen || nachtrag,
             fehler = null,
         )
     }
@@ -959,7 +962,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _bearbeitung.value
         val notiz = z.notiz ?: return
         viewModelScope.launch {
-            repo.bearbeiteNotiz(notiz, z.ueberschrift, z.text)
+            repo.bearbeiteNotiz(notiz, z.ueberschrift, z.text, nachgetragen = z.nachgetragen)
             schliesseBearbeitung()
         }
     }

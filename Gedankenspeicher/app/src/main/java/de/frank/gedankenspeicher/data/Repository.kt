@@ -211,10 +211,25 @@ class Repository(
         merkeAenderung(zielSitzung)
     }
 
-    suspend fun bearbeiteNotiz(notiz: Notiz, ueberschrift: String, text: String) {
+    /**
+     * Eine Notiz richtigstellen — oder um einen Nachtrag ergänzen.
+     *
+     * Ist [nachgetragen] gesetzt, wurde etwas ans Ende gesprochen. Dann ist die Notiz kein
+     * korrigierter alter Gedanke mehr, sondern ein frischer: sie bekommt den jetzigen
+     * Zeitstempel und rutscht im Verlauf ans Ende, wo der zuletzt gedachte Gedanke steht.
+     * Beim blossen Richtigstellen bleibt der Zeitstempel unangetastet — er sagt, wann der
+     * Gedanke da war, nicht wann er zuletzt getippt wurde.
+     */
+    suspend fun bearbeiteNotiz(
+        notiz: Notiz,
+        ueberschrift: String,
+        text: String,
+        nachgetragen: Boolean = false,
+    ) {
         merkeAenderung(notiz.sitzungId)
         db.notizen().aendern(
             notiz.copy(
+                erstelltAm = if (nachgetragen) System.currentTimeMillis() else notiz.erstelltAm,
                 text = text.trim(),
                 ueberschrift = ueberschrift.trim().takeIf(String::isNotBlank),
                 // Wer die Überschrift anfasst, hat sie ab jetzt selbst in der Hand.

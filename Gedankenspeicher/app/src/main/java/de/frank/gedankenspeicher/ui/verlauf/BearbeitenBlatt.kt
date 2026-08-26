@@ -120,9 +120,15 @@ fun BearbeitenBlatt(
 
         Spacer(Modifier.height(10.dp))
         Text(
-            Repository.zeitpunkt(notiz.erstelltAm),
+            // Ein Nachtrag datiert die Notiz auf jetzt um und schiebt sie im Verlauf ans
+            // Ende — das steht hier, bevor gespeichert wird, und nicht erst danach.
+            if (zustand.nachgetragen) {
+                Repository.zeitpunkt(notiz.erstelltAm) + " · Nachtrag — rückt beim Speichern ans Ende"
+            } else {
+                Repository.zeitpunkt(notiz.erstelltAm)
+            },
             style = schrift.zeitstempel,
-            color = farben.textSchwach,
+            color = if (zustand.nachgetragen) farben.akzent else farben.textSchwach,
         )
         Spacer(Modifier.height(16.dp))
     }
