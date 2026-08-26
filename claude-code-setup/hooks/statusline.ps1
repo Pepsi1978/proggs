@@ -249,11 +249,29 @@ try {
         Move-Item -Path $tmpState -Destination $myState -Force -ErrorAction SilentlyContinue
     }
 
-    # 2. Cleanup: State-Files aelter als 24h loeschen — nur ~jeder 600. Aufruf
-    #    (also ca. alle 10 Minuten bei refreshInterval=1) damit es nicht jeden
-    #    Refresh kostet. Performance-kritisch (Frank-Bug-Report 2026-05-09 22:04).
+    # 2. Cleanup: State-Files aelter als 24h loeschen.
+    #    FRUEHER: "if (($nowTs % 600) -lt 2)" — lief nur in einem 2-Sekunden-Fenster
+    #    alle 600s. Das war eine LOTTERIE (0,33% Trefferchance pro Aufruf) und setzte
+    #    voraus, dass die Statusline wirklich sekuendlich laeuft. Folge (Frank-Bug-Report
+    #    2026-08-26): Nach wochenlanger Rechner-Pause lagen 58 Tage alte State-Files noch
+    #    immer da — der Cleanup hatte das Fenster nie getroffen. Genau diese Leichen
+    #    verfaelschten dann die 7d-Anzeige beim Session-Start (84% statt 0%).
+    #    JETZT: deterministischer Marker "wann wurde zuletzt aufgeraeumt?". Ist er aelter
+    #    als 600s (oder fehlt er), wird aufgeraeumt — also GARANTIERT beim ersten Aufruf
+    #    nach einer Pause. Die Performance-Sorge von 2026-05-09 bleibt gewahrt: das teure
+    #    Get-ChildItem laeuft weiterhin hoechstens alle 10 Minuten, statt dessen kostet
+    #    jeder Aufruf nur ein billiges Test-Path/Get-Item auf EINE Datei.
     #    Zusaetzlich: kaputte Files mit leerer session_id (rate-limits-.json) sofort entfernen.
-    if (($nowTs % 600) -lt 2) {
+    $cleanupMarker = Join-Path $stateDir '.last-cleanup'
+    $doCleanup = $true
+    if (Test-Path $cleanupMarker) {
+        try {
+            $cmTs = [long]((Get-Item $cleanupMarker).LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds)
+            if (($nowTs - $cmTs) -lt 600) { $doCleanup = $false }
+        } catch { $doCleanup = $true }
+    }
+    if ($doCleanup) {
+        try { New-Item -Path $cleanupMarker -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null } catch {}
         $cutoff = $nowTs - 86400
         Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue |
             Where-Object { $_.LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds -lt $cutoff } |
@@ -309,6 +327,26 @@ try {
         # aber Files mit anderem Fingerprint werden ignoriert.
         $entryFp = if ($entry.PSObject.Properties['account_fp']) { [string]$entry.account_fp } else { '' }
         if ($entryFp -and $entryFp -ne $accountFp) { return }
+        # TOTES-FENSTER-FILTER (Frank-Bug-Report 2026-08-26): Ein State-File dessen
+        # 5h-Fenster nachweislich ABGELAUFEN ist beschreibt ein abgeschlossenes Fenster —
+        # sein Verbrauchswert ist fuer die aktuelle Anzeige per Definition wertlos.
+        # Root Cause: Nach wochenlanger Rechner-Pause lagen NUR uralte State-Files da
+        # (58 Tage alt, seven_d 84%). Beim Session-Start hatte die eigene Session noch
+        # kein File geschrieben, also galt eine der Leichen als "die frischeste" und
+        # gewann das MAX -> Statusline zeigte "7d 84%" statt "0%". Sobald die eigene
+        # Session ihr File schrieb, kippte der Vergleich und es wurde "von allein"
+        # korrekt. Zwei unabhaengige Kriterien (Defense in Depth):
+        #   a) 5h-Reset liegt in der Vergangenheit -> seit dem Reset nichts geschrieben
+        #      -> tot. (Lebende Sessions haben IMMER einen Reset in der Zukunft.)
+        #   b) ts_seen aelter als 5h -> tot, auch ohne Reset-Info.
+        # Verlustfrei: kein Wert eines LAUFENDEN Fensters geht dadurch verloren.
+        $rawResets = 0
+        try { $rawResets = [long]$entry.five_h_resets } catch { $rawResets = 0 }
+        if ($rawResets -ne 0 -and $rawResets -le $nowTs) { return }
+        $rawTsSeen = 0
+        try { $rawTsSeen = [long]$entry.ts_seen } catch { $rawTsSeen = 0 }
+        if ($rawTsSeen -ne 0 -and $rawTsSeen -le ($nowTs - 18000)) { return }
+
         $resets = 0
         try { $resets = [long]$entry.five_h_resets } catch { $resets = 0 }
         if ($resets -ne 0 -and -not (Test-ValidResetTs $resets $nowTs)) {

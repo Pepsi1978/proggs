@@ -320,10 +320,29 @@ if is_valid_sid "$session_id" \
         && mv -f "$tmp_state" "$my_state" 2>/dev/null
 fi
 
-# 2. Cleanup: State-Files aelter als 24h. Nur ~jeder 600. Aufruf (also ca. alle
-#    10 Minuten bei refreshInterval=1) — find ist teuer auf Windows Git Bash und
-#    der Cleanup ist nicht zeitkritisch.
-if [ $((now_ts % 600)) -lt 2 ]; then
+# 2. Cleanup: State-Files aelter als 24h.
+#    FRUEHER: "if [ $((now_ts % 600)) -lt 2 ]" — lief nur in einem 2-Sekunden-Fenster
+#    alle 600s. Das war eine LOTTERIE (0,33% Trefferchance pro Aufruf) und setzte
+#    voraus, dass die Statusline wirklich sekuendlich laeuft. Folge (Frank-Bug-Report
+#    2026-08-26): Nach wochenlanger Rechner-Pause lagen 58 Tage alte State-Files noch
+#    immer da — der Cleanup hatte das Fenster nie getroffen. Genau diese Leichen
+#    verfaelschten dann die 7d-Anzeige beim Session-Start (84% statt 0%).
+#    JETZT: deterministischer Marker "wann wurde zuletzt aufgeraeumt?". Ist der Marker
+#    aelter als 600s (oder fehlt er), wird aufgeraeumt — also GARANTIERT beim ersten
+#    Aufruf nach einer Pause, genau dann wenn es noetig ist. Kosten: ein stat statt
+#    eines find pro Aufruf, also weiterhin billig (die Windows-Git-Bash-Sorge bleibt
+#    beruecksichtigt: find laeuft nach wie vor hoechstens alle 10 Minuten).
+cleanup_marker="$state_dir/.last-cleanup"
+do_cleanup=0
+if [ ! -f "$cleanup_marker" ]; then
+    do_cleanup=1
+else
+    _cm=$(stat -f %m "$cleanup_marker" 2>/dev/null || stat -c %Y "$cleanup_marker" 2>/dev/null || echo 0)
+    case "$_cm" in ''|*[!0-9]*) _cm=0 ;; esac
+    [ "$((now_ts - _cm))" -ge 600 ] && do_cleanup=1
+fi
+if [ "$do_cleanup" = "1" ]; then
+    : > "$cleanup_marker" 2>/dev/null
     find "$state_dir" -name "rate-limits-*.json" -mmin +1440 -delete 2>/dev/null
     find "$state_dir" -name "ctx-*" -mmin +1440 -delete 2>/dev/null
     # Zusaetzlich: Files von fremden Accounts (anderer Fingerprint) sofort weg —
@@ -349,13 +368,29 @@ fi
 #    werden sie hier verworfen statt blind angezeigt zu werden.
 #    Account-Filter: wenn account_fp im File leer ist (alte Files vor dem Fix),
 #    wird er akzeptiert — sonst muss er exakt zum aktuellen passen.
-fresh=$(jq -sr --arg fp "$account_fp" '
+fresh=$(jq -sr --arg fp "$account_fp" --argjson nowTs "$now_ts" '
     map(select(
         (.session_id // "" | tostring) != ""
         and (.session_id | tostring | test("^[A-Za-z0-9_-]+$"))
         and (.five_h | type == "number") and .five_h >= 0 and .five_h <= 100
         and ((.seven_d == null) or ((.seven_d | type == "number") and .seven_d >= 0 and .seven_d <= 100))
         and ((.account_fp // "") == "" or (.account_fp // "") == $fp)
+        # TOTES-FENSTER-FILTER (Frank-Bug-Report 2026-08-26): Ein State-File dessen
+        # 5h-Fenster nachweislich ABGELAUFEN ist beschreibt ein abgeschlossenes Fenster —
+        # sein Verbrauchswert ist fuer die aktuelle Anzeige per Definition wertlos.
+        # Root Cause des Bugs: Nach langer Rechner-Pause lagen NUR uralte State-Files da
+        # (58 Tage alt, seven_d 84%). Beim Session-Start hatte die eigene Session noch
+        # kein File geschrieben, also war eine der Leichen "die frischeste" und gewann
+        # das MAX -> Statusline zeigte "7d 84%" statt "0%". Sobald die eigene Session ihr
+        # File schrieb, kippte der Vergleich und es wurde "von allein" korrekt — genau das
+        # beobachtete Verhalten. Zwei unabhaengige Kriterien (Defense in Depth):
+        #   a) 5h-Reset liegt in der Vergangenheit -> Session hat seit dem Reset nichts
+        #      mehr geschrieben -> tot. (Lebende Sessions refreshen sekuendlich und haben
+        #      IMMER einen Reset in der Zukunft.)
+        #   b) ts_seen aelter als 5h -> tot, auch ohne Reset-Info.
+        # Verlustfrei: kein Wert eines LAUFENDEN Fensters kann dadurch verloren gehen.
+        and ((.five_h_resets // 0) == 0 or (.five_h_resets // 0) > $nowTs)
+        and ((.ts_seen // 0) == 0 or (.ts_seen // 0) > ($nowTs - 18000))
     )) as $valid |
     if ($valid | length) == 0 then ""
     else

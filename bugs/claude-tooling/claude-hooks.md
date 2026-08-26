@@ -46,6 +46,7 @@
 | 20 | Hook liest stdin (Security-Guard) | NIE `jq` — Control-Chars im stdin-JSON brechen jq → Guard wird STILL umgangen; `python json.loads` + fail-closed | §16.2 |
 | 21 | Tool-Hook soll im Subagent feuern | PreToolUse/PostToolUse feuern NICHT fuer Tool-Calls IN Subagents — SubagentStart/Stop nutzen | §16.3 |
 | 22 | Windows: `.sh`-Hook-Pfad mit Leerzeichen | Pfad in settings.json `"..."` quoten + Forward-Slashes + voller Interpreter-Pfad (sonst Arg-Splitting) | §16.6 |
+| 23 | Statusline zeigt nach langer Pause falsche 5h/7d-Werte | Uralte `state/rate-limits-*.json` gewinnen das MAX. Beim LESEN Eintraege mit **abgelaufenem** 5h-Fenster verwerfen + Cleanup deterministisch per Marker statt Modulo-Lotterie | §13.8 |
 
 ---
 
@@ -613,6 +614,54 @@ enden nach ihren Funktionsdefinitionen OHNE top-level `exit`. Test:
 `hook-exit0-guard` muss Bibliotheken (`hook-log` etc.) vom exit-0-Zwang AUSNEHMEN
 (`grep -v 'hook-log'` / `-notmatch 'hook-log'`), sonst erzwingt der Guard genau diesen Bug.
 **Quelle:** eigener Vorfall 2026-06-15 (Hook-Drift-Aufloesung).
+
+---
+
+### 13.8 Statusline zeigt nach langer Rechner-Pause falsche rate-limit-Werte (uralte State-Files)  ⭐
+
+**Symptom:** Nach wochenlanger Pause zeigt die Statusline beim Session-Start einen viel zu hohen
+7-Tage-Wert (z.B. `7d 84%` statt `0%`) — und korrigiert sich **nach einer Weile von allein**.
+Genau dieses "erst falsch, dann von selbst richtig" ist der Fingerabdruck dieses Bugs.
+
+**Root Cause (zwei Fehler, die sich gegenseitig verstaerken):**
+
+1. **Beim LESEN wurde nie geprueft, ob ein State-File noch lebt.** Der Cross-Session-State
+   (`~/.claude/state/rate-limits-<sid>.json`) wird ueber alle Sessions per MAX aggregiert. Der
+   Fenster-Filter nimmt das `seven_d_resets` der *frischesten* Datei als Referenz. Liegen beim
+   Session-Start NUR Leichen da (eigene Session hat noch nichts geschrieben, weil `rate_limits`
+   erst nach dem ersten API-Call im stdin steht), gilt die juengste **Leiche** als "die frischeste"
+   und gewinnt das MAX. Sobald die eigene Session ihr File schreibt, kippt der Vergleich → der Wert
+   wird "von allein" korrekt.
+2. **Der 24h-Cleanup lief praktisch nie.** Bedingung war `if [ $((now_ts % 600)) -lt 2 ]` — ein
+   2-Sekunden-Fenster alle 600 s, also **0,33 % Trefferchance pro Aufruf**. Das setzt voraus, dass
+   die Statusline wirklich sekuendlich laeuft. Bei einem Rechner, der wochenlang stillsteht, wird
+   das Fenster nie getroffen: Es lagen 58 Tage alte Files mit `seven_d: 84` herum.
+
+**Fix (Defense in Depth, beide Schichten noetig):**
+
+| Schicht | Wo | Was |
+|---------|-----|-----|
+| 1 — Anzeige (praeventiv) | jq-`$valid`-Filter (`.sh`) bzw. Lese-Schleife (`.ps1`) | Eintrag verwerfen wenn `five_h_resets` in der VERGANGENHEIT liegt **oder** `ts_seen` aelter als 5 h (18000 s). Lebende Sessions refreshen staendig und haben IMMER einen Reset in der Zukunft |
+| 2 — Aufraeumen (reaktiv) | Cleanup-Block | Modulo-Lotterie ersetzt durch Marker-Datei `state/.last-cleanup`: aelter als 600 s (oder fehlend) → aufraeumen. Laeuft damit GARANTIERT beim ersten Aufruf nach einer Pause |
+
+Schicht 1 allein macht die **Anzeige** korrekt (auch wenn Muell herumliegt), Schicht 2 verhindert die
+Muellansammlung. Schicht 1 ist noetig, weil eine 20 h alte Leiche unter der 24-h-Cleanup-Grenze liegt
+und trotzdem tot ist.
+
+**Verlustfrei:** Verworfen wird ausschliesslich, was ein nachweislich abgelaufenes Zeitfenster
+beschreibt — kein Wert eines laufenden Fensters kann verloren gehen. Die Performance-Sorge von
+2026-05-09 bleibt gewahrt: das teure `find`/`Get-ChildItem` laeuft weiterhin hoechstens alle 10 Min,
+pro Aufruf kostet nur ein `stat` auf EINE Datei.
+
+**Erkennen (Diagnose in einem Befehl):**
+```bash
+now=$(date +%s); for f in ~/.claude/state/rate-limits-*.json; do
+  jq -r --argjson n "$now" '"\(input_filename|split("/")|last)  ts_seen vor \((($n - .ts_seen)/3600)|floor)h  5h-Reset \(if .five_h_resets < $n then "ABGELAUFEN" else "laeuft" end)  7d=\(.seven_d)%"' "$f"
+done
+```
+
+**Quelle:** eigener Vorfall 2026-08-26 (Frank-Bug-Report nach langer Rechner-Pause, Claude Code
+2.1.246). Reproduziert, gefixt und verifiziert in `statusline.sh` + `statusline.ps1`.
 
 ---
 

@@ -148,6 +148,13 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-06-30 19:01 — Hook: startup-checks.ps1 — Python-Stub-Shadowing automatisch geheilt: python.exe, python3.exe, pythonw.exe, py.exe aus WindowsApps entfernt (echtes Python: C:\Users\barwa\AppData\Local\Python\bin\python.exe)
 ### 2026-06-30 19:06 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--WINDOWS-system32 settings.local.json erstellt — Status: AUTO-GEFIXT
 ### 2026-07-08 22:29 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--Users-barwa-proggs settings.local.json erstellt — Status: AUTO-GEFIXT
+
+### 2026-08-26 14:43 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"011621b3-e6b6-453c-8db8-3a0d357bd072","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/011621b3-e6b6-453c-8db8-3a0d357bd072.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"authentication_failed","last_assistant_message":"Not logged in · Please run /login"}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -195,9 +202,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-06-30 (Windows-Session nach laengerer Pause: Versions-Drift behoben, v2.1.196 lokal verifiziert; verwaister stash-pop-Konflikt in MEMORY.md aufgeloest)
+**Stand:** 2026-08-26, 14:56 (macOS-Session nach ~8 Wochen Pause: grosses Claude-Code-Update v2.1.196 -> **v2.1.246**, Modell jetzt **Opus 5 (1M context)**. Statusline-Bug behoben: uralte state/rate-limits-Leichen verfaelschten die 7d-Anzeige, siehe bugs/claude-tooling/claude-hooks.md 13.8)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.196** (Drift behoben 2026-06-30: stand auf v2.1.177), Opus 4.8 (1M context, neuer Default seit Mai — High Effort by Default, Lean System Prompt, Dynamic Workflows Research Preview)
+- **Plattform (zuletzt aktiv):** macOS 26.5.1 (arm64), Claude Code **v2.1.246** (Drift behoben 2026-08-26: stand auf v2.1.196), **Opus 5 (1M context)**. Windows-Stand vom 2026-06-30: Windows 11 Home 10.0.26200 (x64), damals v2.1.196 — beim naechsten Windows-Start ebenfalls aktualisieren
 - **Sprachen:** Rust 1.94.0 (1 Minor hinter, CVE-2026-33055/33056), Go 1.26.2 (1 Patch hinter), Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12 (1 Patch hinter), Bun 1.3.11 (2 Patch hinter), Node.js v24.15.0 (LTS aktuell)
 - **Effort Level:** high (Standard seit 2026-04-12). Manuelle Aenderung bleibt bis Session-Ende erhalten (CLAUDE.md-Update 2026-05-08).
 - **AUTOCOMPACT:** 100 (dauerhafter Standard ab 2026-05-24; grosse Komprimierung erst bei 100%, Microcompact erledigt den Rest. Alter Wert 85 war wegen Math.min-Clamp wirkungslos)
@@ -210,7 +217,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Session-Scorer:** v4 — Dedup-Bug 2026-05-10 GEFIXT (R7-Diagnose: Loop ueber letzte 10 Lines statt nur lastLine; reines session_id-Matching ohne "similar turns"-Toleranz nach Challenger-Review)
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Sicherheit:** Claude Code v2.1.196 (CVE-Stand fuer 2.1.196 noch nicht geprueft — Best-Practices/Security-Recherche empfohlen). NEU offen: Axios npm Supply-Chain (NK-Attribution, April 2026) — npm audit in PromptBoard + VoiceOverlay-Projekten DRINGEND. Comment-and-Control Prompt Injection 2.0 (Mai 2026, Microsoft Research) — Parry-Scanner aktiv halten.
+- **Sicherheit:** Claude Code v2.1.246 (CVE-Stand fuer 2.1.246 noch nicht geprueft — Best-Practices/Security-Recherche empfohlen). NEU offen: Axios npm Supply-Chain (NK-Attribution, April 2026) — npm audit in PromptBoard + VoiceOverlay-Projekten DRINGEND. Comment-and-Control Prompt Injection 2.0 (Mai 2026, Microsoft Research) — Parry-Scanner aktiv halten.
 - **Speicherplatz (Windows):** **97% belegt, ~28GB frei (KRITISCH)** — 2026-05-30: 436MB sichere Caches geraeumt. Grosse regenerierbare Caches bewusst behalten (Frank-Entscheidung): ~/.gradle 11G, build/-Ordner 5.6G, ~/.claude/projects 4.2G (cleanupPeriodDays=99999), plugins 2.1G. Heartbeat zeigt seit #1209 WARNING statt CRITICAL (GB-basierte Schwelle: CRITICAL erst <10GB frei) — kein Falsch-Alarm mehr, warnt aber weiter.
 - **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
 - **Evolution-Analyst (2026-05-10):** Quality 8.72→8.74 PLATEAU. Meta-Intelligence KRITISCH bei 10% (Schwelle 20%). Intelligence-Vorschlaege bei 40% (Pflicht 70%). Compound Effect Pause: 20 Tage seit #6 (2026-04-20). Session-Scorer Duplikat-Bug verfaelschte die Messung — nach Fix erneute Messung in 5 Sessions noetig.
@@ -218,7 +225,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** Beide Plattformen synchron. macOS-Stand wird beim naechsten Mac-Start aufgeholt.
 - **[2026-05-10 19:30] /self-improve Thorough**: Lauf abgeschlossen — Merge-Konflikt MEMORY.md gefixt, 35 Spam-Eintraege archiviert, 3 Stop-Hook-Stale-Eintraege als GEFIXT markiert (Compound Effect #5), session-scorer.ts Dedup-Fix umgesetzt, startup-checks Cooldown gestuft (.ps1+.sh), worktree.baseRef:"fresh" eingetragen, R8-Findings (Anthropic Dreaming, Darwin Goedel Machine, ARISE, Outcomes/Grader) in Forschung.md ergaenzt.
 - **[2026-05-10 19:22] evolution-analyst**: PLATEAU (8.72→8.74, +0.02): Qualitaet stabil aber Meta-Intelligence KRITISCH (10% self-improving, 40% Vorschlaege) — groesste Schwaeche ist fehlendes 7. Compound-Effect seit 3 Wochen und 6 unumgesetzte UMZUSETZEN-Forschungseintraege (SICA, MAR, TraceCoder, When-To-Verify, KGCompass, Fault-Localization) die alle >30 Tage alt sind.
-- **Pending Admin Updates (1):** Microsoft.VCRedist.2015+.x64
+- **Pending Admin Updates (20):** abseil,ada-url,biome,c-ares,ca-certificates,certifi,dav1d,deno,dotnet,dust,eza,fd,ffmpeg,fmt,fontconfig,fzf,gcc,gh,git,glib,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -403,7 +410,7 @@ _Noch keine Eintraege._
 - **[2026-05-30 16:41] researcher**: Claude Code 2.1.154-2.1.158: Dynamic Workflows (JS-Orchestrierung, max 16 concurrent / 1000 total Agents, /workflows, resumable, Research Preview); Opus 4.8 neues Default-Modell (High Effort by Default, /effort ultracode=xhigh+auto-workflows); Background Shell Commands (!cmd, --bg --exec); Streaming Tool Execution immer aktiv; EnterWorktree mid-session + Worktrees nach Session-Ende entsperrt (v2.1.157); agent-Feld in settings.json fuer dispatched Sessions. Datei aktualisiert: best-practices/claude-tooling/agents.md.
 - **[2026-05-30 16:42] researcher**: Claude Code 2.1.154: Opus 4.8 eingefuehrt (Standard-Effort=high, xhigh fuer haerteste Tasks), Lean System Prompt jetzt Default fuer Opus 4.8+ (spart Token), Opus 4.8 Fast Mode $10/$50 MTok (3x guenstiger als Opus 4.6/4.7 Fast Mode $30/$150), Effort-Labels umbenannt Faster/Smarter, CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE deprecated (entfernt 01.06.2026 - Migration: /model claude-opus-4-6[1m] + /fast on), Dynamic Workflows Research Preview, Tokenizer-Warnung Opus 4.7+: bis zu 35% mehr Tokens. Datei aktualisiert: best-practices/claude-tooling/token-effizienz.md (Stand 2026-05-30, Claude Code 2.1.158)
 - **[2026-05-30 16:43] researcher**: Claude Code 2.1.154-2.1.158 Settings-Delta eingearbeitet in best-practices/07-settings: Auto-Mode auf Bedrock/Vertex/Foundry via CLAUDE_CODE_ENABLE_AUTO_MODE=1 (Opus 4.7/4.8); Workflow-Keyword-Trigger deaktivierbar in /config; OTEL_LOG_TOOL_DETAILS=1 fuer tool_parameters; agent-Feld in settings.json fuer dispatched sessions; CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE deprecated 06/01; CLAUDE_CODE_ALWAYS_ENABLE_EFFORT fuer Nicht-Standardmodelle; autoMode-Block mit environment/allow/soft_deny/hard_deny und $defaults-Pflicht; Worktree-Unlock beim Agent-Ende; Frank-Relevanz: bypassPermissions bleibt optimal, Auto-Mode ist kein Ersatz.
-- **[2026-06-30 19:01] Cross-CLI Delta:** Codex(2) neue Commits — Bruecke starten fuer Details.
+- **[2026-08-26 14:41] Cross-CLI Delta:** Codex(1) neue Commits — Bruecke starten fuer Details.
 ---
 
 - **[2026-04-20] KGCompass Repository-Wissensgraph** - Status: UMZUSETZEN | arXiv 2503.21710
