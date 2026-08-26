@@ -9,13 +9,16 @@ set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$DIR/.." && pwd)"
-TARGET_APP="$PROJECT_DIR/build/OpenLauncher.app"
+# Bevorzugt die installierte Fassung in /Applications - die findet auch Spotlight. Ist sie noch
+# nicht installiert, zeigt das Symbol auf den Build-Ordner.
+TARGET_APP="/Applications/OpenLauncher.app"
+[ -d "$TARGET_APP" ] || TARGET_APP="$PROJECT_DIR/build/OpenLauncher.app"
 ICON="$PROJECT_DIR/OpenLauncher/Resources/AppIcon.icns"
 DESKTOP_APP="$HOME/Desktop/OpenLauncher.app"
 
 if [ ! -d "$TARGET_APP" ]; then
-    echo "❌ Der Launcher ist noch nicht gebaut: $TARGET_APP" >&2
-    echo "   Zuerst 'bash $PROJECT_DIR/build.sh' ausfuehren." >&2
+    echo "❌ Der Launcher ist weder installiert noch gebaut." >&2
+    echo "   Zuerst 'bash $PROJECT_DIR/update-launcher.sh' ausfuehren." >&2
     exit 1
 fi
 

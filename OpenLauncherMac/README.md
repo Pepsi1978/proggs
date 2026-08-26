@@ -4,16 +4,34 @@ Die macOS-Fassung des OpenLaunchers — **1:1 dieselbe Anwendung** wie `~/proggs
 (Windows, C#/WPF), nur in Swift/AppKit statt in WPF. Gleiche Oberfläche, gleiche Modelle, gleiche
 Profile, gleiche Arbeitsmodi, gleiches Startverhalten.
 
-## Bauen und starten
+## Aktualisieren — der vorgeschriebene Weg
+
+```bash
+bash ~/proggs/OpenLauncherMac/update-launcher.sh
+```
+
+Bauen, prüfen und ersetzen in **einem** Schritt — das Gegenstück zu `update-launcher.ps1` unter
+Windows. Von Hand wurde dort mehrfach die alte Fassung gestartet und als neue gemeldet; deshalb
+macht das Skript alles nacheinander und prüft jeden Schritt:
+
+1. fragt nach, bevor ein laufender Launcher geschlossen wird,
+2. schließt ihn sauber (statt ihn abzuschießen), mit 10 Sekunden Geduld,
+3. prüft den Build-Exit-Code,
+4. prüft am Zeitstempel, dass wirklich eine **neue** Datei entstanden ist,
+5. installiert nach `/Applications` (dort findet Spotlight ihn),
+6. startet ihn und erkennt einen sofortigen Absturz der neuen Fassung,
+7. meldet am Ende Version und Build-Zeitpunkt der laufenden Fassung.
+
+## Nur bauen
 
 ```bash
 bash ~/proggs/OpenLauncherMac/build.sh
-open ~/proggs/OpenLauncherMac/build/OpenLauncher.app
 ```
 
 Gebaut wird per `swiftc` als `.app`-Bundle (kein Xcode-Projekt, kein SwiftPM — wie bei den anderen
 macOS-Apps im Repo). `build.sh` setzt den Build-Zeitstempel selbst in die `Info.plist`, damit in der
-Titelleiste nie eine von Hand getippte Uhrzeit steht.
+Titelleiste nie eine von Hand getippte Uhrzeit steht. Zum Ausliefern trotzdem
+`update-launcher.sh` nehmen — `build.sh` allein ersetzt die installierte Fassung nicht.
 
 ## Tests
 
@@ -56,7 +74,9 @@ Der Inhalt (`rules/ agents/ commands/ skills/`, Profiltexte, Modus-Prompts) ist 
 bash ~/proggs/OpenLauncherMac/tools/install-desktop-icon.sh
 ```
 
-Legt `~/Desktop/OpenLauncher.app` an — **ohne Verknüpfungspfeil**. Weder ein Alias noch ein Symlink
+Legt `~/Desktop/OpenLauncher.app` an — **ohne Verknüpfungspfeil**. Es zeigt auf die installierte
+Fassung in `/Applications` (und nur ersatzweise auf den Build-Ordner, solange noch nichts
+installiert ist). Weder ein Alias noch ein Symlink
 kann das: Finder stempelt beiden das kleine Pfeil-Abzeichen auf. Stattdessen entsteht ein winziges
 eigenes Programm, das nur eine Zeile enthält („öffne den echten OpenLauncher"). Es trägt kein
 Abzeichen und bleibt nach jedem Neubau aktuell, statt zu veralten.
