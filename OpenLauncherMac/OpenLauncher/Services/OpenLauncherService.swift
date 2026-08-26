@@ -13,7 +13,7 @@ import Foundation
 ///
 /// Plattform-Unterschiede zu Windows:
 ///   - Startskript ist ein zsh-Skript statt eines PowerShell-Skripts.
-///   - Terminal ist iTerm2 (Fallback Terminal.app) statt Windows Terminal.
+///   - Terminal ist Terminal.app (das Standard-Terminal von macOS) statt Windows Terminal.
 ///   - Prozess-Prioritaet: `renice` statt ProcessPriorityClass.AboveNormal.
 final class OpenLauncherService {
     private static let gpt55Slug = "gpt-5.5"
@@ -225,7 +225,7 @@ final class OpenLauncherService {
         trap cleanup EXIT INT TERM
 
         \(processPriorityScript)
-        \(tabColor.iTermEscapeSequence)
+        \(tabColor.tabColorScript)
         printf '\\033]0;\(title)\\a'
 
         cd \(Shell.singleQuoted(workDir)) || exit 1
@@ -326,7 +326,7 @@ final class OpenLauncherService {
         trap cleanup EXIT INT TERM
 
         \(processPriorityScript)
-        \(tabColor.iTermEscapeSequence)
+        \(tabColor.tabColorScript)
         printf '\\033]0;\(title)\\a'
 
         cd \(Shell.singleQuoted(workDir)) || exit 1

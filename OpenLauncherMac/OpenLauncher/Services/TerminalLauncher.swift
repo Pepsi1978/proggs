@@ -1,18 +1,26 @@
 import Foundation
 
-/// Eine Terminal-Tab-Farbe. Windows uebergibt sie an `wt --tabColor`; macOS setzt sie ueber die
-/// iTerm2-Escape-Sequenz aus dem Startskript heraus.
+/// Eine Terminal-Tab-Farbe. Windows uebergibt sie an `wt --tabColor`.
 struct TerminalTabColor {
     let name: String
     let hex: String
 
-    /// iTerm2-Proprietaersequenz zum Faerben des Tabs. Terminal.app ignoriert sie stillschweigend,
-    /// weshalb sie auch im Fallback gefahrlos im Skript stehen bleiben kann.
-    var iTermEscapeSequence: String {
+    /// Faerbt den Tab ein - aber NUR, wenn das Terminal die Sequenz auch versteht.
+    ///
+    /// Terminal.app (das Standard-Terminal von macOS) kennt keine per-Tab-Farbe: Farben kommen dort
+    /// aus dem gewaehlten Profil und gelten fuer alle Fenster. Die Sequenz wird deshalb zur Laufzeit
+    /// an `$TERM_PROGRAM` geknuepft - in Terminal.app passiert schlicht nichts, statt dass
+    /// unverstandene Steuerzeichen im Fenster landen. Der Farbname bleibt trotzdem sichtbar: er
+    /// steht im Tab-Titel, und bei Claude Code faerbt `/color <name>` zusaetzlich die Oberflaeche.
+    var tabColorScript: String {
         let (r, g, b) = rgb
-        return "printf '\\033]6;1;bg;red;brightness;\(r)\\a'\n"
-             + "printf '\\033]6;1;bg;green;brightness;\(g)\\a'\n"
-             + "printf '\\033]6;1;bg;blue;brightness;\(b)\\a'\n"
+        return """
+        if [ "$TERM_PROGRAM" = "iTerm.app" ]; then
+            printf '\\033]6;1;bg;red;brightness;\(r)\\a'
+            printf '\\033]6;1;bg;green;brightness;\(g)\\a'
+            printf '\\033]6;1;bg;blue;brightness;\(b)\\a'
+        fi
+        """
     }
 
     var rgb: (Int, Int, Int) {
@@ -36,59 +44,25 @@ private struct TabColorState: Codable {
 /// Oeffnet ein neues Terminal-Fenster/-Tab und laesst darin ein Startskript laufen.
 ///
 /// Windows nutzt dafuer Windows Terminal (`wt new-tab --tabColor ... pwsh -File script.ps1`) mit
-/// einem PowerShell-Retry-Wrapper. macOS-Gegenstueck:
-///   1. **iTerm2** (installiert) - neues Tab im aktuellen Fenster per AppleScript, Tab-Farbe und
-///      Titel setzt das Skript selbst per Escape-Sequenz.
-///   2. **Terminal.app** als Fallback - `open -a Terminal <script>`; Tab-Farben kennt es nicht,
-///      der Titel wird trotzdem gesetzt.
-/// Der Retry-Wrapper entfaellt: er umgeht einen Fehler der Windows-Terminal-Kommandozeile, den es
-/// auf macOS nicht gibt.
+/// einem PowerShell-Retry-Wrapper. Auf macOS ist das Gegenstueck **Terminal.app**, das
+/// Standard-Terminal des Systems: `open -a Terminal <skript>` startet das Skript in einem neuen
+/// Fenster bzw. Tab (je nach Systemeinstellung "Tabs bevorzugen"). Der Retry-Wrapper entfaellt - er
+/// umgeht einen Fehler der Windows-Terminal-Kommandozeile, den es hier nicht gibt.
 enum TerminalLauncher {
-    private static let iTermBundleId = "com.googlecode.iterm2"
-
-    static var isITermInstalled: Bool {
-        FileManager.default.fileExists(atPath: "/Applications/iTerm.app")
-            || FileManager.default.fileExists(atPath: "\(Paths.home)/Applications/iTerm.app")
-    }
-
-    /// Startet das Skript in einem neuen Terminal-Tab. Gibt den verwendeten Terminal-Namen zurueck.
+    /// Startet das Skript in Terminal.app. Gibt den verwendeten Terminal-Namen zurueck.
     @discardableResult
     static func openScript(_ scriptPath: String, workDir: String) -> String {
+        // Ohne Ausfuehrungsrecht wuerde Terminal.app das Skript nur im Editor zeigen statt es zu starten.
         try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
 
-        if isITermInstalled, openInITerm(scriptPath: scriptPath, workDir: workDir) {
-            return "iTerm2"
-        }
-        // Fallback: Terminal.app oeffnet das Skript in einem neuen Fenster.
-        Shell.launch("/usr/bin/open", ["-a", "Terminal", scriptPath], workingDirectory: workDir)
-        return "Terminal.app"
-    }
-
-    private static func openInITerm(scriptPath: String, workDir: String) -> Bool {
-        // Der Befehl laeuft als Login-Shell, damit das Skript denselben PATH sieht wie ein von Hand
-        // geoeffnetes Terminal (eine per Finder gestartete .app erbt nur einen minimalen PATH).
-        let command = "/bin/zsh -l \(Shell.singleQuoted(scriptPath))"
-        let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
-                             .replacingOccurrences(of: "\"", with: "\\\"")
-        let script = """
-        tell application id "\(iTermBundleId)"
-            activate
-            if (count of windows) = 0 then
-                create window with default profile command "\(escaped)"
-            else
-                tell current window
-                    create tab with default profile command "\(escaped)"
-                end tell
-            end if
-        end tell
-        """
-        let result = Shell.run("/usr/bin/osascript", ["-e", script], timeout: 20)
+        let result = Shell.run("/usr/bin/open", ["-a", "Terminal", scriptPath],
+                               workingDirectory: workDir, timeout: 20)
         if result.exitCode != 0 {
-            Logger.shared.warn("TerminalLauncher", "openInITerm",
-                               "iTerm2-Start fehlgeschlagen, Fallback auf Terminal.app: \(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))")
-            return false
+            Logger.shared.error("TerminalLauncher", "openScript",
+                                "Terminal.app konnte nicht geoeffnet werden: \(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))",
+                                ["script": scriptPath])
         }
-        return true
+        return "Terminal.app"
     }
 
     // ===================== Tab-Farben =====================

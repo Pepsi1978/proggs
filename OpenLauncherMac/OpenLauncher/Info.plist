@@ -25,7 +25,7 @@
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Pepsi1978</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>OpenLauncher öffnet iTerm2 bzw. Terminal, um Claude Code oder OpenCode in einem neuen Tab zu starten.</string>
+    <string>OpenLauncher öffnet das Terminal, um Claude Code oder OpenCode darin zu starten.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

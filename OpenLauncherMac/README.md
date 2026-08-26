@@ -50,11 +50,22 @@ Die macOS-Profile enthalten dieselben Inhalte mit `bash … .sh`-Hooks und `/Use
 Der Inhalt (`rules/ agents/ commands/ skills/`, Profiltexte, Modus-Prompts) ist ansonsten wortgleich
 übernommen, einschließlich der Verweise auf `~/SK`, `~/proggs/best-practices` und `~/proggs/bugs`.
 
+## Terminal
+
+Gestartet wird im **Standard-Terminal von macOS** (Terminal.app). Ob dabei ein neues Fenster oder
+ein neuer Tab aufgeht, entscheidet die Systemeinstellung „Tabs bevorzugen beim Öffnen von
+Dokumenten" — der Launcher überlässt das bewusst dem System.
+
+Die rotierende Tab-Farbe aus der Windows-Fassung hat auf macOS kein direktes Gegenstück:
+Terminal.app färbt nicht einzelne Tabs, sondern nimmt die Farben aus dem gewählten Profil. Der
+Farbname bleibt aber sichtbar — er steht im Tab-Titel (`Claude-green-xhigh`, `OpenCode-blue-high`),
+und bei Claude Code färbt zusätzlich `/color <name>` die Oberfläche selbst, genau wie unter Windows.
+
 ## Plattform-Abbildung im Detail
 
 | Windows | macOS |
 |---------|-------|
-| Windows Terminal (`wt new-tab --tabColor`) | iTerm2 (neuer Tab, Tab-Farbe per Escape-Sequenz), Fallback Terminal.app |
+| Windows Terminal (`wt new-tab --tabColor`) | **Terminal.app** (`open -a Terminal <skript>`) |
 | PowerShell-Startskript (`.ps1`) | zsh-Startskript (`.sh`) |
 | `%APPDATA%\OpenLauncher` | `~/Library/Application Support/OpenLauncher` |
 | `%LOCALAPPDATA%\OpenLauncher\sessions` | `~/Library/Application Support/OpenLauncher/sessions` |
@@ -93,6 +104,5 @@ OpenLauncherMac/
 
 - macOS 13 oder neuer, Apple Silicon
 - Xcode Command Line Tools (`swiftc`)
-- iTerm2 (empfohlen) — sonst wird Terminal.app verwendet
 - `claude` und/oder `opencode` im PATH
 - Optional: LM Studio für lokale Modelle
