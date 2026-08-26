@@ -354,10 +354,12 @@ private fun Anhangsmenue(
     beiHaftnotiz: () -> Unit,
     beiTabelle: () -> Unit,
     beiNachDerWahl: () -> Unit = beiSchliessen,
+    /** Rechtsbündig am Plus der Karte — für den rechten Daumen, der dort wählt. */
+    rechtsbuendig: Boolean = false,
 ) {
     val farben = Farben
     Popup(
-        alignment = Alignment.BottomStart,
+        alignment = if (rechtsbuendig) Alignment.BottomEnd else Alignment.BottomStart,
         offset = androidx.compose.ui.unit.IntOffset(0, -160),
         onDismissRequest = beiSchliessen,
         properties = PopupProperties(focusable = true),
@@ -368,23 +370,23 @@ private fun Anhangsmenue(
                 .schwebendeKarte(farben, Masse.gruppeRadius)
                 .padding(vertical = 8.dp),
         ) {
-            Menuezeile("PDF", Icons.Outlined.PictureAsPdf) { beiNachDerWahl(); beiPdf() }
+            Menuezeile("PDF", Icons.Outlined.PictureAsPdf, rechtsbuendig) { beiNachDerWahl(); beiPdf() }
             // Die Sprachaufnahme gibt es nur im Entwurf — an einer fertigen Notiz ist das
             // Mikrofon ohnehin sichtbar, der Eintrag wäre doppelt.
             if (beiSprachaufnahme != null) {
-                Menuezeile("Sprachaufnahme", Icons.Outlined.Mic) { beiNachDerWahl(); beiSprachaufnahme() }
+                Menuezeile("Sprachaufnahme", Icons.Outlined.Mic, rechtsbuendig) { beiNachDerWahl(); beiSprachaufnahme() }
             }
             Box(
                 Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     .fillMaxWidth().height(1.dp).background(farben.rand),
             )
-            Menuezeile("Bild", Icons.Outlined.Image) { beiNachDerWahl(); beiBild() }
-            Menuezeile("Kamera", Icons.Outlined.PhotoCamera) { beiNachDerWahl(); beiKamera() }
-            Menuezeile("Dokumentenscan", Icons.Outlined.DocumentScanner) { beiNachDerWahl(); beiScan() }
-            Menuezeile("Audiodatei", Icons.Outlined.MusicNote) { beiNachDerWahl(); beiAudio() }
-            Menuezeile("Zeichnung", Icons.Outlined.Palette) { beiNachDerWahl(); beiZeichnung() }
-            Menuezeile("Haftnotiz", Icons.Outlined.StickyNote2) { beiNachDerWahl(); beiHaftnotiz() }
-            Menuezeile("Tabelle", Icons.Outlined.TableChart) { beiNachDerWahl(); beiTabelle() }
+            Menuezeile("Bild", Icons.Outlined.Image, rechtsbuendig) { beiNachDerWahl(); beiBild() }
+            Menuezeile("Kamera", Icons.Outlined.PhotoCamera, rechtsbuendig) { beiNachDerWahl(); beiKamera() }
+            Menuezeile("Dokumentenscan", Icons.Outlined.DocumentScanner, rechtsbuendig) { beiNachDerWahl(); beiScan() }
+            Menuezeile("Audiodatei", Icons.Outlined.MusicNote, rechtsbuendig) { beiNachDerWahl(); beiAudio() }
+            Menuezeile("Zeichnung", Icons.Outlined.Palette, rechtsbuendig) { beiNachDerWahl(); beiZeichnung() }
+            Menuezeile("Haftnotiz", Icons.Outlined.StickyNote2, rechtsbuendig) { beiNachDerWahl(); beiHaftnotiz() }
+            Menuezeile("Tabelle", Icons.Outlined.TableChart, rechtsbuendig) { beiNachDerWahl(); beiTabelle() }
         }
     }
 }
@@ -503,6 +505,7 @@ fun NotizAnhangsmenue(
         // Registrierung des Datei-Wählers. Die Auswahl lief dann ins Leere. Zugemacht wird
         // erst, wenn der Anhang wirklich da ist (oder ein Fehler gemeldet wurde).
         beiNachDerWahl = { },
+        rechtsbuendig = true,
         beiPdf = {
             runCatching { pdfWahl.launch(arrayOf("application/pdf")) }
                 .onFailure { meld("Es wurde keine Dateiauswahl gefunden.") }
@@ -564,7 +567,7 @@ fun NotizAnhangsmenue(
 }
 
 @Composable
-private fun Menuezeile(text: String, symbol: ImageVector, beiDruck: () -> Unit) {
+private fun Menuezeile(text: String, symbol: ImageVector, rechtsbuendig: Boolean = false, beiDruck: () -> Unit) {
     val farben = Farben
     Row(
         modifier = Modifier
@@ -574,9 +577,22 @@ private fun Menuezeile(text: String, symbol: ImageVector, beiDruck: () -> Unit) 
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(symbol, null, Modifier.size(20.dp), tint = farben.textMittel)
-        Spacer(Modifier.width(14.dp))
-        Text(text, style = Schriften.einstellung, color = farben.textStark)
+        if (rechtsbuendig) {
+            // Gespiegelt: der Text trägt die Zeile, das Symbol liegt ganz rechts am Rand —
+            // genau da, wo der Daumen landet, wenn er vom Plus kommt.
+            Text(
+                text,
+                style = Schriften.einstellung,
+                color = farben.textStark,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(14.dp))
+            Icon(symbol, null, Modifier.size(20.dp), tint = farben.textMittel)
+        } else {
+            Icon(symbol, null, Modifier.size(20.dp), tint = farben.textMittel)
+            Spacer(Modifier.width(14.dp))
+            Text(text, style = Schriften.einstellung, color = farben.textStark)
+        }
     }
 }
 
