@@ -176,11 +176,21 @@ fun Notizkarte(
 
             if (notiz.zustand == Notizzustand.FERTIG) {
                 Spacer(Modifier.height(10.dp))
+                // Eine einzige Reihe, alle Aktionen nebeneinander: Vorlesen, Verbessern,
+                // Nachtrag, Verschieben, Kopieren, Löschen. Alle tragen dieselbe Farbe und
+                // Stärke — keines soll durch Aufmachung wichtiger scheinen als die anderen.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Kartenknopf(
+                        symbol = if (liestVor) Icons.Filled.StopCircle else Icons.Outlined.VolumeUp,
+                        beschreibung = if (liestVor) "Vorlesen anhalten" else "Notiz vorlesen",
+                        farbe = farben.textMittel,
+                        beiDruck = beiVorlesen,
+                    )
+                    Spacer(Modifier.width(4.dp))
                     if (notiz.istVerbessert) {
                         Kartenknopf(
                             symbol = Icons.Outlined.Undo,
@@ -198,25 +208,9 @@ fun Notizkarte(
                     }
                     Spacer(Modifier.width(4.dp))
                     Kartenknopf(
-                        symbol = if (liestVor) Icons.Filled.StopCircle else Icons.Outlined.VolumeUp,
-                        beschreibung = if (liestVor) "Vorlesen anhalten" else "Notiz vorlesen",
-                        farbe = if (liestVor) farben.akzent else farben.textMittel,
-                        beiDruck = beiVorlesen,
-                    )
-                }
-
-                // Die zweite Reihe: die häufigsten Aktionen aus dem Langdruck-Menü, direkt
-                // an der Karte. Der Nachtrag ist der wichtigste Weg — ein Tipp, und das
-                // Mikrofon läuft, ohne erst durchs Menü zu müssen.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Kartenknopf(
                         symbol = Icons.Outlined.Mic,
                         beschreibung = "Nachtrag einsprechen",
-                        farbe = farben.akzent,
+                        farbe = farben.textMittel,
                         beiDruck = beiNachtrag,
                     )
                     Spacer(Modifier.width(4.dp))
@@ -237,7 +231,7 @@ fun Notizkarte(
                     Kartenknopf(
                         symbol = Icons.Outlined.DeleteOutline,
                         beschreibung = "Notiz löschen",
-                        farbe = farben.textSchwach,
+                        farbe = farben.textMittel,
                         beiDruck = beiLoeschen,
                     )
                 }
