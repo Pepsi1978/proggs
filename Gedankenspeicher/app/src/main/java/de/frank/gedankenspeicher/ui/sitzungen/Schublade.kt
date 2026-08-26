@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Ordner
+import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.ui.Schubladenansicht
 import de.frank.gedankenspeicher.ui.theme.Farben
@@ -81,6 +82,7 @@ val Favoritengold = Color(0xFFF5B72A)
 fun Schublade(
     sitzungen: List<Sitzung>,
     ordner: List<Ordner>,
+    letzteAktivitaet: Map<Long, Long>,
     ansicht: Schubladenansicht,
     gewaehlterOrdner: Long?,
     freigegebeneSitzung: Long?,
@@ -265,6 +267,7 @@ fun Schublade(
             items(liste, key = { it.id }) { sitzung ->
                 Sitzungszeile(
                     sitzung = sitzung,
+                    letzteAktivitaet = letzteAktivitaet[sitzung.id],
                     offen = sitzung.id == offeneSitzung,
                     ordnername = ordner.firstOrNull { it.id == sitzung.ordnerId }?.name,
                     zugesperrt = sitzung.geschuetzt && sitzung.id != freigegebeneSitzung,
@@ -353,6 +356,7 @@ private fun Reiter(
 @Composable
 private fun Sitzungszeile(
     sitzung: Sitzung,
+    letzteAktivitaet: Long?,
     offen: Boolean,
     ordnername: String?,
     zugesperrt: Boolean,
@@ -408,7 +412,11 @@ private fun Sitzungszeile(
             }
             Text(
                 listOfNotNull(
-                    de.frank.gedankenspeicher.data.Repository.zeitpunkt(sitzung.zuletztGeaendert),
+                    // Die Zeit der jüngsten Aktivität — des letzten Nachtrags oder der
+                    // spätesten Notiz. Sie kommt aus den Notizen selbst und verschwindet
+                    // mit ihnen: nach dem Löschen steht hier nicht mehr die Zeit der
+                    // gelöschten Karte. Eine leere Sitzung zeigt ihre Entstehung.
+                    Repository.zeitpunkt(letzteAktivitaet ?: sitzung.erstelltAm),
                     ordnername,
                 ).joinToString(" · "),
                 style = schrift.zeitstempel,

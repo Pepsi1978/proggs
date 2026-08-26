@@ -31,6 +31,9 @@ object Nachtraege {
     /** Die Überschriftenzeile, wie sie in den Text eingesetzt wird. */
     fun zeile(zeit: Long): String = "— Nachtrag vom ${zeitpunkt(zeit)} —"
 
+    /** Die Überschriftenzeile aus einem bereits formatierten Datum — zum Wiederzusammensetzen. */
+    fun zeileVon(zeitpunktText: String): String = "— Nachtrag vom $zeitpunktText —"
+
     // --- Die rohen Zeitpunkte als JSON-Feld -------------------------------------------------
 
     fun zeitenAusJson(roh: String): List<Long> = runCatching {

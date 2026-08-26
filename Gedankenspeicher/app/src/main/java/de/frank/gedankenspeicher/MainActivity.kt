@@ -623,6 +623,7 @@ private fun Oberflaeche(
             Schublade(
                 sitzungen = verlauf.sitzungen,
                 ordner = verlauf.ordner,
+                letzteAktivitaet = verlauf.letzteAktivitaet,
                 ansicht = verlauf.ansicht,
                 gewaehlterOrdner = verlauf.gewaehlterOrdner,
                 freigegebeneSitzung = verlauf.freigegebeneSitzung,

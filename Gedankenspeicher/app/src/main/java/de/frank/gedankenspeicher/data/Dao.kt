@@ -103,6 +103,10 @@ interface NotizDao {
     @Query("SELECT * FROM notiz WHERE sitzungId = :sitzungId ORDER BY erstelltAm ASC")
     fun ausSitzung(sitzungId: Long): Flow<List<Notiz>>
 
+    /** Alle Notizen, laufend — die Quelle für die Aktivitätszeiten der Seitenleiste. */
+    @Query("SELECT * FROM notiz")
+    fun alleLaufend(): Flow<List<Notiz>>
+
     @Query("SELECT * FROM notiz WHERE id = :id")
     suspend fun eine(id: Long): Notiz?
 

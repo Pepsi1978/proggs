@@ -34,9 +34,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
+import de.frank.gedankenspeicher.data.Nachtraege
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.ui.Bearbeitungszustand
 import de.frank.gedankenspeicher.ui.theme.Farben
@@ -142,6 +149,9 @@ fun BearbeitenBlatt(
  * zerreisst bei jedem Anschlag die Vervollständigung der Bildschirmtastatur. Nur wenn ein
  * Transkript eingesetzt wurde ([Bearbeitungszustand.einfuegeMarke] zählt hoch), wird der
  * Wert von aussen übernommen — samt der neuen Cursorstelle hinter dem Eingesetzten.
+ *
+ * Nachtragszeilen werden farblich gehoben, damit man sie im Fließtext sofort als das
+ * erkennt, was sie sind: Überschriften mit eigenem Zeitpunkt, kein Notiztext.
  */
 @Composable
 private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -> Unit) {
@@ -153,6 +163,20 @@ private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -
     LaunchedEffect(zustand.einfuegeMarke) {
         if (zustand.einfuegeMarke > 0) {
             feld = TextFieldValue(zustand.text, TextRange(zustand.auswahlStart, zustand.auswahlEnde))
+        }
+    }
+    val nachtragsHebung = remember(farben.akzent) {
+        VisualTransformation { eingabe ->
+            val gehoben = AnnotatedString.Builder(eingabe.text).apply {
+                Nachtraege.zeilenMuster.findAll(eingabe.text).forEach { zeile ->
+                    addStyle(
+                        SpanStyle(color = farben.akzent, fontWeight = FontWeight.Medium),
+                        zeile.range.first,
+                        zeile.range.last + 1,
+                    )
+                }
+            }.toAnnotatedString()
+            TransformedText(gehoben, OffsetMapping.Identity)
         }
     }
     Box(
@@ -174,6 +198,7 @@ private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -
             },
             textStyle = schrift.eingabefeld.copy(color = farben.textStark),
             cursorBrush = SolidColor(farben.akzent),
+            visualTransformation = nachtragsHebung,
             modifier = Modifier.fillMaxWidth(),
         )
     }

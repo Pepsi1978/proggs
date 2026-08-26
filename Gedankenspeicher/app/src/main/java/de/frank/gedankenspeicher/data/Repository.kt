@@ -12,6 +12,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 /**
  * **Alles, was mit Daten geschieht, geht hier durch.**
@@ -130,6 +131,21 @@ class Repository(
     fun notizzahl(sitzungId: Long): Flow<Int> = db.sitzungen().notizzahl(sitzungId)
 
     fun letzteNotizzeit(sitzungId: Long): Flow<Long?> = db.sitzungen().letzteNotizzeit(sitzungId)
+
+    /**
+     * Die jüngste Aktivität je Sitzung, direkt aus den Notizen gerechnet: der letzte
+     * Nachtrag oder die späteste Entstehung.
+     *
+     * Bewusst nicht am Merker `zuletztGeaendert` abgelesen — der bleibt auch nach dem
+     * Löschen stehen und kann dann eine Zeit zeigen, deren Notiz längst weg ist. Hier
+     * verschwindet eine Zeit automatisch, sobald ihre Notiz verschwindet, und ein
+     * Nachtrag hebt seine Sitzung genauso an wie eine neue Notiz.
+     */
+    val letzteAktivitaeten: Flow<Map<Long, Long>> = db.notizen().alleLaufend().map { notizen ->
+        notizen.groupBy(Notiz::sitzungId).mapValues { (_, eigene) ->
+            eigene.maxOf(Notiz::letzteTaetigkeit)
+        }
+    }
 
     // --- Verlauf (B-01) --------------------------------------------------------------------
 

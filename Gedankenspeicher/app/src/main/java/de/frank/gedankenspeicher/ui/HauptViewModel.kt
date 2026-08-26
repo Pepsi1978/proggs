@@ -197,6 +197,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             repo.sitzungen.collectLatest { liste -> _verlauf.update { it.copy(sitzungen = liste) } }
         }
         viewModelScope.launch {
+            repo.letzteAktivitaeten.collectLatest { zeiten ->
+                _verlauf.update { it.copy(letzteAktivitaet = zeiten) }
+            }
+        }
+        viewModelScope.launch {
             repo.ordner.collectLatest { liste -> _verlauf.update { it.copy(ordner = liste) } }
         }
         viewModelScope.launch {
@@ -896,7 +901,23 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _verlauf.update { it.copy(verbessertGerade = it.verbessertGerade + notiz.id) }
         viewModelScope.launch {
             try {
-                val neu = repo.verbessere(notiz.text)
+                // Abschnitt für Abschnitt verbessern, nicht den ganzen Text auf einmal:
+                // Die Nachtragszeilen mit ihren Zeitpunkten bleiben unangetastet stehen,
+                // und jeder Abschnitt wird genau dort wieder eingesetzt, wo er war. So
+                // bleibt der Nachtrag nach der Verbesserung ein Nachtrag.
+                val neu = buildString {
+                    Nachtraege.abschnitte(notiz.text).forEachIndexed { nr, abschnitt ->
+                        if (nr > 0) append("\n\n")
+                        val verbessert = runCatching { repo.verbessere(abschnitt.text.trim()) }
+                            .getOrNull()
+                            ?.takeIf(String::isNotBlank)
+                            ?: abschnitt.text
+                        if (abschnitt.nachtragVom != null) {
+                            append(Nachtraege.zeileVon(abschnitt.nachtragVom)).append('\n')
+                        }
+                        append(verbessert)
+                    }
+                }
                 if (neu.isBlank()) {
                     melde("Die Verbesserung kam leer zurück — der Text bleibt, wie er war.")
                     return@launch

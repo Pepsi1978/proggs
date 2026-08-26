@@ -22,6 +22,12 @@ data class Verlaufszustand(
     val sitzung: Sitzung? = null,
     val sitzungen: List<Sitzung> = emptyList(),
     val ordner: List<Ordner> = emptyList(),
+    /**
+     * Die jüngste Aktivität je Sitzung (letzter Nachtrag oder späteste Notiz) — daraus
+     * zeigt die Seitenleiste ihre Zeitstempel. Steht eine Sitzung nicht drin, hat sie
+     * noch keine Notiz.
+     */
+    val letzteAktivitaet: Map<Long, Long> = emptyMap(),
     val ansicht: Schubladenansicht = Schubladenansicht.ALLE,
     val gewaehlterOrdner: Long? = null,
     /**
