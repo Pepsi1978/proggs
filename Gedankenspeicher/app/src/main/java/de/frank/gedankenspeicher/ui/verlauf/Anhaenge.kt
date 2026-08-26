@@ -576,16 +576,13 @@ private fun Menuezeile(text: String, symbol: ImageVector, rechtsbuendig: Boolean
             .clickable(onClick = beiDruck)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
+        // Rechtsbündig rücken Text **und** Symbol an den rechten Rand: der Text klebt
+        // unmittelbar links neben seinem Symbol, damit der Daumen vom Plus aus beide
+        // zusammen trifft.
+        horizontalArrangement = if (rechtsbuendig) Arrangement.End else Arrangement.Start,
     ) {
         if (rechtsbuendig) {
-            // Gespiegelt: der Text trägt die Zeile, das Symbol liegt ganz rechts am Rand —
-            // genau da, wo der Daumen landet, wenn er vom Plus kommt.
-            Text(
-                text,
-                style = Schriften.einstellung,
-                color = farben.textStark,
-                modifier = Modifier.weight(1f),
-            )
+            Text(text, style = Schriften.einstellung, color = farben.textStark)
             Spacer(Modifier.width(14.dp))
             Icon(symbol, null, Modifier.size(20.dp), tint = farben.textMittel)
         } else {
