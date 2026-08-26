@@ -26,6 +26,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -366,7 +367,12 @@ private fun Anhangsmenue(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(min = 230.dp)
+                // Rechtsbündig ist die Blase genau so breit wie ihr längster Eintrag
+                // („Dokumentenscan") — kein Band über den ganzen Bildschirm.
+                .then(
+                    if (rechtsbuendig) Modifier.width(IntrinsicSize.Max)
+                    else Modifier.widthIn(min = 230.dp)
+                )
                 .schwebendeKarte(farben, Masse.gruppeRadius)
                 .padding(vertical = 8.dp),
         ) {
