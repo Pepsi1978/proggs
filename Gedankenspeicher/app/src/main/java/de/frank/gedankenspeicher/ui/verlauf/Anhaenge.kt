@@ -353,6 +353,7 @@ private fun Anhangsmenue(
     beiZeichnung: () -> Unit,
     beiHaftnotiz: () -> Unit,
     beiTabelle: () -> Unit,
+    beiNachDerWahl: () -> Unit = beiSchliessen,
 ) {
     val farben = Farben
     Popup(
@@ -367,23 +368,23 @@ private fun Anhangsmenue(
                 .schwebendeKarte(farben, Masse.gruppeRadius)
                 .padding(vertical = 8.dp),
         ) {
-            Menuezeile("PDF", Icons.Outlined.PictureAsPdf) { beiSchliessen(); beiPdf() }
+            Menuezeile("PDF", Icons.Outlined.PictureAsPdf) { beiNachDerWahl(); beiPdf() }
             // Die Sprachaufnahme gibt es nur im Entwurf — an einer fertigen Notiz ist das
             // Mikrofon ohnehin sichtbar, der Eintrag wäre doppelt.
             if (beiSprachaufnahme != null) {
-                Menuezeile("Sprachaufnahme", Icons.Outlined.Mic) { beiSchliessen(); beiSprachaufnahme() }
+                Menuezeile("Sprachaufnahme", Icons.Outlined.Mic) { beiNachDerWahl(); beiSprachaufnahme() }
             }
             Box(
                 Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     .fillMaxWidth().height(1.dp).background(farben.rand),
             )
-            Menuezeile("Bild", Icons.Outlined.Image) { beiSchliessen(); beiBild() }
-            Menuezeile("Kamera", Icons.Outlined.PhotoCamera) { beiSchliessen(); beiKamera() }
-            Menuezeile("Dokumentenscan", Icons.Outlined.DocumentScanner) { beiSchliessen(); beiScan() }
-            Menuezeile("Audiodatei", Icons.Outlined.MusicNote) { beiSchliessen(); beiAudio() }
-            Menuezeile("Zeichnung", Icons.Outlined.Palette) { beiSchliessen(); beiZeichnung() }
-            Menuezeile("Haftnotiz", Icons.Outlined.StickyNote2) { beiSchliessen(); beiHaftnotiz() }
-            Menuezeile("Tabelle", Icons.Outlined.TableChart) { beiSchliessen(); beiTabelle() }
+            Menuezeile("Bild", Icons.Outlined.Image) { beiNachDerWahl(); beiBild() }
+            Menuezeile("Kamera", Icons.Outlined.PhotoCamera) { beiNachDerWahl(); beiKamera() }
+            Menuezeile("Dokumentenscan", Icons.Outlined.DocumentScanner) { beiNachDerWahl(); beiScan() }
+            Menuezeile("Audiodatei", Icons.Outlined.MusicNote) { beiNachDerWahl(); beiAudio() }
+            Menuezeile("Zeichnung", Icons.Outlined.Palette) { beiNachDerWahl(); beiZeichnung() }
+            Menuezeile("Haftnotiz", Icons.Outlined.StickyNote2) { beiNachDerWahl(); beiHaftnotiz() }
+            Menuezeile("Tabelle", Icons.Outlined.TableChart) { beiNachDerWahl(); beiTabelle() }
         }
     }
 }
@@ -414,12 +415,18 @@ fun NotizAnhangsmenue(
     var kameradatei by remember { mutableStateOf<File?>(null) }
     var erkenntGerade by remember { mutableStateOf(false) }
 
+    /** Ein Fehler wird gemeldet **und** macht das Menü zu — hier gibt es nichts mehr zu holen. */
+    fun meld(text: String) {
+        beiFehler(text)
+        beiSchliessen()
+    }
+
     fun uebernimm(uri: Uri?, art: Anhangsart) {
         if (uri == null) return
         bereich.launch {
             runCatching { speicher.uebernimm(uri, art) }
                 .onSuccess(beiAnhang)
-                .onFailure { beiFehler(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
+                .onFailure { meld(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
         }
     }
 
@@ -434,7 +441,7 @@ fun NotizAnhangsmenue(
                     if (text.isBlank()) null else if (quellen.size > 1) "— Seite ${nummer + 1} —\n$text" else text
                 }
                 if (seiten.isEmpty()) {
-                    beiFehler("Auf der Vorlage war kein Text zu erkennen.")
+                    meld("Auf der Vorlage war kein Text zu erkennen.")
                 } else {
                     val text = seiten.joinToString("\n\n")
                     beiAnhang(
@@ -491,13 +498,18 @@ fun NotizAnhangsmenue(
 
     Anhangsmenue(
         beiSchliessen = beiSchliessen,
+        // Bewusst **nicht** zuklappen, wenn ein Punkt gewählt wird: Das Schließen nimmt
+        // diese Composable aus dem Baum — und mit ihr die Koroutine der Übernahme und die
+        // Registrierung des Datei-Wählers. Die Auswahl lief dann ins Leere. Zugemacht wird
+        // erst, wenn der Anhang wirklich da ist (oder ein Fehler gemeldet wurde).
+        beiNachDerWahl = { },
         beiPdf = {
             runCatching { pdfWahl.launch(arrayOf("application/pdf")) }
-                .onFailure { beiFehler("Es wurde keine Dateiauswahl gefunden.") }
+                .onFailure { meld("Es wurde keine Dateiauswahl gefunden.") }
         },
         beiBild = {
             runCatching { bildWahl.launch(arrayOf("image/*")) }
-                .onFailure { beiFehler("Es wurde keine Bildauswahl gefunden.") }
+                .onFailure { meld("Es wurde keine Bildauswahl gefunden.") }
         },
         beiKamera = {
             val datei = speicher.neueDatei(".jpg")
@@ -505,7 +517,7 @@ fun NotizAnhangsmenue(
             runCatching {
                 kamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
             }.onFailure {
-                kameradatei = null; datei.delete(); beiFehler("Es wurde keine Kamera-App gefunden.")
+                kameradatei = null; datei.delete(); meld("Es wurde keine Kamera-App gefunden.")
             }
         },
         beiScan = {
@@ -517,7 +529,7 @@ fun NotizAnhangsmenue(
                     scanKamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
                 }.onFailure {
                     scandatei = null; datei.delete()
-                    beiFehler("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
+                    meld("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
                 }
                 Unit
             }
@@ -540,7 +552,7 @@ fun NotizAnhangsmenue(
         },
         beiAudio = {
             runCatching { audioWahl.launch(arrayOf("audio/*")) }
-                .onFailure { beiFehler("Es wurde keine Dateiauswahl gefunden.") }
+                .onFailure { meld("Es wurde keine Dateiauswahl gefunden.") }
         },
         beiZeichnung = beiZeichnung,
         beiHaftnotiz = { haftnotiz = true },
