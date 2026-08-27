@@ -61,7 +61,11 @@ green "OK  AGENTS.md (globale Regeln)"
 
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
 if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) ! -name '*.test.mjs' -exec cp {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/ (inkl. Notifier-Vertrag, ohne Tests)"; else yellow "--  keine produktiven Plugins"; fi
-if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete)"; else yellow "--  keine plugins/*/"; fi
+# Nur plattformneutrale Plugin-Pakete: plugins/windows/ enthaelt ausschliesslich
+# Windows-Plugins (terminal-task-title.js prueft selbst auf win32 und tut hier nichts) --
+# sie haben unter macOS/Linux nichts im Plugin-Ordner zu suchen.
+if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d ! -name windows -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete, ohne windows/)"; else yellow "--  keine plugins/*/"; fi
+rm -rf "$DST/plugins/windows" 2>/dev/null || true
 
 # Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown
 # ausschliesslich die eingebauten OpenCode-Themes.

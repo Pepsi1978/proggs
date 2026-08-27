@@ -384,7 +384,7 @@ final class ModelRowView: SelectableRowView, NSDraggingSource {
     private static func subtitle(for model: ModelEntry) -> String {
         guard model.lmStudioLoadedContext > 0 else { return model.modelString }
         let thousands = model.lmStudioLoadedContext / 1000
-        return "\(model.modelString)  ·  geladen, \(thousands)k Kontext"
+        return "\(model.modelString)  ·  geladen, \(thousands)k Kontext pro Anfrage"
     }
 
     func refreshTexts() {

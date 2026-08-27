@@ -51,25 +51,17 @@ final class LmStudioService {
     }
 
     /// Kontextlaenge, mit der das Modell in LM Studio gerade geladen ist - also exakt die
-    /// Einstellung, die der Benutzer dort gewaehlt hat. 0 bedeutet: nicht geladen. OpenCode rechnet
-    /// seine Auslastung gegen diesen Wert; steht in der Konfig eine kleinere Zahl, meldet die
-    /// Oberflaeche viel zu frueh einen vollen Kontext und komprimiert endlos.
+    /// Einstellung, die dort gilt. 0 bedeutet: nicht geladen. OpenCode rechnet seine Auslastung
+    /// gegen diesen Wert; steht in der Konfig eine kleinere Zahl, meldet die Oberflaeche viel zu
+    /// frueh einen vollen Kontext und komprimiert endlos. Steht dort eine groessere, lehnt LM Studio
+    /// die erste Anfrage ab.
+    ///
+    /// Gemessen (2026-08-27, LM Studio mit `parallel: 4` und 16384 Tokens): ein Prompt mit 9123
+    /// Tokens laeuft durch. Das geladene Fenster wird also NICHT auf die parallelen Slots
+    /// aufgeteilt - der gemeldete Wert gilt jeder einzelnen Anfrage in voller Hoehe.
     static func loadedContextLength(modelId: String) -> Int {
-        guard isInstalled, !modelId.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
-        let result = Shell.run(lmsPath, ["ps", "--json"], timeout: 30)
-        guard !result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let data = result.stdout.data(using: .utf8),
-              let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return 0 }
-
-        for item in array {
-            let identifier = item["identifier"] as? String
-            let modelKey = item["modelKey"] as? String
-            let matches = identifier?.caseInsensitiveCompare(modelId) == .orderedSame
-                || modelKey?.caseInsensitiveCompare(modelId) == .orderedSame
-            if !matches { continue }
-            return (item["contextLength"] as? Int) ?? 0
-        }
-        return 0
+        guard !modelId.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
+        return loadedContexts()[modelId.lowercased()] ?? 0
     }
 
     /// Ausgabe-Obergrenze. OpenCode reserviert diesen Wert im Kontextbudget und zeigt ihn als
@@ -109,9 +101,9 @@ final class LmStudioService {
         return map
     }
 
-    /// Kontextlaenge je GERADE geladenem Modell. Ein Aufruf fuer alle - `loadedContextLength`
-    /// startet die CLI sonst einmal pro Modell und macht das Oeffnen der Liste zaeh.
-    private static func loadedContexts() -> [String: Int] {
+    /// Kontextlaenge je GERADE geladenem Modell. Ein Aufruf fuer alle: `loadedContextLength` wuerde
+    /// die CLI sonst einmal pro Modell starten und das Oeffnen der Liste zaeh machen.
+    static func loadedContexts() -> [String: Int] {
         guard isInstalled else { return [:] }
         let result = Shell.run(lmsPath, ["ps", "--json"], timeout: 30)
         guard let data = result.stdout.data(using: .utf8),

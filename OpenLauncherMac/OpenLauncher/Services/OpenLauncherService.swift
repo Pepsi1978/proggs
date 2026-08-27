@@ -432,16 +432,22 @@ final class OpenLauncherService {
     /// Kontext geladen ist, bevor OpenCode startet. Sichtbar statt im UI-Thread: das Laden eines
     /// grossen Modells dauert Minuten. Fuer alle anderen Provider ist das Ergebnis leer.
     ///
-    /// Ein bereits geladenes Modell wird IMMER unveraendert uebernommen - mit genau der
-    /// Kontextlaenge, mit der es in LM Studio geladen wurde. Es wird nicht entladen und nicht neu
-    /// geladen: das Laden eines grossen Modells dauert Minuten, und die Einstellung, die der
-    /// Benutzer dort getroffen hat, ist Absicht und keine Panne. Der gemessene Wert wandert in die
-    /// opencode-Konfig, damit OpenCode gegen dieselbe Obergrenze rechnet.
+    /// Reicht der geladene Kontext (mindestens `minimumAgentContext`), bleibt das Modell
+    /// unangetastet - die Ladeeinstellung in LM Studio gehoert dem Benutzer.
     ///
-    /// Ist der geladene Kontext kleiner, als OpenCode braucht (der Systemprompt allein belegt rund
-    /// 22000 Tokens), erscheint nur ein Hinweis mit dem Befehl zum Nachjustieren - entladen wird
-    /// nichts. Nur ein NICHT geladenes Modell laedt das Skript selbst, dann mit der Vorgabe dieses
-    /// Modells: der Wunschgroesse, gedeckelt auf den Maximalkontext des Modells.
+    /// Ist er zu klein, wird neu geladen. Das ist der Unterschied zur frueheren Fassung, die nur
+    /// einen Hinweis ausgab: LM Studio laedt ein Modell per JIT mit seiner Vorgabe (oft 4096
+    /// Tokens), OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage
+    /// scheiterte dann mit "The number of tokens to keep from the initial prompt is greater than
+    /// the context length".
+    ///
+    /// Neu geladen wird aber NUR, wenn LM Studio vorher per `--estimate-only` bestaetigt, dass der
+    /// groessere Ladevorgang die Speicher-Schutzschranken passiert. Ohne diese Vorpruefung wuerde
+    /// ein Entladen auf Rechnern mit knappem Speicher in "insufficient system resources" enden -
+    /// das Modell waere weg und kaeme nicht zurueck (Funktionalitaets-Erhaltungspflicht). Scheitert
+    /// ein Neuladen trotzdem, wird der vorherige Ladezustand wiederhergestellt. Bleibt am Ende zu
+    /// wenig Kontext, sagt das Skript das im Klartext samt Auswegen - statt OpenCode in einen
+    /// kryptischen Serverfehler laufen zu lassen.
     private static func buildLmStudioPreloadScript(modelString: String) -> String {
         let prefix = "\(LmStudioService.providerId)/"
         guard modelString.lowercased().hasPrefix(prefix) else { return "" }
@@ -599,57 +605,108 @@ final class OpenLauncherService {
 
             "$LMS" server start >/dev/null 2>&1
 
+            # Liest den Ladezustand: LOADEDCTX = wie in LM Studio geladen, MAXCTX = Obergrenze
+            # dieses Modells. Gemessen am 2026-08-27: LM Studio teilt das geladene Fenster NICHT auf
+            # die parallelen Slots auf (parallel 4, 16384 Tokens, Prompt mit 9123 Tokens laeuft
+            # durch) - der gemeldete Wert gilt jeder Anfrage in voller Hoehe.
             lmsState() {
                 LMSINFO=$("$LMS" ps --json 2>/dev/null | python3 "$LMSPY" ctx "$LMSMODEL" 2>/dev/null)
-                [ -z "$LMSINFO" ] && LMSINFO='0 0'
+                case "$LMSINFO" in
+                    *' '*) : ;;
+                    *) LMSINFO='0 0' ;;
+                esac
                 LOADEDCTX=${LMSINFO%% *}
                 MAXCTX=${LMSINFO##* }
-                [ -z "$LOADEDCTX" ] && LOADEDCTX=0
-                [ -z "$MAXCTX" ] && MAXCTX=0
+                [ "$LOADEDCTX" -ge 0 ] 2>/dev/null || LOADEDCTX=0
+                [ "$MAXCTX" -ge 0 ] 2>/dev/null || MAXCTX=0
+            }
+
+            # Vorpruefung: wuerde ein Ladeversuch an den Speicher-Schutzschranken von LM Studio
+            # scheitern? Ohne diese Frage wuerde ein Entladen auf knappem Speicher das Modell
+            # unwiederbringlich abraeumen. Unbekannte Antwort gilt als "versuchen" - eine geaenderte
+            # Formulierung darf nie einen Ladevorgang blockieren, der funktionieren wuerde.
+            lmsCanLoad() {
+                LMSESTIMATE=$("$LMS" load "$LMSMODEL" --context-length "$1" -y --estimate-only 2>&1)
+                case "$LMSESTIMATE" in
+                    *'will fail to load'*) return 1 ;;
+                    *) return 0 ;;
+                esac
+            }
+
+            # Laedt mit absteigenden Kontextgroessen, bis eine sitzt.
+            lmsLoadLadder() {
+                for LMSWANT in "$@"; do
+                    [ "$LMSWANT" -gt 0 ] 2>/dev/null || continue
+                    if ! lmsCanLoad "$LMSWANT"; then
+                        printf '\\033[33m%s Tokens passen laut LM Studio nicht in den Speicher dieses Rechners.\\033[0m\\n' "$LMSWANT"
+                        continue
+                    fi
+                    printf '\\033[36mLade lokales Modell %s mit %s Tokens Kontext - das kann einige Minuten dauern ...\\033[0m\\n' "$LMSMODEL" "$LMSWANT"
+                    if "$LMS" load "$LMSMODEL" --context-length "$LMSWANT" -y; then
+                        lmsState
+                        if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then return 0; fi
+                    fi
+                done
+                lmsState
+                [ "$LOADEDCTX" -gt 0 ] 2>/dev/null
             }
 
             lmsState
 
-            # Bereits geladen: unangetastet lassen. Frueher wurde bei zu kleinem Kontext entladen
-            # und neu geladen - das hat die bewusste Einstellung des Benutzers ueberschrieben und
-            # jeden Start um Minuten verzoegert. Jetzt gilt, was in LM Studio steht; bei zu wenig
-            # Kontext gibt es nur einen Hinweis samt fertigem Befehl zum Nachjustieren.
-            if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null && [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
-                printf '\\033[33m%s ist in LM Studio mit %s Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage kann damit abbrechen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
-                printf '\\033[33mDas Modell bleibt bewusst so geladen, wie du es eingestellt hast. Mehr Kontext bei Bedarf mit:\\033[0m\\n'
-                printf '\\033[36m  lms unload %s && lms load %s --context-length %s -y\\033[0m\\n' "$LMSMODEL" "$LMSMODEL" "$LMSWANTCTX"
+            # Zielgroesse: Wunschwert, gedeckelt auf den Maximalkontext dieses Modells.
+            if [ "$MAXCTX" -le 0 ] 2>/dev/null; then
+                MAXCTX=$("$LMS" ls --json 2>/dev/null | python3 "$LMSPY" max "$LMSMODEL" 2>/dev/null)
+                [ -z "$MAXCTX" ] && MAXCTX=0
+            fi
+            LMSTARGET=$LMSWANTCTX
+            if [ "$MAXCTX" -gt 0 ] 2>/dev/null && [ "$MAXCTX" -lt "$LMSTARGET" ] 2>/dev/null; then
+                LMSTARGET=$MAXCTX
             fi
 
             if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
-                if [ "$MAXCTX" -le 0 ] 2>/dev/null; then
-                    MAXCTX=$("$LMS" ls --json 2>/dev/null | python3 "$LMSPY" max "$LMSMODEL" 2>/dev/null)
-                    [ -z "$MAXCTX" ] && MAXCTX=0
-                fi
-                TARGETCTX=$LMSWANTCTX
-                if [ "$MAXCTX" -gt 0 ] 2>/dev/null && [ "$MAXCTX" -lt "$TARGETCTX" ] 2>/dev/null; then
-                    TARGETCTX=$MAXCTX
-                fi
-                printf '\\033[36mLade lokales Modell %s mit %s Tokens Kontext - das kann einige Minuten dauern ...\\033[0m\\n' "$LMSMODEL" "$TARGETCTX"
-                if ! "$LMS" load "$LMSMODEL" --context-length "$TARGETCTX" -y; then
-                    printf '\\033[33m%s Tokens haben nicht gepasst - versuche %s ...\\033[0m\\n' "$TARGETCTX" "$LMSMINCTX"
-                    if ! "$LMS" load "$LMSMODEL" --context-length "$LMSMINCTX" -y; then
-                        printf '\\033[33mAutomatisches Laden fehlgeschlagen - bitte %s in LM Studio von Hand mit mindestens %s Tokens Kontext laden.\\033[0m\\n' "$LMSMODEL" "$LMSMINCTX"
+                # Nicht geladen: selbst laden.
+                lmsLoadLadder "$LMSTARGET" "$LMSMINCTX" || true
+            elif [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
+                # Geladen, aber zu klein fuer OpenCode. Neu laden - aber nur, wenn LM Studio den
+                # groesseren Ladevorgang vorher als machbar bestaetigt. Sonst bleibt alles, wie es
+                # ist: ein entladenes Modell, das nicht zurueckkommt, waere schlimmer als ein zu
+                # kleines Fenster.
+                printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                printf '\\033[33mOpenCode braucht allein fuer den Systemprompt rund 22000 Tokens - damit bricht die erste Anfrage ab.\\033[0m\\n'
+
+                if lmsCanLoad "$LMSTARGET" || lmsCanLoad "$LMSMINCTX"; then
+                    LMSOLDCTX=$LOADEDCTX
+                    printf '\\033[36mDas Modell wird deshalb mit groesserem Kontext neu geladen.\\033[0m\\n'
+                    "$LMS" unload "$LMSMODEL" >/dev/null 2>&1
+                    if ! lmsLoadLadder "$LMSTARGET" "$LMSMINCTX"; then
+                        printf '\\033[33mNeuladen fehlgeschlagen - der vorherige Ladezustand wird wiederhergestellt.\\033[0m\\n'
+                        "$LMS" load "$LMSMODEL" --context-length "$LMSOLDCTX" -y >/dev/null 2>&1 || true
+                        lmsState
                     fi
+                else
+                    printf '\\033[33mEin groesserer Ladevorgang passt nicht in den Speicher dieses Rechners - das Modell bleibt unangetastet.\\033[0m\\n'
                 fi
-                lmsState
             fi
 
             if [ "$LOADEDCTX" -ge "$LMSMINCTX" ] 2>/dev/null; then
-                printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen - Einstellung aus LM Studio uebernommen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
-            elif [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
-                printf '\\033[33mLokales Modell %s laeuft mit %s Tokens Kontext weiter (siehe Hinweis oben).\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
             else
-                printf '\\033[33m%s konnte nicht geladen werden - LM Studio versucht es bei der ersten Anfrage selbst.\\033[0m\\n' "$LMSMODEL"
+                # Klartext statt eines kryptischen LM-Studio-Fehlers bei der ersten Anfrage.
+                if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
+                    printf '\\033[31mACHTUNG: %s ist nicht geladen und passt mit agent-tauglichem Kontext nicht in den Speicher dieses Rechners.\\033[0m\\n' "$LMSMODEL"
+                else
+                    printf '\\033[31mACHTUNG: %s hat nur %s Tokens Kontext - OpenCode braucht mindestens %s.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX" "$LMSMINCTX"
+                fi
+                printf '\\033[33mDie erste Anfrage bricht damit ab ("The number of tokens to keep from the initial prompt is greater than the context length"). Auswege:\\033[0m\\n'
+                printf '\\033[36m  1) Eine sparsamere Variante desselben Modells waehlen - im Launcher steht der Herausgeber am Namen (z.B. unsloth statt qwen).\\033[0m\\n'
+                printf '\\033[36m  2) Ein kleineres Modell waehlen.\\033[0m\\n'
+                printf '\\033[36m  3) In LM Studio unter Einstellungen die Speicher-Schutzschranken lockern, dann:  lms load %s --context-length %s -y\\033[0m\\n' "$LMSMODEL" "$LMSMINCTX"
             fi
 
             # Das Kontextfenster in der opencode-Konfig muss exakt der Ladeeinstellung in LM Studio
-            # entsprechen. Sonst rechnet OpenCode gegen eine falsche Obergrenze: bei zu kleinem Wert
-            # meldet es sofort einen fast vollen Kontext und komprimiert endlos im Kreis.
+            # entsprechen. Steht dort mehr, schickt OpenCode einen Prompt, den LM Studio ablehnt;
+            # steht dort weniger, meldet OpenCode sofort einen fast vollen Kontext und komprimiert
+            # endlos im Kreis.
             if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
                 CFGPATH="$HOME/.config/opencode/opencode.jsonc"
                 [ -f "$CFGPATH" ] || CFGPATH="$HOME/.config/opencode/opencode.json"
@@ -829,14 +886,16 @@ final class OpenLauncherService {
         modelNode["tool_call"] = .bool(true)
 
         // Das Kontextfenster MUSS der Ladeeinstellung in LM Studio entsprechen. Steht hier eine
-        // kleinere Zahl, haelt OpenCode den Kontext fuer fast voll, startet sofort die
-        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte.
+        // groessere Zahl, schickt OpenCode einen Prompt, den LM Studio ablehnt ("The number of tokens
+        // to keep from the initial prompt is greater than the context length"); steht hier eine
+        // kleinere, haelt OpenCode den Kontext fuer fast voll, startet sofort die Auto-Komprimierung
+        // und komprimiert danach immer wieder das Komprimierte.
         //
         // Ist das Modell bereits geladen, gilt sein tatsaechlicher Wert - auch ein kleiner. Er wird
-        // bewusst nicht auf ein Minimum angehoben: die Ladeeinstellung in LM Studio gehoert dem
-        // Benutzer, und eine geschoente Zahl in der Konfig wuerde OpenCode gegen ein Fenster rechnen
-        // lassen, das es gar nicht gibt. Ist das Modell noch nicht geladen, gilt vorlaeufig der Wert,
-        // mit dem das Startskript laedt - es korrigiert den Eintrag danach auf den echten Wert.
+        // bewusst nicht auf ein Minimum angehoben: eine geschoente Zahl in der Konfig wuerde OpenCode
+        // gegen ein Fenster rechnen lassen, das es gar nicht gibt. Ist das Modell noch nicht geladen,
+        // gilt vorlaeufig der Wert, mit dem das Startskript laedt - es korrigiert den Eintrag danach
+        // auf den echten Wert.
         let loadedContext = LmStudioService.loadedContextLength(modelId: slug)
         let context = loadedContext > 0 ? loadedContext : defaultLmStudioContext
         let limit = modelNode.getOrAddObject("limit")
