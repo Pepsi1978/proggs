@@ -203,6 +203,30 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    /**
+     * Die Anmeldung als Map — für die Sicherung (F-17).
+     *
+     * Die Tokens liegen verschlüsselt auf dem Gerät, und der Schlüssel dazu stirbt mit der
+     * Installation. Ohne sie in der Sicherung stand nach jeder Wiederherstellung eine
+     * abgemeldete App da, und alles KI-seitige war tot, bis man sich neu anmeldete.
+     */
+    fun alleWerte(): Map<String, Any?> = runCatching { store.all.toMap() }.getOrDefault(emptyMap())
+
+    /** Spielt eine gesicherte Anmeldung ein. Der Zugriffstoken wird beim nächsten Ruf erneuert. */
+    fun uebernimm(werte: Map<String, Any>) {
+        val schreiber = store.edit()
+        werte.forEach { (schluessel, wert) ->
+            when (wert) {
+                is Boolean -> schreiber.putBoolean(schluessel, wert)
+                is Int -> schreiber.putInt(schluessel, wert)
+                is Long -> schreiber.putLong(schluessel, wert)
+                is Float -> schreiber.putFloat(schluessel, wert)
+                is String -> schreiber.putString(schluessel, wert)
+            }
+        }
+        schreiber.commit()
+    }
+
     suspend fun login(
         activity: ComponentActivity,
         onDeviceCode: (DeviceAuthInfo) -> Unit,

@@ -13,11 +13,11 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.5.29"
+        versionCode = 43
+        versionName = "0.6.0"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:25 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:45 Uhr\"")
     }
 
     // **Dieselbe Debug-Signatur auf Windows und Mac** — wie bei den anderen Apps, siehe

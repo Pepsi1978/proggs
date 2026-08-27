@@ -175,7 +175,7 @@ class Anhangsspeicher(private val ctx: Context) {
         }
     }.getOrNull() ?: (null to 0)
 
-    private companion object {
+    companion object {
         const val ORDNER = "anhaenge"
         const val VORSCHAU_BREITE = 900
     }

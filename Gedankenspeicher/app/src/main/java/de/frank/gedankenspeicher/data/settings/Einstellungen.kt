@@ -157,6 +157,36 @@ class Einstellungen(ctx: Context) {
         get() = p.getLong(DRIVE_GROESSE, 0L)
         set(v) { p.edit().putLong(DRIVE_GROESSE, v).commit() }
 
+    /**
+     * Alle Einstellungen als Map — für die Sicherung (F-17).
+     *
+     * Bewusst über `all` und nicht als Aufzählung der einzelnen Werte: käme später ein
+     * Schalter dazu und würde hier vergessen, fehlte er stillschweigend in jeder Sicherung.
+     * Genau so verschwanden bisher der Auftrag der Textverbesserung und die Schlüssel —
+     * sie wurden nämlich überhaupt nicht mitgesichert.
+     */
+    fun alleWerte(): Map<String, Any?> = runCatching { p.all.toMap() }.getOrDefault(emptyMap())
+
+    /**
+     * Spielt gesicherte Einstellungen ein. Der Sicherungsordner bleibt, was er ist: er
+     * gehört zu **diesem** Gerät, nicht zum gesicherten Stand — sonst schriebe die App
+     * nach der Wiederherstellung in einen Ordner, den es hier vielleicht gar nicht gibt.
+     */
+    fun uebernimm(werte: Map<String, Any>) {
+        val schreiber = p.edit()
+        werte.forEach { (schluessel, wert) ->
+            if (schluessel == DRIVE_ORDNER) return@forEach
+            when (wert) {
+                is Boolean -> schreiber.putBoolean(schluessel, wert)
+                is Int -> schreiber.putInt(schluessel, wert)
+                is Long -> schreiber.putLong(schluessel, wert)
+                is Float -> schreiber.putFloat(schluessel, wert)
+                is String -> schreiber.putString(schluessel, wert)
+            }
+        }
+        schreiber.commit()
+    }
+
     private companion object {
         const val ERSCHEINUNG = "erscheinung"
         const val CODEX_MODELL = "codex_modell"
