@@ -11,7 +11,7 @@
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
 > zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections);
 > erweitert **2026-06-25** um den Persistent-Login-Race / "mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom
-> SELBEN VPS (§11); erweitert **2026-08-27** um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz — bei VIELEN KLEINEN Dateien rund Faktor 20, bei grossen Dateien kein Unterschied; inkl. Bufferbloat-Messfalle und ausgeschlossener Ursachen).
+> SELBEN VPS (§11); erweitert **2026-08-27** um den launchd-Prozessgruppen-Kill (§15: LaunchDaemon-Einmal-Job toetet `wireguard-go` 2 ms nach dem Boot-Start -> Laufwerke nach JEDEM Neustart weg) und um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz — bei VIELEN KLEINEN Dateien rund Faktor 20, bei grossen Dateien kein Unterschied; inkl. Bufferbloat-Messfalle und ausgeschlossener Ursachen).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -37,6 +37,7 @@
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
 | 14 | ⭐⭐ macOS: Laufwerke weg; Tunnel pingt mit Verlust, aber Internet + public VPS-IP 0 % & Server gesund | Client-IP/NAT hat gewechselt (dynamische Leitung) → WireGuard-Endpoint veraltet → Mounts fallen ab. ERST Endpoint-Wechsel pruefen (`tail /var/log/wg-endpoint-monitor.log`), NICHT Mac/Server verdaechtigen. FIX: Stale-Mount-Erkennung (perl-alarm) + `/etc/nsmb.conf` soft + Endpoint-Monitor + Keepalive 15. | §13 |
+| 15 | ⭐⭐ macOS: Laufwerke nach JEDEM Neustart weg; Mount-Log sagt im Takt "SMB 445 nicht erreichbar", das Tunnel-Log aber "Tunnel hochgefahren" | **launchd killt den Tunnel-Prozess.** Ein LaunchDaemon mit nur `RunAtLoad` ist ein Einmal-Job — beim `exit 0` beendet launchd ALLE verbliebenen Prozesse seiner Prozessgruppe, also das von `wg-quick` gestartete `wireguard-go`. Systemlog: Job `exited due to exit(0)`, **2 ms spaeter** `utunN detaching`. Von Hand im Terminal tritt es nie auf -> wirkt beim Einrichten immer "erfolgreich". FIX: Tunnel-Skript als **Dauerschleife** (Watchdog) + `KeepAlive=true` — der Job endet nie, der Prozessgruppen-Kill kann nicht mehr eintreten. | §15 |
 
 ---
 
@@ -47,6 +48,7 @@
 | §2 UFW/Ports | §2 Firewall nur ueber wg0 |
 | §3 MTU/Performance | §3 Performance-Tuning |
 | §14 Durchsatz/Parallelitaet | §14 rclone statt Finder |
+| §15 launchd toetet den Tunnel (macOS) | §8 macOS-Autostart: Tunnel als Watchdog-Daemon |
 | §4–§6 Windows-Client | §4 Windows-Mount (persistent, Credentials) |
 | §9 net use haengt (elevated/hidden) | §7 Auto-Reconnect-Task robust (WNetAddConnection2 + explizite Credentials) |
 | §10 EnableLinkedConnections | §7 Auto-Reconnect-Task robust (elevated Mappings sichtbar machen) |
@@ -476,6 +478,78 @@ VPS Hostinger Paris).
 
 ---
 
+## 15. ⭐⭐ macOS: Laufwerke nach JEDEM Neustart weg — launchd toetet `wireguard-go` (live 2026-08-27)
+
+**Symptom:** Auf dem Mac fehlen die Tunnel-Laufwerke (`gedanken`/`daten`) nach jedem Neustart komplett.
+Das Mount-Log meldet im 5-Minuten-Takt
+`SMB 445 (10.8.0.1) nicht erreichbar — Tunnel unten?`, waehrend das Tunnel-Log kurz nach dem Boot ein
+sauberes `WireGuard-Tunnel hochgefahren` zeigt. Von Hand aus dem Terminal gestartet laeuft alles —
+deshalb sieht die Einrichtung jedes Mal erfolgreich aus, und der Fehler kommt nach jedem Reboot wieder.
+
+**Root Cause (aus dem Systemlog bewiesen):** Der LaunchDaemon war ein **Einmal-Job** (`RunAtLoad`, kein
+`KeepAlive`): Wrapper-Skript faehrt `wg-quick up` aus, dann `exit 0`. **launchd beendet beim Exit eines
+Jobs alle verbliebenen Prozesse seiner Prozessgruppe** (Standardverhalten; nur `AbandonProcessGroup`
+schaltet das ab) — und `wg-quick` startet `wireguard-go` genau in diese Prozessgruppe hinein.
+
+```
+19:47:45.134  launchd  [system/de.frank.secondbrain.wireguard [578]] exited due to exit(0), ran for 7924ms
+19:47:45.134  launchd  service state: exited
+19:47:45.136  kernel   utun4 detaching        <- 2 ms nach dem Job-Ende
+19:47:45.137  kernel   utun4 detached
+```
+
+Der Tunnel lebte also exakt so lange wie das Wrapper-Skript. Zurueck blieb eine **verwaiste
+`/var/run/wireguard/<name>.name`**, die auf ein laengst weggeraeumtes `utunN` zeigt und einen spaeteren
+`wg-quick down/up` stolpern laesst.
+
+**Warum die Fehlersuche in die Irre laeuft:** `ping 1.1.1.1` ist sauber, der VPS ist gesund, die
+oeffentliche VPS-IP antwortet, das Tunnel-Log meldet Erfolg — nur der Tunnel ist weg. Wer nach §13
+(Client-IP-Wechsel) sucht, findet nichts. **Diagnose-Schluessel:** `ps aux | grep wireguard-go`
+(Prozess da?) und
+`log show --start '<Boot-Zeit>' --style compact | grep -E 'utun|secondbrain'` — die 2-ms-Naehe zwischen
+`exited due to exit(0)` und `utunN detaching` ist der Beweis.
+
+**Versionen:** macOS 26.6.2 (Apple Silicon), wireguard-tools/wireguard-go 0.0.20250522 (Homebrew),
+launchd-uebergreifend. Betrifft **jeden** LaunchDaemon/LaunchAgent, der einen langlebigen
+Hintergrundprozess startet und sich dann beendet (nicht nur WireGuard).
+
+**FIX (funktionserhaltend, Fehlerklasse statt Symptom — Poka-Yoke Stufe 3):**
+1. Das Tunnel-Skript **kehrt nicht mehr zurueck**: Watchdog-Dauerschleife (Prueftakt 30 s). Der Job endet
+   nie -> der Prozessgruppen-Kill kann konzeptionell nicht mehr eintreten. In der plist
+   `KeepAlive=true` + `RunAtLoad=true` (+ `ThrottleInterval`), damit launchd die Schleife nach einem
+   Absturz neu startet.
+2. Die Schleife prueft **zwei unabhaengige Proben** (ICMP **oder** SMB-Port 445) und baut erst nach
+   4 Fehlschlaegen in Folge (~2 Min) neu auf — heilt zusaetzlich Sleep/Wake, Client-IP-Wechsel (§13)
+   und einen `wireguard-go`-Crash, ohne bei einem einzelnen Aussetzer zu flappen.
+3. **Verwaiste `/var/run/wireguard/<name>.name`** vor jedem Aufbau entfernen (zeigt das darin genannte
+   `utunN` nicht mehr in `ifconfig`, ist die Datei Muell).
+4. Nach erfolgreichem Aufbau den Mount-Job **sofort** anstossen:
+   `launchctl kickstart gui/<uid>/<mount-label>` (root darf in die GUI-Domain) — sonst warten die
+   Laufwerke bis zum naechsten `StartInterval`. **Ohne `-k`**, sonst wird ein gerade laufender
+   Mount-Lauf mitten im Mounten abgeschossen.
+5. Das Mount-Skript wartet beim Start **begrenzt** (hier 90 s) auf Port 445, statt am Boot-Race zu
+   scheitern (der Mount-Agent lief 3 s vor dem fertigen Tunnel).
+
+**Alternative (schwaecher, nicht empfohlen):** `AbandonProcessGroup=true` in der plist laesst den
+Einmal-Job den Tunnel ueberleben — dann existiert aber kein Watchdog: stirbt `wireguard-go` spaeter
+(Sleep/Wake, Crash), bleibt der Tunnel bis zum naechsten Reboot unten. Die Dauerschleife deckt beide
+Faelle ab.
+
+**Gegenprobe nach dem Fix:** `pgrep -f wireguard-up.sh` und `pgrep -f wireguard-go` muessen dieselbe,
+wachsende Laufzeit zeigen (`ps -o etime`). Vorher starb `wireguard-go` nach 7,9 s, nachher lief er
+durch; die Laufwerke waren 6 s nach dem Tunnel im Finder.
+
+**Verwandte Fehlerquellen geprueft (Pflicht nach Direktive #3):** Die uebrigen LaunchAgents dieses
+Repos (`de.frank.secondbrain.drivemount`, die Heartbeat-Jobs) sind echte Einmal-Laeufe **ohne**
+langlebiges Kind — der Mount haelt `automountd`, nicht der Job — und sind daher nicht betroffen. Auf
+Windows tritt die Klasse nicht auf: dort laeuft WireGuard als echter Dienst (§9-§11 decken die
+Windows-Reboot-Fallen ab).
+
+**Quelle:** Eigener Vorfall + Live-Diagnose 2026-08-27 (Systemlog-Korrelation, macOS 26.6.2).
+
+
+---
+
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
 - [ ] `smb.conf`: `interfaces = lo eth0 10.8.0.0/24` (mit Maske!) + `bind interfaces only = yes` (oder `= no`)?
 - [ ] `netstat -tulpen | grep smbd` zeigt `smbd` auf `10.8.0.1:445`?
@@ -484,6 +558,7 @@ VPS Hostinger Paris).
 - [ ] Echter Samba-User (`smbpasswd -a`) statt Gastzugriff?
 - [ ] Win-Mount persistent via `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag?
 - [ ] Bei Langsamkeit: WireGuard-MTU 1350 + MSS getestet?
+- [ ] **macOS-Autostart: laeuft das Tunnel-Skript als Dauerschleife mit `KeepAlive`?** (Einmal-Job = launchd killt `wireguard-go` 2 ms nach dem Start, §15)
 - [ ] Bei Langsamkeit: erst die Leitung leergeraeumt (Bufferbloat!), dann parallele Streams (`rclone --transfers 8`) statt Finder/Explorer probiert? (§14 - meist DIE Ursache)
 - [ ] Kein unnoetiges `ip_forward`/MASQUERADE (Split-Tunnel-Dienst braucht es nicht)?
 - [ ] **`unattended-upgrades` aktiv / `apt upgrade` regelmaessig** (4.19.x ist upstream EOL — Fixes nur ueber Ubuntu-Paket, §8)?

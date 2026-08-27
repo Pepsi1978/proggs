@@ -214,6 +214,63 @@ Ein Skript, das die Laufwerke nach Login/Standby automatisch wiederverbindet, is
 
 ---
 
+---
+
+## §8 macOS-Autostart: den Tunnel als Watchdog-Daemon bauen (nicht als Einmal-Job)
+
+> Pendant zu §7 (Windows). Gegenstueck im Almanach: `bugs/server/samba-wireguard.md` §15.
+
+Auf macOS haengen die Netzlaufwerke an zwei Jobs: einem **LaunchDaemon** (root, faehrt den
+WireGuard-Tunnel) und einem **LaunchAgent** (Benutzer, mountet die Shares). Der haeufigste
+Konstruktionsfehler steckt im Daemon.
+
+**Die Regel:** Ein launchd-Job, der einen **langlebigen Hintergrundprozess** startet, darf sich
+**nicht beenden**. launchd beendet beim Job-Exit alle verbliebenen Prozesse der Prozessgruppe — und
+`wg-quick` startet `wireguard-go` genau dorthin. Ein Skript nach dem Muster
+„`wg-quick up` … `exit 0`" reisst den Tunnel also Millisekunden spaeter wieder mit.
+
+```xml
+<!-- LaunchDaemon: /Library/LaunchDaemons/<label>.plist -->
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>          <!-- haelt die Watchdog-Schleife am Leben -->
+<key>ThrottleInterval</key><integer>10</integer>
+<key>ProcessType</key><string>Background</string>
+```
+
+```bash
+# Skript: Dauerschleife statt Einmal-Lauf
+while true; do
+  if ! ifconfig | grep -q "inet ${TUNIP} "; then
+    clean_stale_state          # /var/run/wireguard/<name>.name aufraeumen, wenn utunN weg ist
+    wg-quick down "$CONF"; wg-quick up "$CONF"
+    launchctl kickstart "gui/$(id -u "$OWNER")/<mount-label>"   # Mount sofort anstossen, OHNE -k
+  elif ! ping -c1 -W2000 "$SERVER" >/dev/null 2>&1 \
+       && ! nc -z -G 3 "$SERVER" 445 >/dev/null 2>&1; then
+    fails=$((fails+1)); [ "$fails" -ge 4 ] && { wg-quick down "$CONF"; wg-quick up "$CONF"; fails=0; }
+  else fails=0; fi
+  sleep 30
+done
+```
+
+**Wichtige Details:**
+- **Zwei unabhaengige Gesundheitsproben** (ICMP *oder* Port 445): wird ICMP unterwegs gefiltert, baut
+  der Watchdog sonst grundlos staendig neu auf (Flapping).
+- **Erst nach mehreren Fehlschlaegen** (hier 4 x 30 s) neu aufbauen — ein einzelner Aussetzer ist normal.
+- `launchctl kickstart` **ohne** `-k`: sonst wird ein gerade laufender Mount-Lauf mitten im Mounten
+  abgeschossen (und laesst seinen Lock verwaist zurueck).
+- Der **Mount-Agent** wartet beim Start begrenzt (z.B. 90 s) auf Port 445, statt sofort aufzugeben —
+  beim Boot laeuft er regelmaessig ein paar Sekunden vor dem fertigen Tunnel.
+- **Gate immer auf Port 445**, nie auf einen Dienst-Port (§7-Logik gilt auf macOS genauso).
+- SMB-Haertung gehoert in **`/etc/nsmb.conf`** (`soft=yes`, `max_resp_timeout=30`) — die
+  Benutzer-`~/Library/Preferences/nsmb.conf` greift fuer `automountd`-Mounts NICHT.
+
+**Gegenprobe:** `pgrep -f <tunnel-skript>` und `pgrep -f wireguard-go` muessen beide dieselbe,
+wachsende `etime` zeigen. Endet der Daemon-Job (`launchctl print system/<label>` -> `state = exited`),
+ist der Aufbau falsch.
+
+**Quelle:** eigener Vorfall + Live-Diagnose 2026-08-27 (macOS 26.6.2, wireguard-go 0.0.20250522).
+
+
 ## Quellen
 Offizielle Samba-Doku (smb.conf, interfaces/bind interfaces only), UFW-Doku, MS-Mount-Doku · Recherche 2026-06-22 (Firecrawl+MiniMax).
 WNetAddConnection2/EnableLinkedConnections: Microsoft-Doku (mpr.dll, KB EnableLinkedConnections) · eigener Vorfall + Live-Diagnose 2026-06-24.

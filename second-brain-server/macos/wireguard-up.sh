@@ -129,9 +129,10 @@ while true; do
 
   if ! iface_up "$TUNIP"; then
     log "Tunnel-Interface (${TUNIP}) fehlt — baue auf."
-    bring_up
+    # Bei Erfolg direkt auf "ok" setzen: bring_up hat den Mount-Agent schon angestossen,
+    # der Gesundheits-Zweig unten soll das nicht gleich nochmal tun (kein Doppel-Kick).
+    if bring_up; then last_state="ok"; else last_state="down"; fi
     fails=0
-    last_state="down"
     sleep "$INTERVAL"
     continue
   fi
@@ -151,9 +152,8 @@ while true; do
     log "Tunnel antwortet nicht (${SERVER}, Fehlschlag ${fails}/${FAIL_LIMIT})."
     if [ "$fails" -ge "$FAIL_LIMIT" ]; then
       log "Tunnel tot trotz vorhandenem Interface — baue neu auf."
-      bring_up
+      if bring_up; then last_state="ok"; else last_state="down"; fi
       fails=0
-      last_state="rebuilt"
     fi
   fi
 
