@@ -10,6 +10,11 @@ import androidx.lifecycle.viewModelScope
 import de.frank.gedankenspeicher.audio.AufnahmeDienst
 import de.frank.gedankenspeicher.audio.AufnahmeFernbedienung
 import de.frank.gedankenspeicher.audio.MicRecorder
+import de.frank.gedankenspeicher.hintergrund.AuswertungsDienst
+import de.frank.gedankenspeicher.hintergrund.AuswertungsFernbedienung
+import de.frank.gedankenspeicher.hintergrund.VorleseAnzeige
+import de.frank.gedankenspeicher.hintergrund.VorleseDienst
+import de.frank.gedankenspeicher.hintergrund.VorleseFernbedienung
 import androidx.documentfile.provider.DocumentFile
 import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Anhangsspeicher
@@ -213,7 +218,28 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             vorleser.laeuft.collectLatest { laeuft ->
                 if (!laeuft) _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
+                // Solange gesprochen wird, hält ein Vordergrunddienst die Wiedergabe am
+                // Leben — sonst friert Android den Prozess ein, sobald eine andere App vorn
+                // ist, und es wird mitten im Satz still.
+                if (laeuft) VorleseDienst.starte(ctx) else VorleseDienst.beende(ctx)
             }
+        }
+        viewModelScope.launch {
+            // Die Benachrichtigung soll „Anhalten" und „Weiter" richtig herum zeigen.
+            vorleser.pausiert.collect { VorleseAnzeige.pausiert.value = it }
+        }
+        viewModelScope.launch {
+            // Die Knöpfe der Vorlese-Benachrichtigung. Der Dienst kennt den Vorleser nicht.
+            VorleseFernbedienung.befehle.collect { befehl ->
+                when (befehl) {
+                    VorleseFernbedienung.Befehl.UMSCHALTEN -> vorleser.umschalten()
+                    VorleseFernbedienung.Befehl.STOPP -> vorleser.halteAn()
+                }
+            }
+        }
+        viewModelScope.launch {
+            // Der Abbruch-Knopf der Auswertungs-Benachrichtigung.
+            AuswertungsFernbedienung.abbruch.collect { auswertungJob?.cancel() }
         }
         viewModelScope.launch {
             // B-09: der Stopp-Knopf der Aufnahme-Benachrichtigung. Er kommt aus dem Dienst,
@@ -1106,6 +1132,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val rueckfrage = blatt.rueckfrage
         _kiBlatt.value = KiBlattzustand()
         _verlauf.update { it.copy(wertetAus = true) }
+        // Eine gründliche Auswertung dauert Minuten. Ohne Vordergrunddienst friert Android
+        // den Prozess ein, sobald Frank in eine andere App wechselt, und schneidet die
+        // offene Verbindung ab — man kam zurück und es war nichts da.
+        AuswertungsDienst.starte(ctx)
 
         auswertungJob = viewModelScope.launch {
             try {
@@ -1146,6 +1176,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 melde(fehler.message ?: "Die Auswertung ist nicht durchgekommen.")
             } finally {
                 _verlauf.update { it.copy(wertetAus = false) }
+                AuswertungsDienst.beende(ctx)
             }
         }
     }
@@ -1712,7 +1743,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Auch die Stimmprobe: sie lief bisher im Hintergrund weiter und hielt das
         // Mikrofon besetzt, bis die App wiederkam.
         if (_nimmtStimmeAuf.value) beendeStimmaufnahme()
-        vorleser.halteAn()
+        // Das Vorlesen läuft bewusst weiter — wie die Aufnahme. Wer während einer langen
+        // Auswertung etwas nachschlägt, soll den Faden nicht mitten im Satz verlieren;
+        // beendet wird es in der App oder über die Benachrichtigung. Der Vordergrunddienst
+        // (`VorleseDienst`) hält die Wiedergabe so lange offen.
         // F-17: die Sicherung läuft beim Schliessen, sofern sie eingeschaltet ist und ein
         // Ordner feststeht. Ohne diesen Aufruf war der Schalter eine blosse Absichtserklärung
         // — gesichert wurde nur auf ausdrücklichen Knopfdruck.
@@ -1732,6 +1766,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Stirbt das ViewModel, gibt es niemanden mehr, der die Aufnahme beenden könnte —
         // die Benachrichtigung bliebe sonst als Geist stehen.
         AufnahmeDienst.beende(ctx)
+        VorleseDienst.beende(ctx)
+        AuswertungsDienst.beende(ctx)
         super.onCleared()
     }
 

@@ -1,5 +1,6 @@
 package de.frank.gedankenspeicher.tts
 
+import android.content.Context
 import android.media.MediaPlayer
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -18,7 +19,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * Anhalten und Fortsetzen gehen über denselben Spieler — sie treffen damit immer den
  * Absatz, der gerade läuft.
  */
-class Absatzabspieler {
+class Absatzabspieler(private val kontext: Context) {
 
     private val sperre = Any()
     private var spieler: MediaPlayer? = null
@@ -32,6 +33,12 @@ class Absatzabspieler {
                 raeumeAuf()
                 spieler = neuer
                 neuer.setAudioAttributes(SpeechLoudness.attributes)
+                // Hält die CPU wach, solange ein Absatz klingt. Ohne das schläft das Gerät
+                // bei ausgeschaltetem Bildschirm mitten im Satz ein — der Vordergrunddienst
+                // allein verhindert das nicht, er verhindert nur das Einfrieren der App.
+                runCatching {
+                    neuer.setWakeMode(kontext, android.os.PowerManager.PARTIAL_WAKE_LOCK)
+                }
                 neuer.setDataSource(datei.absolutePath)
                 neuer.setOnCompletionListener {
                     if (fertig.compareAndSet(false, true)) {

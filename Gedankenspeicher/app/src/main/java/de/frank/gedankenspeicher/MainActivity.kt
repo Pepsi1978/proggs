@@ -232,8 +232,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        // `01-FUNKTIONS-SPEC.md` §6: eine laufende Aufnahme wird beendet wie ein zweiter
-        // Tipp, die Sprachausgabe hört auf. Die Auswertung läuft weiter.
+        // Aufnahme, Vorlesen und Auswertung laufen im Hintergrund weiter — jedes über
+        // seinen eigenen Vordergrunddienst. Hier fällt nur der Fingerabdruck-Schutz zu.
         if (::modell.isInitialized) modell.inDenHintergrund()
     }
 

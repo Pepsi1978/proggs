@@ -54,7 +54,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
     }
 
     /** Spielt die fertigen Absätze — einen nach dem anderen, mit Anhalten und Fortsetzen. */
-    private val abspieler = Absatzabspieler()
+    private val abspieler = Absatzabspieler(context.applicationContext)
 
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 

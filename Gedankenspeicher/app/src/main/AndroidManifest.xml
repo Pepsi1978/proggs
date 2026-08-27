@@ -16,6 +16,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Vorlesen und Auswertung laufen weiter, wenn Frank die App verlässt. Beides braucht
+         einen eigenen Vordergrunddienst: Wiedergabe (`mediaPlayback`) und die lange
+         KI-Anfrage (`dataSync`). Ohne sie friert Android den Prozess ein, sobald ihn
+         niemand mehr sieht — der Ton bricht mitten im Satz ab und die Auswertung
+         verschwindet auf halbem Weg. WAKE_LOCK hält die CPU wach, während bei
+         ausgeschaltetem Bildschirm gesprochen wird. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- Kamera und Dokumentenscan aus dem Plus-Menü laufen über fremde Apps
          (ACTION_IMAGE_CAPTURE, ML-Kit-Scanner) — ein eigenes CAMERA-Recht braucht
          die App dafür nicht. -->
@@ -49,6 +59,18 @@
             android:name=".audio.AufnahmeDienst"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Hält das Vorlesen am Leben, solange eine andere App vorn ist. -->
+        <service
+            android:name=".hintergrund.VorleseDienst"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Hält die laufende KI-Auswertung am Leben, solange eine andere App vorn ist. -->
+        <service
+            android:name=".hintergrund.AuswertungsDienst"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- F-16: nur der Export-Ordner im Cache wird freigegeben, nichts sonst. -->
         <provider
