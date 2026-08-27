@@ -75,6 +75,27 @@ eigenes Schlüsselpaar und eine eigene `10.8.0.X`-Adresse. Zwei Geräte mit ders
 lassen den Server-Endpoint fortlaufend umspringen; Antworten und SSE-Heartbeats landen dann am
 falschen Gerät.
 
+## Cockpit im Browser: HTTPS ohne "Nicht sicher"
+Das Web-Cockpit erreicht man über **`https://10.8.0.1`** (Caddy, Port 443 an der WireGuard-IP).
+`http://10.8.0.1` wird per 301 dorthin umgeleitet, und Caddy setzt `Strict-Transport-Security`
+(max-age 1 Jahr). Der direkte HTTP-Port `10.8.0.1:8003` bleibt für interne Aufrufe bestehen —
+im Browser bitte **nicht** benutzen (dort steht zu Recht "Nicht sicher").
+
+Das Zertifikat kommt von Caddys **eigener interner CA** (bewusst kein Let's Encrypt: kein
+öffentlicher DNS-Name, keine offenen Ports 80/443 nach außen). Diese CA kennt kein Browser ab
+Werk — deshalb muss ihre Wurzel-Bescheinigung **einmal pro Gerät** importiert werden:
+
+```bash
+bash ~/proggs/second-brain-server/macos/install-cortex-ca.sh        # macOS (kein sudo nötig)
+pwsh -NoProfile -File .\windows\install-cortex-ca.ps1               # Windows (kein Admin nötig)
+```
+
+Beide Skripte sind idempotent: Sie holen `root.crt` frisch aus dem `caddy_data`-Volume
+(`docker exec sb-caddy cat /data/caddy/pki/authorities/local/root.crt`), entfernen alte Kopien,
+importieren in den Benutzer-Zertifikatspeicher und prüfen zum Schluss mit einem echten
+HTTPS-Aufruf (`CORTEX_CA_OK`). Sicherungskopie der CA: `~/SK/second-brain/caddy-root-ca.crt`
+(gültig bis 2036-05-02). **Chrome danach einmal komplett beenden**, damit er den Speicher neu liest.
+
 ## Observability
 brain-api schreibt strukturierte JSON-Lines nach `/app/logs/brain-api.jsonl` (Host: `./brain-logs/`,
 rotierend) und spiegelt sie nach stdout. Live mitlesen auf dem Server:
