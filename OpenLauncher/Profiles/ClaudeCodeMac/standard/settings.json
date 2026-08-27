@@ -51,5 +51,8 @@
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "_comment": "macOS-Fassung des Standard-Profils. 1:1 aus Profiles/ClaudeCode/standard/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript.",
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  }
 }
