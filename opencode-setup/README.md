@@ -25,6 +25,7 @@
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
 | 2f. Windows-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode.exe` | nein (lokal) | Patch + Buildskript | ja (gebaut) |
+| 2f1. macOS-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode` | nein (lokal) | `patches/opencode-1.18.23-tui-model.patch` + `build-install-macos-tuifix.sh` | ja (gebaut) |
 | 2g. OpenLauncher | `~/proggs/OpenLauncher/bin/Release/.../OpenLauncher.exe` | **ja** (Quellcode) | `OpenLauncher/` | ja (gebaut + Shortcut) |
 | 3. Projektbasis | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
 | 3b. OpenCode-Profile | `%APPDATA%\OpenLauncher\profiles\opencode\<profil>\` | nein (lokal) | Standardvorlagen im `OpenLauncher` | beim ersten Profilzugriff erzeugt |
@@ -135,6 +136,34 @@ Medium, High, XHigh, Max sowie providerspezifischen Varianten und eine vollstän
 Plugin-Verwaltung: Die Plugin-Seite zeigt TUI- und Runtime-Hook-Plugins gemeinsam an und kann beide Typen
 dauerhaft aktivieren oder deaktivieren. Runtime-Schalter werden kompatibel in `tui.json` gespeichert;
 OpenCode lädt die Server-Plugins danach automatisch neu.
+
+## Der macOS-Fix (Gegenstück zum Windows-Fix)
+
+`build-install-macos-tuifix.sh` baut ein gepatchtes OpenCode-Binary für macOS und hängt es unter
+`~/.local/share/opencode-mousefix/` ein — derselbe Ort und dasselbe `current.json`-Format wie unter
+Windows, damit der macOS-Launcher es über `resolveOpenCodeExecutable` findet.
+
+Bewusst **nicht** derselbe Patch: der Windows-Patch dreht an Maus, Auswahl und Zwischenablage
+(PowerShell-Aufrufe, Rechtsklick-Einfügen). Unter macOS wäre das ein Rückschritt — Kopieren bei
+Auswahl funktioniert dort nativ. Übernommen sind nur die plattformneutralen Teile:
+
+1. **TuiModel-API (`api.model`)** — die Seitenleiste `token-cost-sidebar` liest darüber das aktive
+   Modell und schaltet die Effort-Stufen um. Ohne sie fehlt der Effort-Wähler in der TUI.
+2. **Full-Repaint-Recovery** — OpenTUI fordert nach einem fehlgeschlagenen Frame einen vollständigen
+   Neuaufbau an, statt das zerfallene Bild stehen zu lassen.
+3. **TUI-Fehler-Handler** — unbehandelte Fehler im TUI-Hauptthread landen in
+   `~/.local/share/opencode/log/tui-crash.log` statt roh auf stderr, also auf demselben TTY, auf dem
+   die TUI zeichnet (`bugs/opencode/opencode-cli.md` #14a).
+4. **Cache-Telemetrie** — `cache_write_tokens` werden aus der OpenAI-Antwort übernommen, sonst zählt
+   die Seitenleiste Cache-Schreibkosten als normalen Input.
+
+Voraussetzungen: **git, bun (≥ 1.3.14), python3, npm**. Ablauf wie unter Windows: Tag klonen, Patches
+prüfen und anwenden, fünf Typechecks, fokussierte Regressionstests, Binary-Build, `--version`-Smoke-Test,
+unveränderlicher Versionsordner, danach `current.json` atomar umschalten (`previous` bleibt als
+Rückfallweg). Das Skript ist idempotent und wird von `install.sh` automatisch mitgefahren
+(`OPENCODE_SKIP_MACFIX=1` überspringt es).
+
+---
 
 ## Automatische OpenCode-Updates unter Windows
 

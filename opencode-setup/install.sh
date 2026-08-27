@@ -152,6 +152,20 @@ else
   yellow "--  Node oder Notifier-Updater fehlt -> taegliche Pruefung startet beim naechsten OpenCode-Start erneut"
 fi
 
+# --- 5) macOS-Stabilitaetsbuild (Gegenstueck zum Windows-Fix in install.ps1) ---
+# Baut das gepatchte OpenCode-Binary: TuiModel-API (Effort-Waehler der Seitenleiste),
+# Full-Repaint-Recovery, TUI-Fehler-Handler, Cache-Telemetrie. Der Launcher startet danach dieses
+# Binary. Ueberspringbar mit OPENCODE_SKIP_MACFIX=1 (z.B. auf Testzielen ohne bun/git).
+if [ "${OPENCODE_SKIP_MACFIX:-0}" != "1" ]; then
+  if bash "$SRC/build-install-macos-tuifix.sh"; then
+    green "OK  OpenCode-macOS-Fix (TuiModel-API, Full-Repaint, Fehler-Handler, Cache-Telemetrie)"
+  else
+    yellow "--  macOS-Stabilitaetsbuild fehlgeschlagen -> bisherige OpenCode-Fassung bleibt aktiv"
+  fi
+else
+  yellow "--  macOS-Stabilitaetsbuild uebersprungen (OPENCODE_SKIP_MACFIX=1)"
+fi
+
 # --- 5) Voraussetzungs-Check (nur Hinweise; das Setup selbst ist fertig) ---
 echo ""
 echo "== Voraussetzungs-Check (was noch fehlt, manuell erledigen) =="

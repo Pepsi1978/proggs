@@ -1,0 +1,85 @@
+diff --git a/packages/plugin/src/tui.ts b/packages/plugin/src/tui.ts
+index 6781216..b4789de 100644
+--- a/packages/plugin/src/tui.ts
++++ b/packages/plugin/src/tui.ts
+@@ -372,6 +372,15 @@ export type TuiKV = {
+   readonly ready: boolean
+ }
+ 
++export type TuiModel = {
++  current?: () => { providerID: string; modelID: string } | undefined
++  variant: {
++    current: () => string | undefined
++    list: () => ReadonlyArray<string>
++    set: (value: string | undefined) => boolean
++  }
++}
++
+ export type TuiState = {
+   readonly ready: boolean
+   readonly config: SdkConfig
+@@ -591,6 +600,7 @@ export type TuiPluginApi = {
+   keys: TuiKeys
+   keymap: TuiKeymap
+   mode: TuiModeApi
++  model?: TuiModel
+   route: {
+     register: (routes: TuiRouteDefinition[]) => () => void
+     navigate: (name: string, params?: Record<string, unknown>) => void
+diff --git a/packages/tui/src/app.tsx b/packages/tui/src/app.tsx
+index 57f372e..7983431 100644
+--- a/packages/tui/src/app.tsx
++++ b/packages/tui/src/app.tsx
+@@ -391,6 +391,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
+       tuiConfig,
+       dialog,
+       keymap,
++      local,
+       kv,
+       route,
+       routes: pluginRuntime.routes,
+diff --git a/packages/tui/src/plugin/adapters.tsx b/packages/tui/src/plugin/adapters.tsx
+index fef0ec8..580262a 100644
+--- a/packages/tui/src/plugin/adapters.tsx
++++ b/packages/tui/src/plugin/adapters.tsx
+@@ -5,6 +5,7 @@ import type { useRoute } from "../context/route"
+ import type { useSDK } from "../context/sdk"
+ import type { useSync } from "../context/sync"
+ import type { useTheme } from "../context/theme"
++import type { useLocal } from "../context/local"
+ import { Dialog as DialogUI, type useDialog } from "../ui/dialog"
+ import type { useOpencodeKeymap } from "../keymap"
+ import type { useKV } from "../context/kv"
+@@ -25,6 +26,7 @@ type Input = {
+   tuiConfig: TuiConfig.Resolved
+   dialog: ReturnType<typeof useDialog>
+   keymap: ReturnType<typeof useOpencodeKeymap>
++  local: ReturnType<typeof useLocal>
+   kv: ReturnType<typeof useKV>
+   route: ReturnType<typeof useRoute>
+   routes: PluginRoutes
+@@ -193,6 +195,24 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
+         return Keymap.getOpencodeModeStack(input.keymap).push(mode)
+       },
+     },
++    model: {
++      current() {
++        return input.local.model.current()
++      },
++      variant: {
++        current() {
++          return input.local.model.variant.current()
++        },
++        list() {
++          return input.local.model.variant.list()
++        },
++        set(value) {
++          if (value !== undefined && !input.local.model.variant.list().includes(value)) return false
++          input.local.model.variant.set(value)
++          return input.local.model.variant.current() === value
++        },
++      },
++    },
+     route: {
+       register(list) {
+         return input.routes.register(list)
