@@ -18,6 +18,17 @@ public sealed class LmStudioService
     public const string ProviderName = "LM Studio";
     public const string BaseUrl = "http://localhost:1234/v1";
 
+    /// <summary>
+    /// Kleinster Kontext, mit dem OpenCode überhaupt arbeiten kann. Der Systemprompt allein
+    /// braucht rund 22000 Tokens; darunter bricht schon die erste Anfrage mit
+    /// exceed_context_size_error ab. LM Studio schlägt beim Laden von Hand oft 4096 vor — genau
+    /// dieser Fall hat früher zum sofortigen Abbruch geführt.
+    /// </summary>
+    public const int MinimumAgentContext = 32_768;
+
+    /// <summary>Wunschgröße beim automatischen Laden. Wird auf den Maximalkontext gedeckelt.</summary>
+    public const int PreferredContext = 65_536;
+
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(5) };
 
     private static string LmsPath => Path.Combine(
@@ -159,7 +170,19 @@ public sealed class LmStudioService
         if (models.Count > 0 || !IsInstalled) return models;
 
         await Task.Run(() => EnsureServerRunning(), ct).ConfigureAwait(false);
-        return await GetLocalModelsAsync(ct).ConfigureAwait(false);
+
+        // "lms server start" kehrt zurück, bevor der HTTP-Endpunkt Anfragen annimmt. Ohne
+        // Wiederholversuche liefert die nächste Abfrage deshalb eine leere Liste — der Reiter
+        // "LM Studio" bleibt dann leer, obwohl LM Studio läuft.
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            models = await GetLocalModelsAsync(ct).ConfigureAwait(false);
+            if (models.Count > 0) return models;
+            if (attempt < 3) await Task.Delay(1500, ct).ConfigureAwait(false);
+        }
+        Logger.Instance.Warn("LmStudioService", "GetLocalModelsWithServerAsync",
+            "Server gestartet, liefert aber keine Modelle");
+        return models;
     }
 
     /// <summary>"mistralai/devstral-small-2-2512" -> "Devstral Small 2 2512 (lokal)".</summary>

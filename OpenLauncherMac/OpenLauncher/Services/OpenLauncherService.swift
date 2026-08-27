@@ -26,7 +26,7 @@ final class OpenLauncherService {
     private static let gpt56LunaFastSlug = "gpt-5.6-luna-fast"
 
     /// Kontextlaenge, mit der ein noch nicht geladenes LM-Studio-Modell geladen wird.
-    private static let defaultLmStudioContext = 65_536
+    private static let defaultLmStudioContext = LmStudioService.preferredContext
 
     /// Hebt die Prioritaet der Sitzung an. Windows setzt ProcessPriorityClass.AboveNormal; auf macOS
     /// ist das Gegenstueck ein negativer nice-Wert. Ohne root sind nur Werte >= 0 erlaubt, deshalb
@@ -392,6 +392,11 @@ final class OpenLauncherService {
     /// Sorgt im Terminal-Fenster dafuer, dass ein lokales LM-Studio-Modell mit agent-tauglichem
     /// Kontext geladen ist, bevor OpenCode startet. Sichtbar statt im UI-Thread: das Laden eines
     /// grossen Modells dauert Minuten. Fuer alle anderen Provider ist das Ergebnis leer.
+    ///
+    /// Ein bereits geladenes Modell wird NUR dann uebernommen, wenn sein Kontext fuer OpenCode
+    /// reicht. Hat der Benutzer es in LM Studio von Hand gestartet (Vorgabe dort oft 4096 Tokens),
+    /// wird es entladen und mit grossem Kontext neu geladen - sonst bricht OpenCode sofort mit
+    /// exceed_context_size_error ab, weil allein der Systemprompt rund 22000 Tokens braucht.
     private static func buildLmStudioPreloadScript(modelString: String) -> String {
         let prefix = "\(LmStudioService.providerId)/"
         guard modelString.lowercased().hasPrefix(prefix) else { return "" }
@@ -406,55 +411,192 @@ final class OpenLauncherService {
         LMS="$HOME/.lmstudio/bin/lms"
         if [ -x "$LMS" ]; then
             LMSMODEL=\(Shell.singleQuoted(modelId))
-            "$LMS" server start >/dev/null 2>&1
-            LOADEDCTX=$("$LMS" ps --json 2>/dev/null | python3 -c "
-        import sys, json
-        try:
-            entries = json.load(sys.stdin)
-        except Exception:
-            entries = []
-        target = sys.argv[1]
-        for e in entries:
-            if e.get('identifier') == target or e.get('modelKey') == target:
-                print(e.get('contextLength', 0)); break
-        else:
-            print(0)
-        " "$LMSMODEL" 2>/dev/null)
-            [ -z "$LOADEDCTX" ] && LOADEDCTX=0
+            LMSMINCTX=\(LmStudioService.minimumAgentContext)
+            LMSWANTCTX=\(LmStudioService.preferredContext)
+            LMSPY="${TMPDIR:-/tmp}/openlauncher-lmstudio-$$.py"
+            # Hilfsskript einmal ablegen: liest den Zustand aus der lms-CLI und traegt den echten
+            # Kontext in die opencode-Konfig ein. Als Datei statt als python3 -c, damit die
+            # Anfuehrungszeichen nicht zwischen zsh, Swift und Python zerrieben werden.
+            cat > "$LMSPY" <<'PYEOF'
+        import json, sys
 
-            if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
-                # Selbst geladenes Modell: die in LM Studio eingestellten Parameter gelten unangetastet.
-                # Es wird NICHT neu geladen, auch nicht mit anderer Kontextlaenge.
-                printf '\\033[90mLokales Modell %s ist bereits geladen - deine LM-Studio-Einstellungen gelten (%s Tokens Kontext).\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
-                # OpenCode schickt allein als Systemprompt rund 22k Tokens; darunter bricht die erste
-                # Anfrage mit exceed_context_size_error ab. Nur Hinweis, kein Eingriff.
-                if [ "$LOADEDCTX" -lt 32768 ] 2>/dev/null; then
-                    printf '\\033[33mAchtung: %s Tokens sind fuer OpenCode knapp - der Systemprompt allein braucht rund 22000. Bei Abbruch in LM Studio mit groesserem Kontext neu laden.\\033[0m\\n' "$LOADEDCTX"
-                fi
-            else
-                printf '\\033[36mLade lokales Modell %s mit grossem Kontext - das kann einige Minuten dauern ...\\033[0m\\n' "$LMSMODEL"
-                "$LMS" load "$LMSMODEL" --context-length 65536 -y
-                if [ $? -ne 0 ]; then
-                    printf '\\033[33m65536 Tokens haben nicht gepasst - versuche 32768 ...\\033[0m\\n'
-                    "$LMS" load "$LMSMODEL" --context-length 32768 -y
-                fi
-                if [ $? -ne 0 ]; then
-                    printf '\\033[33mAutomatisches Laden fehlgeschlagen - LM Studio laedt das Modell bei der ersten Anfrage selbst.\\033[0m\\n'
-                fi
-                LOADEDCTX=$("$LMS" ps --json 2>/dev/null | python3 -c "
-        import sys, json
-        try:
-            entries = json.load(sys.stdin)
-        except Exception:
-            entries = []
-        target = sys.argv[1]
-        for e in entries:
-            if e.get('identifier') == target or e.get('modelKey') == target:
-                print(e.get('contextLength', 0)); break
-        else:
-            print(0)
-        " "$LMSMODEL" 2>/dev/null)
+        BACKSLASH = chr(92)
+        NEWLINE = chr(10)
+        BOM = chr(65279)
+
+
+        def strip_jsonc(raw):
+            \"\"\"Kommentare und nachgestellte Kommata entfernen - aber NUR ausserhalb von
+            Zeichenketten. Eine naive Regex auf '//' zerschlaegt sonst jede URL in der Konfig
+            (etwa den $schema-Eintrag) und der Parse scheitert immer.\"\"\"
+            out = []
+            i = 0
+            n = len(raw)
+            in_str = False
+            while i < n:
+                c = raw[i]
+                if in_str:
+                    out.append(c)
+                    if c == BACKSLASH and i + 1 < n:
+                        out.append(raw[i + 1])
+                        i += 2
+                        continue
+                    if c == '"':
+                        in_str = False
+                    i += 1
+                    continue
+                if c == '"':
+                    in_str = True
+                    out.append(c)
+                    i += 1
+                    continue
+                if c == '/' and i + 1 < n and raw[i + 1] == '/':
+                    while i < n and raw[i] != NEWLINE:
+                        i += 1
+                    continue
+                if c == '/' and i + 1 < n and raw[i + 1] == '*':
+                    i += 2
+                    while i + 1 < n and not (raw[i] == '*' and raw[i + 1] == '/'):
+                        i += 1
+                    i += 2
+                    continue
+                out.append(c)
+                i += 1
+
+            text = ''.join(out)
+            cleaned = []
+            j = 0
+            m = len(text)
+            in_str = False
+            while j < m:
+                ch = text[j]
+                if in_str:
+                    cleaned.append(ch)
+                    if ch == BACKSLASH and j + 1 < m:
+                        cleaned.append(text[j + 1])
+                        j += 2
+                        continue
+                    if ch == '"':
+                        in_str = False
+                    j += 1
+                    continue
+                if ch == '"':
+                    in_str = True
+                    cleaned.append(ch)
+                    j += 1
+                    continue
+                if ch == ',':
+                    k = j + 1
+                    while k < m and text[k].isspace():
+                        k += 1
+                    if k < m and (text[k] == '}' or text[k] == ']'):
+                        j += 1
+                        continue
+                cleaned.append(ch)
+                j += 1
+            return ''.join(cleaned)
+
+
+        def entries():
+            try:
+                data = json.load(sys.stdin)
+            except Exception:
+                return []
+            return data if isinstance(data, list) else []
+
+
+        def find(items, target):
+            low = target.lower()
+            for e in items:
+                for key in ('identifier', 'modelKey', 'indexedModelIdentifier', 'path'):
+                    value = e.get(key)
+                    if isinstance(value, str) and value.lower() == low:
+                        return e
+            return None
+
+
+        def number(entry, key):
+            try:
+                return int(entry.get(key) or 0)
+            except Exception:
+                return 0
+
+
+        mode = sys.argv[1]
+
+        if mode == 'ctx':
+            # stdin: Ausgabe von "lms ps --json" -> "<geladen> <maximum>"
+            e = find(entries(), sys.argv[2]) or {}
+            print('%d %d' % (number(e, 'contextLength'), number(e, 'maxContextLength')))
+        elif mode == 'max':
+            # stdin: Ausgabe von "lms ls --json" -> Maximalkontext des Modells
+            e = find(entries(), sys.argv[2]) or {}
+            print('%d' % number(e, 'maxContextLength'))
+        elif mode == 'patch':
+            path, model, ctx = sys.argv[2], sys.argv[3], int(sys.argv[4])
+            raw = open(path, encoding='utf-8').read()
+            if raw[:1] == BOM:
+                raw = raw[1:]
+            try:
+                cfg = json.loads(raw)
+            except Exception:
+                cfg = json.loads(strip_jsonc(raw))
+            entry = cfg.get('provider', {}).get('lmstudio', {}).get('models', {}).get(model)
+            if entry is None:
+                sys.exit(0)
+            limit = entry.setdefault('limit', {})
+            if limit.get('context') != ctx:
+                limit['context'] = ctx
+                limit['output'] = min(8192, max(2048, ctx // 8))
+                open(path, 'w', encoding='utf-8').write(json.dumps(cfg, indent=2, ensure_ascii=False) + NEWLINE)
+                print('Kontextfenster aus LM Studio uebernommen: %d Tokens.' % ctx)
+        PYEOF
+
+            "$LMS" server start >/dev/null 2>&1
+
+            lmsState() {
+                LMSINFO=$("$LMS" ps --json 2>/dev/null | python3 "$LMSPY" ctx "$LMSMODEL" 2>/dev/null)
+                [ -z "$LMSINFO" ] && LMSINFO='0 0'
+                LOADEDCTX=${LMSINFO%% *}
+                MAXCTX=${LMSINFO##* }
                 [ -z "$LOADEDCTX" ] && LOADEDCTX=0
+                [ -z "$MAXCTX" ] && MAXCTX=0
+            }
+
+            lmsState
+
+            # Zu klein geladen (LM-Studio-Vorgabe ist oft 4096): entladen und gross neu laden.
+            if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null && [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
+                printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - damit bricht die erste Anfrage ab. Das Modell wird jetzt mit groesserem Kontext neu geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                "$LMS" unload "$LMSMODEL" >/dev/null 2>&1
+                LOADEDCTX=0
+            fi
+
+            if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
+                if [ "$MAXCTX" -le 0 ] 2>/dev/null; then
+                    MAXCTX=$("$LMS" ls --json 2>/dev/null | python3 "$LMSPY" max "$LMSMODEL" 2>/dev/null)
+                    [ -z "$MAXCTX" ] && MAXCTX=0
+                fi
+                TARGETCTX=$LMSWANTCTX
+                if [ "$MAXCTX" -gt 0 ] 2>/dev/null && [ "$MAXCTX" -lt "$TARGETCTX" ] 2>/dev/null; then
+                    TARGETCTX=$MAXCTX
+                fi
+                printf '\\033[36mLade lokales Modell %s mit %s Tokens Kontext - das kann einige Minuten dauern ...\\033[0m\\n' "$LMSMODEL" "$TARGETCTX"
+                if ! "$LMS" load "$LMSMODEL" --context-length "$TARGETCTX" -y; then
+                    printf '\\033[33m%s Tokens haben nicht gepasst - versuche %s ...\\033[0m\\n' "$TARGETCTX" "$LMSMINCTX"
+                    if ! "$LMS" load "$LMSMODEL" --context-length "$LMSMINCTX" -y; then
+                        printf '\\033[33mAutomatisches Laden fehlgeschlagen - bitte %s in LM Studio von Hand mit mindestens %s Tokens Kontext laden.\\033[0m\\n' "$LMSMODEL" "$LMSMINCTX"
+                    fi
+                fi
+                lmsState
+            fi
+
+            if [ "$LOADEDCTX" -ge "$LMSMINCTX" ] 2>/dev/null; then
+                printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+            elif [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
+                printf '\\033[33mAchtung: nur %s Tokens Kontext - OpenCode bricht die erste Anfrage moeglicherweise ab.\\033[0m\\n' "$LOADEDCTX"
+            else
+                printf '\\033[33m%s konnte nicht geladen werden - LM Studio versucht es bei der ersten Anfrage selbst.\\033[0m\\n' "$LMSMODEL"
             fi
 
             # Das Kontextfenster in der opencode-Konfig muss exakt der Ladeeinstellung in LM Studio
@@ -464,25 +606,11 @@ final class OpenLauncherService {
                 CFGPATH="$HOME/.config/opencode/opencode.jsonc"
                 [ -f "$CFGPATH" ] || CFGPATH="$HOME/.config/opencode/opencode.json"
                 if [ -f "$CFGPATH" ]; then
-                    python3 - "$CFGPATH" "$LMSMODEL" "$LOADEDCTX" <<'PYEOF' || printf '\\033[33mKontextfenster konnte nicht in die opencode-Konfig geschrieben werden.\\033[0m\\n'
-        import json, re, sys
-        path, modelId, ctx = sys.argv[1], sys.argv[2], int(sys.argv[3])
-        raw = open(path, encoding='utf-8').read().lstrip('\\ufeff')
-        stripped = re.sub(r'//[^\\n]*', '', raw)
-        stripped = re.sub(r'/\\*.*?\\*/', '', stripped, flags=re.S)
-        stripped = re.sub(r',(\\s*[}\\]])', r'\\1', stripped)
-        cfg = json.loads(stripped)
-        entry = cfg.get('provider', {}).get('lmstudio', {}).get('models', {}).get(modelId)
-        if entry is not None:
-            limit = entry.setdefault('limit', {})
-            if limit.get('context') != ctx:
-                limit['context'] = ctx
-                limit['output'] = min(8192, max(2048, ctx // 8))
-                open(path, 'w', encoding='utf-8').write(json.dumps(cfg, indent=2, ensure_ascii=False))
-                print('\\033[90mKontextfenster aus LM Studio uebernommen: %d Tokens.\\033[0m' % ctx)
-        PYEOF
+                    python3 "$LMSPY" patch "$CFGPATH" "$LMSMODEL" "$LOADEDCTX" || printf '\\033[33mKontextfenster konnte nicht in die opencode-Konfig geschrieben werden.\\033[0m\\n'
                 fi
             fi
+
+            rm -f "$LMSPY" 2>/dev/null || true
         fi
         """
     }
@@ -657,8 +785,12 @@ final class OpenLauncherService {
         // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte. Ist das Modell
         // noch nicht geladen, gilt vorlaeufig der Wert, mit dem das Startskript laedt - es korrigiert
         // den Eintrag danach auf den tatsaechlichen Wert.
+        // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
+        // Tokens. Dieser Wert darf NICHT in die Konfig wandern - OpenCode bricht damit sofort ab.
+        // Das Startskript laedt in dem Fall sichtbar mit groesserem Kontext neu und traegt den
+        // tatsaechlichen Wert danach nach.
         let loadedContext = LmStudioService.loadedContextLength(modelId: slug)
-        let context = loadedContext > 0 ? loadedContext : defaultLmStudioContext
+        let context = loadedContext >= LmStudioService.minimumAgentContext ? loadedContext : defaultLmStudioContext
         let limit = modelNode.getOrAddObject("limit")
         limit["context"] = .number(context)
         limit["output"] = .number(LmStudioService.outputLimit(for: context))

@@ -12,6 +12,15 @@ final class LmStudioService {
     static let providerName = "LM Studio"
     static let baseUrl = "http://localhost:1234/v1"
 
+    /// Kleinster Kontext, mit dem OpenCode ueberhaupt arbeiten kann. Der Systemprompt allein
+    /// braucht rund 22000 Tokens; darunter bricht schon die erste Anfrage mit
+    /// exceed_context_size_error ab. LM Studio schlaegt beim Laden von Hand oft 4096 vor - genau
+    /// dieser Fall hat frueher zum sofortigen Abbruch gefuehrt.
+    static let minimumAgentContext = 32_768
+
+    /// Wunschgroesse beim automatischen Laden. Wird auf den Maximalkontext des Modells gedeckelt.
+    static let preferredContext = 65_536
+
     static var lmsPath: String {
         (Paths.home as NSString).appendingPathComponent(".lmstudio/bin/lms")
     }
@@ -26,6 +35,15 @@ final class LmStudioService {
         guard isInstalled else { return false }
         let result = Shell.run(lmsPath, ["server", "start"], timeout: 20)
         Logger.shared.info("LmStudioService", "ensureServerRunning", "lms server start beendet mit \(result.exitCode)")
+        return result.exitCode == 0
+    }
+
+    /// Entlaedt ein Modell, damit es mit anderer Kontextlaenge neu geladen werden kann.
+    @discardableResult
+    static func unload(modelId: String) -> Bool {
+        guard isInstalled, !modelId.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        let result = Shell.run(lmsPath, ["unload", modelId], timeout: 60)
+        Logger.shared.info("LmStudioService", "unload", "lms unload \(modelId) beendet mit \(result.exitCode)")
         return result.exitCode == 0
     }
 
@@ -95,7 +113,18 @@ final class LmStudioService {
         if !models.isEmpty || !LmStudioService.isInstalled { return models }
 
         await Task.detached { _ = LmStudioService.ensureServerRunning() }.value
-        return await localModels()
+
+        // "lms server start" kehrt zurueck, bevor der HTTP-Endpunkt Anfragen annimmt. Ohne
+        // Wiederholversuche liefert die naechste Abfrage deshalb eine leere Liste - der Reiter
+        // "LM Studio" bleibt dann leer, obwohl LM Studio laeuft.
+        for attempt in 0..<4 {
+            let models = await localModels()
+            if !models.isEmpty { return models }
+            if attempt < 3 { try? await Task.sleep(nanoseconds: 1_500_000_000) }
+        }
+        Logger.shared.warn("LmStudioService", "localModelsWithServer",
+                           "Server gestartet, liefert aber keine Modelle")
+        return []
     }
 
     /// "mistralai/devstral-small-2-2512" -> "Devstral Small 2 2512 (lokal)".

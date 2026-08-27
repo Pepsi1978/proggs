@@ -723,6 +723,11 @@ try {
     /// Sorgt im Terminal-Fenster dafuer, dass ein lokales LM-Studio-Modell mit agent-tauglichem
     /// Kontext geladen ist, bevor OpenCode startet. Sichtbar statt im UI-Thread: das Laden eines
     /// grossen Modells dauert Minuten. Fuer alle anderen Provider ist das Ergebnis leer.
+    ///
+    /// Ein bereits geladenes Modell wird NUR dann uebernommen, wenn sein Kontext fuer OpenCode
+    /// reicht. Hat der Benutzer es in LM Studio von Hand gestartet (Vorgabe dort oft 4096 Tokens),
+    /// wird es entladen und mit grossem Kontext neu geladen — sonst bricht OpenCode sofort mit
+    /// exceed_context_size_error ab, weil allein der Systemprompt rund 22000 Tokens braucht.
     /// </summary>
     private static string BuildLmStudioPreloadScript(string modelString)
     {
@@ -740,44 +745,64 @@ $env:OPENCODE_DISABLE_EXTERNAL_SKILLS = '1'
 $lms = Join-Path $env:USERPROFILE '.lmstudio\bin\lms.exe'
 if (Test-Path -LiteralPath $lms) {
     $lmsModel = {{PowerShellLiteral(modelId)}}
+    $lmsMinCtx = {{LmStudioService.MinimumAgentContext}}
+    $lmsWantCtx = {{LmStudioService.PreferredContext}}
     & $lms server start | Out-Null
-    $loaded = $null
-    try {
-        $running = & $lms ps --json 2>$null | ConvertFrom-Json
-        $loaded = @($running | Where-Object { $_.identifier -eq $lmsModel -or $_.modelKey -eq $lmsModel })[0]
-    } catch { $loaded = $null }
 
-    if ($loaded) {
-        # Selbst geladenes Modell: die in LM Studio eingestellten Parameter gelten unangetastet.
-        # Es wird NICHT neu geladen, auch nicht mit anderer Kontextlaenge.
-        Write-Host "Lokales Modell $lmsModel ist bereits geladen - deine LM-Studio-Einstellungen gelten ($($loaded.contextLength) Tokens Kontext)." -ForegroundColor DarkGray
-        # OpenCode schickt allein als Systemprompt rund 22k Tokens; darunter bricht die erste
-        # Anfrage mit exceed_context_size_error ab. Nur Hinweis, kein Eingriff.
-        if ([int]$loaded.contextLength -lt 32768) {
-            Write-Host "Achtung: $($loaded.contextLength) Tokens sind fuer OpenCode knapp - der Systemprompt allein braucht rund 22000. Bei Abbruch in LM Studio mit groesserem Kontext neu laden." -ForegroundColor Yellow
+    function Get-LmsEntry {
+        try {
+            $running = & $lms ps --json 2>$null | ConvertFrom-Json
+            return @($running | Where-Object { $_.identifier -eq $lmsModel -or $_.modelKey -eq $lmsModel })[0]
+        } catch { return $null }
+    }
+
+    $loaded = Get-LmsEntry
+    $ctx = if ($loaded) { [int]$loaded.contextLength } else { 0 }
+    $maxCtx = if ($loaded) { [int]$loaded.maxContextLength } else { 0 }
+
+    # Zu klein geladen (LM-Studio-Vorgabe ist oft 4096): entladen und gross neu laden.
+    if ($ctx -gt 0 -and $ctx -lt $lmsMinCtx) {
+        Write-Host "$lmsModel ist in LM Studio mit nur $ctx Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - damit bricht die erste Anfrage ab. Das Modell wird jetzt mit groesserem Kontext neu geladen." -ForegroundColor Yellow
+        & $lms unload $lmsModel 2>$null | Out-Null
+        $ctx = 0
+    }
+
+    if ($ctx -le 0) {
+        if ($maxCtx -le 0) {
+            try {
+                $all = & $lms ls --json 2>$null | ConvertFrom-Json
+                $known = @($all | Where-Object { $_.modelKey -eq $lmsModel -or $_.indexedModelIdentifier -eq $lmsModel -or $_.path -eq $lmsModel })[0]
+                if ($known) { $maxCtx = [int]$known.maxContextLength }
+            } catch { $maxCtx = 0 }
         }
+        $targetCtx = $lmsWantCtx
+        if ($maxCtx -gt 0 -and $maxCtx -lt $targetCtx) { $targetCtx = $maxCtx }
+
+        Write-Host "Lade lokales Modell $lmsModel mit $targetCtx Tokens Kontext - das kann einige Minuten dauern ..." -ForegroundColor Cyan
+        & $lms load $lmsModel --context-length $targetCtx -y
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "$targetCtx Tokens haben nicht gepasst - versuche $lmsMinCtx ..." -ForegroundColor Yellow
+            & $lms load $lmsModel --context-length $lmsMinCtx -y
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Automatisches Laden fehlgeschlagen - bitte $lmsModel in LM Studio von Hand mit mindestens $lmsMinCtx Tokens Kontext laden." -ForegroundColor Yellow
+        }
+
+        $loaded = Get-LmsEntry
+        $ctx = if ($loaded) { [int]$loaded.contextLength } else { 0 }
+    }
+
+    if ($ctx -ge $lmsMinCtx) {
+        Write-Host "Lokales Modell $lmsModel ist mit $ctx Tokens Kontext geladen." -ForegroundColor DarkGray
+    } elseif ($ctx -gt 0) {
+        Write-Host "Achtung: nur $ctx Tokens Kontext - OpenCode bricht die erste Anfrage moeglicherweise ab." -ForegroundColor Yellow
     } else {
-        Write-Host "Lade lokales Modell $lmsModel mit grossem Kontext - das kann einige Minuten dauern ..." -ForegroundColor Cyan
-        & $lms load $lmsModel --context-length 65536 -y
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "65536 Tokens haben nicht gepasst - versuche 32768 ..." -ForegroundColor Yellow
-            & $lms load $lmsModel --context-length 32768 -y
-        }
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Automatisches Laden fehlgeschlagen - LM Studio laedt das Modell bei der ersten Anfrage selbst." -ForegroundColor Yellow
-        }
+        Write-Host "$lmsModel konnte nicht geladen werden - LM Studio versucht es bei der ersten Anfrage selbst." -ForegroundColor Yellow
     }
 
     # Das Kontextfenster in der opencode-Konfig muss exakt der Ladeeinstellung in LM Studio
     # entsprechen. Sonst rechnet OpenCode gegen eine falsche Obergrenze: bei zu kleinem Wert
     # meldet es sofort einen fast vollen Kontext und komprimiert endlos im Kreis.
-    $ctx = 0
-    try {
-        $running = & $lms ps --json 2>$null | ConvertFrom-Json
-        $entry = @($running | Where-Object { $_.identifier -eq $lmsModel -or $_.modelKey -eq $lmsModel })[0]
-        if ($entry) { $ctx = [int]$entry.contextLength }
-    } catch { $ctx = 0 }
-
     if ($ctx -gt 0) {
         $cfgPath = Join-Path $env:USERPROFILE '.config\opencode\opencode.jsonc'
         if (-not (Test-Path -LiteralPath $cfgPath)) {
@@ -1086,7 +1111,7 @@ if (-not $env:NVIDIA_API_KEY) {
     /// globale opencode-Konfig ein. Bestehende Eintraege bleiben erhalten, es wird nur ergaenzt.
     /// </summary>
     /// <summary>Kontextlaenge, mit der ein noch nicht geladenes LM-Studio-Modell geladen wird.</summary>
-    private const int DefaultLmStudioContext = 65_536;
+    private const int DefaultLmStudioContext = LmStudioService.PreferredContext;
 
     private static JsonNode PatchLmStudioModel(JsonNode root, string slug, string modelDisplayName)
     {
@@ -1109,8 +1134,12 @@ if (-not $env:NVIDIA_API_KEY) {
         // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte. Ist das Modell
         // noch nicht geladen, gilt vorlaeufig der Wert, mit dem das Startskript laedt — es
         // korrigiert den Eintrag danach auf den tatsaechlichen Wert.
+        // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
+        // Tokens. Dieser Wert darf NICHT in die Konfig wandern — OpenCode bricht damit sofort ab.
+        // Das Startskript lädt in dem Fall sichtbar mit größerem Kontext neu und trägt den
+        // tatsächlichen Wert danach nach.
         var loadedContext = LmStudioService.GetLoadedContextLength(slug);
-        var context = loadedContext > 0 ? loadedContext : DefaultLmStudioContext;
+        var context = loadedContext >= LmStudioService.MinimumAgentContext ? loadedContext : DefaultLmStudioContext;
         var limit = modelNode.GetOrAddObject("limit");
         limit["context"] = context;
         limit["output"] = LmStudioService.OutputLimitFor(context);
