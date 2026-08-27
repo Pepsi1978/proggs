@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version 1.0.0 - 27.08.2026, 14:54 Uhr
+# Version 1.1.0 - 27.08.2026, 15:23 Uhr
 #
 # macOS-Pendant zu rebuild-overlay.ps1: baut ein Voice-Overlay sauber neu und
 # startet es neu — in EINEM Schritt, inklusive Verifikation, dass hinterher
@@ -12,6 +12,9 @@
 #   * build.sh startet die App nicht neu; ohne Neustart laeuft nach dem Build
 #     weiter der ALTE Code, und man haelt eine Aenderung faelschlich fuer wirkungslos.
 #   * Es fehlte die Verifikation "laeuft jetzt wirklich der neue Build?".
+#   * Beide Apps haengen an einem LaunchAgent mit KeepAlive: ein blosses
+#     Beenden ist wirkungslos, der Agent startet sie binnen Sekunden neu
+#     (macOS-Fassung der "Respawn-Falle" aus rebuild-overlay.ps1).
 #
 # Nutzung:
 #   bash rebuild-overlay.sh TVO        # nur TerminalVoiceOverlay
@@ -41,12 +44,14 @@ overlay_config() {
             LABEL="Terminal"
             FOLDER="$REPO_ROOT/TerminalVoiceOverlay-macOS"
             PORT=5723
+            AGENT="com.frank.terminalvoiceoverlay"
             ;;
         CVO)
             NAME="ClaudeCodexVoiceOverlay"
             LABEL="Claude/Codex"
             FOLDER="$REPO_ROOT/ClaudeCodexVoiceOverlay-macOS"
             PORT=5724
+            AGENT="com.frank.claudecodexvoiceoverlay"
             ;;
         *) return 1 ;;
     esac
@@ -91,7 +96,37 @@ wait_until_idle() {
     return 1
 }
 
+# Haelt den LaunchAgent an. OHNE das ist jedes Beenden zwecklos: der Agent hat
+# KeepAlive und startet die App binnen Sekunden neu (macOS-Pendant zur
+# "Respawn-Falle", die rebuild-overlay.ps1 ueber die geplante Aufgabe loest).
+# `bootout` entlaedt den Agent komplett; die plist-Datei bleibt unangetastet,
+# start_overlay laedt ihn danach wieder.
+stop_launch_agent() {
+    local label="$1"
+    [[ -z "$label" ]] && return 0
+    launchctl list "$label" >/dev/null 2>&1 || return 0
+    step "Halte LaunchAgent '$label' an (sonst startet er die App sofort neu)..."
+    launchctl bootout "gui/$(id -u)/$label" 2>/dev/null
+    for _ in $(seq 1 20); do
+        launchctl list "$label" >/dev/null 2>&1 || return 0
+        sleep 0.25
+    done
+    warn "LaunchAgent '$label' liess sich nicht entladen — Neustart koennte dazwischenfunken."
+}
+
+# Laedt den LaunchAgent wieder — die App startet dadurch automatisch (RunAtLoad).
+start_launch_agent() {
+    local label="$1"
+    [[ -z "$label" ]] && return 1
+    local plist="$HOME/Library/LaunchAgents/$label.plist"
+    [[ -f "$plist" ]] || { warn "LaunchAgent-Datei fehlt: $plist"; return 1; }
+    launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null
+    step "LaunchAgent '$label' wieder geladen (startet die App)."
+    return 0
+}
+
 # Beendet alle Prozesse der App. Erst freundlich (TERM), dann hart (KILL).
+# Der LaunchAgent muss VORHER angehalten sein, sonst ist das wirkungslos.
 stop_overlay() {
     local name="$1"
     pgrep -x "$name" >/dev/null 2>&1 || { step "$name laeuft bereits nicht."; return 0; }
@@ -186,6 +221,7 @@ rebuild_one() {
     # Schritt 1: Datenverlust-Schutz + Prozesse beenden.
     step 'Schritt 1/3: Aufnahme-Schutz pruefen und Prozesse beenden...'
     wait_until_idle "$NAME" "$PORT" || return 1
+    stop_launch_agent "$AGENT"
     stop_overlay "$NAME" || return 1
 
     # Schritt 2: bauen. build.sh reserviert selbst nochmal — mit beendeter App
@@ -198,7 +234,10 @@ rebuild_one() {
     verify_artifact "$APP" "$FOLDER" "$NAME" || return 1
 
     if (( NO_START == 1 )); then
-        step 'Schritt 3/3: --no-start gesetzt -> kein Neustart.'
+        step "Schritt 3/3: --no-start gesetzt -> kein Neustart."
+        warn "Der LaunchAgent '$AGENT' bleibt entladen — $NAME startet auch beim"
+        warn "naechsten Anmelden NICHT, bis du ihn laedst:"
+        warn "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/$AGENT.plist"
         return 0
     fi
 
@@ -206,7 +245,9 @@ rebuild_one() {
     step 'Schritt 3/3: neu starten und verifizieren...'
     local attempt result
     for attempt in 1 2; do
-        open "$APP"
+        # Bevorzugt ueber den LaunchAgent starten — genau so startet die App
+        # auch beim Anmelden, und der KeepAlive-Schutz ist danach wieder aktiv.
+        start_launch_agent "$AGENT" || open "$APP"
         result="$(verify_running_fresh "$NAME" "$BIN" "$PORT")" && {
             local ver
             ver="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null)"
@@ -217,6 +258,7 @@ rebuild_one() {
             STALE)   err "$t: ALTE Version laeuft noch — beende alles und starte erneut (Versuch $attempt/2)." ;;
             TIMEOUT) warn "$t lieferte keinen gueltigen Status auf Port $PORT (Versuch $attempt/2)." ;;
         esac
+        stop_launch_agent "$AGENT"
         stop_overlay "$NAME"
         sleep 2
     done
