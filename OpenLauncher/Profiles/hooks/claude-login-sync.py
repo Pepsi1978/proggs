@@ -112,11 +112,40 @@ def config_dirs() -> list[Path]:
         if not wurzel.is_dir():
             continue
         for eintrag in sorted(wurzel.iterdir()):
-            # "sources" enthält Regeltexte, keine Konfiguration.
-            if eintrag.is_dir() and eintrag.name != "sources":
+            # "sources" enthält Regeltexte, "hooks" die Skripte -- beides keine Konfiguration.
+            if eintrag.is_dir() and eintrag.name not in ("sources", "hooks"):
                 dazu(eintrag)
 
+    for weiterer in entdeckte_config_dirs():
+        dazu(weiterer)
+
     return gefunden
+
+
+def entdeckte_config_dirs() -> list[Path]:
+    """Ordner, die nachweislich schon als Konfigurationsordner benutzt werden.
+
+    Werkzeuge wie claude-mem starten eigene Claude-Sitzungen und koennen dabei ein eigenes
+    ``CLAUDE_CONFIG_DIR`` setzen. Solche Ordner tauchen in keiner festen Liste auf -- fehlt dort
+    die Anmeldung, endet die Sitzung mit "Not logged in".
+
+    Aufgenommen wird ein Ordner nur, wenn er bereits eine **Spur** eines Konfigurationsordners
+    traegt: eine ``.claude.json`` oder (auf Windows) eine ``.credentials.json``. So versorgt der
+    Abgleich vorhandene Ordner, legt aber nie neue an -- sonst entstuende genau der verwaiste
+    Schluesselbund-Muell, den wir gerade aufgeraeumt haben.
+    """
+    spuren: list[Path] = []
+    for ordner in (HOME / ".claude-mem",
+                   HOME / ".claude-mem" / "observer-sessions",
+                   HOME / ".codex" / ".claude"):
+        try:
+            if not ordner.is_dir():
+                continue
+            if (ordner / ".claude.json").is_file() or (ordner / ".credentials.json").is_file():
+                spuren.append(ordner)
+        except OSError:
+            continue
+    return spuren
 
 
 # ------------------------------------------------------------------- Speicher (Plattform)

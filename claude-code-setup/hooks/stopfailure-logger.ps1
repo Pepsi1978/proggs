@@ -46,11 +46,49 @@ if ($errorInput.Length -gt 300) {
 # Update rate limit marker
 Set-Content -Path $rateLimitFile -Value $timestamp -NoNewline -ErrorAction SilentlyContinue
 
+# Fehlerart aus dem Event-JSON bestimmen (Direktive #3, eigener Vorfall 2026-08-27).
+# Vorher trug JEDER Eintrag den Titel "API/Rate-Limit Error" — auch bei
+# "authentication_failed". Ein Anmeldeproblem sah im Whiteboard dadurch wie ein
+# Rate-Limit aus und schickte die Ursachensuche in die falsche Richtung.
+# Gegenstueck zur .sh-Fassung (gleiche Faelle, gleiche Texte).
+$fehlerArt = ""
+try {
+    $fehlerArt = ([string](ConvertFrom-Json $errorInput -ErrorAction Stop).error).Trim().ToLower()
+} catch { $fehlerArt = "" }
+
+$anmeldung = @("auth", "login", "credential", "unauthorized", "401")
+$limit     = @("rate", "limit", "quota", "429")
+
+if ($anmeldung | Where-Object { $fehlerArt -like "*$_*" }) {
+    $titel = "Nicht angemeldet ($(if ($fehlerArt) { $fehlerArt } else { 'authentication_failed' }))"
+    $status = "OFFEN (Anmeldung fehlt - kein Rate-Limit)"
+    $vorschlag = "Der Konfigurationsordner dieser Sitzung hat keine gueltige Anmeldung. Abgleich starten: python OpenLauncher/Profiles/hooks/claude-login-sync.py - Hintergrund: bugs/claude-tooling/claude-config.md 3.9."
+} elseif ($limit | Where-Object { $fehlerArt -like "*$_*" }) {
+    $titel = "API/Rate-Limit Error"
+    $status = "TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)"
+    $vorschlag = "Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen."
+} else {
+    $titel = "API-Fehler ($(if ($fehlerArt) { $fehlerArt } else { 'unbekannt' }))"
+    $status = "TRANSIENT (externer API-Fehler, kein Harness-Bug)"
+    $vorschlag = "Fehlerart in den Details unten pruefen und passend einordnen."
+}
+
 # Build whiteboard entry
-# 2026-05-30: Status TRANSIENT statt OFFEN — ein externer API-/Rate-Limit-Fehler
-# ist kein reparierbarer Harness-Bug. So blaeht er die OFFEN-Liste nicht auf und
-# der invariant-check zaehlt ihn nicht als ungeloesten Fehler.
-$entry = "### $timestamp — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)"
+# 2026-05-30: Status TRANSIENT statt OFFEN — ein externer API-/Rate-Limit-Fehler ist kein
+# reparierbarer Harness-Bug. So blaeht er die OFFEN-Liste nicht auf und der invariant-check
+# zaehlt ihn nicht als ungeloesten Fehler. Ein Anmeldefehler ist dagegen sehr wohl
+# reparierbar und bleibt deshalb bewusst OFFEN.
+# 2026-08-27: Details + Fix-Vorschlag ergaenzt — die .sh-Fassung schrieb sie laengst,
+# die PowerShell-Fassung nur die Titelzeile (Cross-Platform-Luecke).
+$entry = @"
+
+### $timestamp — StopFailure: $titel — Status: $status
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch einen API-Fehler
+**Details:** $errorInput
+**Fix-Vorschlag:** $vorschlag
+**Status:** $status
+"@
 
 # Write to whiteboard
 try {

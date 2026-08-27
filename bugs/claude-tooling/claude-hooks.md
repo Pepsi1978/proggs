@@ -51,6 +51,8 @@
 | 25 | Log voll `ERROR … command failed at line N` | Letzter Befehl einer Funktion ist ein Test → Funktion gibt 1 zurueck; `return 0` ergaenzen | §13.10 |
 | 26 | `echo` scheitert in async SessionEnd-Hook | stdout schon zu → EPIPE ist der Normalfall; `echo … \|\| true` | §13.11 |
 | 27 | Geteilte Projekt-`settings.json`, zwei Plattformen | NIE absoluten Plattform-Pfad hart kodieren — `uname`-Weiche im `command` | §16.5 |
+| 28 | Hook liest stdin per `python3 - <<'EOF'` | Heredoc belegt stdin → Daten kommen NIE an, Hook waehlt still den Default; `python3 -c` nutzen | §13.12 |
+| 29 | Hook schreibt Diagnose ins Whiteboard | NIE konstanten Fehlertext — echte Fehlerart auswerten, sonst falsche Erinnerungen | §13.13 |
 
 ---
 
@@ -758,6 +760,48 @@ sondern den erwarteten EPIPE entschaerfen: `echo "..." || true`.
 
 **Eigener Vorfall (2026-08-26):** `pending-admin-updates.sh`, 4 `echo`-Aufrufe, 12 Falschmeldungen
 pro Session.
+
+---
+
+### 13.12 `python3 - <<'EOF'` in einer Pipe: das Heredoc belegt stdin, die Daten kommen NIE an  ⭐ STILL
+**Symptom:** Ein Hook liest das Event-JSON per `printf '%s' "$INPUT" | python3 - <<'PY' … PY` und
+klassifiziert JEDEN Fall als "unbekannt"/Standardwert. Kein Fehler, kein Log-Eintrag — der Hook
+laeuft mit rc=0 durch und trifft nur immer die falsche Entscheidung.
+**Ursache:** `python3 -` heisst "lies das SKRIPT von stdin". Das Heredoc liefert genau dieses
+Skript — damit ist stdin belegt, und die per Pipe gelieferten Daten erreichen den Prozess nie.
+`json.load(sys.stdin)` sieht nichts mehr (bzw. den Rest des Skripts), faellt in das `except` und
+liefert den Default. Beide Konstrukte einzeln sind korrekt; nur ihre **Kombination** ist der Fehler.
+**Versionen:** per Design (POSIX), jede bash/python3-Fassung.
+**FIX (funktionserhaltend):** Skript per `python3 -c '…'` uebergeben, dann bleibt stdin fuer die
+Daten frei — im `-c`-String nur doppelte Anfuehrungszeichen verwenden, damit das aeussere
+`'…'`-Quoting haelt. Alternativ die Logik in eine eigene `.py`-Datei auslagern (Muster
+`rule-size-guard.py`) und `… | python3 hook.py` aufrufen.
+**PRAEVENTION:** Klassifizierende Hooks IMMER mit mehreren Eingaben gegentesten (echter Fall,
+Gegenfall, kaputtes JSON) — ein einzelner Testfall trifft zufaellig den Default und sieht richtig aus.
+**Quelle:** eigener Vorfall 2026-08-27 (`stopfailure-logger.sh`, beim Bau der Fehlerart-Erkennung
+sofort im Test aufgefallen).
+
+### 13.13 Hook schreibt einen fest verdrahteten Fehlertext → falsche Diagnose im Whiteboard  ⭐
+**Symptom:** Im Whiteboard steht `StopFailure: API/Rate-Limit Error … Fix-Vorschlag: API-Key
+pruefen`, im Detail-JSON derselben Zeile aber `"error":"authentication_failed"` und
+`"Not logged in · Please run /login"`. Die Ursachensuche laeuft danach in die voellig falsche
+Richtung (Rate-Limit statt fehlender Anmeldung).
+**Ursache:** `stopfailure-logger.{sh,ps1}` setzte Titel, Status und Fix-Vorschlag als KONSTANTEN
+Text zusammen und uebernahm nur das rohe JSON in die Details. Jeder StopFailure — egal welcher
+Art — wurde damit als Rate-Limit etikettiert. Verschaerfend: der Status lautete pauschal
+`TRANSIENT`, wodurch ein reparierbarer Anmeldefehler nie in der OFFEN-Liste landete und der
+`invariant-check` ihn nicht zaehlte.
+**Versionen:** eigener Hook, seit 2026-05-30 (Umstellung auf TRANSIENT) bis 2026-08-27.
+**FIX (funktionserhaltend):** `error` aus dem Event-JSON auswerten und drei Faelle unterscheiden —
+Anmeldung (`auth|login|credential|unauthorized|401`) → Titel "Nicht angemeldet", Status **OFFEN**,
+Fix-Vorschlag verweist auf den Login-Abgleich (§3.9 in `claude-config.md`); Rate-Limit
+(`rate|limit|quota|429`) → wie bisher TRANSIENT; sonst neutraler Titel mit der echten Fehlerart.
+Fallback ohne python3 schreibt einen neutralen Eintrag statt einer falschen Behauptung.
+**PRAEVENTION (Direktive #2):** Ein Hook, der eine Diagnose ins Whiteboard schreibt, darf sie NIE
+konstant formulieren — sonst erzeugt er systematisch falsche Erinnerungen, die spaeter als Fakten
+gelesen werden. Der Almanach-Eintrag ist dabei genauso wichtig wie der Fix selbst.
+**Quelle:** eigener Vorfall 2026-08-27 (Suche nach einem vermeintlichen Login-Problem im
+claude-mem-Observer, das in Wahrheit ein falsch etikettierter Eintrag war).
 
 ---
 

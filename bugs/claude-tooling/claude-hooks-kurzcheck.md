@@ -34,3 +34,5 @@
 | 20 | Hook liest stdin (Security-Guard) | NIE `jq` — Control-Chars im stdin-JSON brechen jq → Guard wird STILL umgangen; `python json.loads` + fail-closed | §16.2 |
 | 21 | Tool-Hook soll im Subagent feuern | PreToolUse/PostToolUse feuern NICHT fuer Tool-Calls IN Subagents — SubagentStart/Stop nutzen | §16.3 |
 | 22 | Windows: `.sh`-Hook-Pfad mit Leerzeichen | Pfad in settings.json `"..."` quoten + Forward-Slashes + voller Interpreter-Pfad (sonst Arg-Splitting) | §16.6 |
+| 23 | Hook liest stdin per `python3 - <<'EOF'` | Heredoc belegt stdin → Daten kommen NIE an, Hook waehlt still den Default; `python3 -c` nutzen | §13.12 |
+| 24 | Hook schreibt Diagnose ins Whiteboard | NIE konstanten Fehlertext — echte Fehlerart auswerten, sonst falsche Erinnerungen | §13.13 |
