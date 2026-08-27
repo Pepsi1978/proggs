@@ -57,6 +57,41 @@ final class OpenLauncherService {
     done
     """
 
+    /// Kuerzt mehrzeilige Secret-Variablen auf ihre erste echte Zeile.
+    ///
+    /// Die Profile lesen Schluessel gern per `$(cat schluesseldatei)` ein. Enthaelt die Datei einen
+    /// Kommentar-Header - bei den Dateien in ~/SK die Regel - steht danach ein mehrzeiliger Wert in
+    /// der Umgebung. OpenCode setzt so einen Wert per `{env:...}` woertlich in die opencode.jsonc
+    /// ein; der Zeilenumbruch bricht den JSON-String auf, die Datei ist ungueltig und OpenCode
+    /// verwirft die GESAMTE Konfiguration - samt des LM-Studio-Providers, den der Launcher gerade
+    /// erst geschrieben hat. Sichtbar wird nur "Config file is not valid JSON(C)"; die lokalen
+    /// Modelle fehlen dann kommentarlos.
+    ///
+    /// Deshalb hier direkt nach dem Laden der Profile: jede *_API_KEY/*_TOKEN/*_SECRET-Variable auf
+    /// die erste Zeile eindampfen, die kein Kommentar ist. Einzeilige Schluessel bleiben unberuehrt.
+    private static let secretEnvSanitizeScript = """
+    for secretName in $(env | sed -n 's/^\\([A-Za-z_][A-Za-z0-9_]*\\)=.*/\\1/p'); do
+        # Alternation im sed-Ausdruck waere GNU-only und faende auf macOS NICHTS. Deshalb alle
+        # Namen holen und hier mit case filtern - das kann jede POSIX-Shell.
+        case "$secretName" in
+            *_API_KEY|*_APIKEY|*_TOKEN|*_SECRET|*_KEY) ;;
+            *) continue ;;
+        esac
+        eval "secretValue=\\$$secretName"
+        # Zeilenzahl statt Zeilenumbruch-Muster: ein literaler Umbruch im case-Muster laesst sich in
+        # einem mehrzeiligen Swift-String nicht einruecken und bricht die Uebersetzung.
+        secretLines=$(printf '%s' "$secretValue" | wc -l | tr -d ' ')
+        if [ "$secretLines" != "0" ]; then
+            secretClean=$(printf '%s\\n' "$secretValue" | grep -m1 -E '^[[:space:]]*[^#[:space:]]' | tr -d '[:space:]')
+            if [ -n "$secretClean" ]; then
+                export "$secretName=$secretClean"
+            else
+                unset "$secretName" 2>/dev/null || true
+            fi
+        fi
+    done
+    """
+
     /// Laedt die Login-Umgebung nach, damit alle installierten Werkzeuge erreichbar sind. Das
     /// Windows-Gegenstueck liest Machine- und User-PATH aus der Registry; auf macOS uebernehmen das
     /// path_helper und die Shell-Profile. Prozesslokale Eintraege bleiben erhalten.
@@ -235,6 +270,8 @@ final class OpenLauncherService {
 
         # Geerbte Agenten-Umgebung entfernen -- vor dem Profil, damit das Profil gesetzte Werte behaelt.
         \(inheritedAgentEnvScrubScript)
+        # Mehrzeilige Schluessel aus den Profilen entschaerfen.
+        \(secretEnvSanitizeScript)
 
         # Jedes Profil hat seinen eigenen Config-Ordner (CLAUDE_CONFIG_DIR) im Repo. Standard/Strikt
         # tragen versionierte skills/rules/agents/commands; Minimal ist regelfrei (Skills per Symlink).
@@ -344,6 +381,8 @@ final class OpenLauncherService {
         \(persistentPathRefreshScript)
         # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
         \(inheritedAgentEnvScrubScript)
+        # Mehrzeilige Schluessel aus den Profilen entschaerfen, sonst zerlegt {env:...} die Konfig.
+        \(secretEnvSanitizeScript)
         \(buildNvidiaKeyScript(modelString: modelString))
         \(buildLmStudioPreloadScript(modelString: modelString))
         export OPENCODE_CONFIG=\(Shell.singleQuoted(profileConfigPath))
@@ -393,10 +432,16 @@ final class OpenLauncherService {
     /// Kontext geladen ist, bevor OpenCode startet. Sichtbar statt im UI-Thread: das Laden eines
     /// grossen Modells dauert Minuten. Fuer alle anderen Provider ist das Ergebnis leer.
     ///
-    /// Ein bereits geladenes Modell wird NUR dann uebernommen, wenn sein Kontext fuer OpenCode
-    /// reicht. Hat der Benutzer es in LM Studio von Hand gestartet (Vorgabe dort oft 4096 Tokens),
-    /// wird es entladen und mit grossem Kontext neu geladen - sonst bricht OpenCode sofort mit
-    /// exceed_context_size_error ab, weil allein der Systemprompt rund 22000 Tokens braucht.
+    /// Ein bereits geladenes Modell wird IMMER unveraendert uebernommen - mit genau der
+    /// Kontextlaenge, mit der es in LM Studio geladen wurde. Es wird nicht entladen und nicht neu
+    /// geladen: das Laden eines grossen Modells dauert Minuten, und die Einstellung, die der
+    /// Benutzer dort getroffen hat, ist Absicht und keine Panne. Der gemessene Wert wandert in die
+    /// opencode-Konfig, damit OpenCode gegen dieselbe Obergrenze rechnet.
+    ///
+    /// Ist der geladene Kontext kleiner, als OpenCode braucht (der Systemprompt allein belegt rund
+    /// 22000 Tokens), erscheint nur ein Hinweis mit dem Befehl zum Nachjustieren - entladen wird
+    /// nichts. Nur ein NICHT geladenes Modell laedt das Skript selbst, dann mit der Vorgabe dieses
+    /// Modells: der Wunschgroesse, gedeckelt auf den Maximalkontext des Modells.
     private static func buildLmStudioPreloadScript(modelString: String) -> String {
         let prefix = "\(LmStudioService.providerId)/"
         guard modelString.lowercased().hasPrefix(prefix) else { return "" }
@@ -565,11 +610,14 @@ final class OpenLauncherService {
 
             lmsState
 
-            # Zu klein geladen (LM-Studio-Vorgabe ist oft 4096): entladen und gross neu laden.
+            # Bereits geladen: unangetastet lassen. Frueher wurde bei zu kleinem Kontext entladen
+            # und neu geladen - das hat die bewusste Einstellung des Benutzers ueberschrieben und
+            # jeden Start um Minuten verzoegert. Jetzt gilt, was in LM Studio steht; bei zu wenig
+            # Kontext gibt es nur einen Hinweis samt fertigem Befehl zum Nachjustieren.
             if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null && [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
-                printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - damit bricht die erste Anfrage ab. Das Modell wird jetzt mit groesserem Kontext neu geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
-                "$LMS" unload "$LMSMODEL" >/dev/null 2>&1
-                LOADEDCTX=0
+                printf '\\033[33m%s ist in LM Studio mit %s Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage kann damit abbrechen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                printf '\\033[33mDas Modell bleibt bewusst so geladen, wie du es eingestellt hast. Mehr Kontext bei Bedarf mit:\\033[0m\\n'
+                printf '\\033[36m  lms unload %s && lms load %s --context-length %s -y\\033[0m\\n' "$LMSMODEL" "$LMSMODEL" "$LMSWANTCTX"
             fi
 
             if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
@@ -592,9 +640,9 @@ final class OpenLauncherService {
             fi
 
             if [ "$LOADEDCTX" -ge "$LMSMINCTX" ] 2>/dev/null; then
-                printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen - Einstellung aus LM Studio uebernommen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
             elif [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
-                printf '\\033[33mAchtung: nur %s Tokens Kontext - OpenCode bricht die erste Anfrage moeglicherweise ab.\\033[0m\\n' "$LOADEDCTX"
+                printf '\\033[33mLokales Modell %s laeuft mit %s Tokens Kontext weiter (siehe Hinweis oben).\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
             else
                 printf '\\033[33m%s konnte nicht geladen werden - LM Studio versucht es bei der ersten Anfrage selbst.\\033[0m\\n' "$LMSMODEL"
             fi
@@ -782,15 +830,15 @@ final class OpenLauncherService {
 
         // Das Kontextfenster MUSS der Ladeeinstellung in LM Studio entsprechen. Steht hier eine
         // kleinere Zahl, haelt OpenCode den Kontext fuer fast voll, startet sofort die
-        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte. Ist das Modell
-        // noch nicht geladen, gilt vorlaeufig der Wert, mit dem das Startskript laedt - es korrigiert
-        // den Eintrag danach auf den tatsaechlichen Wert.
-        // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
-        // Tokens. Dieser Wert darf NICHT in die Konfig wandern - OpenCode bricht damit sofort ab.
-        // Das Startskript laedt in dem Fall sichtbar mit groesserem Kontext neu und traegt den
-        // tatsaechlichen Wert danach nach.
+        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte.
+        //
+        // Ist das Modell bereits geladen, gilt sein tatsaechlicher Wert - auch ein kleiner. Er wird
+        // bewusst nicht auf ein Minimum angehoben: die Ladeeinstellung in LM Studio gehoert dem
+        // Benutzer, und eine geschoente Zahl in der Konfig wuerde OpenCode gegen ein Fenster rechnen
+        // lassen, das es gar nicht gibt. Ist das Modell noch nicht geladen, gilt vorlaeufig der Wert,
+        // mit dem das Startskript laedt - es korrigiert den Eintrag danach auf den echten Wert.
         let loadedContext = LmStudioService.loadedContextLength(modelId: slug)
-        let context = loadedContext >= LmStudioService.minimumAgentContext ? loadedContext : defaultLmStudioContext
+        let context = loadedContext > 0 ? loadedContext : defaultLmStudioContext
         let limit = modelNode.getOrAddObject("limit")
         limit["context"] = .number(context)
         limit["output"] = .number(LmStudioService.outputLimit(for: context))

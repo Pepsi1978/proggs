@@ -329,7 +329,7 @@ final class ModelRowView: SelectableRowView, NSDraggingSource {
         self.group = group
         self.index = index
         nameLabel = UI.label(model.displayName, size: 13, weight: .semibold)
-        slugLabel = UI.label(model.modelString, size: 11, role: .dim, monospaced: true)
+        slugLabel = UI.label(ModelRowView.subtitle(for: model), size: 11, role: .dim, monospaced: true)
         super.init()
         setAccessibilityLabel(model.displayName)
 
@@ -378,9 +378,18 @@ final class ModelRowView: SelectableRowView, NSDraggingSource {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
 
+    /// Zweite Zeile eines Modelleintrags: die Modell-ID, bei lokalen Modellen ergaenzt um den
+    /// Ladezustand. "geladen, 79k Kontext" ist die Antwort auf die Frage, die man vor jedem Start
+    /// eines lokalen Modells hat - laeuft es schon, oder kostet der Start erst Minuten?
+    private static func subtitle(for model: ModelEntry) -> String {
+        guard model.lmStudioLoadedContext > 0 else { return model.modelString }
+        let thousands = model.lmStudioLoadedContext / 1000
+        return "\(model.modelString)  ·  geladen, \(thousands)k Kontext"
+    }
+
     func refreshTexts() {
         nameLabel.stringValue = model.displayName
-        slugLabel.stringValue = model.modelString
+        slugLabel.stringValue = ModelRowView.subtitle(for: model)
     }
 
     @objc private func hideClicked() { onHide?() }

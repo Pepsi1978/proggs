@@ -21,8 +21,12 @@ public sealed class LmStudioService
     /// <summary>
     /// Kleinster Kontext, mit dem OpenCode überhaupt arbeiten kann. Der Systemprompt allein
     /// braucht rund 22000 Tokens; darunter bricht schon die erste Anfrage mit
-    /// exceed_context_size_error ab. LM Studio schlägt beim Laden von Hand oft 4096 vor — genau
-    /// dieser Fall hat früher zum sofortigen Abbruch geführt.
+    /// exceed_context_size_error ab.
+    /// <para>
+    /// Reine WARNSCHWELLE und Rückfallwert beim Laden — kein Zwang: ein Modell, das in LM Studio
+    /// bereits mit weniger geladen ist, wird nicht angetastet, sondern nur mit einem Hinweis
+    /// übernommen.
+    /// </para>
     /// </summary>
     public const int MinimumAgentContext = 32_768;
 

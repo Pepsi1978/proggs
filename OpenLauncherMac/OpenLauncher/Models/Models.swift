@@ -30,6 +30,13 @@ final class ModelEntry: Decodable {
     var providerId: String = "openrouter"
     var providerName: String = "OpenRouter"
 
+    /// Kontextlaenge, mit der dieses Modell GERADE in LM Studio geladen ist; 0 = nicht geladen.
+    ///
+    /// Bewusst weder dekodiert noch in `jsonNode` geschrieben: der Wert beschreibt den Zustand
+    /// EINES Rechners zu EINEM Zeitpunkt, models.json liegt dagegen im Repo und wird von beiden
+    /// Launchern geteilt. Er wird bei jedem Abgleich mit LM Studio neu gesetzt.
+    var lmStudioLoadedContext: Int = 0
+
     var modelString: String {
         if providerId.caseInsensitiveCompare(ModelEntry.nvidiaProviderId) != .orderedSame,
            slug.lowercased().hasPrefix("\(providerId.lowercased())/") {

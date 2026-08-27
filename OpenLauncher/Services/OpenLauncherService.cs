@@ -760,11 +760,14 @@ if (Test-Path -LiteralPath $lms) {
     $ctx = if ($loaded) { [int]$loaded.contextLength } else { 0 }
     $maxCtx = if ($loaded) { [int]$loaded.maxContextLength } else { 0 }
 
-    # Zu klein geladen (LM-Studio-Vorgabe ist oft 4096): entladen und gross neu laden.
+    # Bereits geladen: unangetastet lassen. Frueher wurde bei zu kleinem Kontext entladen und neu
+    # geladen - das hat die bewusste Einstellung des Benutzers ueberschrieben und jeden Start um
+    # Minuten verzoegert. Jetzt gilt, was in LM Studio steht; bei zu wenig Kontext gibt es nur einen
+    # Hinweis samt fertigem Befehl zum Nachjustieren.
     if ($ctx -gt 0 -and $ctx -lt $lmsMinCtx) {
-        Write-Host "$lmsModel ist in LM Studio mit nur $ctx Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - damit bricht die erste Anfrage ab. Das Modell wird jetzt mit groesserem Kontext neu geladen." -ForegroundColor Yellow
-        & $lms unload $lmsModel 2>$null | Out-Null
-        $ctx = 0
+        Write-Host "$lmsModel ist in LM Studio mit $ctx Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage kann damit abbrechen." -ForegroundColor Yellow
+        Write-Host "Das Modell bleibt bewusst so geladen, wie du es eingestellt hast. Mehr Kontext bei Bedarf mit:" -ForegroundColor Yellow
+        Write-Host "  lms unload $lmsModel; lms load $lmsModel --context-length $lmsWantCtx -y" -ForegroundColor Cyan
     }
 
     if ($ctx -le 0) {
@@ -793,9 +796,9 @@ if (Test-Path -LiteralPath $lms) {
     }
 
     if ($ctx -ge $lmsMinCtx) {
-        Write-Host "Lokales Modell $lmsModel ist mit $ctx Tokens Kontext geladen." -ForegroundColor DarkGray
+        Write-Host "Lokales Modell $lmsModel ist mit $ctx Tokens Kontext geladen - Einstellung aus LM Studio uebernommen." -ForegroundColor DarkGray
     } elseif ($ctx -gt 0) {
-        Write-Host "Achtung: nur $ctx Tokens Kontext - OpenCode bricht die erste Anfrage moeglicherweise ab." -ForegroundColor Yellow
+        Write-Host "Lokales Modell $lmsModel laeuft mit $ctx Tokens Kontext weiter (siehe Hinweis oben)." -ForegroundColor Yellow
     } else {
         Write-Host "$lmsModel konnte nicht geladen werden - LM Studio versucht es bei der ersten Anfrage selbst." -ForegroundColor Yellow
     }
@@ -1130,16 +1133,16 @@ if (-not $env:NVIDIA_API_KEY) {
         modelNode["tool_call"] = true;
 
         // Das Kontextfenster MUSS der Ladeeinstellung in LM Studio entsprechen. Steht hier eine
-        // kleinere Zahl, haelt OpenCode den Kontext fuer fast voll, startet sofort die
-        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte. Ist das Modell
-        // noch nicht geladen, gilt vorlaeufig der Wert, mit dem das Startskript laedt — es
-        // korrigiert den Eintrag danach auf den tatsaechlichen Wert.
-        // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
-        // Tokens. Dieser Wert darf NICHT in die Konfig wandern — OpenCode bricht damit sofort ab.
-        // Das Startskript lädt in dem Fall sichtbar mit größerem Kontext neu und trägt den
-        // tatsächlichen Wert danach nach.
+        // kleinere Zahl, hält OpenCode den Kontext für fast voll, startet sofort die
+        // Auto-Komprimierung und komprimiert danach immer wieder das Komprimierte.
+        //
+        // Ist das Modell bereits geladen, gilt sein tatsächlicher Wert — auch ein kleiner. Er wird
+        // bewusst nicht auf ein Minimum angehoben: die Ladeeinstellung in LM Studio gehört dem
+        // Benutzer, und eine geschönte Zahl in der Konfig würde OpenCode gegen ein Fenster rechnen
+        // lassen, das es gar nicht gibt. Ist das Modell noch nicht geladen, gilt vorläufig der Wert,
+        // mit dem das Startskript lädt — es korrigiert den Eintrag danach auf den echten Wert.
         var loadedContext = LmStudioService.GetLoadedContextLength(slug);
-        var context = loadedContext >= LmStudioService.MinimumAgentContext ? loadedContext : DefaultLmStudioContext;
+        var context = loadedContext > 0 ? loadedContext : DefaultLmStudioContext;
         var limit = modelNode.GetOrAddObject("limit");
         limit["context"] = context;
         limit["output"] = LmStudioService.OutputLimitFor(context);

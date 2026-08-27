@@ -299,6 +299,8 @@ final class ModelRegistry {
             existing.providerId = group.providerId
             existing.providerName = group.providerName
             if !existing.hasCustomDisplayName { existing.displayName = remoteModel.displayName }
+            // Ladezustand kommt IMMER frisch vom Abgleich - auch bei selbst benannten Eintraegen.
+            existing.lmStudioLoadedContext = remoteModel.lmStudioLoadedContext
             merged.append(existing)
         }
 
