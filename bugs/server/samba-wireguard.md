@@ -11,7 +11,7 @@
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
 > zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections);
 > erweitert **2026-06-25** um den Persistent-Login-Race / "mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom
-> SELBEN VPS (§11).
+> SELBEN VPS (§11); erweitert **2026-08-27** um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz, parallele Streams = Faktor 8, inkl. ausgeschlossener Ursachen).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -46,6 +46,7 @@
 | §1 Interface-Bindung | §1 smb.conf-Grundgeruest (Bind an VPN-IP) |
 | §2 UFW/Ports | §2 Firewall nur ueber wg0 |
 | §3 MTU/Performance | §3 Performance-Tuning |
+| §14 Durchsatz/Parallelitaet | §14 rclone statt Finder |
 | §4–§6 Windows-Client | §4 Windows-Mount (persistent, Credentials) |
 | §9 net use haengt (elevated/hidden) | §7 Auto-Reconnect-Task robust (WNetAddConnection2 + explizite Credentials) |
 | §10 EnableLinkedConnections | §7 Auto-Reconnect-Task robust (elevated Mappings sichtbar machen) |
@@ -385,6 +386,82 @@ auf dem VPS → Server gesund? → Ursache ist der Client-Endpoint-Wechsel.
 
 ---
 
+---
+
+## 14. ⭐⭐ SMB ist "extrem langsam" ueber den Tunnel — SMB kopiert SERIELL (live gemessen 2026-08-27)
+
+**Symptom:** Finder/Explorer kopiert auf die Tunnel-Laufwerke mit wenigen Mbit/s, obwohl der
+Anschluss ein Vielfaches koennte. Grosse Dateien brechen zusaetzlich mit
+`fcopyfile failed: Operation timed out` ab.
+
+**Live gemessene Ausgangslage (macOS-Client -> Hostinger-VPS Paris, WireGuard):**
+
+| Messgroesse | Wert |
+|-------------|------|
+| Leitung (macOS `networkQuality`) | **60 Mbit/s** hoch, 114 Mbit/s runter |
+| Grundlatenz zum Server (leere Leitung) | **48 ms** (min), rund 86 ms Mittel |
+| Path-MTU im Tunnel | **kein Problem** — 1500 im Netz, Tunnel 1420 mit Luft |
+| SMB, 1 Datei seriell (`cp` auf den Mount) | **5,3 Mbit/s** = 9 % der Leitung |
+| SMB, 6 Dateien parallel (`xargs -P6`) | 22,1 Mbit/s |
+| **rclone, 8 Streams parallel** | **42,6 Mbit/s = 71 % der Leitung** |
+| rclone, 16 Streams | 39,3 Mbit/s (schlechter -> ab 8 gesaettigt) |
+| rclone, EINE grosse Datei, 8 Multi-Thread-Streams | 24,8 Mbit/s hoch / 26,2 Mbit/s runter |
+
+**Root Cause:** SMB ist ein *chattiges* Protokoll und arbeitet pro Datei-Handle **seriell**:
+jede Operation (Open, Write, Close, Metadaten) wartet auf die Antwort der Gegenseite, bevor die
+naechste losgeht. Im LAN (unter 1 ms) faellt das nicht auf. Bei **48 ms** Latenz kostet jeder
+Round-Trip die volle Laufzeit — die Leitung steht die meiste Zeit still. Das ist kein Defekt,
+sondern das Bandbreiten-Verzoegerungs-Produkt: nur *gleichzeitige* Streams fuellen die Leitung.
+Der Finder legt obendrauf noch Metadaten-Operationen pro Datei (`.DS_Store`, Ressource-Forks).
+
+**FIX (funktionserhaltend — SMB bleibt eingebunden, es kommt ein schneller Weg DANEBEN):**
+`rclone` mit parallelen Streams statt Finder/Explorer benutzen. Fertige Skripte im Repo:
+`second-brain-server/macos/cortex-copy.sh` bzw. `windows/cortex-copy.ps1`
+(`push` / `pull` / `sync` / `ls` / `bench`).
+
+```bash
+# Kern der Sache (die Werte sind gemessen, nicht geraten):
+rclone copy <quelle> <ziel> \
+  --transfers 8 --checkers 8 \
+  --multi-thread-streams 8 --multi-thread-cutoff 16M \
+  --buffer-size 32M
+```
+
+* `--transfers 8` — 8 Dateien gleichzeitig. **16 bringt nichts mehr** (39 statt 43 Mbit/s).
+* `--multi-thread-streams 8` — zerlegt EINE grosse Datei in 8 Streams. Ohne das bleibt eine
+  einzelne grosse Datei bei rund 25 Mbit/s haengen (SMB-Backend serialisiert sonst auch hier).
+* `--buffer-size 32M` — deckt das Bandbreiten-Verzoegerungs-Produkt ab (60 Mbit/s x 48 ms).
+
+**Was NICHT die Ursache war (jeweils ausgeschlossen — spart die naechste Fehldiagnose):**
+
+| Verdacht | Messung | Urteil |
+|----------|---------|--------|
+| WLAN zu schwach | 802.11ax, 5 GHz, -45 dBm, 816 Mbit/s Linkrate | ❌ nicht die Ursache |
+| MTU / Path-MTU-Black-Hole (§3) | 1500 im Netz durchgaengig, Tunnel-MTU 1420 mit Reserve | ❌ nicht die Ursache |
+| WireGuard-Overhead | Tunnel kostet nur rund 19 ms gegenueber der direkten Route | ❌ nicht die Ursache |
+| Der Mobilfunk-Anschluss "an sich" | 60/114 Mbit/s, 48 ms — voellig brauchbar | ❌ nicht die Ursache |
+| Doppelte Verschluesselung (SMB AES-GCM **in** WireGuard) | Apple-Silicon macht AES mit GB/s | ❌ kein Flaschenhals |
+
+⚠️ **Messfalle:** Ein parallel laufender grosser Download (Steam, Updates, Cloud-Sync) saettigt
+die Leitung und treibt per **Bufferbloat** die Latenz hoch (hier: 48 ms -> 218 ms, Responsiveness
+1,2 s). Jede Durchsatzmessung wird dann wertlos. **Vor jeder Messung die Leitung leerraeumen**
+und mit `netstat -ib` (macOS) gegenpruefen, dass wirklich nichts laeuft.
+
+**Nebenfund:** Ein per Timeout abgebrochener SMB-Transfer laesst serverseitig ein offenes Handle
+zurueck — die halbe Datei ist danach fuer eine Weile weder ueber den Mount noch per rclone
+loeschbar (`Resource busy` / `share access flags are incompatible`). Sie loest sich mit dem
+SMB-Idle-Timeout von selbst; nicht mit Gewalt nachhelfen.
+
+**Grenze, die kein Tuning aufhebt:** Der Durchsatz ist durch den **Uplink** gedeckelt. Bei
+60 Mbit/s dauert **1 TB rund 37 Stunden** — selbst perfekt parallelisiert. Fuer wirklich grosse
+Erstbefuellungen ist ein physischer Datentraeger schneller als jede Leitung; danach nur noch
+Deltas per `rclone sync` schieben.
+
+**Quelle:** eigene Live-Messung 2026-08-27 (macOS 26.6.2, rclone 1.75.0, Samba ueber WireGuard,
+VPS Hostinger Paris).
+
+---
+
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
 - [ ] `smb.conf`: `interfaces = lo eth0 10.8.0.0/24` (mit Maske!) + `bind interfaces only = yes` (oder `= no`)?
 - [ ] `netstat -tulpen | grep smbd` zeigt `smbd` auf `10.8.0.1:445`?
@@ -393,6 +470,7 @@ auf dem VPS → Server gesund? → Ursache ist der Client-Endpoint-Wechsel.
 - [ ] Echter Samba-User (`smbpasswd -a`) statt Gastzugriff?
 - [ ] Win-Mount persistent via `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag?
 - [ ] Bei Langsamkeit: WireGuard-MTU 1350 + MSS getestet?
+- [ ] Bei Langsamkeit: erst die Leitung leergeraeumt (Bufferbloat!), dann parallele Streams (`rclone --transfers 8`) statt Finder/Explorer probiert? (§14 - meist DIE Ursache)
 - [ ] Kein unnoetiges `ip_forward`/MASQUERADE (Split-Tunnel-Dienst braucht es nicht)?
 - [ ] **`unattended-upgrades` aktiv / `apt upgrade` regelmaessig** (4.19.x ist upstream EOL — Fixes nur ueber Ubuntu-Paket, §8)?
 

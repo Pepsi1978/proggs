@@ -103,8 +103,48 @@ war eine echte Platte → ausgewichen auf `Y:`). Wer `New-SmbMapping` nutzen wil
 WireGuard-Tunnel beim Login schon steht (sonst rotes X bis Klick). Test: `Test-NetConnection 10.8.0.1 -Port 445`.
 
 ## §5 Performance ueber den Tunnel
-Bei langsamen Transfers WireGuard-MTU senken (`MTU = 1350` im `[Interface]` der wg0.conf) + TCP-MSS-Clamping.
-Mehrere Werte testen (1380/1350/1280) — MTU-Tuning ist nicht immer eine 100%-Loesung (siehe Almanach §3).
+
+**Die Reihenfolge ist entscheidend — Parallelitaet zuerst, MTU erst danach.** Live gemessen
+2026-08-27 (macOS -> VPS Paris, 48 ms Latenz, 60 Mbit/s Uplink) brachte Parallelitaet **Faktor 8**,
+waehrend am MTU-Tuning gar nichts zu holen war (Path-MTU war voellig in Ordnung).
+
+**1. Nicht mit Finder/Explorer kopieren — mit parallelen Streams.** SMB arbeitet pro Datei-Handle
+seriell: jede Operation wartet auf die Antwort der Gegenseite. Im LAN egal, bei 48 ms Latenz steht
+die Leitung dadurch die meiste Zeit still (gemessen: **5,3 von 60 Mbit/s = 9 %**). Nur gleichzeitige
+Streams fuellen das Bandbreiten-Verzoegerungs-Produkt:
+
+```bash
+rclone copy <quelle> <ziel> \
+  --transfers 8 --checkers 8 \
+  --multi-thread-streams 8 --multi-thread-cutoff 16M \
+  --buffer-size 32M
+# gemessen: 42,6 Mbit/s = 71 % der Leitung (Faktor 8 gegenueber dem Finder)
+```
+
+Fertige Wrapper im Repo: `second-brain-server/macos/cortex-copy.sh` und
+`windows/cortex-copy.ps1` (`push` / `pull` / `sync` / `ls` / `bench`).
+
+* **8 Streams sind das Optimum** — 16 machte es wieder schlechter (39 statt 43 Mbit/s). Ab etwa
+  8 gleichzeitigen Streams ist die Leitung gesaettigt; mehr erzeugt nur Konkurrenz.
+* **`--multi-thread-streams` nicht vergessen**, wenn einzelne grosse Dateien geschoben werden —
+  ohne den Schalter bleibt EINE grosse Datei bei rund 25 Mbit/s, weil auch dort serialisiert wird.
+* Der SMB-Mount darf ruhig eingebunden bleiben (zum Stoebern im Finder) — er ist nur nicht der
+  Weg fuer grosse Datenmengen.
+
+**2. Erst danach MTU/MSS pruefen.** WireGuard-MTU senken (`MTU = 1350` im `[Interface]`) +
+TCP-MSS-Clamping, mehrere Werte testen (1380/1350/1280). **Vorher messen, ob ueberhaupt ein
+Problem vorliegt** — per `ping -D -s <groesse>` (Don't-Fragment) die echte Path-MTU ermitteln.
+Kommt die volle Groesse durch, ist MTU-Tuning wirkungslos und kostet nur Zeit (Almanach §3, §14).
+
+**3. Messen, aber sauber.** Ein nebenher laufender Download (Steam, Updates, Cloud-Sync) saettigt
+die Leitung und treibt per **Bufferbloat** die Latenz hoch (hier gesehen: 48 ms -> 218 ms) — jede
+Messung wird dann wertlos. Vor der Messung Leitung leerraeumen und mit `netstat -ib` (macOS) bzw.
+dem Ressourcenmonitor (Windows) gegenpruefen. Werkzeuge: `networkQuality -v` (macOS, misst auch
+Bufferbloat), `cortex-copy.sh bench`.
+
+**4. Die Grenze kennen.** Der Durchsatz ist durch den **Uplink** gedeckelt: bei 60 Mbit/s dauert
+**1 TB rund 37 Stunden**, auch perfekt parallelisiert. Fuer grosse Erstbefuellungen ist ein
+physischer Datentraeger schneller als jede Leitung; danach nur noch Deltas per `rclone sync`.
 
 ## §6 Patch-Stand sicherstellen (4.19.x ist upstream EOL)
 Der Upstream-**4.19-Zweig ist End-of-Life** (letzter Upstream-Security-Release 4.19.1). Neuere Samba-CVEs (2025/2026)

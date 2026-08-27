@@ -12,6 +12,6 @@
 | 2 | Nur im VPN erreichbar | UFW `allow in on wg0 to any port 445`; 445 NIE oeffentlich; nur UDP 51820 offen | §2 |
 | 3 | Win11-Kompatibilitaet | `protocol = SMB3` server-seitig; echter User (`smbpasswd -a`) statt Gast | §3 |
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
-| 5 | Performance | bei Langsamkeit WireGuard-MTU 1350 + MSS-Clamping testen | §5 |
+| 5 | Performance | **ZUERST Parallelitaet, DANN MTU.** Nicht mit Finder/Explorer kopieren (SMB serialisiert -> 9 % der Leitung), sondern `rclone --transfers 8 --multi-thread-streams 8 --buffer-size 32M` (gemessen Faktor 8). MTU 1350/MSS erst pruefen, wenn `ping -D` ein echtes Path-MTU-Problem zeigt. Vor jeder Messung die Leitung leerraeumen (Bufferbloat). | §5 |
 | 6 | Patch-Stand | 4.19.x ist upstream EOL → `unattended-upgrades`/`apt upgrade` (Ubuntu backportet Fixes ins Paket) | §6 |
 | 7 | Auto-Reconnect-Task (nach Reboot) | In einem ELEVATED/hidden Task NIE `net use` ohne Credentials (haengt am Prompt) → `WNetAddConnection2` mit expliziten Credentials; `EnableLinkedConnections=1` macht das Mapping im Explorer sichtbar; `.ps1` als UTF-8-BOM, ASCII-only; bei MEHREREN Shares vom selben VPS **nicht-persistent** mappen (Flag 0) + persistente `HKCU:\Network`-Eintraege entfernen (sonst Boot-Race → Fehler 1219), 1219 abfangen | §7 |
