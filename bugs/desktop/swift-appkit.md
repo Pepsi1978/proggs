@@ -586,6 +586,97 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 
 ---
 
+## L — Mehr-Datei-Projekte ohne Xcode (`swiftc`-Dateiliste) — erlebte Faelle
+
+> Alle drei Faelle stammen aus Franks Overlay-Apps (erlebt am 2026-08-27). Gemeinsame
+> Wurzel: ohne Xcode-Projekt gibt es KEINE IDE, die beim Tippen kompiliert — ein Fehler
+> faellt erst beim naechsten `build.sh` auf, und der lief zuletzt vor Wochen.
+
+### L1. `private extension` auf Dateiebene bricht Mehr-Datei-Projekte (Build rot, aber erst Wochen spaeter bemerkt)
+**Symptom:** `error: 'toggleOff' is inaccessible due to 'fileprivate' protection level` — obwohl die
+Konstante offensichtlich existiert und der Code „schon immer" so aussah.
+**Ursache:** `private extension NSColor { … }` auf Dateiebene ist in Swift gleichbedeutend mit
+`fileprivate` — die Farbpalette war NUR in ihrer eigenen Datei sichtbar. Wird ein Symbol daraus
+spaeter aus einer Schwesterdatei benutzt (hier: `OverlayExtraButtons.swift` greift auf `.toggleOff`
+aus `OverlayPanel.swift` zu), bricht der Build. Auf einer Plattform mit IDE faellt das sofort auf;
+bei einem `swiftc`-Projekt ohne Xcode erst beim naechsten Build.
+**Versionen:** per Design, alle Swift-Versionen.
+**FIX (funktionserhaltend):** Geteilte Paletten/Helfer NICHT `private` deklarieren — `extension NSColor { … }`
+(intern) ist die richtige Sichtbarkeit fuer alles, was mehr als eine Datei braucht. Damit ist die ganze
+Fehlerklasse weg, nicht nur der eine Zugriff. `private` bleibt richtig fuer echte Datei-Interna.
+**Poka-Yoke (Stufe 2):** Nach JEDER als „plattformuebergreifend" deklarierten Aenderung auch WIRKLICH
+auf der anderen Plattform uebersetzen. Ein reiner Compile-Check (`swiftc -o /tmp/x <alle Dateien>`)
+dauert Sekunden und braucht weder Signierung noch Deploy-Guard.
+
+### L2. `.greatestFiniteMagnitude` ist zwischen CGFloat und Double mehrdeutig
+**Symptom:** `error: ambiguous use of 'greatestFiniteMagnitude'` in `NSSize(width: .greatestFiniteMagnitude, …)`
+— Code, der jahrelang uebersetzt hat.
+**Ursache:** `NSSize.init(width:height:)` existiert in mehreren Ueberladungen (CGFloat und Double);
+neuere Toolchains loesen den Punkt-Kurzschreibweise-Ausdruck deshalb nicht mehr eindeutig auf.
+**Versionen:** faellt mit neueren Swift-/SDK-Staenden auf (erlebt mit Xcode 26.x), aelterer Code uebersetzte noch.
+**FIX (funktionserhaltend):** Typ explizit hinschreiben:
+`NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)`.
+Gleiches Muster gilt fuer `.infinity`, `.pi`, `.zero` in geometrischen Initialisierern.
+
+### L3. Fehlendes explizites `self` in `@autoclosure @escaping`-Parametern
+**Symptom:** `error: reference to property 'x' in closure requires explicit use of 'self'` bei einem
+Aufruf, der wie eine ganz normale Log-Funktion aussieht (`log("… \(activeProfile)")`).
+**Ursache:** Ist der Parameter `@autoclosure @escaping` deklariert (typisch fuer Lazy-Logging, damit
+die String-Interpolation nur im Fehlerfall Arbeit macht), wird der Ausdruck zu einem escaping Closure —
+und dort verlangt Swift explizites `self`, um die Capture-Semantik sichtbar zu machen.
+**Versionen:** per Design, alle Swift-Versionen.
+**FIX (funktionserhaltend):** `self.` hinschreiben. Nicht das `@escaping` entfernen — das wuerde die
+Lazy-Auswertung kaputt machen (jeder Log-Aufruf wuerde dann immer den String bauen).
+
+---
+
+## M — Geteilte Dienste zwischen Fenstern (Recorder/Store) — erlebte Faelle
+
+### M1. Ein Dialog stoppt beim Schliessen eine FREMDE Aufnahme (Datenverlust)
+**Symptom:** Der Benutzer spricht ins Overlay, oeffnet/schliesst nebenbei einen Dialog — die Aufnahme
+ist weg, ohne Fehlermeldung.
+**Ursache:** Der `AudioRecorder` ist prozessweit geteilt. Ein „defensives" Aufraeumen im
+`windowWillClose` (`if recorder.isRecording { recorder.stop() }`) unterscheidet nicht, WER die
+Aufnahme gestartet hat, und beendet auch fremde.
+**Versionen:** Logikfehler, versionsunabhaengig.
+**FIX (funktionserhaltend):** Besitz mitfuehren: ein `recordingStartedHere`-Flag, das nur der Start in
+DIESEM Fenster setzt. Beim Schliessen ausschliesslich die eigene Aufnahme stoppen. Der Mikrofon-Leak,
+gegen den das Aufraeumen gedacht war, bleibt abgedeckt — nur eben zielgenau.
+**Poka-Yoke (Stufe 2):** Jeder prozessweit geteilte Dienst braucht einen Besitzbegriff, sobald mehr als
+ein Fenster ihn startet.
+
+### M2. Zweiter Start eines geteilten Recorders verwaist die laufende Aufnahme (Datenverlust)
+**Symptom:** Zwei Startwege (Overlay + Dialog) — die zuerst gestartete Aufnahme liefert am Ende eine
+leere oder abgeschnittene Datei.
+**Ursache:** `start()` baut ohne Pruefung eine NEUE `AVAudioEngine` auf und ueberschreibt Ziel-Datei
+und Zustand. Der alte Tap schreibt danach ins Leere; niemand merkt es, weil kein Fehler entsteht.
+**Versionen:** Logikfehler, versionsunabhaengig.
+**FIX (funktionserhaltend):** Am Anfang von `start()` pruefen, ob bereits aufgenommen wird, und einen
+eigenen Fehlerfall (`alreadyRecording`) werfen statt die laufende Aufnahme zu ueberschreiben. Der
+Aufrufer verwirft seinen Start still — die laufende Aufnahme bleibt unversehrt.
+
+### M3. Voice-Text `setText` statt anhaengen loescht bereits Getipptes (Datenverlust)
+**Symptom:** Zweimal hintereinander einsprechen — der erste Satz ist verschwunden.
+**Ursache:** Der Routing-Pfad ins Eingabefenster setzte den Text (`setText`) statt ihn anzuhaengen.
+**Versionen:** Logikfehler, versionsunabhaengig.
+**FIX (funktionserhaltend):** Anhaengen (bei leerem Feld setzen, sonst mit einem Leerzeichen verbinden).
+**Merksatz:** In JEDEM Eingabefeld ist `setText` auf einen vom Benutzer befuellbaren Inhalt ein
+Datenverlust-Kandidat — anhaengen oder vorher sichern.
+
+### M4. Ein Test gegen den ECHTEN Anwendungsspeicher loescht Benutzerdaten
+**Symptom:** Nach einem „harmlosen" Logik-Test fehlen echte Eintraege des Benutzers.
+**Ursache:** Der Store ist ein Singleton mit fest verdrahtetem Pfad unter
+`~/Library/Application Support/…`. Ein Test, der zum Aufraeumen Eintraege loescht, trifft die
+Produktivdaten.
+**Versionen:** per Design.
+**FIX (funktionserhaltend):** VOR jedem Test, der schreibt, die Datei/DB sichern und danach per
+Hash-Vergleich pruefen; Testdaten in einer EIGENEN, eindeutig benannten Kategorie/Nummer anlegen und
+nie fremde Eintraege loeschen. Bei einem Store mit Cloud-Merge gilt zusaetzlich: einen faelschlich
+erzeugten Tombstone ENTFERNEN (nicht „leer lassen") — sonst gewinnt er beim naechsten Merge und
+loescht den Eintrag auch in der Cloud.
+
+---
+
 ## Fix-Status (was ist bereits gefixt? — ehrlich getrennt)
 
 **Methodik:** GitHub-Issues hart per `gh issue view` geprueft (2026-06-02). Apple-System-Verhalten ist

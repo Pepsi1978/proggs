@@ -27,3 +27,15 @@
 | 13 | AVAudioEngine-Tap crasht (Sample-Rate) | Tap-Format `inputNode.outputFormat(forBus:0)` nehmen | §E4 |
 | 14 | Aufnahme tot nach AirPods/USB-Wechsel | `AVAudioEngineConfigurationChange` behandeln, Tap neu | §E5 |
 | 15 | `codesign --deep` zum Signieren | Top-Bundle ohne `--deep`, Nested einzeln innen→außen | §G6 |
+| 16 | `… is inaccessible due to 'fileprivate'` | `private extension` auf Dateiebene = fileprivate — geteilte Paletten intern lassen | §L1 |
+| 17 | `ambiguous use of 'greatestFiniteMagnitude'` | Typ hinschreiben: `CGFloat.greatestFiniteMagnitude` | §L2 |
+| 18 | `requires explicit use of 'self'` in Log-Aufruf | Parameter ist `@autoclosure @escaping` → `self.` schreiben, `@escaping` NICHT entfernen | §L3 |
+| 19 | Dialog schließen killt laufende Overlay-Aufnahme | Besitz-Flag: nur die EIGENE Aufnahme stoppen | §M1 |
+| 20 | Zweiter Recorder-Start, erste Aufnahme leer | `start()` muss bei laufender Aufnahme werfen, nicht überschreiben | §M2 |
+| 21 | Zweite Spracheingabe löscht die erste | Im Eingabefeld anhängen statt `setText` | §M3 |
+| 22 | Test schreibt in `~/Library/Application Support` | Vorher sichern + Hash-Vergleich; nie fremde Einträge löschen | §M4 |
+
+> **Vor jedem „plattformübergreifend"-Commit:** die andere Plattform WIRKLICH übersetzen.
+> Ein reiner Compile-Check (`swiftc -o /tmp/x <alle Dateien>`) dauert Sekunden und braucht weder
+> Signierung noch Deploy-Guard. Ohne Xcode-Projekt kompiliert keine IDE beim Tippen mit —
+> ein Fehler fällt sonst erst Wochen später auf (§L1).

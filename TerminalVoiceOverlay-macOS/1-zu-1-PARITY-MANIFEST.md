@@ -1,6 +1,6 @@
 # 1:1-Parity-Manifest TVO-macOS ↔ TVO-Windows
 
-**Stand:** 2026-05-28, 50 Commits (#1111 - #1160)
+**Stand:** 2026-08-27 (Nachzug-Runde), zuvor 2026-05-28 / 50 Commits (#1111 - #1160)
 **Quelle:** `TerminalVoiceOverlay-Windows/Views/OverlayWindow.xaml` + `.xaml.cs`
 
 Dieses Manifest dokumentiert die 1:1-Portierung jedes Windows-Bestandteils
@@ -186,7 +186,43 @@ in das macOS-Pendant. Jeder Eintrag ist mit dem Commit referenziert.
 
 ---
 
+## 12. Nachzug-Runde 2026-08-27 (Windows -> macOS)
+
+Diese Funktionen gab es unter Windows, auf macOS aber noch nicht. Sie sind jetzt
+in BEIDEN macOS-Overlays (TVO + CVO) umgesetzt.
+
+| Windows | macOS | Art |
+|---------|-------|-----|
+| `RecordingCuePlayer` (880 Hz Start, 660+440 Hz Stop) | `RecordingCuePlayer.swift` (AVAudioEngine, gleiche Frequenzen/Amplitude/Blende) | vorher nur `NSSound.beep()` |
+| `SaveDraft` / `RestoreDraft` / `HasPendingDraft` | `saveDraft` / `restoreDraft` / `hasPendingDraft` in `PromptInputPanel` | Datenverlust-Schutz |
+| `InputBox_TextChanged` Live-Vorschau `[Pre] … [Post]` | `textDidChange` + `updatePreviewFromText` | fehlte ganz |
+| `AppendVoiceText(text, autoSubmit)` | `appendVoiceText(_:autoSubmit:)` | **Datenverlust**: macOS ueberschrieb per `setText` |
+| `OnSlotPreviewMouse*` / `OnSlotDrag*` / `PromptSlotService.MoveAsync` | `SlotDragButton` + `PromptSlotStore.move` | Slot-Drag & Drop (verschieben/tauschen) |
+| `OnPromptDroppedOnRowAsync` | `PBPromptRowView` als Drop-Ziel + `handlePromptReorder` | Reihenfolge in der Kategorie |
+| `OnCategoryDroppedOnCategoryAsync` | `PBCategoryTabButton` als Drag-Quelle + `handleCategoryReorder` | Kategorien tauschen |
+| `_foregroundReclaimTimer` (700 ms) | `foregroundReclaimTimer` + `AppWatcher.isTargetAppFrontmost()` | selbstheilende Sichtbarkeit |
+| `BackupFingerprint` / `ReadLastSyncFingerprint` | `backupFingerprint` / `readLastSyncFingerprint` (SHA-256) | Schutz des Start-Restores |
+| `_recordingStartedHere` im PromptEditDialog | `recordingStartedHere` in `PBPromptEditDialog` | **Datenverlust**: Editor stoppte fremde Aufnahmen |
+| `AudioRecorder.Start()` -> `bool` | `AudioRecorder.start()` wirft `alreadyRecording` | **Datenverlust**: Doppelstart verwaiste die Aufnahme |
+| Titel zeigt `(Win+Alt+X)` | Titel zeigt `(⌘⌥X)` | Buchstaben-Hotkey war unsichtbar |
+| `rebuild-overlay.ps1` | `rebuild-overlay.sh` (Repo-Wurzel) | Neubau + Neustart + Verifikation |
+
+**Bewusst NICHT portiert** (Windows-spezifisch, auf macOS gegenstandslos):
+`CaptureWorker` (Kind-Prozess gegen WinMM-Abstuerze), `watcher.vbs`,
+`SendInput`-Struktur-Groesse, `Win32`-Fenster-Handles, `install_autostart.ps1`,
+`update.ps1`, `publish.ps1`, `DiagLog` (macOS nutzt `tvoDebug`/NSLog).
+
+---
+
 ## Verbleibende Punkte
+
+Stand 2026-08-27: die in der Nachzug-Runde gefundenen Luecken sind geschlossen
+(Abschnitt 12). Bekannt offen:
+
+* `SettingsDialog.swift` ist toter Code — der wirksame Dialog ist
+  `PBSettingsDialog` in `PromptBoardDialogs.swift`. Die Datei wird noch
+  mitkompiliert und ist eine Wartungsfalle (man koennte den falschen Dialog
+  aendern), richtet aber keinen Schaden an.
 
 Stand 50 Commits — alle in der XAML/Windows-Source dokumentierten
 Bestandteile sind in macOS umgesetzt. Visuelle Pixel-Mikro-Differenzen
