@@ -35,6 +35,7 @@ werden.
 | CortexAndroid | `debug-shared.keystore` | **ja** (Debug-Signing ergänzt) |
 | NEMS | `debug-shared.keystore` | **ja** (Debug-Signing ergänzt) |
 | VoiceKey | `debug-shared.keystore` | nein (Datei fehlte nur) |
+| Gedankenspeicher | `debug-shared.keystore` | **ja** (Debug-Signing ergänzt, 27.08.2026) |
 
 ## Auf macOS einrichten
 
@@ -47,8 +48,15 @@ bash ~/proggs/keystore-sync/setup-keystores-macos.sh
 
 ## Wichtig: einmalige Neuinstallation auf den Handys
 
-Zwei Apps hatten vorher einen **anderen** Debug-Schlüssel und wurden umgestellt:
-**BestJournalAndroid-Testversion** und **EntropieReductor**. Kommt beim Installieren
+Drei Apps hatten vorher einen **anderen** Debug-Schlüssel und wurden umgestellt:
+**BestJournalAndroid-Testversion**, **EntropieReductor** und **Gedankenspeicher**.
+
+Bei **Gedankenspeicher** war der alte Einzelschlüssel nirgends gesichert — weder in `~/SK`
+noch in `_backup-alte-einzelschluessel/`. Die Version auf dem Handy trägt
+`SHA-256 171034c5…` / `SHA-1 7c:51:08:7f:01:e0:a4:90:43:eb:2f:8b:55:d5:d6:71:74:b3:d3:1e`.
+Taucht diese Datei auf einem Rechner noch auf, gehört sie nach
+`_backup-alte-einzelschluessel/`; sonst hilft nur die einmalige Neuinstallation — **vorher
+in der App sichern** (Einstellungen → Sicherung, F-17), die Notizen kommen nur darüber zurück. Kommt beim Installieren
 `INSTALL_FAILED_UPDATE_INCOMPATIBLE` / „Signatures do not match", die App auf dem Gerät
 **einmal deinstallieren** und neu installieren. Daten kommen über Geräte-Sync (EntropieReductor)
 bzw. Backup (BestJournal) zurück. Der **Release-/Play-Store-Schlüssel ist nicht betroffen.**

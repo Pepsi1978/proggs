@@ -13,22 +13,22 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 41
-        versionName = "0.5.28"
+        versionCode = 42
+        versionName = "0.5.29"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:17 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:25 Uhr\"")
     }
 
-    // Die App auf dem Handy stammt vom Windows-Rechner und trägt dessen Debug-Signatur
-    // (Zertifikat-SHA-256 `171034c5…`). Der Mac signiert von Haus aus mit einer anderen —
-    // eine Installation darüber lehnt Android mit INSTALL_FAILED_UPDATE_INCOMPATIBLE ab
-    // und alle Notizen wären nur über Deinstallation zu retten.
+    // **Dieselbe Debug-Signatur auf Windows und Mac** — wie bei den anderen Apps, siehe
+    // `keystore-sync/README.md`. Ohne das signiert jeder Rechner mit seinem eigenen
+    // Standard-Schlüssel, und eine Installation vom jeweils anderen lehnt Android mit
+    // INSTALL_FAILED_UPDATE_INCOMPATIBLE ab: die Notizen wären nur über eine
+    // Deinstallation zu retten. Genau daran scheiterte der Mac-Build zuerst.
     //
-    // Liegt der Windows-Debug-Keystore unter `~/SK/Gedankenspeicher/` (Dateiname
-    // `debug-shared.keystore` oder `debug.keystore`), signiert Gradle damit und die
-    // Installation geht über die bestehende drüber. Fehlt er, bleibt alles beim Standard —
-    // dann baut der Mac wie bisher, nur eben nicht auf dieses Handy installierbar.
+    // Der Schlüssel liegt bewusst **nicht** im Git, sondern unter `~/SK/Gedankenspeicher/`
+    // (auf Windows `%USERPROFILE%\SK\Gedankenspeicher\`). Fehlt er, baut Gradle mit dem
+    // Standard-Debug-Schlüssel weiter — dann ist der Build nur auf diesem Rechner nutzbar.
     val eigenerDebugKeystore = listOf("debug-shared.keystore", "debug.keystore")
         .map { File(System.getProperty("user.home"), "SK/Gedankenspeicher/$it") }
         .firstOrNull { it.exists() }
