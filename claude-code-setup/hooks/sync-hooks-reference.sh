@@ -14,6 +14,24 @@ COMMENT="Complete hooks reference for macOS. Merge into ~/.claude/settings.json 
 [[ -f "$SETTINGS" ]] || exit 0
 [[ -d "$SETUP_DIR" ]] || exit 0
 
+# Bewusst stillgelegte Referenz respektieren (Direktive #3: nichts ueberschreiben, was jemand
+# absichtlich geleert hat). Traegt die vorhandene Datei den Marker "intentionally removed" oder
+# "sync": false, laesst der Hook sie in Ruhe. Ohne diese Bremse schrieb er die Datei bei JEDEM
+# SessionEnd neu, waehrend der committete Stand leer bleiben sollte -- ein Konflikt, der bei jedem
+# git status wieder auftauchte. Wieder einschalten: Marker aus dem _comment entfernen.
+if [[ -f "$REF_FILE" ]]; then
+    STILLGELEGT=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$REF_FILE'))
+except Exception:
+    print('0'); sys.exit()
+marker = 'intentionally removed' in str(d.get('_comment', ''))
+print('1' if marker or d.get('sync') is False else '0')
+" 2>/dev/null || echo "0")
+    [[ "$STILLGELEGT" == "1" ]] && exit 0
+fi
+
 # Extract hooks section with python3
 TMP_FILE="$REF_FILE.tmp.$$"
 # Poka-Yoke (Direktive #3, Stufe 3): trap raeumt die Temp-Datei bei JEDEM Exit

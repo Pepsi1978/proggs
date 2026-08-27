@@ -61,6 +61,26 @@ fi
 # ─── Schritt 3: macOS-Hooks in settings.json einmergen ────────────────────────
 step "3/11" "macOS-Hooks in settings.json einmergen (hooks-macos.json)"
 
+# Poka-Yoke (Direktive #3, Stufe 3): Der Merge unten SETZT settings["hooks"] — er ergaenzt nicht.
+# Ist die Referenz leer oder bewusst stillgelegt, wuerde dieser Lauf also SAEMTLICHE vorhandenen
+# Hooks aus ~/.claude/settings.json entfernen. Deshalb: bei leerer Referenz ueberspringen statt
+# loeschen. (Die Referenz ist seit #47663 bewusst leer; siehe Marker in ihrem _comment.)
+HOOK_ANZAHL=$(python3 -c "
+import json, sys
+try:
+    print(len(json.load(open('$SCRIPT_DIR/hooks-macos.json')).get('hooks', {})))
+except Exception:
+    print(0)
+" 2>/dev/null || echo 0)
+if [[ "$HOOK_ANZAHL" -eq 0 ]]; then
+    warn "hooks-macos.json enthaelt keine Hooks — Schritt 3 uebersprungen."
+    warn "Vorhandene Hooks in ~/.claude/settings.json bleiben unangetastet (sie zu ueberschreiben"
+    warn "wuerde sie alle loeschen). Hooks werden hier ueber die OpenLauncher-Profile geliefert."
+    SKIP_HOOK_MERGE=1
+fi
+
+if [[ -z "${SKIP_HOOK_MERGE:-}" ]]; then
+
 # Bevorzuge python3 (auf macOS immer vorhanden), Fallback: jq
 if command -v python3 &>/dev/null; then
     python3 - "$SCRIPT_DIR/hooks-macos.json" ~/.claude/settings.json <<'PYEOF'
@@ -93,6 +113,8 @@ else
     warn "Bitte hooks-macos.json manuell in ~/.claude/settings.json unter 'hooks' eintragen."
     warn "Alternativ: brew install jq"
 fi
+
+fi   # Ende Schritt-3-Merge (uebersprungen bei leerer Referenz)
 
 # ─── Schritt 4: Shell-Hooks (.sh) kopieren und ausführbar machen ──────────────
 step "4/11" "Shell-Hooks (.sh) nach ~/.claude/hooks/ kopieren"

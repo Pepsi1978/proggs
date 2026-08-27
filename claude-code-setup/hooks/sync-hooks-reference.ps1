@@ -14,6 +14,17 @@ $Comment = "Complete hooks reference for Windows. Merge into ~/.claude/settings.
 if (-not (Test-Path $Settings)) { exit 0 }
 if (-not (Test-Path $SetupDir)) { exit 0 }
 
+# Bewusst stillgelegte Referenz respektieren (Gegenstueck zur .sh-Fassung): traegt die vorhandene
+# Datei den Marker "intentionally removed" oder "sync": false, laesst der Hook sie unangetastet.
+# Sonst ueberschreibt er bei jedem SessionEnd einen absichtlich geleerten Stand.
+if (Test-Path $RefFile) {
+    try {
+        $vorhanden = Get-Content $RefFile -Raw | ConvertFrom-Json
+        $marker = ($vorhanden._comment -is [string]) -and ($vorhanden._comment -like "*intentionally removed*")
+        if ($marker -or ($vorhanden.PSObject.Properties.Name -contains "sync" -and $vorhanden.sync -eq $false)) { exit 0 }
+    } catch { }
+}
+
 try {
     $settingsContent = Get-Content $Settings -Raw -Encoding utf8 | ConvertFrom-Json
     $hooks = $settingsContent.hooks

@@ -100,12 +100,21 @@ foreach ($skill in $skillDirs) {
 if ($skillDirs) { Write-Host "Custom skills copied ($($skillDirs.Count) skills)" -ForegroundColor Green }
 
 # Add Windows-specific hooks to settings.json
+# Poka-Yoke (Direktive #3, Stufe 3): -Force SETZT "hooks" — es ergaenzt nicht. Ist die Referenz
+# leer oder bewusst stillgelegt, wuerde dieser Lauf SAEMTLICHE vorhandenen Hooks entfernen.
+# Deshalb bei leerer Referenz ueberspringen statt loeschen.
 $settings = Get-Content "$ClaudeDir\settings.json" -Raw | ConvertFrom-Json
 $winHooks = Get-Content "$ScriptDir\hooks-windows.json" -Raw | ConvertFrom-Json
-$settings | Add-Member -MemberType NoteProperty -Name "hooks" -Value $winHooks.hooks -Force
-$settings | ConvertTo-Json -Depth 10 | Set-Content "$ClaudeDir\settings.json" -Encoding UTF8
-
-Write-Host "Hooks (Windows) added to settings.json" -ForegroundColor Green
+$hookAnzahl = 0
+if ($winHooks.hooks) { $hookAnzahl = @($winHooks.hooks.PSObject.Properties).Count }
+if ($hookAnzahl -eq 0) {
+    Write-Host "hooks-windows.json enthaelt keine Hooks - Schritt uebersprungen." -ForegroundColor Yellow
+    Write-Host "Vorhandene Hooks in settings.json bleiben unangetastet (sie zu ueberschreiben wuerde sie alle loeschen)." -ForegroundColor Yellow
+} else {
+    $settings | Add-Member -MemberType NoteProperty -Name "hooks" -Value $winHooks.hooks -Force
+    $settings | ConvertTo-Json -Depth 10 | Set-Content "$ClaudeDir\settings.json" -Encoding UTF8
+    Write-Host "Hooks (Windows) added to settings.json" -ForegroundColor Green
+}
 
 # Git config
 git config --global init.defaultBranch main
