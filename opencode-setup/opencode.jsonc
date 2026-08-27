@@ -12,9 +12,11 @@
   // Direktive #3 wird bewusst NICHT hier geladen (waere sonst IMMER im Kontext).
   // Stattdessen laedt der Skill "resilient-bugfixing" den Volltext on-demand —
   // nur wenn wirklich ein Bug bearbeitet wird (token-sparend, Frank-Wunsch 2026-06-18).
+  // Nur die AGENTS.md, keine Zusatzregeln (Frank, 2026-08-27): jede Datei hier landet in
+  // JEDEM Prompt. browser-policy.md entfernt, weil die Chrome-MCPs ohnehin abgeschaltet sind.
+  // Die Regeln unter opencode-setup/rules-opencode/ waren nie eingebunden und bleiben es nicht.
   "instructions": [
-    "~/.config/opencode/AGENTS.md",
-    "~/proggs/opencode-setup/browser-policy.md"
+    "~/.config/opencode/AGENTS.md"
   ],
 
   // Punkt 2 — Kontext-Kompaktierung entschaerfen (gegen "nach Compress wieder Englisch"):
@@ -79,6 +81,9 @@
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
     // Standard: eigener persistenter Chrome, der ohne Benutzerfreigabe gestartet wird.
+    // ABGESCHALTET 2026-08-27 auf Franks Wunsch: 29 Tools / ~6100 Tokens Schema bei JEDEM Prompt.
+    // Lokale Modelle (LM Studio) muessen das jedes Mal neu prefillen -> langes "Processing Prompt".
+    // Fuer Browser-Arbeit hier auf true setzen und OpenCode neu starten.
     "chrome-devtools": {
       "type": "local",
       "command": [
@@ -88,7 +93,7 @@
         "--no-performance-crux",
         "--redact-network-headers"
       ],
-      "enabled": true,
+      "enabled": false,
       "timeout": 120000
     },
 
