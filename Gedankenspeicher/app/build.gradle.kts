@@ -13,11 +13,35 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40
-        versionName = "0.5.27"
+        versionCode = 41
+        versionName = "0.5.28"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:10 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.08.2026, 12:17 Uhr\"")
+    }
+
+    // Die App auf dem Handy stammt vom Windows-Rechner und trägt dessen Debug-Signatur
+    // (Zertifikat-SHA-256 `171034c5…`). Der Mac signiert von Haus aus mit einer anderen —
+    // eine Installation darüber lehnt Android mit INSTALL_FAILED_UPDATE_INCOMPATIBLE ab
+    // und alle Notizen wären nur über Deinstallation zu retten.
+    //
+    // Liegt der Windows-Debug-Keystore unter `~/SK/Gedankenspeicher/` (Dateiname
+    // `debug-shared.keystore` oder `debug.keystore`), signiert Gradle damit und die
+    // Installation geht über die bestehende drüber. Fehlt er, bleibt alles beim Standard —
+    // dann baut der Mac wie bisher, nur eben nicht auf dieses Handy installierbar.
+    val eigenerDebugKeystore = listOf("debug-shared.keystore", "debug.keystore")
+        .map { File(System.getProperty("user.home"), "SK/Gedankenspeicher/$it") }
+        .firstOrNull { it.exists() }
+
+    signingConfigs {
+        getByName("debug") {
+            eigenerDebugKeystore?.let { datei ->
+                storeFile = datei
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
