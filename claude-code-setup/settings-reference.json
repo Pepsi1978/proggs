@@ -107,7 +107,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+						"command": "pwsh -NoProfile -File \"%USERPROFILE%/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
 						"timeout": 20
 					}
 				]
@@ -466,7 +466,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+						"command": "pwsh -NoProfile -File \"%USERPROFILE%/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
 						"timeout": 20
 					}
 				]

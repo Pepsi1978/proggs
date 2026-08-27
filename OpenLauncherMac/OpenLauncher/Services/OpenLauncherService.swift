@@ -248,7 +248,7 @@ final class OpenLauncherService {
         # CLAUDE_CONFIG_DIR getrennt im Schluesselbund ab -- ohne diesen Abgleich verlangt jedes
         # Profil beim ersten Start (und nach jedem Profilwechsel) eine neue Anmeldung. Der Abgleich
         # schreibt nur dort, wo gar kein oder ein voellig abgelaufener Login liegt.
-        LOGIN_SYNC="$HOME/.claude/hooks/claude-login-sync.py"
+        LOGIN_SYNC="$HOME/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.py"
         if [ -f "$LOGIN_SYNC" ]; then
             python3 "$LOGIN_SYNC" >/dev/null 2>&1 || true
         fi

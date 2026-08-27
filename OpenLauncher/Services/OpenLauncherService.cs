@@ -653,7 +653,7 @@ try {
     # CLAUDE_CONFIG_DIR getrennt ab (Windows: <configdir>\.credentials.json) -- ohne diesen Abgleich
     # verlangt jedes Profil beim ersten Start und nach jedem Profilwechsel eine neue Anmeldung.
     # Der Abgleich schreibt nur dort, wo gar kein oder ein voellig abgelaufener Login liegt.
-    $loginSync = Join-Path $env:USERPROFILE ".claude/hooks/claude-login-sync.py"
+    $loginSync = Join-Path $env:USERPROFILE "proggs/OpenLauncher/Profiles/hooks/claude-login-sync.py"
     if (Test-Path $loginSync) {
         try { $null = python $loginSync 2>$null } catch { }
     }

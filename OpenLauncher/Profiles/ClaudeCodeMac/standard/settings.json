@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/claude-login-sync.sh\"",
+            "command": "bash \"$HOME/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.sh\"",
             "timeout": 20
           }
         ]
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/claude-login-sync.sh\"",
+            "command": "bash \"$HOME/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.sh\"",
             "timeout": 20
           }
         ]
