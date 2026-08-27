@@ -5,7 +5,7 @@
 >
 > **Stand:** recherchiert am 2026-06-18 für **OpenCode CLI v1.17.8**, lokal ergänzt am 2026-07-10
 > um den bestätigten Windows-Mausfix, am 2026-07-11 um den stderr-Stack-Trace-Leak (#14a) und
-> am 2026-07-18 um ChatGPT-OAuth-Fast-Routing (#80a) für **OpenCode CLI v1.18.3** (Repo `anomalyco/opencode`,
+> am 2026-07-18 um ChatGPT-OAuth-Fast-Routing (#80a) und am 2026-08-27 um lokale LM-Studio-Modelle (§15) für **OpenCode CLI v1.18.23** (Repo `anomalyco/opencode`,
 > früher `sst/opencode`; Doku `opencode.ai`). Recherche: 7 parallele Researcher (offizielle Doku +
 > Changelog v1.1.64→v1.17.8, GitHub-Issues, Community, Plattform-Fallen, Config/AGENTS.md,
 > Agents/Plugins/MCP/Skills, Token/Provider/OpenRouter). Quellen je Eintrag verlinkt.
@@ -44,6 +44,9 @@
 | 17 | ⭐ TUI sieht komplett kaputt aus (linke Spalte voller `??`/`M`, `[plugin] …`-Zeilen bluten rein) | Ein Plugin schreibt direkt aufs Terminal — Plugins laufen IM TUI-Prozess. Ursache: `$`-Shell-Aufruf **ohne `.quiet()`** (Bun echoed stdout ans TTY, z.B. `git status --porcelain`) und/oder `console.*` (schreibt auf stderr). **FIX:** an JEDEN `$`-Aufruf `.quiet()`; NIE `console.*`, nur `client.app.log`. | §6 (#48a) |
 | 18 | ⭐ TUI zerfällt sporadisch (Fragmente an falschen Positionen, Statuszeile vermischt), unten rohe `at … (B:/~BUN/root/chunk-…)`-Stack-Traces; Fenster-Resize heilt kurzfristig | Unbehandelte Fehler im TUI-Hauptthread (kein `unhandledRejection`/`uncaughtException`-Handler) → Bun druckt Stack-Trace auf stderr = TTY der TUI; Diff-Renderer merkt nichts. **FIX:** stderr beim Start in Log-Datei umleiten + Handler im TUI-Entry + Fehler-Trigger abstellen (`small_model` explizit setzen). | §2 (#14a) |
 | 19 | ⭐ OpenAI-Fast über ChatGPT-OAuth gewählt, Response meldet `service_tier=default` | Bei OAuth ist dieses finale Feld laut OpenAI kein verlässlicher Fast-Nachweis. Request-Option `priority` prüfen; Fast-Status aus konfiguriertem OAuth-Routing/Modellkatalog ableiten, nicht aus dem API-Key-Responsefeld. | §10 (#80a) |
+| 20 | ⭐ Lokales LM-Studio-Modell: erste Anfrage bricht mit „tokens to keep … greater than the context length" ab | LM Studio lädt per JIT oft mit **4096** Tokens, OpenCodes Systemprompt braucht ~22000. Modell mit ≥32768 NEU laden, dann den echten Wert aus `lms ps` in `limit.context` schreiben. | §15.1 |
+| 21 | ⭐ `lms unload` und danach „insufficient system resources" — Modell kommt nicht zurück | Die Schutzschranken bewerten den Modell-Gesamtbedarf, nicht den Kontext. **Vor** jedem Entladen `lms load … --estimate-only` fragen; nur bei „may be loaded" entladen, sonst alles so lassen. | §15.2 |
+| 22 | ⭐ `lms load --context-length` wirkt nicht: `lms ps` bleibt bei 4096, Server lehnt jeden größeren Prompt ab | **MLX-Modell** (`format: safetensors`). Die MLX-Laufzeit nimmt den Parameter nicht an — in der Oberfläche geht es trotzdem, über den Server nicht. Für Agentenbetrieb eine **GGUF**-Variante nehmen; Format steht in `lms ls --json`. | §15.5 |
 
 ---
 
@@ -1133,6 +1136,90 @@ Call mit `curl` geht durch.
 (`headers={"User-Agent":"curl/8.5.0", ...}` — genau das tun beide Skripte in `_post()`). Alternativ
 `requests`/`httpx` mit eigenem UA. NIE den urllib-Default-UA gegen Cloudflare-gefrontete APIs lassen.
 **Quelle:** eigener Vorfall 2026-06-20 (research-pipeline).
+
+---
+
+## 15. Lokale Modelle über LM Studio
+
+### 15.1 ⭐ „The number of tokens to keep from the initial prompt is greater than the context length"
+**Symptom:** Ein lokales LM-Studio-Modell wird im Modell-Picker sauber angezeigt, die Sitzung startet,
+die Seitenleiste zeigt `0 tokens / 0% used` — und die ERSTE Anfrage bricht sofort ab mit
+`{"message":"The number of tokens to keep from the initial prompt is greater than the context length.
+Try to load the model with a larger context length, or provide a shorter input"}`.
+**Ursache:** LM Studio lädt ein Modell per JIT mit seiner eigenen Vorgabe — häufig **4096 Tokens**.
+OpenCodes Systemprompt belegt allein rund **22000 Tokens**. Der Wert aus `lms ps` landet unverändert
+als `provider.lmstudio.models.<id>.limit.context` in der Konfig, OpenCode hält 4096 für ein gültiges
+Fenster und schickt den Prompt trotzdem — LM Studio lehnt ab.
+**Versionen:** OpenCode 1.18.23, LM Studio (lms-CLI 2026-08). Plattformunabhängig.
+**FIX (funktionserhaltend):** Vor dem Start prüfen, ob der geladene Kontext ≥ 32768 ist. Ist er
+kleiner, das Modell **neu laden** statt nur zu warnen:
+`lms unload <id> && lms load <id> --context-length 65536 -y`. Danach den TATSÄCHLICHEN Wert aus
+`lms ps` in die Konfig schreiben — nie eine geschönte Zahl, sonst rechnet OpenCode gegen ein Fenster,
+das es nicht gibt.
+**Quelle:** eigener Vorfall 2026-08-27 (OpenLauncher macOS 1.24.11).
+
+### 15.2 ⭐ „insufficient system resources" — Entladen ist NICHT umkehrbar
+**Symptom:** Ein Modell war geladen und lief; nach `lms unload` lässt es sich mit
+`lms load … --context-length …` nicht mehr laden: *„Model loading was stopped due to insufficient
+system resources."* Auch der ursprüngliche kleine Kontext geht nicht mehr.
+**Ursache:** Die Speicher-Schutzschranken von LM Studio (`modelLoadingGuardrails.mode`, Vorgabe
+`medium`) bewerten den **Gesamtbedarf des Modells**, nicht die Kontextlänge — der Schätzwert ist für
+4096 und für 65536 Tokens identisch. Gemessen auf 24 GB: `qwen/qwen3.8-27b` (16,1 GB Gewichte)
+schätzt 20,97 GiB und wird abgelehnt, `unsloth/qwen3.8-27b` (10,9 GB) schätzt 10,18 GiB und lädt mit
+65536 Tokens durch. Ein bereits geladenes Modell überlebt eine spätere Verschärfung der Speicherlage —
+entladen kommt es aber nicht zurück.
+**Die Schätzung ist dabei messbar zu pessimistisch:** mit `mode: off` lud dasselbe Modell mit 65536
+Tokens durch und belegte real **14,98 GiB** statt der geschätzten 20,97 GiB. Die Schranke blockiert
+also Ladevorgänge, die tatsächlich funktionieren — deshalb darf sie einen Ladeversuch nur dann
+verhindern, wenn gerade etwas Funktionierendes geladen ist und man es entladen müsste.
+**Versionen:** LM Studio 2026-08, macOS (Apple Silicon, Unified Memory).
+**FIX (funktionserhaltend):** **NIE entladen, ohne vorher zu fragen.** `lms load … --estimate-only`
+antwortet mit *„This model will fail to load based on your resource guardrails settings."* bzw.
+*„… may be loaded …"*. Nur bei „may be loaded" entladen und neu laden; scheitert es doch, den alten
+Ladezustand sofort wiederherstellen. Unbekannte Antwort = versuchen (fail-open), damit eine geänderte
+Formulierung nie einen funktionierenden Ladevorgang blockiert.
+**Quelle:** eigener Vorfall 2026-08-27 (OpenLauncher macOS).
+
+### 15.3 Zwei Herausgeber, ein Modellname → „insufficient system resources" beim falschen
+**Symptom:** Zwei Einträge heißen gleich (`Qwen3.8 27b (lokal)`); der eine startet, der andere meldet
+nur „insufficient system resources".
+**Ursache:** `unsloth/qwen3.8-27b` (10,9 GB) und `qwen/qwen3.8-27b` (16,1 GB) sind verschiedene
+Quantisierungen desselben Modells. Ein aus der ID abgeleiteter Anzeigename verliert den Herausgeber.
+**Versionen:** LM Studio 2026-08.
+**FIX:** Den Herausgeber aus `lms ls --json` (`publisher`) in den Anzeigenamen ziehen:
+`Qwen3.8 27B - unsloth (lokal)`.
+**Quelle:** eigener Vorfall 2026-08-27.
+
+### 15.5 ⭐ MLX-Modelle (`format: safetensors`) ignorieren `--context-length` — bleiben bei 4096
+**Symptom:** `lms load <id> --context-length 65536 -y` meldet „Model loaded successfully“, aber
+`lms ps` zeigt weiterhin **4096**. Der OpenAI-kompatible Server lehnt jeden Prompt über 4096 Tokens
+ab. In der LM-Studio-**Oberfläche** funktioniert dasselbe Modell mit weit größerem Kontext — nur
+über `/v1/chat/completions` nicht.
+**Messung (2026-08-27):** `qwen/qwen3.8-27b` (`format: safetensors`, `quantization: 4bit`,
+`architecture: qwen3_5`, MLX-Laufzeit) nacheinander mit `--context-length` 8192, 16384 und 65536
+geladen — `lms ps` meldet **jedes Mal 4096**. Ein Prompt mit ~6500 Tokens scheitert sofort mit
+`{"error":"The number of tokens to keep from the initial prompt is greater than the context length…"}`.
+Dieselben Kommandos auf GGUF-Modellen (`google/gemma-4-e4b`, `unsloth/qwen3.8-27b`) übernehmen den
+Wert korrekt (16384 bzw. 65536 in `lms ps`).
+**Ursache:** Die MLX-Laufzeit von LM Studio nimmt den Ladeparameter über CLI und Server nicht an.
+**Versionen:** LM Studio 2026-08, macOS/Apple Silicon.
+**FIX (funktionserhaltend):** Für Agentenbetrieb über den Server **GGUF-Varianten** verwenden; das
+Format steht in `lms ls --json` unter `format`. Praktisch: nach JEDEM Ladevorgang prüfen, ob `lms ps`
+den ANGEFORDERTEN Wert meldet — tut es das nicht, ignoriert die Laufzeit den Parameter, und
+Speicher-Schutzschranken zu lockern hilft nicht. Dann eine GGUF-Schwester desselben Modells namentlich
+vorschlagen (gleicher Modellname, anderer Herausgeber).
+**Quelle:** eigene Messung 2026-08-27 (LM Studio 2026-08, macOS/Apple Silicon).
+
+### 15.4 Mythos „parallel teilt das Kontextfenster auf" — durch Live-Test WIDERLEGT
+**Behauptung:** `lms ps` meldet `parallel: 4`; llama.cpp protokolliert `n_ctx_seq = n_ctx / n_seq` —
+also stünden einer Anfrage nur `contextLength / parallel` Tokens zur Verfügung, und der Wert aus
+`lms ps` dürfte nicht ungeteilt in die opencode-Konfig.
+**Messung (2026-08-27):** `google/gemma-4-e4b` mit `--context-length 16384 --parallel 4` geladen,
+danach ein Prompt mit **9123 Tokens** über `/v1/chat/completions` — geht durch
+(`prompt_tokens: 9123`). Bei einer Aufteilung wären nur 4096 Tokens je Slot verfügbar gewesen.
+**Folge:** Der Wert aus `lms ps` gilt jeder einzelnen Anfrage in voller Höhe und gehört ungeteilt in
+`limit.context`. Eine Division würde OpenCode viel zu früh komprimieren lassen.
+**Quelle:** eigene Messung 2026-08-27.
 
 ---
 

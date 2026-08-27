@@ -583,6 +583,30 @@ final class OpenLauncherService {
             # stdin: Ausgabe von "lms ls --json" -> Maximalkontext des Modells
             e = find(entries(), sys.argv[2]) or {}
             print('%d' % number(e, 'maxContextLength'))
+        elif mode == 'fmt':
+            # stdin: Ausgabe von "lms ls --json" -> Dateiformat des Modells. safetensors bedeutet
+            # MLX-Laufzeit; die nimmt --context-length nicht an.
+            e = find(entries(), sys.argv[2]) or {}
+            print(str(e.get('format') or ''))
+        elif mode == 'alt':
+            # stdin: Ausgabe von "lms ls --json" -> andere Quantisierungen DESSELBEN Modells,
+            # kleinste zuerst. Zwei Herausgeber liefern denselben Modellnamen in sehr
+            # unterschiedlicher Groesse (unsloth/qwen3.8-27b 10,9 GB vs. qwen/qwen3.8-27b 16,1 GB);
+            # passt die gewaehlte nicht in den Speicher, ist die kleinere Schwester der Ausweg.
+            target = sys.argv[2]
+            base = target.split('/')[-1].lower()
+            found = []
+            for e in entries():
+                key = e.get('modelKey')
+                if not isinstance(key, str) or key.lower() == target.lower():
+                    continue
+                if key.split('/')[-1].lower() != base:
+                    continue
+                if e.get('type') not in (None, 'llm'):
+                    continue
+                found.append((number(e, 'sizeBytes'), key, str(e.get('format') or '?')))
+            for size, key, fmt in sorted(found):
+                print('%s %.1f %s' % (key, size / 1e9, fmt))
         elif mode == 'patch':
             path, model, ctx = sys.argv[2], sys.argv[3], int(sys.argv[4])
             raw = open(path, encoding='utf-8').read()
@@ -633,24 +657,43 @@ final class OpenLauncherService {
                 esac
             }
 
-            # Laedt mit absteigenden Kontextgroessen, bis eine sitzt.
+            # Laedt mit absteigenden Kontextgroessen, bis eine sitzt. Die Schaetzung darf einen
+            # Versuch nur dann verhindern, wenn gerade etwas Funktionierendes geladen ist
+            # (LMSRISKY=0) - dann waere ein gescheitertes Neuladen ein Rueckschritt. Ist nichts
+            # geladen (LMSRISKY=1), wird trotz negativer Schaetzung geladen: sie ist messbar zu
+            # pessimistisch (geschaetzt 20,97 GiB, tatsaechlich belegt 14,98 GiB), und verlieren
+            # kann man dabei nichts.
             lmsLoadLadder() {
                 for LMSWANT in "$@"; do
                     [ "$LMSWANT" -gt 0 ] 2>/dev/null || continue
-                    if ! lmsCanLoad "$LMSWANT"; then
+                    if [ "$LMSRISKY" != "1" ] && ! lmsCanLoad "$LMSWANT"; then
                         printf '\\033[33m%s Tokens passen laut LM Studio nicht in den Speicher dieses Rechners.\\033[0m\\n' "$LMSWANT"
                         continue
                     fi
                     printf '\\033[36mLade lokales Modell %s mit %s Tokens Kontext - das kann einige Minuten dauern ...\\033[0m\\n' "$LMSMODEL" "$LMSWANT"
                     if "$LMS" load "$LMSMODEL" --context-length "$LMSWANT" -y; then
                         lmsState
-                        if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then return 0; fi
+                        if [ "$LOADEDCTX" -gt 0 ] 2>/dev/null; then
+                            # Nachpruefen, ob die Kontextlaenge ueberhaupt angekommen ist. Die
+                            # MLX-Laufzeit (Modelle im Format safetensors) ignoriert
+                            # --context-length stillschweigend und bleibt bei 4096 - gemessen mit
+                            # 8192, 16384 und 65536, "lms ps" meldet jedes Mal 4096, und der
+                            # Server lehnt jeden groesseren Prompt ab.
+                            if [ "$LOADEDCTX" -lt "$LMSWANT" ] 2>/dev/null && [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
+                                printf '\\033[33mLM Studio hat %s Tokens angefordert bekommen, meldet aber %s - die Laufzeit dieses Modells ignoriert die Kontextlaenge.\\033[0m\\n' "$LMSWANT" "$LOADEDCTX"
+                                LMSIGNORED=1
+                                return 1
+                            fi
+                            return 0
+                        fi
                     fi
                 done
                 lmsState
                 [ "$LOADEDCTX" -gt 0 ] 2>/dev/null
             }
 
+            LMSIGNORED=0
+            LMSFORMAT=$("$LMS" ls --json 2>/dev/null | python3 "$LMSPY" fmt "$LMSMODEL" 2>/dev/null)
             lmsState
 
             # Zielgroesse: Wunschwert, gedeckelt auf den Maximalkontext dieses Modells.
@@ -664,7 +707,9 @@ final class OpenLauncherService {
             fi
 
             if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
-                # Nicht geladen: selbst laden.
+                # Nicht geladen: selbst laden. Hier ist nichts zu verlieren, also auch gegen eine
+                # negative Schaetzung versuchen.
+                LMSRISKY=1
                 lmsLoadLadder "$LMSTARGET" "$LMSMINCTX" || true
             elif [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
                 # Geladen, aber zu klein fuer OpenCode. Neu laden - aber nur, wenn LM Studio den
@@ -674,6 +719,7 @@ final class OpenLauncherService {
                 printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
                 printf '\\033[33mOpenCode braucht allein fuer den Systemprompt rund 22000 Tokens - damit bricht die erste Anfrage ab.\\033[0m\\n'
 
+                LMSRISKY=0
                 if lmsCanLoad "$LMSTARGET" || lmsCanLoad "$LMSMINCTX"; then
                     LMSOLDCTX=$LOADEDCTX
                     printf '\\033[36mDas Modell wird deshalb mit groesserem Kontext neu geladen.\\033[0m\\n'
@@ -692,15 +738,50 @@ final class OpenLauncherService {
                 printf '\\033[90mLokales Modell %s ist mit %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
             else
                 # Klartext statt eines kryptischen LM-Studio-Fehlers bei der ersten Anfrage.
-                if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
+                if [ "$LMSIGNORED" = "1" ]; then
+                    printf '\\033[31mACHTUNG: %s bleibt bei %s Tokens Kontext, egal welcher Wert angefordert wird.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
+                    printf '\\033[33mDas ist eine Eigenheit der MLX-Laufzeit (Modelle im Format "safetensors"): sie nimmt --context-length nicht an. GGUF-Modelle tun es.\\033[0m\\n'
+                elif [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
                     printf '\\033[31mACHTUNG: %s ist nicht geladen und passt mit agent-tauglichem Kontext nicht in den Speicher dieses Rechners.\\033[0m\\n' "$LMSMODEL"
                 else
                     printf '\\033[31mACHTUNG: %s hat nur %s Tokens Kontext - OpenCode braucht mindestens %s.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX" "$LMSMINCTX"
                 fi
                 printf '\\033[33mDie erste Anfrage bricht damit ab ("The number of tokens to keep from the initial prompt is greater than the context length"). Auswege:\\033[0m\\n'
-                printf '\\033[36m  1) Eine sparsamere Variante desselben Modells waehlen - im Launcher steht der Herausgeber am Namen (z.B. unsloth statt qwen).\\033[0m\\n'
+
+                # Konkret statt allgemein: gibt es dasselbe Modell in einer sparsameren Quantisierung,
+                # und passt die in den Speicher? Dann wird sie namentlich genannt.
+                LMSALT=""
+                while IFS=' ' read -r LMSALTKEY LMSALTGB LMSALTFMT; do
+                    [ -n "$LMSALTKEY" ] || continue
+                    # safetensors ueberspringen - dieselbe MLX-Laufzeit, dieselbe Sackgasse.
+                    [ "$LMSALTFMT" = "safetensors" ] && continue
+                    LMSESTIMATE=$("$LMS" load "$LMSALTKEY" --context-length "$LMSMINCTX" -y --estimate-only 2>&1)
+                    case "$LMSESTIMATE" in
+                        *'will fail to load'*) continue ;;
+                    esac
+                    LMSALT="$LMSALTKEY"
+                    LMSALTSIZE="$LMSALTGB"
+                    break
+                done <<ALTEOF
+        $("$LMS" ls --json 2>/dev/null | python3 "$LMSPY" alt "$LMSMODEL" 2>/dev/null)
+        ALTEOF
+
+                if [ -n "$LMSALT" ]; then
+                    printf '\\033[32m  1) Dieselbe Modellfamilie laeuft als %s (%s GB, GGUF) - im Launcher steht der Herausgeber am Namen.\\033[0m\\n' "$LMSALT" "$LMSALTSIZE"
+                else
+                    printf '\\033[36m  1) Eine sparsamere Variante desselben Modells waehlen - im Launcher steht der Herausgeber am Namen (z.B. unsloth statt qwen).\\033[0m\\n'
+                fi
                 printf '\\033[36m  2) Ein kleineres Modell waehlen.\\033[0m\\n'
-                printf '\\033[36m  3) In LM Studio unter Einstellungen die Speicher-Schutzschranken lockern, dann:  lms load %s --context-length %s -y\\033[0m\\n' "$LMSMODEL" "$LMSMINCTX"
+                if [ "$LMSFORMAT" = "safetensors" ]; then
+                    printf '\\033[36m  3) Die Speicher-Schutzschranken zu lockern hilft hier NICHT: dieses Modell laeuft auf der MLX-Laufzeit und bleibt auch dann bei seiner festen Kontextlaenge (gemessen 4096 Tokens).\\033[0m\\n'
+                else
+                    printf '\\033[36m  3) In LM Studio unter Einstellungen die Speicher-Schutzschranken lockern (ihre Schaetzung ist messbar zu pessimistisch), dann:  lms load %s --context-length %s -y\\033[0m\\n' "$LMSMODEL" "$LMSMINCTX"
+                fi
+
+                # Anhalten. Ohne diesen Halt scrollt die Warnung sofort hinter der startenden TUI
+                # weg, und der Benutzer sieht nur noch den rohen Serverfehler von LM Studio.
+                printf '\\033[33m\\nWeiter mit Eingabetaste (die Sitzung bricht dann voraussichtlich ab) - oder dieses Fenster schliessen und im Launcher ein anderes Modell waehlen.\\033[0m\\n'
+                read -r _ < /dev/tty || true
             fi
 
             # Das Kontextfenster in der opencode-Konfig muss exakt der Ladeeinstellung in LM Studio
@@ -896,8 +977,13 @@ final class OpenLauncherService {
         // gegen ein Fenster rechnen lassen, das es gar nicht gibt. Ist das Modell noch nicht geladen,
         // gilt vorlaeufig der Wert, mit dem das Startskript laedt - es korrigiert den Eintrag danach
         // auf den echten Wert.
+        // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
+        // Tokens. Dieser Wert darf NICHT in die Konfig wandern - OpenCode braucht allein fuer den
+        // Systemprompt rund 22000 und braeche sofort ab. Das Startskript laedt in dem Fall sichtbar
+        // mit groesserem Kontext neu und traegt den tatsaechlichen Wert danach nach. (Uebernommen
+        // aus der Windows-Fassung, Commit 05a93eb84.)
         let loadedContext = LmStudioService.loadedContextLength(modelId: slug)
-        let context = loadedContext > 0 ? loadedContext : defaultLmStudioContext
+        let context = loadedContext >= LmStudioService.minimumAgentContext ? loadedContext : defaultLmStudioContext
         let limit = modelNode.getOrAddObject("limit")
         limit["context"] = .number(context)
         limit["output"] = .number(LmStudioService.outputLimit(for: context))
