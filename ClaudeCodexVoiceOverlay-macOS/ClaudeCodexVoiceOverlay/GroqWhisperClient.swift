@@ -2,7 +2,11 @@ import Foundation
 
 final class GroqWhisperClient {
     private let apiKey: String
-    private let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
+    /// Endpunkt, Modell und Sprache kommen aus der .env (Windows: WHISPER_URL /
+    /// WHISPER_MODEL / WHISPER_LANG). Vorher standen alle drei fest im Code.
+    private let endpoint: URL
+    private let model: String
+    private let language: String
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
     /// 1:1 Windows (GroqWhisperClient.cs: MaxRetries = 0). Retries sind dort
     /// bewusst abgeschaltet: Groq ist zeitweise ohnehin 40-50 s langsam, und
@@ -60,8 +64,17 @@ final class GroqWhisperClient {
         "subtitles by the amara org community",
     ]
 
-    init(apiKey: String) {
+    init(apiKey: String,
+         model: String? = nil,
+         language: String? = nil,
+         url: String? = nil) {
+        let cfg = Config.current
         self.apiKey = apiKey
+        self.model = model ?? cfg?.whisperModel ?? "whisper-large-v3-turbo"
+        self.language = language ?? cfg?.whisperLang ?? "de"
+        let raw = url ?? cfg?.whisperUrl ?? "https://api.groq.com/openai/v1/audio/transcriptions"
+        self.endpoint = URL(string: raw)
+            ?? URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
     }
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
@@ -71,7 +84,10 @@ final class GroqWhisperClient {
     }
 
     private func sendRequest(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let totalStart = DiagLog.now()
+        DiagLog.write("Groq", "transcribe_start", [("file", fileURL.lastPathComponent), ("attempt", attempt)])
         guard let audioData = try? Data(contentsOf: fileURL) else {
+            DiagLog.warn("Groq", "read_wav_failed", [("file", fileURL.lastPathComponent)])
             completion(.failure(APIError.fileReadError))
             return
         }
@@ -81,6 +97,7 @@ final class GroqWhisperClient {
         // ueber pasteError eine Fehlermeldung ins Terminal schreiben. Leerer Erfolg -> der
         // .success-Leer-Guard im AppDelegate fuegt nichts ein. Nur beim ersten Versuch pruefen.
         if attempt == 0 && !GroqWhisperClient.hasSpeechContent(audioData) {
+            DiagLog.warn("Groq", "prefilter_rejected", [("bytes", audioData.count)])
             completion(.success(""))
             return
         }
@@ -98,8 +115,8 @@ final class GroqWhisperClient {
         // verbose_json statt text: liefert die Confidence-Felder fuers Halluzinations-Gate,
         // bei Groq ohne Mehrlatenz/-kosten (nur word-Timestamps kosten extra — nicht angefordert).
         let fields: [(String, String)] = [
-            ("model", "whisper-large-v3-turbo"),
-            ("language", "de"),
+            ("model", model),
+            ("language", language),
             ("response_format", "verbose_json"),
             ("temperature", "0")
         ]
@@ -117,13 +134,18 @@ final class GroqWhisperClient {
 
         request.httpBody = body
 
+        let httpStart = DiagLog.now()
+        DiagLog.write("Groq", "http_start", [("attempt", attempt), ("bytes", audioData.count)])
         let task = URLSession.shared.dataTask(with: request) { [self] data, response, error in
             if let error = error {
+                DiagLog.error("Groq", "http_failed", error, [("attempt", attempt)])
                 completion(.failure(error))
                 return
             }
 
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            DiagLog.perf("Groq", "http_response", since: httpStart,
+                         [("attempt", attempt), ("status", statusCode)])
 
             if (200...299).contains(statusCode), let data = data {
                 let raw = String(data: data, encoding: .utf8) ?? ""
@@ -132,6 +154,8 @@ final class GroqWhisperClient {
                 // Schicht 2 (Confidence-Gate) + Schicht 3 (Audio-Abgleich). Bleibt Text uebrig ->
                 // .success(text). Alles Stille/halluziniert -> leer -> .success("") (Leer-Guard fuegt nichts ein).
                 let filtered = GroqWhisperClient.filterTranscription(raw, voiced)
+                DiagLog.perf("Groq", "transcribe_total", since: totalStart,
+                             [("jsonChars", raw.count), ("textChars", filtered.count)])
                 completion(.success(filtered))
                 return
             }
@@ -146,6 +170,8 @@ final class GroqWhisperClient {
             }
 
             let responseText = data.flatMap { String(data: $0, encoding: .utf8) } ?? "no response"
+            DiagLog.warn("Groq", "http_error", [("status", statusCode),
+                                                ("body", String(responseText.prefix(500)))])
             completion(.failure(APIError.httpError(statusCode, responseText)))
         }
         task.resume()
@@ -193,6 +219,7 @@ final class GroqWhisperClient {
         var finalSegs = kept
         if kept.isEmpty && !afterConfidence.isEmpty && voiced != nil {
             NSLog("Groq: Audio-Abgleich (Schicht 3) verwarf alle Segmente -> Fallback auf Confidence-gefilterte (Zeitstempel-Drift?).")
+            DiagLog.warn("Groq", "audio_filter_drift_fallback", [("segments", afterConfidence.count)])
             finalSegs = afterConfidence
         }
         var parts: [String] = []
@@ -202,6 +229,9 @@ final class GroqWhisperClient {
         }
         if droppedConfidence > 0 || droppedAudio > 0 {
             NSLog("Groq: %d Confidence- + %d Audio-Segment(e) verworfen (Stille-Schutz).", droppedConfidence, droppedAudio)
+            DiagLog.write("Groq", "segments_filtered", [("confidence", droppedConfidence),
+                                                        ("audio", droppedAudio),
+                                                        ("kept", finalSegs.count)])
         }
         // Schicht 4: Floskel-Blocklist (letzter Filter, an ALLEN Ausgaengen — siehe oben). Faengt
         // "Vielen Dank", das Schicht 2+3 ueberlebt. Funktionserhaltend (kurz + exakt + Stille-Kontext).
@@ -214,6 +244,7 @@ final class GroqWhisperClient {
     private static func blockIfFloskel(_ text: String, _ voiced: [Bool]?) -> String {
         if isBlocklistedFloskel(text, voiced) {
             NSLog("Groq: Floskel-Blocklist (Schicht 4) verwarf \"%@\" (kurz + exakter Match + Stille-Kontext).", text)
+            DiagLog.warn("Groq", "floskel_blocked", [("text", text)])
             return ""
         }
         return text
@@ -336,6 +367,9 @@ final class GroqWhisperClient {
         }
         NSLog("Groq-Vorfilter: laute Zeit %.0f ms (Schwelle %.0f ms) -> %@",
               voicedMs, minSpeechMs, voicedMs >= minSpeechMs ? "senden" : "verworfen")
+        DiagLog.write("Groq", "prefilter_measure", [("voicedMs", Int(voicedMs)),
+                                                    ("thresholdMs", Int(minSpeechMs)),
+                                                    ("ok", voicedMs >= minSpeechMs)])
         return voicedMs >= minSpeechMs
     }
 

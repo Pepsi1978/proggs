@@ -166,6 +166,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         audioRecorder.onLevel = { [weak self] level in
             self?.panel?.pushWaveformLevel(level)
         }
+        // Windows-Watchdog (`WatchdogTick`): kommen waehrend einer laufenden
+        // Aufnahme ueber Sekunden keine Audio-Buffer mehr, ist das Mikrofon
+        // stehengeblieben.
+        audioRecorder.onCaptureStalled = { [weak self] in
+            guard let self = self, self.isRecording else { return }
+            self.pasteError("Mikrofon liefert keinen Ton mehr — Aufnahme abgebrochen. Bitte erneut starten.")
+            self.stopRecording()
+        }
         groqClient = GroqWhisperClient(apiKey: config.groqApiKey)
         if let geminiKey = config.geminiApiKey, !geminiKey.isEmpty {
             geminiClient = GeminiClient(apiKey: geminiKey)
@@ -197,6 +205,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self.panel?.setAutoEnterEnabled(self.autoEnterEnabled)
             }
+            // Push an alle SSE-Abonnenten (Windows: NotifyStateChanged).
+            self.autoEnterServer.notifyStateChanged(self.autoEnterEnabled)
             return self.autoEnterEnabled
         }
         autoEnterServer.busyProvider = { [weak self] in

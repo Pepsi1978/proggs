@@ -35,7 +35,10 @@ final class AppWatcher {
 
     static func isTargetApp(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return targetBundleIDs.contains(id)
+        if targetBundleIDs.contains(id) { return true }
+        // Zusaetzliche Ziele aus der .env (Windows: TERMINAL_PROCESS_NAMES).
+        // Ergaenzend, nicht ersetzend — eine leere Angabe bleibt harmlos.
+        return Config.current?.extraTerminalBundleIDs.contains(id) ?? false
     }
 
     /// Poll-Variante zu den Aktivierungs-Notifications: prueft, ob die AKTUELL

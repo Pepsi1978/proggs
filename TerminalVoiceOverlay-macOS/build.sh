@@ -63,6 +63,7 @@ SWIFT_FILES=(
     "$SRC_DIR/SettingsDialog.swift"
     "$SRC_DIR/CommonDialogs.swift"
     "$SRC_DIR/AutoHideController.swift"
+    "$SRC_DIR/DiagLog.swift"
     "$SRC_DIR/WaveformView.swift"
     "$SRC_DIR/RecordingCuePlayer.swift"
     "$SRC_DIR/IconPaths.swift"

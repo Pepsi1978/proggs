@@ -5,9 +5,14 @@ import Network
 // Portierung von TerminalVoiceOverlay-Windows/Services/AutoEnterStatusServer.cs
 //
 // Minimal-HTTP-Server auf 127.0.0.1:5723 fuer Stream-Deck-XL-Polling.
-// Routen:
+// Routen (vollstaendig wie Windows):
 //   GET  /autoenter/status   -> {"on":true|false}
 //   POST /autoenter/toggle   -> {"on":<neuer Stand>}
+//   GET  /recording/status   -> {"busy":true|false}
+//   POST /deployment/prepare -> {"ready":true|false}
+//   POST /deployment/release -> {"ready":true}
+//   GET  /autoenter/events   -> text/event-stream, Push bei jeder Zustandsaenderung
+//   POST /log                -> haengt den Rumpf an TVO-hotkey.log an (204)
 //
 // Bewusst KEIN Framework wie Vapor — wir wollen 0 externe Dependencies
 // und KEINE zusaetzlichen Permissions ueber das Network-Entitlement hinaus.
@@ -28,6 +33,12 @@ final class AutoEnterStatusServer {
 
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "tvo.autoenter.server")
+
+    /// Offene SSE-Verbindungen (GET /autoenter/events). Windows haelt dafuer
+    /// `_sseClients` mit `_sseLock`; hier uebernimmt die serielle `queue` die
+    /// Sequenzialisierung — gleichzeitige Writes auf dieselbe Verbindung wuerden
+    /// den Frame-Aufbau ("data: ...\n\n") zerreissen.
+    private var sseClients: [NWConnection] = []
 
     /// Wie oft der Bind schon fehlgeschlagen ist. Begrenzt die Wiederholungen,
     /// damit ein dauerhaft fremdbelegter Port nicht endlos Versuche erzeugt.
@@ -101,6 +112,11 @@ final class AutoEnterStatusServer {
     func stop() {
         listener?.cancel()
         listener = nil
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            for connection in self.sseClients { connection.cancel() }
+            self.sseClients.removeAll()
+        }
     }
 
     // MARK: - Connection handling
@@ -116,6 +132,13 @@ final class AutoEnterStatusServer {
             guard let self = self else { return }
             if let data = data, !data.isEmpty,
                let raw = String(data: data, encoding: .utf8) {
+                // SSE: Verbindung bleibt OFFEN und wird in die Broadcast-Liste
+                // aufgenommen (Windows: HandleSseSubscribe). Alle anderen Routen
+                // antworten und schliessen wie bisher.
+                if self.isSseRequest(raw) {
+                    self.beginSseStream(on: connection)
+                    return
+                }
                 let response = self.makeResponse(forRequest: raw)
                 connection.send(content: response,
                                 completion: .contentProcessed { _ in
@@ -155,6 +178,13 @@ final class AutoEnterStatusServer {
         case ("POST", "/deployment/release"):
             self.deploymentReleaseHandler?()
             json = "{\"ready\":true}"
+        case ("POST", "/log"):
+            // Diagnose-Endpunkt fuer das Stream-Deck-Plugin (kein Dateizugriff
+            // im Webview). Der Rumpf wird 1:1 uebernommen — kein JSON-Parsing.
+            appendPluginLog(body: httpBody(of: raw))
+            return httpResponse(status: "204 No Content",
+                                contentType: "text/plain",
+                                body: Data())
         default:
             return httpResponse(status: "404 Not Found",
                                 contentType: "text/plain",
@@ -165,6 +195,105 @@ final class AutoEnterStatusServer {
         return httpResponse(status: "200 OK",
                             contentType: "application/json",
                             body: body)
+    }
+
+    // MARK: - Server-Sent Events (GET /autoenter/events)
+
+    /// Erkennt eine SSE-Anfrage an der ersten Zeile.
+    private func isSseRequest(_ raw: String) -> Bool {
+        guard let firstLine = raw.split(separator: "\r\n", maxSplits: 1,
+                                        omittingEmptySubsequences: true).first else { return false }
+        let parts = firstLine.split(separator: " ")
+        guard parts.count > 1 else { return false }
+        return String(parts[0]) == "GET" && String(parts[1]) == "/autoenter/events"
+    }
+
+    /// Oeffnet den Ereignis-Strom: Header senden, aktuellen Stand SOFORT
+    /// nachschieben (damit ein frisch verbundener Client nicht bis zur naechsten
+    /// Aenderung im Dunkeln sitzt — 1:1 Windows) und die Verbindung offen halten.
+    private func beginSseStream(on connection: NWConnection) {
+        let header = """
+        HTTP/1.1 200 OK\r
+        Content-Type: text/event-stream; charset=utf-8\r
+        Cache-Control: no-cache, no-store\r
+        Connection: keep-alive\r
+        X-Accel-Buffering: no\r
+        \r
+
+        """
+        let initial = statusProvider?() ?? false
+        var payload = Data(header.utf8)
+        payload.append(Self.sseFrame(on: initial))
+
+        connection.send(content: payload, completion: .contentProcessed { [weak self] error in
+            guard let self = self else { return }
+            if error != nil {
+                connection.cancel()
+                return
+            }
+            self.queue.async {
+                self.sseClients.append(connection)
+                tvoDebug("[AutoEnterHTTP] SSE-Client verbunden (initial=\(initial), gesamt=\(self.sseClients.count))")
+            }
+        })
+
+        // Abbruch der Gegenseite erkennen, damit tote Verbindungen die Liste
+        // nicht zuwachsen lassen.
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .failed, .cancelled:
+                self?.queue.async { self?.removeSseClient(connection) }
+            default: break
+            }
+        }
+    }
+
+    /// Schiebt einen neuen Zustand an alle offenen SSE-Clients.
+    /// Windows-Pendant: `NotifyStateChanged` + `DoBroadcast`.
+    func notifyStateChanged(_ newState: Bool) {
+        queue.async { [weak self] in
+            guard let self = self, !self.sseClients.isEmpty else { return }
+            let frame = Self.sseFrame(on: newState)
+            for connection in self.sseClients {
+                connection.send(content: frame, completion: .contentProcessed { [weak self] error in
+                    if error != nil {
+                        self?.queue.async { self?.removeSseClient(connection) }
+                    }
+                })
+            }
+        }
+    }
+
+    private func removeSseClient(_ connection: NWConnection) {
+        sseClients.removeAll { $0 === connection }
+        connection.cancel()
+    }
+
+    private static func sseFrame(on: Bool) -> Data {
+        Data("data: {\"on\":\(on ? "true" : "false")}\n\n".utf8)
+    }
+
+    // MARK: - POST /log
+
+    /// Rumpf einer HTTP-Anfrage (alles nach der Leerzeile).
+    private func httpBody(of raw: String) -> String {
+        guard let range = raw.range(of: "\r\n\r\n") else { return "" }
+        return String(raw[range.upperBound...])
+    }
+
+    private func appendPluginLog(body: String) {
+        let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("TVO-hotkey.log")
+        let stamp = DateFormatter()
+        stamp.dateFormat = "HH:mm:ss.SSS"
+        let line = "\(stamp.string(from: Date())) PLUGIN \(body)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        if let handle = FileHandle(forWritingAtPath: path) {
+            defer { try? handle.close() }
+            try? handle.seekToEnd()
+            try? handle.write(contentsOf: data)
+        } else {
+            FileManager.default.createFile(atPath: path, contents: data)
+        }
     }
 
     private func httpResponse(status: String,

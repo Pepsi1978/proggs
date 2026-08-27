@@ -33,11 +33,21 @@ enum AlwaysOnPrefixService {
         do {
             let prompts = try PromptBoardStore.shared.allAlwaysOnPrompts()
             if prompts.isEmpty { return "" }
-            return prompts
-                .filter(filter)
-                .sorted { $0.sortOrder < $1.sortOrder }
-                .map { $0.effectiveText }
-                .joined(separator: " ; ")
+
+            // Zusammenbau 1:1 wie Windows' PromptChainBuilder: leere bzw. nur aus
+            // Leerzeichen bestehende Texte werden UEBERSPRUNGEN und jede Prompt-ID
+            // hoechstens EINMAL aufgenommen. Ohne beides erzeugte ein leerer
+            // Always-On-Eintrag ein " ;  ; " im Prefix, und ein doppelt
+            // eingetragener Prompt stand zweimal im Text.
+            var parts: [String] = []
+            var seen = Set<UUID>()
+            for prompt in prompts.filter(filter).sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                let text = prompt.effectiveText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if text.isEmpty { continue }
+                guard seen.insert(prompt.id).inserted else { continue }
+                parts.append(prompt.effectiveText)
+            }
+            return parts.joined(separator: " ; ")
         } catch {
             NSLog("AlwaysOnPrefixService: \(error.localizedDescription)")
             return ""

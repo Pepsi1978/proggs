@@ -166,6 +166,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         audioRecorder.onLevel = { [weak self] level in
             self?.panel?.pushWaveformLevel(level)
         }
+        // Windows-Watchdog (`WatchdogTick`): kommen waehrend einer laufenden
+        // Aufnahme ueber Sekunden keine Audio-Buffer mehr, ist das Mikrofon
+        // stehengeblieben. Windows protokolliert das nur — hier wird es zusaetzlich
+        // sichtbar gemacht, damit niemand minutenlang ins Leere spricht.
+        audioRecorder.onCaptureStalled = { [weak self] in
+            guard let self = self, self.isRecording else { return }
+            self.pasteError("Mikrofon liefert keinen Ton mehr — Aufnahme abgebrochen. Bitte erneut starten.")
+            self.stopRecording()
+        }
         groqClient = GroqWhisperClient(apiKey: config.groqApiKey)
         if let geminiKey = config.geminiApiKey, !geminiKey.isEmpty {
             geminiClient = GeminiClient(apiKey: geminiKey)
@@ -200,6 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self.panel?.setAutoEnterEnabled(self.autoEnterEnabled)
             }
+            // Push an alle SSE-Abonnenten (Windows: NotifyStateChanged).
+            self.autoEnterServer.notifyStateChanged(self.autoEnterEnabled)
             return self.autoEnterEnabled
         }
         autoEnterServer.busyProvider = { [weak self] in
@@ -1480,14 +1491,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isRecording || isProcessing || isBtwRecording {
             autoEnterEnabled.toggle()
             panel.setAutoEnterEnabled(autoEnterEnabled)
+            autoEnterServer.notifyStateChanged(autoEnterEnabled)
             return
         }
         if autoEnterEnabled {
             autoEnterEnabled = false
             panel.setAutoEnterEnabled(autoEnterEnabled)
+            autoEnterServer.notifyStateChanged(autoEnterEnabled)
         } else {
             autoEnterEnabled = true
             panel.setAutoEnterEnabled(autoEnterEnabled)
+            autoEnterServer.notifyStateChanged(autoEnterEnabled)
             DispatchQueue.global(qos: .userInitiated).async {
                 TerminalController.activateTerminal()
                 usleep(150_000)

@@ -9,6 +9,25 @@ final class AudioRecorder {
     private let lock = NSLock()
     private var _isRecording = false
 
+    /// Kleinste brauchbare WAV-Groesse: 44 Byte Header + 320 Byte PCM (= 10 ms bei
+    /// 16 kHz mono). 1:1 Windows (`MinUsableWavBytes = 44 + 320`). Alles darunter ist
+    /// kein Ton, sondern ein Fehlstart — Groq bekaeme daraus nur Halluzinationen.
+    private static let minUsableWavBytes = 44 + 320
+
+    /// Zeitpunkt des letzten Pegel-Callbacks. Der Watchdog erkennt daran ein
+    /// Mikrofon, das zwar "laeuft", aber keine Buffer mehr liefert.
+    private var lastLevelTime: CFAbsoluteTime = 0
+    private var levelWatchdog: Timer?
+    private var stallLogged = false
+    /// Ab dieser Stille im Buffer-Strom gilt die Aufnahme als haengend
+    /// (Windows: `sinceMs > 2500`).
+    private static let levelStallSeconds: CFAbsoluteTime = 2.5
+
+    /// Wird gerufen, wenn waehrend einer laufenden Aufnahme ueber Sekunden kein
+    /// einziger Audio-Buffer mehr ankommt. Der AppDelegate kann den Benutzer damit
+    /// warnen, statt ihn ins Leere sprechen zu lassen.
+    var onCaptureStalled: (() -> Void)?
+
     /// Wird pro Audio-Buffer (~100 ms) mit dem Peak-Level 0..1 aufgerufen.
     /// Pendant zu Windows `LevelChanged` (NAudio). Aktiviert die Waveform-
     /// Animation in OverlayPanel.
@@ -100,10 +119,13 @@ final class AudioRecorder {
             throw RecorderError.noInputDevice
         }
 
-        // Create WAV format: 16kHz mono
+        // Ziel-Format der WAV. Abtastrate und Kanalzahl kommen aus der .env
+        // (Windows: AUDIO_SAMPLE_RATE / AUDIO_CHANNELS), Vorgabe 16 kHz mono.
+        let targetRate = Double(Config.current?.audioSampleRate ?? 16000)
+        let targetChannels = AVAudioChannelCount(Config.current?.audioChannels ?? 1)
         guard let wavFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                            sampleRate: 16000,
-                                            channels: 1,
+                                            sampleRate: targetRate,
+                                            channels: targetChannels,
                                             interleaved: false) else {
             throw RecorderError.formatError
         }
@@ -131,6 +153,11 @@ final class AudioRecorder {
             self.lock.unlock()
 
             guard recording, let file = currentFile else { return }
+
+            // Watchdog fuettern: solange Buffer ankommen, laeuft die Aufnahme.
+            self.lock.lock()
+            self.lastLevelTime = CFAbsoluteTimeGetCurrent()
+            self.lock.unlock()
 
             let frameCount = AVAudioFrameCount(
                 Double(buffer.frameLength) * wavFormat.sampleRate / recordingFormat.sampleRate
@@ -186,8 +213,46 @@ final class AudioRecorder {
 
         lock.lock()
         self._isRecording = true
+        self.lastLevelTime = CFAbsoluteTimeGetCurrent()
+        self.stallLogged = false
         lock.unlock()
         self.audioEngine = engine
+        startLevelWatchdog()
+    }
+
+    // MARK: - Watchdog
+
+    /// Windows-Pendant `WatchdogTick`: prueft im Sekundentakt, ob noch Audio-Buffer
+    /// ankommen. Bleiben sie laenger als `levelStallSeconds` aus, obwohl die Aufnahme
+    /// laeuft, hat das Eingabegeraet aufgehoert zu liefern (Geraetewechsel, entzogene
+    /// Berechtigung, eingeschlafener Ton-Stack). Das wird EINMAL pro Aufnahme gemeldet.
+    private func startLevelWatchdog() {
+        stopLevelWatchdog()
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.lock.lock()
+            let recording = self._isRecording
+            let since = CFAbsoluteTimeGetCurrent() - self.lastLevelTime
+            let alreadyLogged = self.stallLogged
+            if recording && since > AudioRecorder.levelStallSeconds && !alreadyLogged {
+                self.stallLogged = true
+            }
+            self.lock.unlock()
+
+            guard recording else { return }
+            if since > AudioRecorder.levelStallSeconds && !alreadyLogged {
+                NSLog("AudioRecorder: seit %.1f s kein Audio-Buffer mehr - Aufnahme haengt.", since)
+                DiagLog.warn("Audio", "capture_level_stalled", [("silentMs", Int(since * 1000))])
+                DispatchQueue.main.async { self.onCaptureStalled?() }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        levelWatchdog = timer
+    }
+
+    private func stopLevelWatchdog() {
+        levelWatchdog?.invalidate()
+        levelWatchdog = nil
     }
 
     // MARK: - Eingabegeraet
@@ -228,6 +293,7 @@ final class AudioRecorder {
     }
 
     func stop() -> URL? {
+        stopLevelWatchdog()
         // Signal recording to stop first — the tap closure checks this flag
         lock.lock()
         _isRecording = false
@@ -250,6 +316,20 @@ final class AudioRecorder {
         self.outputFile = nil
         lock.unlock()
 
+        // Zu kurze Datei = Fehlstart (Windows: MinUsableWavBytes). Sie jetzt zu
+        // verwerfen ist wichtiger, als sie zu senden: Whisper macht aus 10 ms
+        // Rauschen zuverlaessig eine erfundene Floskel.
+        guard let url = url else { return nil }
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let size = (attrs?[.size] as? Int) ?? 0
+        if size < AudioRecorder.minUsableWavBytes {
+            NSLog("AudioRecorder: Aufnahme zu kurz (%d Byte) - verworfen.", size)
+            DiagLog.warn("Audio", "wav_too_small", [("bytes", size),
+                                                    ("minBytes", AudioRecorder.minUsableWavBytes)])
+            try? FileManager.default.removeItem(at: url)
+            return nil
+        }
+        DiagLog.write("Audio", "stop_ok", [("bytes", size)])
         return url
     }
 

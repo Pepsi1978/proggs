@@ -2,7 +2,10 @@ import Foundation
 
 final class GeminiClient {
     private let apiKey: String
-    private let model = "gemini-3.1-flash-lite"
+    /// Modell und Denkstufe kommen aus der .env (Windows: GEMINI_MODEL /
+    /// GEMINI_THINKING_LEVEL). Vorher fest im Code.
+    private let model = Config.current?.geminiModel ?? "gemini-3.1-flash-lite"
+    private let thinkingLevel = Config.current?.geminiThinkingLevel ?? "MEDIUM"
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
     private let maxRetries = 5
     private let delays: [TimeInterval] = [2, 4, 8, 16, 32]
@@ -456,7 +459,7 @@ final class GeminiClient {
             ],
             "generationConfig": [
                 "maxOutputTokens": 8192,
-                "thinkingConfig": ["thinkingLevel": "MEDIUM"]
+                "thinkingConfig": ["thinkingLevel": thinkingLevel]
             ] as [String: Any]
         ]
 
