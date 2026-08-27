@@ -727,7 +727,7 @@ try {
     /// Ein bereits geladenes Modell wird NUR dann uebernommen, wenn sein Kontext fuer OpenCode
     /// reicht. Hat der Benutzer es in LM Studio von Hand gestartet (Vorgabe dort oft 4096 Tokens),
     /// wird es entladen und mit grossem Kontext neu geladen — sonst bricht OpenCode sofort mit
-    /// exceed_context_size_error ab, weil allein der Systemprompt rund 22000 Tokens braucht.
+    /// exceed_context_size_error ab; der Systemprompt braucht mit abgeschalteten Skills rund 7500 Tokens.
     /// </summary>
     private static string BuildLmStudioPreloadScript(string modelString)
     {
@@ -765,7 +765,7 @@ if (Test-Path -LiteralPath $lms) {
     # Minuten verzoegert. Jetzt gilt, was in LM Studio steht; bei zu wenig Kontext gibt es nur einen
     # Hinweis samt fertigem Befehl zum Nachjustieren.
     if ($ctx -gt 0 -and $ctx -lt $lmsMinCtx) {
-        Write-Host "$lmsModel ist in LM Studio mit $ctx Tokens Kontext geladen. OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage kann damit abbrechen." -ForegroundColor Yellow
+        Write-Host "$lmsModel ist in LM Studio mit $ctx Tokens Kontext geladen. OpenCode braucht mit abgeschalteten externen Skills rund 7500 - die erste Anfrage kann damit abbrechen." -ForegroundColor Yellow
         Write-Host "Das Modell bleibt bewusst so geladen, wie du es eingestellt hast. Mehr Kontext bei Bedarf mit:" -ForegroundColor Yellow
         Write-Host "  lms unload $lmsModel; lms load $lmsModel --context-length $lmsWantCtx -y" -ForegroundColor Cyan
     }

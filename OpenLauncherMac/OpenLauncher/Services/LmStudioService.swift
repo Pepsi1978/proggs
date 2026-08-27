@@ -12,17 +12,27 @@ final class LmStudioService {
     static let providerName = "LM Studio"
     static let baseUrl = "http://localhost:1234/v1"
 
-    /// Kleinster Kontext, mit dem OpenCode ueberhaupt arbeiten kann. Der Systemprompt allein
-    /// braucht rund 22000 Tokens; darunter bricht schon die erste Anfrage mit
-    /// exceed_context_size_error ab.
+    /// Kleinster Kontext, mit dem OpenCode ueberhaupt arbeiten kann.
+    ///
+    /// Frueher 32768, begruendet mit "der Systemprompt braucht rund 22000 Tokens". Das galt, solange
+    /// die rund 70 externen Skills mitgeschickt wurden (gemessen 21816 Token). Seit die
+    /// Vorbereitung OPENCODE_DISABLE_EXTERNAL_SKILLS setzt, sind es gemessene 7461 Token; mit
+    /// abgeschalteten Chrome-MCPs noch weniger. 16384 laesst also reichlich Luft fuer Prompt,
+    /// Antwort und Verlauf.
+    ///
+    /// Der alte Wert war auf 24-GB-Rechnern schaedlich: der KV-Cache eines 27B-Modells kostet bei
+    /// 32768 Tokens rund 8 GB, zusammen mit 15 GB Gewichten mehr als der Rechner hat - LM Studio
+    /// brach mit "insufficient system resources" ab, obwohl das Modell selbst gepasst haette.
     ///
     /// Reine WARNSCHWELLE und Rueckfallwert beim Laden - kein Zwang: ein Modell, das in LM Studio
     /// bereits mit weniger geladen ist, wird nicht angetastet, sondern nur mit einem Hinweis
     /// uebernommen.
-    static let minimumAgentContext = 32_768
+    static let minimumAgentContext = 16_384
 
     /// Wunschgroesse beim automatischen Laden. Wird auf den Maximalkontext des Modells gedeckelt.
-    static let preferredContext = 65_536
+    /// 32768 statt frueher 65536: der KV-Cache waechst linear mit, 65536 kostete bei einem
+    /// 27B-Modell allein rund 16 GB und sprengte jeden Rechner mit 24 GB.
+    static let preferredContext = 32_768
 
     static var lmsPath: String {
         (Paths.home as NSString).appendingPathComponent(".lmstudio/bin/lms")

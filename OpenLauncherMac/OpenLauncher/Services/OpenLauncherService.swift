@@ -437,7 +437,7 @@ final class OpenLauncherService {
     ///
     /// Ist er zu klein, wird neu geladen. Das ist der Unterschied zur frueheren Fassung, die nur
     /// einen Hinweis ausgab: LM Studio laedt ein Modell per JIT mit seiner Vorgabe (oft 4096
-    /// Tokens), OpenCode braucht allein fuer den Systemprompt rund 22000 - die erste Anfrage
+    /// Tokens), OpenCode braucht mit abgeschalteten externen Skills rund 7500 - die erste Anfrage
     /// scheiterte dann mit "The number of tokens to keep from the initial prompt is greater than
     /// the context length".
     ///
@@ -717,7 +717,7 @@ final class OpenLauncherService {
                 # ist: ein entladenes Modell, das nicht zurueckkommt, waere schlimmer als ein zu
                 # kleines Fenster.
                 printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
-                printf '\\033[33mOpenCode braucht allein fuer den Systemprompt rund 22000 Tokens - damit bricht die erste Anfrage ab.\\033[0m\\n'
+                printf '\\033[33mOpenCode braucht mit abgeschalteten externen Skills rund 7500 Tokens - damit bricht die erste Anfrage ab.\\033[0m\\n'
 
                 LMSRISKY=0
                 if lmsCanLoad "$LMSTARGET" || lmsCanLoad "$LMSMINCTX"; then
@@ -979,7 +979,7 @@ final class OpenLauncherService {
         // auf den echten Wert.
         // Ein vom Benutzer selbst geladenes Modell hat oft nur die LM-Studio-Vorgabe von 4096
         // Tokens. Dieser Wert darf NICHT in die Konfig wandern - OpenCode braucht allein fuer den
-        // Systemprompt rund 22000 und braeche sofort ab. Das Startskript laedt in dem Fall sichtbar
+        // Systemprompt rund 7500 und braeche sofort ab. Das Startskript laedt in dem Fall sichtbar
         // mit groesserem Kontext neu und traegt den tatsaechlichen Wert danach nach. (Uebernommen
         // aus der Windows-Fassung, Commit 05a93eb84.)
         let loadedContext = LmStudioService.loadedContextLength(modelId: slug)
