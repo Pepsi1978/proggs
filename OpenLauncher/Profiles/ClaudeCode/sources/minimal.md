@@ -57,3 +57,5 @@ Melde danach kurz:
 - Committet ja/nein, gepusht ja/nein, installiert auf welchem Gerät.
 
 12. Wenn der Emulator angefodert wird, Starte den Emulator, immer mit dem Fold 8 Profil über C:\Users\barwa\proggs\Werkzeuge\fold8-emulator
+
+13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für Windows unter C:\Users\barwa\proggs\OpenLauncher\update-launcher.ps1 und für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh
