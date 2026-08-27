@@ -584,6 +584,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 panel.setMicState(.recording)
             }
             recordingCuePlayer.playStart()
+        } catch AudioRecorder.RecorderError.alreadyRecording {
+            // Es laeuft schon eine Aufnahme (z.B. aus dem Prompt-Editor). Die
+            // NICHT abwuergen und auch keinen Fehlertext ins Terminal schreiben
+            // — nur den eigenen Start verwerfen und die Anzeige zuruecksetzen.
+            tvoDebug("[App] Start verworfen: es laeuft bereits eine Aufnahme")
+            isBtwRecording = false
+            NSSound.beep()
         } catch {
             NSLog("Microphone error: %@", error.localizedDescription)
             pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
@@ -685,7 +692,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // den Eintrag in der Historie ab. So landen auch eingesprochene
         // Prompts in der Historie.
         if !wasBtw, let board = promptBoardPanel, board.isInputPanelVisible {
-            board.routeVoiceTextToInput(text)
+            board.routeVoiceTextToInput(text, autoSubmit: autoEnterEnabled)
             isProcessing = false
             panel.setMicState(.idle)
             tvoDebug("[App] voice text routed to input panel (\(text.count) chars)")

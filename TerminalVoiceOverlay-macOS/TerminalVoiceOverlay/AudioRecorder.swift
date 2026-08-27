@@ -20,6 +20,15 @@ final class AudioRecorder {
     }
 
     func start() throws {
+        // Doppelstart verhindern: der Recorder ist prozessweit geteilt. Ohne
+        // diese Pruefung baut ein zweiter Aufrufer eine NEUE Engine auf,
+        // ueberschreibt outputFile/tempURL und die bereits laufende Aufnahme
+        // schreibt ins Leere — der bis dahin gesprochene Text ist weg.
+        lock.lock()
+        let busy = _isRecording
+        lock.unlock()
+        if busy { throw RecorderError.alreadyRecording }
+
         let engine = AVAudioEngine()
         let inputNode = engine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
@@ -125,11 +134,17 @@ final class AudioRecorder {
     enum RecorderError: Error, LocalizedError {
         case formatError
         case converterError
+        /// Es laeuft bereits eine Aufnahme. Der Recorder ist prozessweit
+        /// geteilt (Overlay + Prompt-Editor greifen auf DIESELBE Instanz zu) —
+        /// ein zweiter Start wuerde die erste Aufnahme verwaisen lassen und
+        /// ihren Ton verlieren. Windows-Pendant: `Start()` liefert `false`.
+        case alreadyRecording
 
         var errorDescription: String? {
             switch self {
             case .formatError: return "Audio-Format konnte nicht erstellt werden"
             case .converterError: return "Audio-Converter konnte nicht erstellt werden"
+            case .alreadyRecording: return "Es laeuft bereits eine Aufnahme"
             }
         }
     }

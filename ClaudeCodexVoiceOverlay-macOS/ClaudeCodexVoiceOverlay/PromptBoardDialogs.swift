@@ -261,6 +261,11 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     // ── Footer buttons (built in init, swapped at runtime) ──
     private var micButton: NSButton!
+    /// True, solange eine Aufnahme laeuft, die DIESER Dialog gestartet hat.
+    /// Der AudioRecorder ist prozessweit geteilt — ohne dieses Flag wuerde das
+    /// Schliessen des Editors eine laufende OVERLAY-Aufnahme abwuergen und der
+    /// gesprochene Text waere weg (Windows-Pendant: `_recordingStartedHere`).
+    private var recordingStartedHere = false
     private var geminiButton: NSButton!
     private var saveButton: NSButton!           // single "Speichern" before improvement
     private var saveOriginalButton: NSButton!   // "Original speichern"  — visible after G
@@ -504,10 +509,16 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     // Called when the window closes via any path — red title-bar X, save,
     // cancel, Cmd+W. Guarantees that the modal session actually ends.
     func windowWillClose(_ notification: Notification) {
-        // Defensive: stop any lingering recording so we never leak the mic
-        // if the window is closed mid-recording.
-        if VoiceServiceProvider.recorder?.isRecording == true {
-            _ = VoiceServiceProvider.recorder?.stop()
+        // Defensive: NUR eine Aufnahme stoppen, die DIESER Dialog selbst
+        // gestartet hat — sonst wuerde das Schliessen des Editors eine gerade
+        // laufende Overlay-Aufnahme abwuergen (geteilter AudioRecorder) und der
+        // gesprochene Text waere verloren. Die eigene Aufnahme wird beendet und
+        // ihre Datei weggeraeumt, damit das Mikrofon nicht haengen bleibt.
+        if recordingStartedHere, VoiceServiceProvider.recorder?.isRecording == true {
+            if let url = VoiceServiceProvider.recorder?.stop() {
+                try? FileManager.default.removeItem(at: url)
+            }
+            recordingStartedHere = false
         }
         pulseTimer?.invalidate()
         NSApp.stopModal(withCode: result != nil ? .OK : .cancel)
@@ -663,8 +674,18 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             return
         }
 
+        // Der AudioRecorder ist prozessweit geteilt. Laeuft bereits eine
+        // Aufnahme, die NICHT dieser Dialog gestartet hat (typisch: die
+        // Overlay-Aufnahme), duerfen wir sie weder stoppen noch ihr Audio in
+        // dieses Feld umleiten — sonst bricht die Overlay-Aufnahme ab.
+        if recorder.isRecording && !recordingStartedHere {
+            showStatus("Es laeuft bereits eine Aufnahme (Voice-Overlay). Bitte zuerst dort stoppen.")
+            return
+        }
+
         if recorder.isRecording {
             // ── Stop & transcribe ──
+            recordingStartedHere = false
             stopPulse()
             setMicButtonTinted(true)
             showStatus("Transkribiere...")
@@ -697,6 +718,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         // ── Start ──
         do {
             try recorder.start()
+            recordingStartedHere = true
             startPulse()
             showStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.")
         } catch {

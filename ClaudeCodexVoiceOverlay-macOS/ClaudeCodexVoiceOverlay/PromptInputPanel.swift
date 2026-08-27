@@ -284,6 +284,47 @@ final class PromptInputPanel: NSPanel, NSTextViewDelegate {
         makeKeyAndFocusInput()
     }
 
+    /// Wird vom Voice-Overlay gerufen, wenn ein gesprochener Prompt ins
+    /// Eingabefenster geroutet wird. Portierung von Windows `AppendVoiceText`:
+    ///
+    /// * Feld leer   -> Text wird gesetzt (frischer Start).
+    /// * Feld gefuellt -> der bestehende Inhalt BLEIBT und der neue Schnipsel
+    ///   wird mit einem einfachen Leerzeichen angehaengt. Mehrere Spracheingaben
+    ///   verschmelzen so zu einem Fliesstext; wer mehrere Aufgaben trennen will,
+    ///   setzt den Trenner bewusst ueber den ;-Knopf.
+    /// * `autoSubmit` (= Auto-Enter ist an) schickt direkt ab, als haette der
+    ///   Benutzer Enter gedrueckt.
+    ///
+    /// Vorher rief macOS hier `setText` — das WARF den bereits getippten oder
+    /// eingesprochenen Text WEG. Zweimal hintereinander sprechen loeschte also
+    /// den ersten Satz.
+    func appendVoiceText(_ text: String, autoSubmit: Bool) {
+        guard !text.isEmpty else { return }
+        let existing = textView.string
+        let combined = existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? text
+            : existing.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+              + " "
+              + text.replacingOccurrences(of: "^\\s+", with: "", options: .regularExpression)
+
+        textView.string = combined
+        let end = NSRange(location: (combined as NSString).length, length: 0)
+        textView.setSelectedRange(end)
+        // Programmatische Aenderung -> textDidChange feuert nicht.
+        saveDraft(combined)
+        updatePreviewFromText(combined)
+
+        // Fokus-Garantie: das Panel oeffnet bewusst ohne zu aktivieren (sonst
+        // klaut der Stern-Klick den Terminal-Fokus). Nach dem Einsprechen MUSS
+        // es aber aktiv sein, sonst geht der naechste Enter ans Terminal und
+        // der Prompt laesst sich nicht abschicken.
+        makeKeyAndFocusInput()
+
+        if autoSubmit {
+            onSubmit?(combined)
+        }
+    }
+
     /// Leert das Eingabefeld nach dem Senden. Setzt KEINEN Fokus mehr — das
     /// wuerde unser Floating-Panel direkt nach onSubmit wieder nach vorne
     /// holen und mit pasteText racen (Voice-Overlay klaut sich zurueck zum

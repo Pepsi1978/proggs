@@ -844,11 +844,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         if prompt.isPrePrompt { titleWithFlags += " - vor" }
         if prompt.isPostPrompt { titleWithFlags += " - nach" }
 
-        let titleWithHotkey: String
+        // Hotkey-Badges: Zahl-Hotkey vorne, Buchstaben-Hotkey hinten. Beide
+        // koennen gleichzeitig gesetzt sein — Windows zeigt ebenfalls beide
+        // ("(Strg+N)" und "(Win+Alt+X)"); auf macOS fehlte der Buchstabe
+        // bisher ganz, sodass eine belegte Cmd+Opt-Taste unsichtbar war.
+        var titleWithHotkey = titleWithFlags
+        if let hl = prompt.hotkeyLetter?.uppercased(), hl.count == 1,
+           let ch = hl.first, ch.isLetter {
+            titleWithHotkey += "  (⌘⌥\(hl))"
+        }
         if let hk = prompt.hotkeyNumber, hk >= 1, hk <= 9 {
-            titleWithHotkey = "⌘\(hk)  \(titleWithFlags)"
-        } else {
-            titleWithHotkey = titleWithFlags
+            titleWithHotkey = "⌘\(hk)  \(titleWithHotkey)"
         }
         let insertLabel = NSTextField(labelWithString: titleWithHotkey)
         insertLabel.textColor = .white
@@ -1095,10 +1101,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// Setzt Text ins Eingabefeld bzw. oeffnet das Fenster zuerst, falls
     /// noetig. Wird vom Voice-Overlay genutzt, damit gesprochene Prompts in
     /// das Eingabefenster geroutet werden statt direkt in die CLI.
-    func routeVoiceTextToInput(_ text: String) {
+    /// `autoSubmit` = der Auto-Enter-Schalter im Overlay. Ist er an, wird der
+    /// zusammengesetzte Text direkt abgeschickt (Windows-Pendant:
+    /// `RouteVoiceTextToInput(text, autoSubmit)`).
+    func routeVoiceTextToInput(_ text: String, autoSubmit: Bool = false) {
         guard !text.isEmpty else { return }
         if !inputPanelVisible { openInputPanel() }
-        inputPanel?.setText(text)
+        // ANHAENGEN, nicht ersetzen — sonst geht der schon vorhandene Text
+        // beim zweiten Einsprechen verloren.
+        inputPanel?.appendVoiceText(text, autoSubmit: autoSubmit)
     }
 
     /// True wenn der Stern an ist und das Eingabefenster sichtbar.
