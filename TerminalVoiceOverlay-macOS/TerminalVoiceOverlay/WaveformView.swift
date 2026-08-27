@@ -35,9 +35,16 @@ final class WaveformView: NSView {
 
     /// Schiebt einen neuen Pegelwert ans rechte Ende (FIFO 14 Plaetze).
     /// Der Aufrufer (AppDelegate) verbindet das mit `AudioRecorder.onLevel`.
+    ///
+    /// Der Pegel wird EXAKT wie in Windows verstaerkt (OverlayWindow.xaml.cs,
+    /// OnAudioLevelChanged): Wurzel macht leise Toene sichtbar, Faktor 1.6 hebt
+    /// das Ergebnis an, Deckel bei 1.0. Ohne diese Verstaerkung bleiben normale
+    /// Sprechlautstaerken bei 0.05..0.2 haengen und die Welle wirkt tot.
     func pushLevel(_ value: Float) {
+        let clamped = min(max(value, 0), 1)
+        let boosted = min(1.0, clamped.squareRoot() * 1.6)
         levels.removeFirst()
-        levels.append(min(max(value, 0), 1))
+        levels.append(boosted)
         needsDisplay = true
     }
 
@@ -53,15 +60,19 @@ final class WaveformView: NSView {
         let startX = (bounds.width - totalW) / 2
         let midY = bounds.height / 2
 
-        // Balken-Farbe: dunkel auf gelbem Mic (Windows MicIcon hat
-        // Fill #FF1A1A1A). Mit leichter Transparenz, damit das Mic-Icon
-        // im Hintergrund noch durchschimmert.
-        NSColor(red: 0.102, green: 0.102, blue: 0.102, alpha: 0.85).set()
+        // Balken-Farbe: dunkel und VOLL deckend wie in Windows (shared frozen
+        // brush #1A1A1A). Frueher 85% Alpha — zusammen mit dem darunter weiter
+        // sichtbaren Mic-Icon sah die Welle dadurch matschig aus. In Windows
+        // verschwindet das Icon waehrend der Aufnahme komplett.
+        NSColor(red: 0.102, green: 0.102, blue: 0.102, alpha: 1.0).set()
 
         for (i, level) in levels.enumerated() {
             let lvl = CGFloat(level)
-            let h = max(WaveformView.minBarHeight,
-                        WaveformView.maxBarHeight * pow(lvl, 0.6))
+            // Windows-Formel 1:1: h = min + level * (max - min). Der Pegel ist
+            // in pushLevel bereits verstaerkt; eine zweite Kurve hier wuerde
+            // die Welle gegenueber Windows verflachen.
+            let h = WaveformView.minBarHeight
+                  + lvl * (WaveformView.maxBarHeight - WaveformView.minBarHeight)
             let x = startX + CGFloat(i) * (WaveformView.barWidth + WaveformView.barSpacing)
             let y = midY - h / 2
             let rect = NSRect(x: x, y: y, width: WaveformView.barWidth, height: h)

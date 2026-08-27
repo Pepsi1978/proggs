@@ -309,9 +309,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         autoHide = AutoHideController(panel: panel)
+        // 1:1 Windows (ScheduleCollapse): NUR eine laufende Aufnahme haelt das
+        // Overlay offen. Waehrend der Transkription (Processing) klappt Windows
+        // bereits ein — sie laeuft im Hintergrund weiter.
         autoHide?.busyProvider = { [weak self] in
             guard let self = self else { return false }
-            return self.isRecording || self.isProcessing
+            return self.isRecording
         }
         // Kein Auto-Collapse solange der Benutzer im Prompt-System arbeitet
         // (Board, Eingabe oder Historie sichtbar) — vertikal wie horizontal.
@@ -580,6 +583,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 panel.setMicState(.recording)
             }
+            // Windows: waehrend einer Aufnahme ist das Overlay IMMER ausgeklappt
+            // (die Welle soll sichtbar sein). Der Idle-Timer pausiert solange.
+            autoHide?.expandForRecording()
+            autoHide?.suspend()
             recordingCuePlayer.playStart()
         } catch AudioRecorder.RecorderError.alreadyRecording {
             // Es laeuft schon eine Aufnahme (z.B. aus dem Prompt-Editor). Die
@@ -604,6 +611,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             panel.setMicState(.processing)
         }
+
+        // Windows ruft ScheduleCollapse() genau hier — beim Uebergang von
+        // Recording auf Processing. Das Overlay verschwindet also direkt nach
+        // dem Sprechen, waehrend die Transkription noch laeuft.
+        autoHide?.scheduleCollapseSoon()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }

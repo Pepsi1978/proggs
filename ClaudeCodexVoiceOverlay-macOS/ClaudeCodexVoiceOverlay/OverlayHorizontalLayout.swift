@@ -215,14 +215,18 @@ extension OverlayPanel {
         // Pillenenden hin verlaengert, damit die Hintergrundfarbe bis zu den
         // abgerundeten Enden durchgeht (sonst zeigt der transparente
         // contentView dort durch — analog zur HBar-Korrektur).
+        // Reihenfolge 1:1 wie Windows-XAML, von OBEN gelesen: S1 Enter+Orientierung,
+        // S2 Mic+BTW, S3 W+G, S4 X, S5 Copy+Paste, S6 Screenshot+Insert, S7 Stern+
+        // Diskette. Die Liste laeuft von unten (AppKit-Y). Enter und Stern lagen
+        // frueher vertauscht (Fix 2026-08-27).
         let sections: [(hex: String, y: CGFloat, h: CGFloat)] = [
-            ("#B31A1A1A", 0,   65),   // S7 Enter (war y=2 h=63)
+            ("#B31F1B15", 0,   65),   // S7 Stern + Diskette (unten, +2 px bis zur Pillenkante)
             ("#B3151B15", 66,  100),  // S6 Screenshot+Insert
             ("#B3151B1D", 167, 100),  // S5 Copy+Paste
             ("#B31F1515", 268, 52),   // S4 X
             ("#B319151F", 321, 100),  // S3 W+G
             ("#B31F1C15", 422, 124),  // S2 Mic+BTW
-            ("#B31F1B15", 547, 65),   // S1 Stern (war h=63 → 65 bis zur Oberkante 612)
+            ("#B31A1A1A", 547, 65),   // S1 Enter + Orientierung (oben)
         ]
         for s in sections {
             let v = NSView(frame: NSRect(x: 0, y: s.y, width: panelWidth, height: s.h))
@@ -245,9 +249,8 @@ extension OverlayPanel {
         let micSize: CGFloat = 52
         let micColumnX: CGFloat = 7
         let actionButtonX: CGFloat = 13     // 7 + (52-40)/2
-        let centeredButtonX: CGFloat = 28   // (96-40)/2
 
-        ultrathinkButton.frame       = NSRect(x: centeredButtonX, y: 553, width: btnSize, height: btnSize)
+        ultrathinkButton.frame       = NSRect(x: 12, y: 23,  width: 34, height: 34)
         micButton.frame              = NSRect(x: micColumnX,      y: 488, width: micSize, height: micSize)
         btwButton.frame              = NSRect(x: micColumnX,      y: 428, width: micSize, height: micSize)
         wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
@@ -257,7 +260,7 @@ extension OverlayPanel {
         pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
         screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
         insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
-        enterButton.frame            = NSRect(x: centeredButtonX, y: 19,  width: btnSize, height: btnSize)
+        enterButton.frame            = NSRect(x: 12, y: 556, width: 34, height: 34)
 
         // Profile-Tiles — gleiche Positionen wie computeProfilePositions().
         let profileX: CGFloat = 65

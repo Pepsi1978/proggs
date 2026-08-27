@@ -13,10 +13,14 @@ import AppKit
 
 final class AutoHideController {
 
-    /// Sekunden Inaktivitaet bevor das Panel einklappt (Frank-Wunsch 2026-06-05: 1s).
+    /// Sekunden Inaktivitaet bevor das Panel einklappt. 1:1 Windows
+    /// (OverlayWindow.xaml.cs: CollapseAfterUseMs = CollapseAfterPeekMs = 350).
+    /// Die 350 ms liegen sicher hinter dem 240-ms-Beam-Fade, ohne die frueher
+    /// volle Sekunde Wartezeit wieder einzufuehren — genau deshalb wirkte das
+    /// macOS-Overlay nach einer Aufnahme traeger als das unter Windows.
     /// Gilt orientierungs-agnostisch fuer Vertikal- UND Horizontalmodus
     /// (collapseIfIdle ruft beamToCollapsed, das beide Layouts auf die Mic-Pille schrumpft).
-    var idleTimeout: TimeInterval = 1.0
+    var idleTimeout: TimeInterval = 0.35
 
     /// Wird gesetzt vom AppDelegate. Soll true sein wahrend Recording/
     /// Processing — dann kein Auto-Collapse.
@@ -76,6 +80,28 @@ final class AutoHideController {
     /// Resume nach Recording/Processing: Timer neu starten.
     func resume() {
         resetTimer()
+    }
+
+    /// Windows-Pendant zu `ScheduleCollapse()`: wird EREIGNISGESTEUERT gerufen,
+    /// sobald eine Aufnahme endet (Recording -> Processing/Idle/Success/Error).
+    /// Windows klappt schon beim Uebergang auf Processing ein — die
+    /// Transkription laeuft im Hintergrund weiter. Vorher lief auf macOS nur
+    /// ein reiner Idle-Timer, der bei jeder Mausbewegung neu startete; das
+    /// Overlay blieb nach dem Sprechen sichtbar stehen.
+    func scheduleCollapseSoon() {
+        guard enabled else { return }
+        guard let panel = panel, !panel.isCollapsed else { return }
+        // Liegt die Maus ueber dem Overlay, bleibt es offen (Windows:
+        // `if (_mouseOverOverlay) return;`).
+        if panel.frame.contains(NSEvent.mouseLocation) { return }
+        resetTimer()
+    }
+
+    /// Windows-Pendant zum Expand beim Aufnahmestart: laeuft eine Aufnahme,
+    /// muss die Welle sichtbar sein — also aufklappen, falls eingeklappt.
+    func expandForRecording() {
+        guard let panel = panel, panel.isCollapsed else { return }
+        panel.beamToExpanded { [weak self] in self?.suspend() }
     }
 
     // MARK: - Private

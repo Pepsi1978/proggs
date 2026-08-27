@@ -135,12 +135,20 @@ extension OverlayPanel {
     ///
     /// **S7**: Enter und ⇄ jeweils 34×34 mit 4 px Abstand, gemeinsam zentriert.
     func positionExtraButtonsVertical() {
-        // S1: y=547..610 (h=63). WPF padding top 21 + bot 8.
-        // macOS-Y (unten=0): Buttons-Unterkante = 547 + 8 = 555.
+        // Reihenfolge 1:1 wie Windows-XAML: Enter + Orientierungs-Umschalter in der
+        // OBERSTEN Sektion (S1, ueber dem Mikrofon), Stern + Diskette in der
+        // UNTERSTEN (S7). Bis 2026-08-27 lagen beide Paare vertauscht.
+        //
+        // S7 unten: y=2..65. XAML-Padding 8 oben / 21 unten
+        //   → Button-Unterkante = 2 + 21 = 23.
+        // S1 oben:  y=547..610. XAML-Padding 20 oben / 9 unten
+        //   → Button-Unterkante = 547 + 9 = 556.
+        // Beide Paare: 34x34, erster bei x=12, zweiter bei x=50
+        //   (34 + 4 Abstand + 34 = 72, zentriert im 92 px breiten Innenraum).
         ultrathinkButton.buttonWidth  = 34
         ultrathinkButton.buttonHeight = 34
-        ultrathinkButton.frame        = NSRect(x: 11, y: 555, width: 34, height: 34)
-        saveButton.frame              = NSRect(x: 50, y: 555, width: 34, height: 34)
+        ultrathinkButton.frame        = NSRect(x: 12, y: 23, width: 34, height: 34)
+        saveButton.frame              = NSRect(x: 50, y: 23, width: 34, height: 34)
         // Stern als exakter XAML-Pentagram-Path (1:1 Windows-XAML Z. 202-204).
         // Wird mit labelColor (starMuted/starGold) eingefaerbt via RoundButton.draw.
         if ultrathinkButton.symbolImage == nil {
@@ -153,9 +161,13 @@ extension OverlayPanel {
         }
         ultrathinkButton.needsDisplay = true
 
-        // Beide Kreise behalten die bisherige gemeinsame Mitte bei.
-        enterButton.frame = NSRect(x: 12, y: 22, width: 34, height: 34)
-        orientationToggleButton.frame = NSRect(x: 50, y: 22, width: 34, height: 34)
+        // Enter + Orientierungs-Umschalter oben, direkt ueber dem Mikrofon.
+        enterButton.buttonWidth  = 34
+        enterButton.buttonHeight = 34
+        enterButton.frame = NSRect(x: 12, y: 556, width: 34, height: 34)
+        orientationToggleButton.buttonWidth  = 34
+        orientationToggleButton.buttonHeight = 34
+        orientationToggleButton.frame = NSRect(x: 50, y: 556, width: 34, height: 34)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0

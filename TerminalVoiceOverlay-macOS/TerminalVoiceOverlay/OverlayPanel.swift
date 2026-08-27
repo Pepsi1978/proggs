@@ -69,6 +69,11 @@ class RoundButton: NSView {
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
     var labelColor: NSColor = .white { didSet { needsDisplay = true } }
     var symbolImage: NSImage?
+    /// Blendet das Symbol aus, ohne es zu verlieren. Windows blendet waehrend
+    /// der Aufnahme das Mic-Icon komplett aus (MicIcon.Visibility = Collapsed)
+    /// und zeigt NUR die Wellenanzeige — sonst liegen Icon und Welle
+    /// uebereinander und das Bild wird unruhig.
+    var symbolHidden: Bool = false { didSet { needsDisplay = true } }
     /// Skalierungsfaktor des symbolImage relativ zu bounds (Default 0.5).
     /// Windows-XAML hat z.B. Mic-Viewbox 22 in 52px-Button → 22/52 ≈ 0.42.
     var symbolScaleFactor: CGFloat = 0.5
@@ -112,7 +117,7 @@ class RoundButton: NSView {
         buttonColor.setFill()
         path.fill()
 
-        if let img = symbolImage {
+        if let img = symbolImage, !symbolHidden {
             let imgSize = CGSize(width: bounds.width * symbolScaleFactor,
                                  height: bounds.height * symbolScaleFactor)
             let imgRect = NSRect(
@@ -126,7 +131,7 @@ class RoundButton: NSView {
             NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
             tinted.unlockFocus()
             tinted.draw(in: imgRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-        } else {
+        } else if !symbolHidden {
             let attrs: [NSAttributedString.Key: Any] = [
                 .foregroundColor: labelColor,
                 .font: labelFont
@@ -423,11 +428,14 @@ final class OverlayPanel: NSPanel {
         //   Aussenrand: 7 px links + 7 px rechts
         // Action-Buttons (40 px) zentriert in der Mic-Spalte → x=13..53,
         // Mitte = 33 (gleiche Achse wie Mic).
-        // Stern und Enter bleiben mittig im Window → x=28..68, Mitte = 48.
         let micColumnX: CGFloat = 7
         let micColumnW: CGFloat = 52
         let actionButtonX: CGFloat = micColumnX + (micColumnW - btnSize) / 2  // 13
-        let centeredButtonX: CGFloat = (panelWidth - btnSize) / 2             // 28
+        // Windows stellt in S1 und S7 je zwei 34er-Buttons nebeneinander:
+        // Gesamtbreite 34 + 4 + 34 = 72, zentriert im 92 px breiten Innenraum
+        // → erster bei x=12, zweiter bei x=50.
+        let sideButtonSize: CGFloat = 34
+        let sideButtonX: CGFloat = 12
         let profileX: CGFloat = micColumnX + micColumnW + 6                   // 65
 
         // Buttons erstellen
@@ -541,8 +549,13 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.borderWidth = 2
 
         // ── 7 colour sections + 6 black 1 px dividers ──
-        // y-coordinates use AppKit (origin at panel bottom). Layout — bottom-up:
-        addSection(hex: "#1A1A1A", y: 2,   height: 63, width: panelWidth)  // S7 Enter
+        // Reihenfolge 1:1 wie Windows-XAML (OverlayWindow.xaml), von OBEN gelesen:
+        //   S1 Enter + Orientierung, S2 Mic+BTW, S3 W+G, S4 X, S5 Copy+Paste,
+        //   S6 Screenshot+Insert, S7 Stern + Diskette.
+        // AppKit rechnet von UNTEN, die Liste hier laeuft also rueckwaerts.
+        // Frueher lagen Enter und Stern vertauscht — der Auto-Enter sass unten
+        // statt ueber dem Mikrofon (Frank 2026-08-27).
+        addSection(hex: "#1F1B15", y: 2,   height: 63, width: panelWidth)  // S7 Stern + Diskette
         addDivider(y: 65, width: panelWidth)
         addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Screenshot+Insert
         addDivider(y: 166, width: panelWidth)
@@ -554,12 +567,15 @@ final class OverlayPanel: NSPanel {
         addDivider(y: 421, width: panelWidth)
         addSection(hex: "#1F1C15", y: 422, height: 124, width: panelWidth) // S2 Mic+BTW
         addDivider(y: 546, width: panelWidth)
-        addSection(hex: "#1F1B15", y: 547, height: 63,  width: panelWidth) // S1 Star
+        addSection(hex: "#1A1A1A", y: 547, height: 63,  width: panelWidth) // S1 Enter + Orientierung
 
         // ── Position der Action-Buttons (Mic-Achse links) ──
         // Stern (S1) und Enter (S7) bleiben zentriert, alle anderen rutschen
         // auf die Mic-Achse links.
-        ultrathinkButton.frame       = NSRect(x: centeredButtonX, y: 553, width: btnSize, height: btnSize)
+        // Windows: Enter/Orientierung (S1 oben) und Stern/Diskette (S7 unten) sind
+        // 34x34, nicht 40x40 wie die Aktions-Buttons. Padding wie im XAML:
+        // S1 = 20 oben / 9 unten, S7 = 8 oben / 21 unten.
+        ultrathinkButton.frame       = NSRect(x: sideButtonX, y: 23,  width: sideButtonSize, height: sideButtonSize)
         micButton.frame              = NSRect(x: micColumnX,      y: 488, width: micSize, height: micSize)
         btwButton.frame              = NSRect(x: micColumnX,      y: 428, width: micSize, height: micSize)
         wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
@@ -569,7 +585,7 @@ final class OverlayPanel: NSPanel {
         pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
         screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
         insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
-        enterButton.frame            = NSRect(x: centeredButtonX, y: 19,  width: btnSize, height: btnSize)
+        enterButton.frame            = NSRect(x: sideButtonX, y: 556, width: sideButtonSize, height: sideButtonSize)
 
         // ── Position der Profile-Tiles (rechte Spalte) ──
         // Verteilung passt 1:1 zur Windows-Variante (#1957):
@@ -713,9 +729,15 @@ final class OverlayPanel: NSPanel {
 
     func showWaveform(_ show: Bool) {
         DispatchQueue.main.async { [weak self] in
-            self?.ensureWaveformView()
-            self?.waveformView?.isHidden = !show
-            if !show { self?.waveformView?.clear() }
+            guard let self = self else { return }
+            self.ensureWaveformView()
+            // Windows SetWaveformVisible: beim Einschalten wird der Buffer
+            // geleert, damit nicht die Welle des letzten Diktats stehenbleibt.
+            if show { self.waveformView?.clear() }
+            self.waveformView?.isHidden = !show
+            if !show { self.waveformView?.clear() }
+            // Mic-Icon und Welle schliessen sich gegenseitig aus (1:1 Windows).
+            self.micButton.symbolHidden = show
         }
     }
 
