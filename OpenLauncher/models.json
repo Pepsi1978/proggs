@@ -237,6 +237,15 @@
         "Slug": "thinkingmachines/inkling-small:free",
         "DisplayName": "Thinking Machines Inkling Small Free",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash-fin:free",
+        "DisplayName": "Ling 3.0 Flash Fin Free",
+        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [
@@ -262,6 +271,7 @@
       "dots-studio/dots-3-note-preview:free",
       "google/gemma-4-26b-a4b-it:free",
       "google/gemma-4-31b-it:free",
+      "inclusionai/ling-3.0-flash-fin:free",
       "liquid/lfm-2.5-2.6b:free",
       "minimax/minimax-m2.7:free",
       "minimax/minimax-m3:free",
@@ -276,7 +286,7 @@
       "thinkingmachines/inkling-small:free",
       "z-ai/glm-5.2:free"
     ],
-    "IsExpanded": true
+    "IsExpanded": false
   },
   {
     "Id": "opencode-go",
