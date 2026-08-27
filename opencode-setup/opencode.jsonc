@@ -94,6 +94,11 @@
 
     // Rueckfall fuer bereits angemeldete Seiten/Tabs im persoenlichen Chrome.
     // Erst bei Werkzeugnutzung verbinden und nur nach Franks ausdruecklicher Bestaetigung verwenden.
+    // ABGESCHALTET 2026-08-27: gemessen 29 Tools / 24402 Zeichen = ~6100 Tokens Schema, die bei
+    // JEDEM Prompt mitgehen — identisch zu chrome-devtools, nur --auto-connect unterscheidet sich.
+    // Lokal (LM Studio) muss dieses Schema jedes Mal neu geprefillt werden: gemessen 21385 Input-
+    // Tokens fuer die Frage "Welches Modell bist du?" (Tokenverbrauch.jsonl, 19:53 Uhr).
+    // Bei Bedarf auf true setzen und OpenCode neu starten.
     "chrome-personal": {
       "type": "local",
       "command": [
@@ -104,7 +109,7 @@
         "--no-performance-crux",
         "--redact-network-headers"
       ],
-      "enabled": true,
+      "enabled": false,
       "timeout": 120000
     },
 
