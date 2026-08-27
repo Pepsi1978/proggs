@@ -26,6 +26,28 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+            "timeout": 20
+          }
+        ]
+      }
     ]
   }
 }

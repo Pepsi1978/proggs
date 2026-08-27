@@ -42,6 +42,7 @@
 | 13 | `allow`-Liste setzen | Keine Whitelist — Sperren nur via `deny` | §3.6 |
 | 14 | Config-/Skill-Datei (Win) | LF halten (CRLF bricht Edit-Tool) | §8.1 |
 | 15 | Subagent crasht (0 Token) | `ENABLE_TOOL_SEARCH` + `tools:`-Whitelist | §5.4 |
+| 16 | Login wird staendig neu verlangt | Pro `CLAUDE_CONFIG_DIR` eigener Schluesselbund-Eintrag — `claude-login-sync` spiegelt | §3.9 |
 
 ---
 
@@ -205,6 +206,39 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 **Quelle:** docs/settings · docs/permissions
 
 > **3-Dateien-Settings-Regel (Repo):** Aenderung an `~/.claude/settings.json` → alle drei Setup-Repo-Dateien aktualisieren (`settings-reference.json`, macOS-`settings.json`, `settings.local.json`-Vorlage). Secrets vorher redaktieren (siehe `git-workflow.md`).
+
+---
+
+### 3.9 `CLAUDE_CONFIG_DIR` = eigener Login pro Profil → Anmeldung bei jedem Profilwechsel  ⭐ EIGENER VORFALL
+**Symptom:** Claude Code verlangt bei (gefuehlt) jedem Start ueber den OpenLauncher eine neue
+Anmeldung/Autorisierung, obwohl man sich kurz zuvor angemeldet hat. Betrifft besonders
+Profil-Setups (minimal/standard/strict) und jedes erstmalig genutzte Profil.
+**Ursache:** Der Login haengt am **Konfigurationsordner**, nicht am Benutzer. Claude Code leitet
+den Speicherort aus `CLAUDE_CONFIG_DIR` ab:
+- **macOS:** Schluesselbund-Dienst `Claude Code-credentials-<sha256(configdir)[:8]>`; der
+  Standardordner `~/.claude` nutzt den Namen **ohne** Suffix. Verifiziert:
+  `sha256("/Users/frank/proggs/OpenLauncher/Profiles/ClaudeCodeMac/standard")[:8] = fab6f47f`
+  → Eintrag `Claude Code-credentials-fab6f47f`.
+- **Windows:** Datei `<configdir>\.credentials.json`.
+Dazu kommt die Kontoidentitaet in `<configdir>/.claude.json` (`oauthAccount`, `userID`,
+`hasCompletedOnboarding`) — beim Standardordner liegt sie als `~/.claude.json` **daneben**, bei
+gesetztem `CLAUDE_CONFIG_DIR` **darin**. Fehlt eines von beidem, erscheint der Anmeldebildschirm.
+Jedes Profil ist damit eine eigene Anmeldung; ein Pfadwechsel (umbenanntes Home, verschobenes
+Repo) erzeugt lautlos einen neuen Hash → wieder Anmeldung. Lokal lagen dadurch **11** getrennte
+`Claude Code-credentials*`-Eintraege im Schluesselbund.
+**Versionen:** per Design, v2.1.247 geprueft.
+**FIX (funktionserhaltend, 3 Schichten):** `claude-login-sync.py` (`~/.claude/hooks/`) sucht den
+frischesten gueltigen Token und spiegelt ihn plus die fehlenden Identitaetsfelder in jeden
+Profil-Konfigurationsordner. Geschrieben wird NUR, wo gar kein oder ein voellig toter Login liegt
+(Zugriffs- UND Auffrischungs-Token abgelaufen) — ein bewusst anderes Konto pro Profil und ein
+laufender Token-Refresh bleiben damit unangetastet. Eingehaengt (1) im Startskript des Launchers
+**vor** dem `claude`-Aufruf (deckt den Kaltstart ab, bevor ueberhaupt gefragt wird), (2) als
+`SessionStart`- und (3) als `SessionEnd`-Hook (verteilt den frisch aufgefrischten Token).
+Schreibzugriff laeuft ueber `security -i` statt argv — sonst stuende der Token in der Prozessliste.
+**Diagnose-Einzeiler:** `security dump-keychain | grep "Claude Code-credentials"` zeigt alle
+Anmeldungen; den erwarteten Namen liefert
+`python3 -c "import hashlib;print(hashlib.sha256(b'<configdir>').hexdigest()[:8])"`.
+**Quelle:** eigener Vorfall 2026-08-27 (OpenLauncher-Profile, macOS 2.1.247).
 
 ---
 

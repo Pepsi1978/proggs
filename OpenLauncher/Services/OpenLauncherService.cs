@@ -648,6 +648,15 @@ try {
         New-Item -ItemType Directory -Force -Path $claudeConfigDir | Out-Null
         $env:CLAUDE_CONFIG_DIR = $claudeConfigDir
     }
+
+    # Anmeldung in dieses Profil spiegeln, BEVOR Claude startet. Claude Code legt den Login je
+    # CLAUDE_CONFIG_DIR getrennt ab (Windows: <configdir>\.credentials.json) -- ohne diesen Abgleich
+    # verlangt jedes Profil beim ersten Start und nach jedem Profilwechsel eine neue Anmeldung.
+    # Der Abgleich schreibt nur dort, wo gar kein oder ein voellig abgelaufener Login liegt.
+    $loginSync = Join-Path $env:USERPROFILE ".claude/hooks/claude-login-sync.py"
+    if (Test-Path $loginSync) {
+        try { $null = python $loginSync 2>$null } catch { }
+    }
     $sessionSettings = {{PowerShellLiteral(tempSettings)}}
     $claudeArgs = @('--dangerously-skip-permissions', '--settings', $sessionSettings, '--model', {{PowerShellLiteral(modelId)}})
     $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}

@@ -244,6 +244,15 @@ final class OpenLauncherService {
             export CLAUDE_CONFIG_DIR="$CLAUDE_PROFILE_DIR"
         fi
 
+        # Anmeldung in dieses Profil spiegeln, BEVOR Claude startet. Claude Code legt den Login je
+        # CLAUDE_CONFIG_DIR getrennt im Schluesselbund ab -- ohne diesen Abgleich verlangt jedes
+        # Profil beim ersten Start (und nach jedem Profilwechsel) eine neue Anmeldung. Der Abgleich
+        # schreibt nur dort, wo gar kein oder ein voellig abgelaufener Login liegt.
+        LOGIN_SYNC="$HOME/.claude/hooks/claude-login-sync.py"
+        if [ -f "$LOGIN_SYNC" ]; then
+            python3 "$LOGIN_SYNC" >/dev/null 2>&1 || true
+        fi
+
         claudeArgs=(--dangerously-skip-permissions --settings "$SETTINGS" --model \(Shell.singleQuoted(modelId)))
         EFFORT=\(Shell.singleQuoted(effortLevel ?? ""))
         if [ -n "$EFFORT" ]; then

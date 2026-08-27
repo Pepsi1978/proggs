@@ -102,6 +102,15 @@
 						"timeout": 10
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+						"timeout": 20
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
@@ -452,11 +461,25 @@
 						"async": true
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+						"timeout": 20
+					}
+				]
 			}
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"],
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		],
 		"baseRef": "fresh"
 	},
 	"statusLine": {

@@ -101,6 +101,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -454,6 +463,15 @@
             "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/experience-logger.ps1\"",
             "timeout": 15,
             "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/claude-login-sync.ps1\"",
+            "timeout": 20
           }
         ]
       }

@@ -127,6 +127,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/claude-login-sync.sh\"",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -502,6 +511,15 @@
           {
             "type": "command",
             "command": "bash ~/.claude/hooks/experience-logger.sh 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/claude-login-sync.sh\"",
+            "timeout": 20
           }
         ]
       }

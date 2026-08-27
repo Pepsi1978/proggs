@@ -27,3 +27,4 @@
 | 13 | `allow`-Liste setzen | Keine Whitelist — Sperren nur via `deny` | §3.6 |
 | 14 | Config-/Skill-Datei (Win) | LF halten (CRLF bricht Edit-Tool) | §8.1 |
 | 15 | Subagent crasht (0 Token) | `ENABLE_TOOL_SEARCH` + `tools:`-Whitelist | §5.4 |
+| 16 | Login wird staendig neu verlangt | Pro `CLAUDE_CONFIG_DIR` eigener Schluesselbund-Eintrag — `claude-login-sync` spiegelt | §3.9 |
