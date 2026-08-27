@@ -10,50 +10,50 @@
         <GradientStop Color="#07060C" Offset="1"/>
     </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="WindowBg"          Color="#8C12101C"/>
+    <SolidColorBrush x:Key="WindowBg"          Color="#12101C"/>
     <SolidColorBrush x:Key="TitleBarBg"        Color="#00191826"/>
-    <SolidColorBrush x:Key="CardBg"            Color="#6B1E1B2E"/>
-    <SolidColorBrush x:Key="SurfaceBg"         Color="#0DFFFFFF"/>
-    <SolidColorBrush x:Key="HoverBg"           Color="#14FFFFFF"/>
-    <SolidColorBrush x:Key="ChipBg"            Color="#0FFFFFFF"/>
+    <SolidColorBrush x:Key="CardBg"            Color="#1A1726"/>
+    <SolidColorBrush x:Key="SurfaceBg"         Color="#262336"/>
+    <SolidColorBrush x:Key="HoverBg"           Color="#363050"/>
+    <SolidColorBrush x:Key="ChipBg"            Color="#2A263C"/>
 
     <SolidColorBrush x:Key="AuraOneBrush"       Color="#8C7C6CF5"/>
     <SolidColorBrush x:Key="AuraTwoBrush"       Color="#6BB050F0"/>
     <SolidColorBrush x:Key="AuraThreeBrush"     Color="#4D22C8EE"/>
-    <SolidColorBrush x:Key="GlassBorderBrush"   Color="#1CFFFFFF"/>
-    <SolidColorBrush x:Key="GlassBrightBrush"   Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="GlassBorderBrush"   Color="#524C6B"/>
+    <SolidColorBrush x:Key="GlassBrightBrush"   Color="#6E6790"/>
     <SolidColorBrush x:Key="AccentGlowBrush"    Color="#B37C6CF5"/>
-    <SolidColorBrush x:Key="PanelBg"            Color="#6B1E1B2E"/>
-    <SolidColorBrush x:Key="TableHeaderBg"      Color="#B8181524"/>
+    <SolidColorBrush x:Key="PanelBg"            Color="#1A1726"/>
+    <SolidColorBrush x:Key="TableHeaderBg"      Color="#211E2E"/>
 
-    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#14FFFFFF"/>
-    <SolidColorBrush x:Key="BorderBrushStrong" Color="#1CFFFFFF"/>
-    <SolidColorBrush x:Key="GridLineBrush"     Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#403A55"/>
+    <SolidColorBrush x:Key="BorderBrushStrong" Color="#6A6389"/>
+    <SolidColorBrush x:Key="GridLineBrush"     Color="#3A3550"/>
 
-    <SolidColorBrush x:Key="TextBrush"         Color="#F1EFF9"/>
-    <SolidColorBrush x:Key="MutedBrush"        Color="#A3F1EFF9"/>
-    <SolidColorBrush x:Key="DimBrush"          Color="#6BF1EFF9"/>
+    <SolidColorBrush x:Key="TextBrush"         Color="#F3F1FB"/>
+    <SolidColorBrush x:Key="MutedBrush"        Color="#CFCBDE"/>
+    <SolidColorBrush x:Key="DimBrush"          Color="#9B96AD"/>
 
-    <SolidColorBrush x:Key="AccentBrush"        Color="#A79CFF"/>
+    <SolidColorBrush x:Key="AccentBrush"        Color="#B0A6FF"/>
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0.5,0" EndPoint="0.5,1">
         <GradientStop Color="#BDB6FF" Offset="0"/>
         <GradientStop Color="#7C6CF5" Offset="1"/>
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="AccentHoverBrush"   Color="#B9B0FF"/>
+    <SolidColorBrush x:Key="AccentHoverBrush"   Color="#8E80FF"/>
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#6455E0"/>
-    <SolidColorBrush x:Key="AccentSoftBg"       Color="#387C6CF5"/>
-    <SolidColorBrush x:Key="AccentLineBrush"    Color="#7A7C6CF5"/>
+    <SolidColorBrush x:Key="AccentSoftBg"       Color="#2E2947"/>
+    <SolidColorBrush x:Key="AccentLineBrush"    Color="#6F62D8"/>
 
-    <SolidColorBrush x:Key="SelectedBg"         Color="#427C6CF5"/>
-    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#D6A79CFF"/>
-    <SolidColorBrush x:Key="RowSelectedBg"      Color="#297C6CF5"/>
+    <SolidColorBrush x:Key="SelectedBg"         Color="#3A3168"/>
+    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#B0A6FF"/>
+    <SolidColorBrush x:Key="RowSelectedBg"      Color="#2C2650"/>
 
-    <SolidColorBrush x:Key="StatusOkBg"    Color="#294ADE80"/>
+    <SolidColorBrush x:Key="StatusOkBg"    Color="#14301F"/>
     <SolidColorBrush x:Key="StatusOkFg"    Color="#5BF0A0"/>
-    <SolidColorBrush x:Key="StatusWarnBg"  Color="#29FBBF24"/>
+    <SolidColorBrush x:Key="StatusWarnBg"  Color="#33280D"/>
     <SolidColorBrush x:Key="StatusWarnFg"  Color="#FBBF24"/>
-    <SolidColorBrush x:Key="StatusBadBg"   Color="#29F87171"/>
-    <SolidColorBrush x:Key="StatusBadFg"   Color="#FF8F8F"/>
+    <SolidColorBrush x:Key="StatusBadBg"   Color="#351A1A"/>
+    <SolidColorBrush x:Key="StatusBadFg"   Color="#FF9A9A"/>
 
     <SolidColorBrush x:Key="CloseHoverBg"  Color="#E5484D"/>
 
