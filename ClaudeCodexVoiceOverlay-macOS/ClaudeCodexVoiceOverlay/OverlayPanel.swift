@@ -948,7 +948,12 @@ final class OverlayPanel: NSPanel {
         btwPulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            self.btwButton.buttonColor = bright ? .btnRecordingBright : .btnRecording
+            // 1:1 Windows (_btwPulseTimer): der BTW-Knopf pulsiert GELB
+            // (#FFEB3B <-> #F57F17), nicht rot. Rot ist die Farbe des grossen
+            // Mikrofons — mit der roten Variante sahen beide Aufnahmearten
+            // gleich aus, obwohl Windows sie klar unterscheidet.
+            self.btwButton.buttonColor = bright ? .btnBtwPulse : .btnBtwRecording
+            self.btwButton.labelColor = .darkLabel
         }
     }
 

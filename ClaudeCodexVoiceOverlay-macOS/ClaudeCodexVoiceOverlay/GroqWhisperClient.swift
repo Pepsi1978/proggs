@@ -4,7 +4,12 @@ final class GroqWhisperClient {
     private let apiKey: String
     private let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
-    private let maxRetries = 3
+    /// 1:1 Windows (GroqWhisperClient.cs: MaxRetries = 0). Retries sind dort
+    /// bewusst abgeschaltet: Groq ist zeitweise ohnehin 40-50 s langsam, und
+    /// drei Wiederholungen mit 2/4/8 s Pause haengen im Fehlerfall bis zu
+    /// 14 Sekunden Wartezeit an, ohne dass ein Text ankommt. Der Benutzer
+    /// drueckt schneller selbst noch einmal.
+    private let maxRetries = 0
     private let delays: [TimeInterval] = [2, 4, 8]
 
     // ----- Abwehr gegen Whisper-Stille-Halluzination (Almanach bugs/desktop/groq-transkription.md) -----
@@ -85,7 +90,9 @@ final class GroqWhisperClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 180
+        // 1:1 Windows (TransportTimeoutSeconds = 75). 180 s liessen die App bei
+        // einem haengenden Groq-Aufruf drei Minuten scheinbar "verarbeiten".
+        request.timeoutInterval = 75
 
         var body = Data()
         // verbose_json statt text: liefert die Confidence-Felder fuers Halluzinations-Gate,
