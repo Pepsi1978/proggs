@@ -2014,6 +2014,104 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         }
         refresh()
     }
+
+    // MARK: - Reihenfolge per Drag & Drop (Portierung von Windows)
+    // Windows kann zwei Dinge, die macOS bisher fehlten:
+    //   * einen Prompt auf eine ANDERE ZEILE ziehen -> Reihenfolge innerhalb
+    //     der Kategorie aendern (OnPromptDroppedOnRowAsync)
+    //   * einen Kategorie-Tab auf einen anderen ziehen -> Kategorien tauschen
+    //     (OnCategoryDroppedOnCategoryAsync)
+    // Der bereits vorhandene Pfad "Prompt auf Kategorie-Tab" (= Kategorie
+    // wechseln) bleibt unveraendert daneben bestehen.
+
+    /// Setzt den Quell-Prompt vor (`above`) bzw. hinter den Ziel-Prompt und
+    /// nummeriert die ganze Kategorie lueckenlos neu. Nur INNERHALB derselben
+    /// Kategorie — der Wechsel zwischen Kategorien laeuft weiter ueber den
+    /// Kategorie-Tab (genau wie unter Windows).
+    /// Darf hier ueberhaupt umsortiert werden? Nur wenn beide Prompts in
+    /// DERSELBEN Kategorie liegen — sonst zeigt die Zeile gar keine Drop-Linie
+    /// und der Drag landet stattdessen (wie bisher) auf einem Kategorie-Tab.
+    fileprivate func canReorder(sourceId: UUID, targetId: UUID?) -> Bool {
+        guard let targetId = targetId, sourceId != targetId,
+              let s = currentPrompts.first(where: { $0.id == sourceId }),
+              let t = currentPrompts.first(where: { $0.id == targetId }) else { return false }
+        return s.categoryId == t.categoryId
+    }
+
+    fileprivate func handlePromptReorder(sourceId: UUID, targetId: UUID, above: Bool) {
+        guard sourceId != targetId,
+              let source = currentPrompts.first(where: { $0.id == sourceId }),
+              let target = currentPrompts.first(where: { $0.id == targetId }),
+              source.categoryId == target.categoryId else { return }
+
+        do {
+            var prompts = try PromptBoardStore.shared.prompts(in: target.categoryId)
+                .sorted {
+                    if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+                    return $0.shortLabel.localizedCaseInsensitiveCompare($1.shortLabel) == .orderedAscending
+                }
+            guard let moving = prompts.first(where: { $0.id == sourceId }) else { return }
+            prompts.removeAll { $0.id == sourceId }
+
+            var insertIdx = prompts.firstIndex(where: { $0.id == targetId }) ?? prompts.count
+            if !above { insertIdx += 1 }
+            insertIdx = max(0, min(insertIdx, prompts.count))
+            prompts.insert(moving, at: insertIdx)
+
+            // Lueckenlos neu nummerieren (0, 1, 2, …) und nur schreiben, was
+            // sich wirklich geaendert hat.
+            for (i, var p) in prompts.enumerated() where p.sortOrder != i {
+                p.sortOrder = i
+                p.updatedAt = Date()
+                try PromptBoardStore.shared.updatePrompt(p)
+            }
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn("Reihenfolge aendern fehlgeschlagen: \(error.localizedDescription)")
+            return
+        }
+        refresh()
+    }
+
+    /// Tauscht die Reihenfolge zweier Kategorien. Haben beide (nach einem
+    /// Import) denselben `sortOrder`, wird zuerst lueckenlos neu nummeriert —
+    /// sonst waere der Tausch wirkungslos. 1:1 zum Windows-Verhalten.
+    fileprivate func handleCategoryReorder(sourceId: UUID, targetId: UUID) {
+        guard sourceId != targetId else { return }
+        do {
+            var all = try PromptBoardStore.shared.allCategories()
+            guard let sIdx = all.firstIndex(where: { $0.id == sourceId }),
+                  let tIdx = all.firstIndex(where: { $0.id == targetId }) else { return }
+
+            if all[sIdx].sortOrder == all[tIdx].sortOrder {
+                var ordered = all.sorted {
+                    if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+                for i in ordered.indices where ordered[i].sortOrder != i {
+                    ordered[i].sortOrder = i
+                    ordered[i].updatedAt = Date()
+                    try PromptBoardStore.shared.updateCategory(ordered[i])
+                }
+                all = try PromptBoardStore.shared.allCategories()
+            }
+
+            guard var source = all.first(where: { $0.id == sourceId }),
+                  var target = all.first(where: { $0.id == targetId }) else { return }
+            let sourceOrder = source.sortOrder
+            source.sortOrder = target.sortOrder
+            target.sortOrder = sourceOrder
+            source.updatedAt = Date()
+            target.updatedAt = Date()
+            try PromptBoardStore.shared.updateCategory(source)
+            try PromptBoardStore.shared.updateCategory(target)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn("Kategorien tauschen fehlgeschlagen: \(error.localizedDescription)")
+            return
+        }
+        refresh()
+    }
 }
 
 // MARK: - Drag-source row view
@@ -2072,6 +2170,84 @@ fileprivate final class PBPromptRowView: NSView, NSDraggingSource {
 
         beginDraggingSession(with: [item], event: event, source: self)
     }
+
+    // MARK: - Zeile als Drop-Ziel (Reihenfolge aendern)
+    // Portierung von Windows `OnPromptRowDragOver` / `OnPromptDroppedOnRowAsync`:
+    // ein Prompt laesst sich auf eine andere ZEILE ziehen und landet dort davor
+    // oder dahinter — je nachdem, ob die obere oder untere Haelfte getroffen
+    // wird. Eine goldene Linie oben bzw. unten zeigt an, wo er einrastet.
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([PBPromptRowView.pasteboardType])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht benutzt") }
+
+    private var dropAbove: Bool?
+
+    private func sourcePromptId(_ sender: NSDraggingInfo) -> UUID? {
+        guard let str = sender.draggingPasteboard.string(forType: PBPromptRowView.pasteboardType)
+        else { return nil }
+        return UUID(uuidString: str)
+    }
+
+    /// Obere oder untere Haelfte der Zeile getroffen? Bestimmt, ob der Prompt
+    /// VOR oder HINTER dem Ziel einsortiert wird.
+    private func isAbove(_ sender: NSDraggingInfo) -> Bool {
+        let p = convert(sender.draggingLocation, from: nil)
+        // Die Zeilen liegen in einer geflippten Stack-View: Y waechst nach
+        // unten. „Oben" ist dann die kleinere Y-Haelfte.
+        return isFlipped ? p.y < bounds.height / 2 : p.y > bounds.height / 2
+    }
+
+    private func showDropLine(_ above: Bool?) {
+        dropAbove = above
+        guard let above = above else {
+            layer?.borderWidth = 0
+            return
+        }
+        layer?.borderWidth = 0
+        // Nur EINE Kante faerben: AppKit-Layer koennen keine einseitigen
+        // Rahmen, deshalb eine duenne Hilfsschicht als Linie.
+        dropLine.removeFromSuperlayer()
+        dropLine.frame = above
+            ? CGRect(x: 0, y: isFlipped ? 0 : bounds.height - 2, width: bounds.width, height: 2)
+            : CGRect(x: 0, y: isFlipped ? bounds.height - 2 : 0, width: bounds.width, height: 2)
+        dropLine.backgroundColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1).cgColor
+        layer?.addSublayer(dropLine)
+    }
+
+    private let dropLine = CALayer()
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard let from = sourcePromptId(sender), from != promptId,
+              owner?.canReorder(sourceId: from, targetId: promptId) == true else { return [] }
+        showDropLine(isAbove(sender))
+        return .move
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard let from = sourcePromptId(sender), from != promptId,
+              owner?.canReorder(sourceId: from, targetId: promptId) == true else { return [] }
+        let above = isAbove(sender)
+        if above != dropAbove { showDropLine(above) }
+        return .move
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        showDropLine(nil)
+        dropLine.removeFromSuperlayer()
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let above = dropAbove ?? isAbove(sender)
+        showDropLine(nil)
+        dropLine.removeFromSuperlayer()
+        guard let from = sourcePromptId(sender), let target = promptId, from != target else { return false }
+        owner?.handlePromptReorder(sourceId: from, targetId: target, above: above)
+        return true
+    }
 }
 
 // MARK: - Flipped vertical stack
@@ -2093,14 +2269,21 @@ fileprivate final class PBFlippedStackView: NSStackView {
 /// NSButton subclass that accepts prompt drags and forwards them to
 /// PromptBoardPanel.handlePromptDrop. Tab is highlighted while a drag
 /// hovers over it — restored to its normal style on exit.
-fileprivate final class PBCategoryTabButton: NSButton {
+fileprivate final class PBCategoryTabButton: NSButton, NSDraggingSource {
     var categoryId: UUID?
     weak var owner: PromptBoardPanel?
     private var savedBackground: CGColor?
 
+    /// Eigener Pasteboard-Typ fuer KATEGORIE-Drags — ein Tab, der auf einen
+    /// anderen Tab gezogen wird, tauscht die Reihenfolge (Windows-Pendant:
+    /// `CategoryDragFormat` / `OnCategoryDroppedOnCategoryAsync`). Bewusst
+    /// getrennt vom Prompt-Typ, damit ein Prompt-Drag weiterhin "Kategorie
+    /// wechseln" bedeutet und nicht versehentlich sortiert.
+    static let categoryPasteboardType = NSPasteboard.PasteboardType("com.tvo.CategoryId")
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        registerForDraggedTypes([PBPromptRowView.pasteboardType])
+        registerForDraggedTypes([PBPromptRowView.pasteboardType, Self.categoryPasteboardType])
     }
 
     convenience init(title: String, target: AnyObject?, action: Selector) {
@@ -2112,32 +2295,100 @@ fileprivate final class PBCategoryTabButton: NSButton {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard sender.draggingPasteboard.types?.contains(PBPromptRowView.pasteboardType) == true
-        else { return [] }
-        // Brighten the tab to signal it's a valid drop target.
-        if savedBackground == nil { savedBackground = layer?.backgroundColor }
-        if let bg = savedBackground, let nsBg = NSColor(cgColor: bg) {
-            let brighter = nsBg.blended(withFraction: 0.25, of: .white) ?? nsBg
-            layer?.backgroundColor = brighter.cgColor
+    // ── Drag-Quelle: Tab auf Tab ziehen (Reihenfolge tauschen) ──
+
+    func draggingSession(_ session: NSDraggingSession,
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        return .move
+    }
+
+    /// Eigene Maus-Verfolgung, weil `NSButton.mouseDown` einen eigenen
+    /// Tracking-Loop faehrt — `mouseDragged` kommt darin nie an. Unter der
+    /// 4-px-Schwelle bleibt es ein normaler Klick (Kategorie an/aus), darueber
+    /// startet der Drag. `super.mouseDown` wird bewusst nicht aufgerufen: es
+    /// wuerde auf ein MouseUp warten, das wir schon verbraucht haben.
+    override func mouseDown(with event: NSEvent) {
+        guard categoryId != nil, let win = window else {
+            super.mouseDown(with: event)
+            return
         }
+        let start = event.locationInWindow
+        while let next = win.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            if next.type == .leftMouseUp {
+                if bounds.contains(convert(next.locationInWindow, from: nil)) {
+                    sendAction(action, to: target)
+                }
+                return
+            }
+            if abs(next.locationInWindow.x - start.x) >= 4 || abs(next.locationInWindow.y - start.y) >= 4 {
+                beginCategoryDrag(with: next)
+                return
+            }
+        }
+    }
+
+    private func beginCategoryDrag(with event: NSEvent) {
+        guard let categoryId = categoryId else { return }
+        let pbItem = NSPasteboardItem()
+        pbItem.setString(categoryId.uuidString, forType: Self.categoryPasteboardType)
+        let item = NSDraggingItem(pasteboardWriter: pbItem)
+        if let bmp = bitmapImageRepForCachingDisplay(in: bounds) {
+            cacheDisplay(in: bounds, to: bmp)
+            let img = NSImage(size: bounds.size)
+            img.addRepresentation(bmp)
+            item.setDraggingFrame(bounds, contents: img)
+        } else {
+            item.draggingFrame = bounds
+        }
+        beginDraggingSession(with: [item], event: event, source: self)
+    }
+
+    // ── Drop-Ziel: Prompt (Kategorie wechseln) ODER Kategorie (tauschen) ──
+
+    /// Name bewusst NICHT `highlight` — das kollidiert mit NSButton.highlight(_:).
+    private func setDropHighlight(_ on: Bool) {
+        if on {
+            if savedBackground == nil { savedBackground = layer?.backgroundColor }
+            if let bg = savedBackground, let nsBg = NSColor(cgColor: bg) {
+                let brighter = nsBg.blended(withFraction: 0.25, of: .white) ?? nsBg
+                layer?.backgroundColor = brighter.cgColor
+            }
+        } else {
+            if let saved = savedBackground { layer?.backgroundColor = saved }
+            savedBackground = nil
+        }
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let types = sender.draggingPasteboard.types ?? []
+        if types.contains(Self.categoryPasteboardType) {
+            // Ein Tab auf sich selbst zu ziehen ergibt nichts.
+            if let str = sender.draggingPasteboard.string(forType: Self.categoryPasteboardType),
+               UUID(uuidString: str) == categoryId { return [] }
+            setDropHighlight(true)
+            return .move
+        }
+        guard types.contains(PBPromptRowView.pasteboardType) else { return [] }
+        setDropHighlight(true)
         return .move
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        if let saved = savedBackground { layer?.backgroundColor = saved }
-        savedBackground = nil
+        setDropHighlight(false)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        defer {
-            if let saved = savedBackground { layer?.backgroundColor = saved }
-            savedBackground = nil
+        defer { setDropHighlight(false) }
+        guard let categoryId = self.categoryId, let owner = self.owner else { return false }
+
+        // Kategorie-Drag zuerst pruefen: er ist der spezifischere Fall.
+        if let str = sender.draggingPasteboard.string(forType: Self.categoryPasteboardType),
+           let sourceId = UUID(uuidString: str) {
+            owner.handleCategoryReorder(sourceId: sourceId, targetId: categoryId)
+            return true
         }
         guard let str = sender.draggingPasteboard.string(forType: PBPromptRowView.pasteboardType),
-              let promptId = UUID(uuidString: str),
-              let categoryId = self.categoryId,
-              let owner = self.owner else { return false }
+              let promptId = UUID(uuidString: str) else { return false }
         owner.handlePromptDrop(promptId: promptId, onCategory: categoryId)
         return true
     }

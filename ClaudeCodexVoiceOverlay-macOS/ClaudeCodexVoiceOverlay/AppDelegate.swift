@@ -60,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let autoEnterServer = AutoEnterStatusServer()
     private var autoHide: AutoHideController?
     private var ptt: PushToTalkController?
+    /// Aufnahme-Signaltoene wie unter Windows (880 Hz Start, 660+440 Hz Stop)
+    /// statt der bisherigen System-Pieptoene.
+    private let recordingCuePlayer = RecordingCuePlayer()
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
 
@@ -577,7 +580,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 panel.setMicState(.recording)
             }
-            NSSound.beep()
+            recordingCuePlayer.playStart()
         } catch {
             NSLog("Microphone error: %@", error.localizedDescription)
             pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
@@ -609,9 +612,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            // Audio feedback: double beep on stop
-            DispatchQueue.main.async { NSSound.beep() }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSSound.beep() }
+            // Stopp-Signal: absteigendes Zwei-Ton-Signal (660 Hz -> 440 Hz),
+            // exakt wie unter Windows. Der Player spielt beide Toene in EINEM
+            // Puffer — kein zweiter Timer noetig, kein Auseinanderdriften.
+            DispatchQueue.main.async { self.recordingCuePlayer.playStop() }
 
             self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
                 try? FileManager.default.removeItem(at: fileURL)
@@ -1478,6 +1482,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             tvoDebug("[App] launch-restore skipped (Drive not connected)")
             return
         }
+        // Datenverlust-Schutz (Portierung von Windows "Protect launch restore
+        // from local changes"): weicht der lokale Stand vom zuletzt
+        // synchronisierten ab, gibt es hier ungesicherte Aenderungen. Ein
+        // Restore wuerde sie ueberschreiben — also gar nicht erst anfangen.
+        // Beim allerersten Start (noch kein Fingerabdruck) darf er laufen.
+        let localBeforeDownload = PromptBoardPanel.currentBackupFingerprint()
+        if let lastSynced = PromptBoardPanel.readLastSyncFingerprint(),
+           let localNow = localBeforeDownload,
+           localNow != lastSynced {
+            tvoDebug("[App] launch-restore skipped (lokale PromptBoard-Aenderungen sind noch nicht gesichert)")
+            return
+        }
         GoogleDriveBackupService.shared.downloadLatest { [weak self] result in
             switch result {
             case .failure(let e):
@@ -1497,8 +1513,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // moments earlier doesn't trigger a self-restore race.
                 if remoteDate > localDate.addingTimeInterval(2) {
                     DispatchQueue.main.async {
+                        // Zweite Sicherung: waehrend des Downloads kann der
+                        // Benutzer weitergearbeitet haben. Hat sich der lokale
+                        // Stand seit der Pruefung oben geaendert, wird NICHT
+                        // ueberschrieben (Windows-Pendant: localAfterDownload).
+                        let localAfterDownload = PromptBoardPanel.currentBackupFingerprint()
+                        guard localAfterDownload == localBeforeDownload else {
+                            tvoDebug("[App] launch-restore skipped (PromptBoard hat sich waehrend des Downloads geaendert)")
+                            return
+                        }
                         do {
                             let result = try PromptBoardPanel.applyBackupJson(json)
+                            // Eingespielter Stand = synchronisierter Stand.
+                            // Bewusst aus dem ERGEBNIS-Zustand berechnet, nicht
+                            // aus dem heruntergeladenen JSON: ein von Windows
+                            // geschriebenes Backup hat eine leicht andere Form,
+                            // sein Abdruck wuerde nie zum lokal gebauten passen
+                            // und der Restore waere dauerhaft blockiert.
+                            PromptBoardPanel.writeLastSyncFingerprintFromCurrentState()
                             tvoDebug("[App] launch-restore applied remote backup from \(remoteDate): \(result.newPrompts) neue Prompts, \(result.newCategories) neue Kategorien")
                             // PromptBoard ueber den Auto-Sync informieren —
                             // setzt Timestamp + "+N neu"-Badge im Header.

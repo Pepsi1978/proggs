@@ -251,6 +251,60 @@ final class PromptSlotStore {
         }
     }
 
+    /// Verschiebt (Ziel leer) bzw. TAUSCHT (Ziel belegt) den Inhalt zweier Slots.
+    /// Pendant zu Windows `PromptSlotService.MoveAsync`: Text, Zusammenfassung UND
+    /// Prioritaet reisen zusammen, weil alle drei zum PROMPT gehoeren — bliebe die
+    /// Prioritaet am alten Slot haengen, faerbt sich nach dem Ziehen der falsche
+    /// Knopf ein. Beide Slots bekommen einen frischen `updatedAt`, damit die
+    /// Verschiebung beim naechsten Cloud-Merge gegen den alten Stand gewinnt.
+    /// No-op wenn from == to oder die Quelle leer ist.
+    func move(from: Int, to: Int, completion: @escaping () -> Void) {
+        guard from != to,
+              (1...Self.slotCount).contains(from),
+              (1...Self.slotCount).contains(to) else {
+            DispatchQueue.main.async { completion() }
+            return
+        }
+        queue.async { [weak self] in
+            guard let self = self else { DispatchQueue.main.async { completion() }; return }
+            var entries = self.loadUnlocked()
+
+            func entry(_ n: Int) -> PBSlotEntry? {
+                entries.first(where: { $0.number == n })
+            }
+            let src = entry(from)
+            let fromText = src?.text ?? ""
+            // Leere Quelle (unbelegt oder Tombstone): nichts zu verschieben.
+            guard !fromText.isEmpty else {
+                DispatchQueue.main.async { completion() }
+                return
+            }
+            let dst = entry(to)
+            let toText = dst?.text ?? ""
+
+            let now = Date()
+            func put(_ n: Int, text: String, summary: String, priority: Int) {
+                let e = PBSlotEntry(number: n, text: text, updatedAt: now,
+                                    summary: text.isEmpty ? "" : summary,
+                                    priority: text.isEmpty ? 0 : priority)
+                if let idx = entries.firstIndex(where: { $0.number == n }) {
+                    entries[idx] = e
+                } else {
+                    entries.append(e)
+                }
+            }
+
+            // Ziel bekommt den gezogenen Prompt …
+            put(to, text: fromText, summary: src?.summary ?? "", priority: src?.priority ?? 0)
+            // … die Quelle den alten Ziel-Prompt (belegt = Tausch) bzw. einen
+            // Tombstone (leer = reines Verschieben, damit das Loeschen syncbar ist).
+            put(from, text: toText, summary: dst?.summary ?? "", priority: dst?.priority ?? 0)
+
+            self.saveUnlocked(entries)
+            DispatchQueue.main.async { completion() }
+        }
+    }
+
     // MARK: - Cloud-Sync
 
     /// Roher JSON-Inhalt der lokalen Datei fuer den Cloud-Upload (1:1 hoch,
