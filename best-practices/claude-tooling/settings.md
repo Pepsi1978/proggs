@@ -16,6 +16,47 @@
 | 5 | `model`/`outputStyle` | nicht live-reloaded — Neustart noetig | /model |
 | 6 | user-level rules `paths:` | nie user-level (ignoriert) — nur projektweit | .claude/rules paths: |
 | 7 | env-Vars | `NO_COLOR`/`FORCE_COLOR` wirken nur fuer Subprozesse (ab v2.1.143) | Umgebungsvariablen |
+| 8 | `CLAUDE_CONFIG_DIR` gesetzt | eigener Login je Ordner (macOS: Schluesselbund-Hash) — spiegeln statt neu anmelden | CLAUDE_CONFIG_DIR |
+
+---
+
+## CLAUDE_CONFIG_DIR — ein Konfigurationsordner, eine Anmeldung
+
+`CLAUDE_CONFIG_DIR` verschiebt nicht nur die Einstellungen, sondern die **komplette Identitaet**
+der Sitzung: Login, Kontodaten, Sitzungshistorie, Projekte, Cache. Wer damit Profile baut
+(z. B. OpenLauncher `minimal`/`standard`/`strict`), baut faktisch getrennte Benutzerkonten.
+
+**Wo der Login liegt**
+
+| Plattform | Speicherort |
+|-----------|-------------|
+| macOS | Schluesselbund, Dienst `Claude Code-credentials-<sha256(CLAUDE_CONFIG_DIR)[:8]>` — der Standardordner `~/.claude` nutzt den Namen **ohne** Suffix |
+| Windows | Datei `<configdir>\.credentials.json` |
+
+Dazu kommt die Kontoidentitaet (`oauthAccount`, `userID`, `hasCompletedOnboarding`) in
+`.claude.json` — beim Standardordner als `~/.claude.json` **daneben**, bei gesetztem
+`CLAUDE_CONFIG_DIR` **darin**. Fehlt eines von beidem, erscheint der Anmeldebildschirm.
+
+**Konsequenzen fuer die Praxis**
+
+- Jedes neue Profil verlangt genau eine Erstanmeldung — das ist kein Fehler, sondern die Bauart.
+- Der Dienstname haengt am **Pfad-String**. Ein umbenanntes Home, ein verschobenes Repo oder ein
+  abweichend geschriebener Pfad (`~/…` vs. `/Users/…`, Schrägstrich am Ende) erzeugt lautlos einen
+  neuen Hash → wieder Anmeldung. Den Pfad im Startskript deshalb **immer identisch** aufbauen.
+- Erwarteten Dienstnamen pruefen:
+  `python3 -c "import hashlib;print(hashlib.sha256(b'<configdir>').hexdigest()[:8])"`,
+  Bestand: `security dump-keychain | grep "Claude Code-credentials"`.
+- Wer mehrere Profile mit **einem** Konto fahren will, spiegelt den Login aktiv
+  (hier: `~/.claude/hooks/claude-login-sync.py`, eingehaengt im Startskript sowie als
+  SessionStart-/SessionEnd-Hook). Beim Spiegeln nur dort schreiben, wo gar kein oder ein
+  vollstaendig abgelaufener Login liegt — sonst ueberschreibt man ein bewusst getrenntes Konto
+  oder einen laufenden Token-Refresh.
+- Token beim Schreiben nie ueber `argv` uebergeben (steht in der Prozessliste) — auf macOS
+  `security -i` von stdin fuettern.
+- Getrennte Profile sind auch ein **Vorteil**: zwei Konten parallel ohne Ab- und Anmelden.
+
+**Quelle:** eigener Vorfall 2026-08-27 (Claude Code 2.1.247, macOS) · vgl.
+`bugs/claude-tooling/claude-config.md` §3.9
 
 ---
 

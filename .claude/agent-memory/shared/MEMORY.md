@@ -155,6 +155,13 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"011621b3-e6b6-453c-8db8-3a0d357bd072","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/011621b3-e6b6-453c-8db8-3a0d357bd072.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"authentication_failed","last_assistant_message":"Not logged in · Please run /login"}
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+
+### 2026-08-26 17:09 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"05350bea-beeb-4167-ab9c-1d7776546c24","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/05350bea-beeb-4167-ab9c-1d7776546c24.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 5:10pm (Europe/Berlin)"}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -211,7 +218,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **worktree.baseRef:** "fresh" (NEU 2026-05-10) — schuetzt vor unpushed Commits in Worktrees
 - **Quality Gate:** quality-gate Agent (test+review+optimize parallel)
 - **Agents:** 29+ aktiv
-- **Hooks:** 46+ PS1, 46+ SH. Cross-Platform-Paritaet: 2026-05-10 startup-checks.sh nachgezogen (Disk-Cooldown).
+- **Hooks:** 46+ PS1, 46+ SH. Cross-Platform-Paritaet: 2026-05-10 startup-checks.sh nachgezogen (Disk-Cooldown). NEU 2026-08-27: `claude-login-sync` (.py/.sh/.ps1, SessionStart+SessionEnd) spiegelt die Claude-Anmeldung auf alle OpenLauncher-Profile — vorher verlangte jedes Profil (eigener CLAUDE_CONFIG_DIR = eigener Schluesselbund-Eintrag) eine eigene Anmeldung. Siehe bugs/claude-tooling/claude-config.md §3.9.
 - **Rules:** 57+ in ~/.claude/rules/
 - **Plugins:** 88+ installiert
 - **Session-Scorer:** v4 — Dedup-Bug 2026-05-10 GEFIXT (R7-Diagnose: Loop ueber letzte 10 Lines statt nur lastLine; reines session_id-Matching ohne "similar turns"-Toleranz nach Challenger-Review)

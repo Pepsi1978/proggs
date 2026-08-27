@@ -18,3 +18,4 @@
 | 5 | `model`/`outputStyle` | nicht live-reloaded — Neustart noetig | /model |
 | 6 | user-level rules `paths:` | nie user-level (ignoriert) — nur projektweit | .claude/rules paths: |
 | 7 | env-Vars | `NO_COLOR`/`FORCE_COLOR` wirken nur fuer Subprozesse (ab v2.1.143) | Umgebungsvariablen |
+| 8 | `CLAUDE_CONFIG_DIR` gesetzt | eigener Login je Ordner (macOS: Schluesselbund-Hash) — spiegeln statt neu anmelden | CLAUDE_CONFIG_DIR |
