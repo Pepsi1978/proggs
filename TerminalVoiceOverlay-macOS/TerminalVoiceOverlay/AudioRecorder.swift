@@ -63,6 +63,22 @@ final class AudioRecorder {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .denied, .restricted:
             throw RecorderError.permissionDenied
+        case .notDetermined:
+            // Noch nie gefragt (oder der Eintrag wurde zurueckgesetzt). Hier AKTIV nachfragen und
+            // auf die Antwort warten. Ohne diesen Schritt laeuft der Start einfach weiter und
+            // `AVAudioEngine.start()` scheitert mit dem nichtssagenden CoreAudio-Code 'what' -
+            // ein Dialog erscheint dabei NICHT von allein, AVAudioEngine loest ihn nicht aus.
+            DiagLog.write("Audio", "permission_request")
+            let semaphore = DispatchSemaphore(value: 0)
+            var granted = false
+            AVCaptureDevice.requestAccess(for: .audio) { ok in
+                granted = ok
+                semaphore.signal()
+            }
+            // Grosszuegiges Zeitfenster: der Benutzer muss den Systemdialog erst sehen und klicken.
+            _ = semaphore.wait(timeout: .now() + 60)
+            DiagLog.write("Audio", "permission_result", [("granted", granted)])
+            if !granted { throw RecorderError.permissionDenied }
         default:
             break
         }
@@ -70,7 +86,11 @@ final class AudioRecorder {
         var lastError: Error = RecorderError.noInputDevice
         for attempt in 0..<3 {
             do {
-                try startEngineOnce(forceRebind: attempt > 0)
+                DiagLog.write("Audio", "start_attempt", [("attempt", attempt)])
+                // Erst im DRITTEN Anlauf das Geraet erzwingen: die ersten beiden versuchen es mit
+                // einer frischen Engine, was den haeufigsten Fall (Ton-Stack sortiert sich gerade
+                // neu) ohne den riskanten AudioUnit-Eingriff loest.
+                try startEngineOnce(forceRebind: attempt >= 2)
                 if attempt > 0 {
                     NSLog("AudioRecorder: Aufnahme im %d. Anlauf gestartet", attempt + 1)
                 }
@@ -82,6 +102,9 @@ final class AudioRecorder {
                 lastError = error
                 NSLog("AudioRecorder: Start-Versuch %d fehlgeschlagen: %@",
                       attempt + 1, error.localizedDescription)
+                DiagLog.warn("Audio", "start_attempt_failed",
+                             [("attempt", attempt), ("err", error.localizedDescription),
+                              ("code", (error as NSError).code)])
                 // Kurz warten: bei einem Geraetewechsel braucht CoreAudio einen Moment, bis das
                 // neue Standardgeraet bereitsteht. Ohne Pause scheitern alle drei Anlaeufe gleich.
                 if attempt < 2 { Thread.sleep(forTimeInterval: 0.25) }
@@ -111,7 +134,15 @@ final class AudioRecorder {
         // Ohne die folgende Neuzuweisung bleibt die Aufnahme bis zum Neustart der App tot:
         // genau das Symptom "kein Mikrofon vorhanden", obwohl das Geraet im System da ist.
         var recordingFormat = inputNode.outputFormat(forBus: 0)
-        if forceRebind || recordingFormat.sampleRate <= 0 || recordingFormat.channelCount == 0 {
+        let formatInvalid = recordingFormat.sampleRate <= 0 || recordingFormat.channelCount == 0
+        // Das Geraet NUR dann ausdruecklich binden, wenn das Format tatsaechlich unbrauchbar ist
+        // (oder ein vorheriger Anlauf gescheitert ist). `AudioUnitSetProperty` auf einer bereits
+        // benutzten AudioUnit ist selbst ein Ausloeser fuer 'what' — beim Wiederholversuch reicht
+        // in aller Regel schon die frisch gebaute Engine.
+        if formatInvalid || forceRebind {
+            DiagLog.write("Audio", "rebind_input_device",
+                          [("reason", formatInvalid ? "format_invalid" : "retry"),
+                           ("device", defaultInput)])
             Self.bindInputDevice(defaultInput, to: inputNode)
             recordingFormat = inputNode.outputFormat(forBus: 0)
         }
@@ -199,7 +230,14 @@ final class AudioRecorder {
         // weitere Versuch scheiterte mit "Es laeuft bereits eine Aufnahme" - der Recorder war
         // fuer den Rest der Sitzung tot, ohne dass je eine Aufnahme lief.
         do {
+            // `prepare()` reserviert die Ressourcen des Graphen und bringt die AudioUnits in den
+            // startbereiten Zustand. Ohne diesen Schritt scheitert `start()` reproduzierbar mit
+            // kAudioUnitErr_CannotDoInCurrentContext (FourCC 'what', 2003329396) — die Engine ist
+            // dann schlicht noch nicht so weit. Der Aufruf fehlte hier bisher ganz.
+            engine.prepare()
             try engine.start()
+            DiagLog.write("Audio", "engine_started", [("rate", recordingFormat.sampleRate),
+                                                      ("channels", recordingFormat.channelCount)])
         } catch {
             inputNode.removeTap(onBus: 0)
             lock.lock()
@@ -208,6 +246,11 @@ final class AudioRecorder {
             self._isRecording = false
             lock.unlock()
             try? FileManager.default.removeItem(at: url)
+            let ns = error as NSError
+            DiagLog.error("Audio", "engine_start_failed", error,
+                          [("domain", ns.domain), ("code", ns.code),
+                           ("rate", recordingFormat.sampleRate),
+                           ("channels", recordingFormat.channelCount)])
             throw error
         }
 

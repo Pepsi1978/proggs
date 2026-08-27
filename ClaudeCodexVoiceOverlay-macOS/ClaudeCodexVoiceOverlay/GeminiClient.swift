@@ -7,7 +7,9 @@ final class GeminiClient {
     private let model = Config.current?.geminiModel ?? "gemini-3.1-flash-lite"
     private let thinkingLevel = Config.current?.geminiThinkingLevel ?? "MEDIUM"
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
-    private let maxRetries = 5
+    /// 1:1 Windows (GeminiClient.cs: MaxRetries = 0). Fuenf Versuche mit
+    /// 2/4/8/16/32 s Pause haben im Fehlerfall bis zu 62 Sekunden gewartet.
+    private let maxRetries = 0
     private let delays: [TimeInterval] = [2, 4, 8, 16, 32]
 
     init(apiKey: String) {
@@ -379,7 +381,8 @@ final class GeminiClient {
         var request = URLRequest(url: urlComponents.url!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
+        // 1:1 Windows (SharedHttp.Timeout = 15 s).
+        request.timeoutInterval = 15
 
         let payload: [String: Any] = [
             "contents": [

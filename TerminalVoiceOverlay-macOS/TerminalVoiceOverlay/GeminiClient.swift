@@ -7,7 +7,11 @@ final class GeminiClient {
     private let model = Config.current?.geminiModel ?? "gemini-3.1-flash-lite"
     private let thinkingLevel = Config.current?.geminiThinkingLevel ?? "MEDIUM"
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
-    private let maxRetries = 5
+    /// 1:1 Windows (GeminiClient.cs: MaxRetries = 0). Fuenf Versuche mit
+    /// 2/4/8/16/32 s Pause haben im Fehlerfall bis zu 62 Sekunden gewartet —
+    /// die Korrektur kam entweder gleich oder gar nicht, der Benutzer sass
+    /// derweil vor einem orangen Knopf.
+    private let maxRetries = 0
     private let delays: [TimeInterval] = [2, 4, 8, 16, 32]
 
     init(apiKey: String) {
@@ -39,11 +43,38 @@ final class GeminiClient {
         }
     }
 
+    /// Zwischenspeicher fuer Prompt-Dateien, geschluesselt nach Pfad und mit dem
+    /// Aenderungsdatum als Gueltigkeitsmarke. 1:1 Windows (`ReadPromptFileCached`):
+    /// die Korrektur-Prompts wurden bisher bei JEDER Diktat-Korrektur neu von der
+    /// Platte gelesen, obwohl sie sich fast nie aendern. Wird die Datei im Editor
+    /// geaendert, aendert sich ihr Datum und der Eintrag wird verworfen.
+    private static var promptCache: [String: (mtime: Date, text: String)] = [:]
+    private static let promptCacheLock = NSLock()
+
+    private static func readPromptFileCached(_ url: URL) -> String? {
+        let path = url.path
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let mtime = attrs[.modificationDate] as? Date else { return nil }
+
+        promptCacheLock.lock()
+        if let cached = promptCache[path], cached.mtime == mtime {
+            promptCacheLock.unlock()
+            return cached.text
+        }
+        promptCacheLock.unlock()
+
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        promptCacheLock.lock()
+        promptCache[path] = (mtime, text)
+        promptCacheLock.unlock()
+        return text
+    }
+
     private static func loadCorrectionPrompt(profile: Int) -> String? {
         // 1) Profil-spezifische Datei
         let profileURL = geminiPromptDir.appendingPathComponent(profilePromptFileName(profile))
         if FileManager.default.fileExists(atPath: profileURL.path),
-           let text = try? String(contentsOf: profileURL, encoding: .utf8) {
+           let text = readPromptFileCached(profileURL) {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
                 return isLegacyMinimalInterventionPrompt(profile: profile, text: trimmed)
@@ -55,7 +86,7 @@ final class GeminiClient {
         // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
         let legacyURL = geminiPromptDir.appendingPathComponent("gemini-correction-prompt.txt")
         if FileManager.default.fileExists(atPath: legacyURL.path),
-           let text = try? String(contentsOf: legacyURL, encoding: .utf8) {
+           let text = readPromptFileCached(legacyURL) {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty { return trimmed }
         }
@@ -451,7 +482,10 @@ final class GeminiClient {
         var request = URLRequest(url: urlComponents.url!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
+        // 1:1 Windows (SharedHttp.Timeout = 15 s). Die Korrektur ist ein kurzer
+        // Aufruf; 120 s liessen die Oberflaeche im Haenger zwei Minuten lang
+        // "verarbeiten" anzeigen.
+        request.timeoutInterval = 15
 
         let payload: [String: Any] = [
             "contents": [
