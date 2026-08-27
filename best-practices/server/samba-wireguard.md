@@ -271,6 +271,50 @@ ist der Aufbau falsch.
 **Quelle:** eigener Vorfall + Live-Diagnose 2026-08-27 (macOS 26.6.2, wireguard-go 0.0.20250522).
 
 
+---
+
+## §9 Grosse Dateien nicht ueber SMB schieben — SFTP als zweiter Transportweg
+
+> Gegenstueck im Almanach: `bugs/server/samba-wireguard.md` §14 (Nachmessung 27.08.2026).
+
+Ueber einen Tunnel mit rund 48 ms Latenz sind SMB und SFTP **gegenlaeufig** — der richtige Weg haengt
+an der Dateigroesse. Alle Werte serverseitig gegengeprueft, Leitung frei (Uplink 54,8 Mbit/s, roher
+SSH-Durchsatz durch den Tunnel 44 Mbit/s = erreichbares Maximum):
+
+| Fall | SMB | SFTP |
+|------|-----|------|
+| 60 x 50 KB | **18,7 Dateien/s** | 4,4 Dateien/s |
+| 1 x 48 MB | 10,2 Mbit/s | **37,1 Mbit/s** |
+| 6 x 8 MB | 26,7 Mbit/s | **40,5 Mbit/s** |
+
+**Regel:** mittlere Dateigroesse < 2 MB -> SMB mit vielen gleichzeitigen Transfers; >= 2 MB -> SFTP.
+Ein Kopier-Skript sollte das automatisch entscheiden, statt es dem Benutzer zu ueberlassen.
+
+```bash
+# SFTP inline, ohne Eintrag in der rclone-Konfig (Schluessel liegt in ~/SK):
+rclone copy "$QUELLE" ":sftp:/srv/samba/daten/$ZIEL" \
+  --sftp-host 10.8.0.1 --sftp-user root --sftp-key-file ~/SK/.../id_ed25519 \
+  --sftp-concurrency 64 --transfers 4 --buffer-size 32M
+ssh ... "chown -R frank:frank /srv/samba/daten/$ZIEL"   # PFLICHT, siehe unten
+```
+
+**Drei Dinge, die man dabei falsch machen kann:**
+1. **Besitzer vergessen.** SSH laeuft meist als `root`, die Freigabe gehoert dem Samba-User (uid 1000).
+   Ohne `chown` nach dem Transfer gehoeren die Dateien `root:root` und sind ueber den SMB-Mount nicht
+   mehr aenderbar — eine stille Regression. Alternativ dem Samba-User eine Login-Shell + eigenen
+   SSH-Zugang geben und gleich als er schreiben.
+2. **Share fehlt im Pfad.** Ein rclone-SMB-Remote ignoriert `share =` in der Konfig; der Share gehoert
+   in den Pfad (`remote:share/unterordner`). Gegenprobe: `rclone lsd remote:` — listet es die Shares
+   statt des Inhalts, fehlt das Praefix.
+3. **Ohne serverseitige Gegenprobe messen.** Der lokale SMB-Schreibpuffer taeuschte in einer Messung
+   138 Mbit/s bei 54,8 Mbit/s Uplink vor. Jede Durchsatzzahl mit `du -sh`/`ls -l` auf dem Server
+   verifizieren — und vorher die Leitung leerraeumen (Bufferbloat, §5).
+
+**Den SMB-Weg trotzdem behalten:** SFTP ist der schnellere Weg fuer grosse Dateien, nicht der bessere
+fuer alles. Faellt SSH aus, muss das Skript auf SMB zurueckfallen — sonst tauscht man einen
+Engpass gegen einen Totalausfall.
+
+
 ## Quellen
 Offizielle Samba-Doku (smb.conf, interfaces/bind interfaces only), UFW-Doku, MS-Mount-Doku · Recherche 2026-06-22 (Firecrawl+MiniMax).
 WNetAddConnection2/EnableLinkedConnections: Microsoft-Doku (mpr.dll, KB EnableLinkedConnections) · eigener Vorfall + Live-Diagnose 2026-06-24.

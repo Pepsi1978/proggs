@@ -462,6 +462,41 @@ Der Nutzen von rclone bleibt unter Last aber real: es haelt durch, wo SMB abbric
 | Der Mobilfunk-Anschluss "an sich" | 60/114 Mbit/s bei 48 ms — voellig brauchbar | ❌ nein |
 | Doppelte Verschluesselung (SMB AES-GCM **in** WireGuard) | Apple Silicon macht AES mit GB/s | ❌ nein |
 
+
+### ⭐⭐ Nachmessung 27.08.2026 abends: bei EINER grossen Datei ist SMB doch der Engpass
+
+Die obige Zeile „wenige grosse Dateien -> kein Unterschied" gilt nur, wenn MEHRERE grosse Dateien
+gleichzeitig laufen. Eine **einzelne** grosse Datei bleibt ueber SMB haengen — `--multi-thread-streams`
+aendert daran nichts, weil der rclone-SMB-Backend die Streams nicht wirklich parallel fuehrt.
+Alle Werte serverseitig gegengeprueft (Dateigroesse auf dem VPS), Leitung frei (Idle-Latenz 42,8 ms,
+`networkQuality`: Uplink **54,8 Mbit/s**), roher SSH-Durchsatz durch den Tunnel **44 Mbit/s** = das
+erreichbare Maximum:
+
+| Fall | SMB | SFTP | Urteil |
+|------|-----|------|--------|
+| 60 x 50 KB (klein) | **18,7 Dateien/s** | 4,4 Dateien/s | SMB gewinnt klar |
+| 1 x 48 MB (eine grosse Datei) | 10,2 Mbit/s | **37,1 Mbit/s** | SFTP, Faktor **3,6** |
+| 6 x 8 MB (mehrere grosse) | 26,7 Mbit/s | **40,5 Mbit/s** | SFTP, 92 % des Maximums |
+
+**FIX:** `cortex-copy.sh` waehlt seit Version 2.0.0 nicht nur das Profil, sondern auch den
+**Transportweg**: Schnitt < 2 MB -> SMB (64 gleichzeitig), Schnitt >= 2 MB -> **SFTP** ueber den
+SSH-Schluessel aus `~/SK/second-brain/id_ed25519`. Der SMB-Weg bleibt vollstaendig erhalten und ist
+der Rueckfall, wenn SSH nicht antwortet.
+
+**Falle dabei:** SSH laeuft als `root`, die Freigaben gehoeren `frank:frank` (uid 1000). Ohne
+Nacharbeit gehoeren per SFTP geschriebene Dateien `root:root` und sind ueber den SMB-Mount nicht mehr
+aenderbar. Deshalb setzt das Skript nach jedem SFTP-Transfer `chown -R frank:frank` auf den Zielpfad.
+
+**⚠️ Zwei Messfallen, die in dieser Sitzung zu falschen Zahlen fuehrten:**
+1. **Ziel ohne Share-Praefix.** Ein rclone-SMB-Remote ignoriert eine `share =`-Zeile in der Konfig —
+   der Share gehoert in den PFAD (`cortex-daten:daten/unterordner`). Schreibt man auf
+   `cortex-daten:unterordner`, sucht rclone einen Share dieses Namens, meldet je nach Aufruf trotzdem
+   „Transferred 100%" bzw. haengt minutenlang in Retries — und **es kommt nichts an**. Erkennbar an
+   `rclone lsd <remote>:`: listet es die SHARES statt des Inhalts, fehlt das Praefix.
+2. **Lokaler Schreibpuffer.** Eine SMB-Messung ergab 138 Mbit/s bei 54,8 Mbit/s Uplink — physikalisch
+   unmoeglich. **Jede** Durchsatzmessung serverseitig gegenpruefen (`ls -l`/`du -sh` per SSH), sonst
+   misst man den Puffer statt der Leitung.
+
 **Nebenfund:** Ein per Timeout abgebrochener SMB-Transfer laesst serverseitig ein offenes Handle
 zurueck — die betroffene Datei ist danach weder ueber den Mount noch per rclone loeschbar
 (`Resource busy` / `share access flags are incompatible`), auch ein Neu-Einbinden des Mounts
@@ -544,6 +579,15 @@ Repos (`de.frank.secondbrain.drivemount`, die Heartbeat-Jobs) sind echte Einmal-
 langlebiges Kind — der Mount haelt `automountd`, nicht der Job — und sind daher nicht betroffen. Auf
 Windows tritt die Klasse nicht auf: dort laeuft WireGuard als echter Dienst (§9-§11 decken die
 Windows-Reboot-Fallen ab).
+
+**Nebenwirkung beim Einspielen des Fixes (live erlebt):** Ein `launchctl bootout`/`bootstrap` des
+Tunnel-Daemons trennt den Tunnel fuer ein bis zwei Sekunden. Ein in dieser Sekunde laufender
+Finder-Kopiervorgang bricht mit **„Fehler 100057"** ab (macOS-Sammelfehler fuer einen weggebrochenen
+SMB-Schreibvorgang; das Mount-Log zeigt zeitgleich „Mount vorhanden aber TOT — loese + remounte"). Kein
+Datenverlust auf dem Server, der Mount kommt binnen Sekunden von selbst zurueck — den Kopiervorgang
+einfach wiederholen. **Regel:** Tunnel-Daemon nie neu laden, waehrend eine Uebertragung laeuft; fuer
+groessere Kopien ohnehin `cortex-copy.sh` nehmen (§14) — rclone setzt nach einem Abriss selbst wieder an,
+der Finder nicht.
 
 **Quelle:** Eigener Vorfall + Live-Diagnose 2026-08-27 (Systemlog-Korrelation, macOS 26.6.2).
 

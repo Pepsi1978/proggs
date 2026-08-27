@@ -45,6 +45,7 @@ sudo bash ~/proggs/second-brain-server/macos/setup-macos.sh --daemon
 | `de.frank.secondbrain.wireguard.plist` | LaunchDaemon: startet den Watchdog beim Boot, `KeepAlive` hält ihn am Leben | System |
 | `nsmb.conf.vorlage` | Vorlage für `/etc/nsmb.conf` (soft mounts → Finder friert bei Aussetzer nicht ein) | System |
 | `setup-macos.sh` | Installer für beide Teile | — |
+| `cortex-copy.sh` | **Schneller Kopierweg neben dem Mount** (Almanach §14). Waehlt Profil UND Transportweg automatisch: viele kleine Dateien -> SMB mit 64 gleichzeitigen Uebertragungen, grosse Dateien -> **SFTP** (1 x 48 MB: 37,1 statt 10,2 Mbit/s). Nach SFTP wird der Besitzer wieder auf `frank:frank` gesetzt. Ohne SSH faellt alles auf SMB zurueck. | User |
 | `install-cortex-ca.sh` | importiert Caddys interne Root-CA in den Login-Schlüsselbund → Chrome zeigt bei `https://10.8.0.1` ein Schloss statt "Nicht sicher" (idempotent, kein sudo) | User |
 | `../wg-endpoint-monitor.{sh,service,timer}` | VPS-seitig: protokolliert jeden Endpoint-/IP-Wechsel der Peers (Beweis für Client-IP-Wechsel) | VPS (root) |
 
