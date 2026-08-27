@@ -1024,11 +1024,21 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
 
     init(settings: PBAppSettings) {
         self.settings = settings
+        // Wunschhoehe 860 — auf kleinen Bildschirmen (MacBook Air, externe
+        // Zweitmonitore) passt das nicht, und der untere Teil des Dialogs war
+        // schlicht nicht erreichbar. Deshalb: Hoehe auf den sichtbaren Bereich
+        // deckeln und den Inhalt darunter scrollbar machen (siehe unten).
+        let preferredHeight: CGFloat = 860
+        let available = (NSScreen.main?.visibleFrame.height ?? preferredHeight) - 40
+        let windowHeight = Swift.min(preferredHeight, Swift.max(360, available))
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 640, height: 860),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: windowHeight),
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered, defer: false)
         window.title = "Einstellungen"
+        // Untergrenze, damit das Fenster nicht unter die Bedienbarkeit
+        // geschrumpft werden kann; nach oben bleibt es frei skalierbar.
+        window.minSize = NSSize(width: 560, height: 360)
         window.isReleasedWhenClosed = false
         // Keep Settings above the .floating overlay/panel. No demotion of
         // other panels required — that approach was fragile (stuck level
@@ -1189,18 +1199,59 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             statusLabel, connectRow,
         ], fullWidth: [clientIdField, clientSecretField])
 
-        let stack = NSStackView(views: [apiCard, vocabCard, promptsCard, behaviorCard, driveCard, buttonRow])
+        // Die Karten wandern in eine Scrollansicht; die Knopfreihe bleibt
+        // FEST am unteren Rand. Wuerde sie mitscrollen, waeren "Speichern" und
+        // "Abbrechen" auf einem kleinen Bildschirm erst nach dem Scrollen
+        // erreichbar — genau die Falle, die den Dialog vorher unbedienbar machte.
+        let stack = NSStackView(views: [apiCard, vocabCard, promptsCard, behaviorCard, driveCard])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
-        window.contentView?.addSubview(stack)
+
+        let contentScroll = NSScrollView()
+        contentScroll.translatesAutoresizingMaskIntoConstraints = false
+        contentScroll.hasVerticalScroller = true
+        contentScroll.hasHorizontalScroller = false
+        contentScroll.autohidesScrollers = false
+        contentScroll.borderType = .noBorder
+        contentScroll.drawsBackground = false
+        // Heller Scrollbalken: auf dem dunklen Untergrund waere die helle
+        // Standardvariante kaum zu sehen.
+        contentScroll.scrollerKnobStyle = .light
+
+        let documentView = NSView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        documentView.addSubview(stack)
+        contentScroll.documentView = documentView
+
+        buttonRow.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView?.addSubview(contentScroll)
+        window.contentView?.addSubview(buttonRow)
+
+        guard let contentView = window.contentView else { return }
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -16),
-            stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
+            // Scrollbereich fuellt alles oberhalb der Knopfreihe.
+            contentScroll.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            contentScroll.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            contentScroll.topAnchor.constraint(equalTo: contentView.topAnchor),
+            contentScroll.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -12),
+
+            // Knopfreihe fest am unteren Rand.
+            buttonRow.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            buttonRow.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 16),
+            buttonRow.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+
+            // Der Inhalt ist genau so breit wie der sichtbare Bereich — sonst
+            // entstuende zusaetzlich ein waagerechter Scrollbalken.
+            documentView.widthAnchor.constraint(equalTo: contentScroll.contentView.widthAnchor),
+
+            stack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -16),
+
             apiCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             vocabCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             promptsCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
