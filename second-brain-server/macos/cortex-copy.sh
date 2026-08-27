@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # cortex-copy.sh — Schnelles Kopieren zum/vom Cortex-Server (10.8.0.1) ueber WireGuard.
 #
-# WARUM DIESES SKRIPT (gemessen 27.08.2026, siehe bugs/server/samba-wireguard.md §12):
-#   Finder/SMB kopiert SERIELL. Bei ~50 ms Latenz zum VPS (Paris) wartet jeder einzelne
-#   SMB-Round-Trip die volle Laufzeit ab -> nur ~5 Mbit/s von ~60 Mbit/s Uplink (9 %).
-#   rclone kopiert mit mehreren Streams GLEICHZEITIG -> gemessen 42,6 Mbit/s (71 %).
-#   Das ist Faktor 8 — ohne dass sich an Leitung, Tunnel oder Server irgendetwas aendert.
+# WARUM DIESES SKRIPT (gemessen 27.08.2026, siehe bugs/server/samba-wireguard.md §14):
+#   Der Engpass zum VPS in Paris ist die LATENZ (rund 48 ms), nicht die Bandbreite.
+#   Finder/SMB arbeitet pro Datei seriell und wartet jeden Round-Trip voll ab:
+#     - VIELE KLEINE Dateien (200 x 50 KB): Finder 1,5 Dateien/s und brach mit Timeouts ab;
+#       rclone mit 64 gleichzeitigen Uebertragungen 29,8 Dateien/s -> rund Faktor 20.
+#     - WENIGE GROSSE Dateien: Finder 33,1 Mbit/s, rclone 36,4 Mbit/s -> kaum Unterschied,
+#       hier ist schlicht die Leitung voll (rund 60 Mbit/s Uplink).
+#   Das Skript waehlt das passende Profil automatisch anhand der mittleren Dateigroesse.
 #
 # BENUTZUNG:
 #   cortex-copy.sh push <lokaler-pfad> <ziel-auf-server>     # hochladen (kopieren)
@@ -78,26 +81,63 @@ if ! ping -c 2 -W 2000 10.8.0.1 >/dev/null 2>&1; then
   die "Server 10.8.0.1 antwortet nicht. Laeuft der WireGuard-Tunnel?  (macos/wireguard-up.sh)"
 fi
 
-# --- Optimale Parameter (gemessen, nicht geraten) --------------------------------------------
-# transfers 8:            8 Dateien gleichzeitig. 16 brachte nichts mehr (39 statt 43 Mbit/s)
-#                         -> die Leitung ist ab ~8 Streams gesaettigt.
-# multi-thread-streams 8: teilt EINE grosse Datei auf 8 Streams (sonst nur ~25 Mbit/s).
-# buffer-size 32M:        deckt das Bandbreiten-Verzoegerungs-Produkt ab (60 Mbit/s x 50 ms).
-# --local-no-set-modtime: spart einen SMB-Round-Trip pro Datei (bei ~50 ms spuerbar).
-RCLONE_OPTS=(
-  --transfers 8
-  --checkers 8
-  --multi-thread-streams 8
-  --multi-thread-cutoff 16M
-  --buffer-size 32M
-  --smb-idle-timeout 5m
-  --retries 5
-  --low-level-retries 20
-  --stats 5s
-  --progress
-  --log-file "$LOG"
-  --log-level INFO
-)
+# --- Parameter nach Dateigroesse waehlen (alles gemessen, nicht geraten) ---------------------
+#
+# Der Engpass ist die LATENZ (rund 48 ms), nicht die Bandbreite. Daraus folgen zwei voellig
+# verschiedene Faelle — deshalb waehlt das Skript das Profil automatisch:
+#
+#   VIELE KLEINE Dateien: jede Datei kostet mehrere Round-Trips. Hier hilft nur, sehr viele
+#     Dateien GLEICHZEITIG zu uebertragen. Gemessen (200 Dateien x 50 KB):
+#       Finder/SMB 1,5 Dateien/s (und brach mit Timeouts ab)  |  rclone  8 parallel:  6,2/s
+#       rclone 32 parallel: 21,0/s  |  48: 26,2/s  |  **64: 29,8/s**  -> Faktor 20 zum Finder.
+#   WENIGE GROSSE Dateien: hier ist die Leitung schon mit wenigen Streams voll. Gemessen
+#     (24 MB, leere Leitung): Finder/SMB 33,1 Mbit/s vs. rclone 36,4 Mbit/s — kaum Unterschied.
+#     Wichtig ist hier `--multi-thread-streams`, sonst bleibt EINE grosse Datei bei rund 25 Mbit/s.
+#
+# buffer-size 32M: deckt das Bandbreiten-Verzoegerungs-Produkt ab (60 Mbit/s x 48 ms).
+# --local-no-set-modtime: spart einen SMB-Round-Trip pro Datei (bei 48 ms spuerbar).
+
+# Durchschnittliche Dateigroesse eines lokalen Pfades ermitteln (in KB; 0 = unbekannt).
+mittlere_groesse_kb() {
+  local pfad="$1"
+  [ -e "$pfad" ] || { echo 0; return; }
+  if [ -f "$pfad" ]; then echo $(( $(stat -f%z "$pfad") / 1024 )); return; fi
+  # Ordner: Gesamtgroesse und Anzahl in EINEM Durchlauf (spart Zeit bei vielen Dateien)
+  local summe anzahl
+  read -r summe anzahl < <(find "$pfad" -type f -exec stat -f%z {} + 2>/dev/null \
+    | awk '{s+=$1; n++} END {print (n?s:0), (n?n:0)}')
+  [ "${anzahl:-0}" -gt 0 ] 2>/dev/null || { echo 0; return; }
+  echo $(( summe / anzahl / 1024 ))
+}
+
+# Setzt RCLONE_OPTS passend zur mittleren Dateigroesse.
+waehle_profil() {
+  local kb="$1" quelle="${2:-}"
+  local basis=(
+    --buffer-size 32M
+    --smb-idle-timeout 5m
+    --retries 5
+    --low-level-retries 20
+    --stats 5s
+    --progress
+    --log-file "$LOG"
+    --log-level INFO
+  )
+  if [ "$kb" -gt 0 ] && [ "$kb" -lt 2048 ]; then
+    # unter 2 MB im Schnitt -> latenzgebunden -> massiv parallel
+    PROFIL="viele kleine Dateien (Schnitt ${kb} KB) -> 64 gleichzeitig"
+    RCLONE_OPTS=(--transfers 64 --checkers 64 "${basis[@]}")
+  else
+    # grosse Dateien -> Leitung ist der Engpass -> wenige Streams, dafuer Datei aufteilen
+    if [ "$kb" -gt 0 ]; then PROFIL="grosse Dateien (Schnitt $((kb/1024)) MB) -> 8 gleichzeitig, je 8 Streams"
+    else PROFIL="Standard -> 8 gleichzeitig, je 8 Streams"; fi
+    RCLONE_OPTS=(--transfers 8 --checkers 8 --multi-thread-streams 8 --multi-thread-cutoff 16M "${basis[@]}")
+  fi
+  echo "⚙️  Profil: $PROFIL"
+  log info "profil: $PROFIL"
+}
+
+RCLONE_OPTS=()   # wird pro Befehl von waehle_profil gesetzt
 
 # --- Server-Pfad (daten:Unterordner) in ein rclone-Remote uebersetzen ------------------------
 zu_remote() {
@@ -118,6 +158,7 @@ case "$BEFEHL" in
     [ -e "$QUELLE" ] || die "Lokaler Pfad existiert nicht: $QUELLE"
     log info "push start: $QUELLE -> $ZIEL"
     echo "⬆️  Hochladen: $QUELLE  ->  $2"
+    waehle_profil "$(mittlere_groesse_kb "$QUELLE")"
     rclone copy "$QUELLE" "$ZIEL" "${RCLONE_OPTS[@]}" --local-no-set-modtime
     RC=$?; log info "push ende rc=$RC"
     [ $RC -eq 0 ] && echo "✅ Fertig." || die "Fehlgeschlagen (Code $RC) — Details im Protokoll."
@@ -128,6 +169,13 @@ case "$BEFEHL" in
     QUELLE="$(zu_remote "$1")"; ZIEL="$2"
     log info "pull start: $QUELLE -> $ZIEL"
     echo "⬇️  Herunterladen: $1  ->  $ZIEL"
+    # Groesse der Gegenseite erfragen, um dasselbe Profil wie beim Hochladen zu waehlen
+    GR_KB=$(rclone size "$QUELLE" --json 2>/dev/null \
+      | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); print(d['bytes']//d['count']//1024 if d.get('count') else 0)
+except Exception: print(0)" 2>/dev/null || echo 0)
+    waehle_profil "${GR_KB:-0}"
     rclone copy "$QUELLE" "$ZIEL" "${RCLONE_OPTS[@]}"
     RC=$?; log info "pull ende rc=$RC"
     [ $RC -eq 0 ] && echo "✅ Fertig." || die "Fehlgeschlagen (Code $RC) — Details im Protokoll."
@@ -147,6 +195,7 @@ case "$BEFEHL" in
     read -r -p "Wirklich so ausfuehren? (tippe JA) " ANTWORT
     [ "$ANTWORT" = "JA" ] || { echo "Abgebrochen — nichts veraendert."; log info "sync abgebrochen"; exit 0; }
     log info "sync start: $QUELLE -> $ZIEL"
+    waehle_profil "$(mittlere_groesse_kb "$QUELLE")"
     rclone sync "$QUELLE" "$ZIEL" "${RCLONE_OPTS[@]}" --local-no-set-modtime
     RC=$?; log info "sync ende rc=$RC"
     [ $RC -eq 0 ] && echo "✅ Abgleich fertig." || die "Fehlgeschlagen (Code $RC)"

@@ -77,41 +77,44 @@ falschen Gerät.
 
 ## Dateien schnell kopieren (Laufwerke `daten` + `gedanken`)
 
-Die SMB-Freigaben lassen sich im Finder/Explorer einbinden — zum **Stöbern**. Für **große
-Datenmengen ist der Finder der falsche Weg**: SMB arbeitet pro Datei-Handle seriell, und bei rund
-48 ms Latenz zum VPS wartet jeder Round-Trip die volle Laufzeit ab. Gemessen am 27.08.2026:
+Die SMB-Freigaben lassen sich im Finder/Explorer einbinden — zum **Stöbern** ist das genau richtig.
+Für **viele kleine Dateien** ist der Finder aber der falsche Weg: SMB arbeitet pro Datei seriell,
+und bei rund 48 ms Latenz zum VPS dominieren die Round-Trips. Gemessen am 27.08.2026:
 
-| Weg | Durchsatz | Anteil der Leitung (60 Mbit/s hoch) |
-|-----|-----------|--------------------------------------|
-| Finder/Explorer über SMB | 5,3 Mbit/s | 9 % |
-| `rclone`, 8 parallele Streams | **42,6 Mbit/s** | **71 %** |
+| Fall | Finder/Explorer | `cortex-copy` (rclone) | Unterschied |
+|------|-----------------|------------------------|-------------|
+| **200 Dateien × 50 KB** (Fotos, Dokumente) | 1,5 Dateien/s — brach mit Timeouts ab | **29,8 Dateien/s** | rund **20×** |
+| **Wenige große Dateien** | 33,1 Mbit/s | 36,4 Mbit/s | kaum ein Unterschied |
 
-Dafür liegt ein fertiges Werkzeug bereit — es bringt die gemessen optimalen Parameter mit und legt
-seine rclone-Konfiguration beim ersten Start selbst aus `~/SK/second-brain/samba.env` an:
+Kurz: **Bei großen Dateien ist der Finder in Ordnung, bei vielen kleinen ist er unbrauchbar.**
+Das mitgelieferte Werkzeug wählt das passende Profil automatisch anhand der mittleren Dateigröße
+und legt seine rclone-Konfiguration beim ersten Start selbst aus `~/SK/second-brain/samba.env` an:
 
 ```bash
 # macOS (einmalig: brew install rclone)
-second-brain-server/macos/cortex-copy.sh push ~/Filme daten:Filme      # hochladen
-second-brain-server/macos/cortex-copy.sh pull gedanken:Notizen ~/Notizen  # herunterladen
-second-brain-server/macos/cortex-copy.sh sync ~/Projekte daten:Backup  # abgleichen (fragt nach!)
-second-brain-server/macos/cortex-copy.sh bench                         # Durchsatz messen
+second-brain-server/macos/cortex-copy.sh push ~/Fotos daten:Fotos          # hochladen
+second-brain-server/macos/cortex-copy.sh pull gedanken:Notizen ~/Notizen   # herunterladen
+second-brain-server/macos/cortex-copy.sh sync ~/Projekte daten:Backup      # abgleichen (fragt nach!)
+second-brain-server/macos/cortex-copy.sh bench                             # Durchsatz messen
 ```
 
 ```powershell
 # Windows (einmalig: winget install Rclone.Rclone)
-.\second-brain-server\windows\cortex-copy.ps1 push C:\Filme daten:Filme
+.\second-brain-server\windows\cortex-copy.ps1 push C:\Fotos daten:Fotos
 ```
 
 Protokoll: `~/Library/Logs/cortex-copy/` (macOS) bzw. `%LOCALAPPDATA%\cortex-copy\` (Windows).
 
-**Grenzen, die kein Tuning aufhebt:** Der Durchsatz ist durch den **Uplink** gedeckelt — bei
-60 Mbit/s dauert **1 TB rund 37 Stunden**, auch perfekt parallelisiert. Für große Erstbefüllungen
-ist ein physischer Datenträger schneller als jede Leitung; danach nur noch Deltas per `sync`.
-Und: Eine **parallel laufende Last** (Steam-Download, Cloud-Sync) verfälscht per Bufferbloat jede
-Messung (48 ms → 218 ms Latenz) — vor dem Messen die Leitung leerräumen.
+**Zwei Dinge, die kein Tuning aufhebt:**
+- Der Durchsatz ist durch den **Uplink** gedeckelt — bei 60 Mbit/s dauert **1 TB rund 37 Stunden**,
+  auch perfekt parallelisiert. Für große Erstbefüllungen ist ein physischer Datenträger schneller
+  als jede Leitung; danach nur noch Deltas per `sync`.
+- Eine **parallel laufende Last** (großer Download, Cloud-Sync) verfälscht per Bufferbloat jede
+  Messung und lässt SMB einbrechen (48 ms → 218 ms Latenz, SMB auf 5 Mbit/s). Vor dem Messen die
+  Leitung leerräumen und mit `netstat -ib` gegenprüfen.
 
-Hintergrund und die ausgeschlossenen Fehlerursachen: `bugs/server/samba-wireguard.md` §14,
-Vorgehen: `best-practices/server/samba-wireguard.md` §5.
+Hintergrund, Messreihen und die ausgeschlossenen Fehlerursachen: `bugs/server/samba-wireguard.md`
+§14; Vorgehen: `best-practices/server/samba-wireguard.md` §5.
 
 ## Cockpit im Browser: HTTPS ohne "Nicht sicher"
 Das Web-Cockpit erreicht man über **`https://10.8.0.1`** (Caddy, Port 443 an der WireGuard-IP).

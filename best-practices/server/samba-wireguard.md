@@ -104,45 +104,50 @@ WireGuard-Tunnel beim Login schon steht (sonst rotes X bis Klick). Test: `Test-N
 
 ## §5 Performance ueber den Tunnel
 
-**Die Reihenfolge ist entscheidend — Parallelitaet zuerst, MTU erst danach.** Live gemessen
-2026-08-27 (macOS -> VPS Paris, 48 ms Latenz, 60 Mbit/s Uplink) brachte Parallelitaet **Faktor 8**,
-waehrend am MTU-Tuning gar nichts zu holen war (Path-MTU war voellig in Ordnung).
+**Die Dateigroesse entscheidet, was zu tun ist.** Der Engpass ueber einen Tunnel mit spuerbarer
+Latenz (hier 48 ms) ist nicht die Bandbreite, sondern die Anzahl der Round-Trips. Live gemessen
+2026-08-27 (macOS -> VPS Paris, 60 Mbit/s Uplink):
 
-**1. Nicht mit Finder/Explorer kopieren — mit parallelen Streams.** SMB arbeitet pro Datei-Handle
-seriell: jede Operation wartet auf die Antwort der Gegenseite. Im LAN egal, bei 48 ms Latenz steht
-die Leitung dadurch die meiste Zeit still (gemessen: **5,3 von 60 Mbit/s = 9 %**). Nur gleichzeitige
-Streams fuellen das Bandbreiten-Verzoegerungs-Produkt:
+| Fall | Finder/Explorer ueber SMB | rclone parallel | Konsequenz |
+|------|---------------------------|-----------------|------------|
+| **Viele kleine** Dateien (200 x 50 KB) | 1,5 Dateien/s, brach mit Timeouts ab | **29,8 Dateien/s** (`--transfers 64`) | rund **20x** — hier lohnt es sich massiv |
+| **Wenige grosse** Dateien (leere Leitung) | 33,1 Mbit/s | 36,4 Mbit/s | 1,1x — SMB ist voellig in Ordnung |
+
+**1. Viele kleine Dateien: massiv parallel uebertragen.** Jede Datei kostet mehrere Round-Trips;
+nur Gleichzeitigkeit fuellt die Leitung. Gemessener Verlauf (200 x 50 KB): 8 gleichzeitig -> 6,2
+Dateien/s, 32 -> 21,0, 48 -> 26,2, **64 -> 29,8**, 128 -> 38,6 (schwankend). **64 ist der
+empfohlene Wert** — darueber flacht der Gewinn ab und der VPS wird unnoetig belastet.
 
 ```bash
-rclone copy <quelle> <ziel> \
-  --transfers 8 --checkers 8 \
-  --multi-thread-streams 8 --multi-thread-cutoff 16M \
-  --buffer-size 32M
-# gemessen: 42,6 Mbit/s = 71 % der Leitung (Faktor 8 gegenueber dem Finder)
+rclone copy <quelle> <ziel> --transfers 64 --checkers 64 --buffer-size 32M
 ```
 
-Fertige Wrapper im Repo: `second-brain-server/macos/cortex-copy.sh` und
-`windows/cortex-copy.ps1` (`push` / `pull` / `sync` / `ls` / `bench`).
+**2. Wenige grosse Dateien: `--multi-thread-streams` nicht vergessen.** Hier ist die Leitung der
+Engpass, viele parallele Transfers bringen nichts. Ohne den Schalter bleibt aber EINE grosse
+Datei bei rund 25 Mbit/s, weil auch dort serialisiert wird:
 
-* **8 Streams sind das Optimum** — 16 machte es wieder schlechter (39 statt 43 Mbit/s). Ab etwa
-  8 gleichzeitigen Streams ist die Leitung gesaettigt; mehr erzeugt nur Konkurrenz.
-* **`--multi-thread-streams` nicht vergessen**, wenn einzelne grosse Dateien geschoben werden —
-  ohne den Schalter bleibt EINE grosse Datei bei rund 25 Mbit/s, weil auch dort serialisiert wird.
-* Der SMB-Mount darf ruhig eingebunden bleiben (zum Stoebern im Finder) — er ist nur nicht der
-  Weg fuer grosse Datenmengen.
+```bash
+rclone copy <quelle> <ziel> --transfers 8 --checkers 8 \
+  --multi-thread-streams 8 --multi-thread-cutoff 16M --buffer-size 32M
+```
 
-**2. Erst danach MTU/MSS pruefen.** WireGuard-MTU senken (`MTU = 1350` im `[Interface]`) +
-TCP-MSS-Clamping, mehrere Werte testen (1380/1350/1280). **Vorher messen, ob ueberhaupt ein
-Problem vorliegt** — per `ping -D -s <groesse>` (Don't-Fragment) die echte Path-MTU ermitteln.
-Kommt die volle Groesse durch, ist MTU-Tuning wirkungslos und kostet nur Zeit (Almanach §3, §14).
+Fertige Wrapper, die das Profil **automatisch** anhand der mittleren Dateigroesse waehlen:
+`second-brain-server/macos/cortex-copy.sh` und `windows/cortex-copy.ps1`
+(`push` / `pull` / `sync` / `ls` / `bench`). Der SMB-Mount darf eingebunden bleiben — er ist zum
+Stoebern gut, nur nicht der Weg fuer grosse Datenmengen.
 
-**3. Messen, aber sauber.** Ein nebenher laufender Download (Steam, Updates, Cloud-Sync) saettigt
-die Leitung und treibt per **Bufferbloat** die Latenz hoch (hier gesehen: 48 ms -> 218 ms) — jede
-Messung wird dann wertlos. Vor der Messung Leitung leerraeumen und mit `netstat -ib` (macOS) bzw.
-dem Ressourcenmonitor (Windows) gegenpruefen. Werkzeuge: `networkQuality -v` (macOS, misst auch
-Bufferbloat), `cortex-copy.sh bench`.
+**3. MTU/MSS erst pruefen, wenn wirklich ein Problem vorliegt.** WireGuard-MTU senken
+(`MTU = 1350`) + MSS-Clamping hilft nur bei einem echten Path-MTU-Black-Hole. Vorher mit
+`ping -D -s <groesse>` (Don't Fragment) messen: kommt die volle Groesse durch, ist MTU-Tuning
+wirkungslos (Almanach §3, §14).
 
-**4. Die Grenze kennen.** Der Durchsatz ist durch den **Uplink** gedeckelt: bei 60 Mbit/s dauert
+**4. Sauber messen — sonst misst man Bufferbloat.** Ein nebenher laufender Download saettigt die
+Leitung und treibt die Latenz hoch (hier gesehen: 48 -> 218 ms, Responsiveness 1,2 s). SMB bricht
+dann auf 5 Mbit/s ein und laeuft in `max_resp_timeout`. Vor der Messung Leitung leerraeumen und
+mit `netstat -ib` (macOS) gegenpruefen; `ping` mitlaufen lassen. Werkzeuge: `networkQuality -v`
+(macOS, misst Bufferbloat mit), `cortex-copy.sh bench`.
+
+**5. Die Grenze kennen.** Der Durchsatz ist durch den **Uplink** gedeckelt: bei 60 Mbit/s dauert
 **1 TB rund 37 Stunden**, auch perfekt parallelisiert. Fuer grosse Erstbefuellungen ist ein
 physischer Datentraeger schneller als jede Leitung; danach nur noch Deltas per `rclone sync`.
 

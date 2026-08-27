@@ -11,7 +11,7 @@
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
 > zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections);
 > erweitert **2026-06-25** um den Persistent-Login-Race / "mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom
-> SELBEN VPS (§11); erweitert **2026-08-27** um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz, parallele Streams = Faktor 8, inkl. ausgeschlossener Ursachen).
+> SELBEN VPS (§11); erweitert **2026-08-27** um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz — bei VIELEN KLEINEN Dateien rund Faktor 20, bei grossen Dateien kein Unterschied; inkl. Bufferbloat-Messfalle und ausgeschlossener Ursachen).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -388,72 +388,86 @@ auf dem VPS → Server gesund? → Ursache ist der Client-Endpoint-Wechsel.
 
 ---
 
-## 14. ⭐⭐ SMB ist "extrem langsam" ueber den Tunnel — SMB kopiert SERIELL (live gemessen 2026-08-27)
+## 14. ⭐⭐ SMB "extrem langsam" ueber den Tunnel — es kommt auf die DATEIGROESSE an (live gemessen 2026-08-27)
 
-**Symptom:** Finder/Explorer kopiert auf die Tunnel-Laufwerke mit wenigen Mbit/s, obwohl der
-Anschluss ein Vielfaches koennte. Grosse Dateien brechen zusaetzlich mit
-`fcopyfile failed: Operation timed out` ab.
+**Symptom:** Kopieren auf die Tunnel-Laufwerke dauert ewig; bei vielen kleinen Dateien brechen
+Transfers zusaetzlich mit `Operation timed out` / `Not a directory` ab.
 
-**Live gemessene Ausgangslage (macOS-Client -> Hostinger-VPS Paris, WireGuard):**
+**Messaufbau:** macOS-Client -> Hostinger-VPS Paris ueber WireGuard. Leitung 60 Mbit/s hoch /
+114 Mbit/s runter, Grundlatenz **48 ms** (bei leerer Leitung, mit `ping` gegengeprueft).
 
-| Messgroesse | Wert |
-|-------------|------|
-| Leitung (macOS `networkQuality`) | **60 Mbit/s** hoch, 114 Mbit/s runter |
-| Grundlatenz zum Server (leere Leitung) | **48 ms** (min), rund 86 ms Mittel |
-| Path-MTU im Tunnel | **kein Problem** — 1500 im Netz, Tunnel 1420 mit Luft |
-| SMB, 1 Datei seriell (`cp` auf den Mount) | **5,3 Mbit/s** = 9 % der Leitung |
-| SMB, 6 Dateien parallel (`xargs -P6`) | 22,1 Mbit/s |
-| **rclone, 8 Streams parallel** | **42,6 Mbit/s = 71 % der Leitung** |
-| rclone, 16 Streams | 39,3 Mbit/s (schlechter -> ab 8 gesaettigt) |
-| rclone, EINE grosse Datei, 8 Multi-Thread-Streams | 24,8 Mbit/s hoch / 26,2 Mbit/s runter |
+### Der entscheidende Unterschied: kleine vs. grosse Dateien
 
-**Root Cause:** SMB ist ein *chattiges* Protokoll und arbeitet pro Datei-Handle **seriell**:
-jede Operation (Open, Write, Close, Metadaten) wartet auf die Antwort der Gegenseite, bevor die
-naechste losgeht. Im LAN (unter 1 ms) faellt das nicht auf. Bei **48 ms** Latenz kostet jeder
-Round-Trip die volle Laufzeit — die Leitung steht die meiste Zeit still. Das ist kein Defekt,
-sondern das Bandbreiten-Verzoegerungs-Produkt: nur *gleichzeitige* Streams fuellen die Leitung.
-Der Finder legt obendrauf noch Metadaten-Operationen pro Datei (`.DS_Store`, Ressource-Forks).
+| Fall | Finder/SMB | rclone (parallel) | Faktor |
+|------|-----------|-------------------|--------|
+| **200 Dateien x 50 KB** (Fotos, Dokumente) | **1,5 Dateien/s** — und brach mit Timeouts ab | **29,8 Dateien/s** (64 gleichzeitig) | **rund 20x** |
+| **Wenige grosse Dateien** (24 MB, leere Leitung) | 33,1 Mbit/s | 36,4 Mbit/s | 1,1x (egal) |
 
-**FIX (funktionserhaltend — SMB bleibt eingebunden, es kommt ein schneller Weg DANEBEN):**
-`rclone` mit parallelen Streams statt Finder/Explorer benutzen. Fertige Skripte im Repo:
-`second-brain-server/macos/cortex-copy.sh` bzw. `windows/cortex-copy.ps1`
-(`push` / `pull` / `sync` / `ls` / `bench`).
+**Root Cause:** SMB arbeitet pro Datei-Handle **seriell** — jede Operation (Open, Write, Close,
+Metadaten) wartet auf die Antwort der Gegenseite. Der Engpass ist damit die **Latenz, nicht die
+Bandbreite**:
+
+* Bei **vielen kleinen** Dateien dominieren die Round-Trips. 200 Dateien x mehrere Round-Trips
+  x 48 ms = Minuten, waehrend die Leitung praktisch leer bleibt. Nur **viele gleichzeitige**
+  Uebertragungen helfen.
+* Bei **wenigen grossen** Dateien amortisiert sich der Round-Trip ueber viele MB Nutzdaten —
+  hier ist die Leitung ohnehin der Engpass, und SMB ist voellig in Ordnung.
+
+### Wie stark Parallelitaet bei kleinen Dateien wirkt (gemessen, 200 x 50 KB)
+
+| gleichzeitige Uebertragungen | 8 | 32 | 48 | 64 | 128 |
+|------------------------------|---|----|----|----|-----|
+| Dateien/s | 6,2 | 21,0 | 26,2 | **29,8** | 38,6 |
+
+Ab etwa 64 flacht der Gewinn ab und die Messwerte schwanken. **64 ist der empfohlene Wert** —
+mehr belastet den (kleinen) VPS ohne verlaesslichen Zusatznutzen.
+
+**FIX (funktionserhaltend — der SMB-Mount bleibt, es kommt ein schneller Weg DANEBEN):**
+`second-brain-server/macos/cortex-copy.sh` bzw. `windows/cortex-copy.ps1`. Die Skripte waehlen
+das Profil **automatisch** anhand der mittleren Dateigroesse:
 
 ```bash
-# Kern der Sache (die Werte sind gemessen, nicht geraten):
-rclone copy <quelle> <ziel> \
-  --transfers 8 --checkers 8 \
-  --multi-thread-streams 8 --multi-thread-cutoff 16M \
-  --buffer-size 32M
+# unter 2 MB Schnitt -> latenzgebunden -> massiv parallel:
+rclone copy <quelle> <ziel> --transfers 64 --checkers 64 --buffer-size 32M
+# darueber -> Leitung ist der Engpass -> wenige Transfers, dafuer Datei aufteilen:
+rclone copy <quelle> <ziel> --transfers 8 --checkers 8 \
+  --multi-thread-streams 8 --multi-thread-cutoff 16M --buffer-size 32M
 ```
 
-* `--transfers 8` — 8 Dateien gleichzeitig. **16 bringt nichts mehr** (39 statt 43 Mbit/s).
-* `--multi-thread-streams 8` — zerlegt EINE grosse Datei in 8 Streams. Ohne das bleibt eine
-  einzelne grosse Datei bei rund 25 Mbit/s haengen (SMB-Backend serialisiert sonst auch hier).
-* `--buffer-size 32M` — deckt das Bandbreiten-Verzoegerungs-Produkt ab (60 Mbit/s x 48 ms).
+`--multi-thread-streams` bei grossen Dateien nicht vergessen: ohne den Schalter bleibt EINE
+grosse Datei bei rund 25 Mbit/s, weil auch dort serialisiert wird.
 
-**Was NICHT die Ursache war (jeweils ausgeschlossen — spart die naechste Fehldiagnose):**
+### ⚠️ Messfalle, die zuerst zur Fehldiagnose fuehrte
+
+Die ersten Messungen dieser Session entstanden, waehrend im Hintergrund ein grosser Download
+lief. Der saettigte die Leitung und trieb per **Bufferbloat** die Latenz hoch — **48 ms -> 218 ms**
+(Spitzen 300 ms), Responsiveness 1,2 s. Unter diesen Bedingungen brach SMB auf **5,3 Mbit/s** ein
+(rclone hielt 42,6 Mbit/s), und ein 50-MB-`cp` starb nach 14 s an `max_resp_timeout=30`
+(siehe `nsmb.conf`). Daraus entstand faelschlich der Schluss "SMB ist generell 8x langsamer".
+
+**Regel daraus:** Vor JEDER Durchsatzmessung die Leitung leerraeumen und das mit
+`netstat -ib` (macOS) bzw. dem Ressourcenmonitor gegenpruefen; zusaetzlich `ping` mitlaufen
+lassen — steigt die Latenz deutlich ueber den Ruhewert, misst man Bufferbloat, nicht SMB.
+Der Nutzen von rclone bleibt unter Last aber real: es haelt durch, wo SMB abbricht.
+
+**Was NICHT die Ursache war (jeweils gegengemessen — spart die naechste Fehldiagnose):**
 
 | Verdacht | Messung | Urteil |
 |----------|---------|--------|
-| WLAN zu schwach | 802.11ax, 5 GHz, -45 dBm, 816 Mbit/s Linkrate | ❌ nicht die Ursache |
-| MTU / Path-MTU-Black-Hole (§3) | 1500 im Netz durchgaengig, Tunnel-MTU 1420 mit Reserve | ❌ nicht die Ursache |
-| WireGuard-Overhead | Tunnel kostet nur rund 19 ms gegenueber der direkten Route | ❌ nicht die Ursache |
-| Der Mobilfunk-Anschluss "an sich" | 60/114 Mbit/s, 48 ms — voellig brauchbar | ❌ nicht die Ursache |
-| Doppelte Verschluesselung (SMB AES-GCM **in** WireGuard) | Apple-Silicon macht AES mit GB/s | ❌ kein Flaschenhals |
-
-⚠️ **Messfalle:** Ein parallel laufender grosser Download (Steam, Updates, Cloud-Sync) saettigt
-die Leitung und treibt per **Bufferbloat** die Latenz hoch (hier: 48 ms -> 218 ms, Responsiveness
-1,2 s). Jede Durchsatzmessung wird dann wertlos. **Vor jeder Messung die Leitung leerraeumen**
-und mit `netstat -ib` (macOS) gegenpruefen, dass wirklich nichts laeuft.
+| WLAN zu schwach | 802.11ax, 5 GHz, -45 dBm, 816 Mbit/s Linkrate | ❌ nein |
+| MTU / Path-MTU-Black-Hole (§3) | `ping -D`: volle 1500 im Netz, Tunnel-MTU 1420 mit Reserve | ❌ nein |
+| WireGuard-Overhead | Tunnel kostet rund 19 ms gegenueber der direkten Route | ❌ nein |
+| Der Mobilfunk-Anschluss "an sich" | 60/114 Mbit/s bei 48 ms — voellig brauchbar | ❌ nein |
+| Doppelte Verschluesselung (SMB AES-GCM **in** WireGuard) | Apple Silicon macht AES mit GB/s | ❌ nein |
 
 **Nebenfund:** Ein per Timeout abgebrochener SMB-Transfer laesst serverseitig ein offenes Handle
-zurueck — die halbe Datei ist danach fuer eine Weile weder ueber den Mount noch per rclone
-loeschbar (`Resource busy` / `share access flags are incompatible`). Sie loest sich mit dem
-SMB-Idle-Timeout von selbst; nicht mit Gewalt nachhelfen.
+zurueck — die betroffene Datei ist danach weder ueber den Mount noch per rclone loeschbar
+(`Resource busy` / `share access flags are incompatible`), auch ein Neu-Einbinden des Mounts
+loest das nicht. Sie verschwindet erst, wenn Samba die Session serverseitig aufraeumt. Nicht mit
+Gewalt nachhelfen.
 
 **Grenze, die kein Tuning aufhebt:** Der Durchsatz ist durch den **Uplink** gedeckelt. Bei
-60 Mbit/s dauert **1 TB rund 37 Stunden** — selbst perfekt parallelisiert. Fuer wirklich grosse
+60 Mbit/s dauert **1 TB rund 37 Stunden** — selbst perfekt parallelisiert. Fuer grosse
 Erstbefuellungen ist ein physischer Datentraeger schneller als jede Leitung; danach nur noch
 Deltas per `rclone sync` schieben.
 

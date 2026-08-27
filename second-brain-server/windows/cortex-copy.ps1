@@ -1,10 +1,13 @@
 ﻿# cortex-copy.ps1 - Schnelles Kopieren zum/vom Cortex-Server (10.8.0.1) ueber WireGuard.
 #
-# WARUM DIESES SKRIPT (gemessen 27.08.2026, siehe bugs/server/samba-wireguard.md §12):
-#   Der Explorer kopiert ueber SMB SERIELL. Bei rund 50 ms Latenz zum VPS (Paris) wartet
-#   jeder SMB-Round-Trip die volle Laufzeit ab -> nur rund 5 Mbit/s von rund 60 Mbit/s
-#   Uplink (9 Prozent). rclone kopiert mit mehreren Streams GLEICHZEITIG -> gemessen
-#   42,6 Mbit/s (71 Prozent). Faktor 8, ohne Aenderung an Leitung, Tunnel oder Server.
+# WARUM DIESES SKRIPT (gemessen 27.08.2026, siehe bugs/server/samba-wireguard.md §14):
+#   Der Engpass zum VPS in Paris ist die LATENZ (rund 48 ms), nicht die Bandbreite.
+#   Explorer/SMB arbeitet pro Datei seriell und wartet jeden Round-Trip voll ab:
+#     - VIELE KLEINE Dateien (200 x 50 KB): Finder 1,5 Dateien/s und brach mit Timeouts ab;
+#       rclone mit 64 gleichzeitigen Uebertragungen 29,8 Dateien/s -> rund Faktor 20.
+#     - WENIGE GROSSE Dateien: Finder 33,1 Mbit/s, rclone 36,4 Mbit/s -> kaum Unterschied,
+#       hier ist schlicht die Leitung voll (rund 60 Mbit/s Uplink).
+#   Das Skript waehlt das passende Profil automatisch anhand der mittleren Dateigroesse.
 #
 # BENUTZUNG:
 #   .\cortex-copy.ps1 push <lokaler-pfad> <daten:ziel>      # hochladen
@@ -100,15 +103,20 @@ if (-not (Test-Connection -ComputerName 10.8.0.1 -Count 2 -Quiet -ErrorAction Si
     Abbruch "Server 10.8.0.1 antwortet nicht. Laeuft der WireGuard-Tunnel?"
 }
 
-# --- Optimale Parameter (gemessen, nicht geraten) --------------------------------------------
-# transfers 8:            8 Dateien gleichzeitig. 16 brachte nichts mehr (39 statt 43 Mbit/s).
-# multi-thread-streams 8: teilt EINE grosse Datei auf 8 Streams (sonst nur rund 25 Mbit/s).
-# buffer-size 32M:        deckt das Bandbreiten-Verzoegerungs-Produkt ab (60 Mbit/s x 50 ms).
-$RcloneOpts = @(
-    "--transfers", "8",
-    "--checkers", "8",
-    "--multi-thread-streams", "8",
-    "--multi-thread-cutoff", "16M",
+# --- Parameter nach Dateigroesse waehlen (alles gemessen, nicht geraten) ---------------------
+#
+# Der Engpass ist die LATENZ (rund 48 ms), nicht die Bandbreite. Daraus folgen zwei voellig
+# verschiedene Faelle, deshalb waehlt das Skript das Profil automatisch:
+#
+#   VIELE KLEINE Dateien: jede Datei kostet mehrere Round-Trips. Hier hilft nur, sehr viele
+#     Dateien GLEICHZEITIG zu uebertragen. Gemessen (200 Dateien x 50 KB):
+#       Explorer/SMB 1,5 Dateien/s (brach mit Timeouts ab) | rclone 8 parallel: 6,2/s
+#       rclone 32 parallel: 21,0/s | 48: 26,2/s | 64: 29,8/s  -> rund Faktor 20.
+#   WENIGE GROSSE Dateien: hier ist die Leitung schon mit wenigen Streams voll. Gemessen
+#     (24 MB, leere Leitung): Explorer/SMB 33,1 Mbit/s vs. rclone 36,4 Mbit/s.
+#     Wichtig ist hier --multi-thread-streams, sonst bleibt EINE grosse Datei bei rund 25 Mbit/s.
+
+$BasisOpts = @(
     "--buffer-size", "32M",
     "--smb-idle-timeout", "5m",
     "--retries", "5",
@@ -118,6 +126,37 @@ $RcloneOpts = @(
     "--log-file", $Log,
     "--log-level", "INFO"
 )
+
+# Mittlere Dateigroesse eines lokalen Pfades in KB (0 = unbekannt).
+function MittlereGroesseKB {
+    param([string]$Pfad)
+    if (-not (Test-Path $Pfad)) { return 0 }
+    $eintrag = Get-Item $Pfad
+    if (-not $eintrag.PSIsContainer) { return [int]($eintrag.Length / 1KB) }
+    $mess = Get-ChildItem -Path $Pfad -Recurse -File -ErrorAction SilentlyContinue |
+            Measure-Object -Property Length -Sum
+    if (-not $mess -or $mess.Count -eq 0) { return 0 }
+    return [int](($mess.Sum / $mess.Count) / 1KB)
+}
+
+# Setzt $script:RcloneOpts passend zur mittleren Dateigroesse.
+function WaehleProfil {
+    param([int]$KB)
+    if ($KB -gt 0 -and $KB -lt 2048) {
+        $text = "viele kleine Dateien (Schnitt $KB KB) -> 64 gleichzeitig"
+        $script:RcloneOpts = @("--transfers", "64", "--checkers", "64") + $BasisOpts
+    }
+    else {
+        if ($KB -gt 0) { $text = "grosse Dateien (Schnitt $([int]($KB/1024)) MB) -> 8 gleichzeitig, je 8 Streams" }
+        else { $text = "Standard -> 8 gleichzeitig, je 8 Streams" }
+        $script:RcloneOpts = @("--transfers", "8", "--checkers", "8",
+                               "--multi-thread-streams", "8", "--multi-thread-cutoff", "16M") + $BasisOpts
+    }
+    Write-Host "Profil: $text" -ForegroundColor DarkCyan
+    Schreibe-Log "info" "profil: $text"
+}
+
+$RcloneOpts = @()   # wird pro Befehl von WaehleProfil gesetzt
 
 function ZuRemote {
     param([string]$Pfad)
@@ -139,6 +178,7 @@ switch ($Befehl) {
         $ziel = ZuRemote $Zweites
         Schreibe-Log "info" "push start: $Erstes -> $ziel"
         Write-Host "Hochladen: $Erstes  ->  $Zweites" -ForegroundColor Cyan
+        WaehleProfil (MittlereGroesseKB $Erstes)
         & rclone copy $Erstes $ziel @RcloneOpts
         if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Fertig." -ForegroundColor Green }
         else { Abbruch "Fehlgeschlagen (Code $LASTEXITCODE), Details im Protokoll." }
@@ -149,6 +189,13 @@ switch ($Befehl) {
         $quelle = ZuRemote $Erstes
         Schreibe-Log "info" "pull start: $quelle -> $Zweites"
         Write-Host "Herunterladen: $Erstes  ->  $Zweites" -ForegroundColor Cyan
+        # Groesse der Gegenseite erfragen, damit dasselbe Profil wie beim Hochladen greift
+        $groesseKB = 0
+        try {
+            $j = (& rclone size $quelle --json 2>$null) | ConvertFrom-Json
+            if ($j.count -gt 0) { $groesseKB = [int](($j.bytes / $j.count) / 1KB) }
+        } catch { $groesseKB = 0 }
+        WaehleProfil $groesseKB
         & rclone copy $quelle $Zweites @RcloneOpts
         if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Fertig." -ForegroundColor Green }
         else { Abbruch "Fehlgeschlagen (Code $LASTEXITCODE), Details im Protokoll." }
@@ -172,6 +219,7 @@ switch ($Befehl) {
             exit 0
         }
         Schreibe-Log "info" "sync start: $Erstes -> $ziel"
+        WaehleProfil (MittlereGroesseKB $Erstes)
         & rclone sync $Erstes $ziel @RcloneOpts
         if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Abgleich fertig." -ForegroundColor Green }
         else { Abbruch "Fehlgeschlagen (Code $LASTEXITCODE)" }
