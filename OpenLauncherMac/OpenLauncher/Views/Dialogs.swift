@@ -7,7 +7,7 @@ import AppKit
 enum Dialogs {
     /// Hintergrund fuer modale Fenster (`Background="#202028"` in XAML).
     private static var sheetBackground: NSColor {
-        ThemeManager.current == .dark ? NSColor.wpf("#202028") : NSColor.wpf("#F2F0FE")
+        ThemeManager.current == .dark ? NSColor.wpf("#202028") : ThemeManager.palette.desktopBgMid
     }
 
     // MARK: - Modell hinzufuegen / bearbeiten
@@ -142,8 +142,8 @@ enum Dialogs {
         textView.isSelectable = true
         textView.string = details
         textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.backgroundColor = ThemeManager.current == .dark ? NSColor.wpf("#18181E") : .white
-        textView.textColor = ThemeManager.current == .dark ? .white : .black
+        textView.backgroundColor = ThemeManager.current == .dark ? NSColor.wpf("#18181E") : NSColor.wpf("#FDFDFF")
+        textView.textColor = ThemeManager.current == .dark ? NSColor.wpf("#F1EFF9") : NSColor.wpf("#1B1729")
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = true
         textView.textContainer?.widthTracksTextView = false
@@ -207,8 +207,8 @@ enum Dialogs {
         textView.isRichText = false
         textView.string = text
         textView.font = .monospacedSystemFont(ofSize: 12.5, weight: .regular)
-        textView.backgroundColor = ThemeManager.current == .dark ? NSColor.wpf("#18181E") : .white
-        textView.textColor = ThemeManager.current == .dark ? NSColor.wpf("#F1EFF9") : NSColor.wpf("#211D33")
+        textView.backgroundColor = ThemeManager.current == .dark ? NSColor.wpf("#18181E") : NSColor.wpf("#FDFDFF")
+        textView.textColor = ThemeManager.current == .dark ? NSColor.wpf("#F1EFF9") : NSColor.wpf("#1B1729")
         textView.insertionPointColor = textView.textColor ?? .white
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false

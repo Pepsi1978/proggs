@@ -255,20 +255,24 @@ class StyledButton: NSControl {
         case .ghost:
             layer?.cornerRadius = 9
             layer?.borderWidth = 1
-            layer?.borderColor = palette.glassBorder.cgColor
+            // Kraeftiger Rand (BorderStrong statt GlassBorder): im Hellmodus war der weisse
+            // Glas-Rand auf heller Flaeche unsichtbar, der Knopf verschwand im Hintergrund.
+            layer?.borderColor = palette.borderStrong.cgColor
             let fill = isHovered && isEnabled ? palette.hoverBg : palette.surfaceBg
             layer?.backgroundColor = fill.flattened(over: base).cgColor
             label.textColor = isEnabled ? palette.text : palette.dim
         case .window:
             layer?.cornerRadius = 7
             layer?.backgroundColor = (isHovered ? palette.hoverBg.flattened(over: base) : .clear).cgColor
-            label.textColor = isEnabled ? palette.muted : palette.dim
+            label.textColor = isEnabled ? palette.text : palette.dim
         case .close:
             layer?.cornerRadius = 7
             layer?.backgroundColor = (isHovered ? palette.closeHoverBg : .clear).cgColor
-            label.textColor = isHovered ? .white : palette.muted
+            label.textColor = isHovered ? .white : palette.text
         case .theme:
             layer?.cornerRadius = 7
+            layer?.borderWidth = 1
+            layer?.borderColor = palette.accentLine.cgColor
             layer?.backgroundColor = (isHovered ? palette.hoverBg.flattened(over: base) : palette.accentSoftBg.flattened(over: base)).cgColor
             label.textColor = palette.accent
         }
@@ -296,7 +300,7 @@ final class SlimScroller: NSScroller {
         guard knob.width > 0, knob.height > 0 else { return }
         let bar = knob.insetBy(dx: 3, dy: 2)
         let radius = bar.width / 2
-        ThemeManager.palette.dim.withAlphaComponent(0.45).setFill()
+        ThemeManager.palette.dim.withAlphaComponent(ThemeManager.current == .dark ? 0.45 : 0.7).setFill()
         NSBezierPath(roundedRect: bar, xRadius: radius, yRadius: radius).fill()
     }
 }

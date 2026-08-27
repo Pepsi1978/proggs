@@ -113,7 +113,7 @@ enum ThemeManager {
 
     /// Untergrund, gegen den halbtransparente Flaechen verrechnet werden (der Fensterhintergrund).
     static var flattenBase: NSColor {
-        current == .dark ? NSColor.wpf("#0A0810") : NSColor.wpf("#E9E7F8")
+        current == .dark ? NSColor.wpf("#0A0810") : NSColor.wpf("#E4E1F5")
     }
 
     // ===== Dark (Themes/DarkTheme.xaml) =====
@@ -158,43 +158,48 @@ enum ThemeManager {
     )
 
     // ===== Light (Themes/LightTheme.xaml) =====
+    // Kontrast-Ueberarbeitung: Im Hellmodus waren Raender frueher WEISS (#BFFFFFFF) bzw. nur
+    // 10 % deckend - auf hellem Grund also praktisch unsichtbar; schaltbare Flaechen (Ghost-Knoepfe,
+    // Zeilen, Eingabefelder) verschwanden im Hintergrund. Jetzt sind alle Raender dunkle,
+    // deckende Lila-Grautoene und die Flaechen sind gegenueber den (fast weissen) Karten
+    // getoent, damit man sofort sieht, was anklickbar ist.
     private static let lightPalette = ThemePalette(
-        desktopBgTop: .wpf("#F2F0FE"),
-        desktopBgMid: .wpf("#E9E7F8"),
-        desktopBgBottom: .wpf("#E2E0F2"),
-        windowBg: .wpf("#85FFFFFF"),
+        desktopBgTop: .wpf("#EFEDFB"),
+        desktopBgMid: .wpf("#E4E1F5"),
+        desktopBgBottom: .wpf("#D9D5EE"),
+        windowBg: .wpf("#F8F7FD"),
         titleBarBg: .wpf("#00FFFFFF"),
-        cardBg: .wpf("#8CFFFFFF"),
-        surfaceBg: .wpf("#8CFFFFFF"),
-        hoverBg: .wpf("#1A7C6CF5"),
-        chipBg: .wpf("#1A7C6CF5"),
-        glassBorder: .wpf("#BFFFFFFF"),
-        glassBright: .wpf("#E6FFFFFF"),
+        cardBg: .wpf("#FDFDFF"),
+        surfaceBg: .wpf("#F0EEFA"),
+        hoverBg: .wpf("#DFDAF9"),
+        chipBg: .wpf("#E6E2FA"),
+        glassBorder: .wpf("#9C96B4"),
+        glassBright: .wpf("#B9B3CC"),
         accentGlow: .wpf("#737C6CF5"),
-        panelBg: .wpf("#8CFFFFFF"),
-        tableHeaderBg: .wpf("#B8FFFFFF"),
-        borderSoft: .wpf("#1A281E50"),
-        borderStrong: .wpf("#BFFFFFFF"),
-        gridLine: .wpf("#1A281E50"),
-        text: .wpf("#211D33"),
-        muted: .wpf("#9E1D1930"),
-        dim: .wpf("#6B1D1930"),
-        accent: .wpf("#6F60E8"),
-        accentGradientTop: .wpf("#A79CFF"),
-        accentGradientBottom: .wpf("#7C6CF5"),
-        accentHover: .wpf("#6455E0"),
-        accentPressed: .wpf("#5646C8"),
-        accentSoftBg: .wpf("#D9EDEAFD"),
-        accentLine: .wpf("#527C6CF5"),
-        selectedBg: .wpf("#D9EEEBFC"),
-        selectedBorder: .wpf("#7C6CF5"),
-        rowSelectedBg: .wpf("#F1EEFC"),
-        statusOkBg: .wpf("#DCFCE7"),
-        statusOkFg: .wpf("#15803D"),
-        statusWarnBg: .wpf("#FEF3C7"),
-        statusWarnFg: .wpf("#B45309"),
-        statusBadBg: .wpf("#FEE2E2"),
-        statusBadFg: .wpf("#DC2626"),
-        closeHoverBg: .wpf("#E5484D")
+        panelBg: .wpf("#FDFDFF"),
+        tableHeaderBg: .wpf("#E7E4F6"),
+        borderSoft: .wpf("#AAA4C0"),
+        borderStrong: .wpf("#6F6890"),
+        gridLine: .wpf("#BDB8CE"),
+        text: .wpf("#1B1729"),
+        muted: .wpf("#4A4459"),
+        dim: .wpf("#6E6880"),
+        accent: .wpf("#5D4EDB"),
+        accentGradientTop: .wpf("#8375F0"),
+        accentGradientBottom: .wpf("#6455E0"),
+        accentHover: .wpf("#5646C8"),
+        accentPressed: .wpf("#4A3BB0"),
+        accentSoftBg: .wpf("#E4E0FB"),
+        accentLine: .wpf("#9086F2"),
+        selectedBg: .wpf("#DCD7F9"),
+        selectedBorder: .wpf("#5D4EDB"),
+        rowSelectedBg: .wpf("#DFDAFA"),
+        statusOkBg: .wpf("#CDF5DC"),
+        statusOkFg: .wpf("#136B36"),
+        statusWarnBg: .wpf("#FCEBB4"),
+        statusWarnFg: .wpf("#8A4008"),
+        statusBadBg: .wpf("#FBD6D6"),
+        statusBadFg: .wpf("#B91C1C"),
+        closeHoverBg: .wpf("#D93A3F")
     )
 }

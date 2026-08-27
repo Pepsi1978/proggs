@@ -92,7 +92,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="9"
-                                BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderBrushStrong}" BorderThickness="1"
                                 Padding="{TemplateBinding Padding}">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.14" Color="#FFFFFF"/>
@@ -115,7 +115,7 @@
         <!-- Fenster-Buttons (min/max/close/theme) -->
         <Style x:Key="WindowBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
