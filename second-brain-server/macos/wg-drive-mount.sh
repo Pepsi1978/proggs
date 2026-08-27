@@ -28,6 +28,9 @@
 # valid users beider Freigaben) — siehe README.md, Abschnitt Voraussetzungen.
 set +e
 
+# Version 1.3.0 (27.08.2026, 20:48 Uhr) — steht in jeder "gemountet"-Zeile im Log.
+SCRIPT_VERSION="1.3.0"
+
 SERVER="10.8.0.1"
 SHARES="gedanken daten"
 ENVFILE="$HOME/SK/second-brain/samba.env"
@@ -49,7 +52,10 @@ if ! mkdir "$LOCKDIR" 2>/dev/null; then
     exit 0
   fi
 fi
+# Lock auch bei SIGTERM/SIGINT freigeben (z.B. wenn launchd den Agent neu startet) —
+# sonst bliebe er bis zur 10-Minuten-Bruchregel liegen und blockierte den naechsten Lauf.
 trap 'rmdir "$LOCKDIR" 2>/dev/null' EXIT
+trap 'rmdir "$LOCKDIR" 2>/dev/null; exit 0' TERM INT
 
 # Reine-Bash-URL-Kodierung (Percent-Encoding, KEINE externen Deps). SMB-User/Passwort mit
 # Sonderzeichen (@ : / % ...) wuerden die smb://-URL sonst zerbrechen — ein '@' im Passwort z.B.
@@ -105,13 +111,28 @@ PENC="$(urlencode "$P")"
 
 # Gate: genau den SMB-Port 445 testen (NICHT einen fremden Dienst-Port — Almanach §5/§9).
 # Tunnel braucht nach dem Boot ein paar Sekunden; LaunchAgent ruft uns ohnehin periodisch erneut.
-if ! nc -z -G 4 "$SERVER" 445 >/dev/null 2>&1; then
+# Nach dem Boot/Login laeuft dieses Skript oft ein paar Sekunden VOR dem fertigen Tunnel
+# (am 2026-08-27 um 19:47:42 exakt 3 s zu frueh). Frueher hiess das: sofort aufgeben und bis
+# zu 5 Minuten warten, bis der LaunchAgent erneut dran ist. Deshalb wird jetzt begrenzt
+# GEWARTET (Boot-Race entschaerft, ohne die Aufgeben-Logik zu verlieren).
+GATE_WAIT=${GATE_WAIT:-90}   # Sekunden, die maximal auf Port 445 gewartet wird
+gate_open=0
+gate_waited=0
+while :; do
+  if nc -z -G 4 "$SERVER" 445 >/dev/null 2>&1; then gate_open=1; break; fi
+  [ "$gate_waited" -ge "$GATE_WAIT" ] && break
+  [ "$gate_waited" -eq 0 ] && log "SMB 445 ($SERVER) noch zu — warte bis zu ${GATE_WAIT}s auf den Tunnel."
+  sleep 5
+  gate_waited=$((gate_waited + 5))
+done
+if [ "$gate_open" -ne 1 ]; then
   # Observability (observability-first): bei Aussetzer die oeffentliche IP festhalten ->
   # beim naechsten Vorfall sieht man, ob die Telekom-IP/das NAT gewechselt hat.
   PUBIP=$(curl -s --max-time 4 https://api.ipify.org 2>/dev/null || echo "?")
-  log "SMB 445 ($SERVER) nicht erreichbar — Tunnel unten? (oeffentliche IP jetzt: ${PUBIP}). Abbruch (Retry beim naechsten Lauf)."
+  log "SMB 445 ($SERVER) nach ${gate_waited}s nicht erreichbar — Tunnel unten? (oeffentliche IP jetzt: ${PUBIP}). Abbruch (Retry beim naechsten Lauf)."
   exit 0
 fi
+[ "$gate_waited" -gt 0 ] && log "SMB 445 ($SERVER) nach ${gate_waited}s offen — mounte."
 
 for share in $SHARES; do
   MP="/Volumes/${share}"
@@ -131,7 +152,7 @@ for share in $SHARES; do
   fi
   # Mounten via automountd (kein sudo, erscheint im Finder)
   if /usr/bin/osascript -e "mount volume \"smb://${UENC}:${PENC}@${SERVER}/${share}\"" >/dev/null 2>&1; then
-    log "${share}: gemountet (${MP})"
+    log "${share}: gemountet (${MP}) [wg-drive-mount ${SCRIPT_VERSION}]"
   else
     log "${share}: Mount FEHLGESCHLAGEN"
   fi

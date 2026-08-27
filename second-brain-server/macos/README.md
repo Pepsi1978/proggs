@@ -41,12 +41,58 @@ sudo bash ~/proggs/second-brain-server/macos/setup-macos.sh --daemon
 |-------|-------|-------|
 | `wg-drive-mount.sh` | mountet gedanken/daten, sobald SMB-445 erreichbar ist (Gate auf 445, Almanach §5); **erkennt tote Mounts und baut sie sofort neu auf** (Stale-Erkennung, siehe unten); mkdir-Lock verhindert Doppelmounts (`/Volumes/gedanken-1`) wenn LaunchAgent und Handaufruf kollidieren | User |
 | `de.frank.secondbrain.drivemount.plist` | LaunchAgent: ruft das Mount-Skript bei Login + alle 5 Min | User |
-| `wireguard-up.sh` | fährt den WireGuard-Tunnel idempotent hoch | root |
-| `de.frank.secondbrain.wireguard.plist` | LaunchDaemon: Tunnel beim Boot | System |
+| `wireguard-up.sh` | **Watchdog**: fährt den Tunnel hoch und hält ihn dauerhaft oben (Prüftakt 30 s, baut nach Sleep/Wake, IP-Wechsel oder Prozess-Tod selbst neu auf und stößt danach sofort den Mount-Agent an) | root |
+| `de.frank.secondbrain.wireguard.plist` | LaunchDaemon: startet den Watchdog beim Boot, `KeepAlive` hält ihn am Leben | System |
 | `nsmb.conf.vorlage` | Vorlage für `/etc/nsmb.conf` (soft mounts → Finder friert bei Aussetzer nicht ein) | System |
 | `setup-macos.sh` | Installer für beide Teile | — |
 | `install-cortex-ca.sh` | importiert Caddys interne Root-CA in den Login-Schlüsselbund → Chrome zeigt bei `https://10.8.0.1` ein Schloss statt "Nicht sicher" (idempotent, kein sudo) | User |
 | `../wg-endpoint-monitor.{sh,service,timer}` | VPS-seitig: protokolliert jeden Endpoint-/IP-Wechsel der Peers (Beweis für Client-IP-Wechsel) | VPS (root) |
+
+## ⭐ Laufwerke waren nach JEDEM Neustart weg (Direktive #3, 2026-08-27)
+
+**Symptom:** Nach jedem Neustart des Macs fehlten `gedanken`/`daten` komplett. Das Mount-Log meldete
+im 5-Minuten-Takt nur `SMB 445 (10.8.0.1) nicht erreichbar — Tunnel unten?`, obwohl das Tunnel-Log
+kurz nach dem Boot ein sauberes „WireGuard-Tunnel hochgefahren" zeigte.
+
+**Root Cause (aus dem Systemlog bewiesen, Boot 19:47:18):**
+```
+19:47:45.134  launchd  [system/de.frank.secondbrain.wireguard [578]] exited due to exit(0), ran for 7924ms
+19:47:45.136  kernel   utun4 detaching          <- 2 ms nach dem Job-Ende
+19:47:45.137  kernel   utun4 detached
+```
+Der LaunchDaemon war ein **Einmal-Job** (`RunAtLoad`, kein `KeepAlive`): Skript fährt den Tunnel hoch,
+`exit 0`. launchd beendet beim Job-Exit aber **alle verbliebenen Prozesse der Prozessgruppe** — und
+`wg-quick` startet `wireguard-go` genau dort hinein. Der Tunnel starb also zuverlässig 2 ms nach dem
+Start, und die Laufwerke konnten nie mounten. Von Hand aus dem Terminal gestartet trat der Fehler
+**nicht** auf (kein launchd-Job) — deshalb wirkte der Fix beim Einrichten jedes Mal „erfolgreich".
+
+**Fix (Fehlerklasse, nicht Symptom — funktionserhaltend, nichts entfernt):**
+1. `wireguard-up.sh` läuft als **Dauerschleife** → der Job endet nie → der Prozessgruppen-Kill kann
+   gar nicht mehr eintreten (Poka-Yoke Stufe 3).
+2. Die Schleife prüft alle 30 s **zwei unabhängige Proben** (ICMP *oder* SMB-Port 445). Erst nach
+   4 Fehlschlägen in Folge (~2 Min) wird der Tunnel neu aufgebaut → heilt zusätzlich Sleep/Wake,
+   Client-IP-Wechsel und `wireguard-go`-Crash, ohne bei einem einzelnen Aussetzer zu flappen.
+3. `KeepAlive=true` in der plist: stirbt das Skript selbst, startet launchd es neu (zweite Schicht).
+4. Verwaiste `/var/run/wireguard/<name>.name` (Überbleibsel des alten Bugs) werden vor jedem
+   Aufbau entfernt.
+5. Kommt der Tunnel hoch, stößt der Watchdog den Mount-LaunchAgent **sofort** an
+   (`launchctl kickstart gui/<uid>/de.frank.secondbrain.drivemount`) — die Laufwerke sind in Sekunden
+   da statt nach bis zu 5 Minuten.
+6. `wg-drive-mount.sh` wartet beim Start **bis zu 90 s** auf Port 445 (Boot-Race: der Agent lief am
+   27.08.2026 exakt 3 s vor dem fertigen Tunnel) statt sofort aufzugeben.
+
+**Nicht betroffen (geprüft):** Die schnelle Datenübertragung (`cortex-copy.sh` / rclone, Almanach §14)
+ist unverändert — sie hängt nicht am Mount, sondern spricht SMB direkt an. Die übrigen LaunchAgents im
+Repo (`drivemount`, Heartbeats) sind echte Einmal-Läufe ohne langlebiges Kind und damit von dieser
+Fehlerklasse nicht betroffen.
+
+**Prüfen, ob der Fix aktiv ist:**
+```bash
+sudo launchctl print system/de.frank.secondbrain.wireguard | grep -E "state|pid"   # muss "running" sein
+tail -5 ~/Library/Logs/wg-tunnel.log                                              # "Watchdog gestartet"
+ifconfig | grep 10.8.0.6                                                          # Tunnel-IP da?
+mount | grep smbfs                                                                # beide Shares
+```
 
 ## Resilienz gegen IP-Wechsel / Tunnel-Aussetzer (Direktive #3, 2026-06-29)
 

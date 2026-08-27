@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- LaunchDaemon (System-Ebene, braucht sudo zum Installieren): faehrt den WireGuard-Tunnel beim Boot hoch. -->
+<!--
+  LaunchDaemon (System-Ebene, braucht sudo zum Installieren): haelt den WireGuard-Tunnel
+  zum Gehirn-Server dauerhaft oben — ab Boot, ohne Login, ueber Sleep/Wake hinweg.
+
+  KRITISCH (Root Cause 2026-08-27, siehe wireguard-up.sh-Kopf):
+  Frueher war hier NUR RunAtLoad gesetzt. Das Skript fuhr den Tunnel hoch und beendete sich —
+  und launchd toetete daraufhin alle verbliebenen Prozesse der Job-Prozessgruppe, also
+  ausgerechnet `wireguard-go`. Der Tunnel starb 2 ms nach dem Boot-Start, die Laufwerke
+  gedanken/daten konnten nie mounten.
+  Deshalb laeuft wireguard-up.sh jetzt als Dauerschleife und KeepAlive haelt sie am Leben:
+  der Job endet nie -> der Prozessgruppen-Kill kann gar nicht mehr eintreten.
+  RunAtLoad + KeepAlive NIEMALS entfernen und das Skript NIEMALS wieder "einmal ausfuehren"
+  lassen — das ist genau der alte Bug.
+-->
 <plist version="1.0">
 <dict>
     <key>Label</key>
@@ -12,6 +25,12 @@
     </array>
     <key>RunAtLoad</key>
     <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
     <key>StandardErrorPath</key>
     <string>/Users/frank/Library/Logs/wg-tunnel.launchd.log</string>
     <key>StandardOutPath</key>
