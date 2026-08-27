@@ -67,8 +67,10 @@ Ausnahme Research-Engine C = Sonnet 5 (`highest-model-everywhere.md`); Absturzsi
 
 - Nach jedem Feature **`quality-gate`**-Agent (tester+code-reviewer+optimizer, PASS/FAIL); KEIN Commit
   ohne Gate (ausser reine Config-/CLAUDE.md-/Memory-Aenderungen). Neues Projekt: `architect` + Recherche. Bugs: `debugger`.
-- **Whiteboard** `.claude/agent-memory/shared/MEMORY.md` — EINZIGE zentrale Wissensdatei; jeder liest +
-  schreibt Erkenntnisse/Fehler hinein (Fehler NIE still verschlucken).
+- **Kein Whiteboard mehr** (2026-08-27): `.claude/agent-memory/shared/MEMORY.md` wird NICHT mehr
+  gelesen oder beschrieben — sie ist Historie. Erkenntnisse gehoeren in die Almanache (`bugs/`),
+  die Best Practices (`best-practices/`) und das Datei-Gedaechtnis; Bugfixes zusaetzlich in
+  `bug-cases.jsonl`. Fehler trotzdem NIE still verschlucken — nur eben am richtigen Ort.
 - Sprachen: Swift, C#, TypeScript, Rust, Go. KEIN Python fuer GUIs/Desktop (unvermeidbar → fragen). UI wie
   gekaufte Software, Auslieferung einzelne `.app`/`.exe`. Jedes Projekt: ausfuehrliche `README.md`.
 - Skills NUR ueber `/skill-creator:skill-creator`. Erster Repo-Start: `claude-code-setup/manifest.json` pruefen.

@@ -1,3 +1,10 @@
+> ⚠️ **STILLGELEGT am 27.08.2026 — diese Datei wird nicht mehr gepflegt.**
+> Der Arbeitsweg laeuft ueber die OpenLauncher-Profile; jede Sitzung startet frisch.
+> Nichts mehr hier hineinschreiben und nichts hier als aktuellen Stand lesen — der Inhalt
+> unten ist Historie und teils veraltet (Beispiel: StopFailure-Eintraege waren bis 27.08.
+> pauschal als "Rate-Limit" etikettiert, siehe bugs/claude-tooling/claude-hooks.md 13.13).
+> Aktuelles Wissen steht in `bugs/`, `best-practices/` und im Datei-Gedaechtnis.
+
 # Shared Knowledge Hub — Zentrales Whiteboard
 
 Das zentrale Nervensystem des Claude Code Systems. JEDE Komponente die hier arbeitet

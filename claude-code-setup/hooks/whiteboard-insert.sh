@@ -7,6 +7,18 @@
 # This replaces naive append (Add-Content / echo >> ) which is FORBIDDEN by whiteboard rules.
 # Entries are inserted inside the correct ## Section, replacing the placeholder if present.
 
+# Stillgelegtes Whiteboard erkennen (2026-08-27). Traegt MEMORY.md den STILLGELEGT-Marker,
+# schreibt keine Funktion dieser Bibliothek mehr hinein — die Datei ist Historie, der Arbeitsweg
+# laeuft ueber die OpenLauncher-Profile. Wieder einschalten: Marker aus dem Dateikopf entfernen.
+# WICHTIG: hier steht bewusst KEIN top-level `exit` — diese Datei wird per `source` eingebunden,
+# ein `exit` wuerde den AUFRUFENDEN Hook beenden (bugs/claude-tooling/claude-hooks.md 13.7).
+_whiteboard_stillgelegt() {
+    local memory_file="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
+    [[ -f "$memory_file" ]] || return 1
+    head -5 "$memory_file" 2>/dev/null | grep -q "STILLGELEGT" && return 0
+    return 1
+}
+
 # Pre-pull remote changes to prevent MEMORY.md merge conflicts (Intelligenz-Vorschlag #715)
 _whiteboard_safe_pull() {
     local script_dir
@@ -20,6 +32,7 @@ _whiteboard_safe_pull() {
 # Usage: replace_whiteboard_entry "Systemzustand" "Pending Admin Updates" "- **Pending Admin Updates (5):** foo,bar"
 # This prevents duplicate accumulation (e.g. pending-admin-updates hook writing a new line every session).
 replace_whiteboard_entry() {
+    _whiteboard_stillgelegt && return 0
     local section="$1"
     local match_pattern="$2"   # Lines containing this string will be REMOVED first
     local entry="$3"
@@ -108,6 +121,7 @@ PYEOF
 }
 
 insert_whiteboard_entry() {
+    _whiteboard_stillgelegt && return 0
     local section="$1"
     local entry="$2"
     local memory_file="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"

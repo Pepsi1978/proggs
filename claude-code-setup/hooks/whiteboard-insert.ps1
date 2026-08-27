@@ -32,12 +32,31 @@ function Get-WhiteboardDedupKey {
 # Replace-WhiteboardEntry — Removes ALL lines matching a pattern within a section, then inserts the new entry.
 # Usage: Replace-WhiteboardEntry -Section "Systemzustand" -MatchPattern "Pending Admin Updates" -Entry "- **Pending Admin Updates (5):** foo,bar"
 # This prevents duplicate accumulation (e.g. pending-admin-updates hook writing a new line every session).
+# Stillgelegtes Whiteboard erkennen (2026-08-27, Gegenstueck zur .sh-Fassung). Traegt MEMORY.md
+# den STILLGELEGT-Marker, schreibt keine Funktion dieser Bibliothek mehr hinein — die Datei ist
+# Historie, der Arbeitsweg laeuft ueber die OpenLauncher-Profile. Wieder einschalten: Marker aus
+# dem Dateikopf entfernen. Wie in der .sh-Fassung steht hier bewusst KEIN top-level exit.
+function Test-WhiteboardStillgelegt {
+    try {
+        # USERPROFILE gibt es nur auf Windows; HOME als Rueckfall, damit die Pruefung
+        # auch unter pwsh auf macOS/Linux nicht mit einem Null-Pfad scheitert.
+        $basis = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
+        if (-not $basis) { return $false }
+        $memoryFile = Join-Path $basis "proggs/.claude/agent-memory/shared/MEMORY.md"
+        if (-not (Test-Path $memoryFile)) { return $false }
+        $kopf = Get-Content $memoryFile -TotalCount 5 -ErrorAction Stop
+        return [bool]($kopf -match "STILLGELEGT")
+    } catch { return $false }
+}
+
 function Replace-WhiteboardEntry {
     param(
         [string]$Section,
         [string]$MatchPattern,
         [string]$Entry
     )
+
+    if (Test-WhiteboardStillgelegt) { return }
 
     Invoke-WhiteboardSafePull
 
@@ -121,6 +140,8 @@ function Insert-WhiteboardEntry {
         [string]$Section,
         [string]$Entry
     )
+
+    if (Test-WhiteboardStillgelegt) { return }
 
     Invoke-WhiteboardSafePull
 
