@@ -18,9 +18,10 @@ if [ ! -f "$CONF" ]; then
   exit 0
 fi
 
-# Schon ein Tunnel mit 10.8.0.2 aktiv? -> nichts tun.
-if ifconfig 2>/dev/null | grep -q "inet 10.8.0.2 "; then
-  log "Tunnel bereits aktiv (10.8.0.2) — ok"
+# Schon ein Tunnel ins Gehirn-Netz aktiv? -> nichts tun. (IP aus der Konfig, nicht hart kodiert)
+TUNIP=$(grep -E "^Address" "$CONF" | head -1 | sed -E "s/.*= *([0-9.]+).*/\1/")
+if [ -n "$TUNIP" ] && ifconfig 2>/dev/null | grep -q "inet ${TUNIP} "; then
+  log "Tunnel bereits aktiv (${TUNIP}) — ok"
   exit 0
 fi
 

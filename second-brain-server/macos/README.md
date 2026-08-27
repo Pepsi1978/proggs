@@ -13,14 +13,19 @@ Erreichbar nur über den WireGuard-Tunnel (`10.8.0.1`, SMB-Port 445 ist nicht ö
 ## Voraussetzungen (einmalig)
 - `wg`/`wg-quick` installiert (`brew install wireguard-tools`).
 - WireGuard-Konfig liegt in `~/SK/second-brain/wireguard/second-brain.conf`.
+  Dieser Mac ist **Peer `10.8.0.6`** (Handy .2, PC .3, Fold6 .4/.5). Der zugehoerige
+  `[Peer]`-Block steht in `/etc/wireguard/wg0.conf` auf dem VPS (Kommentar `# Mac (10.8.0.6)`).
+  Ein neuer Rechner braucht **immer einen eigenen Peer** — zwei Geraete duerfen sich einen
+  Schluessel/eine Tunnel-IP nicht teilen, sonst werfen sie sich gegenseitig raus.
 - Samba-Zugangsdaten in `~/SK/second-brain/samba.env` (NICHT im Repo — secrets-in-sk-folder):
   ```
-  SAMBA_USER=frankmac
+  SAMBA_USER=frank
   SAMBA_PASS=<passwort>
   ```
-  `frankmac` ist ein **eigener Mac-Samba-User** (uid 1001, Gruppe `frank`). Der Windows-Zugang
-  läuft weiter über `frank` — beide stehen in `valid users` beider Freigaben, sind aber getrennt,
-  damit eine Passwort-Änderung auf einer Plattform die andere nicht bricht.
+  Auf dem Server existieren zwei Samba-Nutzer: `frank` (uid 1000) und `frankmac` (uid 1001).
+  **Beide** stehen in `valid users` beider Freigaben. Aktuell nutzt der Mac `frank` — damit war
+  kein Passwort-Reset auf dem Produktivserver noetig. Wer die Plattformen strikt trennen will,
+  setzt `frankmac` ein eigenes Passwort (`smbpasswd -a frankmac`) und traegt es in `samba.env` ein.
 
 ## Einrichtung
 ```bash
@@ -34,12 +39,13 @@ sudo bash ~/proggs/second-brain-server/macos/setup-macos.sh --daemon
 ## Bestandteile
 | Datei | Zweck | Ebene |
 |-------|-------|-------|
-| `wg-drive-mount.sh` | mountet gedanken/daten, sobald SMB-445 erreichbar ist (Gate auf 445, Almanach §5); **erkennt tote Mounts und baut sie sofort neu auf** (Stale-Erkennung, siehe unten) | User |
+| `wg-drive-mount.sh` | mountet gedanken/daten, sobald SMB-445 erreichbar ist (Gate auf 445, Almanach §5); **erkennt tote Mounts und baut sie sofort neu auf** (Stale-Erkennung, siehe unten); mkdir-Lock verhindert Doppelmounts (`/Volumes/gedanken-1`) wenn LaunchAgent und Handaufruf kollidieren | User |
 | `de.frank.secondbrain.drivemount.plist` | LaunchAgent: ruft das Mount-Skript bei Login + alle 5 Min | User |
 | `wireguard-up.sh` | fährt den WireGuard-Tunnel idempotent hoch | root |
 | `de.frank.secondbrain.wireguard.plist` | LaunchDaemon: Tunnel beim Boot | System |
 | `nsmb.conf.vorlage` | Vorlage für `/etc/nsmb.conf` (soft mounts → Finder friert bei Aussetzer nicht ein) | System |
 | `setup-macos.sh` | Installer für beide Teile | — |
+| `install-cortex-ca.sh` | importiert Caddys interne Root-CA in den Login-Schlüsselbund → Chrome zeigt bei `https://10.8.0.1` ein Schloss statt "Nicht sicher" (idempotent, kein sudo) | User |
 | `../wg-endpoint-monitor.{sh,service,timer}` | VPS-seitig: protokolliert jeden Endpoint-/IP-Wechsel der Peers (Beweis für Client-IP-Wechsel) | VPS (root) |
 
 ## Resilienz gegen IP-Wechsel / Tunnel-Aussetzer (Direktive #3, 2026-06-29)

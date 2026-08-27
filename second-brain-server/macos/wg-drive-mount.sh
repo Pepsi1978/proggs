@@ -24,7 +24,8 @@
 # Mount-Befehl -- so bleibt der osascript-Weg (no-sudo + Finder) unveraendert erhalten.
 #
 # Credentials kommen aus ~/SK/second-brain/samba.env (AUSSERHALB des Repos,
-# secrets-in-sk-folder-Regel) — User frankmac (eigener Mac-Zugang, Windows bleibt unberuehrt).
+# secrets-in-sk-folder-Regel). Aktueller Mac-Zugang: SAMBA_USER=frank (steht wie frankmac in
+# valid users beider Freigaben) — siehe README.md, Abschnitt Voraussetzungen.
 set +e
 
 SERVER="10.8.0.1"
@@ -35,6 +36,20 @@ PROBE_TIMEOUT=4   # Sekunden — hartes Timeout fuer die Leseprobe eines (evtl. 
 export PROBE_TIMEOUT
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" >>"$LOG" 2>/dev/null; }
+
+# --- Einfach-Lauf erzwingen (2026-08-27): LaunchAgent und ein manueller Aufruf koennen sich
+# ueberschneiden -> beide mounten denselben Share und macOS legt /Volumes/<share>-1 an
+# (Doppelmount). mkdir ist atomar; ein alter Lock (>10 Min, z.B. nach Absturz) wird gebrochen.
+LOCKDIR="$HOME/Library/Caches/wg-drive-mount.lock"
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
+  if [ -n "$(find "$LOCKDIR" -maxdepth 0 -mmin +10 2>/dev/null)" ]; then
+    rmdir "$LOCKDIR" 2>/dev/null; mkdir "$LOCKDIR" 2>/dev/null || { log "Lock belegt — Abbruch."; exit 0; }
+  else
+    log "Laeuft bereits (Lock) — Abbruch, kein Doppelmount."
+    exit 0
+  fi
+fi
+trap 'rmdir "$LOCKDIR" 2>/dev/null' EXIT
 
 # Reine-Bash-URL-Kodierung (Percent-Encoding, KEINE externen Deps). SMB-User/Passwort mit
 # Sonderzeichen (@ : / % ...) wuerden die smb://-URL sonst zerbrechen — ein '@' im Passwort z.B.
