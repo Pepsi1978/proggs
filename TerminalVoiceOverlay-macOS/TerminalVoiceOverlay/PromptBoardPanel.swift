@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 
 /// Anzahl Items, die ein applyBackupJson()-Aufruf NEU lokal hinzugefuegt
 /// hat (id war lokal vorher nicht vorhanden). Updates an bestehenden
@@ -226,6 +227,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     switch result {
                     case .success:
                         tvoDebug("[PBPanel] auto-backup uploaded")
+                        // Der gerade hochgeladene Stand ist ab jetzt der
+                        // synchronisierte — Fingerabdruck mitziehen, sonst
+                        // haelt der Start-Restore ihn faelschlich fuer
+                        // "lokal veraendert" und wird nie ausgefuehrt.
+                        Self.writeLastSyncFingerprint(backupJson: json)
                         self?.recordSuccessfulSync()
                     case .failure(let e):
                         tvoDebug("[PBPanel] auto-backup failed: \(e.localizedDescription)")
@@ -1036,6 +1042,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     self?.onSlotsSyncRequested?()
                 }
             }
+            // Slot per Drag & Drop verschoben/getauscht: im Store spiegeln und
+            // SOFORT synchronisieren — sonst holt der naechste Cloud-Merge den
+            // alten Stand zurueck und die Verschiebung waere wieder weg.
+            panel.onSlotMove = { [weak self] from, to in
+                PromptSlotStore.shared.move(from: from, to: to) {
+                    self?.onSlotsSyncRequested?()
+                }
+            }
             inputPanel = panel
         }
         inputPanel?.dock(leftOf: self, force: true)
@@ -1635,7 +1649,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     // MARK: - Backup helpers
 
-    private func buildBackupJson() throws -> String {
+    private func buildBackupJson() throws -> String { try Self.buildBackupJson() }
+
+    /// STATIC-Variante — der AppDelegate braucht sie beim Start, wenn es noch
+    /// gar kein Board-Panel gibt (Fingerprint-Vergleich vor dem Launch-Restore).
+    static func buildBackupJson() throws -> String {
         let cats = try PromptBoardStore.shared.allCategories()
         var allPrompts: [PBPrompt] = []
         for c in cats { allPrompts.append(contentsOf: try PromptBoardStore.shared.prompts(in: c.id)) }
@@ -1798,6 +1816,59 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         return BackupApplyResult(newPrompts: newPrompts, newCategories: newCategories)
     }
 
+    // MARK: - Backup-Fingerabdruck (Schutz des Start-Restores)
+    // Portierung von Windows `BuildBackupFingerprintAsync` / `BackupFingerprint` /
+    // `ReadLastSyncFingerprint` (Commit "Protect launch restore from local changes").
+    //
+    // Ohne diesen Schutz konnte der Start-Restore lokale Aenderungen wegwerfen:
+    // wer auf diesem Rechner Prompts anlegt, waehrend Drive gerade ein AELTERES
+    // Backup vorhaelt, bekam beim naechsten Start das alte Backup aufgespielt.
+    // Der Fingerabdruck erkennt "lokal hat sich seit dem letzten Sync etwas
+    // getaendert" und laesst den Restore dann bewusst aus.
+
+    private static let lastSyncFingerprintKey = "pbLastSyncFingerprint"
+
+    /// SHA-256 ueber den Backup-Inhalt OHNE `ExportedAt` — der Zeitstempel
+    /// aendert sich bei jedem Aufbau und wuerde sonst jeden Vergleich zerstoeren.
+    /// Die Schluessel werden sortiert serialisiert, damit derselbe Datenstand
+    /// immer denselben Abdruck ergibt.
+    static func backupFingerprint(_ json: String) -> String? {
+        guard let data = json.data(using: .utf8),
+              var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        root.removeValue(forKey: "ExportedAt")
+        guard let normalized = try? JSONSerialization.data(withJSONObject: root,
+                                                          options: [.sortedKeys])
+        else { return nil }
+        return SHA256.hash(data: normalized).map { String(format: "%02X", $0) }.joined()
+    }
+
+    /// Fingerabdruck des AKTUELLEN lokalen Stands.
+    static func currentBackupFingerprint() -> String? {
+        guard let json = try? buildBackupJson() else { return nil }
+        return backupFingerprint(json)
+    }
+
+    /// Fingerabdruck des Stands, der zuletzt erfolgreich synchronisiert wurde
+    /// (nil = noch nie synchronisiert; dann darf der Restore laufen).
+    static func readLastSyncFingerprint() -> String? {
+        UserDefaults.standard.string(forKey: lastSyncFingerprintKey)
+    }
+
+    /// Merkt sich den Fingerabdruck des gerade synchronisierten Stands.
+    /// `json` ist der Backup-Inhalt, der hoch- bzw. eingespielt wurde.
+    static func writeLastSyncFingerprint(backupJson: String) {
+        guard let fp = backupFingerprint(backupJson) else { return }
+        UserDefaults.standard.set(fp, forKey: lastSyncFingerprintKey)
+    }
+
+    /// Merkt sich den Fingerabdruck des aktuellen lokalen Stands — nach einem
+    /// erfolgreichen Upload ist genau der der synchronisierte Stand.
+    static func writeLastSyncFingerprintFromCurrentState() {
+        guard let fp = currentBackupFingerprint() else { return }
+        UserDefaults.standard.set(fp, forKey: lastSyncFingerprintKey)
+    }
+
     /// Returns the `ExportedAt` timestamp from a backup JSON, or nil if
     /// the field is missing / unparseable. Used to decide whether the
     /// remote backup is newer than the local state.
@@ -1877,6 +1948,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
+                        Self.writeLastSyncFingerprint(backupJson: json)
                         self?.recordSuccessfulSync()
                         NSAlert.warn("Backup bei Google Drive gespeichert.")
                     case .failure(let e):
@@ -1908,6 +1980,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                                         confirmLabel: "Einspielen", parent: self) else { return }
                     do {
                         try self.applyBackupJson(json)
+                        // Eingespielter Stand = synchronisierter Stand. Ohne das
+                        // haelt der Start-Restore ihn beim naechsten Start fuer
+                        // "lokal veraendert" und laeuft nie wieder.
+                        Self.writeLastSyncFingerprintFromCurrentState()
+                        self.recordSuccessfulSync()
                         NSAlert.warn("Google-Drive-Backup eingespielt.")
                         self.refresh()
                     } catch {

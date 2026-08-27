@@ -38,6 +38,29 @@ final class AppWatcher {
         return targetBundleIDs.contains(id)
     }
 
+    /// Poll-Variante zu den Aktivierungs-Notifications: prueft, ob die AKTUELL
+    /// vorderste App eine unserer Ziel-Apps ist. Grundlage fuer den
+    /// selbstheilenden Sichtbarkeits-Poll im AppDelegate — 1:1 zum Windows-
+    /// `GetForegroundTerminalHwnd` (Commit "Foreground-Reclaim-Poll").
+    ///
+    /// Warum: das Einblenden haengt allein an
+    /// `didActivateApplicationNotification`. Blitzt kurz ein Fremdfenster auf
+    /// (Mitteilung, Berechtigungs-Dialog) oder geht eine Notification verloren,
+    /// bleibt das Overlay versteckt, obwohl das CLI weiter vorne steht — und
+    /// kaeme erst bei einem echten Fokuswechsel zurueck. Steht wirklich eine
+    /// fremde App vorne, liefert das hier `false` und das Overlay bleibt aus.
+    func isTargetAppFrontmost() -> Bool {
+        guard let front = NSWorkspace.shared.frontmostApplication else { return false }
+        // Die eigene App zaehlt NICHT als Ziel — sonst wuerde jeder Klick auf
+        // ein eigenes Panel das Overlay auch dann zurueckholen, wenn es
+        // bewusst versteckt wurde.
+        if front.bundleIdentifier == Bundle.main.bundleIdentifier { return false }
+        guard Self.isTargetApp(front.bundleIdentifier) else { return false }
+        lastActiveTerminalBundleID = front.bundleIdentifier
+        TerminalController.lastActiveTerminalBundleID = front.bundleIdentifier
+        return true
+    }
+
     func start() {
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(self, selector: #selector(appActivated(_:)),

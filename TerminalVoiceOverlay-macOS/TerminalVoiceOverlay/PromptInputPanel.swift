@@ -5,7 +5,7 @@ import AppKit
 /// `onSubmit` aus), Shift+Enter macht einen Zeilenumbruch. Rechtsklick auf
 /// den Hintergrund verschiebt das Fenster frei und setzt das Andock-Tracking
 /// aus, damit der Benutzer eine eigene Position waehlen kann.
-final class PromptInputPanel: NSPanel {
+final class PromptInputPanel: NSPanel, NSTextViewDelegate {
 
     /// Wird ausgeloest wenn der Benutzer Enter drueckt (ohne Shift). Der
     /// Text ist der reine Inhalt des Eingabefelds — Pre/Mitte/Post-Bauen
@@ -70,6 +70,12 @@ final class PromptInputPanel: NSPanel {
     /// schreibt sie via `PromptSlotStore.setSummary` + Sofort-Sync.
     var onSlotSummary: ((Int, String, String) -> Void)?
 
+    /// Ein Slot wurde per Drag & Drop auf einen anderen gezogen (from, to).
+    /// Ziel leer = verschieben, Ziel belegt = tauschen. Das PromptBoardPanel
+    /// persistiert via `PromptSlotStore.move` und stoesst SOFORT den Cloud-/
+    /// Drive-Sync an. Pendant zu Windows `SlotMoveRequested`.
+    var onSlotMove: ((Int, Int) -> Void)?
+
     /// Rechtsklick auf einen belegten Slot -> Prioritaet (0=keine, 1=niedrig,
     /// 2=mittel, 3=hoch). Das PromptBoardPanel persistiert via
     /// `PromptSlotStore.setPriority` und stoesst SOFORT den Cloud-/Drive-Sync an.
@@ -116,6 +122,8 @@ final class PromptInputPanel: NSPanel {
     private static let slotPrioMedium = NSColor(calibratedRed: 0.984, green: 0.753, blue: 0.176, alpha: 1)
     private static let slotPrioLow = NSColor(calibratedRed: 0.263, green: 0.627, blue: 0.278, alpha: 1)
     private static let slotPrioText = NSColor(calibratedWhite: 0.102, alpha: 1)
+    /// Rahmenfarbe des moeglichen Ziel-Slots waehrend eines Drags (Windows: cyan).
+    fileprivate static let slotDropTarget = NSColor(calibratedRed: 0.0, green: 0.74, blue: 0.83, alpha: 1)
     /// Wieviele Slots je Reihe — 15 oben (1-15), 15 unten (16-30).
     private static let slotsPerRow = 15
 
@@ -151,6 +159,9 @@ final class PromptInputPanel: NSPanel {
 
         buildUI()
         installRightClickDragMonitor()
+        // Nicht abgeschickten Text vom letzten Mal zurueckholen — ueberlebt
+        // einen Overlay-Neustart (Datenverlust-Schutz, siehe saveDraft).
+        restoreDraft()
     }
 
     deinit {
@@ -170,6 +181,77 @@ final class PromptInputPanel: NSPanel {
         tooltipPanel.orderOut(nil)
     }
 
+    // MARK: - Draft-Persistenz (Datenverlust-Schutz)
+    // Portierung von Windows `SaveDraft`/`RestoreDraft`/`HasPendingDraft`
+    // (PromptInputWindow.xaml.cs): der noch nicht abgeschickte Eingabe-Text
+    // wird bei JEDER Aenderung sofort in eine kleine Datei gespiegelt und beim
+    // naechsten Start wiederhergestellt. Damit ueberlebt ein getippter Prompt
+    // einen Overlay-Neustart/Absturz. Best-Effort: ein Fehler beim Schreiben
+    // darf die Eingabe nie stoeren, deshalb ueberall `try?`.
+
+    /// Ablageort des Entwurfs. Bewusst unter Application Support/PromptBoard —
+    /// dasselbe Verzeichnis, in dem auch die Slots und die Historie liegen.
+    private static var draftURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory,
+                                            in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        return base.appendingPathComponent("PromptBoard/input-draft.txt")
+    }
+
+    /// Gibt es einen nicht-leeren Entwurf? (Fuer Aufrufer, die das Eingabe-
+    /// fenster nach einem Neustart automatisch oeffnen wollen.)
+    static func hasPendingDraft() -> Bool {
+        guard let text = try? String(contentsOf: draftURL, encoding: .utf8) else { return false }
+        return !text.isEmpty
+    }
+
+    /// Schreibt den aktuellen Stand atomar weg. Beim Leeren (nach dem
+    /// Abschicken) wird "" gespeichert — der Entwurf leert sich also mit.
+    private func saveDraft(_ text: String) {
+        let url = Self.draftURL
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
+        try? text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    /// Stellt einen gespeicherten Entwurf beim Aufbau des Fensters wieder her.
+    /// Ueberschreibt NIE vorhandenen Text — nur ein leeres Feld wird gefuellt.
+    private func restoreDraft() {
+        guard textView.string.isEmpty,
+              let saved = try? String(contentsOf: Self.draftURL, encoding: .utf8),
+              !saved.isEmpty else { return }
+        textView.string = saved
+        let end = NSRange(location: (saved as NSString).length, length: 0)
+        textView.setSelectedRange(end)
+        updatePreviewFromText(saved)
+    }
+
+    /// NSTextViewDelegate: jede Texteingabe spiegelt sofort in den Entwurf und
+    /// frischt die Pre/Post-Vorschau auf (Windows `InputBox_TextChanged`).
+    func textDidChange(_ notification: Notification) {
+        let text = textView.string
+        saveDraft(text)
+        updatePreviewFromText(text)
+    }
+
+    /// Kompakte Struktur-Vorschau wie unter Windows: "[Pre] <Anfang>… [Post]".
+    /// Ein laufender Gemini-Status wird nicht ueberschrieben.
+    private func updatePreviewFromText(_ text: String) {
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let current = previewLabel.stringValue
+            if !current.hasPrefix("Verbessere") && !current.hasPrefix("Gemini") {
+                previewLabel.stringValue = ""
+            }
+            return
+        }
+        let maxLen = 60
+        let flat = text.replacingOccurrences(of: "\n", with: " ")
+        let snippet = flat.count > maxLen
+            ? String(flat.prefix(maxLen)).trimmingCharacters(in: .whitespaces) + "…"
+            : flat
+        previewLabel.stringValue = "[Pre] \(snippet) [Post]"
+    }
+
     // MARK: - Public API
 
     /// Setzt den Inhalt des Eingabefelds und positioniert den Cursor ans
@@ -179,6 +261,10 @@ final class PromptInputPanel: NSPanel {
         textView.string = text
         let endRange = NSRange(location: (text as NSString).length, length: 0)
         textView.setSelectedRange(endRange)
+        // Programmatische Aenderungen loesen KEIN textDidChange aus — den
+        // Entwurf deshalb hier von Hand nachziehen.
+        saveDraft(text)
+        updatePreviewFromText(text)
         makeKeyAndFocusInput()
     }
 
@@ -193,6 +279,8 @@ final class PromptInputPanel: NSPanel {
         textView.string = merged
         let newCaret = sel.location + (text as NSString).length
         textView.setSelectedRange(NSRange(location: newCaret, length: 0))
+        saveDraft(merged)
+        updatePreviewFromText(merged)
         makeKeyAndFocusInput()
     }
 
@@ -205,6 +293,10 @@ final class PromptInputPanel: NSPanel {
     /// sinnvoll handhabt).
     func clearInput() {
         textView.string = ""
+        // Entwurf mit leeren — sonst taucht der bereits abgeschickte Text beim
+        // naechsten Start wieder auf.
+        saveDraft("")
+        updatePreviewFromText("")
         // Bewusst KEIN makeKeyAndFocusInput() hier. Wenn der Benutzer den
         // naechsten Prompt tippen will, klickt er einmal ins Eingabefeld.
     }
@@ -357,6 +449,8 @@ final class PromptInputPanel: NSPanel {
         textView.onSubmit = { [weak self] text in
             self?.onSubmit?(text)
         }
+        // Delegate fuer die Draft-Persistenz + Live-Vorschau (textDidChange).
+        textView.delegate = self
 
         scrollView.hasVerticalScroller = true
         scrollView.scrollerStyle = .overlay
@@ -623,7 +717,8 @@ final class PromptInputPanel: NSPanel {
         var row1Views: [NSView] = []
         var row2Views: [NSView] = []
         for n in 1...PromptSlotStore.slotCount {
-            let btn = HoverButton()
+            let btn = SlotDragButton()
+            btn.owner = self
             // Kein System-Tooltip (leerer String) — die Anzeige uebernimmt der
             // eigene gestylte Tooltip ueber die Hover-Erkennung (handleSlotHover).
             configureSlotButton(btn, title: "\(n)", textColor: Self.slotGrey,
@@ -781,6 +876,70 @@ final class PromptInputPanel: NSPanel {
     /// ausgewaehlte Zahl bekommt einen goldenen Rahmen. Diskette/X sind nur
     /// sichtbar wenn eine Zahl ausgewaehlt ist; X ist nur aktiv wenn der Slot
     /// wirklich Inhalt hat.
+    // ── Slot-Drag & Drop (Windows-Pendant: OnSlotPreviewMouse*/OnSlotDrag*) ──
+
+    /// Darf von diesem Slot aus gezogen werden? Nur belegte Slots — ein leerer
+    /// Slot hat nichts zu verschieben (deckungsgleich zu Windows
+    /// `OnSlotPreviewMouseDown`, das die Scharfstellung bei leerem Slot verwirft).
+    func slotDragCanStart(_ n: Int) -> Bool {
+        !(slotContents[n]?.isEmpty ?? true)
+    }
+
+    /// Markiert einen moeglichen Ziel-Slot waehrend des Ziehens cyan (Windows:
+    /// `OnSlotDragOver` faerbt den Rahmen). `on == false` stellt die normale
+    /// Auswahl-/Belegt-Optik ueber `updateSlotVisuals()` wieder her.
+    func slotDragHighlight(_ n: Int, on: Bool) {
+        guard let btn = slotButtons[n] else { return }
+        if on {
+            btn.layer?.borderWidth = 2
+            btn.layer?.borderColor = Self.slotDropTarget.cgColor
+        } else {
+            updateSlotVisuals()
+        }
+    }
+
+    /// Ablegen auf einem Slot: lokalen Cache verschieben bzw. tauschen, Anzeige
+    /// auffrischen und `onSlotMove` feuern (dort passiert die Persistenz +
+    /// Cloud-Sync). 1:1 zu Windows `OnSlotDrop` — Text, Zusammenfassung UND
+    /// Prioritaet wandern gemeinsam, sonst bliebe die Einfaerbung am alten Slot.
+    func handleSlotDrop(from: Int, to: Int) {
+        updateSlotVisuals()               // Drop-Markierung entfernen
+        guard from != to,
+              let fromText = slotContents[from], !fromText.isEmpty else { return }
+
+        let toText = slotContents[to] ?? ""
+        let targetOccupied = !toText.isEmpty
+        let fromSummary = slotSummaries[from]
+        let toSummary = slotSummaries[to]
+        let fromPriority = slotPriorities[from]
+        let toPriority = slotPriorities[to]
+        let now = Date()
+
+        slotContents[to] = fromText
+        slotTimestamps[to] = now
+        if let sm = fromSummary, !sm.isEmpty { slotSummaries[to] = sm } else { slotSummaries.removeValue(forKey: to) }
+        if let pr = fromPriority, pr != 0 { slotPriorities[to] = pr } else { slotPriorities.removeValue(forKey: to) }
+
+        if targetOccupied {
+            slotContents[from] = toText
+            slotTimestamps[from] = now
+            if let sm = toSummary, !sm.isEmpty { slotSummaries[from] = sm } else { slotSummaries.removeValue(forKey: from) }
+            if let pr = toPriority, pr != 0 { slotPriorities[from] = pr } else { slotPriorities.removeValue(forKey: from) }
+        } else {
+            slotContents.removeValue(forKey: from)
+            slotTimestamps.removeValue(forKey: from)
+            slotSummaries.removeValue(forKey: from)
+            slotPriorities.removeValue(forKey: from)
+        }
+
+        selectedSlot = to                 // Auswahl wandert auf das Ziel
+        updateSlotVisuals()
+        updatePreview(targetOccupied
+            ? "Slot \(from) und \(to) getauscht."
+            : "Prompt von Slot \(from) nach \(to) verschoben.")
+        onSlotMove?(from, to)
+    }
+
     private func updateSlotVisuals() {
         for (n, btn) in slotButtons {
             let hasContent = !(slotContents[n]?.isEmpty ?? true)
@@ -1143,7 +1302,8 @@ final class SubmitTextView: NSTextView {
 /// NSButton, der Maus-Eintritt/-Austritt ueber eine NSTrackingArea meldet —
 /// Grundlage fuer das eigene Tooltip-Fenster (der System-NSToolTip laesst sich
 /// nicht im App-Stil gestalten).
-final class HoverButton: NSButton {
+/// Nicht `final`: SlotDragButton erbt davon (Slot-Drag & Drop).
+class HoverButton: NSButton {
     var onHover: ((Bool) -> Void)?
     private var hoverTrackingArea: NSTrackingArea?
 
@@ -1160,6 +1320,112 @@ final class HoverButton: NSButton {
 
     override func mouseEntered(with event: NSEvent) { onHover?(true) }
     override func mouseExited(with event: NSEvent) { onHover?(false) }
+}
+
+/// Slot-Zahl mit Drag & Drop: ein belegter Slot laesst sich auf einen anderen
+/// ziehen (Ziel leer = verschieben, Ziel belegt = tauschen) — 1:1 zum Windows-
+/// Verhalten (`OnSlotPreviewMouseDown/Move`, `OnSlotDragOver/Leave/Drop`).
+///
+/// Warum eine eigene mouseDown-Schleife: `NSButton.mouseDown` startet einen
+/// eigenen Tracking-Loop, der bis zum MouseUp nicht zurueckkehrt — `mouseDragged`
+/// wird darin NIE aufgerufen. Deshalb tracken wir die Maus selbst und
+/// entscheiden anhand der 4-px-Schwelle (gleiche Schwelle wie beim Overlay-Drag):
+/// unter der Schwelle ein normaler Klick (Aktion nur beim Loslassen INNERHALB
+/// des Knopfes, wie AppKit es tut), darueber ein Drag. `super.mouseDown` wird
+/// bewusst nicht aufgerufen — es wuerde auf ein MouseUp warten, das wir bereits
+/// verbraucht haben, und der Knopf bliebe haengen.
+final class SlotDragButton: HoverButton, NSDraggingSource {
+
+    static let pasteboardType = NSPasteboard.PasteboardType("de.frank.voiceoverlay.slot")
+
+    weak var owner: PromptInputPanel?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([Self.pasteboardType])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht benutzt") }
+
+    // ── Quelle ──
+
+    override func mouseDown(with event: NSEvent) {
+        guard let owner = owner, owner.slotDragCanStart(tag), let win = window else {
+            super.mouseDown(with: event)
+            return
+        }
+        let start = event.locationInWindow
+        while let next = win.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            if next.type == .leftMouseUp {
+                // Kein Drag — normaler Klick, aber nur wenn innerhalb des Knopfes
+                // losgelassen wurde (AppKit-Verhalten).
+                if bounds.contains(convert(next.locationInWindow, from: nil)) {
+                    sendAction(action, to: target)
+                }
+                return
+            }
+            let dx = next.locationInWindow.x - start.x
+            let dy = next.locationInWindow.y - start.y
+            if abs(dx) >= 4 || abs(dy) >= 4 {
+                beginSlotDrag(with: next)
+                return
+            }
+        }
+    }
+
+    private func beginSlotDrag(with event: NSEvent) {
+        let item = NSPasteboardItem()
+        item.setString(String(tag), forType: Self.pasteboardType)
+        let dragItem = NSDraggingItem(pasteboardWriter: item)
+        // Der gezogene Knopf selbst als Drag-Bild — der Benutzer sieht genau,
+        // welche Zahl er gerade in der Hand hat.
+        if let rep = bitmapImageRepForCachingDisplay(in: bounds) {
+            cacheDisplay(in: bounds, to: rep)
+            let img = NSImage(size: bounds.size)
+            img.addRepresentation(rep)
+            dragItem.setDraggingFrame(bounds, contents: img)
+        } else {
+            dragItem.draggingFrame = bounds
+        }
+        beginDraggingSession(with: [dragItem], event: event, source: self)
+    }
+
+    func draggingSession(_ session: NSDraggingSession,
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        return .move
+    }
+
+    // ── Ziel ──
+
+    private var isDropHighlighted = false
+
+    private func sourceSlot(_ sender: NSDraggingInfo) -> Int? {
+        guard let str = sender.draggingPasteboard.string(forType: Self.pasteboardType) else { return nil }
+        return Int(str)
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard let from = sourceSlot(sender), from != tag else { return [] }
+        isDropHighlighted = true
+        owner?.slotDragHighlight(tag, on: true)
+        return .move
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        guard isDropHighlighted else { return }
+        isDropHighlighted = false
+        owner?.slotDragHighlight(tag, on: false)
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        isDropHighlighted = false
+        guard let from = sourceSlot(sender), from != tag else {
+            owner?.slotDragHighlight(tag, on: false)
+            return false
+        }
+        owner?.handleSlotDrop(from: from, to: tag)
+        return true
+    }
 }
 
 /// Kleines, selbst gezeichnetes Tooltip-Fenster im App-Stil — 1:1 Pendant zum

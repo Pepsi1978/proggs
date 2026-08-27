@@ -41,6 +41,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var panel: OverlayPanel!
     private var appWatcher: AppWatcher!
+    /// Selbstheilender Sichtbarkeits-Poll (0,7 s) — holt das Overlay zurueck,
+    /// wenn die Ziel-App real im Vordergrund steht, es aber faelschlich
+    /// versteckt wurde. Windows-Pendant: `_foregroundReclaimTimer`.
+    private var foregroundReclaimTimer: Timer?
     private var audioRecorder: AudioRecorder!
     private var groqClient: GroqWhisperClient!
     private var geminiClient: GeminiClient?
@@ -463,6 +467,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         appWatcher.start()
+
+        // ── Foreground-Reclaim-Poll (Portierung von Windows) ──
+        // Das Einblenden haengt sonst allein an den Aktivierungs-Notifications.
+        // Blitzt kurz ein Fremdfenster auf (Mitteilung, Spotlight, ein
+        // Berechtigungs-Dialog) ODER geht eine Notification verloren, laeuft
+        // `onTerminalDeactivated` — und das Overlay bleibt weg, obwohl das CLI
+        // weiter vorne steht. Fuer Sprach-/Klick-Bedienung muss es aber sichtbar
+        // sein, solange das CLI zu sehen ist. Der Poll prueft daher die reale
+        // vorderste App: ist es eine Ziel-App und das Overlay unsichtbar, kommt
+        // es sofort zurueck. Steht eine echte Fremd-App vorne, passiert nichts —
+        // kein Widerspruch zum schnellen Verstecken (0,4 s). 0,7 s sind schnell
+        // genug, dass die Luecke kaum auffaellt, und der Poll ist billig
+        // (ein NSWorkspace-Zugriff, kein Fenster-Scan).
+        foregroundReclaimTimer?.invalidate()
+        foregroundReclaimTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            guard !self.panel.isVisible else { return }
+            guard self.appWatcher.isTargetAppFrontmost() else { return }
+            tvoDebug("[App] Foreground-Reclaim: Ziel-App ist vorne, Overlay war weg -> wieder einblenden")
+            self.hideDelayTimer?.invalidate()
+            self.hideDelayTimer = nil
+            self.appWatcher.onTerminalActivated?()
+        }
     }
 
     // MARK: - Status Bar

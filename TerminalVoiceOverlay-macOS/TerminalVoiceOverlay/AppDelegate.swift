@@ -41,6 +41,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var panel: OverlayPanel!
     private var appWatcher: AppWatcher!
+    /// Selbstheilender Sichtbarkeits-Poll (0,7 s) — holt das Overlay zurueck,
+    /// wenn die Ziel-App real im Vordergrund steht, es aber faelschlich
+    /// versteckt wurde. Windows-Pendant: `_foregroundReclaimTimer`.
+    private var foregroundReclaimTimer: Timer?
     private var audioRecorder: AudioRecorder!
     private var groqClient: GroqWhisperClient!
     private var geminiClient: GeminiClient?
@@ -56,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let autoEnterServer = AutoEnterStatusServer()
     private var autoHide: AutoHideController?
     private var ptt: PushToTalkController?
+    /// Aufnahme-Signaltoene wie unter Windows (880 Hz Start, 660+440 Hz Stop)
+    /// statt der bisherigen System-Pieptoene.
+    private let recordingCuePlayer = RecordingCuePlayer()
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
 
@@ -466,6 +473,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         appWatcher.start()
+
+        // ── Foreground-Reclaim-Poll (Portierung von Windows) ──
+        // Das Einblenden haengt sonst allein an den Aktivierungs-Notifications.
+        // Blitzt kurz ein Fremdfenster auf (Mitteilung, Spotlight, ein
+        // Berechtigungs-Dialog) ODER geht eine Notification verloren, laeuft
+        // `onTerminalDeactivated` — und das Overlay bleibt weg, obwohl das CLI
+        // weiter vorne steht. Fuer Sprach-/Klick-Bedienung muss es aber sichtbar
+        // sein, solange das CLI zu sehen ist. Der Poll prueft daher die reale
+        // vorderste App: ist es eine Ziel-App und das Overlay unsichtbar, kommt
+        // es sofort zurueck. Steht eine echte Fremd-App vorne, passiert nichts —
+        // kein Widerspruch zum schnellen Verstecken (0,4 s). 0,7 s sind schnell
+        // genug, dass die Luecke kaum auffaellt, und der Poll ist billig
+        // (ein NSWorkspace-Zugriff, kein Fenster-Scan).
+        foregroundReclaimTimer?.invalidate()
+        foregroundReclaimTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            guard !self.panel.isVisible else { return }
+            guard self.appWatcher.isTargetAppFrontmost() else { return }
+            tvoDebug("[App] Foreground-Reclaim: Ziel-App ist vorne, Overlay war weg -> wieder einblenden")
+            self.hideDelayTimer?.invalidate()
+            self.hideDelayTimer = nil
+            self.appWatcher.onTerminalActivated?()
+        }
     }
 
     // MARK: - Status Bar
@@ -553,7 +583,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 panel.setMicState(.recording)
             }
-            NSSound.beep()
+            recordingCuePlayer.playStart()
         } catch {
             NSLog("Microphone error: %@", error.localizedDescription)
             pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
@@ -585,9 +615,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            // Audio feedback: double beep on stop
-            DispatchQueue.main.async { NSSound.beep() }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSSound.beep() }
+            // Stopp-Signal: absteigendes Zwei-Ton-Signal (660 Hz -> 440 Hz),
+            // exakt wie unter Windows. Der Player spielt beide Toene in EINEM
+            // Puffer — kein zweiter Timer noetig, kein Auseinanderdriften.
+            DispatchQueue.main.async { self.recordingCuePlayer.playStop() }
 
             self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
                 try? FileManager.default.removeItem(at: fileURL)
@@ -1457,6 +1488,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             tvoDebug("[App] launch-restore skipped (Drive not connected)")
             return
         }
+        // Datenverlust-Schutz (Portierung von Windows "Protect launch restore
+        // from local changes"): weicht der lokale Stand vom zuletzt
+        // synchronisierten ab, gibt es hier ungesicherte Aenderungen. Ein
+        // Restore wuerde sie ueberschreiben — also gar nicht erst anfangen.
+        // Beim allerersten Start (noch kein Fingerabdruck) darf er laufen.
+        let localBeforeDownload = PromptBoardPanel.currentBackupFingerprint()
+        if let lastSynced = PromptBoardPanel.readLastSyncFingerprint(),
+           let localNow = localBeforeDownload,
+           localNow != lastSynced {
+            tvoDebug("[App] launch-restore skipped (lokale PromptBoard-Aenderungen sind noch nicht gesichert)")
+            return
+        }
         GoogleDriveBackupService.shared.downloadLatest { [weak self] result in
             switch result {
             case .failure(let e):
@@ -1476,8 +1519,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // moments earlier doesn't trigger a self-restore race.
                 if remoteDate > localDate.addingTimeInterval(2) {
                     DispatchQueue.main.async {
+                        // Zweite Sicherung: waehrend des Downloads kann der
+                        // Benutzer weitergearbeitet haben. Hat sich der lokale
+                        // Stand seit der Pruefung oben geaendert, wird NICHT
+                        // ueberschrieben (Windows-Pendant: localAfterDownload).
+                        let localAfterDownload = PromptBoardPanel.currentBackupFingerprint()
+                        guard localAfterDownload == localBeforeDownload else {
+                            tvoDebug("[App] launch-restore skipped (PromptBoard hat sich waehrend des Downloads geaendert)")
+                            return
+                        }
                         do {
                             let result = try PromptBoardPanel.applyBackupJson(json)
+                            // Der eingespielte Stand ist ab jetzt der
+                            // synchronisierte — Fingerabdruck mitziehen, sonst
+                            // gilt er beim naechsten Start als "lokal veraendert".
+                            // Bewusst aus dem ERGEBNIS-Zustand berechnet, nicht
+                            // aus dem heruntergeladenen JSON: ein von Windows
+                            // geschriebenes Backup hat eine leicht andere
+                            // Feld-/Reihenfolge-Form, sein Abdruck wuerde nie
+                            // zum lokal gebauten passen und der Restore waere
+                            // dauerhaft blockiert.
+                            PromptBoardPanel.writeLastSyncFingerprintFromCurrentState()
                             tvoDebug("[App] launch-restore applied remote backup from \(remoteDate): \(result.newPrompts) neue Prompts, \(result.newCategories) neue Kategorien")
                             // PromptBoard ueber den Auto-Sync informieren —
                             // setzt Timestamp + "+N neu"-Badge im Header.
