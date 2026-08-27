@@ -1003,6 +1003,19 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     func openInputPanelExternally() { openInputPanel() }
     func closeInputPanelExternally() { closeInputPanel() }
 
+    /// Datenverlust-Schutz (Windows: Loaded-Handler im PromptBoardPanel):
+    /// Steht aus der letzten Sitzung noch ein nicht abgeschickter Eingabe-Text
+    /// im Entwurf — etwa weil das Overlay neu gestartet wurde, waehrend Text im
+    /// Feld stand —, wird das Eingabefenster automatisch geoeffnet. Sein
+    /// Konstruktor stellt den Text dann wieder her, sodass er sichtbar bleibt
+    /// statt unbemerkt liegenzubleiben. Ohne Entwurf passiert nichts.
+    func openInputPanelIfDraftPending() {
+        guard PromptInputPanel.hasPendingDraft() else { return }
+        guard inputPanel == nil || inputPanel?.isVisible != true else { return }
+        tvoDebug("[Board] Nicht abgeschickter Entwurf gefunden — Eingabefenster wird geoeffnet")
+        openInputPanel()
+    }
+
     private func openInputPanel() {
         // Eingabe und Historie schliessen sich gegenseitig aus — beide
         // docken am gleichen Platz links neben dem Promtboard. Wenn die
@@ -1361,6 +1374,19 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// Kategorie (Windows #1868). Visuell: gruener Flash auf dem Button als
     /// Bestaetigung. Loest danach refresh aus.
     @objc private func onClearAllChecks() {
+        // Schutz vor dem Fehlklick: dieser Knopf entfernt die Always-On-Markierung
+        // in ALLEN Kategorien (ausser "Allgemein") und laesst sich nicht mit einem
+        // Klick rueckgaengig machen. Windows fragt an derselben Stelle nach
+        // (ConfirmDialog.Ask) — auf macOS geschah es bisher ohne Rueckfrage.
+        let alert = NSAlert()
+        alert.messageText = "Alle Haekchen entfernen?"
+        alert.informativeText = "Damit wird Always-On in ALLEN Kategorien ausser \"Allgemein\" abgeschaltet. "
+            + "Das laesst sich nicht mit einem Klick rueckgaengig machen."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Entfernen")
+        alert.addButton(withTitle: "Abbrechen")
+        guard PBModalPresenter.runModal(on: alert) == .alertFirstButtonReturn else { return }
+
         do {
             for cat in categories {
                 if cat.name.lowercased() == "allgemein" { continue }

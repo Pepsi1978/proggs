@@ -999,6 +999,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     func openInputPanelExternally() { openInputPanel() }
     func closeInputPanelExternally() { closeInputPanel() }
 
+    /// Datenverlust-Schutz (Windows: Loaded-Handler): steht noch ein nicht
+    /// abgeschickter Entwurf, wird das Eingabefenster automatisch geoeffnet.
+    func openInputPanelIfDraftPending() {
+        guard PromptInputPanel.hasPendingDraft() else { return }
+        guard inputPanel == nil || inputPanel?.isVisible != true else { return }
+        openInputPanel()
+    }
+
     private func openInputPanel() {
         // Eingabe und Historie schliessen sich gegenseitig aus — beide
         // docken am gleichen Platz links neben dem Promtboard. Wenn die
@@ -1357,6 +1365,18 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// Kategorie (Windows #1868). Visuell: gruener Flash auf dem Button als
     /// Bestaetigung. Loest danach refresh aus.
     @objc private func onClearAllChecks() {
+        // Schutz vor dem Fehlklick: entfernt Always-On in ALLEN Kategorien ausser
+        // "Allgemein" und ist nicht mit einem Klick rueckgaengig zu machen.
+        // Windows fragt an derselben Stelle nach (ConfirmDialog.Ask).
+        let alert = NSAlert()
+        alert.messageText = "Alle Haekchen entfernen?"
+        alert.informativeText = "Damit wird Always-On in ALLEN Kategorien ausser \"Allgemein\" abgeschaltet. "
+            + "Das laesst sich nicht mit einem Klick rueckgaengig machen."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Entfernen")
+        alert.addButton(withTitle: "Abbrechen")
+        guard PBModalPresenter.runModal(on: alert) == .alertFirstButtonReturn else { return }
+
         do {
             for cat in categories {
                 if cat.name.lowercased() == "allgemein" { continue }

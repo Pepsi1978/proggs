@@ -1780,6 +1780,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PromptHotkeyRegistry.shared.installHotkeys()
         refreshPromptHotkeys()
 
+        // Datenverlust-Schutz (Windows: Loaded-Handler des Promptboards): stand
+        // beim letzten Beenden noch ein nicht abgeschickter Text im Eingabefeld,
+        // wird das Fenster jetzt geoeffnet und der Text wieder sichtbar gemacht.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self, PromptInputPanel.hasPendingDraft() else { return }
+            self.ensurePromptBoardInstance()
+            self.promptBoardPanel?.openInputPanelIfDraftPending()
+        }
+
         // Screenshot (Cmd+Shift+S) — Pendant zu Windows Strg+Alt+P.
         // Windows macht daraus einen EIN-SCHRITT-Befehl: Screenshot aufnehmen UND
         // sofort einfuegen. Eingefuegt wird nur, wenn wirklich ein NEUES Bild

@@ -1781,6 +1781,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PromptHotkeyRegistry.shared.installHotkeys()
         refreshPromptHotkeys()
 
+        // Datenverlust-Schutz: nicht abgeschickter Entwurf wird wieder sichtbar.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self, PromptInputPanel.hasPendingDraft() else { return }
+            self.ensurePromptBoardInstance()
+            self.promptBoardPanel?.openInputPanelIfDraftPending()
+        }
+
         // Finder zum Release-Bundle (Cmd+Shift+E) — Pendant zu Windows Alt+F11
         reg.register(keyCode: TVOHotkey.openReleaseBundle.keyCode,
                      modifiers: TVOHotkey.openReleaseBundle.modifiers) { [weak self] in
