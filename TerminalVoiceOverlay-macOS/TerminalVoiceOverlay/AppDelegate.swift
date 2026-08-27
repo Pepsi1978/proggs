@@ -602,7 +602,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSSound.beep()
         } catch {
             NSLog("Microphone error: %@", error.localizedDescription)
-            pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
+            pasteError("Mikrofon nicht verfuegbar — \(ErrorDescriptions.describeMicrophoneError(error))")
         }
     }
 

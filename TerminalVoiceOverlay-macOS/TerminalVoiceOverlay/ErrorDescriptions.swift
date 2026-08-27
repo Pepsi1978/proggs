@@ -3,6 +3,39 @@ import Foundation
 /// User-friendly error descriptions for API errors (extracted from AppDelegate for clarity)
 enum ErrorDescriptions {
 
+    /// Uebersetzt einen Fehler beim Start der Aufnahme in einen Satz, der sagt, was zu tun ist.
+    ///
+    /// AVFoundation reicht CoreAudio-Fehler als nackte Zahl durch ("error 2003329396"). Im
+    /// Terminal stand deshalb bisher eine Nummer, mit der niemand etwas anfangen kann - obwohl
+    /// die Ursache fast immer eine von drei banalen ist: Berechtigung fehlt, ein anderes Programm
+    /// haelt das Mikrofon, oder das Eingabegeraet hat gerade gewechselt.
+    static func describeMicrophoneError(_ error: Error) -> String {
+        if let recorderError = error as? AudioRecorder.RecorderError {
+            return recorderError.errorDescription ?? "\(recorderError)"
+        }
+
+        let nsError = error as NSError
+        guard nsError.domain == "com.apple.coreaudio.avfaudio" else {
+            return error.localizedDescription
+        }
+
+        switch nsError.code {
+        case 2003329396:
+            // FourCC 'what' - die AudioUnit laesst sich im aktuellen Zustand nicht starten.
+            return "Mikrofon liess sich nicht starten (Code 'what') — belegt es gerade ein anderes "
+                 + "Programm, oder hat das Eingabegeraet gewechselt? Systemeinstellungen > Ton > Eingabe pruefen"
+        case 560557673:
+            // 'nope' - kein passendes Eingabegeraet.
+            return "Kein nutzbares Eingabegeraet — Systemeinstellungen > Ton > Eingabe pruefen"
+        case 561015905:
+            // '!pri' - Berechtigung.
+            return "Keine Mikrofon-Berechtigung — Systemeinstellungen > Datenschutz & Sicherheit > Mikrofon"
+        default:
+            return "Mikrofon liess sich nicht starten (CoreAudio-Code \(nsError.code)) — "
+                 + "Eingabegeraet und Mikrofon-Berechtigung pruefen"
+        }
+    }
+
     static func describeTranscriptionError(_ error: Error) -> String {
         let nsError = error as NSError
 

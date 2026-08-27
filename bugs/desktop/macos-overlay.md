@@ -253,6 +253,14 @@
 - **FIX:** Bei `AVAudioEngineConfigurationChange` Tap entfernen, Engine stoppen und Engine/Tap **neu aufbauen** (im Härtefall neue `AVAudioEngine`-Instanz). Engine NIE im Notification-Handler deallokieren.
 - **Quelle:** https://developer.apple.com/forums/thread/705706 (extern)
 
+### M3a. `engine.start()` scheitert mit CoreAudio-Code 2003329396 ('what') ⭐ HAEUFIG
+- **Symptom:** "Mikrofon nicht verfuegbar — com.apple.coreaudio.avfaudio error 2003329396", obwohl das Geraet im System da ist und die Berechtigung steht. Oft direkt nach einem Geraetewechsel oder wenn ein zweites Programm im selben Moment aufnimmt.
+- **Ursache:** `AVAudioEngine.start()` bekommt eine AudioUnit, die im aktuellen Zustand nicht starten kann. Ein einzelner Startversuch gibt sofort auf. Verschaerfend: wird das Eingabegeraet nur bei LEEREM Format (`sampleRate <= 0`) neu gebunden, rettet das nichts — CoreAudio haelt ein verschwundenes Geraet mit gueltig wirkendem Format im Prozess-Cache.
+- **Versionen:** alle (bestaetigt macOS 15/26, TerminalVoiceOverlay 1.36 / ClaudeCodexVoiceOverlay 1.34).
+- **FIX:** Start bis zu 3x wiederholen mit ~0,25 s Pause; ab dem ZWEITEN Anlauf `kAudioOutputUnitProperty_CurrentDevice` ausdruecklich auf das Standard-Eingabegeraet setzen (`forceRebind`), statt nur bei leerem Format. Vorher `AVCaptureDevice.authorizationStatus(for: .audio)` pruefen — bei `.denied`/`.restricted` sofort mit Klartext abbrechen statt dreimal vergeblich zu starten. `inputNode.audioUnit` NIE force-unwrappen (ist nach einem Ton-Stack-Neustart wirklich nil).
+- **Zusatz:** Rohe CoreAudio-Codes nie an den Benutzer durchreichen — 'what' (2003329396), 'nope' (560557673), '!pri' (561015905) in Klartext uebersetzen.
+- **Quelle:** eigener Bug-Case 2026-08-27 (`.claude/agent-memory/shared/bug-cases.jsonl`)
+
 ### M4. Prompt erscheint nie beim Hintergrund-/Login-Item-Start
 - **Symptom:** Overlay startet als Agent/Login-Item, `requestAccess` ruft keinen Dialog auf; App fehlt teils in der Settings-Liste.
 - **Ursache:** TCC zeigt den Mikro-Prompt zuverlässig nur bei aktiver UI / Vordergrund-App.

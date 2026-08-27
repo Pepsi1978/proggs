@@ -20,6 +20,15 @@ final class AudioRecorder {
         return _isRecording
     }
 
+    /// Startet die Aufnahme. Schlaegt der Start fehl, wird er bis zu dreimal wiederholt und ab
+    /// dem zweiten Anlauf das Eingabegeraet ausdruecklich neu an die Engine gebunden.
+    ///
+    /// Der Grund: `AVAudioEngine.start()` scheitert reproduzierbar mit einem rohen CoreAudio-Code
+    /// (etwa 2003329396), wenn der Ton-Stack sich gerade neu sortiert - Geraetewechsel, ein
+    /// zweites Programm, das im selben Moment das Mikrofon greift, oder ein Standardgeraet, das
+    /// CoreAudio im Prozess noch zwischengespeichert hat. Bisher gab der Recorder in genau diesem
+    /// Fall sofort auf und meldete "Mikrofon nicht verfuegbar", obwohl das Geraet da war und der
+    /// naechste Anlauf gereicht haette. Ein Anlauf allein ist deshalb zu wenig.
     func start() throws {
         // Doppelstart verhindern: der Recorder ist prozessweit geteilt. Ohne
         // diese Pruefung baut ein zweiter Aufrufer eine NEUE Engine auf,
@@ -30,6 +39,43 @@ final class AudioRecorder {
         lock.unlock()
         if busy { throw RecorderError.alreadyRecording }
 
+        // Ohne erteilte Berechtigung scheitert jeder Anlauf gleich - dann lieber sofort sagen,
+        // was zu tun ist, statt dreimal vergeblich zu starten und eine CoreAudio-Nummer zu zeigen.
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .denied, .restricted:
+            throw RecorderError.permissionDenied
+        default:
+            break
+        }
+
+        var lastError: Error = RecorderError.noInputDevice
+        for attempt in 0..<3 {
+            do {
+                try startEngineOnce(forceRebind: attempt > 0)
+                if attempt > 0 {
+                    NSLog("AudioRecorder: Aufnahme im %d. Anlauf gestartet", attempt + 1)
+                }
+                return
+            } catch RecorderError.alreadyRecording {
+                // Kein Wiederholungsfall: hier laeuft bereits eine Aufnahme.
+                throw RecorderError.alreadyRecording
+            } catch {
+                lastError = error
+                NSLog("AudioRecorder: Start-Versuch %d fehlgeschlagen: %@",
+                      attempt + 1, error.localizedDescription)
+                // Kurz warten: bei einem Geraetewechsel braucht CoreAudio einen Moment, bis das
+                // neue Standardgeraet bereitsteht. Ohne Pause scheitern alle drei Anlaeufe gleich.
+                if attempt < 2 { Thread.sleep(forTimeInterval: 0.25) }
+            }
+        }
+        throw lastError
+    }
+
+    /// Ein einzelner Startversuch: Engine bauen, Tap setzen, starten.
+    /// - Parameter forceRebind: Eingabegeraet ausdruecklich an die Engine binden, auch wenn ihr
+    ///   Format plausibel aussieht. Genau dieser Fall rettet den zweiten Anlauf: CoreAudio kann ein
+    ///   verschwundenes Geraet mit gueltig wirkendem Format zwischenspeichern.
+    private func startEngineOnce(forceRebind: Bool) throws {
         // Gibt es ueberhaupt ein Eingabegeraet? Ohne diese Pruefung meldet der Recorder bei
         // abgezogenem Mikrofon nur "Audio-Converter konnte nicht erstellt werden" - eine
         // Meldung, aus der niemand auf ein fehlendes Geraet schliesst.
@@ -46,7 +92,7 @@ final class AudioRecorder {
         // Ohne die folgende Neuzuweisung bleibt die Aufnahme bis zum Neustart der App tot:
         // genau das Symptom "kein Mikrofon vorhanden", obwohl das Geraet im System da ist.
         var recordingFormat = inputNode.outputFormat(forBus: 0)
-        if recordingFormat.sampleRate <= 0 || recordingFormat.channelCount == 0 {
+        if forceRebind || recordingFormat.sampleRate <= 0 || recordingFormat.channelCount == 0 {
             Self.bindInputDevice(defaultInput, to: inputNode)
             recordingFormat = inputNode.outputFormat(forBus: 0)
         }
@@ -163,8 +209,14 @@ final class AudioRecorder {
     /// Zwingt die AudioUnit des Eingangsknotens auf ein bestimmtes Geraet. Das ist der einzige
     /// Weg, eine Engine nach einem Geraetewechsel wieder an das echte Mikrofon zu binden.
     private static func bindInputDevice(_ deviceID: AudioDeviceID, to inputNode: AVAudioInputNode) {
+        // audioUnit ist optional und im Fehlerfall (Ton-Stack neu gestartet) tatsaechlich nil.
+        // Ein Force-Unwrap wuerde die App genau dann abschiessen, wenn sie sich erholen soll.
+        guard let unit = inputNode.audioUnit else {
+            NSLog("AudioRecorder: Eingangsknoten hat keine AudioUnit - Geraet nicht bindbar")
+            return
+        }
         var device = deviceID
-        let status = AudioUnitSetProperty(inputNode.audioUnit!,
+        let status = AudioUnitSetProperty(unit,
                                           kAudioOutputUnitProperty_CurrentDevice,
                                           kAudioUnitScope_Global,
                                           0,
@@ -213,6 +265,9 @@ final class AudioRecorder {
         /// verschwundenes fest. Eigener Fall, damit die Meldung im Terminal sagt, was
         /// wirklich fehlt, statt auf einen Converter-Fehler auszuweichen.
         case noInputDevice
+        /// Die Mikrofon-Berechtigung ist entzogen oder durch eine Richtlinie gesperrt. Ohne sie
+        /// scheitert jeder Startversuch mit einer nichtssagenden CoreAudio-Nummer.
+        case permissionDenied
 
         var errorDescription: String? {
             switch self {
@@ -220,6 +275,7 @@ final class AudioRecorder {
             case .converterError: return "Audio-Converter konnte nicht erstellt werden"
             case .alreadyRecording: return "Es laeuft bereits eine Aufnahme"
             case .noInputDevice: return "kein Eingabegeraet gefunden (Systemeinstellungen > Ton > Eingabe pruefen)"
+            case .permissionDenied: return "keine Mikrofon-Berechtigung (Systemeinstellungen > Datenschutz & Sicherheit > Mikrofon)"
             }
         }
     }

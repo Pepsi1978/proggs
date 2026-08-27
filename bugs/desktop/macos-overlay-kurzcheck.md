@@ -27,6 +27,7 @@
 | 13 | Prompt kommt nur einmal, Toggle aus | Nicht erneut prompten; Nutzer in Settings-Pane führen | T3 |
 | 14 | App-Crash beim ersten Mikrofon-Zugriff | `NSMicrophoneUsageDescription` fehlt in Info.plist | M1 |
 | 15 | `format.sampleRate`-Crash beim Tap | Live-Hardware-Format (`outputFormat(forBus:)`) | M2 |
+| 15a | ⭐ „Mikrofon nicht verfuegbar" — CoreAudio 2003329396 ('what') trotz vorhandenem Geraet | `AVAudioEngine.start()` **bis zu 3x** wiederholen (~0,25 s Pause) und ab dem 2. Anlauf das Standard-Eingabegeraet **ausdruecklich neu binden** — nicht nur bei leerem Format. Vorher `authorizationStatus` pruefen; `inputNode.audioUnit` nie force-unwrappen; rohe CoreAudio-Codes in Klartext uebersetzen. | M3a |
 | 16 | Login-Item reaktiviert sich selbst | Nie blind `register()`; Nutzer-Wahl respektieren | L1 |
 | 17 | „App is damaged / cannot be opened" | Developer ID + notarisieren + stapeln; xattr putzen | C7 |
 | 18 | Notarisierung „signature invalid" | `--timestamp` + `ditto`-ZIP + `xattr -cr`, kein `--deep` | C2, C4, C5 |
