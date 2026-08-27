@@ -29,6 +29,11 @@ final class AutoEnterStatusServer {
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "tvo.autoenter.server")
 
+    /// Wie oft der Bind schon fehlgeschlagen ist. Begrenzt die Wiederholungen,
+    /// damit ein dauerhaft fremdbelegter Port nicht endlos Versuche erzeugt.
+    private var startAttempts = 0
+    private static let maxStartAttempts = 10
+
     func start() {
         do {
             let parameters = NWParameters.tcp
@@ -45,12 +50,22 @@ final class AutoEnterStatusServer {
                 self?.handle(connection: conn)
             }
 
-            listener.stateUpdateHandler = { state in
+            listener.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
                     tvoDebug("[AutoEnterHTTP] listening on 127.0.0.1:\(Self.port)")
+                    // Erfolgreich gebunden -> Zaehler zuruecksetzen, damit ein
+                    // spaeterer Ausfall wieder die vollen Versuche bekommt.
+                    self?.startAttempts = 0
                 case .failed(let err):
+                    // Selbstheilung statt stillem Aufgeben: Ist der Port beim
+                    // Start noch von einer Vorgaenger-Instanz (oder der
+                    // Schwester-App) belegt, war der Status-Server bisher fuer
+                    // die GANZE Sitzung tot — und damit auch der Aufnahme-Schutz
+                    // beim naechsten Build ("Status nicht sicher lesbar,
+                    // fail-closed"). Jetzt wird in Abstaenden erneut versucht.
                     tvoDebug("[AutoEnterHTTP] failed: \(err)")
+                    self?.scheduleRestart(after: err)
                 case .cancelled:
                     tvoDebug("[AutoEnterHTTP] cancelled")
                 default: break
@@ -59,6 +74,27 @@ final class AutoEnterStatusServer {
             listener.start(queue: queue)
         } catch {
             tvoDebug("[AutoEnterHTTP] could not start: \(error)")
+            scheduleRestart(after: error)
+        }
+    }
+
+    /// Baut den Listener nach einem Fehlschlag neu auf. Typischer Fall: der
+    /// Port ist beim Start noch von einer Vorgaenger-Instanz belegt, die
+    /// gerade beendet wird — nach ein paar Sekunden klappt es. Abstand waechst
+    /// (2 s, 4 s, 6 s …), Deckel bei zehn Versuchen; danach steht die Ursache
+    /// im Log statt in einer Endlosschleife.
+    private func scheduleRestart(after error: Error) {
+        startAttempts += 1
+        guard startAttempts <= Self.maxStartAttempts else {
+            tvoDebug("[AutoEnterHTTP] Port \(Self.port) bleibt belegt — nach \(Self.maxStartAttempts) Versuchen aufgegeben (\(error)). Aufnahme-Status ist fuer diese Sitzung nicht abfragbar.")
+            return
+        }
+        let delay = Double(startAttempts) * 2.0
+        tvoDebug("[AutoEnterHTTP] Neuversuch \(self.startAttempts)/\(Self.maxStartAttempts) in \(delay)s (Port \(Self.port) belegt?)")
+        listener?.cancel()
+        listener = nil
+        queue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.start()
         }
     }
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version 1.1.0 - 27.08.2026, 15:23 Uhr
+# Version 1.2.0 - 27.08.2026, 15:27 Uhr
 #
 # macOS-Pendant zu rebuild-overlay.ps1: baut ein Voice-Overlay sauber neu und
 # startet es neu — in EINEM Schritt, inklusive Verifikation, dass hinterher
@@ -271,6 +271,22 @@ case "$TARGET" in
     Both)    TARGETS=("TVO" "CVO") ;;
     *)       usage ;;
 esac
+
+# Bei "Both" ZUERST beide anhalten, dann erst bauen. Grund: die beiden Overlays
+# haben je einen eigenen Status-Port (TVO 5723, CVO 5724) — eine ALTE Fassung
+# der Schwester-App kann aber noch den falschen Port belegen. Baut man
+# nacheinander und laesst die andere laufen, bindet die frisch gestartete App
+# ihren Port nicht, und die Verifikation wartet auf einen Status, den nie
+# jemand liefert. Erst alles anhalten heisst: kein Squatter mehr da.
+if (( ${#TARGETS[@]} > 1 )); then
+    head_ "Vorbereitung: alle Ziele anhalten"
+    for t in "${TARGETS[@]}"; do
+        overlay_config "$t" || continue
+        wait_until_idle "$NAME" "$PORT" || exit 1
+        stop_launch_agent "$AGENT"
+        stop_overlay "$NAME" || exit 1
+    done
+fi
 
 FAILED=()
 for t in "${TARGETS[@]}"; do
