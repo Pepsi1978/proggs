@@ -116,6 +116,8 @@ extension OverlayPanel {
         var trackedDividerViews: [NSView] = []
         var s1Origin: NSPoint = .zero
         var s1Width: CGFloat = 0
+        var s7Origin: NSPoint = .zero
+        var s7Width: CGFloat = 0
         for (i, s) in sections.enumerated() {
             // Hintergrund-Rect der Sektion. Erste Sektion (S7, links) deckt
             // zusaetzlich das linke Innen-Polster ab, letzte Sektion (S1,
@@ -133,11 +135,16 @@ extension OverlayPanel {
             if i == sections.count - 1 {
                 bgRect.size.width = s.width + HBarLayout.sectionInnerPadX
             }
-            // Tracking-Origin/Width fuer S1-Extra-Buttons bleibt die
-            // logische Sektion (ohne Polster-Erweiterung).
-            if i == sections.count - 1 {  // letzte Sektion = S1
+            // Tracking-Origin/Width der beiden Randgruppen bleibt die logische
+            // Sektion (ohne Polster-Erweiterung). Erste Sektion = S1 (Stern +
+            // Diskette), letzte = S7 (Enter + Umschalter).
+            if i == 0 {
                 s1Origin = NSPoint(x: x, y: 0)
                 s1Width  = s.width
+            }
+            if i == sections.count - 1 {
+                s7Origin = NSPoint(x: x, y: 0)
+                s7Width  = s.width
             }
             let sectionView = makeSectionView(rect: bgRect,
                                               hex: s.backgroundHex,
@@ -179,7 +186,8 @@ extension OverlayPanel {
         self.currentOrientation = .horizontal
 
         // Extra-Buttons (OrientationToggle, Save) positionieren.
-        positionExtraButtonsHorizontal(s1Origin: s1Origin, s1Width: s1Width)
+        positionExtraButtonsHorizontal(s1Origin: s1Origin, s1Width: s1Width,
+                                       s7Origin: s7Origin, s7Width: s7Width)
 
         // HBar-Sektion-Farben enthalten bereits B3-Alpha-Praefix —
         // kein zusaetzlicher alphaValue-Multiplikator (sonst doppelte
@@ -386,16 +394,21 @@ extension OverlayPanel {
 
     private func makeHBarSections() -> [HBarSection] {
         // Reihenfolge LINKS→RECHTS:
-        // S7 (Enter+Umschalter), S6, S5, S4, S3, S2, S1 (Stern+Diskette)
+        // S1 (Stern+Diskette), S6, S5, S4, S3, S2, S7 (Enter+Umschalter)
         // Inhalts-Reihenfolge innerhalb jeder Sektion = rechts→links wie
         // vertikal oben→unten (Windows Z. 1187).
 
+        // Enter + Orientierungs-Umschalter: RECHTE Randgruppe (Windows
+        // BuildHorizontalLayout, letzte HBar-Gruppe). Beide Buttons werden wie
+        // Stern/Diskette als gleich grosse Kreise gestapelt und deshalb
+        // ausserhalb der Slot-Reihen positioniert — die untere Reihe ist fuer
+        // 22 px hohe Zahlen-Kacheln gedacht und wuerde die 34er Kreise stauchen.
         let s7 = HBarSection(
-            backgroundHex: "#B31A1A1A",  // S7 = zwei symmetrische Kreise (MakeHStackGroup)
+            backgroundHex: "#B31A1A1A",
             width: 50,
-            upperButtons: [.action(\.enterButton, HBarLayout.smallButtonSize)],
-            lowerButtons: [.orientationToggleExtra(HBarLayout.smallButtonSize)],
-            cornerMode: .leftRounded)
+            upperButtons: [],
+            lowerButtons: [],
+            cornerMode: .rightRounded)
 
         // Sektion-Widths: Mindestbreite = Content + 2×sectionInnerPadX (=16),
         // sonst landet das berechnete Polster (max(8, (width-content)/2))
@@ -472,9 +485,13 @@ extension OverlayPanel {
             width: 50,  // 34 + 16 padding
             upperButtons: [],
             lowerButtons: [],
-            cornerMode: .rightRounded)
+            cornerMode: .leftRounded)
 
-        return [s7, s6, s5, s4, s3, s2, s1]
+        // Reihenfolge LINKS→RECHTS exakt wie Windows BuildHorizontalLayout:
+        // Stern/Diskette ganz links, dann S6…S2, Enter/Umschalter ganz rechts.
+        // Bis 2026-08-27 lagen die beiden Randgruppen vertauscht — dieselbe
+        // Verwechslung wie im vertikalen Layout.
+        return [s1, s6, s5, s4, s3, s2, s7]
     }
 
     private func positionButtonsInSection(buttons: [HBarButtonSlot],

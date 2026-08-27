@@ -209,21 +209,35 @@ extension OverlayPanel {
     /// Spezial-Behandlung: beide 34×34 ÜBEREINANDER (MakeHStackGroup auf
     /// Windows), Slot-Mechanik kann das nicht (lower-Row ist nur 22 hoch).
     /// `s1Origin` + `s1Width` werden von applyHorizontalLayout uebergeben.
-    func positionExtraButtonsHorizontal(s1Origin: NSPoint, s1Width: CGFloat) {
-        // Stern auf 34×34 verkleinern (war 40×40 im vertikalen Layout).
+    func positionExtraButtonsHorizontal(s1Origin: NSPoint, s1Width: CGFloat,
+                                        s7Origin: NSPoint, s7Width: CGFloat) {
+        // Beide Randgruppen werden gestapelt wie Windows' MakeHStackGroup:
+        // zwei gleich grosse 34er-Kreise, oberer und unterer, vertikal mittig.
+        //   links  (S1): Stern oben, Diskette unten
+        //   rechts (S7): Enter oben, Orientierungs-Umschalter unten
         ultrathinkButton.buttonWidth  = 34
         ultrathinkButton.buttonHeight = 34
+        enterButton.buttonWidth  = 34
+        enterButton.buttonHeight = 34
+        orientationToggleButton.buttonWidth  = 34
+        orientationToggleButton.buttonHeight = 34
 
-        // S1-Sektion: 50 breit, 92 hoch. Padding 6 oben/unten.
-        // Stack: Stern oben + 4 px Margin + Diskette unten. Total 34+4+34 = 72.
+        // Rand-Sektion: 50 breit, 92 hoch. Padding 6 oben/unten.
+        // Stack: oberer Button + 4 px Margin + unterer. Total 34+4+34 = 72.
         // Free space innerhalb 92 - 12 padding = 80. (80-72)/2 = 4 zusaetzlich.
         // macOS-Y (unten=0):
-        //   Diskette untere Kante = padding 6 + 4 = 10
-        //   Stern untere Kante = 10 + 34 + 4 (margin) = 48
-        let stackX = s1Origin.x + (s1Width - 34) / 2
-        ultrathinkButton.frame        = NSRect(x: stackX, y: 48, width: 34, height: 34)
-        saveButton.frame              = NSRect(x: stackX, y: 10, width: 34, height: 34)
+        //   unterer Button = padding 6 + 4 = 10
+        //   oberer Button  = 10 + 34 + 4 (margin) = 48
+        let starX = s1Origin.x + (s1Width - 34) / 2
+        ultrathinkButton.frame = NSRect(x: starX, y: 48, width: 34, height: 34)
+        saveButton.frame       = NSRect(x: starX, y: 10, width: 34, height: 34)
         ultrathinkButton.needsDisplay = true
+
+        let enterX = s7Origin.x + (s7Width - 34) / 2
+        enterButton.frame             = NSRect(x: enterX, y: 48, width: 34, height: 34)
+        orientationToggleButton.frame = NSRect(x: enterX, y: 10, width: 34, height: 34)
+        enterButton.needsDisplay = true
+        orientationToggleButton.needsDisplay = true
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0

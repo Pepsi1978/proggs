@@ -72,6 +72,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // good path memorised — matches Windows _lastScreenshotPath behaviour.
     private var lastScreenshotPath: String?
 
+    /// Sperrfristen fuer die beiden Screenshot-Hotkeys. 1:1 Windows
+    /// (ScreenshotCooldownMs = 800, InsertCooldownMs = 500): ein gehaltener oder
+    /// doppelt gedrueckter Hotkey loeste sonst die Aktion mehrfach aus, waehrend
+    /// die erste noch lief (Screenshot + Einfuegen dauern zusammen rund 420 ms).
+    private var screenshotCooldownUntil: Date = .distantPast
+    private var insertCooldownUntil: Date = .distantPast
+    private static let screenshotCooldown: TimeInterval = 0.8
+    private static let insertCooldown: TimeInterval = 0.5
+
     /// Timer fuer X-Button Press-and-Hold: solange linke Maustaste gedrueckt,
     /// wird alle 10 ms eine Zeile geloescht. Bei mouseUp wird der Timer invalidiert.
     private var xRepeatTimer: Timer?
@@ -1293,14 +1302,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Erstellt die PromptBoardPanel-Instanz inkl. aller Callbacks, macht es
     /// aber NICHT sichtbar. Wird sowohl vom Solo-Dock-Einstieg (nur Eingabe)
     /// als auch von applySoloDockMode(false) genutzt — alle Subscriptions
+    /// Fuegt einen Prompt-Text ins Ziel ein — gemeinsamer Weg fuer Board-Klick
+    /// und Kurzbefehl (Windows: beide landen in BtnPaste/Insert).
+    private func insertPromptText(_ text: String) {
+        guard !text.isEmpty else { return }
+        tvoDebug("[App] insertPromptText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
+        TerminalController.pasteText(text, autoEnter: autoEnterEnabled)
+    }
+
+    /// Liest die Prompt-Liste und baut die Kurzbefehl-Tabellen neu auf.
+    /// Windows ruft das nach JEDEM Rendern des Promptboards; hier genuegt es,
+    /// nach Aenderungen und beim Start zu aktualisieren.
+    func refreshPromptHotkeys() {
+        do {
+            let prompts = try PromptBoardStore.shared.allPrompts()
+            PromptHotkeyRegistry.shared.rebuild(from: prompts)
+        } catch {
+            NSLog("refreshPromptHotkeys: %@", error.localizedDescription)
+        }
+    }
+
     /// liegen damit an einer Stelle. Pendant zu Windows EnsurePromptPanelInstance.
     private func ensurePromptBoardInstance() {
         if promptBoardPanel != nil { return }
         let p = PromptBoardPanel()
         p.onInsertText = { [weak self] text in
-            guard let self = self, !text.isEmpty else { return }
-            tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
-            TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
+            self?.insertPromptText(text)
+        }
+        // Nach jeder Aenderung im Board die Kurzbefehl-Tabellen nachziehen —
+        // sonst zeigt ein frisch zugewiesenes Cmd+3 ins Leere.
+        p.onPromptsChanged = { [weak self] in
+            self?.refreshPromptHotkeys()
         }
         p.onInputSubmit = { [weak self] middleText in
             self?.handleInputSubmit(middleText)
@@ -1736,16 +1768,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.toggleRecording()
         }
 
-        // Screenshot (Cmd+Shift+S) — Pendant zu Windows Strg+Alt+P
+        // Prompt-Kurzbefehle: Cmd+1..9 und Cmd+Opt+A..Z fuegen den jeweils
+        // zugewiesenen Prompt direkt ein (Windows: Strg+1..9 / Win+Alt+A..Z).
+        // Die Zuweisung selbst passiert im Promptboard; hier wird nur einmal
+        // beim System angemeldet und die Tabelle mit dem gespeicherten Stand
+        // gefuellt.
+        PromptHotkeyRegistry.shared.insertHandler = { [weak self] text in
+            guard let self = self else { return }
+            self.insertPromptText(text)
+        }
+        PromptHotkeyRegistry.shared.installHotkeys()
+        refreshPromptHotkeys()
+
+        // Screenshot (Cmd+Shift+S) — Pendant zu Windows Strg+Alt+P.
+        // Windows macht daraus einen EIN-SCHRITT-Befehl: Screenshot aufnehmen UND
+        // sofort einfuegen. Eingefuegt wird nur, wenn wirklich ein NEUES Bild
+        // entstanden ist — sonst landet versehentlich der alte Pfad im Terminal.
         reg.register(keyCode: TVOHotkey.screenshot.keyCode,
                      modifiers: TVOHotkey.screenshot.modifiers) { [weak self] in
-            self?.takeScreenshot()
+            guard let self = self else { return }
+            guard Date() >= self.screenshotCooldownUntil else {
+                tvoDebug("[Hotkey] Screenshot im Cooldown — ignoriert")
+                return
+            }
+            self.screenshotCooldownUntil = Date().addingTimeInterval(AppDelegate.screenshotCooldown)
+            let before = self.lastScreenshotPath
+            self.takeScreenshot()
+            // takeScreenshot laeuft asynchron; kurz warten, dann pruefen ob ein
+            // neuer Pfad entstanden ist.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+                guard let self = self else { return }
+                if let path = self.lastScreenshotPath, path != before {
+                    self.insertLastScreenshot()
+                } else {
+                    tvoDebug("[Hotkey] OneShot: Screenshot fehlgeschlagen, Einfuegen uebersprungen")
+                }
+            }
         }
 
         // Insert-Screenshot (Cmd+Shift+I) — Pendant zu Windows Strg+Alt+I
         reg.register(keyCode: TVOHotkey.insertScreenshot.keyCode,
                      modifiers: TVOHotkey.insertScreenshot.modifiers) { [weak self] in
-            self?.insertLastScreenshot()
+            guard let self = self else { return }
+            guard Date() >= self.insertCooldownUntil else {
+                tvoDebug("[Hotkey] Einfuegen im Cooldown — ignoriert")
+                return
+            }
+            self.insertCooldownUntil = Date().addingTimeInterval(AppDelegate.insertCooldown)
+            self.insertLastScreenshot()
         }
 
         // Finder zum Release-Bundle (Cmd+Shift+E) — Pendant zu Windows Alt+F11

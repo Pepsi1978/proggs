@@ -22,6 +22,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     var onInsertText: ((String) -> Void)?
 
+    /// Wird nach jeder Aenderung an der Prompt-Liste ausgeloest (anlegen,
+    /// bearbeiten, loeschen, Kurzbefehl zuweisen, Wiederherstellung). Der
+    /// AppDelegate baut daraufhin die Kurzbefehl-Tabellen neu auf — Windows
+    /// macht das an derselben Stelle, direkt nach dem Rendern.
+    var onPromptsChanged: (() -> Void)?
+
     /// Wird ausgeloest wenn der Benutzer im neuen PromptInputPanel Enter
     /// drueckt. Der Text ist der reine Inhalt der Eingabe-Box — das
     /// Pre/Mitte/Post-Zusammenbauen passiert weiter oben (AppDelegate
@@ -718,6 +724,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func renderPrompts() {
+        // Windows meldet die Kurzbefehl-Tabellen nach JEDEM Rendern neu an
+        // (HotkeyRegistry.Replace in PromptBoardPanel). Genau dieselbe Stelle:
+        // so passt die Zuordnung immer zum angezeigten Stand, egal ob gerade
+        // angelegt, bearbeitet, geloescht oder aus dem Backup geholt wurde.
+        defer { onPromptsChanged?() }
+
         promptStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         if activeCategoryIds.isEmpty {

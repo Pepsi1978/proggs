@@ -229,6 +229,18 @@ final class PromptBoardStore {
         return list
     }
 
+    /// Alle Prompts ueber alle Kategorien. Grundlage fuer die Kurzbefehl-Tabellen
+    /// (Windows: PromptBoardPanel liest beim Rendern ebenfalls den Gesamtbestand).
+    func allPrompts() throws -> [PBPrompt] {
+        var list: [PBPrompt] = []
+        try prepared("SELECT \(Self.promptColumns) FROM Prompts ORDER BY SortOrder, ShortLabel") { _ in
+        } step: { [weak self] stmt in
+            guard let self = self, let p = self.readPrompt(stmt) else { return }
+            list.append(p)
+        }
+        return list
+    }
+
     func allAlwaysOnPrompts() throws -> [PBPrompt] {
         var list: [PBPrompt] = []
         try query("SELECT \(Self.promptColumns) FROM Prompts WHERE IsAlwaysOn=1 ORDER BY SortOrder") { stmt in
