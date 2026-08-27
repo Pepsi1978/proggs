@@ -149,12 +149,18 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-06-30 19:06 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--WINDOWS-system32 settings.local.json erstellt — Status: AUTO-GEFIXT
 ### 2026-07-08 22:29 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--Users-barwa-proggs settings.local.json erstellt — Status: AUTO-GEFIXT
 
-### 2026-08-26 14:43 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+### 2026-08-26 14:43 — StopFailure: Nicht angemeldet (authentication_failed) — Status: GEFIXT (2026-08-27)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
+**Symptom:** Session-Turn des claude-mem-Observers endete, weil keine gueltige Anmeldung vorlag
 **Details:** {"session_id":"011621b3-e6b6-453c-8db8-3a0d357bd072","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/011621b3-e6b6-453c-8db8-3a0d357bd072.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"authentication_failed","last_assistant_message":"Not logged in · Please run /login"}
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+**KORREKTUR (2026-08-27):** Titel und Fix-Vorschlag dieses Eintrags waren FALSCH — er las sich als
+Rate-Limit ("API-Key pruefen"), obwohl im Detail-JSON `authentication_failed` steht. Ursache war ein
+fest verdrahteter Text im `stopfailure-logger` (bugs/claude-tooling/claude-hooks.md §13.13, gefixt).
+Der Ordner `~/.claude-mem/observer-sessions` ist KEIN eigener Konfigurationsordner (dort liegt nur
+`.parry-guard.redb`); der Observer nutzt `CLAUDE_CONFIG_DIR || ~/.claude`.
+**Fix-Vorschlag:** Erledigt — `claude-login-sync` (OpenLauncher/Profiles/hooks/) haelt seit 2026-08-27
+alle Konfigurationsordner angemeldet, inkl. `~/.claude`. Hintergrund: bugs/claude-tooling/claude-config.md §3.9.
+**Status:** GEFIXT (2026-08-27)
 
 ### 2026-08-26 17:09 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
