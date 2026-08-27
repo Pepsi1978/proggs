@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreAudio
 import Foundation
 
 final class AudioRecorder {
@@ -29,9 +30,29 @@ final class AudioRecorder {
         lock.unlock()
         if busy { throw RecorderError.alreadyRecording }
 
+        // Gibt es ueberhaupt ein Eingabegeraet? Ohne diese Pruefung meldet der Recorder bei
+        // abgezogenem Mikrofon nur "Audio-Converter konnte nicht erstellt werden" - eine
+        // Meldung, aus der niemand auf ein fehlendes Geraet schliesst.
+        guard let defaultInput = Self.defaultInputDeviceID() else {
+            throw RecorderError.noInputDevice
+        }
+
         let engine = AVAudioEngine()
         let inputNode = engine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+        // Wechselt das Standard-Eingabegeraet waehrend der Laufzeit (Bluetooth-Kopfhoerer weg,
+        // Dock abgezogen, Ton-Neustart), liefert eine frisch erzeugte Engine trotzdem ein
+        // leeres Format - CoreAudio haelt in dem Prozess noch das alte, verschwundene Geraet.
+        // Ohne die folgende Neuzuweisung bleibt die Aufnahme bis zum Neustart der App tot:
+        // genau das Symptom "kein Mikrofon vorhanden", obwohl das Geraet im System da ist.
+        var recordingFormat = inputNode.outputFormat(forBus: 0)
+        if recordingFormat.sampleRate <= 0 || recordingFormat.channelCount == 0 {
+            Self.bindInputDevice(defaultInput, to: inputNode)
+            recordingFormat = inputNode.outputFormat(forBus: 0)
+        }
+        guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+            throw RecorderError.noInputDevice
+        }
 
         // Create WAV format: 16kHz mono
         guard let wavFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
@@ -53,7 +74,6 @@ final class AudioRecorder {
         lock.lock()
         self.tempURL = url
         self.outputFile = file
-        self._isRecording = true
         lock.unlock()
 
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: recordingFormat) { [weak self] buffer, _ in
@@ -101,8 +121,58 @@ final class AudioRecorder {
             }
         }
 
-        try engine.start()
+        // _isRecording wird ERST nach dem erfolgreichen Start gesetzt. Frueher stand das Flag
+        // schon vor engine.start(); schlug der Start fehl, blieb es auf true haengen und jeder
+        // weitere Versuch scheiterte mit "Es laeuft bereits eine Aufnahme" - der Recorder war
+        // fuer den Rest der Sitzung tot, ohne dass je eine Aufnahme lief.
+        do {
+            try engine.start()
+        } catch {
+            inputNode.removeTap(onBus: 0)
+            lock.lock()
+            self.outputFile = nil
+            self.tempURL = nil
+            self._isRecording = false
+            lock.unlock()
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
+
+        lock.lock()
+        self._isRecording = true
+        lock.unlock()
         self.audioEngine = engine
+    }
+
+    // MARK: - Eingabegeraet
+
+    /// ID des aktuellen Standard-Eingabegeraets, oder nil wenn das System keines meldet.
+    private static func defaultInputDeviceID() -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
+                                                &address, 0, nil, &size, &deviceID)
+        guard status == noErr, deviceID != kAudioObjectUnknown else { return nil }
+        return deviceID
+    }
+
+    /// Zwingt die AudioUnit des Eingangsknotens auf ein bestimmtes Geraet. Das ist der einzige
+    /// Weg, eine Engine nach einem Geraetewechsel wieder an das echte Mikrofon zu binden.
+    private static func bindInputDevice(_ deviceID: AudioDeviceID, to inputNode: AVAudioInputNode) {
+        var device = deviceID
+        let status = AudioUnitSetProperty(inputNode.audioUnit!,
+                                          kAudioOutputUnitProperty_CurrentDevice,
+                                          kAudioUnitScope_Global,
+                                          0,
+                                          &device,
+                                          UInt32(MemoryLayout<AudioDeviceID>.size))
+        if status != noErr {
+            NSLog("AudioRecorder: Eingabegeraet konnte nicht gesetzt werden (Status %d)", status)
+        }
     }
 
     func stop() -> URL? {
@@ -139,12 +209,17 @@ final class AudioRecorder {
         /// ein zweiter Start wuerde die erste Aufnahme verwaisen lassen und
         /// ihren Ton verlieren. Windows-Pendant: `Start()` liefert `false`.
         case alreadyRecording
+        /// Das System meldet kein Eingabegeraet - oder CoreAudio haelt noch ein
+        /// verschwundenes fest. Eigener Fall, damit die Meldung im Terminal sagt, was
+        /// wirklich fehlt, statt auf einen Converter-Fehler auszuweichen.
+        case noInputDevice
 
         var errorDescription: String? {
             switch self {
             case .formatError: return "Audio-Format konnte nicht erstellt werden"
             case .converterError: return "Audio-Converter konnte nicht erstellt werden"
             case .alreadyRecording: return "Es laeuft bereits eine Aufnahme"
+            case .noInputDevice: return "kein Eingabegeraet gefunden (Systemeinstellungen > Ton > Eingabe pruefen)"
             }
         }
     }
