@@ -7,11 +7,11 @@
     <key>CFBundleIdentifier</key>
     <string>com.frank.TerminalVoiceOverlay</string>
     <key>CFBundleVersion</key>
-    <string>1.27</string>
+    <string>1.28</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.27</string>
+    <string>1.28</string>
     <key>BuildTimestamp</key>
-    <string>19.07.2026, 15:11 Uhr</string>
+    <string>27.08.2026, 14:35 Uhr</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>

@@ -474,6 +474,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
+        // Version + Bau-Zeitpunkt dauerhaft sichtbar (Regel version-bump-visible-always):
+        // beides direkt aus der Info.plist abgeleitet, damit die Anzeige nie von der
+        // Quelle abweichen kann. Der Eintrag ist bewusst nicht anklickbar.
+        let info = Bundle.main.infoDictionary ?? [:]
+        let versionText = "Version \(info["CFBundleShortVersionString"] as? String ?? "?")"
+            + " (\(info["BuildTimestamp"] as? String ?? "unbekannt"))"
+        let versionItem = NSMenuItem(title: versionText, action: nil, keyEquivalent: "")
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Overlay zeigen", action: #selector(showOverlay), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Beenden", action: #selector(quitApp), keyEquivalent: "q"))

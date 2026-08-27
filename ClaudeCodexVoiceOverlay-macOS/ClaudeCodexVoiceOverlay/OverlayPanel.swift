@@ -6,7 +6,10 @@ import AppKit
 // teal Screenshot/Insert pair, blue Copy/Paste pair, profile tiles in
 // goldenrod (active) / dark (inactive), and the 7-section dark panel
 // with black dividers and a black 2px outer ring.
-private extension NSColor {
+// Sichtbarkeit: bewusst INTERN (nicht fileprivate). Die Palette wird auch von
+// OverlayExtraButtons.swift/OverlayHorizontalLayout.swift gebraucht; ein
+// `private` hier hat den Build brechen lassen (Fix 2026-08-27).
+extension NSColor {
     // Idle/base
     static let btnIdle       = NSColor(hex: "#2D2D2D")
     static let btnRecording  = NSColor(hex: "#C62828")
