@@ -228,10 +228,7 @@ final class ThinkingListView: NSView {
         documentView.addSubview(stack)
 
         scrollView.documentView = documentView
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
-        scrollView.scrollerStyle = .overlay
+        ScrollStyling.apply(to: scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         emptyDash.alignment = .center

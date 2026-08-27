@@ -20,7 +20,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let versionLabel = UI.label("", size: 12, role: .dim)
     private let themeButton = StyledButton(style: .theme, title: "☀︎")
 
-    private let splitView = NSSplitView()
+    private let splitView = TransparentSplitView()
     private let modelCard = CardView()
     private let providerCard = CardView()
     private let profileCard = CardView()
@@ -685,6 +685,14 @@ final class GradientBackgroundView: NSView {
     }
 
     @objc func applyTheme() { needsDisplay = true }
+}
+
+/// Splitter ohne sichtbaren Trenner: der graue Systemstrich zwischen den Karten passte nicht zum
+/// Design (er lief als graue Flaeche in die Kartenrundungen hinein). Die Fuge bleibt gleich breit -
+/// nur gezeichnet wird sie nicht mehr, dort steht jetzt der Fensterverlauf. Ziehen geht weiterhin.
+final class TransparentSplitView: NSSplitView {
+    override var dividerColor: NSColor { .clear }
+    override func drawDivider(in rect: NSRect) { /* bewusst leer */ }
 }
 
 /// Fußleiste mit oberer Trennlinie (`BorderThickness="0,1,0,0"` in XAML).

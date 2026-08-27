@@ -14,15 +14,13 @@ final class CardView: NSView {
     init() {
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.masksToBounds = false
-        // Schatten direkt auf der Ebene statt ueber NSView.shadow: nur so laesst sich der
-        // Schattenumriss vorgeben. Mit NSView.shadow zeichnet AppKit ihn nach dem RECHTECK der
-        // Ansicht - hinter den runden Ecken blitzte dadurch eine eckige Flaeche hervor, als laege
-        // ein zweites Rechteck darunter.
-        layer?.shadowColor = NSColor.black.cgColor
-        layer?.shadowOpacity = 0.28
-        layer?.shadowRadius = 15
-        layer?.shadowOffset = CGSize(width: 0, height: -5)
+        // KEIN Schlagschatten mehr. Die Karten sitzen im NSSplitView und werden dort auf ihren
+        // eigenen Rahmen geclippt: nach AUSSEN war vom Schatten also nie etwas zu sehen, nach
+        // INNEN dagegen schon - genau in den vier ausgesparten Rundungsecken, wo die Karte
+        // durchsichtig ist. Dort stand der volle graue Schattenkern und wirkte wie eine
+        // aufgesetzte eckige graue Ecke. Ohne Schatten bleiben nur die sauberen Rundungen.
+        layer?.masksToBounds = true
+        layer?.shadowOpacity = 0
         applyTheme()
         NotificationCenter.default.addObserver(self, selector: #selector(applyTheme),
                                                name: ThemeManager.themeChangedNotification, object: nil)
@@ -31,13 +29,6 @@ final class CardView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
 
     deinit { NotificationCenter.default.removeObserver(self) }
-
-    /// Schattenumriss den runden Ecken nachfuehren - sonst bleibt er rechteckig.
-    override func layout() {
-        super.layout()
-        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: cornerRadius,
-                                   cornerHeight: cornerRadius, transform: nil)
-    }
 
     @objc func applyTheme() {
         let palette = ThemeManager.palette
@@ -61,6 +52,10 @@ class SurfaceView: NSView {
         self.cornerRadius = cornerRadius
         super.init(frame: .zero)
         wantsLayer = true
+        // Inhalte an der Rundung abschneiden: sonst schiebt sich ein Kind mit eigener Flaeche
+        // (Listen, Kopfzeilen) bis in die ausgesparte Ecke und macht aus der Rundung wieder ein
+        // Viereck.
+        layer?.masksToBounds = true
         applyTheme()
         NotificationCenter.default.addObserver(self, selector: #selector(applyTheme),
                                                name: ThemeManager.themeChangedNotification, object: nil)
@@ -279,6 +274,44 @@ class StyledButton: NSControl {
         }
         symbolView.contentTintColor = label.textColor
         window?.invalidateCursorRects(for: self)
+    }
+}
+
+// MARK: - Schlanker Scrollbalken
+
+/// Eigener Scrollbalken ohne Rinne. macOS zeichnet - je nach Systemeinstellung "Scrollbalken immer
+/// einblenden" - hinter dem Griff eine helle Rinne mit Trennlinie. Auf den hellen Karten sah das wie
+/// ein langer grauer Strich aus. Hier bleibt nur ein schmaler, abgerundeter Griff uebrig.
+final class SlimScroller: NSScroller {
+    override class var isCompatibleWithOverlayScrollers: Bool { true }
+
+    override class func scrollerWidth(for controlSize: NSControl.ControlSize,
+                                      scrollerStyle: NSScroller.Style) -> CGFloat { 11 }
+
+    /// Rinne (samt Trennlinie zum Inhalt) gar nicht erst zeichnen.
+    override func drawKnobSlot(in slotRect: NSRect, highlight flag: Bool) { }
+
+    override func drawKnob() {
+        let knob = rect(for: .knob)
+        guard knob.width > 0, knob.height > 0 else { return }
+        let bar = knob.insetBy(dx: 3, dy: 2)
+        let radius = bar.width / 2
+        ThemeManager.palette.dim.withAlphaComponent(0.45).setFill()
+        NSBezierPath(roundedRect: bar, xRadius: radius, yRadius: radius).fill()
+    }
+}
+
+/// Einheitliche Einstellung fuer alle Listen der App.
+enum ScrollStyling {
+    static func apply(to scrollView: NSScrollView) {
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.drawsBackground = false
+        scrollView.scrollerStyle = .overlay
+        scrollView.verticalScroller = SlimScroller()
+        scrollView.scrollerInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        scrollView.contentView.drawsBackground = false
+        scrollView.backgroundColor = .clear
     }
 }
 

@@ -35,10 +35,7 @@ final class ModelListView: NSView {
         documentView.addSubview(stack)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
-        scrollView.scrollerStyle = .overlay
+        ScrollStyling.apply(to: scrollView)
         scrollView.documentView = documentView
         addSubview(scrollView)
 

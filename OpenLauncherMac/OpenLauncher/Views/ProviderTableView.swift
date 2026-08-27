@@ -81,10 +81,7 @@ final class ProviderTableView: NSView, NSTableViewDataSource, NSTableViewDelegat
         }
 
         scrollView.documentView = tableView
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
-        scrollView.scrollerStyle = .overlay
+        ScrollStyling.apply(to: scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scrollView)
 
