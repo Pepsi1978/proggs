@@ -588,6 +588,15 @@ final class OpenLauncherService {
             # MLX-Laufzeit; die nimmt --context-length nicht an.
             e = find(entries(), sys.argv[2]) or {}
             print(str(e.get('format') or ''))
+        elif mode == 'others':
+            # stdin: Ausgabe von "lms ps --json" -> alle geladenen Modelle AUSSER dem Ziel. Ihr
+            # belegter Speicher ist der haeufigste Grund, warum ein Ladeversuch an den
+            # Schutzschranken scheitert, obwohl das Zielmodell allein bequem passen wuerde.
+            target = sys.argv[2].lower()
+            for e in entries():
+                key = e.get('identifier') or e.get('modelKey')
+                if isinstance(key, str) and key.lower() != target:
+                    print(key)
         elif mode == 'alt':
             # stdin: Ausgabe von "lms ls --json" -> andere Quantisierungen DESSELBEN Modells,
             # kleinste zuerst. Zwei Herausgeber liefern denselben Modellnamen in sehr
@@ -643,6 +652,20 @@ final class OpenLauncherService {
                 MAXCTX=${LMSINFO##* }
                 [ "$LOADEDCTX" -ge 0 ] 2>/dev/null || LOADEDCTX=0
                 [ "$MAXCTX" -ge 0 ] 2>/dev/null || MAXCTX=0
+            }
+
+            # Andere geladene Modelle belegen denselben Speicher. Bleiben sie liegen, scheitert
+            # der Ladeversuch an den Schutzschranken, obwohl das gewuenschte Modell allein bequem
+            # passen wuerde - gemessen am 2026-08-28: qwen3.8-27b@iq1_m lag mit 7,66 GB geladen,
+            # das gewuenschte iq3_xxs braucht 11,05 GB, zusammen sprengt das die 24 GB.
+            lmsFreeOthers() {
+                LMSOTHERS=$("$LMS" ps --json 2>/dev/null | python3 "$LMSPY" others "$LMSMODEL" 2>/dev/null)
+                [ -n "$LMSOTHERS" ] || return 0
+                printf '%s\n' "$LMSOTHERS" | while IFS= read -r LMSOTHER; do
+                    [ -n "$LMSOTHER" ] || continue
+                    printf '\033[90mGebe Speicher frei: %s wird entladen.\033[0m\n' "$LMSOTHER"
+                    "$LMS" unload "$LMSOTHER" >/dev/null 2>&1 || true
+                done
             }
 
             # Vorpruefung: wuerde ein Ladeversuch an den Speicher-Schutzschranken von LM Studio
@@ -708,7 +731,9 @@ final class OpenLauncherService {
 
             if [ "$LOADEDCTX" -le 0 ] 2>/dev/null; then
                 # Nicht geladen: selbst laden. Hier ist nichts zu verlieren, also auch gegen eine
-                # negative Schaetzung versuchen.
+                # negative Schaetzung versuchen. Vorher aber den Speicher raeumen, den ein anderes
+                # Modell aus einer frueheren Sitzung noch haelt.
+                lmsFreeOthers
                 LMSRISKY=1
                 lmsLoadLadder "$LMSTARGET" "$LMSMINCTX" || true
             elif [ "$LOADEDCTX" -lt "$LMSMINCTX" ] 2>/dev/null; then
@@ -719,6 +744,7 @@ final class OpenLauncherService {
                 printf '\\033[33m%s ist in LM Studio mit nur %s Tokens Kontext geladen.\\033[0m\\n' "$LMSMODEL" "$LOADEDCTX"
                 printf '\\033[33mOpenCode braucht mit abgeschalteten externen Skills rund 7500 Tokens - damit bricht die erste Anfrage ab.\\033[0m\\n'
 
+                lmsFreeOthers
                 LMSRISKY=0
                 if lmsCanLoad "$LMSTARGET" || lmsCanLoad "$LMSMINCTX"; then
                     LMSOLDCTX=$LOADEDCTX
