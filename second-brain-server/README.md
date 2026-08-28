@@ -103,6 +103,68 @@ second-brain-server/macos/cortex-copy.sh bench                             # Dur
 .\second-brain-server\windows\cortex-copy.ps1 push C:\Fotos daten:Fotos
 ```
 
+### Windows: schnell einfügen direkt im Explorer (empfohlen)
+
+Damit man den schnellen Weg nicht bewusst wählen muss, gibt es ihn unter Windows als
+Kontextmenü-Eintrag. Der Ablauf bleibt exakt der gewohnte:
+
+1. Dateien/Ordner markieren, **Strg+C** (bzw. **Strg+X** zum Verschieben)
+2. Zielordner öffnen — egal ob lokal oder auf `Y:`/`Z:`
+3. Rechtsklick ins Leere → **„Weitere Optionen anzeigen"** → **„Cortex: Hier schnell einfügen"**
+   (**Umschalt+F10** öffnet das alte Menü direkt, ohne den Zwischenschritt)
+
+Das Skript liest die normale Windows-Zwischenablage, erkennt selbst die Richtung
+(hoch- oder herunterladen) und ob kopiert oder verschoben werden soll, und wählt das
+Übertragungsprofil nach der mittleren Dateigröße. Einzelne Dateien werden dabei nach
+Elternordner gebündelt und über `--files-from` in **einem** rclone-Aufruf übertragen —
+sonst liefen sie wieder nacheinander, also genau in das Problem hinein, das gelöst werden soll.
+
+```powershell
+.\second-brain-server\windows\cortex-menu-install.ps1              # einrichten (kein Admin)
+.\second-brain-server\windows\cortex-menu-install.ps1 -Entfernen   # wieder entfernen
+```
+
+Warum Windows 11 den Eintrag ins erweiterte Menü schiebt: das schlanke Menü nimmt nur
+Einträge von signierten Shell-Erweiterungen (`IExplorerCommand`) auf; ein Skript kommt dort
+grundsätzlich nicht hinein. Der Kontextmenü-Befehl startet bewusst `powershell.exe -STA` —
+die Zwischenablage ist COM und braucht ein Single-Threaded-Apartment, `pwsh` 7 läuft ab Werk
+als MTA und würde beim Auslesen scheitern.
+
+### Windows: SMB-Client auf hohe Latenz einstellen
+
+Windows ist ab Werk für ein LAN mit unter 1 ms Latenz konfiguriert. Über den Tunnel kostet
+jede dieser Voreinstellungen zusätzliche Round-Trips — spürbar vor allem beim **Blättern**
+durch `Y:`/`Z:` und bei mittelgroßen Kopien, die weiterhin über den Explorer laufen:
+
+```powershell
+# als Administrator
+powershell -ExecutionPolicy Bypass -File .\second-brain-server\windows\cortex-tuning.ps1
+.\second-brain-server\windows\cortex-tuning.ps1 -Zeigen         # nur Stand anzeigen
+.\second-brain-server\windows\cortex-tuning.ps1 -Zuruecksetzen  # Windows-Standard zurück
+```
+
+| Wert | Windows ab Werk | Tunnel-Profil | Warum |
+|------|-----------------|---------------|-------|
+| `DirectoryCacheLifetime` | 10 s | **60 s** | Der Explorer holt sonst bei jedem Blick das ganze Listing neu — Hauptgrund für das träge Gefühl |
+| `FileInfoCacheLifetime` | 10 s | **60 s** | dito für Größe/Datum/Attribute |
+| `FileNotFoundCacheLifetime` | 5 s | **30 s** | Programme fragen sehr oft nach nicht existierenden Sidecar-Dateien |
+| `MaxCmds` | 50 | **2048** | Pipeline-Tiefe: mehr ausstehende Befehle = mehr Arbeit pro Round-Trip |
+| `DormantFileLimit` | 1023 | **4096** | Handles bleiben offen → erneutes Öffnen spart den kompletten Open-Round-Trip |
+| `EnableBandwidthThrottling` | an | **aus** | Windows drosselt SMB absichtlich, um andere Verbindungen zu schonen — auf einer WAN-Strecke kostet das direkt Durchsatz |
+| `*CacheEntriesMax` (Registry) | 16 / 64 / 128 | **4096 / 32768 / 32768** | die obigen Caches greifen nur, wenn auch genug Einträge hineinpassen |
+
+Die drei Registry-Werte wirken erst nach einem Neustart des Arbeitsstationsdienstes
+(`LanmanWorkstation`), am einfachsten per Windows-Neustart; alles andere wirkt sofort.
+
+**Nicht angefasst:** Signing und `smb encrypt`. Beide kosten CPU, aber keine Round-Trips —
+Abschalten brächte kaum Tempo und gäbe Sicherheit auf. Der Server verlangt sie ohnehin
+(`smb encrypt = required`).
+
+Gemessen 28.08.2026 auf diesem Rechner (31 × 50 KB nach `Y:`, Tuning bereits aktiv):
+serielles SMB-Kopieren **23,5 s** gegenüber rund **5 s** über „Hier schnell einfügen".
+Der Abstand wächst mit der Dateianzahl, weil das Parallelprofil erst bei vielen Dateien
+seine 64 gleichzeitigen Übertragungen ausspielt.
+
 Protokoll: `~/Library/Logs/cortex-copy/` (macOS) bzw. `%LOCALAPPDATA%\cortex-copy\` (Windows).
 
 **Zwei Dinge, die kein Tuning aufhebt:**

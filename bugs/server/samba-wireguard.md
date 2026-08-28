@@ -11,7 +11,7 @@
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
 > zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections);
 > erweitert **2026-06-25** um den Persistent-Login-Race / "mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom
-> SELBEN VPS (§11); erweitert **2026-08-27** um den launchd-Prozessgruppen-Kill (§15: LaunchDaemon-Einmal-Job toetet `wireguard-go` 2 ms nach dem Boot-Start -> Laufwerke nach JEDEM Neustart weg) und um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz — bei VIELEN KLEINEN Dateien rund Faktor 20, bei grossen Dateien kein Unterschied; inkl. Bufferbloat-Messfalle und ausgeschlossener Ursachen).
+> SELBEN VPS (§11); erweitert **2026-08-27** um den launchd-Prozessgruppen-Kill (§15: LaunchDaemon-Einmal-Job toetet `wireguard-go` 2 ms nach dem Boot-Start -> Laufwerke nach JEDEM Neustart weg) und um den Durchsatz-Bug (§14: SMB serialisiert ueber Latenz — bei VIELEN KLEINEN Dateien rund Faktor 20, bei grossen Dateien kein Unterschied; inkl. Bufferbloat-Messfalle und ausgeschlossener Ursachen); erweitert **2026-08-28** um die Windows-Seite (§17: SMB-Client-Defaults sind LAN-Werte; §18: Kontextmenue + drei PowerShell-5.1-Fallen).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -38,6 +38,8 @@
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
 | 14 | ⭐⭐ macOS: Laufwerke weg; Tunnel pingt mit Verlust, aber Internet + public VPS-IP 0 % & Server gesund | Client-IP/NAT hat gewechselt (dynamische Leitung) → WireGuard-Endpoint veraltet → Mounts fallen ab. ERST Endpoint-Wechsel pruefen (`tail /var/log/wg-endpoint-monitor.log`), NICHT Mac/Server verdaechtigen. FIX: Stale-Mount-Erkennung (perl-alarm) + `/etc/nsmb.conf` soft + Endpoint-Monitor + Keepalive 15. | §13 |
 | 15 | ⭐⭐ macOS: Laufwerke nach JEDEM Neustart weg; Mount-Log sagt im Takt "SMB 445 nicht erreichbar", das Tunnel-Log aber "Tunnel hochgefahren" | **launchd killt den Tunnel-Prozess.** Ein LaunchDaemon mit nur `RunAtLoad` ist ein Einmal-Job — beim `exit 0` beendet launchd ALLE verbliebenen Prozesse seiner Prozessgruppe, also das von `wg-quick` gestartete `wireguard-go`. Systemlog: Job `exited due to exit(0)`, **2 ms spaeter** `utunN detaching`. Von Hand im Terminal tritt es nie auf -> wirkt beim Einrichten immer "erfolgreich". FIX: Tunnel-Skript als **Dauerschleife** (Watchdog) + `KeepAlive=true` — der Job endet nie, der Prozessgruppen-Kill kann nicht mehr eintreten. | §15 |
+| 17 | ⭐⭐ Windows: Y:/Z: fuehlen sich traege an, schon beim BLAETTERN; Einfuegen vieler kleiner Dateien dauert ewig | Der SMB-Client ist ab Werk auf LAN eingestellt: Metadaten-Caches 10 s / 16 Eintraege, `MaxCmds` 50, und `EnableBandwidthThrottling` drosselt absichtlich. Ueber 48 ms Latenz ist fast jeder Blick ein Round-Trip. FIX: `windows/cortex-tuning.ps1` (Caches 60 s, `MaxCmds` 2048, Bremse aus). Signing/`smb encrypt` NICHT anfassen — kostet CPU, keine Round-Trips. Faktor ~2; der grosse Hebel bleibt §14. | §17 |
+| 18 | ⭐ Kontextmenue-Skript startet nicht oder bricht mit "Parametersatz kann nicht aufgeloest werden" ab | Drei 5.1-Fallen: `pwsh` 7 ist MTA und kann die Zwischenablage (COM) nicht lesen → `powershell.exe -STA`; `Split-Path -LiteralPath` geht in 5.1 NICHT mit `-Leaf` → `[IO.Path]::GetFileName()`; `Group-Object { }` ohne `-Property` bindet in 5.1 nicht → Hashtable. Ausserdem: rclone nimmt EINE Quelle pro Aufruf → Dateien per `--files-from` buendeln, sonst ist es wieder seriell. | §18 |
 
 ---
 
@@ -49,6 +51,8 @@
 | §3 MTU/Performance | §3 Performance-Tuning |
 | §14 Durchsatz/Parallelitaet | §14 rclone statt Finder |
 | §15 launchd toetet den Tunnel (macOS) | §8 macOS-Autostart: Tunnel als Watchdog-Daemon |
+| §17 Windows-SMB-Client-Defaults | §5 Performance (Windows-Teil) |
+| §18 Kontextmenue/PowerShell-5.1-Fallen | §5 Performance (Windows-Teil) |
 | §4–§6 Windows-Client | §4 Windows-Mount (persistent, Credentials) |
 | §9 net use haengt (elevated/hidden) | §7 Auto-Reconnect-Task robust (WNetAddConnection2 + explizite Credentials) |
 | §10 EnableLinkedConnections | §7 Auto-Reconnect-Task robust (elevated Mappings sichtbar machen) |
@@ -593,6 +597,77 @@ der Finder nicht.
 
 
 ---
+## 17. ⭐⭐ Windows: der SMB-Client ist ab Werk auf LAN eingestellt — Caches zu klein, Bremse an (live 2026-08-28)
+
+**Symptom.** Y:/Z: fuehlen sich im Explorer traege an, schon beim blossen Blaettern. Einfuegen
+(Strg+V) vieler kleiner Dateien dauert ewig, obwohl die Leitung schnell ist und der Server
+gesund. Auf macOS war dasselbe Material laengst per rclone geloest (§14) — unter Windows fiel
+zusaetzlich auf, dass sich schon das NAVIGIEREN zaeh anfuehlt, also nicht nur das Kopieren.
+
+**Ursache.** Zwei getrennte Dinge, die man leicht verwechselt:
+
+1. **Metadaten-Caches sind auf Sub-Millisekunden-LAN dimensioniert.** `DirectoryCacheLifetime`
+   und `FileInfoCacheLifetime` stehen ab Werk auf **10 s**, `FileNotFoundCacheLifetime` auf 5 s,
+   und die zugehoerigen `*CacheEntriesMax` in der Registry auf laecherliche **16 / 64 / 128**.
+   Ueber 48 ms Latenz heisst das: fast jeder Blick in einen Ordner ist ein neuer Round-Trip.
+2. **`EnableBandwidthThrottling` ist ab Werk AN.** Windows drosselt SMB absichtlich, damit
+   andere Verbindungen nicht verhungern. Im LAN unauffaellig, auf einer WAN-Strecke kostet es
+   direkt Durchsatz. Dazu `MaxCmds = 50`, also nur 50 gleichzeitig ausstehende SMB-Befehle —
+   das ist die Pipeline-Tiefe, und die entscheidet bei Latenz alles.
+
+**Nicht die Ursache — Zeit sparen.** Signing (`RequireSecuritySignature`) und `smb encrypt`
+kosten CPU, aber KEINE Round-Trips. Sie abzuschalten bringt hier praktisch nichts und gibt
+Sicherheit auf. Ebenso `EnableLargeMtu`: steht ab Werk schon richtig. Und MTU/MSS erst pruefen,
+wenn `ping -f -l <groesse>` ein echtes Path-MTU-Black-Hole zeigt (§3).
+
+**Fix (Client-seitig, idempotent):** `second-brain-server/windows/cortex-tuning.ps1` — hebt die
+sechs Werte an, zeigt vorher/nachher und kann mit `-Zuruecksetzen` den Windows-Standard
+wiederherstellen. Die drei Registry-`*CacheEntriesMax` greifen erst nach Neustart des Dienstes
+`LanmanWorkstation` (am einfachsten: Windows neu starten), alles andere sofort.
+
+| Wert | ab Werk | Tunnel |
+|------|---------|--------|
+| `DirectoryCacheLifetime` / `FileInfoCacheLifetime` | 10 s | 60 s |
+| `FileNotFoundCacheLifetime` | 5 s | 30 s |
+| `MaxCmds` | 50 | 2048 |
+| `DormantFileLimit` | 1023 | 4096 |
+| `EnableBandwidthThrottling` | `$true` | `$false` |
+| `DirectoryCacheEntriesMax` / `FileInfoCacheEntriesMax` / `FileNotFoundCacheEntriesMax` | 16 / 64 / 128 | 4096 / 32768 / 32768 |
+
+**Und die Groessenordnung im Blick behalten.** Das Tuning macht das Stoebern fluessig und
+mittelgrosse Kopien schneller — es ist aber **Faktor 2, nicht Faktor 20**. Der grosse Hebel
+bleibt paralleles Uebertragen (§14). Live gemessen 2026-08-28, 31 x 50 KB nach `Y:`, Tuning
+bereits aktiv: serielles SMB **23,5 s** gegenueber rund **5 s** parallel.
+
+## 18. ⭐ Windows-Kontextmenue fuer den schnellen Weg — drei Fallen auf einmal (live 2026-08-28)
+
+Damit der schnelle Weg auch benutzt wird, muss er dort sitzen, wo eingefuegt wird: im
+Explorer-Kontextmenue (`cortex-paste.ps1` + `cortex-menu-install.ps1`). Beim Bauen sind drei
+Dinge nacheinander hochgegangen, alle drei schwer zu erraten:
+
+1. **`pwsh` 7 kann die Zwischenablage nicht lesen.** Sie ist COM und braucht ein
+   Single-Threaded-Apartment; PowerShell 7 laeuft ab Werk als **MTA**, der Zugriff auf
+   `[Windows.Forms.Clipboard]` scheitert. Der Kontextmenue-Befehl muss darum explizit
+   `powershell.exe -STA` starten (Windows PowerShell 5.1 ist ohnehin STA).
+2. **`Split-Path -LiteralPath` laesst sich in 5.1 NICHT mit `-Leaf` kombinieren.** Fehler:
+   *"Der Parametersatz kann mit den angegebenen benannten Parametern nicht aufgeloest werden"* —
+   und weil es aus dem Skript-Scope kommt, zeigt die Meldung auf die `.ps1`, nicht auf die Zeile.
+   Ohne `-LiteralPath` wiederum deutet `Split-Path` eckige Klammern im Dateinamen als Platzhalter.
+   Loesung: `[IO.Path]::GetFileName()` / `GetDirectoryName()` — kennt weder Parametersaetze noch
+   Platzhalter.
+3. **`Group-Object { … }` ohne `-Property` bindet in 5.1 nicht.** Dieselbe
+   Parametersatz-Fehlermeldung. In 7 laeuft es. Wer fuer `powershell.exe` schreibt, gruppiert
+   von Hand ueber eine Hashtable — das laeuft in beiden.
+
+**Dazu die Design-Falle:** rclone nimmt pro Aufruf genau EINE Quelle. Wer die markierten
+Dateien einzeln durchschleift, hat wieder ein serielles Verfahren gebaut — also genau das
+Problem, das geloest werden sollte. Richtig: Dateien nach Elternordner gruppieren und pro
+Gruppe mit `--files-from` in EINEM Aufruf uebertragen; Ordner bekommen je einen Aufruf
+(darin parallelisiert rclone selbst).
+
+**Kosmetik, kein Bug:** Unter Windows 11 landet der Eintrag im erweiterten Menue
+("Weitere Optionen anzeigen" / Umschalt+F10). Das schlanke Menue nimmt nur signierte
+`IExplorerCommand`-Shell-Erweiterungen auf; ein Skript kommt dort grundsaetzlich nicht hinein.
 
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
 - [ ] `smb.conf`: `interfaces = lo eth0 10.8.0.0/24` (mit Maske!) + `bind interfaces only = yes` (oder `= no`)?
@@ -604,6 +679,8 @@ der Finder nicht.
 - [ ] Bei Langsamkeit: WireGuard-MTU 1350 + MSS getestet?
 - [ ] **macOS-Autostart: laeuft das Tunnel-Skript als Dauerschleife mit `KeepAlive`?** (Einmal-Job = launchd killt `wireguard-go` 2 ms nach dem Start, §15)
 - [ ] Bei Langsamkeit: erst die Leitung leergeraeumt (Bufferbloat!), dann parallele Streams (`rclone --transfers 8`) statt Finder/Explorer probiert? (§14 - meist DIE Ursache)
+- [ ] Windows-Client: `cortex-tuning.ps1` gelaufen (Caches 60 s, `MaxCmds` 2048, Durchsatzbremse aus)? (§17)
+- [ ] Windows: "Cortex: Hier schnell einfuegen" eingerichtet, damit der schnelle Weg der bequeme ist? (§18)
 - [ ] Kein unnoetiges `ip_forward`/MASQUERADE (Split-Tunnel-Dienst braucht es nicht)?
 - [ ] **`unattended-upgrades` aktiv / `apt upgrade` regelmaessig** (4.19.x ist upstream EOL — Fixes nur ueber Ubuntu-Paket, §8)?
 

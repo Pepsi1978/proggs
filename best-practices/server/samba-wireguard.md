@@ -16,7 +16,7 @@
 | 2 | Nur im VPN erreichbar | UFW `allow in on wg0 to any port 445`; 445 NIE oeffentlich; nur UDP 51820 offen | §2 |
 | 3 | Win11-Kompatibilitaet | `protocol = SMB3` server-seitig; echter User (`smbpasswd -a`) statt Gast | §3 |
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
-| 5 | Performance | bei Langsamkeit WireGuard-MTU 1350 + MSS-Clamping testen | §5 |
+| 5 | Performance | Dateigroesse entscheidet: viele kleine → parallel (`--transfers 64`), wenige grosse → `--multi-thread-streams`. Windows zusaetzlich `cortex-tuning.ps1` + Kontextmenue. MTU/MSS erst bei echtem Black-Hole | §5 |
 | 6 | Patch-Stand | 4.19.x ist upstream EOL → `unattended-upgrades`/`apt upgrade` (Ubuntu backportet Fixes ins Paket) | §6 |
 | 7 | Auto-Reconnect-Task (nach Reboot) | In einem ELEVATED/hidden Task NIE `net use` ohne Credentials (haengt am Prompt) → `WNetAddConnection2` mit expliziten Credentials; `EnableLinkedConnections=1` macht das Mapping im Explorer sichtbar; `.ps1` als UTF-8-BOM, ASCII-only; bei MEHREREN Shares vom selben VPS **nicht-persistent** mappen (Flag 0) + persistente `HKCU:\Network`-Eintraege entfernen (sonst Boot-Race → Fehler 1219), 1219 abfangen | §7 |
 
@@ -135,6 +135,28 @@ Fertige Wrapper, die das Profil **automatisch** anhand der mittleren Dateigroess
 `second-brain-server/macos/cortex-copy.sh` und `windows/cortex-copy.ps1`
 (`push` / `pull` / `sync` / `ls` / `bench`). Der SMB-Mount darf eingebunden bleiben — er ist zum
 Stoebern gut, nur nicht der Weg fuer grosse Datenmengen.
+
+**2b. Windows-Client: einmalig auf hohe Latenz einstellen — und den schnellen Weg ins
+Kontextmenue legen.** Windows ist ab Werk fuer ein LAN mit unter 1 ms konfiguriert. Zwei
+getrennte Massnahmen, die man nicht verwechseln sollte:
+
+- **`windows/cortex-tuning.ps1`** (als Administrator, idempotent, `-Zuruecksetzen` vorhanden)
+  hebt die Client-Grenzen an: Metadaten-Caches 10 s → 60 s, `FileNotFoundCacheLifetime` 5 s →
+  30 s, `MaxCmds` 50 → 2048, `DormantFileLimit` 1023 → 4096, `EnableBandwidthThrottling` aus,
+  und die Registry-`*CacheEntriesMax` von 16/64/128 auf 4096/32768/32768. Das macht vor allem
+  das **Blaettern** fluessig — der Explorer holt sonst bei jedem Blick das Listing neu. Wirkung:
+  ungefaehr **Faktor 2**, nicht 20. **Signing und `smb encrypt` bewusst NICHT anfassen** — sie
+  kosten CPU, aber keine Round-Trips; abschalten braechte kaum Tempo und gaebe Sicherheit auf.
+- **`windows/cortex-menu-install.ps1`** (kein Admin) legt "Cortex: Hier schnell einfuegen" ins
+  Explorer-Kontextmenue. Damit bleibt der Ablauf Strg+C → Zielordner → Rechtsklick, aber die
+  Uebertragung laeuft parallel. Das ist der eigentliche Punkt: **ein schneller Weg, den man
+  bewusst waehlen muss, wird nicht benutzt.** Der Befehl muss `powershell.exe -STA` starten
+  (die Zwischenablage ist COM und braucht ein STA; `pwsh` 7 ist MTA), und mehrere markierte
+  Dateien muessen per `--files-from` in EINEM rclone-Aufruf gebuendelt werden — sonst hat man
+  aus Versehen wieder ein serielles Verfahren gebaut. Weitere 5.1-Fallen: Almanach §18.
+
+Gemessen 2026-08-28 (Windows, 31 x 50 KB nach `Y:`, Tuning bereits aktiv): serielles SMB
+**23,5 s** gegenueber rund **5 s** ueber "Hier schnell einfuegen".
 
 **3. MTU/MSS erst pruefen, wenn wirklich ein Problem vorliegt.** WireGuard-MTU senken
 (`MTU = 1350`) + MSS-Clamping hilft nur bei einem echten Path-MTU-Black-Hole. Vorher mit
