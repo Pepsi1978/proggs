@@ -114,10 +114,23 @@ Kontextmenü-Eintrag. Der Ablauf bleibt exakt der gewohnte:
    (**Umschalt+F10** öffnet das alte Menü direkt, ohne den Zwischenschritt)
 
 Das Skript liest die normale Windows-Zwischenablage, erkennt selbst die Richtung
-(hoch- oder herunterladen) und ob kopiert oder verschoben werden soll, und wählt das
-Übertragungsprofil nach der mittleren Dateigröße. Einzelne Dateien werden dabei nach
+(hoch- oder herunterladen) und ob kopiert oder verschoben werden soll, und wählt
+**Profil und Transportweg** nach der mittleren Dateigröße — genau wie `cortex-copy.sh`
+unter macOS: Schnitt < 2 MB → SMB mit 64 gleichzeitigen Übertragungen, Schnitt ≥ 2 MB →
+**SFTP** über den Schlüssel aus `~/SK/second-brain/id_ed25519`. Fehlt der Schlüssel oder
+antwortet SSH nicht, fällt alles auf SMB zurück. Nach einem SFTP-Transfer setzt das Skript
+`chown -R frank:frank` auf den Zielpfad, weil SSH als `root` schreibt und die Dateien sonst
+über den SMB-Mount nicht mehr änderbar wären.
+
+Gemessen 28.08.2026 auf diesem Rechner (24 MB nach `Y:`): SMB **17 s** gegen SFTP rund
+**3 s** (8,2 MiB/s ≈ 68 Mbit/s). Einzelne Dateien werden nach
 Elternordner gebündelt und über `--files-from` in **einem** rclone-Aufruf übertragen —
 sonst liefen sie wieder nacheinander, also genau in das Problem hinein, das gelöst werden soll.
+
+Eine Windows-Eigenheit nimmt das Skript dabei mit ab: OpenSSH verweigert private Schlüssel,
+auf die mehr als der eigene Benutzer zugreifen darf, und Dateien in `%USERPROFILE%` erben ab
+Werk Rechte für SYSTEM und Administratoren. Der Schlüssel wird deshalb einmalig per `icacls`
+geradegezogen, statt daran zu scheitern.
 
 ```powershell
 .\second-brain-server\windows\cortex-menu-install.ps1              # einrichten (kein Admin)

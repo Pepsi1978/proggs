@@ -12,7 +12,16 @@
 #   3. Rechtsklick ins Leere -> "Cortex: Hier schnell einfuegen"
 #
 # Es erkennt selbst, ob hoch- oder heruntergeladen wird, ob kopiert oder verschoben
-# werden soll, und waehlt das Uebertragungsprofil nach der mittleren Dateigroesse.
+# werden soll, und waehlt Profil UND Transportweg nach der mittleren Dateigroesse:
+#
+#   Schnitt <  2 MB  -> SMB, 64 gleichzeitig   (viele kleine Dateien: 18,7 statt 4,4 Dateien/s)
+#   Schnitt >= 2 MB  -> SFTP, 4 gleichzeitig   (eine grosse Datei: 37,1 statt 10,2 Mbit/s)
+#
+# Der zweite Fall ist die Nachmessung vom 27.08.2026: rclone fuehrt --multi-thread-streams
+# ueber SMB nicht wirklich parallel, eine einzelne grosse Datei bleibt dort bei rund
+# 10 Mbit/s haengen. Ueber SFTP laeuft dieselbe Datei nahe am Tunnel-Maximum (Faktor 3,6).
+# Umgekehrt kostet SFTP pro Datei viel Vorlauf - bei vielen kleinen gewinnt SMB klar.
+# Fehlt der SSH-Schluessel oder antwortet SSH nicht, faellt alles auf SMB zurueck.
 #
 # Kontextmenue einrichten:  .\cortex-menu-install.ps1
 # Direkter Aufruf:          .\cortex-paste.ps1 -Ziel "Y:\Filme"
@@ -101,7 +110,15 @@ if ($ShareVonBuchstabe.Count -eq 0) {
     $ShareVonBuchstabe["Z:"] = "gedanken"
 }
 
-# Liefert @{ IstRemote; Spez } - Spez ist entweder ein lokaler Pfad oder "cortex-<share>:<share>/<rest>".
+# Zugangsdaten und Serverlayout fuer den SFTP-Weg. Muss VOR ZuSpez stehen, weil dort
+# schon der echte Serverpfad mitberechnet wird.
+$SshKey = Join-Path $env:USERPROFILE "SK\second-brain\id_ed25519"
+$SshUser = "root"
+$SftpBasis = "/srv/samba"        # dort liegen die Freigaben daten/ und gedanken/
+$ShareBesitzer = "frank:frank"
+
+# Liefert @{ IstRemote; Spez; Share; Serverpfad } - Spez ist ein lokaler Pfad oder
+# "cortex-<share>:<share>/<rest>", Serverpfad der echte Pfad auf dem Server (fuer SFTP).
 function ZuSpez {
     param([string]$Pfad)
 
@@ -110,7 +127,7 @@ function ZuSpez {
     if ($voll -match '^\\\\10\.8\.0\.1\\([^\\]+)\\?(.*)$') {
         $share = $Matches[1]
         $rest = $Matches[2] -replace '\\', '/'
-        return @{ IstRemote = $true; Spez = "cortex-${share}:$share/$rest".TrimEnd('/'); Share = $share }
+        return @{ IstRemote = $true; Spez = "cortex-${share}:$share/$rest".TrimEnd('/'); Share = $share; Serverpfad = "$SftpBasis/$share/$rest".TrimEnd('/') }
     }
 
     $buchstabe = ""
@@ -119,10 +136,10 @@ function ZuSpez {
     if ($buchstabe -and $ShareVonBuchstabe.ContainsKey($buchstabe)) {
         $share = $ShareVonBuchstabe[$buchstabe]
         $rest = $voll.Substring(2).TrimStart('\') -replace '\\', '/'
-        return @{ IstRemote = $true; Spez = "cortex-${share}:$share/$rest".TrimEnd('/'); Share = $share }
+        return @{ IstRemote = $true; Spez = "cortex-${share}:$share/$rest".TrimEnd('/'); Share = $share; Serverpfad = "$SftpBasis/$share/$rest".TrimEnd('/') }
     }
 
-    return @{ IstRemote = $false; Spez = $voll; Share = "" }
+    return @{ IstRemote = $false; Spez = $voll; Share = ""; Serverpfad = "" }
 }
 
 $zielInfo = ZuSpez $Ziel
@@ -148,6 +165,58 @@ if (-not ((Test-Path $RcConf) -and (Select-String -Path $RcConf -Pattern '^\[cor
 
 if (-not (Test-Connection -ComputerName 10.8.0.1 -Count 2 -Quiet -ErrorAction SilentlyContinue)) {
     Abbruch "Server 10.8.0.1 antwortet nicht. Laeuft der WireGuard-Tunnel?"
+}
+
+# --- SFTP-Transportweg: verfuegbar? ----------------------------------------------------------
+# Windows-Falle: OpenSSH verweigert einen privaten Schluessel, auf den mehr als der eigene
+# Benutzer zugreifen darf ("UNPROTECTED PRIVATE KEY FILE") - und Dateien in %USERPROFILE%
+# erben ab Werk Rechte fuer SYSTEM und Administratoren. Einmal geradeziehen statt daran
+# scheitern. rclone selbst prueft das nicht, nur ssh.exe (das wir fuer chown brauchen).
+function Schluessel-Rechte-Richten {
+    param([string]$Pfad)
+    try {
+        $acl = Get-Acl $Pfad
+        $ich = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+        if (($acl.Access | Where-Object { $_.IdentityReference -ne $ich }).Count -eq 0) { return }
+        & icacls.exe $Pfad /inheritance:r /grant:r "${ich}:R" | Out-Null
+        Schreibe-Log "info" "schluessel-rechte auf nur $ich gesetzt"
+    }
+    catch { Schreibe-Log "warn" "schluessel-rechte nicht setzbar: $($_.Exception.Message)" }
+}
+
+# Erst pruefen, wenn der SFTP-Weg wirklich gebraucht wird - bei vielen kleinen Dateien
+# nehmen wir ohnehin SMB und sparen uns den Verbindungsaufbau.
+$script:SftpMoeglich = -1   # -1 = ungeprueft, 0 = nein, 1 = ja
+function Sftp-Verfuegbar {
+    if ($script:SftpMoeglich -ge 0) { return ($script:SftpMoeglich -eq 1) }
+    if (-not (Test-Path -LiteralPath $SshKey)) {
+        $script:SftpMoeglich = 0
+        Write-Host "SFTP-Weg nicht verfuegbar (Schluessel fehlt) - nutze SMB." -ForegroundColor Yellow
+        return $false
+    }
+    Schluessel-Rechte-Richten $SshKey
+    & ssh.exe -i $SshKey -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-new `
+              "$SshUser@10.8.0.1" "true" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) { $script:SftpMoeglich = 1; return $true }
+    $script:SftpMoeglich = 0
+    Write-Host "SFTP-Weg nicht verfuegbar (SSH antwortet nicht) - nutze SMB." -ForegroundColor Yellow
+    Schreibe-Log "warn" "sftp nicht verfuegbar, rueckfall auf smb"
+    return $false
+}
+
+$SftpFlags = @("--sftp-host", "10.8.0.1", "--sftp-user", $SshUser,
+               "--sftp-key-file", $SshKey,
+               "--sftp-concurrency", "64", "--sftp-set-modtime=false")
+
+# SSH laeuft als root, die Freigaben gehoeren frank:frank. Ohne Nacharbeit gehoerten per
+# SFTP geschriebene Dateien root:root und waeren ueber den SMB-Mount nicht mehr aenderbar.
+function Sftp-Besitzer-Richten {
+    param([string]$Serverpfad)
+    if (-not $Serverpfad) { return }
+    $q = "'" + ($Serverpfad -replace "'", "'''") + "'"
+    & ssh.exe -i $SshKey -o BatchMode=yes -o ConnectTimeout=6 "$SshUser@10.8.0.1" `
+              "chown -R $ShareBesitzer $q 2>/dev/null" 2>$null | Out-Null
+    Schreibe-Log "info" "besitzer gerichtet: $Serverpfad"
 }
 
 # --- Profil nach mittlerer Dateigroesse ------------------------------------------------------
@@ -196,15 +265,36 @@ else {
     $groesseKB = MittlereGroesseKB $eintraege
 }
 
+$Transport = "smb"
+
 if ($groesseKB -gt 0 -and $groesseKB -lt 2048) {
-    $profilText = "viele kleine Dateien (Schnitt $groesseKB KB) -> 64 gleichzeitig"
+    # Viele kleine Dateien: hier gewinnt SMB klar (18,7 gegen 4,4 Dateien/s), weil SFTP pro
+    # Datei viel mehr Vorlauf kostet. Es zaehlt allein die Gleichzeitigkeit.
+    $profilText = "viele kleine Dateien (Schnitt $groesseKB KB) -> SMB, 64 gleichzeitig"
     $Opts = @("--transfers", "64", "--checkers", "64") + $BasisOpts
 }
+elseif (Sftp-Verfuegbar) {
+    # Grosse Dateien: ueber SMB bleibt EINE Datei bei rund 10 Mbit/s haengen, weil rclone die
+    # Streams dort nicht wirklich parallel fuehrt. Ueber SFTP laeuft sie nahe am Maximum.
+    $Transport = "sftp"
+    if ($groesseKB -gt 0) { $profilText = "grosse Dateien (Schnitt $([int]($groesseKB/1024)) MB) -> SFTP, 4 gleichzeitig" }
+    else { $profilText = "Standard -> SFTP, 4 gleichzeitig" }
+    $Opts = @("--transfers", "4", "--checkers", "8") + $SftpFlags + $BasisOpts
+}
 else {
-    if ($groesseKB -gt 0) { $profilText = "grosse Dateien (Schnitt $([int]($groesseKB/1024)) MB) -> 8 gleichzeitig, je 8 Streams" }
-    else { $profilText = "Standard -> 8 gleichzeitig, je 8 Streams" }
+    if ($groesseKB -gt 0) { $profilText = "grosse Dateien (Schnitt $([int]($groesseKB/1024)) MB) -> SMB (SFTP nicht verfuegbar)" }
+    else { $profilText = "Standard -> SMB (SFTP nicht verfuegbar)" }
     $Opts = @("--transfers", "8", "--checkers", "8",
               "--multi-thread-streams", "8", "--multi-thread-cutoff", "16M") + $BasisOpts
+}
+
+# Ein Ort auf dem Server sieht je nach Transportweg anders aus: als rclone-Remote
+# ("cortex-daten:daten/x") oder als echter Pfad im Dateisystem (":sftp:/srv/samba/daten/x").
+function FuerTransport {
+    param($info)
+    if (-not $info.IstRemote) { return $info.Spez }
+    if ($Transport -eq "sftp") { return ":sftp:" + $info.Serverpfad }
+    return $info.Spez
 }
 
 # --- Uebersicht + Nachfrage beim Verschieben -------------------------------------------------
@@ -236,7 +326,7 @@ if ($verschieben) {
 #     in EINEM Aufruf uebertragen, also alle gleichzeitig.
 #   - Ordner bekommen je einen eigenen Aufruf (rclone parallelisiert darin selbst).
 
-$zielSpez = $zielInfo.Spez
+$zielSpez = FuerTransport $zielInfo
 $fehler = 0
 $tempDateien = @()
 
@@ -270,7 +360,7 @@ foreach ($d in $dateien) {
 
 foreach ($eltern in $gruppen.Keys) {
     $gruppe = $gruppen[$eltern]
-    $quelleSpez = (ZuSpez $eltern).Spez
+    $quelleSpez = FuerTransport (ZuSpez $eltern)
     $liste = Join-Path $env:TEMP ("cortex-paste-" + [Guid]::NewGuid().ToString("N") + ".txt")
     $tempDateien += $liste
     # rclone erwartet die Namen relativ zur Quelle, eine pro Zeile, UTF-8 ohne BOM.
@@ -284,7 +374,7 @@ foreach ($eltern in $gruppen.Keys) {
 
 # Ordner einzeln - jeweils in einen gleichnamigen Unterordner am Ziel, wie es der Explorer tut.
 foreach ($o in $ordner) {
-    $quelleSpez = (ZuSpez $o).Spez
+    $quelleSpez = FuerTransport (ZuSpez $o)
     $name = Blatt $o
     $unterZiel = if ($zielInfo.IstRemote) { "$zielSpez/$name" } else { Join-Path $zielSpez $name }
 
@@ -295,6 +385,12 @@ foreach ($o in $ordner) {
 
 foreach ($t in $tempDateien) {
     if (Test-Path -LiteralPath $t) { [IO.File]::Delete($t) }
+}
+
+# Ueber SFTP schreibt root - Besitzer zurueckdrehen, sonst gehoeren die Dateien am
+# SMB-Mount niemandem, den Frank aendern darf.
+if ($fehler -eq 0 -and $Transport -eq "sftp" -and $zielInfo.IstRemote) {
+    Sftp-Besitzer-Richten $zielInfo.Serverpfad
 }
 
 Write-Host ""

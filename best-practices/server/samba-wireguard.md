@@ -154,6 +154,10 @@ getrennte Massnahmen, die man nicht verwechseln sollte:
   (die Zwischenablage ist COM und braucht ein STA; `pwsh` 7 ist MTA), und mehrere markierte
   Dateien muessen per `--files-from` in EINEM rclone-Aufruf gebuendelt werden — sonst hat man
   aus Versehen wieder ein serielles Verfahren gebaut. Weitere 5.1-Fallen: Almanach §18.
+  Der Weg waehlt wie unter macOS auch den **Transport**: Schnitt < 2 MB → SMB (64 gleichzeitig),
+  Schnitt ≥ 2 MB → **SFTP** (gemessen 28.08.2026, 24 MB: 17 s über SMB gegen rund 3 s über SFTP),
+  danach `chown` auf den Samba-User. Den SSH-Schluessel vorher mit `icacls /inheritance:r` auf den
+  eigenen Benutzer beschraenken — sonst verweigert OpenSSH ihn (Almanach §18).
 
 Gemessen 2026-08-28 (Windows, 31 x 50 KB nach `Y:`, Tuning bereits aktiv): serielles SMB
 **23,5 s** gegenueber rund **5 s** ueber "Hier schnell einfuegen".

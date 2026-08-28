@@ -39,7 +39,7 @@
 | 14 | ⭐⭐ macOS: Laufwerke weg; Tunnel pingt mit Verlust, aber Internet + public VPS-IP 0 % & Server gesund | Client-IP/NAT hat gewechselt (dynamische Leitung) → WireGuard-Endpoint veraltet → Mounts fallen ab. ERST Endpoint-Wechsel pruefen (`tail /var/log/wg-endpoint-monitor.log`), NICHT Mac/Server verdaechtigen. FIX: Stale-Mount-Erkennung (perl-alarm) + `/etc/nsmb.conf` soft + Endpoint-Monitor + Keepalive 15. | §13 |
 | 15 | ⭐⭐ macOS: Laufwerke nach JEDEM Neustart weg; Mount-Log sagt im Takt "SMB 445 nicht erreichbar", das Tunnel-Log aber "Tunnel hochgefahren" | **launchd killt den Tunnel-Prozess.** Ein LaunchDaemon mit nur `RunAtLoad` ist ein Einmal-Job — beim `exit 0` beendet launchd ALLE verbliebenen Prozesse seiner Prozessgruppe, also das von `wg-quick` gestartete `wireguard-go`. Systemlog: Job `exited due to exit(0)`, **2 ms spaeter** `utunN detaching`. Von Hand im Terminal tritt es nie auf -> wirkt beim Einrichten immer "erfolgreich". FIX: Tunnel-Skript als **Dauerschleife** (Watchdog) + `KeepAlive=true` — der Job endet nie, der Prozessgruppen-Kill kann nicht mehr eintreten. | §15 |
 | 17 | ⭐⭐ Windows: Y:/Z: fuehlen sich traege an, schon beim BLAETTERN; Einfuegen vieler kleiner Dateien dauert ewig | Der SMB-Client ist ab Werk auf LAN eingestellt: Metadaten-Caches 10 s / 16 Eintraege, `MaxCmds` 50, und `EnableBandwidthThrottling` drosselt absichtlich. Ueber 48 ms Latenz ist fast jeder Blick ein Round-Trip. FIX: `windows/cortex-tuning.ps1` (Caches 60 s, `MaxCmds` 2048, Bremse aus). Signing/`smb encrypt` NICHT anfassen — kostet CPU, keine Round-Trips. Faktor ~2; der grosse Hebel bleibt §14. | §17 |
-| 18 | ⭐ Kontextmenue-Skript startet nicht oder bricht mit "Parametersatz kann nicht aufgeloest werden" ab | Drei 5.1-Fallen: `pwsh` 7 ist MTA und kann die Zwischenablage (COM) nicht lesen → `powershell.exe -STA`; `Split-Path -LiteralPath` geht in 5.1 NICHT mit `-Leaf` → `[IO.Path]::GetFileName()`; `Group-Object { }` ohne `-Property` bindet in 5.1 nicht → Hashtable. Ausserdem: rclone nimmt EINE Quelle pro Aufruf → Dateien per `--files-from` buendeln, sonst ist es wieder seriell. | §18 |
+| 18 | ⭐ Kontextmenue-Skript startet nicht oder bricht mit "Parametersatz kann nicht aufgeloest werden" ab | Drei 5.1-Fallen (plus `UNPROTECTED PRIVATE KEY FILE` beim SFTP-Weg → `icacls /inheritance:r /grant:r "<user>:R"`): `pwsh` 7 ist MTA und kann die Zwischenablage (COM) nicht lesen → `powershell.exe -STA`; `Split-Path -LiteralPath` geht in 5.1 NICHT mit `-Leaf` → `[IO.Path]::GetFileName()`; `Group-Object { }` ohne `-Property` bindet in 5.1 nicht → Hashtable. Ausserdem: rclone nimmt EINE Quelle pro Aufruf → Dateien per `--files-from` buendeln, sonst ist es wieder seriell. | §18 |
 
 ---
 
@@ -664,6 +664,13 @@ Dateien einzeln durchschleift, hat wieder ein serielles Verfahren gebaut — als
 Problem, das geloest werden sollte. Richtig: Dateien nach Elternordner gruppieren und pro
 Gruppe mit `--files-from` in EINEM Aufruf uebertragen; Ordner bekommen je einen Aufruf
 (darin parallelisiert rclone selbst).
+
+**Vierte Falle, wenn der SFTP-Weg dazukommt:** OpenSSH unter Windows verweigert einen privaten
+Schluessel, auf den mehr als der eigene Benutzer zugreifen darf (`UNPROTECTED PRIVATE KEY FILE`) —
+und Dateien in `%USERPROFILE%` erben ab Werk Rechte fuer SYSTEM und Administratoren, der Schluessel
+aus `~/SK/` also auch. `rclone --sftp-key-file` stoert das nicht, `ssh.exe` (fuer das `chown`
+danach) sehr wohl. Darum einmalig geradeziehen statt daran zu scheitern:
+`icacls <key> /inheritance:r /grant:r "<benutzer>:R"`.
 
 **Kosmetik, kein Bug:** Unter Windows 11 landet der Eintrag im erweiterten Menue
 ("Weitere Optionen anzeigen" / Umschalt+F10). Das schlanke Menue nimmt nur signierte
