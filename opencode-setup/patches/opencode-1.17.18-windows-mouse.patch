@@ -244,15 +244,6 @@ index 115c102..60f5f21 100644
    async function pasteAttachment(file: { filename?: string; filepath?: string; content: string; mime: string }) {
      const currentOffset = input.cursorOffset
      const extmarkStart = currentOffset
-@@ -1431,7 +1441,7 @@ export function Prompt(props: PromptProps) {
-                   input.cursorColor = theme.text
-                 }, 0)
-               }}
--              onMouseDown={(r: MouseEvent) => r.target?.focus()}
-+              onMouseDown={(event: MouseEvent) => event.target?.focus()}
-               focusedBackgroundColor={theme.backgroundElement}
-               cursorColor={props.disabled ? theme.backgroundElement : theme.text}
-               syntaxStyle={syntax()}
 diff --git a/packages/tui/src/ui/dialog.tsx b/packages/tui/src/ui/dialog.tsx
 index 5028163..8dd33ab 100644
 --- a/packages/tui/src/ui/dialog.tsx
