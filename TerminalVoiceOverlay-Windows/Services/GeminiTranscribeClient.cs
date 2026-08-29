@@ -19,7 +19,18 @@ namespace TerminalVoiceOverlay.Services
     /// generateContent-Endpunkt antwortet mit 404. Also spricht dieser Client
     /// die Live-API: Setup schicken, die fertige Aufnahme als PCM-Bloecke
     /// hineinschieben, audioStreamEnd senden, die Transkript-Fragmente
-    /// einsammeln bis der Server den Zug abschliesst.
+    /// einsammeln.
+    ///
+    /// ZWEI EIGENHEITEN DER LIVE-API (gegen die echte API gemessen, nicht
+    /// geraten — beide haben den ersten Anlauf haengen lassen):
+    ///   1. Das Feld heisst "interimInputTranscription", nicht
+    ///      "inputTranscription", und sein Text ist KUMULATIV: jedes Frame
+    ///      enthaelt das bisher Gehoerte komplett. Anhaengen wuerde den Text
+    ///      vervielfachen — es wird ersetzt.
+    ///   2. Der Server schickt am Ende WEDER turnComplete NOCH
+    ///      generationComplete; der Strom verstummt einfach. Ein Warten auf
+    ///      das Schlusssignal laeuft darum immer in den Timeout. Ende ist
+    ///      deshalb: Text vorhanden und seit <see cref="IdleMs"/> nichts Neues.
     ///
     /// BEWUSST OHNE HALLUZINATIONS-GATE: die dreischichtige Abwehr gegen
     /// Whisper-Stille-Halluzinationen in GroqWhisperClient haengt an Whispers
@@ -37,7 +48,19 @@ namespace TerminalVoiceOverlay.Services
         // 32 KB entspricht bei 16 kHz/16 bit/mono rund einer Sekunde. Kleine
         // Bloecke, weil einzelne Riesen-Frames die Verbindung sonst blockieren.
         private const int ChunkBytes = 32 * 1024;
-        private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(75);
+
+        // Stille-Fenster nach dem letzten Transkript-Frame. Gemessen kamen die
+        // Frames im Abstand von deutlich unter einer Sekunde; 1,5 s laesst
+        // Denkpausen des Modells zu, ohne den Knopf lange orange stehen zu lassen.
+        private const int IdleMs = 1500;
+
+        // Wartezeit auf das ERSTE Transkript-Frame. Die Live-API verarbeitet die
+        // Aufnahme in ihrem eigenen Takt, der erste Text kann ein paar Sekunden
+        // brauchen.
+        private const int FirstFrameMs = 30_000;
+
+        // Harte Obergrenze fuer den gesamten Aufruf.
+        private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(120);
 
         public GeminiTranscribeClient(string apiKey, string model, string language)
         {
@@ -101,13 +124,12 @@ namespace TerminalVoiceOverlay.Services
                 await SendAsync(ws, msg, ct).ConfigureAwait(false);
             }
 
-            // 3) Ende der Aufnahme melden — erst danach schliesst der Server den Zug ab.
+            // 3) Ende der Aufnahme melden.
             await SendAsync(ws, "{\"realtimeInput\":{\"audioStreamEnd\":true}}", ct).ConfigureAwait(false);
 
-            // 4) Fragmente einsammeln.
-            var transcript = new StringBuilder();
-            var modelText = new StringBuilder();
-            var buffer = new byte[16 * 1024];
+            // 4) Fragmente einsammeln, bis der Strom verstummt.
+            var collector = new TranscriptCollector();
+            var buffer = new byte[64 * 1024];
             var frame = new StringBuilder();
             bool done = false;
 
@@ -115,7 +137,22 @@ namespace TerminalVoiceOverlay.Services
             {
                 while (!done && ws.State == WebSocketState.Open)
                 {
-                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), ct).ConfigureAwait(false);
+                    WebSocketReceiveResult result;
+                    using var idle = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    idle.CancelAfter(collector.HasText ? IdleMs : FirstFrameMs);
+                    try
+                    {
+                        result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), idle.Token)
+                            .ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                    {
+                        // Kein Schlusssignal von der API — Stille ist das Ende.
+                        DiagLog.Write("GeminiSTT", "idle_end",
+                            ("hasText", collector.HasText), ("ms", sw.ElapsedMilliseconds));
+                        break;
+                    }
+
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         DiagLog.Warn("GeminiSTT", "server_closed",
@@ -129,16 +166,18 @@ namespace TerminalVoiceOverlay.Services
 
                     var payload = frame.ToString();
                     frame.Clear();
-                    done = HandleServerMessage(payload, transcript, modelText);
+                    done = HandleServerMessage(payload, collector);
                 }
             }
             catch (OperationCanceledException)
             {
                 DiagLog.Warn("GeminiSTT", "timeout", ("seconds", Deadline.TotalSeconds));
-                throw new Exception("Gemini-Transkription: Zeitueberschreitung (75 s).");
+                throw new Exception("Gemini-Transkription: Zeitueberschreitung.");
             }
             finally
             {
+                // Nach einem abgebrochenen ReceiveAsync ist der Socket abgebrochen;
+                // Schliessen ist dann weder moeglich noch noetig.
                 if (ws.State == WebSocketState.Open)
                 {
                     try
@@ -150,10 +189,7 @@ namespace TerminalVoiceOverlay.Services
                 }
             }
 
-            // inputTranscription ist die Verschriftlichung des Gesprochenen und
-            // hat Vorrang; modelTurn-Text ist der Ausweg, falls das Modell den
-            // Text als normale Antwort liefert.
-            var text = transcript.Length > 0 ? transcript.ToString().Trim() : modelText.ToString().Trim();
+            var text = collector.Result();
             if (string.IsNullOrWhiteSpace(text))
             {
                 // Gleiches Verhalten wie der Groq-Stille-Schutz: werfen statt
@@ -167,8 +203,52 @@ namespace TerminalVoiceOverlay.Services
             return text;
         }
 
+        /// <summary>
+        /// Sammelt die kumulativen Transkript-Frames ein. Jedes Frame enthaelt
+        /// den bisherigen Text komplett und darf sich dabei auch rueckwirkend
+        /// aendern ("das Ganze" wird zu "das ganze mal"), deshalb wird ersetzt
+        /// statt angehaengt. Faellt die Laenge dagegen stark ab, hat die API
+        /// einen neuen Abschnitt begonnen — dann wird der bisherige Stand
+        /// weggeschrieben und neu gesammelt.
+        /// </summary>
+        private sealed class TranscriptCollector
+        {
+            private readonly StringBuilder _committed = new();
+            private string _current = string.Empty;
+
+            public bool HasText => _committed.Length > 0 || _current.Length > 0;
+
+            public void Update(string? text)
+            {
+                if (string.IsNullOrEmpty(text)) return;
+
+                // Neuer Abschnitt: der neue Text ist deutlich kuerzer und damit
+                // keine Fortschreibung des bisherigen mehr.
+                if (_current.Length > 0 && text.Length * 2 < _current.Length)
+                {
+                    if (_committed.Length > 0) _committed.Append(' ');
+                    _committed.Append(_current);
+                    _current = text;
+                    return;
+                }
+
+                _current = text;
+            }
+
+            public string Result()
+            {
+                var sb = new StringBuilder(_committed.ToString());
+                if (_current.Length > 0)
+                {
+                    if (sb.Length > 0) sb.Append(' ');
+                    sb.Append(_current);
+                }
+                return sb.ToString().Trim();
+            }
+        }
+
         /// <summary>Verarbeitet eine Server-Nachricht; true = Zug beendet.</summary>
-        private static bool HandleServerMessage(string payload, StringBuilder transcript, StringBuilder modelText)
+        private static bool HandleServerMessage(string payload, TranscriptCollector collector)
         {
             JsonDocument doc;
             try { doc = JsonDocument.Parse(payload); }
@@ -195,13 +275,20 @@ namespace TerminalVoiceOverlay.Services
                 if (!root.TryGetProperty("serverContent", out var server))
                     return false;
 
-                if (server.TryGetProperty("inputTranscription", out var input) &&
-                    input.TryGetProperty("text", out var inText) &&
-                    inText.ValueKind == JsonValueKind.String)
+                // Beide Schreibweisen mitnehmen: gemessen kommt
+                // interimInputTranscription, inputTranscription ist der
+                // dokumentierte Name — falls die API ihn doch noch schickt.
+                foreach (var field in new[] { "interimInputTranscription", "inputTranscription" })
                 {
-                    transcript.Append(inText.GetString());
+                    if (server.TryGetProperty(field, out var part) &&
+                        part.TryGetProperty("text", out var t) &&
+                        t.ValueKind == JsonValueKind.String)
+                    {
+                        collector.Update(t.GetString());
+                    }
                 }
 
+                // Falls das Modell den Text als normale Antwort liefert.
                 if (server.TryGetProperty("modelTurn", out var turn) &&
                     turn.TryGetProperty("parts", out var parts) &&
                     parts.ValueKind == JsonValueKind.Array)
@@ -211,14 +298,13 @@ namespace TerminalVoiceOverlay.Services
                         if (part.TryGetProperty("thought", out var thought) && thought.ValueKind == JsonValueKind.True)
                             continue;
                         if (part.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
-                            modelText.Append(t.GetString());
+                            collector.Update(t.GetString());
                     }
                 }
 
-                var finished =
+                return
                     (server.TryGetProperty("turnComplete", out var tc) && tc.ValueKind == JsonValueKind.True) ||
                     (server.TryGetProperty("generationComplete", out var gc) && gc.ValueKind == JsonValueKind.True);
-                return finished;
             }
         }
 
