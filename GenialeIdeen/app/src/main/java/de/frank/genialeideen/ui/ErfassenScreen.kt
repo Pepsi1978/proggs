@@ -84,6 +84,7 @@ fun ErfassenScreen(
     val aufnahme by viewModel.aufnahme.collectAsState()
     val ki by viewModel.ki.collectAsState()
     val korrektur by viewModel.korrektur.collectAsState()
+    val titelLaeuft by viewModel.titelLaeuft.collectAsState()
 
     var titel by remember { mutableStateOf("") }
     var text by remember { mutableStateOf("") }
@@ -151,11 +152,20 @@ fun ErfassenScreen(
 
                 GestaffeltEinblenden(sichtbar = true, index = 1) {
                     EingabeFeld(
-                        beschriftung = "Titel",
-                        platzhalter = "Kurz und wiedererkennbar",
+                        beschriftung = if (titelLaeuft) {
+                            "Titel — die KI sucht einen …"
+                        } else {
+                            "Titel"
+                        },
+                        platzhalter = if (titelLaeuft) {
+                            "gleich da"
+                        } else {
+                            "Höchstens drei Wörter"
+                        },
                         wert = titel,
                         aufWert = { titel = it },
                         einzeilig = true,
+                        laedt = titelLaeuft,
                     )
                 }
 
@@ -214,9 +224,16 @@ fun ErfassenScreen(
                         aufTipp = {
                             if (aufnahme.laeuft) {
                                 viewModel.beendeAufnahme { erkannt ->
-                                    text = if (text.isBlank()) erkannt else "$text $erkannt"
-                                    if (titel.isBlank()) titel = erkannt.take(60)
+                                    val gesamt = if (text.isBlank()) erkannt else "$text $erkannt"
+                                    text = gesamt
                                     viewModel.korrekturVergessen()
+                                    // Der Titel kommt von der KI, höchstens drei Wörter. Ein
+                                    // selbst getippter Titel wird dabei nie überschrieben.
+                                    if (titel.isBlank()) {
+                                        viewModel.schlageTitelVor(gesamt) { vorschlag ->
+                                            if (titel.isBlank()) titel = vorschlag
+                                        }
+                                    }
                                 }
                             } else if (mikrofonErlaubt) {
                                 viewModel.starteAufnahme()
@@ -308,13 +325,22 @@ private fun EingabeFeld(
     aufWert: (String) -> Unit,
     einzeilig: Boolean = false,
     minHoehe: Dp = 46.dp,
+    laedt: Boolean = false,
 ) {
     val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val uebergang = rememberInfiniteTransition(label = "titelsuche")
+    val puls by uebergang.animateFloat(
+        initialValue = 0.35f,
+        targetValue = if (laedt && !reduziert) 1f else 0.35f,
+        animationSpec = infiniteRepeatable(tween(Motion.SCHIMMER_MS), RepeatMode.Reverse),
+        label = "pulswert",
+    )
     Column {
         Text(
             beschriftung,
             style = MaterialTheme.typography.labelSmall,
-            color = gold.textGedaempft,
+            color = if (laedt) gold.primaer.copy(alpha = puls) else gold.textGedaempft,
             modifier = Modifier.padding(bottom = 6.dp, start = 4.dp),
         )
         Box(
@@ -328,7 +354,15 @@ private fun EingabeFeld(
                         listOf(gold.eingabefeld, gold.eingabefeld, gold.flaeche),
                     ),
                 )
-                .border(1.dp, lichtKante(gedrueckt = true, staerke = 0.22f), RoundedCornerShape(16.dp))
+                .border(
+                    1.dp,
+                    if (laedt) {
+                        androidx.compose.ui.graphics.SolidColor(gold.primaer.copy(alpha = puls))
+                    } else {
+                        lichtKante(gedrueckt = true, staerke = 0.22f)
+                    },
+                    RoundedCornerShape(16.dp),
+                )
                 .padding(14.dp),
         ) {
             if (wert.isEmpty()) {

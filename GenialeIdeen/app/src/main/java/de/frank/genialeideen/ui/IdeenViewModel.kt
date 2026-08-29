@@ -98,6 +98,11 @@ class IdeenViewModel(
     private val _aufnahme = MutableStateFlow(AufnahmeStand())
     val aufnahme: StateFlow<AufnahmeStand> = _aufnahme.asStateFlow()
 
+    private val _titelLaeuft = MutableStateFlow(false)
+
+    /** Solange true, sucht die KI gerade einen Titel für das frische Diktat. */
+    val titelLaeuft: StateFlow<Boolean> = _titelLaeuft.asStateFlow()
+
     private val _korrektur = MutableStateFlow<KorrekturStand?>(null)
 
     /** Steht ein Wert drin, zeigt der Knopf „Rückgängig" statt „Korrigieren". */
@@ -216,7 +221,8 @@ class IdeenViewModel(
 
     fun legeAn(titel: String, text: String, aufnahmePfad: String? = null, originalText: String? = null) {
         viewModelScope.launch {
-            val name = titel.trim().ifBlank { text.trim().take(60).ifBlank { "Neue Idee" } }
+            // Auch der Ersatztitel bleibt bei drei Wörtern — sonst sprengt er die Liste.
+            val name = titel.trim().ifBlank { ersatzTitel(text) }
             repository.lege(name, text.trim(), aufnahmePfad, originalText)
             zeige(Meldung("Idee gespeichert."))
         }
@@ -426,6 +432,86 @@ class IdeenViewModel(
         kiJob?.cancel()
         _ki.value = KiStand()
     }
+
+    /**
+     * Lässt die KI einen Titel für die eingesprochene Idee finden — höchstens drei Wörter.
+     *
+     * Kommt kein Zugang zustande, greift der Ersatz aus den ersten Wörtern des Diktats: Ein
+     * Titelfeld darf nie leer bleiben, nur weil die KI schweigt (Baustein L).
+     */
+    fun schlageTitelVor(text: String, fertig: (String) -> Unit) {
+        val quelle = text.trim()
+        if (quelle.isBlank() || _titelLaeuft.value) return
+        viewModelScope.launch {
+            _titelLaeuft.value = true
+            try {
+                val antwort = codex.streamChat(
+                    instructions = TITEL,
+                    turns = listOf(ChatTurn("user", quelle.take(4000))),
+                    model = CodexModel.fromLabel(settings.model),
+                    reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
+                )
+                val titel = kuerzeAufDreiWoerter(UmlautKorrektur.korrigiere(antwort))
+                _titelLaeuft.value = false
+                if (titel.isBlank()) {
+                    fertig(ersatzTitel(quelle))
+                    return@launch
+                }
+                IdeenLog.info(
+                    "Titel",
+                    "schlageTitelVor",
+                    "Titel von der KI",
+                    mapOf("woerter" to titel.split(" ").size),
+                )
+                fertig(titel)
+            } catch (fehler: Exception) {
+                _titelLaeuft.value = false
+                fertig(ersatzTitel(quelle))
+                IdeenLog.warn(
+                    "Titel",
+                    "schlageTitelVor",
+                    "Kein Titel von der KI, Ersatz gesetzt",
+                    mapOf("art" to fehler.javaClass.simpleName),
+                )
+                zeige(
+                    Meldung(
+                        if (fehler is CodexAuthException && fehler.kind == AuthErrorKind.REAUTH) {
+                            "Für den Titelvorschlag fehlt der KI-Zugang. Der Titel kommt " +
+                                "solange aus deinen ersten Worten."
+                        } else {
+                            "Der Titelvorschlag kam nicht durch — der Titel kommt aus deinen " +
+                                "ersten Worten. Du kannst ihn überschreiben."
+                        },
+                        istFehler = true,
+                        wiederholen = { schlageTitelVor(quelle, fertig) },
+                        zuEinstellungen = fehler is CodexAuthException &&
+                            fehler.kind == AuthErrorKind.REAUTH,
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * Sicherheitsnetz: Auch wenn das Modell mehr liefert, bleiben höchstens drei Wörter übrig.
+     * Anführungszeichen und Schlusspunkt fallen weg — ein Titel trägt keine Satzzeichen.
+     */
+    internal fun kuerzeAufDreiWoerter(roh: String): String = roh
+        .lineSequence()
+        .firstOrNull { it.isNotBlank() }
+        .orEmpty()
+        .trim()
+        .trim('"', '\'', '„', '“', '”', '«', '»')
+        .split(Regex("\\s+"))
+        .filter(String::isNotBlank)
+        .take(3)
+        .joinToString(" ")
+        .trimEnd('.', ',', ';', ':', '!')
+        .trim()
+
+    /** Der Ersatz ohne KI: die ersten drei Wörter des Diktats. */
+    private fun ersatzTitel(text: String): String =
+        kuerzeAufDreiWoerter(text).ifBlank { "Neue Idee" }
 
     /**
      * Bringt einen diktierten Text in gutes Deutsch (Baustein O.4).
@@ -923,6 +1009,20 @@ class IdeenViewModel(
          * Der Auftrag für den Korrektur-Knopf. Bewusst eng gefasst: Inhalt bleibt, nur die
          * Sprache wird besser. Gekürzt werden ausschliesslich echte Wiederholungen.
          */
+        /**
+         * Der Auftrag für den Titel. Höchstens drei Wörter — der Titel steht in einer Liste
+         * und muss auf dem schmalen Cover-Display in eine Zeile passen.
+         */
+        const val TITEL =
+            "Du bekommst eine eingesprochene Idee. Gib ihr einen Titel aus HÖCHSTENS DREI " +
+                "WÖRTERN, der den Kern trifft.\n\n" +
+                "Regeln:\n" +
+                "- Höchstens drei Wörter, lieber zwei.\n" +
+                "- Keine Anführungszeichen, kein Punkt am Ende, keine Nummerierung.\n" +
+                "- Keine Einleitung wie „Titel:" + "“ — gib nur den Titel selbst zurück.\n" +
+                "- Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß).\n" +
+                "- Benutze die Worte der Idee, erfinde kein neues Thema."
+
         const val KORREKTUR =
             "Du bekommst einen diktierten Text. Erkenne, was gemeint ist, und gib ihn in " +
                 "grammatikalisch und orthografisch einwandfreiem Deutsch zurück: richtige " +
