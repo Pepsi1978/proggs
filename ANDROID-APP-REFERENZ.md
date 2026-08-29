@@ -1,6 +1,6 @@
 # Android-App-Referenz — verbindliche Standard-Bausteine für alle meine Apps
 
-> **Stand:** 29.08.2026, 16:31 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
+> **Stand:** 29.08.2026, 16:44 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
 > **Referenz-Apps im Repo:** `~/proggs/PerfectMoment`, `~/proggs/CortexAndroid`,
 > `~/proggs/BestJournalAndroid`, `~/proggs/TerminalVoiceOverlay-Windows`
 
@@ -645,23 +645,168 @@ strasse → Straße · gruss → Gruß · massnahme → Maßnahme · dass ≠ da
 
 ---
 
-## 14. Baustein N — Fünf-Sterne-Optik: modern, mit vielen optischen Effekten ⭐ PFLICHT
+## 14. Baustein N — Fünf-Sterne-Optik: 3D, Glas, Schatten, Motion ⭐ PFLICHT
 
-**Was:** Die App soll aussehen wie eine der besten Apps im Play Store — modern, aufwendig, mit vielen
-optischen Effekten. Nichts darf nach Standard-Baukasten aussehen.
+**Was:** Die App soll aussehen wie eine der besten Apps im Play Store — modern, aufwendig, mit sehr
+vielen optischen Effekten: **3D-Knöpfe, 3D-Tiefe, Glaseffekte, mehrschichtige Schatten,
+Übergangseffekte und Motion überall**. Nichts darf nach Standard-Baukasten aussehen, nichts nüchtern.
+
+> **Warum dieser Baustein so ausführlich ist:** Eine frühere App wurde nach der alten, knappen Fassung
+> gebaut und sah komplett nüchtern aus. Die Aufzählungen waren zu allgemein — daraus wird Standard-
+> Material. Deshalb stehen hier jetzt **konkrete Werte, Rezepte und Verbote**. Sie sind die Vorgabe,
+> nicht eine Anregung.
 
 ### N.1 Grundhaltung
 
+- **Die App muss aussehen wie das Nonplusultra, nicht wie eine Durchschnitts-App.** Maßstab ist die
+  Vorzeigeauswahl im Play Store, nicht „ordentlich gebaut".
+- **„Nüchtern" ist ein Fehler, keine Geschmacksfrage.** Sieht ein Bildschirm flach, grau oder wie
+  ein Compose-Beispielprojekt aus, ist er **nicht fertig** — auch wenn alles funktioniert.
 - **Kein Bildschirm ohne Gestaltung.** Jede Fläche bekommt Tiefe, Bewegung und Charakter — auch
   Einstellungen, Leerzustände und Fehlermeldungen.
+- **Flächen sind niemals einfarbig.** Jede Karte, jede Leiste, jeder Knopf hat mindestens einen
+  Verlauf, eine Lichtkante und einen Schatten. Eine plane `Color`-Füllung ohne alles ist verboten.
 - **Es bewegt sich immer etwas**, wenn ich etwas tue: nichts erscheint hart, nichts verschwindet
   schlagartig, nichts springt.
 - Die **Gold-Palette aus Baustein A ist die Bühne** für alle Effekte. Verläufe, Glanz und Schein werden
   aus Gold gebaut, nicht aus Fremdfarben.
 - Grundlage: **Material 3 Expressive** (`MaterialTheme` mit `MotionScheme.expressive()`), nicht das
   nüchterne Standard-Material.
+- **Im Zweifel mehr Effekt, nicht weniger.** Die Leitplanken in N.7 begrenzen das — bis dahin gilt:
+  aufwendiger.
 
-### N.2 Pflicht-Effekt-Katalog
+---
+
+### N.2 3D-Knöpfe ⭐ PFLICHT
+
+**Jeder Knopf in der App ist ein körperlicher, plastischer 3D-Knopf** — er sieht aus, als könnte man
+ihn anfassen und eindrücken. Flache Material-Knöpfe (`Button` ohne eigene Gestaltung) sind verboten.
+
+**Aufbau eines Knopfes — vier Schichten von unten nach oben**
+
+1. **Schlagschatten unten** — versetzt nach unten, weich: `shadow(elevation = 8.dp, shape,
+   ambientColor = Gold.copy(alpha = .35f), spotColor = Gold.copy(alpha = .55f))`.
+2. **Körper mit senkrechtem Verlauf** — oben heller, unten dunkler, das ist der 3D-Eindruck:
+   `Brush.verticalGradient(listOf(Gold.lighten(0.18f), Gold, Gold.darken(0.22f)))`.
+3. **Lichtkante oben** — 1 dp heller Rand am oberen Bogen (`Brush.verticalGradient` von
+   `White.copy(alpha = .45f)` nach `Transparent`), **dunklere Kante unten**. Das ist der Unterschied
+   zwischen „farbiges Rechteck" und „Knopf".
+4. **Glanzlicht (Specular)** — ein flacher heller Bogen im oberen Drittel, rund 40 % Deckung,
+   `Brush.radialGradient` mit Mittelpunkt über der Oberkante.
+
+**Beim Drücken kippt die Plastik um** (das ist der wichtigste Teil):
+
+- Skalierung auf **0,96**, Schatten von 8 dp auf **2 dp**, Verlauf **umgekehrt** (oben dunkel, unten
+  hell) → der Knopf wirkt *eingedrückt*, nicht nur kleiner.
+- Die Lichtkante wandert von oben nach unten mit.
+- Rückweg mit **Spring** (`dampingRatio = 0.55f`, `stiffness = 900f`), damit er sichtbar ausfedert.
+- Dazu ein kurzer **haptischer Impuls** (`HapticFeedbackType.TextHandleMove` bzw.
+  `performHapticFeedback`) — der Knopf fühlt sich an, wie er aussieht.
+
+**Weitere Pflichten**
+
+- **Der Haupt-Knopf eines Bildschirms** (der eine wichtigste) bekommt zusätzlich einen **atmenden
+  goldenen Schein** ringsum (Alpha 0,25 → 0,45 im 2,5-s-Rhythmus) und beim Erscheinen ein kurzes
+  Aufschwingen.
+- **Umschalter, Chips und Auswahlkarten** sind ebenfalls plastisch: nicht gewählt = leicht vertieft
+  (innerer Schatten oben), gewählt = erhaben mit Schein.
+- **Der schwebende Aktionsknopf (FAB)** steht sichtbar über der Fläche: großer weicher Schatten,
+  Verlaufskörper, beim Scrollen zieht er den Schatten mit.
+- **Deaktivierte Knöpfe bleiben plastisch**, nur entsättigt und ohne Schein — nie zu einem grauen
+  Rechteck degradiert.
+- Der Knopf wird **einmal zentral** gebaut (`ui/common/Knopf3D.kt` o. ä.) und überall wiederverwendet.
+  Es gibt in der App **keinen** rohen `Button`/`TextButton` ohne diese Gestaltung.
+
+---
+
+### N.3 3D-Effekte und räumliche Tiefe ⭐ PFLICHT
+
+Die App ist **nicht flach**. Es gibt einen Raum mit Vorder- und Hintergrund.
+
+- **Kipp-Karten (Tilt/Parallax auf Berührung):** Wichtige Karten neigen sich zum Finger —
+  `Modifier.graphicsLayer { rotationX = …; rotationY = …; cameraDistance = 12f * density }`,
+  maximal **6°** in jede Richtung, mit Spring zurück in die Ruhelage. Das Glanzlicht wandert
+  gegenläufig mit.
+- **Umdrehen statt Austauschen:** Wo eine Karte ihre Rückseite zeigt (Detail, Einstellung,
+  „mehr Infos"), dreht sie sich in 3D um die Y-Achse (`rotationY` 0° → 180°, Inhalt tauscht bei 90°),
+  statt hart ersetzt zu werden.
+- **Gestapelte Tiefe:** Listen und Auswahlflächen zeigen dahinterliegende Elemente **kleiner, dunkler
+  und nach hinten versetzt** (Skalierung 0,94 · Alpha 0,7 · 8 dp Versatz) — man sieht, dass da noch
+  etwas ist.
+- **Tiefen-Parallaxe beim Scrollen:** Hintergrundschein bewegt sich mit **0,3×**, Kopfbereich mit
+  **0,6×**, Inhalt mit 1× — drei Ebenen, nicht eine.
+- **Perspektivisches Erscheinen:** Dialoge und Blätter kommen **aus der Tiefe** nach vorn
+  (Skalierung 0,88 → 1,0 + Aufblenden + Schatten wächst mit), nicht von unten hereingeschoben.
+- **Beleuchtung ist einheitlich:** Die Lichtquelle sitzt in der ganzen App **oben links**. Alle
+  Lichtkanten oben/links, alle Schatten unten/rechts. Widersprüchliche Beleuchtung zerstört den
+  3D-Eindruck sofort.
+- **Bewegte Hintergrund-Ebene:** Hinter dem Inhalt liegt ein langsam wandernder goldener Schein
+  (zwei radiale Verläufe, 20–30 s Umlauf, sehr niedrige Deckung) — die App wirkt lebendig, auch wenn
+  gerade nichts passiert. Auf Leer- und Ladebildschirmen ist das Pflicht.
+
+---
+
+### N.4 Glas- und Schatteneffekte ⭐ PFLICHT
+
+**Glas (Glassmorphismus) — mit konkreten Werten, nicht „irgendwie durchsichtig"**
+
+- **Wo:** Kopfleiste, Fußleiste, schwebende Leisten, Dialoge, Blätter (Bottom Sheets), Overlays.
+- **Rezept:** Unterlage `Modifier.blur(24.dp)` (bzw. `RenderEffect.createBlurEffect` mit 24/24 und
+  `Shader.TileMode.CLAMP`) · darüber Fläche in Flächenfarbe mit **Alpha 0,55–0,70** · darüber ein
+  **diagonaler Aufhellungs-Verlauf** (weiß 12 % oben links → transparent) · **1-dp-Lichtkante** oben
+  und links, dunkle Kante unten.
+- **Körnung:** eine sehr feine Rausch-Textur mit 3–5 % Deckung über dem Glas — das nimmt dem Verlauf
+  die Plastikwirkung und ist der Unterschied zu „billigem" Glas.
+- **Ab Android 13** darf zusätzlich ein **AGSL-Shader** (`RuntimeShader`) für gebrochene Lichtkanten
+  eingesetzt werden.
+- **Glas braucht Untergrund:** Über einer leeren einfarbigen Fläche wirkt es nicht. Wo Glas liegt,
+  liegt darunter ein Verlauf, ein Bild oder Inhalt.
+
+**Schatten — mehrschichtig, farbig, nie der Standardschatten**
+
+- **Jedes erhabene Element bekommt zwei bis drei Schatten übereinander**, nicht einen:
+  1. **Kontaktschatten** — klein und dunkel dicht am Element (2–4 dp, Alpha 0,35),
+  2. **Umgebungsschatten** — groß und weich (16–28 dp, Alpha 0,18),
+  3. **Farbschein** — in Gold bzw. der Elementfarbe (`spotColor`), macht den Unterschied zu Grau.
+- **Farbige Schatten sind der Standard**, nicht Schwarz: `ambientColor`/`spotColor` aus der
+  Elementfarbe abgeleitet. Schwarze Standardschatten sehen billig aus.
+- **Innenschatten** für Vertiefungen (Eingabefelder, nicht gewählte Umschalter, Fortschrittsrinnen):
+  dunkler Verlauf an der Oberkante nach innen — Felder wirken eingelassen, nicht aufgemalt.
+- **Der Schatten bewegt sich mit:** Beim Drücken schrumpft er, beim Anheben (Ziehen, Auswählen)
+  wächst er, beim Scrollen unter eine Leiste wird sie kräftiger — Schatten sind animiert, nicht fest.
+- Höhenstaffel verbindlich: Hintergrund 0 dp · Karte 6 dp · erhöhte Karte 12 dp · schwebende Leiste
+  20 dp · Dialog 28 dp. Steht **einmal zentral** in `ui/theme/Elevation.kt`.
+
+---
+
+### N.5 Übergangseffekte ⭐ PFLICHT
+
+**Kein Wechsel ohne Übergang** — weder zwischen Bildschirmen noch zwischen Zuständen.
+
+- **Geteilte Elemente (Shared Element Transition)** zwischen Übersicht und Detail — das angetippte
+  Element wandert sichtbar an seinen neuen Platz (`SharedTransitionLayout`,
+  `Modifier.sharedElement()`). Das ist der wichtigste Einzeleffekt für den Eindruck „teure App".
+- **Kreis-Enthüllung (Circular Reveal)** beim Öffnen aus einem Knopf heraus: Der neue Inhalt wächst
+  kreisförmig genau aus dem Punkt, den ich getippt habe.
+- **Der Theme-Wechsel (Baustein C) wird animiert:** Die neue Palette breitet sich als Kreis vom
+  Theme-Knopf über den Bildschirm aus — kein hartes Umspringen der Farben.
+- **`AnimatedContent` für jeden Inhaltswechsel**, mit Richtung passend zur Navigation (vorwärts von
+  rechts, zurück nach rechts), dazu leichtes Skalieren (0,96 → 1,0) statt reinem Schieben.
+- **Gestaffeltes Einblenden** beim Betreten eines Bildschirms: Elemente kommen nacheinander (40–60 ms
+  Versatz), jeweils 12 dp hochgleitend und aufblendend. Ein Bildschirm erscheint nie komplett auf
+  einmal.
+- **Vorausschauendes Zurück (Predictive Back)** unterstützen: Die Zurück-Geste zieht den Bildschirm
+  schon beim Wischen mit, skaliert und rundet ihn ab.
+- **Listenumsortierung, Einfügen und Löschen** animiert (`Modifier.animateItem()`), niemals hartes
+  Neuzeichnen. Gelöschtes schrumpft und blendet aus.
+- **Zustandswechsel formwandeln:** Kreis → Rundquadrat → Stern über `Morph` aus
+  `androidx.graphics.shapes`, statt Symbole hart zu tauschen.
+- **Auch Fehler und Ladezustände wechseln weich** (Baustein L): Schimmer-Gerüst blendet in den echten
+  Inhalt über, es springt nicht um.
+
+---
+
+### N.6 Pflicht-Effekt-Katalog
 
 Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
 
@@ -670,11 +815,11 @@ Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
   `Brush.radialGradient` als weicher Schein hinter wichtigen Elementen, `Brush.sweepGradient` für
   Ringe und Fortschritt.
 - **Goldener Schein (Glow)** an aktiven Elementen: `Modifier.shadow(elevation, shape,
-  ambientColor = Gold, spotColor = Gold)`.
-- **Milchglas (Glassmorphismus)** hinter Kopf- und Fußleisten sowie Dialogen: `Modifier.blur()` bzw.
-  `RenderEffect.createBlurEffect` auf der darunterliegenden Ebene, dazu halbtransparente Fläche und
-  1-dp-Lichtkante oben.
-- **Lichtkante:** feiner heller Rahmen oben, dunklerer unten — gibt Karten Körperlichkeit.
+  ambientColor = Gold, spotColor = Gold)` — mehrschichtig nach **N.4**.
+- **Milchglas (Glassmorphismus)** hinter Kopf- und Fußleisten sowie Dialogen — Rezept mit festen
+  Werten in **N.4**.
+- **Lichtkante:** feiner heller Rahmen oben, dunklerer unten — gibt Karten Körperlichkeit
+  (Beleuchtung immer von oben links, **N.3**).
 - **Gestaffelte Höhenwirkung:** Hintergrund → Karte → erhöhte Karte → Dialog, jede Stufe mit eigener
   Fläche *und* eigenem Schatten.
 - **Eigene Formen** statt nur Rechtecke: `androidx.graphics.shapes` (`RoundedPolygon`) für Abzeichen,
@@ -692,16 +837,11 @@ Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
 - **Parallaxe** beim Scrollen: Kopfbild bewegt sich langsamer als der Inhalt, Titel schrumpft weich
   in die Leiste (`nestedScroll` mit `TopAppBarScrollBehavior`).
 
-**Übergänge**
-- **Geteilte Elemente (Shared Element Transition)** zwischen Übersicht und Detail — das angetippte
-  Element wandert sichtbar an seinen neuen Platz (`SharedTransitionLayout`).
-- **`AnimatedContent`** für jeden Inhaltswechsel, mit Richtung passend zur Navigation.
-- **Vorausschauendes Zurück (Predictive Back)** unterstützen, damit die Zurück-Geste den Bildschirm
-  schon beim Wischen mitzieht.
-- **Listenumsortierung** animiert (`Modifier.animateItem()`), niemals hartes Neuzeichnen.
+**Übergänge** — vollständig in **N.5** (geteilte Elemente, Kreis-Enthüllung, animierter Theme-Wechsel,
+`AnimatedContent`, Predictive Back, animierte Listen).
 
 **Mikro-Interaktionen**
-- Jeder Knopf reagiert beim Drücken: kurz einsinken (Skalierung ~0,96) und wieder ausfedern.
+- Jeder Knopf reagiert beim Drücken: einsinken und ausfedern — Vollausbau als 3D-Knopf in **N.2**.
 - **Wellen-Effekt (Ripple)** in Gold eingefärbt, nicht im Grauton der Vorgabe.
 - Umschalter, Haken und Auswahlkreise werden **gezeichnet, nicht getauscht** — der Haken malt sich.
 - Erfolgsmomente bekommen eine kleine Feier: aufblitzender Ring, kurzes Aufleuchten, Zähler zählt hoch.
@@ -712,7 +852,67 @@ Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
 - Eine gut gewählte **Schriftfamilie über Google Fonts** (`compose.google.fonts`), nicht die
   Systemschrift — mit klarer Größen- und Gewichtungsstaffel.
 
-### N.3 Bewegungs-Standards (einheitlich in der ganzen App)
+---
+
+### N.7 Motion-Effekte — überall, nicht nur an Knöpfen ⭐ PFLICHT
+
+**Grundsatz:** Motion ist kein Zusatz am Ende, sondern gehört zu jedem Element, das gebaut wird.
+**Nichts erscheint, verschwindet, ändert sich oder wartet ohne Bewegung.** Ein statischer Bildschirm
+ist ein unfertiger Bildschirm.
+
+**Motion beim Erscheinen (jeder Bildschirm, jedes Element)**
+- Elemente kommen **gestaffelt** herein: 40–60 ms Versatz, 12 dp Hochgleiten, Aufblenden, dazu
+  leichtes Skalieren von 0,96 auf 1,0.
+- **Wichtige Elemente schwingen ein** (Spring, `dampingRatio = 0.6f`) statt nur einzublenden.
+- Symbole und Abzeichen **drehen sich leicht ein** (−8° → 0°) beim ersten Erscheinen.
+- Der Bildschirmtitel **schreibt sich auf** oder blendet mit Verlauf von links nach rechts ein.
+
+**Motion im Ruhezustand (die App lebt, auch wenn ich nichts tue)**
+- **Atmender Schein** am Haupt-Knopf und an aktiven Karten (2,5-s-Rhythmus, Alpha 0,25 ↔ 0,45).
+- **Wandernder Hintergrundverlauf** (N.3), 20–30 s Umlauf, sehr dezent.
+- **Schwebende Elemente:** FAB und Abzeichen bewegen sich um 2–3 dp auf und ab (4-s-Rhythmus).
+- **Glanzlicht wandert** langsam über wichtige Karten und über die Verlaufsschrift der Überschrift.
+- Diese Ruhe-Bewegungen sind **sehr langsam und sehr leise** — sie sollen wirken, nicht ablenken, und
+  laufen nie hinter Text, den ich gerade lese (N.9).
+
+**Motion als Rückmeldung (jede Handlung hat eine sichtbare Antwort)**
+- **Druck:** einsinken + ausfedern + Haptik (N.2).
+- **Wischen:** der Inhalt folgt dem Finger sofort (1:1) und federt zurück, wenn die Schwelle nicht
+  erreicht ist — nie erst nach dem Loslassen reagieren.
+- **Ziehen und Sortieren:** Das gegriffene Element **hebt sich an** (Skalierung 1,04, Schatten wächst
+  auf 20 dp, leichte Neigung 2°), die anderen weichen animiert aus.
+- **Zum Aktualisieren ziehen:** eigene goldene Anzeige, die sich beim Ziehen aufbaut und dreht — nicht
+  der graue Standardkreis.
+- **Erfolg:** aufblitzender Ring, kurzes Aufleuchten, Haken malt sich, Zähler zählt hoch.
+- **Fehler:** kurzes seitliches Wackeln (3 Ausschläge, 320 ms) plus rotes Aufleuchten des Rahmens —
+  nie nur ein stummer roter Text.
+- **Löschen:** Element schrumpft, kippt leicht weg und blendet aus; die Lücke schließt sich animiert.
+
+**Motion beim Warten (Baustein L)**
+- **Schimmer** über Platzhalter-Gerüsten statt Drehkreis, mit goldenem Laufband.
+- **Fortschritt** als Verlaufsring mit `Brush.sweepGradient`, der Wert zählt animiert mit.
+- **Streaming-Text** (Baustein O.3) erscheint wortweise mit kurzem Aufblenden je Wort, dazu ein
+  blinkender Schreib-Cursor.
+- Lange Vorgänge zeigen einen **Zustandswechsel mit Bewegung** („sendet" → „denkt nach" → „schreibt"),
+  jeder Wechsel per `AnimatedContent`.
+
+**Motion beim Vorlesen und Aufnehmen (Bausteine D–F)**
+- **Aufnahme:** Knopf pulsiert im Takt, ringsum eine **echte Pegel-Anzeige**, die auf die Lautstärke
+  reagiert (Balken oder Wellenform, nicht simuliert).
+- **Vorlesen:** Der gerade gesprochene Absatz ist **hervorgehoben und wandert weich mit**, der
+  Lautsprecher-Knopf atmet im Sprechrhythmus, der Fortschritt läuft als feine Linie mit.
+
+**Umsetzung**
+- Alle Werte kommen aus **`ui/theme/Motion.kt`** (N.8) — keine handgetippten Dauern im Code.
+- Wiederkehrende Motion-Bausteine (Staffel-Einblendung, Wackeln, Pulsieren, Schimmer, Glanzlicht)
+  werden **einmal als `Modifier`-Erweiterung** gebaut und überall wiederverwendet, z. B.
+  `Modifier.pulsierenderSchein()`, `Modifier.gestaffeltEinblenden(index)`, `Modifier.wackelnBeiFehler(trigger)`.
+- **Endlos-Animationen laufen nur, wenn sichtbar** (`LaunchedEffect` an die Sichtbarkeit koppeln) —
+  sonst kostet die Bewegung Akku, ohne dass sie jemand sieht.
+
+---
+
+### N.8 Bewegungs-Standards (einheitlich in der ganzen App)
 
 | Vorgang | Dauer | Kurve |
 |---|---|---|
@@ -724,7 +924,7 @@ Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
 Diese Werte stehen **einmal zentral** im Projekt (`ui/theme/Motion.kt`) und werden überall von dort
 geholt — keine handgetippten Dauern verstreut im Code.
 
-### N.4 Leitplanken (die Effekte dürfen nichts kaputt machen)
+### N.9 Leitplanken (die Effekte dürfen nichts kaputt machen)
 
 - **Lesbarkeit schlägt Effekt.** Verlauf oder Milchglas hinter Text nur, wenn der Kontrast danach
   immer noch mindestens 4,5:1 beträgt (Baustein A). Im Zweifel eine deckende Schicht unterlegen.
@@ -740,21 +940,40 @@ geholt — keine handgetippten Dauern verstreut im Code.
 - **Kein Effekt kostet Verständlichkeit:** Ein Knopf muss als Knopf erkennbar bleiben, ein Feld als
   Feld. Verzierung ersetzt nie eine Beschriftung.
 
-### N.5 Was verboten ist
+### N.10 Was verboten ist
 
+- **Nüchterne Optik.** Flache einfarbige Flächen, graue Standardschatten, unveränderte
+  Material-Knöpfe, keine Tiefe, keine Bewegung — das ist ein Mangel und wird nicht abgenommen.
 - Standard-Material-Optik ohne eigene Handschrift („sieht aus wie das Compose-Beispielprojekt").
+- **Roher `Button`, `Card`, `TopAppBar` oder `TextField` ohne die Gestaltung aus N.2–N.4.**
+- **Ein Bildschirm ohne jede Bewegung** — auch Einstellungen, Fehler und Leerzustände bewegen sich.
 - Effekte, die nur auf einem Bildschirm auftauchen — dann wirkt die App zusammengestückelt.
 - Dauerbewegung im Sichtfeld, während ich lese (blinkende Ränder, endlose Wellen hinter Text).
 - Verläufe quer durch fremde Farbwelten — Gold bleibt die Leitfarbe.
 - Effekte, die den ersten Bildaufbau verzögern: Der Bildschirm ist zuerst da, die Verzierung kommt
   im selben Atemzug hinterher.
 
-### N.6 Abnahme
+### N.11 Abnahme
 
-Vor „fertig" wird jeder Bildschirm einmal durchgegangen:
-Hat er Tiefe? Bewegt sich beim Betreten etwas? Reagiert jeder Knopf sichtbar? Ist der Übergang zum
-nächsten Bildschirm animiert? Sieht der Leerzustand gestaltet aus? — Ein „nein" ist eine offene
-Aufgabe, keine Geschmacksfrage.
+**Jeder** Bildschirm wird vor „fertig" gegen diese Liste geprüft. **Jedes „nein" ist eine offene
+Aufgabe, keine Geschmacksfrage** — und wird behoben, nicht gemeldet.
+
+- [ ] Sind **alle** Knöpfe plastische 3D-Knöpfe mit Verlauf, Lichtkante, Schatten und Eindrück-Effekt (N.2)?
+- [ ] Gibt es **räumliche Tiefe** — mindestens drei Ebenen (Hintergrundschein, Fläche, erhabenes Element) (N.3)?
+- [ ] Hat jede Fläche **Verlauf statt Einfarbe** und **mehrschichtigen, farbigen Schatten** (N.4)?
+- [ ] Liegt hinter Kopf-/Fußleiste und Dialogen **echtes Milchglas** mit Körnung (N.4)?
+- [ ] **Bewegt sich beim Betreten** etwas — gestaffelt, nicht alles auf einmal (N.7)?
+- [ ] Bewegt sich auch **im Ruhezustand** etwas Dezentes (atmender Schein, wandernder Verlauf) (N.7)?
+- [ ] Antwortet **jede** Handlung sichtbar — Druck, Wischen, Ziehen, Erfolg, Fehler (N.7)?
+- [ ] Ist der **Übergang zum nächsten Bildschirm** animiert, möglichst mit geteiltem Element (N.5)?
+- [ ] Sind **Lade-, Leer- und Fehlerzustand gestaltet und bewegt** — kein grauer Drehkreis, kein nackter Text?
+- [ ] Kommt die **Gold-Palette** als Verlauf, Schein und Ripple vor — nicht nur als Akzentfarbe?
+- [ ] Läuft alles **flüssig bei 120 Hz**, und bleibt der Kontrast überall bei mindestens 4,5:1 (N.9)?
+
+**Härtetest zum Schluss:** Einen Bildschirmfoto-Vergleich gegen eine ausgezeichnete Play-Store-App
+machen und ehrlich fragen: *Sieht meine App teurer aus oder nüchterner?* Ist die Antwort „nüchterner",
+ist der Bildschirm nicht fertig — dann fehlen Tiefe, Verlauf, Schatten oder Bewegung, und zwar in
+dieser Reihenfolge.
 
 ---
 
@@ -976,7 +1195,9 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **K** Volltextsuche (Room FTS4) über alle Inhalte, mit Hervorhebung und Leerzustand
 - [ ] **L** Kein stiller Fehlschlag: Klartext-Meldung + Wiederholen, Lade- und Leerzustände überall
 - [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
-- [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` zentral, jeder Bildschirm durch die Abnahme N.6
+- [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` und `Elevation.kt` zentral, jeder Bildschirm durch die Abnahme N.11
+- [ ] **N (N.2–N.4)** **3D-Knöpfe** überall (Verlauf, Lichtkante, Glanz, Eindrück-Effekt, Haptik) · **3D-Tiefe** (Kipp-Karten, Ebenen-Parallaxe, Beleuchtung von oben links) · **Glas** mit Körnung · **mehrschichtige farbige Schatten** — kein roher `Button`/`Card` in der App
+- [ ] **N (N.5/N.7)** Übergänge mit geteilten Elementen und animiertem Theme-Wechsel · **Motion überall**: beim Erscheinen, im Ruhezustand, als Rückmeldung, beim Warten — kein statischer Bildschirm
 - [ ] **O** KI über Abo **und** Schlüssel; **Codex-Anmeldecode mit Knopf „Code kopieren" und Rückmeldung**; Antwort strömt; „Text glätten" mit erhaltenem Original
 - [ ] **O (O.2)** **Modell-Dropdown (Sol / Terra / Luna, erweiterbar) UND Effort-Auswahl (Niedrig bis Maximal)** vorhanden, gespeichert und an *jeder* Codex-Anfrage mitgesendet — keine Stelle mit hartverdrahtetem Wert
 - [ ] **P** Absturz-Fänger schreibt vor dem Absturz; Diagnose-Bildschirm mit Teilen-Knopf; keine Geheimnisse im Log
@@ -1030,6 +1251,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
 | 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
 | 29.08.2026, 13:59 Uhr | Zweite Durchsicht aller 14 Apps (Klassennamen, Manifeste, Berechtigungen): Baustein O (KI über Abo oder Schlüssel, strömende Antworten, Text glätten), Baustein P (Absturz-Fänger und Diagnose-Bildschirm) und Kapitel 4.3 (Vorlesen im Vordergrunddienst) ergänzt |
+| 29.08.2026, 16:44 Uhr | Baustein N stark ausgebaut, weil die letzte App danach nüchtern aussah: N.2 3D-Knöpfe, N.3 3D-Effekte und Tiefe, N.4 Glas- und Schatteneffekte, N.5 Übergangseffekte, N.7 Motion-Effekte überall — jeweils mit konkreten Werten; Verbote und Abnahme (N.11) verschärft |
 | 29.08.2026, 16:31 Uhr | Kapitel O.2 neu: Modell-Auswahl (Sol / Terra / Luna, neuere ergänzbar) **und** Effort-Auswahl (Niedrig bis Maximal) sind Pflicht, gespeichert und an jeder Anfrage mitgesendet; alte O.2–O.4 zu O.3–O.5 verschoben; Einstellungs-Block 7.4 (KI) ergänzt |
 | 29.08.2026, 16:17 Uhr | Baustein O.1: Codex-Anmeldecode ist immer kopierbar — Pflicht-Knopf „Code kopieren" mit Rückmeldung, antippbarer Code, „Seite öffnen" |
 | 29.08.2026, 16:17 Uhr | Kapitel 4.6 ergänzt: **ein** gemeinsames Stimmen-Dropdown über alle Engines (Meine → Alibaba → Google Chirp 3 HD → Edge) statt getrennter Engine-Auswahl |
