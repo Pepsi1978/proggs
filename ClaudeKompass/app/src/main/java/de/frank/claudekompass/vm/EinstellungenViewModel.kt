@@ -18,6 +18,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Was bei der Prüfung eines Schlüssels herauskam.
+ *
+ * Das Ergebnis gehört an das Feld, das geprüft wurde — nicht an den Kopf des Bildschirms.
+ * Beim Tippen auf „Schlüssel prüfen" steht der Kopf längst ausserhalb des Sichtfelds; eine
+ * Meldung dort wird schlicht nicht gesehen.
+ */
+data class PruefErgebnis(
+    val laeuft: Boolean = false,
+    val geglueckt: Boolean = false,
+    val text: String = "",
+) {
+    val hatErgebnis: Boolean get() = text.isNotBlank()
+}
+
 /** Zustand des Einstellungs-Bildschirms. */
 data class EinstellungenZustand(
     val ttsAnbieter: TtsAnbieter = TtsAnbieter.GOOGLE,
@@ -46,7 +61,8 @@ data class EinstellungenZustand(
     val stimmenLaden: Boolean = false,
     val aufnahmeLaeuft: Boolean = false,
     val aufnahmeSchritt: String = "",
-    val pruefungLaeuft: String = "",
+    /** Prüfergebnis je Schlüssel, abgelegt unter [SCHLUESSEL_GOOGLE] und den anderen. */
+    val pruefungen: Map<String, PruefErgebnis> = emptyMap(),
     val meldung: String = "",
     val fehler: String = "",
     val schluesselAblageFehler: String? = null,
@@ -110,6 +126,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             eigeneStimmen = _zustand.value.eigeneStimmen,
             geraeteCode = _zustand.value.geraeteCode,
             meldeAnLaeuft = _zustand.value.meldeAnLaeuft,
+            pruefungen = _zustand.value.pruefungen,
         )
     }
 
@@ -152,16 +169,19 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
 
     fun setzeGoogleSchluessel(wert: String) {
         store.googleSchluessel = wert
+        verwerfePruefung(SCHLUESSEL_GOOGLE)
         frischLesen()
     }
 
     fun setzeAlibabaSchluessel(wert: String) {
         store.alibabaSchluessel = wert
+        verwerfePruefung(SCHLUESSEL_ALIBABA)
         frischLesen()
     }
 
     fun setzeGroqSchluessel(wert: String) {
         store.groqSchluessel = wert
+        verwerfePruefung(SCHLUESSEL_GROQ)
         frischLesen()
     }
 
@@ -182,66 +202,95 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
      * wird und ob die nötige Schnittstelle im Konto überhaupt freigeschaltet ist.
      */
     fun pruefeGoogle() {
-        _zustand.value = _zustand.value.copy(pruefungLaeuft = "google", meldung = "", fehler = "")
+        setzePruefung(SCHLUESSEL_GOOGLE, PruefErgebnis(laeuft = true))
         viewModelScope.launch {
+            var fehlgeschlagen = false
             container.vorlesen.probiere(TtsAnbieter.GOOGLE, store.googleStimme) { fehler ->
-                _zustand.value = _zustand.value.copy(pruefungLaeuft = "", fehler = fehler)
+                fehlgeschlagen = true
+                setzePruefung(SCHLUESSEL_GOOGLE, PruefErgebnis(geglueckt = false, text = fehler))
             }
-            _zustand.value = _zustand.value.copy(
-                pruefungLaeuft = "",
-                meldung = "Wenn du jetzt eine Stimme hörst, ist der Google-Schlüssel in Ordnung.",
-            )
+            if (!fehlgeschlagen) {
+                setzePruefung(
+                    SCHLUESSEL_GOOGLE,
+                    PruefErgebnis(
+                        geglueckt = true,
+                        text = "Verbunden. Wenn du jetzt eine Stimme hörst, stimmt der Schlüssel.",
+                    ),
+                )
+            }
         }
     }
 
     fun pruefeAlibaba() {
-        _zustand.value = _zustand.value.copy(pruefungLaeuft = "alibaba", meldung = "", fehler = "")
+        setzePruefung(SCHLUESSEL_ALIBABA, PruefErgebnis(laeuft = true))
         viewModelScope.launch {
             try {
                 val stimmen = container.stimmVerwaltung.liste()
-                _zustand.value = _zustand.value.copy(
-                    pruefungLaeuft = "",
-                    eigeneStimmen = stimmen,
-                    meldung = if (stimmen.isEmpty()) {
-                        "Der Alibaba-Schlüssel wurde angenommen. Eigene Stimmen sind noch keine " +
-                            "hinterlegt — nimm unten eine auf."
-                    } else {
-                        "Der Alibaba-Schlüssel ist in Ordnung. ${stimmen.size} eigene Stimme(n) gefunden."
-                    },
+                _zustand.value = _zustand.value.copy(eigeneStimmen = stimmen)
+                setzePruefung(
+                    SCHLUESSEL_ALIBABA,
+                    PruefErgebnis(
+                        geglueckt = true,
+                        text = if (stimmen.isEmpty()) {
+                            "Verbunden. Eigene Stimmen sind noch keine hinterlegt — " +
+                                "nimm unten eine auf."
+                        } else {
+                            "Verbunden. ${stimmen.size} eigene Stimme(n) gefunden."
+                        },
+                    ),
                 )
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
-                _zustand.value = _zustand.value.copy(
-                    pruefungLaeuft = "",
-                    fehler = fehler.message ?: "Der Alibaba-Schlüssel wurde nicht angenommen.",
+                setzePruefung(
+                    SCHLUESSEL_ALIBABA,
+                    PruefErgebnis(
+                        geglueckt = false,
+                        text = fehler.message ?: "Der Schlüssel wurde abgelehnt.",
+                    ),
                 )
             }
         }
     }
 
     fun pruefeGroq() {
-        _zustand.value = _zustand.value.copy(pruefungLaeuft = "groq", meldung = "", fehler = "")
+        setzePruefung(SCHLUESSEL_GROQ, PruefErgebnis(laeuft = true))
         viewModelScope.launch {
             try {
-                // Eine halbe Sekunde Stille reicht als Probe. Schicht 1 würde sie normalerweise
-                // gar nicht senden; hier geht es aber ausdrücklich darum, den Schlüssel zu
-                // prüfen — deshalb wird die Aufnahme mit etwas Rauschen versehen.
-                val probe = baueProbeAufnahme()
-                container.transkribierer.transkribiere(probe)
-                _zustand.value = _zustand.value.copy(
-                    pruefungLaeuft = "",
-                    meldung = "Der Groq-Schlüssel wurde angenommen.",
+                // Eine halbe Sekunde Ton reicht als Probe. Schicht 1 würde reine Stille gar
+                // nicht senden; hier geht es aber ausdrücklich darum, den Schlüssel zu prüfen —
+                // deshalb trägt die Probe einen leisen Ton.
+                container.transkribierer.transkribiere(baueProbeAufnahme())
+                setzePruefung(
+                    SCHLUESSEL_GROQ,
+                    PruefErgebnis(geglueckt = true, text = "Verbunden. Der Schlüssel wurde angenommen."),
                 )
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
-                _zustand.value = _zustand.value.copy(
-                    pruefungLaeuft = "",
-                    fehler = fehler.message ?: "Der Groq-Schlüssel wurde nicht angenommen.",
+                setzePruefung(
+                    SCHLUESSEL_GROQ,
+                    PruefErgebnis(
+                        geglueckt = false,
+                        text = fehler.message ?: "Der Schlüssel wurde abgelehnt.",
+                    ),
                 )
             }
         }
+    }
+
+    private fun setzePruefung(schluessel: String, ergebnis: PruefErgebnis) {
+        _zustand.value = _zustand.value.copy(
+            pruefungen = _zustand.value.pruefungen + (schluessel to ergebnis),
+        )
+    }
+
+    /** Wird beim Tippen im Feld gerufen: Ein geänderter Schlüssel ist nicht mehr geprüft. */
+    private fun verwerfePruefung(schluessel: String) {
+        if (schluessel !in _zustand.value.pruefungen) return
+        _zustand.value = _zustand.value.copy(
+            pruefungen = _zustand.value.pruefungen - schluessel,
+        )
     }
 
     private fun baueProbeAufnahme(): ByteArray {
@@ -460,6 +509,12 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     fun loescheMeldungen() {
         _zustand.value = _zustand.value.copy(meldung = "", fehler = "")
         container.vorlesen.loescheFehler()
+    }
+
+    companion object {
+        const val SCHLUESSEL_GOOGLE = "google"
+        const val SCHLUESSEL_ALIBABA = "alibaba"
+        const val SCHLUESSEL_GROQ = "groq"
     }
 
     override fun onCleared() {
