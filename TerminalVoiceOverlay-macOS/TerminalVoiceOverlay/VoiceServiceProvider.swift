@@ -14,14 +14,21 @@ enum VoiceServiceProvider {
     private(set) static var groq: GroqWhisperClient?
     private(set) static var gemini: GeminiClient?
 
+    /// Transkriptions-Router (Groq Whisper oder Gemini Transcribe, je nach
+    /// Einstellung). Nebenflaechen wie der PromptEdit-Dialog nutzen ihn statt
+    /// `groq` direkt, damit die Modellauswahl ueberall gilt.
+    private(set) static var stt: SpeechToTextRouter?
+
     static var recorderAvailable: Bool { recorder != nil && groq != nil }
     static var geminiAvailable: Bool { gemini != nil }
 
     static func initialize(recorder: AudioRecorder,
                            groq: GroqWhisperClient,
-                           gemini: GeminiClient?) {
+                           gemini: GeminiClient?,
+                           stt: SpeechToTextRouter? = nil) {
         self.recorder = recorder
         self.groq = groq
         self.gemini = gemini
+        self.stt = stt ?? SpeechToTextRouter(groq: groq, gemini: nil)
     }
 }

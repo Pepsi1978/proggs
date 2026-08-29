@@ -33,6 +33,14 @@ public partial class SettingsDialog : Window
         // Non-secret settings stay in the SQLite DB (they sync via Drive backup).
         GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
+        // Transkriptions-Modell: Groq (0), Gemini Transcribe (1), Gemini Live (2).
+        // Lebt als SK-Datei, deshalb ausserhalb des SettingsEditResult.
+        TranscriptionEngineBox.SelectedIndex = TranscriptionEngineSetting.Current switch
+        {
+            TranscriptionEngineSetting.Gemini => 1,
+            TranscriptionEngineSetting.GeminiLive => 2,
+            _ => 0,
+        };
         VocabularyBox.Text = LoadPersonalVocabulary();
         UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
         PreambleBox.Text = GeminiClient.EffectiveVocabularyPreamble();
@@ -53,6 +61,12 @@ public partial class SettingsDialog : Window
         {
             // Persoenliches Vokabular in die SK-Datei schreiben — unabhaengig vom
             // SettingsEditResult, weil GeminiClient die Datei direkt liest.
+            TranscriptionEngineSetting.Save(TranscriptionEngineBox.SelectedIndex switch
+            {
+                1 => TranscriptionEngineSetting.Gemini,
+                2 => TranscriptionEngineSetting.GeminiLive,
+                _ => TranscriptionEngineSetting.Groq,
+            });
             SavePersonalVocabulary(VocabularyBox.Text);
             SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
             GeminiClient.SaveVocabularyPreamble(PreambleBox.Text);

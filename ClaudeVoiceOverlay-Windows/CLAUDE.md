@@ -42,6 +42,11 @@ TerminalVoiceOverlay, use `Both` instead of `CVO`.
 | `Services/Config.cs` | API keys from .env, configuration |
 | `Services/AudioRecorder.cs` | NAudio microphone recording |
 | `Services/GroqWhisperClient.cs` | Groq Whisper API for speech-to-text |
+| `Services/GeminiBatchTranscribeClient.cs` | **Default Gemini path.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64 — no WebSocket, no VAD, no file upload. Measured 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,0 % (Groq 4,6 %). Mode `verbatim`, because `smart` drops words |
+| `Services/GeminiTranscribeClient.cs` | Gemini Live API (WebSocket) speech-to-text, kept for comparison only |
+| `Services/PersonalVocabulary.cs` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to Gemini as `customVocabulary` |
+| `Services/SpeechToTextRouter.cs` | Picks Groq / Gemini / Gemini-Live per recording; falls back to Groq on any technical Gemini failure (quota, network) but NOT on `NoSpeechException` |
+| `Services/TranscriptionEngineSetting.cs` | Engine switch (`groq` / `gemini` / `gemini-live`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
 | `Services/GeminiClient.cs` | Gemini API for text correction/formatting |
 | `Services/AppController.cs` | Win32 keyboard simulation for Electron apps (keybd_event) |
 | `Services/AppWatcher.cs` | SetWinEventHook for target app detection |

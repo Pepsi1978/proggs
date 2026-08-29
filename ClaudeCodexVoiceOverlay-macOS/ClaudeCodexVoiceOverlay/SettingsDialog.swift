@@ -12,6 +12,10 @@ final class SettingsDialog: NSWindow {
     private let groqKeyField     = NSTextField()
     private let geminiKeyField   = NSSecureTextField()
     private let separatorField   = NSTextField()
+    /// Groq Whisper oder Gemini Transcribe. Liegt nicht in den UserDefaults,
+    /// sondern als geteilte SK-Datei (TranscriptionEngineSetting) — damit
+    /// wirkt die Umschaltung sofort und gilt fuer beide Overlays.
+    private let transcriptionEnginePopup = NSPopUpButton()
     private let autoHideCheck    = NSButton(checkboxWithTitle: "Auto-Hide (Collapsed-Mic)", target: nil, action: nil)
     private let horizontalCheck  = NSButton(checkboxWithTitle: "Horizontal-Orientierung", target: nil, action: nil)
     private let persistPosCheck  = NSButton(checkboxWithTitle: "Position ueber Neustart merken", target: nil, action: nil)
@@ -57,6 +61,7 @@ final class SettingsDialog: NSWindow {
     /// Werte aus UserDefaults vorbefuellen.
     func loadFromDefaults() {
         let d = UserDefaults.standard
+        transcriptionEnginePopup.selectItem(at: TranscriptionEngineSetting.useGemini ? 1 : 0)
         groqKeyField.stringValue    = d.string(forKey: "GROQ_API_KEY") ?? ""
         geminiKeyField.stringValue  = d.string(forKey: "GEMINI_API_KEY") ?? ""
         separatorField.stringValue  = d.string(forKey: "SEPARATOR_TEMPLATE") ?? "\n\n;\n\n"
@@ -96,6 +101,27 @@ final class SettingsDialog: NSWindow {
             tf.font = .systemFont(ofSize: 13)
             cv.addSubview(tf)
         }
+
+        addLabel("Transkriptions-Modell", atY: y); y -= 24
+        transcriptionEnginePopup.removeAllItems()
+        transcriptionEnginePopup.addItems(withTitles: [
+            "Groq Whisper — schnell, mit Stille-Schutz",
+            "Gemini Transcribe — genauer, kostenlos (empfohlen)"
+        ])
+        transcriptionEnginePopup.frame = NSRect(x: pad, y: y, width: 580, height: 26)
+        cv.addSubview(transcriptionEnginePopup); y -= 34
+
+        let engineHint = NSTextField(wrappingLabelWithString:
+            "Gemini Transcribe ist der von Google fuer fertige Aufnahmen vorgesehene Weg: "
+            + "gemessen 4,4 s statt 15,1 s gegenueber der Streaming-Variante, Wortfehlerrate "
+            + "2,6 % gegenueber 4,6 % bei Groq, und dein Woerterbuch geht direkt in die Erkennung. "
+            + "Der Stille-Schutz gegen Whisper-Halluzinationen greift nur bei Groq. Faellt Gemini "
+            + "aus (Kontingent erschoepft, Netz weg), springt automatisch Groq ein.")
+        engineHint.frame = NSRect(x: pad, y: y - 34, width: 580, height: 48)
+        engineHint.textColor = NSColor(white: 0.6, alpha: 1)
+        engineHint.font = .systemFont(ofSize: 10)
+        engineHint.drawsBackground = false
+        cv.addSubview(engineHint); y -= 56
 
         addLabel("Groq API Key (Pflicht)", atY: y); y -= 24
         addTextField(groqKeyField, atY: y); y -= 36
@@ -166,6 +192,12 @@ final class SettingsDialog: NSWindow {
             googleClientId: googleClientId.stringValue,
             googleClientSecret: googleSecret.stringValue
         )
+        // Modellauswahl in die geteilte SK-Datei (nicht in die UserDefaults),
+        // damit sie sofort wirkt und sich beide Overlays teilen.
+        TranscriptionEngineSetting.save(transcriptionEnginePopup.indexOfSelectedItem == 1
+                                        ? TranscriptionEngineSetting.gemini
+                                        : TranscriptionEngineSetting.groq)
+
         // Direkt in UserDefaults persistieren — der Aufrufer kann via onSave
         // zusaetzlich auf die Felder reagieren.
         let d = UserDefaults.standard

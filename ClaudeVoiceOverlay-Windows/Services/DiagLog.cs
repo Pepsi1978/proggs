@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
@@ -35,6 +36,18 @@ namespace ClaudeVoiceOverlay.Services
         }
 
         public static string FilePath => _path;
+
+        public static void Info(string ctx, string msg, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, extra);
+
+        public static void Warn(string ctx, string msg, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, Combine(("level", "WARN"), extra));
+
+        public static void Error(string ctx, string msg, Exception ex, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, Combine(("level", "ERROR"), Combine(("err", ex.Message), Combine(("type", ex.GetType().Name), extra))));
+
+        public static void Perf(string ctx, string step, Stopwatch sw, params (string Key, object? Value)[] extra)
+            => Write(ctx, "perf", Combine(("step", step), Combine(("ms", sw.ElapsedMilliseconds), extra)));
 
         private static string ResolvePath()
         {
@@ -134,6 +147,15 @@ namespace ClaudeVoiceOverlay.Services
         private static void AppendKv(StringBuilder sb, string key, string val)
         {
             sb.Append('"').Append(Escape(key)).Append("\":\"").Append(Escape(val)).Append('"');
+        }
+
+        private static (string Key, object? Value)[] Combine((string Key, object? Value) first, params (string Key, object? Value)[] rest)
+        {
+            var result = new (string Key, object? Value)[(rest?.Length ?? 0) + 1];
+            result[0] = first;
+            if (rest != null && rest.Length > 0)
+                Array.Copy(rest, 0, result, 1, rest.Length);
+            return result;
         }
 
         private static string Escape(string s)

@@ -434,7 +434,7 @@ public partial class PromptEditDialog : Window
                     BtnMic.Background = MicIdle;
                     return;
                 }
-                var text = await groq.TranscribeAsync(wavPath);
+                var text = await (VoiceServiceProvider.Stt?.TranscribeAsync(wavPath) ?? groq.TranscribeAsync(wavPath));
                 AppendToPromptText(text);
                 ShowStatus($"{text.Length} Zeichen eingefuegt.");
                 // Auto-title only if the user hasn't already typed a custom

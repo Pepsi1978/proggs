@@ -694,7 +694,11 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
                 setMicButtonTinted(false)
                 return
             }
-            groq.transcribe(fileURL: url) { [weak self] result in
+            // Ueber den Router, damit die Modellauswahl aus den Einstellungen
+            // auch hier gilt; ohne Router (sehr frueh im Start) direkt Groq.
+            let transcribe = VoiceServiceProvider.stt?.transcribe(fileURL:completion:)
+                ?? groq.transcribe(fileURL:completion:)
+            transcribe(url) { [weak self] result in
                 onMainCommon {
                     guard let self = self else { return }
                     switch result {

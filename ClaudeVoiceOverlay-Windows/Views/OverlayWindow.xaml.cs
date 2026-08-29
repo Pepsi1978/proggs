@@ -69,6 +69,10 @@ namespace ClaudeVoiceOverlay.Views
         private readonly AudioRecorder     _audioRecorder;
         private readonly RecordingCuePlayer _recordingCuePlayer;
         private readonly GroqWhisperClient _groqClient;
+        // Router ueber Groq Whisper und die beiden Gemini-Wege. Welches Modell
+        // laeuft, entscheidet der Schalter in den Einstellungen — pro Aufnahme
+        // neu gelesen, also ohne Neustart wirksam.
+        private readonly SpeechToTextRouter _stt;
         private readonly GeminiClient?     _geminiClient;
         private readonly AppWatcher   _appWatcher;
 
@@ -442,6 +446,14 @@ namespace ClaudeVoiceOverlay.Views
             _audioRecorder   = new AudioRecorder(config.AudioSampleRate, config.AudioChannels);
             _recordingCuePlayer = new RecordingCuePlayer();
             _groqClient      = new GroqWhisperClient(config.GroqApiKey, config.WhisperModel, config.WhisperLang, config.WhisperUrl);
+            _stt             = new SpeechToTextRouter(
+                _groqClient,
+                config.GeminiTranscribeAvailable
+                    ? new GeminiBatchTranscribeClient(config.GeminiTranscribeApiKey!, config.GeminiTranscribeBatchModel)
+                    : null,
+                config.GeminiTranscribeAvailable
+                    ? new GeminiTranscribeClient(config.GeminiTranscribeApiKey!, config.GeminiTranscribeModel, config.WhisperLang)
+                    : null);
             _appWatcher = new AppWatcher(config.TargetProcessNames);
 
             if (config.GeminiAvailable)
@@ -450,7 +462,7 @@ namespace ClaudeVoiceOverlay.Views
             // Share the audio/STT/Gemini stack with secondary surfaces
             // (e.g. PromptEditDialog's mic + G buttons). Single AudioRecorder
             // instance is critical — only one process can hold the microphone.
-            VoiceServiceProvider.Initialize(_audioRecorder, _groqClient, _geminiClient);
+            VoiceServiceProvider.Initialize(_audioRecorder, _groqClient, _geminiClient, _stt);
 
             // ── Pulse timer: main mic (500 ms, #FF6666 ↔ #E53935) ──
             _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
@@ -2570,7 +2582,7 @@ namespace ClaudeVoiceOverlay.Views
 
                     try
                     {
-                        var transcript = await _groqClient.TranscribeAsync(wavFile);
+                        var transcript = await _stt.TranscribeAsync(wavFile);
                     Console.WriteLine($"Transcript: {SafeLogPreview(transcript)}");
                     lastRawTranscript = transcript;
                     // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
@@ -2761,7 +2773,7 @@ namespace ClaudeVoiceOverlay.Views
 
                     try
                     {
-                        var transcript = await _groqClient.TranscribeAsync(wavFile);
+                        var transcript = await _stt.TranscribeAsync(wavFile);
                     Console.WriteLine($"BTW transcript: {SafeLogPreview(transcript)}");
                     // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
                     _lastCorrectableRaw = transcript;
@@ -4681,7 +4693,7 @@ namespace ClaudeVoiceOverlay.Views
             SetMicState(RecordingState.Processing);
             try
             {
-                var transcript = await _groqClient.TranscribeAsync(wav);
+                var transcript = await _stt.TranscribeAsync(wav);
                 DiagLog.Write("VoiceTurn", "retranscribe_done", ("chars", transcript.Length));
 
                 string finalText = transcript;

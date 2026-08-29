@@ -47,6 +47,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var foregroundReclaimTimer: Timer?
     private var audioRecorder: AudioRecorder!
     private var groqClient: GroqWhisperClient!
+    /// Router ueber Groq Whisper und Gemini Transcribe. Welches Modell laeuft,
+    /// entscheidet der Schalter in den Einstellungen — pro Aufnahme neu
+    /// gelesen, also ohne Neustart wirksam.
+    private var stt: SpeechToTextRouter!
     private var geminiClient: GeminiClient?
     private var config: Config!
     private var statusItem: NSStatusItem!
@@ -185,6 +189,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.stopRecording()
         }
         groqClient = GroqWhisperClient(apiKey: config.groqApiKey)
+        stt = SpeechToTextRouter(
+            groq: groqClient,
+            gemini: config.geminiTranscribeAvailable
+                ? GeminiBatchTranscribeClient(apiKey: config.geminiTranscribeApiKey!,
+                                              model: config.geminiTranscribeBatchModel)
+                : nil)
         if let geminiKey = config.geminiApiKey, !geminiKey.isEmpty {
             geminiClient = GeminiClient(apiKey: geminiKey)
         } else {
@@ -200,7 +210,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         VoiceServiceProvider.initialize(
             recorder: audioRecorder,
             groq: groqClient,
-            gemini: geminiClient)
+            gemini: geminiClient,
+            stt: stt)
 
         // Create overlay panel
         panel = OverlayPanel()
@@ -664,7 +675,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Puffer — kein zweiter Timer noetig, kein Auseinanderdriften.
             DispatchQueue.main.async { self.recordingCuePlayer.playStop() }
 
-            self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
+            self.stt.transcribe(fileURL: fileURL) { [weak self] result in
                 // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv, wo die
                 // letzten zwei Diktate liegen bleiben und per Rechtsklick auf das Mikrofon
                 // erneut transkribiert werden koennen.
@@ -732,7 +743,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isProcessing = true
         panel.setMicState(.processing)
 
-        groqClient.transcribe(fileURL: wav) { [weak self] result in
+        stt.transcribe(fileURL: wav) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 switch result {

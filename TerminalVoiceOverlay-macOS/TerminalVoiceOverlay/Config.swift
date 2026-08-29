@@ -19,6 +19,13 @@ struct Config {
     let geminiModel: String
     let geminiThinkingLevel: String
 
+    // Gemini Transcribe (Sprache-zu-Text, Alternative zu Groq Whisper).
+    // Eigener Schluessel, weil der Free-Tier-Key fuer die Transkription ein
+    // anderer sein darf als der Key fuer die Textkorrektur. Fehlt er, faellt
+    // geminiTranscribeApiKey auf GEMINI_API_KEY zurueck.
+    let geminiTranscribeApiKey: String?
+    let geminiTranscribeBatchModel: String
+
     // Audio
     let audioSampleRate: Int
     let audioChannels: Int
@@ -29,6 +36,7 @@ struct Config {
     let extraTerminalBundleIDs: [String]
 
     var geminiAvailable: Bool { !(geminiApiKey?.isEmpty ?? true) }
+    var geminiTranscribeAvailable: Bool { !(geminiTranscribeApiKey?.isEmpty ?? true) }
 
     /// Die zuletzt geladene Konfiguration. Damit kommen auch Stellen an die
     /// Werte, die keine Instanz durchgereicht bekommen (AudioRecorder,
@@ -62,6 +70,11 @@ struct Config {
             geminiApiKey: (geminiKey?.isEmpty ?? true) ? nil : geminiKey,
             geminiModel: get(env, "GEMINI_MODEL", "gemini-3.1-flash-lite"),
             geminiThinkingLevel: get(env, "GEMINI_THINKING_LEVEL", "MEDIUM"),
+            geminiTranscribeApiKey: {
+                let k = env["GEMINI_TRANSCRIBE_API_KEY"]
+                return (k?.isEmpty ?? true) ? ((geminiKey?.isEmpty ?? true) ? nil : geminiKey) : k
+            }(),
+            geminiTranscribeBatchModel: get(env, "GEMINI_TRANSCRIBE_BATCH_MODEL", "gemini-3.5-transcribe"),
             audioSampleRate: getInt(env, "AUDIO_SAMPLE_RATE", 16000),
             audioChannels: getInt(env, "AUDIO_CHANNELS", 1),
             extraTerminalBundleIDs: processNames

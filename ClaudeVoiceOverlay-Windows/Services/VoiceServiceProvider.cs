@@ -18,6 +18,13 @@ public static class VoiceServiceProvider
     public static GeminiClient? Gemini { get; private set; }
 
     /// <summary>
+    /// Transkriptions-Router (Groq Whisper oder Gemini Transcribe, je nach
+    /// Einstellung). Nebenflaechen wie der PromptEditDialog nutzen ihn statt
+    /// <see cref="Groq"/> direkt, damit die Modellauswahl ueberall gilt.
+    /// </summary>
+    public static SpeechToTextRouter? Stt { get; private set; }
+
+    /// <summary>
     /// Single PromptHistoryService instance per process. Lazy-initialisiert
     /// damit ein Code-Pfad der den HistoryService braucht ohne dass das
     /// OverlayWindow je gestartet wurde (z.B. zukuenftige CLI-Tools die nur
@@ -62,10 +69,12 @@ public static class VoiceServiceProvider
     public static bool RecorderAvailable => Recorder is not null && Groq is not null;
     public static bool GeminiAvailable => Gemini is not null;
 
-    public static void Initialize(AudioRecorder recorder, GroqWhisperClient groq, GeminiClient? gemini)
+    public static void Initialize(AudioRecorder recorder, GroqWhisperClient groq, GeminiClient? gemini,
+        SpeechToTextRouter? stt = null)
     {
         Recorder = recorder;
         Groq = groq;
         Gemini = gemini;
+        Stt = stt ?? new SpeechToTextRouter(groq, null, null);
     }
 }

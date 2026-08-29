@@ -27,6 +27,11 @@ the target apps, and per-app data isolation (see below).
 | `Config.swift` | API keys from .env (`~/SK/VoiceOverlays/.env`), configuration |
 | `AudioRecorder.swift` | AVAudioEngine microphone recording |
 | `GroqWhisperClient.swift` | Groq Whisper API for speech-to-text |
+| `GeminiBatchTranscribeClient.swift` | **Gemini speech-to-text.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64. Measured on Windows: 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,6 % (Groq). Mode `verbatim`, because `smart` drops words |
+| `PersonalVocabulary.swift` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to Gemini as `customVocabulary` |
+| `SpeechToTextRouter.swift` | Picks Groq or Gemini per recording; falls back to Groq on technical Gemini failure (quota, network) but NOT on `noSpeech` |
+| `TranscriptionEngineSetting.swift` | Engine switch (`groq` / `gemini`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `build.sh` | **Fixed source list** — every new `.swift` file must be added there, otherwise it is silently not compiled |
 | `GeminiClient.swift` | Gemini API for text correction/formatting |
 | `TerminalController.swift` | CGEvent keyboard sim — **Electron variant** (Cmd+A+Backspace). Class name kept identical to TVO so all call sites match; only the keystrokes differ. |
 | `AppWatcher.swift` | NSWorkspace observer; targets `com.anthropic.claudefordesktop` + `com.openai.codex` |

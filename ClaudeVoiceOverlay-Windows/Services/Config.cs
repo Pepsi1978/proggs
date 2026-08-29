@@ -18,6 +18,15 @@ namespace ClaudeVoiceOverlay.Services
         public string GeminiThinkingLevel { get; }
         public bool GeminiAvailable => !string.IsNullOrEmpty(GeminiApiKey);
 
+        // Gemini Transcribe (Sprache-zu-Text, Alternative zu Groq Whisper).
+        // Eigener Schluessel, weil der Free-Tier-Key fuer die Transkription ein
+        // anderer sein darf als der Key fuer die Textkorrektur. Fehlt er, faellt
+        // GeminiTranscribeApiKey auf GEMINI_API_KEY zurueck.
+        public string? GeminiTranscribeApiKey { get; }
+        public string GeminiTranscribeModel { get; }
+        public string GeminiTranscribeBatchModel { get; }
+        public bool GeminiTranscribeAvailable => !string.IsNullOrEmpty(GeminiTranscribeApiKey);
+
         // Audio
         public int AudioSampleRate { get; }
         public int AudioChannels { get; }
@@ -38,6 +47,12 @@ namespace ClaudeVoiceOverlay.Services
             GeminiApiKey = string.IsNullOrEmpty(geminiKey) ? null : geminiKey;
             GeminiModel = Get(env, "GEMINI_MODEL", "gemini-3.1-flash-lite");
             GeminiThinkingLevel = Get(env, "GEMINI_THINKING_LEVEL", "MEDIUM");
+
+            // Gemini Transcribe (optional)
+            env.TryGetValue("GEMINI_TRANSCRIBE_API_KEY", out var transcribeKey);
+            GeminiTranscribeApiKey = string.IsNullOrEmpty(transcribeKey) ? GeminiApiKey : transcribeKey;
+            GeminiTranscribeModel = Get(env, "GEMINI_TRANSCRIBE_MODEL", "gemini-3.5-transcribe-live");
+            GeminiTranscribeBatchModel = Get(env, "GEMINI_TRANSCRIBE_BATCH_MODEL", "gemini-3.5-transcribe");
 
             // Audio
             AudioSampleRate = GetInt(env, "AUDIO_SAMPLE_RATE", 16000);
