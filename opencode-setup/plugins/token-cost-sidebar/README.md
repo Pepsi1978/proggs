@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.5 – 27.07.2026 23:57
+Stand: v1.14.7 – 29.08.2026 19:49
 
 ## Funktionen
 
@@ -19,7 +19,7 @@ Stand: v1.14.5 – 27.07.2026 23:57
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
-- Versionszeile im Format `V.<Version> (<Datum>, <Uhrzeit>)` unten zwischen Arbeitsverzeichnis und
+- Versionszeile im Format `TUI <Version> (<Datum>, <Uhrzeit>)` unten zwischen Arbeitsverzeichnis und
   OpenCode-Version. Die vollständige Zeile verwendet einheitlich die normale Theme-Textfarbe ohne Hervorhebung.
 - Effort-Klicks ändern unmittelbar OpenCodes aktive Model-Variante für den nächsten Modellaufruf.
 - Sitzungsbezogene Speicherung des gewählten Arbeitsmodus.

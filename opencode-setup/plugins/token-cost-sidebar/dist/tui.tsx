@@ -312,7 +312,7 @@ function SidebarFooter(props: { api: TuiPluginApi; sessionID: string }) {
         <span style={{ fg: theme().textMuted }}>{displayPath().parent}/</span>
         <span style={{ fg: theme().text }}>{displayPath().name}</span>
       </text>
-      <text fg={theme().text}>{`V.${packageMetadata.version} (${packageMetadata.updated})`}</text>
+      <text fg={theme().text}>{`TUI ${packageMetadata.version} (${packageMetadata.updated})`}</text>
       <text fg={theme().textMuted}>
         <span style={{ fg: theme().success }}>•</span> <b>Open</b>
         <span style={{ fg: theme().text }}><b>Code</b></span>{" "}
