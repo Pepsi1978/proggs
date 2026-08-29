@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -78,6 +79,7 @@ import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.speech.VorleseZustand
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
+import de.frank.genialeideen.ui.theme.IdeenSchriftDick
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.Semantisch
@@ -123,6 +125,12 @@ fun ListenScreen(
     val bereichsraum = rememberCoroutineScope()
     val kategorieName = kategorien.firstOrNull { it.id == gewaehlteKategorie }?.name
 
+    // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
+    val zaehlung = alleZaehlung(offene + umgesetzte)
+    val sortierteKategorien = kategorien.sortedWith(
+        compareByDescending<KategorieEntity> { zaehlung[it.id] ?: 0 }.thenBy { it.name.lowercase() },
+    )
+
     // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
     BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
 
@@ -146,9 +154,9 @@ fun ListenScreen(
         drawerState = schublade,
         drawerContent = {
             KategorienLeiste(
-                kategorien = kategorien,
+                kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
-                anzahlJeKategorie = alleZaehlung(offene + umgesetzte),
+                anzahlJeKategorie = zaehlung,
                 gesamt = offene.size + umgesetzte.size,
                 aufWahl = { id ->
                     viewModel.waehleKategorie(id)
@@ -577,18 +585,23 @@ private fun IdeenKarte(
             ) {
                 Text(
                     idee.titel,
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
+                        fontFamily = IdeenSchriftDick,
+                        fontWeight = FontWeight.Black,
                     ),
                     color = if (umgesetzt) gold.textGedaempft else gold.textPrimaer,
+                    textAlign = TextAlign.Center,
                     maxLines = 2,
                 )
                 if (idee.text.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         idee.text,
+                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
                         color = gold.textGedaempft,
+                        textAlign = TextAlign.Center,
                         maxLines = 2,
                     )
                 }
@@ -781,7 +794,8 @@ private fun SuchErgebnisse(
                         Text(
                             hervorgehoben(idee.titel, anfrage, gold.primaer),
                             style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = IdeenSchriftDick,
+                                fontWeight = FontWeight.Black,
                             ),
                             color = gold.textPrimaer,
                         )

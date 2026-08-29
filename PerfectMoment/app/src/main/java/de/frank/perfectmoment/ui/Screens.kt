@@ -73,7 +73,6 @@ import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
@@ -500,8 +499,9 @@ fun SessionScreen(
             SessionQuestions(
                 runtime = runtime,
                 state = state,
-                onToggleSpeaker = viewModel::toggleSpeaker,
-                onTogglePause = viewModel::togglePause,
+                onPlayPause = {
+                    if (state?.speakerOn == true) viewModel.togglePause() else viewModel.toggleSpeaker()
+                },
                 onSkip = viewModel::skipToNextQuestion,
                 onQuestionClick = viewModel::jumpToQuestion,
                 onOpenPauses = { viewModel.openSheet(AppSheet.PAUSES) },
@@ -647,8 +647,7 @@ private fun SessionStopDialog(
 private fun SessionQuestions(
     runtime: SessionRuntime?,
     state: SessionState?,
-    onToggleSpeaker: () -> Unit,
-    onTogglePause: () -> Unit,
+    onPlayPause: () -> Unit,
     onSkip: () -> Unit,
     onQuestionClick: (Int) -> Unit,
     onOpenPauses: () -> Unit,
@@ -672,7 +671,7 @@ private fun SessionQuestions(
     Box(modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 144.dp, bottom = 240.dp),
+            contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 166.dp, bottom = 240.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             itemsIndexed(questions, key = { _, question -> question.id.takeIf { it != 0L } ?: question.hashCode() }) { index, question ->
@@ -755,19 +754,19 @@ private fun SessionQuestions(
             }
         }
         Column(
-            Modifier.fillMaxWidth().height(112.dp).align(Alignment.TopCenter)
+            Modifier.fillMaxWidth().height(138.dp).align(Alignment.TopCenter)
                 .pmHeaderSurface(colors)
                 .padding(horizontal = 20.dp),
         ) {
             Row(
-                Modifier.fillMaxWidth().height(54.dp),
+                Modifier.fillMaxWidth().height(56.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     runtime?.topic.orEmpty(),
                     color = colors.text2,
                     fontFamily = Inter,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -779,8 +778,6 @@ private fun SessionQuestions(
                         else Modifier.background(colors.goldDim, CircleShape),
                     ),
                 )
-                Spacer(Modifier.width(12.dp))
-                SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
             }
             runtime?.let { active ->
                 Row(
@@ -794,7 +791,7 @@ private fun SessionQuestions(
                         Modifier.weight(1f),
                     )
                     SessionParameterChip(
-                        "Wdh.",
+                        "Wiederholung",
                         "${active.config.repsPerQuestion}×",
                         onOpenRepetitions,
                         Modifier.weight(1f),
@@ -819,14 +816,18 @@ private fun SessionQuestions(
                 Box(
                     // .pm-session-stop-button:active — amber outline
                     Modifier.size(48.dp)
-                        .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onTogglePause)
+                        .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onPlayPause)
                         .background(colors.surface2, controlShape)
                         .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        if (state.paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
-                        if (state.paused) "Sitzung fortsetzen" else "Sitzung pausieren",
+                        if (!state.speakerOn || state.paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                        when {
+                            !state.speakerOn -> "Vorlesen starten"
+                            state.paused -> "Sitzung fortsetzen"
+                            else -> "Sitzung pausieren"
+                        },
                         tint = colors.gold,
                         modifier = Modifier.size(20.dp),
                     )
@@ -866,17 +867,27 @@ private fun SessionParameterChip(
         modifier.pmClickable(shape = RoundedCornerShape(12.dp), onClick = onClick)
             .background(colors.surface2, RoundedCornerShape(12.dp))
             .border(1.dp, colors.goldDim.copy(alpha = 0.34f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .height(66.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(label, color = colors.text3, fontFamily = Inter, fontSize = 9.sp, lineHeight = 10.sp)
+        Text(
+            label,
+            color = colors.text2,
+            fontFamily = Inter,
+            fontWeight = FontWeight.Medium,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
+            maxLines = 1,
+        )
         Text(
             value,
             color = colors.goldHi,
             fontFamily = JetBrainsMono,
             fontWeight = FontWeight.Medium,
-            fontSize = 11.sp,
-            lineHeight = 13.sp,
+            fontSize = 17.sp,
+            lineHeight = 21.sp,
             maxLines = 1,
         )
     }

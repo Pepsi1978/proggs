@@ -30,6 +30,15 @@ val IdeenSchriftBetont = FontFamily(
     Font(R.font.newsreader, FontWeight.SemiBold),
 )
 
+/**
+ * Dieselbe Schrift, aber als Normal registriert. Nur so zeichnet Android bei hohen Gewichten
+ * wirklich fett: Wäre sie wie [IdeenSchriftBetont] schon als SemiBold eingetragen, bliebe die
+ * einzige vorhandene Schnittfarbe stehen und ein angefragtes Bold hätte keine Wirkung.
+ */
+val IdeenSchriftDick = FontFamily(
+    Font(R.font.newsreader, FontWeight.Normal),
+)
+
 /** Festbreitenschrift für den Anmeldecode (Baustein O.1). */
 val IdeenSchriftFest = FontFamily(
     Font(R.font.jetbrains_mono, FontWeight.Medium),
