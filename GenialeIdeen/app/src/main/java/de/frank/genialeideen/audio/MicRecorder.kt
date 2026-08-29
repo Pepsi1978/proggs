@@ -11,6 +11,9 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.logging.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +29,14 @@ class MicRecorder(context: Context) {
     private val bufferLock = Any()
     private val pcmBuffer = ByteArrayOutputStream()
     private val recording = AtomicBoolean(false)
+
+    /**
+     * Die aktuelle Lautstärke von 0 bis 1 — für die Pegel-Anzeige am Aufnahmeknopf (N.7).
+     * Bewusst echt gemessen und nicht simuliert: Eine erfundene Welle verrät nicht, ob das
+     * Mikrofon überhaupt etwas hört.
+     */
+    private val _pegel = MutableStateFlow(0f)
+    val pegel: StateFlow<Float> = _pegel.asStateFlow()
 
     @Volatile
     private var recorder: AudioRecord? = null
@@ -117,12 +128,15 @@ class MicRecorder(context: Context) {
                     )
                     if (!recording.get()) break
                     when {
-                        read > 0 -> synchronized(bufferLock) {
-                            if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
-                                pcmBuffer.write(readBuffer, 0, read)
-                            } else {
-                                logger.warning("Maximum recording buffer reached")
-                                return@launch
+                        read > 0 -> {
+                            _pegel.value = messePegel(readBuffer, read)
+                            synchronized(bufferLock) {
+                                if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
+                                    pcmBuffer.write(readBuffer, 0, read)
+                                } else {
+                                    logger.warning("Maximum recording buffer reached")
+                                    return@launch
+                                }
                             }
                         }
                         read < 0 -> {
@@ -185,7 +199,25 @@ class MicRecorder(context: Context) {
 
     fun isRecording(): Boolean = recording.get()
 
+    /** Effektivwert des Blocks, auf 0 bis 1 gebracht und leicht angehoben, damit leise Sprache sichtbar bleibt. */
+    private fun messePegel(puffer: ByteArray, laenge: Int): Float {
+        if (laenge < 2) return 0f
+        var summe = 0.0
+        var index = 0
+        var anzahl = 0
+        while (index + 1 < laenge) {
+            val wert = ((puffer[index + 1].toInt() shl 8) or (puffer[index].toInt() and 0xFF)).toShort()
+            summe += wert.toDouble() * wert.toDouble()
+            index += 2
+            anzahl++
+        }
+        if (anzahl == 0) return 0f
+        val effektivwert = kotlin.math.sqrt(summe / anzahl) / Short.MAX_VALUE
+        return (kotlin.math.sqrt(effektivwert) * 1.6).toFloat().coerceIn(0f, 1f)
+    }
+
     fun release() {
+        _pegel.value = 0f
         val activeRecorder: AudioRecord?
         val activeJob: Job?
         synchronized(lifecycleLock) {

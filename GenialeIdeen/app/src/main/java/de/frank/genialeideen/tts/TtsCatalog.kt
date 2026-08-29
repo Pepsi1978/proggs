@@ -1,9 +1,10 @@
 package de.frank.genialeideen.tts
 
-enum class TtsProvider(val id: String, val label: String) {
-    EDGE("edge_tts", "Microsoft Edge"),
-    GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD"),
-    QWEN_CLONE("qwen_clone", "Meine Stimme"),
+enum class TtsProvider(val id: String, val label: String, val kurz: String) {
+    QWEN_CLONE("qwen_clone", "Meine Stimme", "Meine"),
+    QWEN("qwen", "Alibaba", "Alibaba"),
+    GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD", "Google"),
+    EDGE("edge_tts", "Microsoft Edge", "Edge"),
 }
 
 enum class VoiceGender {
@@ -20,17 +21,34 @@ data class TtsVoice(
 object TtsCatalog {
     const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
     const val DEFAULT_GOOGLE_VOICE = "de-DE-Chirp3-HD-Kore"
+    const val DEFAULT_QWEN_VOICE = "Cherry"
+
+    /** Edge braucht keinen Schlüssel und ist deshalb der garantierte Rückfall (Kapitel 4.6). */
     val DEFAULT_PROVIDER = TtsProvider.EDGE
 
     val providers = TtsProvider.entries
 
     val edgeVoices = listOf(
         TtsVoice("de-DE-SeraphinaMultilingualNeural", "Seraphina", VoiceGender.FEMALE),
-        TtsVoice("de-DE-FlorianMultilingualNeural", "Florian", VoiceGender.MALE),
         TtsVoice("de-DE-KatjaNeural", "Katja", VoiceGender.FEMALE),
+        TtsVoice("de-DE-AmalaNeural", "Amala", VoiceGender.FEMALE),
+        TtsVoice("de-DE-FlorianMultilingualNeural", "Florian", VoiceGender.MALE),
         TtsVoice("de-DE-KillianNeural", "Killian", VoiceGender.MALE),
         TtsVoice("de-DE-ConradNeural", "Conrad", VoiceGender.MALE),
-        TtsVoice("de-DE-AmalaNeural", "Amala", VoiceGender.FEMALE),
+    )
+
+    /**
+     * Die fertigen Standardstimmen von Alibaba (Qwen TTS). Sie kommen über dasselbe Konto wie
+     * die geklonten Stimmen, brauchen aber kein Klonen — nur den DashScope-Schlüssel.
+     */
+    val qwenVoices = listOf(
+        TtsVoice("Cherry", "Cherry", VoiceGender.FEMALE),
+        TtsVoice("Chelsie", "Chelsie", VoiceGender.FEMALE),
+        TtsVoice("Serena", "Serena", VoiceGender.FEMALE),
+        TtsVoice("Jada", "Jada", VoiceGender.FEMALE),
+        TtsVoice("Sunny", "Sunny", VoiceGender.FEMALE),
+        TtsVoice("Ethan", "Ethan", VoiceGender.MALE),
+        TtsVoice("Dylan", "Dylan", VoiceGender.MALE),
     )
 
     val googleVoices = listOf(
@@ -65,4 +83,12 @@ object TtsCatalog {
         TtsVoice("de-DE-Chirp3-HD-Umbriel", "Umbriel", VoiceGender.MALE),
         TtsVoice("de-DE-Chirp3-HD-Zubenelgenubi", "Zubenelgenubi", VoiceGender.MALE),
     )
+
+    /** Findet den Anbieter zu einer Stimm-Kennung aus dem festen Katalog. */
+    fun anbieterZu(stimmeId: String): TtsProvider? = when {
+        edgeVoices.any { it.id == stimmeId } -> TtsProvider.EDGE
+        googleVoices.any { it.id == stimmeId } -> TtsProvider.GOOGLE_CLOUD
+        qwenVoices.any { it.id == stimmeId } -> TtsProvider.QWEN
+        else -> null
+    }
 }

@@ -56,12 +56,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
+import de.frank.genialeideen.ui.theme.Hoehe
 import de.frank.genialeideen.ui.theme.LocalGold
+import de.frank.genialeideen.ui.theme.tiefenSchatten
 import de.frank.genialeideen.ui.theme.Semantisch
 
 @Composable
@@ -77,6 +80,7 @@ fun DetailScreen(
     val vorlese by viewModel.vorleseStand.collectAsState()
     val aufnahme by viewModel.aufnahme.collectAsState()
     val theme by viewModel.theme.collectAsState()
+    val korrektur by viewModel.korrektur.collectAsState()
 
     var eingabe by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -160,6 +164,11 @@ fun DetailScreen(
                             nachricht = nachricht,
                             spricht = vorlese.quelle == "nachricht-${nachricht.id}",
                             vorleseZustand = vorlese.zustand,
+                            laufenderAbsatz = if (vorlese.quelle == "nachricht-${nachricht.id}") {
+                                vorlese.absatzText
+                            } else {
+                                ""
+                            },
                             aufVorlesen = {
                                 viewModel.lies(
                                     "nachricht-${nachricht.id}",
@@ -183,7 +192,10 @@ fun DetailScreen(
 
         EingabeZeile(
             text = eingabe,
-            aufText = { eingabe = it },
+            aufText = {
+                eingabe = it
+                if (korrektur != null && it != korrektur?.korrigiert) viewModel.korrekturVergessen()
+            },
             antwortet = ki.antwortet,
             nimmtAuf = aufnahme.laeuft,
             uebertraegt = aufnahme.wirdUebertragen,
@@ -201,8 +213,12 @@ fun DetailScreen(
                     viewModel.starteAufnahme()
                 }
             },
-            aufGlaetten = {
-                viewModel.glaetteText(eingabe) { geglaettet -> eingabe = geglaettet }
+            korrigiert = korrektur != null,
+            aufKorrigieren = {
+                viewModel.korrigiereText(eingabe) { neu -> eingabe = neu }
+            },
+            aufZuruecknehmen = {
+                viewModel.korrekturZuruecknehmen { alt -> eingabe = alt }
             },
         )
     }
@@ -298,6 +314,7 @@ private fun NachrichtenBlase(
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
+    laufenderAbsatz: String = "",
 ) {
     val gold = LocalGold.current
     val vonMir = nachricht.rolle == "user"
@@ -324,8 +341,9 @@ private fun NachrichtenBlase(
                 )
                 .padding(14.dp),
         ) {
+            // Der gerade gesprochene Absatz ist hervorgehoben (N.7).
             Text(
-                nachricht.text,
+                text = hervorgehobenerAbsatz(nachricht.text, laufenderAbsatz, gold.primaer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = gold.textPrimaer,
             )
@@ -351,18 +369,41 @@ private fun NachrichtenBlase(
     }
 }
 
+/** Der einlaufende Text mit blinkendem Schreib-Cursor (N.7). */
 @Composable
 private fun StroemendeAntwort(text: String) {
     val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val uebergang = rememberInfiniteTransition(label = "cursor")
+    val blinken by uebergang.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduziert) 1f else 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "blinkwert",
+    )
     Column(
         modifier = Modifier
             .fillMaxWidth(0.9f)
+            .tiefenSchatten(gold.primaer, Hoehe.karte, RoundedCornerShape(18.dp))
             .clip(RoundedCornerShape(18.dp))
             .background(gold.flaeche)
             .border(1.dp, gold.primaer.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
             .padding(14.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text,
+                modifier = Modifier.weight(1f, fill = false),
+                style = MaterialTheme.typography.bodyMedium,
+                color = gold.textPrimaer,
+            )
+            Box(
+                modifier = Modifier
+                    .padding(start = 3.dp, bottom = 3.dp)
+                    .size(width = 2.dp, height = 16.dp)
+                    .background(gold.primaer.copy(alpha = if (reduziert) 1f else blinken)),
+            )
+        }
     }
 }
 
@@ -406,7 +447,9 @@ private fun EingabeZeile(
     aufSenden: () -> Unit,
     aufAbbrechen: () -> Unit,
     aufMikrofon: () -> Unit,
-    aufGlaetten: () -> Unit,
+    korrigiert: Boolean,
+    aufKorrigieren: () -> Unit,
+    aufZuruecknehmen: () -> Unit,
 ) {
     val gold = LocalGold.current
     Column(
@@ -465,18 +508,13 @@ private fun EingabeZeile(
             }
             Spacer(Modifier.width(8.dp))
             if (text.isNotBlank()) {
-                RundKnopf(
-                    beschreibung = "Text glätten",
-                    farbe = gold.textGedaempft,
-                    aufTipp = aufGlaetten,
-                ) {
-                    Icon(
-                        Icons.Default.AutoFixHigh,
-                        contentDescription = null,
-                        tint = gold.textGedaempft,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                KorrekturKnopf(
+                    korrigiert = korrigiert,
+                    laeuft = antwortet,
+                    aufKorrigieren = aufKorrigieren,
+                    aufZuruecknehmen = aufZuruecknehmen,
+                    modifier = Modifier.size(46.dp),
+                )
                 Spacer(Modifier.width(8.dp))
             }
             RundKnopf(
@@ -536,3 +574,37 @@ private fun RundKnopf(
         contentAlignment = Alignment.Center,
     ) { inhalt() }
 }
+
+/**
+ * Hebt den Absatz hervor, der gerade vorgelesen wird. Der Vergleich läuft über die ersten
+ * Wörter, weil der gesprochene Text vorher durch die TTS-Aufbereitung gelaufen ist und
+ * deshalb nicht mehr Zeichen für Zeichen mit dem angezeigten übereinstimmt.
+ */
+private fun hervorgehobenerAbsatz(
+    text: String,
+    laufend: String,
+    farbe: androidx.compose.ui.graphics.Color,
+) = androidx.compose.ui.text.buildAnnotatedString {
+    if (laufend.isBlank()) {
+        append(text)
+        return@buildAnnotatedString
+    }
+    val anker = laufend.take(24).trim()
+    val absaetze = text.split(ZEILENUMBRUCH)
+    absaetze.forEachIndexed { index, absatz ->
+        val passt = anker.isNotBlank() && absatz.take(28).contains(anker.take(12), ignoreCase = true)
+        if (passt) {
+            withStyle(
+                androidx.compose.ui.text.SpanStyle(
+                    color = farbe,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                ),
+            ) { append(absatz) }
+        } else {
+            append(absatz)
+        }
+        if (index < absaetze.lastIndex) append(ZEILENUMBRUCH)
+    }
+}
+
+private const val ZEILENUMBRUCH = "\n"

@@ -38,6 +38,7 @@ fun GenialeIdeenApp(
     aufExport: () -> Unit,
     aufImport: () -> Unit,
     aufAppSperreUmschalten: (Boolean) -> Unit,
+    aufSeiteOeffnen: (String?) -> Unit,
 ) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
@@ -128,6 +129,7 @@ fun GenialeIdeenApp(
                     aufExport = aufExport,
                     aufImport = aufImport,
                     aufAppSperreUmschalten = aufAppSperreUmschalten,
+                    aufSeiteOeffnen = aufSeiteOeffnen,
                 )
                 Bildschirm.DIAGNOSE -> DiagnoseScreen(
                     viewModel = viewModel,

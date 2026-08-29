@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
@@ -55,12 +56,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.BuildConfig
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.tts.TtsCatalog
 import de.frank.genialeideen.tts.TtsProvider
 import de.frank.genialeideen.tts.VoiceGender
+import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Semantisch
 
@@ -74,6 +77,7 @@ fun EinstellungenScreen(
     aufExport: () -> Unit,
     aufImport: () -> Unit,
     aufAppSperreUmschalten: (Boolean) -> Unit,
+    aufSeiteOeffnen: (String?) -> Unit,
 ) {
     val gold = LocalGold.current
     val zwischenablage = LocalClipboardManager.current
@@ -83,23 +87,24 @@ fun EinstellungenScreen(
     val anmeldung by viewModel.anmeldung.collectAsState()
     val eigeneStimmen by viewModel.eigeneStimmen.collectAsState()
     val stimmenLaden by viewModel.stimmenLaden.collectAsState()
-    val eigeneGewaehlt by viewModel.gewaehlteEigeneStimme.collectAsState()
+    val stimmenEintraege by viewModel.stimmenEintraege.collectAsState()
+    val gewaehlteStimme by viewModel.gewaehlteStimme.collectAsState()
+    val favoriten by viewModel.favoriten.collectAsState()
+    val vorlese by viewModel.vorleseStand.collectAsState()
 
     var googleKey by remember { mutableStateOf(settings.googleTtsApiKey) }
     var qwenKey by remember { mutableStateOf(settings.qwenTtsApiKey) }
     var groqKey by remember { mutableStateOf(settings.groqApiKey) }
     var geminiKey by remember { mutableStateOf(settings.geminiApiKey) }
-    var anbieter by remember { mutableStateOf(settings.ttsProvider) }
-    var stimme by remember { mutableStateOf(settings.googleTtsVoice) }
-    var edgeStimme by remember { mutableStateOf(settings.edgeTtsVoice) }
     var tempo by remember { mutableStateOf(settings.ttsSpeechRate) }
-    var favoriten by remember { mutableStateOf(settings.favoriteTtsVoices) }
     var sperreAn by remember { mutableStateOf(settings.appLockEnabled) }
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
     var kiZugang by remember { mutableStateOf(settings.kiZugang) }
     var modell by remember { mutableStateOf(settings.model) }
     var denktiefe by remember { mutableStateOf(settings.reasoning) }
     var pruefErgebnis by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    /** Bis wann der Kopier-Knopf „Kopiert ✓" zeigt (Baustein O.1). */
+    var kopiertBis by remember { mutableStateOf(0L) }
 
     Column(
         modifier = Modifier
@@ -137,99 +142,26 @@ fun EinstellungenScreen(
         ) {
             // ---- Vorlesen ----
             Klappblock("Vorlesen", "Stimme, Tempo und Schlüssel", offenAnfangs = true) {
-                Text("Stimme", style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TtsCatalog.providers.forEach { anbieterEintrag ->
-                        Auswahlchip(
-                            text = anbieterEintrag.label,
-                            gewaehlt = anbieter == anbieterEintrag.id,
-                            aufTipp = {
-                                anbieter = anbieterEintrag.id
-                                settings.ttsProvider = anbieterEintrag.id
-                            },
+                // Genau eine Stimmenauswahl über alle Engines — kein vorgelagerter
+                // Engine-Umschalter (Kapitel 4.6).
+                StimmenDropdown(
+                    eintraege = stimmenEintraege,
+                    gewaehlt = gewaehlteStimme,
+                    favoriten = favoriten,
+                    laedt = stimmenLaden,
+                    spricht = if (vorlese.quelle == "probe") gewaehlteStimme else null,
+                    aufWahl = viewModel::waehleStimme,
+                    aufProbe = viewModel::probeStimme,
+                    aufFavorit = viewModel::schalteFavorit,
+                    aufNeuLaden = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
+                    aufAufnehmen = aufEigeneStimme,
+                    aufFehlendenSchluessel = {
+                        viewModel.zeige(
+                            Meldung("Trag den fehlenden Schlüssel hier im Block „Vorlesen“ ein."),
                         )
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
+                    },
+                )
 
-                when (anbieter) {
-                    TtsProvider.GOOGLE_CLOUD.id -> Klappmenue(
-                        beschriftung = "Stimme von Google Chirp 3 HD",
-                        eintraege = TtsCatalog.googleVoices.map { eintrag ->
-                            KlappEintrag(
-                                id = eintrag.id,
-                                name = eintrag.name,
-                                gruppe = geschlechtsGruppe(eintrag.gender),
-                            )
-                        },
-                        gewaehlt = stimme,
-                        favoriten = favoriten,
-                        aufWahl = {
-                            stimme = it
-                            settings.googleTtsVoice = it
-                        },
-                        aufProbe = { id ->
-                            stimme = id
-                            viewModel.probeStimme(TtsProvider.GOOGLE_CLOUD.id, id)
-                        },
-                        aufFavorit = { id ->
-                            favoriten = if (id in favoriten) favoriten - id else favoriten + id
-                            settings.favoriteTtsVoices = favoriten
-                        },
-                    )
-
-                    TtsProvider.EDGE.id -> Klappmenue(
-                        beschriftung = "Stimme von Microsoft Edge",
-                        eintraege = TtsCatalog.edgeVoices.map { eintrag ->
-                            KlappEintrag(
-                                id = eintrag.id,
-                                name = eintrag.name,
-                                gruppe = geschlechtsGruppe(eintrag.gender),
-                            )
-                        },
-                        gewaehlt = edgeStimme,
-                        favoriten = favoriten,
-                        aufWahl = {
-                            edgeStimme = it
-                            settings.edgeTtsVoice = it
-                        },
-                        aufProbe = { id ->
-                            edgeStimme = id
-                            viewModel.probeStimme(TtsProvider.EDGE.id, id)
-                        },
-                        aufFavorit = { id ->
-                            favoriten = if (id in favoriten) favoriten - id else favoriten + id
-                            settings.favoriteTtsVoices = favoriten
-                        },
-                    )
-
-                    // Die eigenen Stimmen kommen vom Konto, nicht aus einem festen Katalog —
-                    // darum mit Ladezustand, Neu-laden-Knopf und eigenem Leerzustand.
-                    TtsProvider.QWEN_CLONE.id -> Klappmenue(
-                        beschriftung = "Meine aufgenommenen Stimmen",
-                        eintraege = eigeneStimmen.map { eintrag ->
-                            KlappEintrag(
-                                id = eintrag.id,
-                                name = viewModel.stimmenName(eintrag),
-                                zusatz = eintrag.createdAt,
-                            )
-                        },
-                        gewaehlt = eigeneGewaehlt,
-                        laedt = stimmenLaden,
-                        leerText = if (qwenKey.isBlank()) {
-                            "Erst den DashScope-Schlüssel eintragen"
-                        } else {
-                            "Noch keine eigene Stimme aufgenommen"
-                        },
-                        aufWahl = viewModel::waehleEigeneStimme,
-                        aufProbe = { id ->
-                            viewModel.waehleEigeneStimme(id)
-                            viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, id)
-                        },
-                        aufNeuLaden = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
-                    )
-                }
                 Spacer(Modifier.height(14.dp))
 
                 Text(
@@ -253,6 +185,8 @@ fun EinstellungenScreen(
                     aufWert = {
                         googleKey = it
                         settings.googleTtsApiKey = it.trim()
+                        // Der Schlüssel entscheidet, welche Stimmen nutzbar sind.
+                        viewModel.stimmenlisteAuffrischen()
                     },
                     ergebnis = pruefErgebnis["google"],
                     aufPruefen = {
@@ -269,6 +203,7 @@ fun EinstellungenScreen(
                         settings.qwenTtsApiKey = it.filterNot(Char::isWhitespace)
                         // Sobald der Schlüssel steht, holt die App die vorhandenen Stimmen —
                         // sie sollen nicht erst nach einem Neustart auftauchen.
+                        viewModel.stimmenlisteAuffrischen()
                         viewModel.ladeEigeneStimmen()
                     },
                     ergebnis = when {
@@ -358,26 +293,53 @@ fun EinstellungenScreen(
                                 color = gold.textGedaempft,
                             )
                             Spacer(Modifier.height(6.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    anmeldung.code.orEmpty(),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(gold.eingabefeld)
-                                        .border(1.dp, gold.primaer.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = gold.primaer,
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Auswahlchip("Code kopieren", false) {
-                                    val code = anmeldung.code.orEmpty()
-                                    if (code.isNotBlank()) {
-                                        zwischenablage.setText(AnnotatedString(code))
-                                        viewModel.zeige(Meldung("Code kopiert: $code"))
-                                    }
+                            val kopieren = {
+                                val code = anmeldung.code.orEmpty()
+                                if (code.isNotBlank()) {
+                                    zwischenablage.setText(AnnotatedString(code))
+                                    kopiertBis = System.currentTimeMillis() + 2_000L
                                 }
+                            }
+                            // Der Code selbst ist antippbar, der Knopf ist der offensichtliche
+                            // Weg — beide kopieren dasselbe (Baustein O.1).
+                            Text(
+                                anmeldung.code.orEmpty(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .druckEffekt { kopieren() }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(gold.eingabefeld)
+                                    .border(1.dp, gold.primaer.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontFamily = IdeenSchriftFest,
+                                    letterSpacing = 4.sp,
+                                ),
+                                color = gold.primaer,
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                GoldKnopf(
+                                    text = if (kopiertBis > System.currentTimeMillis()) {
+                                        "Kopiert ✓"
+                                    } else {
+                                        "Code kopieren"
+                                    },
+                                    aufTipp = kopieren,
+                                    symbol = {
+                                        Icon(
+                                            Icons.Default.ContentCopy,
+                                            contentDescription = null,
+                                            tint = gold.aufPrimaer,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    },
+                                )
+                                StillerKnopf(
+                                    "Seite öffnen",
+                                    { aufSeiteOeffnen(anmeldung.adresse) },
+                                    hervorgehoben = true,
+                                )
                             }
                             Spacer(Modifier.height(6.dp))
                             Text(
@@ -466,7 +428,6 @@ fun EinstellungenScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Auswahlchip("Hell", theme == "light") { viewModel.setzeTheme("light") }
                     Auswahlchip("Dunkel", theme == "dark") { viewModel.setzeTheme("dark") }
-                    Auswahlchip("System", theme == "system") { viewModel.setzeTheme("system") }
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(

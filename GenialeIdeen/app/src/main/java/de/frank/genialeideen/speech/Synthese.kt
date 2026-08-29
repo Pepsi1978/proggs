@@ -45,14 +45,15 @@ class Synthese(context: Context, private val settings: SecureSettings) {
 
     /** Ob die gewählte Engine vorab synthetisieren kann. Edge spricht über den WebSocket-Player. */
     fun kannVorausschauen(): Boolean = when (settings.ttsProvider) {
-        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id -> true
+        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id -> true
         else -> false
     }
 
     suspend fun synthetisiere(text: String): File = gleichzeitig.withPermit {
         when (settings.ttsProvider) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text)
-            TtsProvider.QWEN_CLONE.id -> qwen(text)
+            TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
+            TtsProvider.QWEN.id -> qwen(text, geklont = false)
             else -> throw SyntheseAbbruch("Diese Stimme kann nicht vorab erzeugt werden.")
         }
     }
@@ -89,17 +90,31 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         return schreibeDatei(Base64.decode(audio, Base64.DEFAULT), "mp3")
     }
 
-    private suspend fun qwen(text: String): File {
+    /**
+     * @param geklont true für meine eigene Stimme (Voice-Clone-Modell), false für die fertigen
+     *   Alibaba-Standardstimmen. Klonen und Sprechen müssen dasselbe Modell benutzen, sonst wird
+     *   die Stimm-Kennung abgelehnt — darum zwei Modellnamen.
+     */
+    private suspend fun qwen(text: String, geklont: Boolean): File {
         val schluessel = settings.qwenTtsApiKey.filterNot(Char::isWhitespace)
-        val stimme = settings.qwenTtsVoiceId.filterNot(Char::isWhitespace)
-        if (schluessel.isBlank() || stimme.isBlank()) {
+        val stimme = if (geklont) {
+            settings.qwenTtsVoiceId.filterNot(Char::isWhitespace)
+        } else {
+            settings.qwenStandardVoice
+        }
+        if (schluessel.isBlank()) {
+            throw SyntheseAbbruch(
+                "Vorlesen fehlgeschlagen: Der Alibaba-Schlüssel fehlt. Trag ihn in den Einstellungen ein.",
+            )
+        }
+        if (stimme.isBlank()) {
             throw SyntheseAbbruch(
                 "Vorlesen fehlgeschlagen: Die eigene Stimme ist nicht eingerichtet. " +
                     "Nimm sie in den Einstellungen auf.",
             )
         }
         val koerper = JSONObject()
-            .put("model", QWEN_MODELL)
+            .put("model", if (geklont) QWEN_KLON_MODELL else QWEN_MODELL)
             .put(
                 "input",
                 JSONObject().put("text", text).put("voice", stimme).put("language_type", "German"),
@@ -189,7 +204,11 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         const val GOOGLE_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
         const val QWEN_URL =
             "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
-        const val QWEN_MODELL = "qwen3-tts-vc-2026-01-22"
+        /** Die fertigen Standardstimmen. */
+        const val QWEN_MODELL = "qwen3-tts-flash"
+
+        /** Die geklonten Stimmen — dasselbe Modell wie beim Anlegen (Baustein E). */
+        const val QWEN_KLON_MODELL = "qwen3-tts-vc-2026-01-22"
         val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
     }

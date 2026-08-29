@@ -152,8 +152,7 @@ fun StimmeScreen(
                         },
                         aufWahl = viewModel::waehleEigeneStimme,
                         aufProbe = { id ->
-                            viewModel.waehleEigeneStimme(id)
-                            viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, id)
+                            viewModel.probeEigeneStimme(id)
                         },
                         aufNeuLaden = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
                     )
@@ -323,10 +322,7 @@ fun StimmeScreen(
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .druckEffekt {
-                                    viewModel.waehleEigeneStimme(eintrag.id)
-                                    viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, eintrag.id)
-                                }
+                                .druckEffekt { viewModel.probeEigeneStimme(eintrag.id) }
                                 .clip(CircleShape)
                                 .border(1.dp, gold.rahmen, CircleShape),
                             contentAlignment = Alignment.Center,

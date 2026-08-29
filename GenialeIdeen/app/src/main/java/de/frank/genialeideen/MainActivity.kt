@@ -1,6 +1,7 @@
 package de.frank.genialeideen
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -159,12 +160,24 @@ class MainActivity : FragmentActivity() {
                         aufExport = { exportZiel.launch(Sicherung.dateiName()) },
                         aufImport = { importQuelle.launch(arrayOf("application/json", "text/plain")) },
                         aufAppSperreUmschalten = ::schalteAppSperre,
+                        aufSeiteOeffnen = ::oeffneSeite,
                     )
                 }
             }
         }
 
         IdeenCrashHandler.letzteAktion = "App gestartet"
+    }
+
+    /** Öffnet die Bestätigungsseite der Anmeldung im Browser (Baustein O.1). */
+    private fun oeffneSeite(adresse: String?) {
+        val ziel = adresse?.takeIf(String::isNotBlank) ?: "https://auth.openai.com/codex/device"
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ziel))) }
+            .onFailure {
+                viewModel.zeige(
+                    Meldung("Es liess sich kein Browser öffnen: ${it.message}", istFehler = true),
+                )
+            }
     }
 
     private fun baueSperrPrompt(): BiometricPrompt = BiometricPrompt(

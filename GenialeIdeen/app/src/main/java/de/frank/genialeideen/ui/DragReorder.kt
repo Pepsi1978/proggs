@@ -156,6 +156,12 @@ fun Modifier.reorderRow(state: ReorderState, id: Long): Modifier {
         label = "Zeile Deckkraft",
     )
     val rowScale by animateFloatAsState(if (dragging) 1.04f else 1f, label = "Zeile Größe")
+    // Das gegriffene Element hebt sich an: grösser, leicht geneigt, mit wachsendem Schatten (N.7).
+    val rowTilt by animateFloatAsState(if (dragging) 2f else 0f, label = "Zeile Neigung")
+    val rowShadow by androidx.compose.animation.core.animateDpAsState(
+        if (dragging) 20.dp else 0.dp,
+        label = "Zeile Schatten",
+    )
     return this
         .onGloballyPositioned { state.measure(id, it.size.height.toFloat(), it.positionInRoot().y) }
         .zIndex(if (dragging) 1f else 0f)
@@ -164,6 +170,8 @@ fun Modifier.reorderRow(state: ReorderState, id: Long): Modifier {
             alpha = rowAlpha
             scaleX = rowScale
             scaleY = rowScale
+            rotationZ = rowTilt
+            shadowElevation = rowShadow.toPx()
         }
 }
 

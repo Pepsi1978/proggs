@@ -76,6 +76,11 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.QWEN_TTS_API_KEY, "")
         set(value) = writeString(Keys.QWEN_TTS_API_KEY, value)
 
+    /** Die gewählte Alibaba-Standardstimme (nicht geklont). */
+    var qwenStandardVoice: String
+        get() = readString(Keys.QWEN_STANDARD_VOICE, Defaults.QWEN_STANDARD_VOICE)
+        set(value) = writeString(Keys.QWEN_STANDARD_VOICE, value)
+
     var qwenTtsVoiceId: String
         get() = readString(Keys.QWEN_TTS_VOICE_ID, "")
         set(value) = writeString(Keys.QWEN_TTS_VOICE_ID, value)
@@ -228,6 +233,7 @@ class SecureSettings(context: Context) : Closeable {
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
         const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
+        const val QWEN_STANDARD_VOICE = "qwen_standard_voice"
         const val QWEN_VOICE_NAMES = "qwen_voice_names"
         const val QWEN_VOICE_ORDER = "qwen_voice_order"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
@@ -251,21 +257,23 @@ class SecureSettings(context: Context) : Closeable {
     }
 
     object Defaults {
-        const val TTS_PROVIDER = "google_cloud"
+        const val TTS_PROVIDER = "edge_tts"
         const val EDGE_TTS_VOICE = "de-DE-SeraphinaMultilingualNeural"
         const val GOOGLE_TTS_VOICE = "de-DE-Chirp3-HD-Kore"
+        const val QWEN_STANDARD_VOICE = "Cherry"
         const val TTS_SPEECH_RATE = 1f
         const val KI_ZUGANG = "abo"
         const val MODEL = "gpt-5.6-terra"
         const val REASONING = "medium"
-        const val THEME = "system"
+        const val THEME = "light"
         const val APP_LOCK_ENABLED = false
         const val APP_LOCK_DELAY = 1
     }
 
     companion object {
         const val STORE_NAME = "geniale_ideen_secure_prefs"
-        val ALLOWED_THEMES = setOf("light", "dark", "system")
+        /** Genau zwei Modi — die App folgt der Systemvorgabe bewusst nicht (Baustein A). */
+        val ALLOWED_THEMES = setOf("light", "dark")
         const val MIN_TTS_SPEECH_RATE = 0.5f
         const val MAX_TTS_SPEECH_RATE = 2.0f
     }

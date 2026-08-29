@@ -109,10 +109,10 @@ fun ListenScreen(
     val listState = rememberLazyListState()
     ReorderAutoScroll(zustand, listState)
 
+    Box(Modifier.fillMaxSize().background(hintergrundVerlauf())) {
+    BewegterHintergrund()
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(hintergrundVerlauf()),
+        modifier = Modifier.fillMaxSize(),
     ) {
         IdeenKopfleiste(
             titel = "Geniale Ideen",
@@ -205,17 +205,19 @@ fun ListenScreen(
             }
 
             if (!suchOffen) {
-                AufnahmeKnopf(
+                AufnahmeKnopfMitPegel(
                     laeuft = aufnahme.laeuft,
-                    uebertraegt = aufnahme.wirdUebertragen,
+                    pegel = aufnahme.pegel,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 28.dp)
                         .navigationBarsPadding(),
+                    groesse = 68.dp,
                     aufTipp = aufNeueIdee,
                 )
             }
         }
+    }
     }
 }
 
@@ -288,7 +290,7 @@ private fun IdeenKarte(
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
-    GoldKarte(modifier = modifier.fillMaxWidth()) {
+    GoldKarte(modifier = modifier.fillMaxWidth(), kippbar = true) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -409,41 +411,6 @@ private fun UmgesetztKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
             contentDescription = if (umgesetzt) "Zurück zu den offenen Ideen" else "Als umgesetzt markieren",
             tint = if (umgesetzt) Semantisch.erfolg else gold.textGedaempft,
             modifier = Modifier.size(18.dp),
-        )
-    }
-}
-
-@Composable
-private fun AufnahmeKnopf(
-    laeuft: Boolean,
-    uebertraegt: Boolean,
-    modifier: Modifier,
-    aufTipp: () -> Unit,
-) {
-    val gold = LocalGold.current
-    val reduziert = LocalBewegungReduziert.current
-    val uebergang = rememberInfiniteTransition(label = "puls")
-    val puls by uebergang.animateFloat(
-        initialValue = 1f,
-        targetValue = if ((laeuft || uebertraegt) && !reduziert) 1.10f else 1f,
-        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-        label = "pulswert",
-    )
-    Box(
-        modifier = modifier
-            .scale(puls)
-            .size(68.dp)
-            .druckEffekt(aufTipp)
-            .goldSchein(gold.primaer, hoehe = 18.dp, radius = 34.dp)
-            .clip(CircleShape)
-            .background(Brush.radialGradient(listOf(gold.primaer, gold.primaerGedaempft))),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            Icons.Default.Mic,
-            contentDescription = "Neue Idee einsprechen oder eintippen",
-            tint = gold.aufPrimaer,
-            modifier = Modifier.size(30.dp),
         )
     }
 }

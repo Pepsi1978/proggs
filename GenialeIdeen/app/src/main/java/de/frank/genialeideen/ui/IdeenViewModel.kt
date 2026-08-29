@@ -53,6 +53,14 @@ data class AufnahmeStand(
     val laeuft: Boolean = false,
     val wirdUebertragen: Boolean = false,
     val seit: Long = 0L,
+    /** Echte Lautstärke von 0 bis 1 für die Pegel-Anzeige (N.7). */
+    val pegel: Float = 0f,
+)
+
+/** Was vor der Korrektur dastand — damit „Rückgängig" es zurückholen kann (Baustein O.4). */
+data class KorrekturStand(
+    val original: String,
+    val korrigiert: String,
 )
 
 data class KiStand(
@@ -90,6 +98,11 @@ class IdeenViewModel(
     private val _aufnahme = MutableStateFlow(AufnahmeStand())
     val aufnahme: StateFlow<AufnahmeStand> = _aufnahme.asStateFlow()
 
+    private val _korrektur = MutableStateFlow<KorrekturStand?>(null)
+
+    /** Steht ein Wert drin, zeigt der Knopf „Rückgängig" statt „Korrigieren". */
+    val korrektur: StateFlow<KorrekturStand?> = _korrektur.asStateFlow()
+
     private val _ki = MutableStateFlow(KiStand())
     val ki: StateFlow<KiStand> = _ki.asStateFlow()
 
@@ -125,6 +138,14 @@ class IdeenViewModel(
     private val _gewaehlteEigeneStimme = MutableStateFlow(settings.qwenTtsVoiceId)
     val gewaehlteEigeneStimme: StateFlow<String> = _gewaehlteEigeneStimme.asStateFlow()
 
+    private val _gewaehlteStimme = MutableStateFlow(aktuelleStimmenId())
+    val gewaehlteStimme: StateFlow<String> = _gewaehlteStimme.asStateFlow()
+
+    private val _favoriten = MutableStateFlow(settings.favoriteTtsVoices)
+    val favoriten: StateFlow<Set<String>> = _favoriten.asStateFlow()
+
+    private val _stimmenFehler = MutableStateFlow<String?>(null)
+
     private var stimmenJob: Job? = null
     private var suchJob: Job? = null
     private var kiJob: Job? = null
@@ -156,11 +177,34 @@ class IdeenViewModel(
         .flatMapLatest { id -> if (id == null) flowOf(null) else repository.beobachteIdee(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /**
+     * Die **eine** Stimmenliste über alle Engines (Kapitel 4.6). Sie wird neu gebaut, sobald
+     * sich die eigenen Stimmen, die Favoriten oder ein Schlüssel ändern.
+     */
+    val stimmenEintraege: StateFlow<List<StimmenEintrag>> =
+        combine(_eigeneStimmen, _favoriten, _stimmenFehler) { eigene, markierte, fehler ->
+            Stimmenliste.baue(
+                eigene = eigene,
+                eigeneNamen = settings.qwenVoiceNames,
+                favoriten = markierte,
+                alibabaSchluessel = settings.qwenTtsApiKey.isNotBlank(),
+                googleSchluessel = settings.googleTtsApiKey.isNotBlank(),
+                eigeneFehler = fehler,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val chatGptVerbunden: Boolean get() = codex.isConnected
     val chatGptKonto: String? get() = codex.email
 
     init {
         ladeEigeneStimmen()
+        // Der gemessene Pegel wandert in den Aufnahmestand, damit die Anzeige am Knopf
+        // wirklich auf die Stimme reagiert und nichts simuliert.
+        viewModelScope.launch {
+            recorder.pegel.collect { wert ->
+                if (_aufnahme.value.laeuft) _aufnahme.value = _aufnahme.value.copy(pegel = wert)
+            }
+        }
     }
 
     // ---- Ideen ----
@@ -384,33 +428,60 @@ class IdeenViewModel(
     }
 
     /**
-     * Glättet einen diktierten Text (Baustein O.3). Das Original bleibt erhalten und ist
-     * jederzeit wiederherstellbar.
+     * Bringt einen diktierten Text in gutes Deutsch (Baustein O.4).
+     *
+     * Das Original bleibt erhalten: [KorrekturStand] hält es fest, solange die korrigierte
+     * Fassung steht. Aus dem Korrektur-Knopf wird dadurch ein Rückgängig-Knopf.
      */
-    fun glaetteText(roh: String, fertig: (String) -> Unit) {
+    fun korrigiereText(roh: String, fertig: (String) -> Unit) {
         if (roh.isBlank() || _ki.value.antwortet) return
         viewModelScope.launch {
             _ki.value = KiStand(antwortet = true)
             try {
                 val antwort = codex.streamChat(
-                    instructions = GLAETTUNG,
+                    instructions = KORREKTUR,
                     turns = listOf(ChatTurn("user", roh)),
                     model = CodexModel.fromLabel(settings.model),
                     reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
                 )
+                val sauber = UmlautKorrektur.korrigiere(antwort.trim())
                 _ki.value = KiStand()
-                fertig(UmlautKorrektur.korrigiere(antwort.trim()))
+                if (sauber.isBlank()) {
+                    zeige(Meldung("Es kam keine korrigierte Fassung zurück.", istFehler = true))
+                    return@launch
+                }
+                _korrektur.value = KorrekturStand(original = roh, korrigiert = sauber)
+                fertig(sauber)
+                IdeenLog.info(
+                    "Korrektur",
+                    "korrigiereText",
+                    "Text korrigiert",
+                    mapOf("vorherChars" to roh.length, "nachherChars" to sauber.length),
+                )
             } catch (fehler: Exception) {
                 _ki.value = KiStand()
                 zeige(
                     Meldung(
                         fehlerText(fehler),
                         istFehler = true,
-                        wiederholen = { glaetteText(roh, fertig) },
+                        wiederholen = { korrigiereText(roh, fertig) },
                     ),
                 )
             }
         }
+    }
+
+    /** Stellt das ungeglättete Diktat wieder her. */
+    fun korrekturZuruecknehmen(fertig: (String) -> Unit) {
+        val stand = _korrektur.value ?: return
+        _korrektur.value = null
+        fertig(stand.original)
+        zeige(Meldung("Dein Originaltext ist wieder da."))
+    }
+
+    /** Wird der Text von Hand geändert, ist die Korrektur nicht mehr rücknehmbar. */
+    fun korrekturVergessen() {
+        _korrektur.value = null
     }
 
     fun meldeAn(activity: ComponentActivity) {
@@ -453,14 +524,9 @@ class IdeenViewModel(
         _theme.value = settings.theme
     }
 
+    /** Ein Tipp schaltet zwischen genau zwei Modi um — hell und dunkel (Baustein C). */
     fun themeWeiterschalten() {
-        setzeTheme(
-            when (settings.theme) {
-                "light" -> "dark"
-                "dark" -> "system"
-                else -> "light"
-            },
-        )
+        setzeTheme(if (settings.theme == "dark") "light" else "dark")
     }
 
     fun setzeSchriftgroesse(wert: Float) {
@@ -503,21 +569,65 @@ class IdeenViewModel(
     }
 
     /**
-     * Spielt eine Kostprobe. Die angetippte Stimme wird dabei auch übernommen — sonst hörte man
+     * Übernimmt eine Stimme aus der gemeinsamen Liste. Mit der Stimme wird die zugehörige
+     * Engine mitgeschaltet — ich wähle die Stimme, nicht die Engine (Kapitel 4.6).
+     */
+    fun waehleStimme(eintrag: StimmenEintrag) {
+        when (eintrag.anbieter) {
+            TtsProvider.GOOGLE_CLOUD -> settings.googleTtsVoice = eintrag.id
+            TtsProvider.EDGE -> settings.edgeTtsVoice = eintrag.id
+            TtsProvider.QWEN -> settings.qwenStandardVoice = eintrag.id
+            TtsProvider.QWEN_CLONE -> settings.qwenTtsVoiceId = eintrag.id
+        }
+        settings.ttsProvider = eintrag.anbieter.id
+        _gewaehlteStimme.value = eintrag.id
+        IdeenLog.info(
+            "Stimmen",
+            "waehleStimme",
+            "Stimme gewählt",
+            mapOf("anbieter" to eintrag.anbieter.id),
+        )
+    }
+
+    /**
+     * Spielt eine Kostprobe mit genau dieser Stimme und übernimmt sie dabei — sonst hörte man
      * eine Stimme, die danach gar nicht liest.
      */
-    fun probeStimme(anbieter: String, stimmeId: String) {
-        when (anbieter) {
-            TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = stimmeId
-            TtsProvider.EDGE.id -> settings.edgeTtsVoice = stimmeId
-            TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId = stimmeId
+    fun probeStimme(eintrag: StimmenEintrag) {
+        if (vorleseStand.value.quelle == "probe") {
+            vorleser.stopp()
+            return
         }
-        settings.ttsProvider = anbieter
+        waehleStimme(eintrag)
         vorleser.sprich(
             "probe",
             "Stimmprobe",
-            "So klingt diese Stimme, wenn sie deine Ideen vorliest.",
+            "So klingt diese Stimme, wenn sie deine genialen Ideen vorliest.",
         )
+    }
+
+    /** Baut die Stimmenliste neu — nötig, sobald ein Schlüssel dazukommt oder wegfällt. */
+    fun stimmenlisteAuffrischen() {
+        _favoriten.value = settings.favoriteTtsVoices
+    }
+
+    /** Probe einer eigenen Stimme, aufgerufen aus dem Stimmen-Bildschirm. */
+    fun probeEigeneStimme(id: String) {
+        val eintrag = stimmenEintraege.value.firstOrNull { it.id == id }
+            ?: StimmenEintrag(
+                id = id,
+                name = id,
+                anbieter = TtsProvider.QWEN_CLONE,
+                gruppe = Stimmenliste.GRUPPE_MEINE,
+                herkunft = TtsProvider.QWEN_CLONE.kurz,
+            )
+        probeStimme(eintrag)
+    }
+
+    fun schalteFavorit(id: String) {
+        val bisher = settings.favoriteTtsVoices
+        settings.favoriteTtsVoices = if (id in bisher) bisher - id else bisher + id
+        _favoriten.value = settings.favoriteTtsVoices
     }
 
     // ---- Eigene Stimmen (Baustein E) ----
@@ -538,7 +648,9 @@ class IdeenViewModel(
             runCatching { verzeichnis.list(schluessel) }
                 .onSuccess { liste ->
                     _eigeneStimmen.value = liste
+                    _stimmenFehler.value = null
                     IdeenLog.info("Stimmen", "ladeEigeneStimmen", "Eigene Stimmen geladen", mapOf("anzahl" to liste.size))
+                    pruefeGemerkteStimme()
                     if (zeigeFehler && liste.isEmpty()) {
                         zeige(
                             Meldung(
@@ -550,6 +662,9 @@ class IdeenViewModel(
                 }
                 .onFailure { fehler ->
                     _eigeneStimmen.value = emptyList()
+                    // Der Fehlschlag einer Engine leert das Menü nicht — die betroffene Gruppe
+                    // zeigt eine eigene Zeile, alle anderen bleiben bedienbar (Kapitel 4.6).
+                    _stimmenFehler.value = fehler.message
                     IdeenLog.warn("Stimmen", "ladeEigeneStimmen", "Liste nicht geladen", mapOf("art" to fehler.javaClass.simpleName))
                     zeige(
                         Meldung(
@@ -576,6 +691,7 @@ class IdeenViewModel(
         settings.qwenTtsVoiceId = id
         settings.ttsProvider = TtsProvider.QWEN_CLONE.id
         _gewaehlteEigeneStimme.value = id
+        _gewaehlteStimme.value = id
     }
 
     fun loescheEigeneStimme(id: String) {
@@ -695,6 +811,42 @@ class IdeenViewModel(
         zeige(Meldung("Protokoll geleert."))
     }
 
+    /**
+     * Die gemerkte Stimme. Ist sie nicht mehr verfügbar (Stimme gelöscht, Schlüssel weg), fällt
+     * die App auf Edge zurück und sagt es einmal im Klartext (Kapitel 4.6).
+     */
+    private fun aktuelleStimmenId(): String = when (settings.ttsProvider) {
+        TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice
+        TtsProvider.QWEN.id -> settings.qwenStandardVoice
+        TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId
+        else -> settings.edgeTtsVoice
+    }
+
+    /** Prüft nach dem Laden, ob die gemerkte Stimme noch existiert. */
+    private fun pruefeGemerkteStimme() {
+        val id = aktuelleStimmenId()
+        val anbieter = settings.ttsProvider
+        val nochDa = when (anbieter) {
+            TtsProvider.QWEN_CLONE.id -> _eigeneStimmen.value.any { it.id == id }
+            TtsProvider.QWEN.id -> settings.qwenTtsApiKey.isNotBlank()
+            TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsApiKey.isNotBlank()
+            else -> true
+        }
+        if (nochDa || id.isBlank() && anbieter == TtsProvider.EDGE.id) return
+        if (!nochDa) {
+            settings.ttsProvider = TtsProvider.EDGE.id
+            _gewaehlteStimme.value = settings.edgeTtsVoice
+            zeige(
+                Meldung(
+                    "Die zuletzt gewählte Stimme ist nicht mehr verfügbar. Es liest jetzt " +
+                        "Microsoft Edge vor — such dir in den Einstellungen eine neue aus.",
+                    istFehler = true,
+                    zuEinstellungen = true,
+                ),
+            )
+        }
+    }
+
     // ---- Hilfen ----
 
     fun zeige(meldung: Meldung) {
@@ -761,11 +913,29 @@ class IdeenViewModel(
          * keine Internetadressen, keine Quellenangaben.
          */
         const val TTS_REGEL =
-            "Der Text wird vorgelesen. Schreib ihn deshalb vorlesefreundlich: ganze Sätze, " +
-                "keine Sonderzeichen, keine Aufzählungszeichen, keine Sternchen oder Rauten, " +
-                "keine Internetadressen, keine Quellenangaben und keine Klammerzusätze wie " +
-                "„vgl." + "“ oder Seitenzahlen. Zahlen und Abkürzungen ausschreiben, wo es " +
-                "natürlich klingt."
+            "Dieser Text wird vorgelesen. Schreib ihn in ganzen, gesprochenen Sätzen. " +
+                "Verzichte auf Markdown, Aufzählungszeichen, Sternchen, Rauten, Klammern, " +
+                "Tabellen, Emoji und Abkürzungen. Schreib Zahlen, Einheiten und Abkürzungen " +
+                "aus. Keine Internetadressen, keine Quellenangaben. Antworte auf Deutsch mit " +
+                "echten Umlauten (ä ö ü Ä Ö Ü ß)."
+
+        /**
+         * Der Auftrag für den Korrektur-Knopf. Bewusst eng gefasst: Inhalt bleibt, nur die
+         * Sprache wird besser. Gekürzt werden ausschliesslich echte Wiederholungen.
+         */
+        const val KORREKTUR =
+            "Du bekommst einen diktierten Text. Erkenne, was gemeint ist, und gib ihn in " +
+                "grammatikalisch und orthografisch einwandfreiem Deutsch zurück: richtige " +
+                "Zeichensetzung, saubere Satzstellung, sinnvolle Absätze, Füllwörter und " +
+                "Versprecher raus.\n\n" +
+                "Strenge Regeln:\n" +
+                "- Lass keine Information weg. Jede Aussage des Originals steht auch in deiner Fassung.\n" +
+                "- Füge keine neue Information hinzu, erfinde nichts, deute nichts aus.\n" +
+                "- Kürzen darfst du ausschliesslich echte Wiederholungen: Wird dieselbe Sache " +
+                "zweimal gesagt, bleibt sie einmal stehen.\n" +
+                "- Behalte Ton und Sichtweise des Originals bei; aus einer Notiz wird kein Aufsatz.\n" +
+                "- Gib nur den korrigierten Text zurück, ohne Vorrede, ohne Anführungszeichen, " +
+                "ohne Kommentar."
 
         const val GLAETTUNG =
             "Bring den folgenden diktierten Text in gutes Deutsch: Füllwörter raus, Satzzeichen " +

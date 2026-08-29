@@ -37,6 +37,8 @@ data class VorleseStand(
     val titel: String = "",
     val absatzNummer: Int = 0,
     val absaetzeGesamt: Int = 0,
+    /** Der Wortlaut des laufenden Absatzes — die Anzeige hebt ihn hervor (N.7). */
+    val absatzText: String = "",
     val fehler: String? = null,
 )
 
@@ -133,6 +135,7 @@ class Vorleser(
             _stand.value = _stand.value.copy(
                 zustand = VorleseZustand.SPRICHT,
                 absatzNummer = index + 1,
+                absatzText = absaetze[index],
             )
             VorleseDienst.aktualisiere(
                 appContext,
@@ -168,7 +171,11 @@ class Vorleser(
     /** Rückfall für Microsoft Edge: Absatz für Absatz über den vorhandenen Player. */
     private suspend fun reihum(absaetze: List<String>) {
         absaetze.forEachIndexed { index, absatz ->
-            _stand.value = _stand.value.copy(zustand = VorleseZustand.SPRICHT, absatzNummer = index + 1)
+            _stand.value = _stand.value.copy(
+                zustand = VorleseZustand.SPRICHT,
+                absatzNummer = index + 1,
+                absatzText = absatz,
+            )
             VorleseDienst.aktualisiere(appContext, _stand.value.titel, index + 1, absaetze.size, pausiert = false)
             suspendCancellableCoroutine { fortsetzung ->
                 fortsetzung.invokeOnCancellation { ttsManager.stop() }
