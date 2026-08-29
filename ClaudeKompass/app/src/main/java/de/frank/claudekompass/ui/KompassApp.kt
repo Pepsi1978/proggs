@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Terminal
@@ -223,7 +223,7 @@ private fun BereichsLeiste(aktiv: String, beiWahl: (String) -> Unit) {
         BereichsKnopf(Bereich.SLASH, Icons.Default.Terminal, aktiv, beiWahl)
         BereichsKnopf(Bereich.CONFIG, Icons.Default.Tune, aktiv, beiWahl)
         BereichsKnopf(Bereich.PRAXIS, Icons.Default.Lightbulb, aktiv, beiWahl)
-        BereichsKnopf(Bereich.CHAT, Icons.Default.Chat, aktiv, beiWahl)
+        BereichsKnopf(Bereich.CHAT, Icons.AutoMirrored.Filled.Chat, aktiv, beiWahl)
     }
 }
 

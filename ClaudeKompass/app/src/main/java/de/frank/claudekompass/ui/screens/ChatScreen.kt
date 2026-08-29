@@ -26,13 +26,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -208,7 +208,7 @@ private fun SitzungsListe(
 
         if (sitzungen.isEmpty()) {
             LeerZustand(
-                symbol = Icons.Default.Chat,
+                symbol = Icons.AutoMirrored.Filled.Chat,
                 ueberschrift = "Noch kein Gespräch",
                 text = "Leg eines an und frag alles, was du über Claude Code wissen willst. " +
                     "Slash-Befehle und Einstellungen kommen dabei von selbst zur Sprache.",
@@ -311,7 +311,7 @@ private fun Gespraech(
         if (nachrichten.isEmpty()) {
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 LeerZustand(
-                    symbol = Icons.Default.Chat,
+                    symbol = Icons.AutoMirrored.Filled.Chat,
                     ueberschrift = "Frag einfach los",
                     text = "Zum Beispiel: Wie halte ich das Gedächtnis in langen Sitzungen " +
                         "sauber? Oder: Welche Einstellung verhindert, dass Claude Zugangsdaten " +
@@ -414,7 +414,7 @@ private fun NachrichtBlase(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = if (spricht) Icons.Default.Stop else Icons.Default.VolumeUp,
+                        imageVector = if (spricht) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = if (spricht) "Vorlesen anhalten" else "Antwort vorlesen",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(17.dp),

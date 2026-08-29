@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -415,7 +415,7 @@ private fun KnopfLeiste(
     val farben = LocalKompassFarben.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         WerkzeugKnopf(
-            symbol = if (spricht) Icons.Default.Stop else Icons.Default.VolumeUp,
+            symbol = if (spricht) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
             text = when {
                 laedtTon -> "Lädt"
                 spricht -> "Stopp"
@@ -638,7 +638,7 @@ private fun FrageZeile(
                     Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         WerkzeugKnopf(
-                            symbol = if (spricht) Icons.Default.Stop else Icons.Default.VolumeUp,
+                            symbol = if (spricht) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
                             text = if (spricht) "Stopp" else "Vorlesen",
                             beschreibung = "Diese Antwort vorlesen",
                             aktiv = spricht,
