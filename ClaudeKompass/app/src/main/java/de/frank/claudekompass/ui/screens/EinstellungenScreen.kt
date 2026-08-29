@@ -242,53 +242,45 @@ fun EinstellungenScreen(
                     }
                 }
 
-                TtsAnbieter.QWEN -> {
-                    Block("Meine Stimme — Alibaba") {
-                        if (zustand.eigeneStimmen.isEmpty()) {
-                            Zeilentext(
-                                "Noch keine eigene Stimme geladen. Tipp auf den Knopf darunter " +
-                                    "— dafür braucht es den Alibaba-Schlüssel von oben.",
-                            )
-                            Spacer(Modifier.height(Mass.abstandKlein))
-                            Aktionsknopf(
-                                text = "Meine Stimmen laden",
-                                zurueckhaltend = true,
-                                laedt = zustand.stimmenLaden,
-                            ) {
-                                viewModel.ladeEigeneStimmen()
-                            }
-                        } else {
-                            Zeilentext(
-                                "Hier steht, mit welcher deiner Stimmen vorgelesen wird. Der " +
-                                    "Abspielknopf daneben lässt sie sofort hören.",
-                            )
-                            Klappauswahl(
-                                beschriftung = "Ausgewählte Stimme",
-                                punkte = zustand.eigeneStimmen.map { stimme ->
-                                    AuswahlPunkt(
-                                        wert = stimme.id,
-                                        text = stimme.name,
-                                        zusatz = "angelegt am ${stimme.angelegtAm}",
-                                    )
-                                },
-                                gewaehlt = zustand.qwenStimme.takeIf { it.isNotBlank() },
-                                beiWahl = { viewModel.setzeStimme(TtsAnbieter.QWEN, it) },
-                                platzhalter = "Noch keine ausgewählt",
-                                beiProbe = {
-                                    viewModel.probeAbspielen(TtsAnbieter.QWEN, zustand.qwenStimme)
-                                },
-                                probeLaeuft = probeLaeuft,
-                                beiProbeStopp = viewModel::stoppeProbe,
-                            )
-                        }
-                    }
-                }
+                TtsAnbieter.QWEN -> Unit // Auswahl und Aufnahme stehen im Block darunter.
             }
         }
 
         // --- Eigene Stimme ----------------------------------------------------------------
         item {
             Block("Meine eigene Stimme") {
+                // Die Auswahl steht oben: Wer mehrere Stimmen hat, will zuerst sehen und
+                // aendern koennen, mit welcher gerade vorgelesen wird. Eine neue aufzunehmen
+                // ist der seltenere Fall und steht deshalb darunter.
+                if (zustand.eigeneStimmen.isNotEmpty()) {
+                    Klappauswahl(
+                        beschriftung = "Wird zum Vorlesen benutzt",
+                        punkte = zustand.eigeneStimmen.map { stimme ->
+                            AuswahlPunkt(
+                                wert = stimme.id,
+                                text = stimme.name,
+                                zusatz = "angelegt am ${stimme.angelegtAm}",
+                            )
+                        },
+                        gewaehlt = zustand.qwenStimme.takeIf { it.isNotBlank() },
+                        beiWahl = { viewModel.setzeStimme(TtsAnbieter.QWEN, it) },
+                        platzhalter = "Noch keine ausgewählt",
+                        beiProbe = {
+                            viewModel.probeAbspielen(TtsAnbieter.QWEN, zustand.qwenStimme)
+                        },
+                        probeLaeuft = vorlesen.quelleId == VorleseManager.PROBE_ID &&
+                            vorlesen.stufe != VorleseStufe.AUS,
+                        beiProbeStopp = viewModel::stoppeProbe,
+                    )
+                    if (zustand.ttsAnbieter != TtsAnbieter.QWEN) {
+                        Zeilentext(
+                            "Vorgelesen wird gerade mit ${zustand.ttsAnbieter.label}. Stell " +
+                                "oben um, damit diese Stimme zum Zug kommt.",
+                        )
+                    }
+                    Spacer(Modifier.height(Mass.abstand))
+                }
+
                 Zeilentext(
                     "Nimm einmal etwa eine Minute auf. Danach liest die App mit deiner Stimme " +
                         "vor. Die Aufnahme geht zu Alibaba Model Studio — dafür braucht es den " +
@@ -356,44 +348,49 @@ fun EinstellungenScreen(
                     }
                 }
 
-                zustand.eigeneStimmen.forEach { stimme ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.setzeStimme(TtsAnbieter.QWEN, stimme.id) }
-                            .padding(vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stimme.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (stimme.id == zustand.qwenStimme) {
-                                    FontWeight.SemiBold
-                                } else {
-                                    FontWeight.Normal
-                                },
-                                color = if (stimme.id == zustand.qwenStimme) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                            Text(
-                                text = "Angelegt am ${stimme.angelegtAm}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = LocalKompassFarben.current.textGedaempft,
+                if (zustand.eigeneStimmen.isNotEmpty()) {
+                    Spacer(Modifier.height(Mass.abstand))
+                    Untertitel("Vorhandene Stimmen")
+                    zustand.eigeneStimmen.forEach { stimme ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stimme.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (stimme.id == zustand.qwenStimme) {
+                                        FontWeight.SemiBold
+                                    } else {
+                                        FontWeight.Normal
+                                    },
+                                    color = if (stimme.id == zustand.qwenStimme) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                )
+                                Text(
+                                    text = if (stimme.id == zustand.qwenStimme) {
+                                        "ausgewählt - angelegt am ${stimme.angelegtAm}"
+                                    } else {
+                                        "angelegt am ${stimme.angelegtAm}"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LocalKompassFarben.current.textGedaempft,
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Die Stimme ${stimme.name} löschen",
+                                tint = LocalKompassFarben.current.textGedaempft,
+                                modifier = Modifier
+                                    .size(Mass.tippflaeche)
+                                    .clickable { viewModel.loescheEigeneStimme(stimme.id) }
+                                    .padding(13.dp),
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Diese Stimme löschen",
-                            tint = LocalKompassFarben.current.textGedaempft,
-                            modifier = Modifier
-                                .size(Mass.tippflaeche)
-                                .clickable { viewModel.loescheEigeneStimme(stimme.id) }
-                                .padding(13.dp),
-                        )
                     }
                 }
             }
