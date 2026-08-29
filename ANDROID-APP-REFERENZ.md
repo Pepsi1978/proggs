@@ -11,7 +11,7 @@
 Sage ich **„nutze die Referenzdatei"**, **„bau nach der Android-Referenz"** oder füge ich diese Datei in
 den Chat ein, dann gilt:
 
-1. **Jeder Baustein A bis L wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
+1. **Jeder Baustein A bis M wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
    du Hell/Dunkel-Modus?" oder „soll Vorlesen rein?". Die Antwort ist immer ja.
 2. **Einzige Ausnahme:** Ein Baustein ergibt in dieser konkreten App *nachweislich* keinen Sinn (z. B.
    Vorlesen in einer App, die überhaupt keinen Text anzeigt). Dann — und nur dann — **melde es einmal
@@ -21,12 +21,14 @@ den Chat ein, dann gilt:
    > Ich lasse ihn weg. Sag Bescheid, wenn er trotzdem rein soll.
 
    Kein Baustein wird stillschweigend weggelassen. Im Zweifel: **einbauen**.
+   **Baustein M (echte Umlaute) ist von dieser Ausnahme ausgenommen** — er gilt immer, in jeder App.
 3. **Diese Datei ersetzt nicht die Projekt-Regeln** aus `CLAUDE.md` (Version-Bump, Commit+Push vor Build,
    Deutsch mit echten Umlauten, Secrets aus `~/SK/`, Bug-Almanach-Kurzcheck). Sie kommt *zusätzlich*.
 4. **Reihenfolge beim Neubau:** Grundgerüst (Kap. 9) → Theme (A) → Kopfleiste (C) → Einstellungen (G) →
    Fold-Layout (B) → Fehler-/Lade-/Leerzustände (L, von Anfang an mitdenken) → App-Logik →
    Vorlesen (D/E) → Transkription (F) → Suche (K) → App-Sperre (I) → Sicherung (J) →
-   Version sichtbar (H).
+   Version sichtbar (H). **Baustein M (Umlaute) läuft durchgehend mit** — bei jedem Text, der
+   entsteht, nicht als Schritt am Ende.
 5. **Bestehende App erweitern:** Zuerst prüfen, welche Bausteine schon da sind (Checkliste Kap. 10),
    dann nur die fehlenden nachrüsten. Nichts doppelt bauen, nichts Bestehendes wegwerfen.
 
@@ -418,6 +420,69 @@ Deutsch, mit einem Weg nach vorn.
 
 ---
 
+## 8f. Baustein M — Nur echte deutsche Umlaute ⭐ PFLICHT
+
+**Grundregel: Innerhalb der App erscheinen ausschließlich echte Umlaute — ä ö ü Ä Ö Ü ß.**
+Niemals die Ersatzschreibung „ae", „oe", „ue", „ss". Das gilt für **jeden** Text, den ich zu sehen
+bekomme, ohne Ausnahme:
+
+| Textart | Regel |
+|---|---|
+| **Angezeigter Text** (Oberfläche) | Alle `strings.xml`, alle Beschriftungen, Knöpfe, Überschriften, Platzhalter, `contentDescription`, Fehler- und Hinweismeldungen, Benachrichtigungen, Widget-Texte, App-Name |
+| **Transkribierter Text** (Baustein F) | Was aus der Spracherkennung kommt, wird mit echten Umlauten eingefügt |
+| **KI-erzeugter Text** | Was ein Sprachmodell für die App schreibt (Zusammenfassungen, Antworten, Vorschläge), enthält echte Umlaute |
+| **Was ich selbst eintippe** | bleibt unangetastet — meine Eingabe wird nie umgeschrieben |
+
+### M.1 Oberfläche
+- Alle Textdateien **UTF-8 ohne BOM**. Keine `ä`-Escapes und keine HTML-Entitäten in
+  `strings.xml` — dort steht das Zeichen selbst.
+- Kein „ae/oe/ue/ss" in Quelltext-Zeichenketten, auch nicht in Log-Meldungen und Kommentaren.
+- **Prüfung als Test:** Ein Unit-Test läuft über `res/values/strings.xml` und schlägt fehl, sobald ein
+  Wort aus der Ersatzschreib-Liste auftaucht (siehe M.4). Damit rutscht es nicht durch.
+
+### M.2 Transkription
+- An der Quelle richtig anfordern: `language = "de"` (Baustein F). Whisper liefert damit von sich aus
+  echte Umlaute — die Ersatzschreibung entsteht fast nie im Modell, sondern erst durch falsche
+  Weiterverarbeitung.
+- **Auf dem Weg zum Textfeld nichts kaputtmachen:** keine ASCII-Normalisierung, kein
+  `Normalizer.NFD` mit anschließendem Entfernen der Akzentzeichen, keine Transliteration, kein
+  `toByteArray()` mit falschem Zeichensatz. Von der Antwort bis zum Textfeld durchgehend UTF-8.
+- Kommt trotzdem Ersatzschreibung an, greift die Wörterbuch-Korrektur aus M.4.
+
+### M.3 KI-erzeugter Text
+- **Jeder Systemprompt** an ein Sprachmodell enthält den Satz:
+  > „Antworte auf Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß). Verwende niemals die Ersatzschreibung
+  > ae, oe, ue oder ss."
+- Die Antwort wird vor der Anzeige durch dieselbe Wörterbuch-Korrektur geschickt.
+- Auch der Text, der zum **Vorlesen** geht (Baustein D), läuft vorher durch — sonst spricht die Stimme
+  „Bueromoebel" statt „Büromöbel".
+
+### M.4 Wie korrigiert wird (wichtig: kein blindes Suchen und Ersetzen)
+
+**Verboten:** eine pauschale Ersetzung `ae → ä`, `oe → ö`, `ue → ü`, `ss → ß`. Das zerstört richtige
+Wörter — aus „Michael" würde „Michäl", aus „Aerodynamik" „Ärodynamik", aus „Poesie" „Pösie", aus
+„Duell" „Düll", aus „Messer" „Meßer".
+
+**Richtig:** eine gepflegte **Wortliste** bekannter Ersatzschreibungen, die als **ganze Wörter**
+(Wortgrenzen, Groß-/Kleinschreibung egal) ersetzt werden — plus deutsche Zusammensetzungen davon:
+
+```
+ueber → über · fuer → für · koennen → können · muessen → müssen · moechte → möchte
+waehlen → wählen · aendern → ändern · loeschen → löschen · schliessen → schließen
+groesse → Größe · gruen → grün · zurueck → zurück · naechste → nächste · hoeren → hören
+oeffnen → öffnen · erklaeren → erklären · verfuegbar → verfügbar · gueltig → gültig
+strasse → Straße · gruss → Gruß · massnahme → Maßnahme · dass ≠ daß (bleibt „dass")
+```
+
+- Die Liste liegt an **einer** Stelle im Projekt (`de.<paket>.text.UmlautKorrektur`) und wird von
+  Transkription, KI-Antwort und Vorlese-Aufbereitung gemeinsam benutzt.
+- **Unsicher heißt: unverändert lassen.** Steht ein Wort nicht in der Liste, wird es nicht angefasst.
+- Jede vorgenommene Ersetzung wird protokolliert (Wort vorher/nachher), damit die Liste wachsen kann.
+- **Ausgenommen von jeder Umlaut-Regel:** Paketnamen, Klassennamen, Variablennamen, Dateinamen, Pfade,
+  URLs, JSON-Schlüssel, API-Parameter und Schlüssel-Zeichenketten — die bleiben ASCII.
+
+---
+
 ## 9. Technische Grundausstattung
 
 **Stack (Standard, ohne Rückfrage):**
@@ -437,8 +502,8 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 `CortexAndroid/app/src/main/java/de/frank/cortex/observability/CortexLog.kt`.
 **Keine Schlüssel und keine persönlichen Daten ins Log.**
 
-**Sprache:** Alle Texte in der Oberfläche auf **Deutsch mit echten Umlauten** (ä ö ü ß) — auch
-`contentDescription`, Fehlermeldungen und Log-Meldungen.
+**Sprache:** Deutsch mit **echten Umlauten** überall — die vollständigen Regeln dazu stehen in
+**Baustein M** (Kapitel 8f) und gelten für angezeigten, transkribierten und KI-erzeugten Text.
 
 ---
 
@@ -456,6 +521,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **J** Export/Import als Datei; Drive-Sicherung im `appDataFolder`; `backup_rules.xml` gepflegt
 - [ ] **K** Volltextsuche (Room FTS4) über alle Inhalte, mit Hervorhebung und Leerzustand
 - [ ] **L** Kein stiller Fehlschlag: Klartext-Meldung + Wiederholen, Lade- und Leerzustände überall
+- [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
 - [ ] Bauen und Tests grün → committen → pushen → auf dem Fold 8 installiert
 - [ ] Jeder weggelassene Baustein wurde mit einem Satz begründet gemeldet
 
@@ -492,3 +558,4 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 |---|---|
 | 29.08.2026, 11:19 Uhr | Erstfassung: Bausteine A–H aus PerfectMoment, CortexAndroid, BestJournalAndroid und TerminalVoiceOverlay zusammengetragen |
 | 29.08.2026, 11:19 Uhr | Bausteine I (App-Sperre), J (Sicherung), K (Volltextsuche) und L (Fehler-, Lade- und Leerzustände) ergänzt — nach Durchsicht aller 14 Android-Apps im Repo |
+| 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
