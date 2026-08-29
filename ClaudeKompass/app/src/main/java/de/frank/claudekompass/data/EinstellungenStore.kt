@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Zwei getrennte Ablagen mit Absicht:
  *  - [offen] für alles Harmlose (Erscheinungsbild, Sprechtempo, gewählte Stimme),
- *  - [geheim] ausschliesslich für API-Schlüssel, verschlüsselt.
+ *  - [geheim] ausschließlich für API-Schlüssel, verschlüsselt.
  *
  * Lässt sich die verschlüsselte Ablage auf einem Gerät nicht öffnen — das kommt bei
  * beschädigtem Schlüsselspeicher und auf manchen Emulator-Abbildern vor —, werden Schlüssel

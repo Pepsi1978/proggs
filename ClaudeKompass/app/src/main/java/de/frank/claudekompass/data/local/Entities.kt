@@ -8,9 +8,9 @@ import androidx.room.PrimaryKey
 /**
  * Ein Nachschlage-Eintrag: ein Slash-Befehl, eine Config-Einstellung oder eine Best Practice.
  *
- * Alle drei Bereiche liegen bewusst in EINER Tabelle. Sie verhalten sich fuer den Benutzer
- * identisch (vorlesen, nachfragen, ausfuehrlicher erklaeren, zurueck) — getrennte Tabellen
- * haetten denselben Code dreimal erzwungen und damit drei Stellen zum Auseinanderlaufen.
+ * Alle drei Bereiche liegen bewusst in EINER Tabelle. Sie verhalten sich für den Benutzer
+ * identisch (vorlesen, nachfragen, ausführlicher erklären, zurück) — getrennte Tabellen
+ * hätten denselben Code dreimal erzwungen und damit drei Stellen zum Auseinanderlaufen.
  */
 @Entity(
     tableName = "eintraege",
@@ -20,13 +20,13 @@ data class EintragEntity(
     @PrimaryKey val id: String,
     /** `slash`, `config` oder `praxis`. */
     val bereich: String,
-    /** Wie der Eintrag heisst: `/compact`, `autoCompactEnabled`, „Hooks statt Gedaechtnis". */
+    /** Wie der Eintrag heisst: `/compact`, `autoCompactEnabled`, „Hooks statt Gedächtnis". */
     val name: String,
-    /** Ein Satz fuer die Liste. */
+    /** Ein Satz für die Liste. */
     val kurz: String,
-    /** Die aktuell angezeigte Erklaerung. Wird durch „Ausfuehrlicher" ersetzt. */
+    /** Die aktuell angezeigte Erklärung. Wird durch „Ausführlicher" ersetzt. */
     val erklaerung: String,
-    /** Stufe der aktuellen Erklaerung: 0 = Grundfassung, 1..n = jeweils ausfuehrlicher. */
+    /** Stufe der aktuellen Erklärung: 0 = Grundfassung, 1..n = jeweils ausführlicher. */
     val stufe: Int = 0,
     /** In welcher Claude-Code-Version der Eintrag dazukam. Leer, solange unbekannt. */
     val seitVersion: String = "",
@@ -36,25 +36,25 @@ data class EintragEntity(
     /** Wurde der Eintrag aus Claude Code entfernt? Dann steht er im Klapp-Bereich ganz unten. */
     val entfernt: Boolean = false,
     val entferntInVersion: String = "",
-    /** Was die Aufgabe uebernommen hat — oder der Hinweis, dass es keinen Ersatz gibt. */
+    /** Was die Aufgabe übernommen hat — oder der Hinweis, dass es keinen Ersatz gibt. */
     val ersatz: String = "",
     /**
      * Markierung „in diesem Aktualisierungslauf neu dazugekommen".
-     * Beim naechsten Lauf faellt sie weg: dann gehoert der Eintrag zum Bestand.
+     * Beim nächsten Lauf fällt sie weg: dann gehört der Eintrag zum Bestand.
      */
     val neuImLauf: Long = 0L,
     /** Der englische Originaltext aus der offiziellen Dokumentation, als Beleg. */
     val quelleEnglisch: String = "",
-    /** Kleingeschriebener Name ohne fuehrenden Schraegstrich — dient der Sortierung. */
+    /** Kleingeschriebener Name ohne führenden Schrägstrich — dient der Sortierung. */
     val sortierName: String,
     val zuletztGeaendert: Long = System.currentTimeMillis(),
 )
 
 /**
- * Eine frühere Fassung einer Erklaerung.
+ * Eine frühere Fassung einer Erklärung.
  *
- * Der Zurueck-Pfeil braucht sie: „Ausfuehrlicher" schreibt die alte Fassung hierhin, bevor die
- * neue in den Eintrag wandert. Ohne diese Tabelle waere die kurze Fassung unwiederbringlich weg.
+ * Der Zurück-Pfeil braucht sie: „Ausführlicher" schreibt die alte Fassung hierhin, bevor die
+ * neue in den Eintrag wandert. Ohne diese Tabelle wäre die kurze Fassung unwiederbringlich weg.
  */
 @Entity(
     tableName = "erklaerung_historie",
@@ -100,7 +100,7 @@ data class FrageEntity(
     val erstelltAm: Long = System.currentTimeMillis(),
 )
 
-/** Ein Gespraech im Chat-Bereich. Neue entstehen ueber das Plus. */
+/** Ein Gespraech im Chat-Bereich. Neue entstehen über das Plus. */
 @Entity(tableName = "chat_sitzungen")
 data class ChatSitzungEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -137,7 +137,7 @@ data class AktualisierungEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val gestartetAm: Long = System.currentTimeMillis(),
     val beendetAm: Long = 0L,
-    /** Die Claude-Code-Version, fuer die dieser Lauf den Stand gehoben hat. */
+    /** Die Claude-Code-Version, für die dieser Lauf den Stand gehoben hat. */
     val cliVersion: String = "",
     val neuAnzahl: Int = 0,
     val entferntAnzahl: Int = 0,

@@ -6,9 +6,9 @@ import java.nio.ByteOrder
 import kotlin.math.sqrt
 
 /**
- * Zerlegt eine zu grosse Aufnahme in Teile, die der Dienst noch annimmt (Referenz, Baustein F).
+ * Zerlegt eine zu große Aufnahme in Teile, die der Dienst noch annimmt (Referenz, Baustein F).
  *
- * Hintergrund: Groq lehnt zu grosse Uploads mit Fehler 413 ab, und dieser Fehler ist NICHT
+ * Hintergrund: Groq lehnt zu große Uploads mit Fehler 413 ab, und dieser Fehler ist NICHT
  * wiederholbar — ein zu langes Diktat wäre damit vollständig verloren. Am 29.08.2026 ist genau
  * das passiert: 15,4 Minuten ergaben 29,5 MB, der Dienst lehnte ab, der ganze Text war weg.
  *

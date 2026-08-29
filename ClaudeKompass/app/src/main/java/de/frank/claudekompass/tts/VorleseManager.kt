@@ -179,7 +179,7 @@ class VorleseManager(
             offen.clear()
         }
 
-        // Vorausschau: den laufenden plus die nächsten beiden Absätze anstossen.
+        // Vorausschau: den laufenden plus die nächsten beiden Absätze anstoßen.
         repeat(minOf(VORAUSSCHAU + 1, absaetze.size)) { beauftrage(it) }
 
         for (index in absaetze.indices) {

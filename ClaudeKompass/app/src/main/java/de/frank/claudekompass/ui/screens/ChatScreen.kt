@@ -279,7 +279,7 @@ private fun Gespraech(
     val farben = LocalKompassFarben.current
     val listenZustand = rememberLazyListState()
 
-    // Bei neuer Nachricht ans Ende springen — sonst schreibt die Antwort ausserhalb des Bildes.
+    // Bei neuer Nachricht ans Ende springen — sonst schreibt die Antwort außerhalb des Bildes.
     LaunchedEffect(nachrichten.size, nachrichten.lastOrNull()?.text?.length) {
         if (nachrichten.isNotEmpty()) listenZustand.animateScrollToItem(nachrichten.lastIndex)
     }

@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.Flow
 interface EintragDao {
 
     /**
-     * Alle sichtbaren Eintraege eines Bereichs, alphabetisch.
+     * Alle sichtbaren Einträge eines Bereichs, alphabetisch.
      *
-     * `sortierName` statt `name`: sonst stuenden alle Slash-Befehle unter „/" und die
-     * Sortierung waere case-abhaengig (`Bash` vor `agent`).
+     * `sortierName` statt `name`: sonst stünden alle Slash-Befehle unter „/" und die
+     * Sortierung wäre case-abhängig (`Bash` vor `agent`).
      */
     @Query("SELECT * FROM eintraege WHERE bereich = :bereich AND entfernt = 0 ORDER BY sortierName ASC")
     fun beobachteAktive(bereich: String): Flow<List<EintragEntity>>
@@ -42,10 +42,10 @@ interface EintragDao {
     suspend fun aktualisiere(eintrag: EintragEntity)
 
     /**
-     * Loescht die Neu-Markierung aller Eintraege, die NICHT aus dem laufenden Durchgang stammen.
+     * Löscht die Neu-Markierung aller Einträge, die NICHT aus dem laufenden Durchgang stammen.
      *
      * Genau das macht die farbliche Hervorhebung sitzungsbezogen: was beim letzten Mal neu war,
-     * gehoert jetzt zum Bestand und wird nicht mehr hervorgehoben.
+     * gehört jetzt zum Bestand und wird nicht mehr hervorgehoben.
      */
     @Query("UPDATE eintraege SET neuImLauf = 0 WHERE neuImLauf != :laufId")
     suspend fun entferneAlteNeuMarkierungen(laufId: Long)
@@ -57,7 +57,7 @@ interface ErklaerungDao {
     @Insert
     suspend fun sichere(eintrag: ErklaerungHistorieEntity): Long
 
-    /** Die jeweils zuletzt gesicherte Fassung — der Zurueck-Pfeil holt genau diese. */
+    /** Die jeweils zuletzt gesicherte Fassung — der Zurück-Pfeil holt genau diese. */
     @Query("SELECT * FROM erklaerung_historie WHERE eintragId = :eintragId ORDER BY id DESC LIMIT 1")
     suspend fun letzte(eintragId: String): ErklaerungHistorieEntity?
 
@@ -107,7 +107,7 @@ interface ChatDao {
     @Query("SELECT * FROM chat_nachrichten WHERE sitzungId = :sitzungId ORDER BY id ASC")
     suspend fun ladeNachrichten(sitzungId: Long): List<ChatNachrichtEntity>
 
-    /** Alle Nachrichten aller Gespraeche — fuer den Neuaufbau des Suchindex. */
+    /** Alle Nachrichten aller Gespräche — für den Neuaufbau des Suchindex. */
     @Query("SELECT * FROM chat_nachrichten ORDER BY id ASC")
     suspend fun ladeAlleNachrichten(): List<ChatNachrichtEntity>
 
@@ -151,7 +151,7 @@ interface AktualisierungDao {
     @Query("SELECT * FROM aktualisierungen WHERE id = :id")
     suspend fun lade(id: Long): AktualisierungEntity?
 
-    /** Der letzte abgeschlossene Lauf liefert die Kopfzeile „Aktualisiert fuer Version …". */
+    /** Der letzte abgeschlossene Lauf liefert die Kopfzeile „Aktualisiert für Version …". */
     @Query("SELECT * FROM aktualisierungen WHERE status = 'fertig' ORDER BY id DESC LIMIT 1")
     fun beobachteLetztenErfolg(): Flow<AktualisierungEntity?>
 

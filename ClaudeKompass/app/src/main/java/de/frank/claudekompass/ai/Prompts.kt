@@ -9,7 +9,7 @@ import org.json.JSONObject
  *
  * Alle an einer Stelle, damit sich der Ton nicht auseinanderentwickelt. Drei Vorgaben ziehen
  * sich durch alle: Deutsch mit echten Umlauten, das Niveau einer zehnten Klasse Realschule,
- * und nichts erfinden — was das Modell nicht weiss, sagt es.
+ * und nichts erfinden — was das Modell nicht weiß, sagt es.
  */
 object Prompts {
 

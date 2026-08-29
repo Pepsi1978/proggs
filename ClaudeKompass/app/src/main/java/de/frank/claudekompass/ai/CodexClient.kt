@@ -47,7 +47,7 @@ import org.json.JSONObject
  * öffnet die Bestätigungsseite. Dort wird der Code eingetippt, danach holt sich die App den
  * Zugang ab. Ein Passwort tippt man nie in die App — das ist der Sinn dieses Verfahrens.
  *
- * Die Zugangsdaten liegen ausschliesslich verschlüsselt.
+ * Die Zugangsdaten liegen ausschließlich verschlüsselt.
  */
 class CodexClient(context: Context) {
 

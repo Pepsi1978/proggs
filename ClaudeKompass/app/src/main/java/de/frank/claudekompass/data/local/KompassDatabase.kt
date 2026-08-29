@@ -51,7 +51,7 @@ abstract class KompassDatabase : RoomDatabase() {
  * Vereinheitlicht Text für die Suche: klein geschrieben, Umlaute aufgelöst, alles andere als
  * Trennung.
  *
- * Damit findet „Uber", „über" und „ueber" dasselbe. Wichtig: Genau diese Funktion muss beim
+ * Damit findet „Uber", „über" und „über" dasselbe. Wichtig: Genau diese Funktion muss beim
  * Indizieren UND beim Suchen benutzt werden — sonst passen Index und Anfrage nicht zusammen
  * und die Suche findet stillschweigend nichts.
  */

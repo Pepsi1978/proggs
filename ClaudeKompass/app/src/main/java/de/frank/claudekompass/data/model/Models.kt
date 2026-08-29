@@ -40,9 +40,9 @@ data class KiModell(
 ) {
     companion object {
         /**
-         * Die heute bekannten Modelle. Kommen spaeter neue dazu, traegt der Nutzer sie in den
+         * Die heute bekannten Modelle. Kommen später neue dazu, trägt der Nutzer sie in den
          * Einstellungen als eigenen Eintrag nach — die Liste ist deshalb bewusst nur der
-         * Startbestand und keine abgeschlossene Aufzaehlung.
+         * Startbestand und keine abgeschlossene Aufzählung.
          */
         val bekannt = listOf(
             KiModell("GPT 5.6 Sol", "gpt-5.6-sol"),

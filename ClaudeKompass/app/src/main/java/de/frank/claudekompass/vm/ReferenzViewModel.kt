@@ -137,9 +137,9 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
     /**
      * Je Bereich genau EIN Fluss, einmal gebaut und danach wiederverwendet.
      *
-     * Ohne diesen Zwischenspeicher entstuende bei jeder Neuzeichnung ein neuer `stateIn`-Fluss.
+     * Ohne diesen Zwischenspeicher entstünde bei jeder Neuzeichnung ein neuer `stateIn`-Fluss.
      * Der beginnt bei seinem Anfangswert — und der heisst hier `laedt = true`. Die Liste bliebe
-     * damit dauerhaft im Ladezustand stehen, obwohl die Daten laengst da sind (Almanach
+     * damit dauerhaft im Ladezustand stehen, obwohl die Daten längst da sind (Almanach
      * jetpack-compose §2.14: roher Fluss pro Neuzeichnung neu erzeugt).
      *
      * Die Regel dahinter gilt allgemein: Eine Funktion eines Ansichtsmodells, die einen Fluss
@@ -152,12 +152,12 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
             zustaende.getOrPut(bereich) { baueZustand(bereich) }
         }
 
-    /** Zaehlt, wie oft je Bereich gebaut wurde — Grundlage der Sonde in [baueZustand]. */
+    /** Zählt, wie oft je Bereich gebaut wurde — Grundlage der Sonde in [baueZustand]. */
     private val bauZaehler = mutableMapOf<Bereich, Int>()
 
     private fun baueZustand(bereich: Bereich): StateFlow<ReferenzZustand> {
-        // Zweite Schicht neben dem Zwischenspeicher: Sollte jemand den Speicher spaeter
-        // entfernen, faellt das hier sofort auf, statt sich als „Liste laedt ewig" zu zeigen —
+        // Zweite Schicht neben dem Zwischenspeicher: Sollte jemand den Speicher später
+        // entfernen, fällt das hier sofort auf, statt sich als „Liste laedt ewig" zu zeigen —
         // ein Fehlerbild, dem man die Ursache nicht ansieht.
         val anzahl = (bauZaehler[bereich] ?: 0) + 1
         bauZaehler[bereich] = anzahl

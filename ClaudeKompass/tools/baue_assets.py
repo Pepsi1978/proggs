@@ -18,6 +18,7 @@ from daten_config_rest1 import CONFIG_REST_1
 from daten_config_rest2 import CONFIG_REST_2
 from daten_envvars import ENV_VARS
 from daten_praxis import PRAXIS
+from echte_umlaute import wandle_text
 
 CHANGELOG = os.path.join(HIER, "cc-changelog.md")
 ZIEL = sys.argv[1] if len(sys.argv) > 1 else "."
@@ -239,8 +240,27 @@ for index, (titel, kategorie, kurz, erklaerung) in enumerate(PRAXIS):
     })
 
 # --- Schreiben ---------------------------------------------------------------------------
+# Die deutschen Felder bekommen echte Umlaute. Bezeichner (`name`), die englischen
+# Originalbeschreibungen und die Changelog-Belege bleiben unberuehrt — dort waere eine
+# Umwandlung schlicht falsch.
+DEUTSCHE_FELDER = ("kurz", "erklaerung", "kategorie", "ersatz")
+
+
+def setze_umlaute(eintraege, auch_name=False):
+    """Wandelt die deutschen Felder. [auch_name] gilt nur fuer die Best Practices, deren
+    `name` ein Artikeltitel ist — bei Slash und Config waere er ein Bezeichner."""
+    protokoll = {}
+    for eintrag in eintraege:
+        felder = DEUTSCHE_FELDER + ("name",) if auch_name else DEUTSCHE_FELDER
+        for feld in felder:
+            if eintrag.get(feld):
+                eintrag[feld] = wandle_text(eintrag[feld], protokoll)
+    return protokoll
+
+
 def schreibe(dateiname, eintraege, bereich):
     pfad = os.path.join(ZIEL, dateiname)
+    ersetzt = setze_umlaute(eintraege, auch_name=(bereich == "praxis"))
     inhalt = {
         "bereich": bereich,
         "standVersion": "2.1.251",
@@ -250,9 +270,16 @@ def schreibe(dateiname, eintraege, bereich):
         json.dumps(inhalt, ensure_ascii=False, indent=1)
     )
     mit_version = sum(1 for e in eintraege if e["seit"])
-    print("%-26s %4d Eintraege, davon %3d mit belegter Version"
-          % (dateiname, len(eintraege), mit_version))
+    print("%-26s %4d Eintraege, %3d mit belegter Version, %3d Woerter auf echte Umlaute"
+          % (dateiname, len(eintraege), mit_version, len(ersetzt)))
+    return ersetzt
 
-schreibe("slash_befehle.json", slash, "slash")
-schreibe("config_einstellungen.json", config, "config")
-schreibe("best_practices.json", praxis, "praxis")
+alle_ersetzungen = {}
+alle_ersetzungen.update(schreibe("slash_befehle.json", slash, "slash"))
+alle_ersetzungen.update(schreibe("config_einstellungen.json", config, "config"))
+alle_ersetzungen.update(schreibe("best_practices.json", praxis, "praxis"))
+
+print()
+print("Auf echte Umlaute gesetzt (%d verschiedene Woerter):" % len(alle_ersetzungen))
+for alt in sorted(alle_ersetzungen):
+    print("  %-30s -> %s" % (alt, alle_ersetzungen[alt]))

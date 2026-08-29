@@ -21,7 +21,7 @@ class TranskriptionsFehler(meldung: String, ursache: Throwable? = null) : Except
  * Zwei Dinge sind hier nicht verhandelbar:
  *  - `response_format` MUSS `verbose_json` sein. Ohne dieses Format fehlen die Kennzahlen je
  *    Abschnitt, und die Halluzinations-Schichten 2 und 3 hätten nichts zum Prüfen.
- *  - Eine zu grosse Aufnahme wird VOR dem Senden geteilt. Der Ablehnungsfehler 413 lässt sich
+ *  - Eine zu große Aufnahme wird VOR dem Senden geteilt. Der Ablehnungsfehler 413 lässt sich
  *    nicht wiederholen; ohne das Teilen wäre ein langes Diktat vollständig verloren.
  */
 class GroqTranskribierer(

@@ -11,9 +11,9 @@ import org.json.JSONObject
 /**
  * Strukturiertes Logbuch der App — eine JSON-Zeile je Ereignis.
  *
- * Regel „Observability-First": Ohne diese Schicht wird kein Feature gebaut. Jede Zeile traegt
- * Zeitstempel, Stufe, Modul, Funktion, Meldung und einen frei befuellbaren Kontext, damit sich
- * ein Fehlverhalten spaeter aus der Datei rekonstruieren laesst, ohne die App neu zu starten.
+ * Regel „Observability-First": Ohne diese Schicht wird kein Feature gebaut. Jede Zeile trägt
+ * Zeitstempel, Stufe, Modul, Funktion, Meldung und einen frei befüllbaren Kontext, damit sich
+ * ein Fehlverhalten später aus der Datei rekonstruieren lässt, ohne die App neu zu starten.
  *
  * Der Pfad wird beim Start EINMAL ausgegeben (siehe [start]), damit er auffindbar ist.
  */
@@ -76,7 +76,7 @@ object KompassLog {
                 .toString()
         }.getOrElse { return }
 
-        // Spiegelung nach Logcat: waehrend der Entwicklung ist das der schnellste Weg.
+        // Spiegelung nach Logcat: während der Entwicklung ist das der schnellste Weg.
         when (level) {
             "error" -> Log.e(TAG, line)
             "warn" -> Log.w(TAG, line)
@@ -93,7 +93,7 @@ object KompassLog {
         }
     }
 
-    /** Haelt die Datei klein, ohne aeltere Eintraege sofort wegzuwerfen. */
+    /** Hält die Datei klein, ohne ältere Einträge sofort wegzuwerfen. */
     private fun rotate(file: File) {
         for (index in KEPT_ROTATIONS downTo 1) {
             val older = File(file.parentFile, "$FILE_NAME.$index")

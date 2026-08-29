@@ -1,11 +1,11 @@
 package de.frank.claudekompass.observability
 
 /**
- * Logik-Sonde: prueft eine Erwartung und meldet ihr Scheitern, ohne den Ablauf zu stoppen.
+ * Logik-Sonde: prüft eine Erwartung und meldet ihr Scheitern, ohne den Ablauf zu stoppen.
  *
- * Sie ist gegen die STILLEN Fehler gerichtet — die, bei denen nichts abstuerzt und trotzdem
+ * Sie ist gegen die STILLEN Fehler gerichtet — die, bei denen nichts abstürzt und trotzdem
  * etwas Falsches herauskommt (leere Liste statt Inhalt, doppelter Eintrag, Zustand, den es
- * nicht geben duerfte). Rueckgabewert ist die gepruefte Bedingung, damit die Sonde direkt in
+ * nicht geben dürfte). Rückgabewert ist die geprüfte Bedingung, damit die Sonde direkt in
  * ein `if` gesetzt werden kann.
  */
 fun probe(
@@ -21,7 +21,7 @@ fun probe(
     return condition
 }
 
-/** Meldet einen Zustandsuebergang — die zweite Haelfte der stillen Fehler lebt in Uebergaengen. */
+/** Meldet einen Zustandsübergang — die zweite Hälfte der stillen Fehler lebt in Übergängen. */
 fun probeTransition(
     module: String,
     function: String,

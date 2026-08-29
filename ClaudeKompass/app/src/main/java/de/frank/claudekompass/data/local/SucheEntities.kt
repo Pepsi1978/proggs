@@ -10,12 +10,12 @@ import androidx.room.PrimaryKey
  *
  * Bewusst eine eigenständige FTS4-Tabelle statt einer `contentEntity`-Spiegelung: Die
  * gespiegelte Form verlangt einen ganzzahligen Primärschlüssel in der Quelltabelle, und die
- * Einträge werden über eine sprechende Zeichenkette identifiziert (`slash:/compact`). Ausserdem
- * fliessen hier drei verschiedene Quellen zusammen — Einträge, eigene Fragen und Gespräche —,
+ * Einträge werden über eine sprechende Zeichenkette identifiziert (`slash:/compact`). Außerdem
+ * fließen hier drei verschiedene Quellen zusammen — Einträge, eigene Fragen und Gespräche —,
  * die es als eine gespiegelte Tabelle gar nicht geben könnte.
  *
  * [suchtext] ist die normalisierte Fassung (klein, Umlaute aufgelöst). Gesucht wird gezielt in
- * dieser Spalte, damit „Uber", „über" und „ueber" dasselbe finden. Für die Anzeige der
+ * dieser Spalte, damit „Uber", „über" und „über" dasselbe finden. Für die Anzeige der
  * Fundstelle wird der Originaltext über [quelleId] nachgeladen.
  */
 @Fts4

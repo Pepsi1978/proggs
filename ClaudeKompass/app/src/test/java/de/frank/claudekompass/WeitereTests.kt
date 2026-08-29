@@ -70,7 +70,7 @@ class SuchNormalisierungTest {
     }
 }
 
-/** Eine zu grosse Aufnahme muss VOR dem Senden geteilt werden — 413 ist nicht wiederholbar. */
+/** Eine zu große Aufnahme muss VOR dem Senden geteilt werden — 413 ist nicht wiederholbar. */
 class WavSchneiderTest {
 
     private fun baueAufnahme(sekunden: Int, rate: Int = 16_000): ByteArray {

@@ -18,7 +18,7 @@ import org.json.JSONObject
  * Google Chirp 3 HD — der Standardweg (Referenz, Baustein D).
  *
  * Wichtige Falle: Die Chirp-3-HD-Stimmen kennen keinen `pitch`-Parameter. Wird er trotzdem
- * mitgeschickt, antwortet der Dienst mit Fehler 400. Deshalb geht `pitch` hier ausschliesslich
+ * mitgeschickt, antwortet der Dienst mit Fehler 400. Deshalb geht `pitch` hier ausschließlich
  * an Stimmen, die nicht „Chirp" im Namen tragen.
  */
 class GoogleTtsSynthesizer(private val schluesselGeber: () -> String) : TtsSynthesizer {

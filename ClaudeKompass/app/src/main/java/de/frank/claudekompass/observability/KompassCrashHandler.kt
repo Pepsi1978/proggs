@@ -3,11 +3,11 @@ package de.frank.claudekompass.observability
 import kotlin.system.exitProcess
 
 /**
- * Globaler Fehlerfaenger: nichts stirbt still.
+ * Globaler Fehlerfänger: nichts stirbt still.
  *
- * Ohne ihn verschwindet ein Absturz im Systemlog und ist nach einem Neustart des Geraets weg.
- * Der Handler schreibt den vollen Kontext ins Logbuch und gibt danach an den urspruenglichen
- * Handler ab, damit sich das System weiterhin normal verhaelt.
+ * Ohne ihn verschwindet ein Absturz im Systemlog und ist nach einem Neustart des Geräts weg.
+ * Der Handler schreibt den vollen Kontext ins Logbuch und gibt danach an den ursprünglichen
+ * Handler ab, damit sich das System weiterhin normal verhält.
  */
 object KompassCrashHandler {
 
