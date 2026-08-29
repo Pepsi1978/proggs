@@ -101,6 +101,9 @@ fun DetailScreen(
         if (nachrichten.isNotEmpty()) listState.animateScrollToItem(nachrichten.size)
     }
 
+    // Wechselt man die Idee, steht die Karte wieder ganz oben.
+    LaunchedEffect(idee?.id) { listState.scrollToItem(0) }
+
     val aktuelle = idee
     if (aktuelle == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -135,72 +138,88 @@ fun DetailScreen(
             },
         )
 
-        IdeenKopf(
-            idee = aktuelle,
-            kategorien = kategorien,
-            aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
-            aufNeueKategorie = { name, fertig -> viewModel.legeKategorieAn(name, fertig) },
-            spricht = vorlese.quelle == "detail-${aktuelle.id}",
-            vorleseZustand = vorlese.zustand,
-            aufVorlesen = {
-                viewModel.lies("detail-${aktuelle.id}", aktuelle.titel, "${aktuelle.titel}.\n\n${aktuelle.text}")
-            },
-            aufUmgesetzt = {
-                if (aktuelle.status == IdeenStatus.OFFEN.name) {
-                    viewModel.setzeUmgesetzt(aktuelle)
-                } else {
-                    viewModel.zurueckZuOffen(aktuelle)
-                }
-            },
-            aufLoeschen = {
-                viewModel.loesche(aktuelle)
-                aufZurueck()
-            },
-        )
-
+        // Die Ideenkarte liegt als erstes Stück *in* der Liste: Bei einer langen Idee schiebt
+        // sie sich beim Hochwischen nach oben weg und gibt den Chat frei.
         Box(Modifier.weight(1f)) {
-            if (nachrichten.isEmpty() && ki.teilAntwort.isBlank()) {
-                Leerzustand(
-                    symbol = "💬",
-                    ueberschrift = "Denk laut über die Idee nach",
-                    satz = "Frag das Modell nach dem ersten Schritt, nach Risiken oder danach, " +
-                        "was die Idee wirklich braucht.",
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(nachrichten, key = NachrichtEntity::id) { nachricht ->
-                        NachrichtenBlase(
-                            nachricht = nachricht,
-                            spricht = vorlese.quelle == "nachricht-${nachricht.id}",
-                            vorleseZustand = vorlese.zustand,
-                            laufenderAbsatz = if (vorlese.quelle == "nachricht-${nachricht.id}") {
-                                vorlese.absatzText
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(0.dp, 4.dp, 0.dp, 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                item(key = "ideenkopf") {
+                    IdeenKopf(
+                        idee = aktuelle,
+                        kategorien = kategorien,
+                        aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
+                        aufNeueKategorie = { name, fertig -> viewModel.legeKategorieAn(name, fertig) },
+                        spricht = vorlese.quelle == "detail-${aktuelle.id}",
+                        vorleseZustand = vorlese.zustand,
+                        aufVorlesen = {
+                            viewModel.lies(
+                                "detail-${aktuelle.id}",
+                                aktuelle.titel,
+                                "${aktuelle.titel}.\n\n${aktuelle.text}",
+                            )
+                        },
+                        aufUmgesetzt = {
+                            if (aktuelle.status == IdeenStatus.OFFEN.name) {
+                                viewModel.setzeUmgesetzt(aktuelle)
                             } else {
-                                ""
-                            },
-                            aufVorlesen = {
-                                viewModel.lies(
-                                    "nachricht-${nachricht.id}",
-                                    aktuelle.titel,
-                                    nachricht.text,
-                                )
-                            },
-                            aufLangdruck = { gedrueckt = nachricht },
+                                viewModel.zurueckZuOffen(aktuelle)
+                            }
+                        },
+                        aufLoeschen = {
+                            viewModel.loesche(aktuelle)
+                            aufZurueck()
+                        },
+                    )
+                }
+
+                if (nachrichten.isEmpty() && ki.teilAntwort.isBlank() && !ki.antwortet) {
+                    item(key = "leer") {
+                        Leerzustand(
+                            symbol = "💬",
+                            ueberschrift = "Denk laut über die Idee nach",
+                            satz = "Frag das Modell nach dem ersten Schritt, nach Risiken oder " +
+                                "danach, was die Idee wirklich braucht.",
+                            modifier = Modifier.padding(top = 12.dp),
                         )
                     }
-                    if (ki.teilAntwort.isNotBlank()) {
-                        item {
-                            StroemendeAntwort(text = ki.teilAntwort)
-                        }
+                }
+
+                items(nachrichten, key = NachrichtEntity::id) { nachricht ->
+                    NachrichtenBlase(
+                        nachricht = nachricht,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        spricht = vorlese.quelle == "nachricht-${nachricht.id}",
+                        vorleseZustand = vorlese.zustand,
+                        laufenderAbsatz = if (vorlese.quelle == "nachricht-${nachricht.id}") {
+                            vorlese.absatzText
+                        } else {
+                            ""
+                        },
+                        aufVorlesen = {
+                            viewModel.lies(
+                                "nachricht-${nachricht.id}",
+                                aktuelle.titel,
+                                nachricht.text,
+                            )
+                        },
+                        aufLangdruck = { gedrueckt = nachricht },
+                    )
+                }
+                if (ki.teilAntwort.isNotBlank()) {
+                    item(key = "stroemend") {
+                        StroemendeAntwort(
+                            text = ki.teilAntwort,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
                     }
-                    if (ki.antwortet && ki.teilAntwort.isBlank()) {
-                        item { DenktNach() }
+                }
+                if (ki.antwortet && ki.teilAntwort.isBlank()) {
+                    item(key = "denkt") {
+                        DenktNach(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
             }
@@ -363,6 +382,7 @@ private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
 @Composable
 private fun NachrichtenBlase(
     nachricht: NachrichtEntity,
+    modifier: Modifier = Modifier,
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
@@ -372,7 +392,7 @@ private fun NachrichtenBlase(
     val gold = LocalGold.current
     val vonMir = nachricht.rolle == "user"
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = if (vonMir) Arrangement.End else Arrangement.Start,
     ) {
         Column(
@@ -430,7 +450,7 @@ private fun NachrichtenBlase(
 
 /** Der einlaufende Text mit blinkendem Schreib-Cursor (N.7). */
 @Composable
-private fun StroemendeAntwort(text: String) {
+private fun StroemendeAntwort(text: String, modifier: Modifier = Modifier) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
     val uebergang = rememberInfiniteTransition(label = "cursor")
@@ -441,7 +461,7 @@ private fun StroemendeAntwort(text: String) {
         label = "blinkwert",
     )
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth(0.9f)
             .tiefenSchatten(gold.primaer, Hoehe.karte, RoundedCornerShape(18.dp))
             .clip(RoundedCornerShape(18.dp))
@@ -467,7 +487,7 @@ private fun StroemendeAntwort(text: String) {
 }
 
 @Composable
-private fun DenktNach() {
+private fun DenktNach(modifier: Modifier = Modifier) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
     val uebergang = rememberInfiniteTransition(label = "denkt")
@@ -478,7 +498,7 @@ private fun DenktNach() {
         label = "taktwert",
     )
     Row(
-        modifier = Modifier.padding(vertical = 6.dp),
+        modifier = modifier.padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(3) { index ->

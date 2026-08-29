@@ -31,12 +31,12 @@ val IdeenSchriftBetont = FontFamily(
 )
 
 /**
- * Dieselbe Schrift, aber als Normal registriert. Nur so zeichnet Android bei hohen Gewichten
- * wirklich fett: Wäre sie wie [IdeenSchriftBetont] schon als SemiBold eingetragen, bliebe die
- * einzige vorhandene Schnittfarbe stehen und ein angefragtes Bold hätte keine Wirkung.
+ * Die Schrift für die Ideen-Überschriften: Inter, nicht die Serifenschrift. Serifen werden
+ * künstlich fett schnell matschig, die Grotesk bleibt auch bei Black klar lesbar. Sie ist als
+ * Normal registriert — nur dann zeichnet Android bei hohen Gewichten überhaupt fett.
  */
 val IdeenSchriftDick = FontFamily(
-    Font(R.font.newsreader, FontWeight.Normal),
+    Font(R.font.inter, FontWeight.Normal),
 )
 
 /** Festbreitenschrift für den Anmeldecode (Baustein O.1). */
