@@ -18,12 +18,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
@@ -176,6 +179,10 @@ fun Modifier.wackelnBeiFehler(ausloeser: Any?): Modifier = composed {
  * Kipp-Effekt auf Berührung: Die Karte neigt sich zum Finger, höchstens 6 Grad,
  * und federt danach zurück (N.3).
  */
+/**
+ * Achtung: Der Kipp-Effekt greift Zieh-Gesten ab und darf deshalb **nie** an eine Karte
+ * innerhalb einer Scroll-Liste. Dort stiehlt er dem Scrollen die Finger und die Liste hakt.
+ */
 fun Modifier.kippKarte(aktiv: Boolean = true, maxGrad: Float = 6f): Modifier = composed {
     val reduziert = LocalBewegungReduziert.current
     var kippX by remember { mutableFloatStateOf(0f) }
@@ -242,9 +249,12 @@ fun Modifier.milchglas(
  * Bewusst gezeichnet statt als Bild: eine Textur im Projekt wäre schwerer und sähe bei
  * jeder Bildschirmdichte anders aus.
  */
-fun Modifier.koernung(deckung: Float = 0.04f): Modifier = drawWithContent {
-    drawContent()
+fun Modifier.koernung(deckung: Float = 0.04f): Modifier = drawWithCache {
+    // Die Punkte werden **einmal je Grösse** berechnet und danach in einem einzigen
+    // drawPoints-Aufruf gezeichnet. Vorher lief die Doppelschleife mit tausenden
+    // Einzelkreisen bei *jedem* Bild — das war die teuerste Stelle der ganzen Oberfläche.
     val schritt = 3f
+    val punkte = ArrayList<Offset>(((size.width / schritt) * (size.height / schritt) / 3).toInt().coerceAtLeast(16))
     var y = 0f
     var zaehler = 0
     while (y < size.height) {
@@ -253,17 +263,24 @@ fun Modifier.koernung(deckung: Float = 0.04f): Modifier = drawWithContent {
             // Ein billiger, aber gleichmässig streuender Pseudozufall — kein Random je Bild,
             // sonst flimmert die Körnung bei jeder Neuzeichnung.
             val zufall = abs(sin(x * 12.9898f + y * 78.233f) * 43758.547f) % 1f
-            if (zufall > 0.75f) {
-                drawCircle(
-                    color = Color.White.copy(alpha = deckung * zufall),
-                    radius = 0.6f,
-                    center = Offset(x, y),
-                )
-            }
+            if (zufall > 0.75f) punkte += Offset(x, y)
             x += schritt
         }
         y += schritt
         zaehler++
+    }
+    val farbe = Color.White.copy(alpha = deckung * 0.85f)
+    onDrawWithContent {
+        drawContent()
+        if (punkte.isNotEmpty()) {
+            drawPoints(
+                points = punkte,
+                pointMode = PointMode.Points,
+                color = farbe,
+                strokeWidth = 1.2f,
+                cap = StrokeCap.Round,
+            )
+        }
     }
 }
 

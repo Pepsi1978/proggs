@@ -129,10 +129,13 @@ fun ListenScreen(
     val kategorieName = kategorien.firstOrNull { it.id == gewaehlteKategorie }?.name
 
     // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
-    val zaehlung = alleZaehlung(offene + umgesetzte)
-    val sortierteKategorien = kategorien.sortedWith(
-        compareByDescending<KategorieEntity> { zaehlung[it.id] ?: 0 }.thenBy { it.name.lowercase() },
-    )
+    // Beides gemerkt — sonst wird bei jedem Bild neu gezählt und sortiert.
+    val zaehlung = remember(offene, umgesetzte) { alleZaehlung(offene + umgesetzte) }
+    val sortierteKategorien = remember(kategorien, zaehlung) {
+        kategorien.sortedWith(
+            compareByDescending<KategorieEntity> { zaehlung[it.id] ?: 0 }.thenBy { it.name.lowercase() },
+        )
+    }
 
     // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
     BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
@@ -217,8 +220,9 @@ fun ListenScreen(
                     contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(sortiert, key = IdeeEntity::id) { idee ->
-                        val index = sortiert.indexOf(idee)
+                    // itemsIndexed statt indexOf je Zeile: Das war eine Suche über die
+                    // ganze Liste pro sichtbarem Element, also quadratischer Aufwand.
+                    itemsIndexed(sortiert, key = { _, idee -> idee.id }) { index, idee ->
                         GestaffeltEinblenden(sichtbar = true, index = index.coerceAtMost(8)) {
                             IdeenKarte(
                                 idee = idee,
@@ -691,7 +695,8 @@ private fun IdeenKarte(
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
-    GoldKarte(modifier = modifier.fillMaxWidth(), kippbar = true) {
+    // Kein kippbar: Der Kipp-Effekt fängt Zieh-Gesten ab und liesse die Liste haken.
+    GoldKarte(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,

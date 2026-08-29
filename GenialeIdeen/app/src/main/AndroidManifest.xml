@@ -14,6 +14,8 @@
     <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 
     <application
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"
         android:name=".GenialeIdeenApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

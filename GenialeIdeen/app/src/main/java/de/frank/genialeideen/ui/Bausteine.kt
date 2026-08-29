@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
@@ -312,14 +313,23 @@ fun SchimmerGeruest(zeilen: Int = 3, modifier: Modifier = Modifier) {
 fun BewegterHintergrund(modifier: Modifier = Modifier) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
-    val uebergang = rememberInfiniteTransition(label = "hintergrund")
-    val phase by uebergang.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduziert) 0f else (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(Motion.HINTERGRUND_MS), RepeatMode.Restart),
-        label = "phase",
-    )
-    Canvas(modifier = modifier.fillMaxSize()) {
+    // Bei reduzierter Bewegung läuft gar keine Animation: Eine Endlos-Animation mit
+    // gleichem Start- und Zielwert zeichnet den Vollbild-Hintergrund trotzdem jedes Bild neu.
+    val phase = if (reduziert) {
+        0f
+    } else {
+        val uebergang = rememberInfiniteTransition(label = "hintergrund")
+        val wert by uebergang.animateFloat(
+            initialValue = 0f,
+            targetValue = (2 * Math.PI).toFloat(),
+            animationSpec = infiniteRepeatable(tween(Motion.HINTERGRUND_MS), RepeatMode.Restart),
+            label = "phase",
+        )
+        wert
+    }
+    // Eigene Zeichenebene: Der wandernde Schein zieht so nur sich selbst neu, nicht die
+    // Liste darüber.
+    Canvas(modifier = modifier.fillMaxSize().graphicsLayer()) {
         val breite = size.width
         val hoehe = size.height
         drawCircle(
