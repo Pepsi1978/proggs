@@ -17,7 +17,12 @@ interface SessionRepository {
     suspend fun getSession(sessionId: Long): SessionWithQuestions?
     suspend fun createSession(session: SessionEntity): Long
     suspend fun appendQuestions(sessionId: Long, questions: List<Question>)
-    suspend fun saveProgress(sessionId: Long, state: SessionState, config: SessionConfig)
+    suspend fun saveProgress(
+        sessionId: Long,
+        state: SessionState,
+        config: SessionConfig,
+        preserveQuestionOrder: Boolean = false,
+    )
     suspend fun clearProgress(sessionId: Long)
     suspend fun markPlayed(sessionId: Long)
     /** Fills in the AI title; keeps its hands off entries that already carry one. */
@@ -79,20 +84,27 @@ class RoomSessionRepository(
         }
     }
 
-    override suspend fun saveProgress(sessionId: Long, state: SessionState, config: SessionConfig) {
+    override suspend fun saveProgress(
+        sessionId: Long,
+        state: SessionState,
+        config: SessionConfig,
+        preserveQuestionOrder: Boolean,
+    ) {
         require(state.questions.isNotEmpty()) { "A session without questions cannot be resumed" }
         database.withTransaction {
-            sessionDao.deleteQuestions(sessionId)
-            sessionDao.insertQuestions(
-                state.questions.mapIndexed { index, question ->
-                    QuestionEntity(
-                        sessionId = sessionId,
-                        orderIndex = index,
-                        emoji = question.emoji,
-                        text = question.text,
-                    )
-                },
-            )
+            if (!preserveQuestionOrder) {
+                sessionDao.deleteQuestions(sessionId)
+                sessionDao.insertQuestions(
+                    state.questions.mapIndexed { index, question ->
+                        QuestionEntity(
+                            sessionId = sessionId,
+                            orderIndex = index,
+                            emoji = question.emoji,
+                            text = question.text,
+                        )
+                    },
+                )
+            }
             sessionDao.saveProgress(
                 sessionId = sessionId,
                 durationMin = (config.durationMs / 60_000L).toInt(),
@@ -105,6 +117,11 @@ class RoomSessionRepository(
                 questionIndex = state.currentIndex.coerceIn(0, state.questions.size),
                 repetition = state.currentRep.coerceIn(1, config.repsPerQuestion),
                 remainingMs = state.remainingMs.coerceAtLeast(1L),
+                questionOrder = if (preserveQuestionOrder) {
+                    state.questions.map(Question::id).filter { it > 0L }.joinToString(",")
+                } else {
+                    ""
+                },
             )
         }
     }

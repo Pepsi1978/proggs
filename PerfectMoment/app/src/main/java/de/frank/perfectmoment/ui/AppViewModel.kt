@@ -824,21 +824,25 @@ class AppViewModel(
     fun updatePauseRep(value: Int) {
         pauseRep = normalizePauseSeconds(value)
         settings.pauseRepSeconds = pauseRep
+        sessionController.updateConfig()
     }
 
     fun updatePauseNext(value: Int) {
         pauseNext = normalizePauseSeconds(value)
         settings.pauseNextSeconds = pauseNext
+        sessionController.updateConfig()
     }
 
     fun updateRepetitions(value: Int) {
         repetitions = value.coerceIn(1, MAX_REPETITIONS_PER_QUESTION)
         settings.repsPerQuestion = repetitions
+        sessionController.updateConfig()
     }
 
     fun setDuration(value: Int) {
         durationMinutes = value
         settings.sessionDurationMin = value
+        sessionController.updateConfig()
         viewModelScope.launch {
             delay(100)
             if (sheet == AppSheet.DURATION) sheet = null
@@ -1335,6 +1339,8 @@ class AppViewModel(
 
     fun toggleSpeaker() = sessionController.toggleSpeaker()
     fun togglePause() = sessionController.togglePause()
+    fun skipToNextQuestion() = sessionController.skipToNextQuestion()
+    fun jumpToQuestion(index: Int) = sessionController.jumpToQuestion(index)
 
     fun stopSession() {
         cancelVoiceInput()
@@ -1698,6 +1704,17 @@ class AppViewModel(
         commitHistoryTitle()
         persistReadingSettings()
         startReading(detail.session.id, randomReplay)
+    }
+
+    fun resumeReadingSession() {
+        val session = historyDetail?.session ?: return
+        val useChangedSettings = pauseRep != session.pauseRep ||
+            pauseNext != session.pauseNext ||
+            repetitions != session.reps ||
+            durationMinutes != session.durationMin
+        commitHistoryTitle()
+        persistReadingSettings()
+        startResume(session.id, useChangedSettings, false)
     }
 
     private fun startReading(sessionId: Long, shuffle: Boolean) {

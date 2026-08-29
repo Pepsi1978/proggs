@@ -28,6 +28,8 @@ data class SessionEntity(
     val resumeQuestionIndex: Int? = null,
     val resumeRepetition: Int? = null,
     val resumeRemainingMs: Long? = null,
+    /** Frage-IDs in der laufenden Abspielreihenfolge; hält zufällige eigene Sessions fortsetzbar. */
+    @ColumnInfo(defaultValue = "") val resumeQuestionOrder: String = "",
     @ColumnInfo(defaultValue = "1") val playCount: Int = 1,
     @ColumnInfo(defaultValue = "0") val lastPlayedAt: Long = startedAt,
     /** The short title the history list shows instead of the whole wish. Empty until written. */

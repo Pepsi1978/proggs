@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class SessionEngine(
     initialQuestions: List<Question>,
-    private val config: SessionConfig,
+    private var config: SessionConfig,
     private val ttsPort: SessionTtsPort,
     private val refillPort: QuestionRefillPort? = null,
     private val persistencePort: QuestionPersistencePort = QuestionPersistencePort { },
@@ -151,6 +151,50 @@ class SessionEngine(
         scope.launch { setSpeakerOnInternal(!_state.value.speakerOn) }
     }
 
+    fun updateConfig(updated: SessionConfig) {
+        scope.launch {
+            val previous = config
+            config = updated
+            var current = _state.value.copy(
+                currentRep = _state.value.currentRep.coerceAtMost(updated.repsPerQuestion),
+            )
+            if (previous.durationMs != updated.durationMs) {
+                timerExpired = false
+                current = current.copy(remainingMs = updated.initialRemainingMs)
+                deadlineMs = clock.nowMillis() + updated.initialRemainingMs
+                if (!current.paused) startTimer()
+            }
+            _state.value = current
+
+            val pauseDuration = when (current.phase) {
+                Phase.PAUSE_REP -> updated.pauseRepMs
+                Phase.PAUSE_NEXT -> updated.pauseNextMs
+                else -> null
+            } ?: return@launch
+            if (current.paused) {
+                pausedCadenceRemainingMs = pauseDuration
+            } else {
+                cadenceContinuation?.let { schedulePause(current.phase, pauseDuration, it) }
+            }
+        }
+    }
+
+    fun skipToNextQuestion() {
+        scope.launch {
+            val current = _state.value
+            val next = if (loopQuestions && current.questions.isNotEmpty()) {
+                (current.currentIndex + 1) % current.questions.size
+            } else {
+                current.currentIndex + 1
+            }
+            jumpToQuestionInternal(next)
+        }
+    }
+
+    fun jumpToQuestion(index: Int) {
+        scope.launch { jumpToQuestionInternal(index) }
+    }
+
     private fun setSpeakerOnInternal(enabled: Boolean) {
         val current = _state.value
         if (current.phase == Phase.ENDED || current.speakerOn == enabled) return
@@ -187,6 +231,37 @@ class SessionEngine(
         if (_state.value.currentIndex < _state.value.questions.size) {
             speakCurrentQuestion()
         } else {
+            handleQuestionsExhausted()
+        }
+    }
+
+    private fun jumpToQuestionInternal(index: Int) {
+        val current = _state.value
+        if (current.phase == Phase.ENDED || current.questions.isEmpty()) return
+        val target = index.coerceIn(0, current.questions.size)
+        speechGeneration++
+        ttsPort.stop()
+        cadenceJob?.cancel()
+        cadenceJob = null
+        cadenceDeadlineMs = 0L
+        cadenceContinuation = null
+        pausedCadenceRemainingMs = 0L
+        pausedCadenceContinuation = null
+        pausedAudioAtPosition = false
+        ttsErrorsForCurrentQuestion = 0
+        _state.value = current.copy(
+            currentIndex = target,
+            currentRep = 1,
+            phase = when {
+                target >= current.questions.size -> Phase.WAITING_NETWORK
+                current.speakerOn -> Phase.SPEAKING
+                else -> Phase.IDLE_MUTED
+            },
+        )
+        if (current.paused) return
+        if (target < current.questions.size && current.speakerOn) {
+            speakCurrentQuestion()
+        } else if (target >= current.questions.size) {
             handleQuestionsExhausted()
         }
     }
@@ -266,6 +341,7 @@ class SessionEngine(
                     pausedAudioAtPosition = false
                     afterOfflineNotice(::speakCurrentQuestion)
                 }
+                current.speakerOn -> handleQuestionsExhausted()
             }
             else -> Unit
         }

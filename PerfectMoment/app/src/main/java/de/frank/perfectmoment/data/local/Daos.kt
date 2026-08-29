@@ -153,7 +153,8 @@ abstract class SessionDao {
             questionCount = :questionCount,
             resumeQuestionIndex = :questionIndex,
             resumeRepetition = :repetition,
-            resumeRemainingMs = :remainingMs
+            resumeRemainingMs = :remainingMs,
+            resumeQuestionOrder = :questionOrder
             WHERE id = :sessionId""",
     )
     abstract suspend fun saveProgress(
@@ -166,13 +167,15 @@ abstract class SessionDao {
         questionIndex: Int,
         repetition: Int,
         remainingMs: Long,
+        questionOrder: String,
     )
 
     @Query(
         """UPDATE sessions SET
             resumeQuestionIndex = NULL,
             resumeRepetition = NULL,
-            resumeRemainingMs = NULL
+            resumeRemainingMs = NULL,
+            resumeQuestionOrder = ''
             WHERE id = :sessionId""",
     )
     abstract suspend fun clearProgress(sessionId: Long)

@@ -69,6 +69,7 @@ import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -501,6 +502,11 @@ fun SessionScreen(
                 state = state,
                 onToggleSpeaker = viewModel::toggleSpeaker,
                 onTogglePause = viewModel::togglePause,
+                onSkip = viewModel::skipToNextQuestion,
+                onQuestionClick = viewModel::jumpToQuestion,
+                onOpenPauses = { viewModel.openSheet(AppSheet.PAUSES) },
+                onOpenRepetitions = { viewModel.openSheet(AppSheet.REPETITIONS) },
+                onOpenDuration = { viewModel.openSheet(AppSheet.DURATION) },
                 onStop = {
                     resumeAfterStopDialog = state?.paused == false
                     if (resumeAfterStopDialog) viewModel.togglePause()
@@ -643,6 +649,11 @@ private fun SessionQuestions(
     state: SessionState?,
     onToggleSpeaker: () -> Unit,
     onTogglePause: () -> Unit,
+    onSkip: () -> Unit,
+    onQuestionClick: (Int) -> Unit,
+    onOpenPauses: () -> Unit,
+    onOpenRepetitions: () -> Unit,
+    onOpenDuration: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -661,7 +672,7 @@ private fun SessionQuestions(
     Box(modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 96.dp, bottom = 240.dp),
+            contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 144.dp, bottom = 240.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             itemsIndexed(questions, key = { _, question -> question.id.takeIf { it != 0L } ?: question.hashCode() }) { index, question ->
@@ -699,7 +710,9 @@ private fun SessionQuestions(
                     questionColor = targetColor
                 }
                 Row(
-                    Modifier.fillMaxWidth().padding(bottom = 20.dp),
+                    Modifier.fillMaxWidth()
+                        .pmClickable(shape = RoundedCornerShape(18.dp)) { onQuestionClick(index) }
+                        .padding(bottom = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -741,30 +754,59 @@ private fun SessionQuestions(
                 }
             }
         }
-        Row(
-            Modifier.fillMaxWidth().height(56.dp).align(Alignment.TopCenter)
+        Column(
+            Modifier.fillMaxWidth().height(112.dp).align(Alignment.TopCenter)
                 .pmHeaderSurface(colors)
                 .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                runtime?.topic.orEmpty(),
-                color = colors.text2,
-                fontFamily = Inter,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            val waiting = state?.offline == true || state?.phase == Phase.WAITING_NETWORK
-            Box(
-                Modifier.size(8.dp).then(
-                    if (waiting) Modifier.border(1.dp, colors.goldDim, CircleShape)
-                    else Modifier.background(colors.goldDim, CircleShape),
-                ),
-            )
-            Spacer(Modifier.width(12.dp))
-            SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
+            Row(
+                Modifier.fillMaxWidth().height(54.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    runtime?.topic.orEmpty(),
+                    color = colors.text2,
+                    fontFamily = Inter,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                val waiting = state?.offline == true || state?.phase == Phase.WAITING_NETWORK
+                Box(
+                    Modifier.size(8.dp).then(
+                        if (waiting) Modifier.border(1.dp, colors.goldDim, CircleShape)
+                        else Modifier.background(colors.goldDim, CircleShape),
+                    ),
+                )
+                Spacer(Modifier.width(12.dp))
+                SpeakerButton(state?.speakerOn == true, state != null && state.paused != true, onToggleSpeaker)
+            }
+            runtime?.let { active ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SessionParameterChip(
+                        "Pause",
+                        "${active.config.pauseRepMs / 1_000}/${active.config.pauseNextMs / 1_000} s",
+                        onOpenPauses,
+                        Modifier.weight(1f),
+                    )
+                    SessionParameterChip(
+                        "Wdh.",
+                        "${active.config.repsPerQuestion}×",
+                        onOpenRepetitions,
+                        Modifier.weight(1f),
+                    )
+                    SessionParameterChip(
+                        "Dauer",
+                        formatSessionDuration((active.config.durationMs / 60_000L).toInt()),
+                        onOpenDuration,
+                        Modifier.weight(1f),
+                    )
+                }
+            }
         }
         if (state != null) {
             Row(
@@ -791,6 +833,15 @@ private fun SessionQuestions(
                 }
                 Box(
                     Modifier.size(48.dp)
+                        .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onSkip)
+                        .background(colors.surface2, controlShape)
+                        .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.SkipNext, "Nächsten Satz vorlesen", tint = colors.gold, modifier = Modifier.size(21.dp))
+                }
+                Box(
+                    Modifier.size(48.dp)
                         .pmClickable(shape = controlShape, pressBorder = colors.amber, onClick = onStop)
                         .background(colors.surface2, controlShape)
                         .border(1.dp, colors.goldDim.copy(alpha = 0.42f), controlShape),
@@ -800,6 +851,34 @@ private fun SessionQuestions(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SessionParameterChip(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalPmColors.current
+    Column(
+        modifier.pmClickable(shape = RoundedCornerShape(12.dp), onClick = onClick)
+            .background(colors.surface2, RoundedCornerShape(12.dp))
+            .border(1.dp, colors.goldDim.copy(alpha = 0.34f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(label, color = colors.text3, fontFamily = Inter, fontSize = 9.sp, lineHeight = 10.sp)
+        Text(
+            value,
+            color = colors.goldHi,
+            fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            maxLines = 1,
+        )
     }
 }
 
@@ -841,7 +920,7 @@ private fun SessionProgress(state: SessionState?, runtime: SessionRuntime?) {
     } else {
         remember { mutableFloatStateOf(0.25f) }
     }
-    LaunchedEffect(state.phase, state.currentIndex, state.currentRep, state.paused) {
+    LaunchedEffect(state.phase, state.currentIndex, state.currentRep, state.paused, runtime.config) {
         if (state.paused) return@LaunchedEffect
         progress.snapTo(if (state.phase == Phase.SPEAKING) 1f else 0f)
         val pause = when (state.phase) {

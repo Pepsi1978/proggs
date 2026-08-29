@@ -44,7 +44,7 @@ data class SessionRuntime(
     val sessionId: Long? = null,
     val config: SessionConfig,
     val generating: Boolean = false,
-    /** Ein Vorlese-Verlauf: eigene Fragen, kein Nachschub, kein Fortsetzungspunkt. */
+    /** Ein Vorlese-Verlauf: eigene Fragen, kein Nachschub. */
     val reading: Boolean = false,
 )
 
@@ -267,21 +267,32 @@ class SessionController(
                 durationMinutes = source.session.durationMin,
             )
         }
-        val entranceQuestion = source.session.entranceQuestion
-        val requestBase = newQuestionRequest(
-            topic = source.session.topic,
-            introContext = source.session.introContext,
-            entranceQuestion = entranceQuestion,
-        )
         val stored = source.questions.map { Question(it.id, it.emoji, it.text) }
+        val reading = source.session.custom
+        val (questions, resumeIndex) = if (reading) {
+            readingResumeOrder(source.session.resumeQuestionOrder, stored, questionIndex)
+        } else {
+            (if (shuffle) shuffleUpcoming(stored, questionIndex) else stored) to questionIndex
+        }
         sessionRepository.markPlayed(sourceSessionId)
         createEngine(
-            runtime = SessionRuntime(source.session.topic, sourceSessionId, config),
-            questions = if (shuffle) shuffleUpcoming(stored, questionIndex) else stored,
-            refillPort = newRefillPort(requestBase, entranceQuestion),
-            persistencePort = newPersistencePort(sourceSessionId),
+            runtime = SessionRuntime(
+                topic = if (reading) historyTitle(source.session) else source.session.topic,
+                sessionId = sourceSessionId,
+                config = config,
+                reading = reading,
+            ),
+            questions = questions,
+            refillPort = if (reading) null else {
+                val entranceQuestion = source.session.entranceQuestion
+                newRefillPort(
+                    newQuestionRequest(source.session.topic, source.session.introContext, entranceQuestion),
+                    entranceQuestion,
+                )
+            },
+            persistencePort = if (reading) QuestionPersistencePort { } else newPersistencePort(sourceSessionId),
             checkpoint = SessionCheckpoint(
-                currentIndex = questionIndex,
+                currentIndex = resumeIndex,
                 // Beim Mischen steht am Fortsetzungspunkt eine andere Frage — die faengt bei
                 // ihrer ersten Wiederholung an, nicht mitten in der der abgebrochenen Frage.
                 currentRep = if (shuffle) 1 else source.session.resumeRepetition ?: 1,
@@ -292,6 +303,7 @@ class SessionController(
                 },
             ),
             voice = SessionVoice.of(source.session),
+            loopQuestions = reading,
         )
         startForegroundSessionService()
     }
@@ -304,6 +316,32 @@ class SessionController(
 
     fun togglePause() {
         engine?.togglePause()
+    }
+
+    fun skipToNextQuestion() {
+        engine?.skipToNextQuestion()
+    }
+
+    fun jumpToQuestion(index: Int) {
+        engine?.jumpToQuestion(index)
+    }
+
+    fun updateConfig() {
+        val updated = currentConfig()
+        val runtime = _runtime.value ?: return
+        _runtime.value = runtime.copy(config = updated)
+        engine?.updateConfig(updated)
+        runtime.sessionId?.let { sessionId ->
+            scope.launch {
+                sessionRepository.setSessionSettings(
+                    sessionId = sessionId,
+                    pauseRep = (updated.pauseRepMs / 1_000L).toInt(),
+                    pauseNext = (updated.pauseNextMs / 1_000L).toInt(),
+                    reps = updated.repsPerQuestion,
+                    durationMin = (updated.durationMs / 60_000L).toInt(),
+                )
+            }
+        }
     }
 
     internal fun setSpeakerOn(enabled: Boolean) {
@@ -322,9 +360,12 @@ class SessionController(
         val runtime = requireNotNull(_runtime.value)
         val sessionId = requireNotNull(runtime.sessionId)
         val state = requireNotNull(_state.value)
-        // Ein Vorlese-Verlauf kennt keinen Fortsetzungspunkt: Das Speichern würde die von Hand
-        // geschriebenen Fragen in der zufälligen Abspielreihenfolge zurückschreiben.
-        if (!runtime.reading) sessionRepository.saveProgress(sessionId, state, runtime.config)
+        sessionRepository.saveProgress(
+            sessionId = sessionId,
+            state = state,
+            config = runtime.config,
+            preserveQuestionOrder = runtime.reading,
+        )
         releaseEngine()
         appContext.stopService(Intent(appContext, SessionForegroundService::class.java))
     }
@@ -500,6 +541,23 @@ class SessionController(
         repsPerQuestion = settings.repsPerQuestion,
         durationMinutes = settings.sessionDurationMin,
     )
+
+    private fun readingResumeOrder(
+        serializedOrder: String,
+        stored: List<Question>,
+        savedIndex: Int,
+    ): Pair<List<Question>, Int> {
+        val savedIds = serializedOrder.split(',').mapNotNull(String::toLongOrNull)
+        if (savedIds.isEmpty()) return stored to savedIndex.coerceIn(0, stored.size)
+        val byId = stored.associateBy(Question::id)
+        val ordered = savedIds.mapNotNull(byId::get)
+        val knownIds = ordered.mapTo(mutableSetOf(), Question::id)
+        val complete = ordered + stored.filterNot { it.id in knownIds }
+        val targetId = savedIds.getOrNull(savedIndex)
+        val adjustedIndex = targetId?.let { id -> complete.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
+            ?: savedIds.take(savedIndex).count(byId::containsKey)
+        return complete to adjustedIndex.coerceIn(0, complete.size)
+    }
 
     private fun releaseEngine() {
         engineGeneration.incrementAndGet()

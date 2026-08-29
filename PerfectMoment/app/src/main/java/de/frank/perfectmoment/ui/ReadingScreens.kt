@@ -214,7 +214,20 @@ fun ReadingDetailScreen(
                         onDone = viewModel::commitHistoryTitle,
                     )
                     Spacer(Modifier.height(14.dp))
-                    PrimaryButton("Vorlesen starten", viewModel::playReadingSession)
+                    val resumable = detail.session.resumeQuestionIndex != null
+                    PrimaryButton(
+                        if (resumable) "Sitzung fortsetzen" else "Vorlesen starten",
+                        if (resumable) viewModel::resumeReadingSession else viewModel::playReadingSession,
+                    )
+                    if (resumable) {
+                        Spacer(Modifier.height(10.dp))
+                        OutlineButton(
+                            "Von vorne vorlesen",
+                            colors.gold,
+                            viewModel::playReadingSession,
+                            Modifier.fillMaxWidth(),
+                        )
+                    }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ParameterCard("Pause", "${viewModel.pauseRep} s", { viewModel.openSheet(AppSheet.PAUSES) }, Modifier.weight(1f), compact = true)
                         ParameterCard("Wiederholungen", "${viewModel.repetitions}×", { viewModel.openSheet(AppSheet.REPETITIONS) }, Modifier.weight(1.2f), compact = true)
