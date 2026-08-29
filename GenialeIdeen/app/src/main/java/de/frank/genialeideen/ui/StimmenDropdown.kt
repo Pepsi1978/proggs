@@ -40,7 +40,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.tts.VoiceGender
 import de.frank.genialeideen.ui.theme.Hoehe
@@ -50,9 +53,13 @@ import de.frank.genialeideen.ui.theme.milchglas
 import de.frank.genialeideen.ui.theme.tiefenSchatten
 
 /**
- * Die **eine** Stimmenauswahl der App (Kapitel 4.6): alle Stimmen aller Engines in einem
- * Aufklapp-Menü, in fester Gruppenreihenfolge. Es gibt keinen vorgelagerten Engine-Umschalter —
- * mit der Stimme wird die Engine mitgeschaltet.
+ * Die Stimmenauswahl in zwei Stufen (Kapitel 4.6).
+ *
+ * Oben die Gruppe — meine Stimmen, Google Chirp 3 HD, die Edge-Stimmen —, darunter die
+ * Stimmen genau dieser Gruppe. Eine einzige, seitenlange Liste über alle Anbieter war nicht
+ * zu überblicken; beide Klappmenüs sind so breit wie ihr Knopf und bleiben unter ihm stehen.
+ *
+ * An der Sache ändert sich nichts: Ich wähle die Stimme, die Engine wird mitgeschaltet.
  */
 @Composable
 fun StimmenDropdown(
@@ -70,21 +77,32 @@ fun StimmenDropdown(
     aufFehlendenSchluessel: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
-    var offen by remember { mutableStateOf(false) }
-    var suche by remember { mutableStateOf("") }
     val form = RoundedCornerShape(14.dp)
 
     val aktuell = eintraege.firstOrNull { it.id == gewaehlt && it.gruppe != Stimmenliste.GRUPPE_FAVORITEN }
+    // Die Gruppen in der Reihenfolge, in der die Liste sie liefert (Kapitel 4.6).
+    val gruppen = remember(eintraege) { eintraege.map(StimmenEintrag::gruppe).distinct() }
+
+    // Die Gruppe folgt der gewählten Stimme, lässt sich aber frei durchblättern.
+    var gruppe by remember(aktuell?.gruppe, gruppen) {
+        mutableStateOf(aktuell?.gruppe ?: gruppen.firstOrNull().orEmpty())
+    }
+    var gruppeOffen by remember { mutableStateOf(false) }
+    var stimmenOffen by remember { mutableStateOf(false) }
+    var suche by remember { mutableStateOf("") }
+
+    val inGruppe = remember(eintraege, gruppe) { eintraege.filter { it.gruppe == gruppe } }
     val gefiltert = if (suche.isBlank()) {
-        eintraege
+        inGruppe
     } else {
-        eintraege.filter { it.name.contains(suche, ignoreCase = true) }
+        inGruppe.filter { it.name.contains(suche, ignoreCase = true) }
     }
 
     Column(modifier) {
+        // ---- Stufe 1: die Gruppe ----
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Stimme",
+                "Stimmenart",
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelSmall,
                 color = gold.textGedaempft,
@@ -94,48 +112,97 @@ fun StimmenDropdown(
             }
         }
         Spacer(Modifier.height(6.dp))
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .druckEffekt { offen = true }
-                    .tiefenSchatten(gold.primaer, Hoehe.karte, form)
-                    .clip(form)
-                    .background(gold.eingabefeld)
-                    .border(1.dp, if (offen) gold.primaer else gold.rahmen, form)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = when {
-                        laedt && aktuell == null -> "Wird geladen …"
-                        aktuell != null -> aktuell.name
-                        else -> "Stimme wählen"
-                    },
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (aktuell != null) gold.textPrimaer else gold.textGedaempft,
-                    maxLines = 1,
-                )
-                aktuell?.let { HerkunftsChip(it.herkunft) }
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.ExpandMore,
-                    contentDescription = "Stimme wählen",
-                    tint = gold.primaer,
-                    modifier = Modifier.size(20.dp).rotate(if (offen) 180f else 0f),
-                )
-            }
-
+        KlappFeld(
+            beschriftung = gruppe.ifBlank { "Stimmenart wählen" },
+            zusatz = if (gruppe.isBlank()) "" else "${inGruppe.size}",
+            offen = gruppeOffen,
+            gefuellt = gruppe.isNotBlank(),
+            form = form,
+            aufOeffnen = { gruppeOffen = true },
+        ) { breite ->
             DropdownMenu(
-                expanded = offen,
-                onDismissRequest = { offen = false; suche = "" },
+                expanded = gruppeOffen,
+                onDismissRequest = { gruppeOffen = false },
                 modifier = Modifier
+                    .width(breite)
+                    .milchglas(gold.flaecheErhoeht, RoundedCornerShape(16.dp), deckung = 0.96f)
+                    .heightIn(max = 420.dp),
+            ) {
+                gruppen.forEach { name ->
+                    val anzahl = eintraege.count { it.gruppe == name }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .druckEffekt {
+                                gruppe = name
+                                gruppeOffen = false
+                                suche = ""
+                            }
+                            .background(
+                                if (name == gruppe) gold.primaer.copy(alpha = 0.12f) else Color.Transparent,
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (name == gruppe) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Ausgewählt",
+                                tint = gold.primaer,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.size(16.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (name == gruppe) gold.primaer else gold.textPrimaer,
+                        )
+                        Text(
+                            anzahl.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = gold.textGedaempft,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // ---- Stufe 2: die Stimme aus dieser Gruppe ----
+        Text(
+            "Stimme",
+            style = MaterialTheme.typography.labelSmall,
+            color = gold.textGedaempft,
+        )
+        Spacer(Modifier.height(6.dp))
+        KlappFeld(
+            beschriftung = when {
+                laedt && aktuell == null -> "Wird geladen …"
+                aktuell != null && aktuell.gruppe == gruppe -> aktuell.name
+                inGruppe.isEmpty() -> "Keine Stimme in dieser Gruppe"
+                else -> "Stimme wählen"
+            },
+            zusatz = if (aktuell != null && aktuell.gruppe == gruppe) aktuell.herkunft else "",
+            offen = stimmenOffen,
+            gefuellt = aktuell != null && aktuell.gruppe == gruppe,
+            form = form,
+            aufOeffnen = { if (inGruppe.isNotEmpty()) stimmenOffen = true },
+        ) { breite ->
+            DropdownMenu(
+                expanded = stimmenOffen,
+                onDismissRequest = { stimmenOffen = false; suche = "" },
+                modifier = Modifier
+                    .width(breite)
                     .milchglas(gold.flaecheErhoeht, RoundedCornerShape(16.dp), deckung = 0.96f)
                     .heightIn(max = 480.dp),
             ) {
                 // Suchfeld erst ab 15 Stimmen — darunter kostet es nur Platz (Kapitel 4.6).
-                if (eintraege.size > 15) {
+                if (inGruppe.size > 15) {
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -161,25 +228,13 @@ fun StimmenDropdown(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        color = gold.rahmen,
+                    )
                 }
 
-                var letzteGruppe: String? = null
                 gefiltert.forEach { eintrag ->
-                    if (eintrag.gruppe != letzteGruppe) {
-                        letzteGruppe = eintrag.gruppe
-                        if (eintrag.gruppe != gefiltert.first().gruppe) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                color = gold.rahmen,
-                            )
-                        }
-                        Text(
-                            eintrag.gruppe,
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = gold.primaer,
-                            modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 4.dp),
-                        )
-                    }
                     StimmenZeile(
                         eintrag = eintrag,
                         gewaehlt = eintrag.id == gewaehlt,
@@ -188,7 +243,7 @@ fun StimmenDropdown(
                         aufTipp = {
                             when {
                                 eintrag.id == Stimmenliste.ID_STIMME_AUFNEHMEN -> {
-                                    offen = false
+                                    stimmenOffen = false
                                     if (eintrag.name.startsWith("Konnte nicht")) {
                                         aufNeuLaden?.invoke()
                                     } else {
@@ -197,12 +252,12 @@ fun StimmenDropdown(
                                 }
                                 // Ein Tipp auf eine gesperrte Stimme führt direkt zum Schlüsselfeld.
                                 !eintrag.nutzbar -> {
-                                    offen = false
+                                    stimmenOffen = false
                                     aufFehlendenSchluessel?.invoke()
                                 }
                                 else -> {
                                     aufWahl(eintrag)
-                                    offen = false
+                                    stimmenOffen = false
                                     suche = ""
                                 }
                             }
@@ -215,6 +270,59 @@ fun StimmenDropdown(
                 }
             }
         }
+    }
+}
+
+/**
+ * Ein Klappfeld über die volle Breite. Es misst sich selbst und reicht seine Breite an das
+ * Menü weiter, damit das Aufklappen genau unter dem Knopf steht statt daneben.
+ */
+@Composable
+private fun KlappFeld(
+    beschriftung: String,
+    zusatz: String,
+    offen: Boolean,
+    gefuellt: Boolean,
+    form: RoundedCornerShape,
+    aufOeffnen: () -> Unit,
+    menue: @Composable (Dp) -> Unit,
+) {
+    val gold = LocalGold.current
+    val dichte = LocalDensity.current
+    var breite by remember { mutableStateOf(0.dp) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { breite = with(dichte) { it.size.width.toDp() } }
+                .druckEffekt(aufOeffnen)
+                .tiefenSchatten(gold.primaer, Hoehe.karte, form)
+                .clip(form)
+                .background(gold.eingabefeld)
+                .border(1.dp, if (offen) gold.primaer else gold.rahmen, form)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = beschriftung,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (gefuellt) gold.textPrimaer else gold.textGedaempft,
+                maxLines = 1,
+            )
+            if (zusatz.isNotBlank()) {
+                HerkunftsChip(zusatz)
+                Spacer(Modifier.width(8.dp))
+            }
+            Icon(
+                Icons.Default.ExpandMore,
+                contentDescription = "Auswählen",
+                tint = gold.primaer,
+                modifier = Modifier.size(20.dp).rotate(if (offen) 180f else 0f),
+            )
+        }
+        menue(breite)
     }
 }
 
@@ -291,8 +399,6 @@ private fun StimmenZeile(
             }
         }
         if (!platzhalter) {
-            HerkunftsChip(eintrag.herkunft)
-            Spacer(Modifier.width(4.dp))
             Box(
                 modifier = Modifier.size(30.dp).druckEffekt(aufFavorit),
                 contentAlignment = Alignment.Center,
