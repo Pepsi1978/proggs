@@ -408,6 +408,9 @@ final class OverlayPanel: NSPanel {
     /// Logik greift, damit Right-Clicks auf Tiles nicht versehentlich
     /// das Pillar verschieben.
     var onProfileRightClicked: ((Int) -> Void)?
+    /// Rechtsklick auf das Mikrofon: letzte Aufnahme erneut transkribieren.
+    /// Parameter true = mit gedrueckter Umschalttaste (die VORLETZTE Aufnahme).
+    var onMicRightClicked: ((Bool) -> Void)?
     var onPillarMoved: (() -> Void)?
 
     init() {
@@ -681,7 +684,7 @@ final class OverlayPanel: NSPanel {
         self.tooltipManager = mgr
 
         mgr.register(ultrathinkButton, text: "Promptboard")
-        mgr.register(micButton,        text: "Aufnahme")
+        mgr.register(micButton,        text: "Aufnahme\nRechtsklick: letzte Aufnahme erneut transkribieren\nUmschalt+Rechtsklick: die vorletzte")
         mgr.register(btwButton,        text: "Zwischenfrage")
         mgr.register(wButton,          text: "Whisper")
         mgr.register(gButton,          text: "Gemini")
@@ -997,6 +1000,12 @@ final class OverlayPanel: NSPanel {
                 )
                 for (idx, tile) in profileButtons.enumerated() where tile.frame.contains(panelPoint) {
                     onProfileRightClicked?(idx + 1)
+                    return true
+                }
+                // Hit-Test auf das Mikrofon: Rechtsklick transkribiert die letzte Aufnahme
+                // erneut (Umschalt: die vorletzte) — kein Drag-Start.
+                if micButton.frame.contains(panelPoint) {
+                    onMicRightClicked?(event.modifierFlags.contains(.shift))
                     return true
                 }
                 isDragging = true

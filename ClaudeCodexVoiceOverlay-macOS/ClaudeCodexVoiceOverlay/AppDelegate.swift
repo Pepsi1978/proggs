@@ -356,6 +356,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
+        panel.onMicRightClicked = { [weak self] takePrevious in
+            self?.retranscribeArchivedRecording(index: takePrevious ? 1 : 0)
+        }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
         panel.onBtwClicked = { [weak self] in self?.toggleBtwRecording() }
@@ -654,7 +657,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { self.recordingCuePlayer.playStop() }
 
             self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
-                try? FileManager.default.removeItem(at: fileURL)
+                // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv, wo die
+                // letzten zwei Diktate liegen bleiben und per Rechtsklick auf das Mikrofon
+                // erneut transkribiert werden koennen.
+                if case .failure = result {
+                    RecordingArchive.archive(fileURL, success: false)
+                } else {
+                    RecordingArchive.archive(fileURL, success: true)
+                }
 
                 DispatchQueue.main.async {
                     guard let self = self else { return }
@@ -685,6 +695,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         self.pasteError(msg, wasBtw: wasBtw)
                     }
                 }
+            }
+        }
+    }
+
+    /// Rechtsklick auf das Mikrofon: die zuletzt aufgenommene Datei noch einmal an die
+    /// Transkription schicken und den Text einfuegen (Umschalt = die VORLETZTE Aufnahme).
+    /// Gedacht fuer den Fall "die Transkription hat nicht geklappt" — seit dem 413-Vorfall vom
+    /// 29.08.2026 wird keine Aufnahme mehr geloescht, die letzten zwei liegen im Archiv.
+    /// Laeuft durch denselben Client wie eine frische Aufnahme, also inklusive Chunking langer
+    /// Diktate — genau das, was beim Original fehlgeschlagen war.
+    private func retranscribeArchivedRecording(index: Int) {
+        guard !isProcessing, !isRecording else { return }
+
+        guard let wav = RecordingArchive.at(index) else {
+            let welche = index == 0 ? "letzte" : "vorletzte"
+            NSLog("Keine %@ Aufnahme im Archiv.", welche)
+            DiagLog.warn("VoiceTurn", "retranscribe_no_recording", [("index", index)])
+            // Kurz rot zeigen, dann zurueck auf Idle — es ist kein Fehler, es ist nur nichts da.
+            panel.setMicState(.error)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                self?.panel.setMicState(.idle)
+            }
+            return
+        }
+
+        DiagLog.write("VoiceTurn", "retranscribe_start", [("index", index), ("path", wav.path)])
+        isProcessing = true
+        panel.setMicState(.processing)
+
+        groqClient.transcribe(fileURL: wav) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success(let transcript):
+                    let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                    DiagLog.write("VoiceTurn", "retranscribe_done", [("chars", trimmed.count)])
+                    if trimmed.isEmpty {
+                        self.isProcessing = false
+                        self.panel.setMicState(.idle)
+                        return
+                    }
+                    self.lastRawTranscript = transcript
+                    self.lastCorrectableRaw = transcript
+                    self.handleTranscript(transcript, wasBtw: false)
+                case .failure(let error):
+                    NSLog("Wiederholte Transkription fehlgeschlagen: %@", error.localizedDescription)
+                    DiagLog.warn("VoiceTurn", "retranscribe_failed",
+                                 [("path", wav.path), ("err", error.localizedDescription)])
+                    self.pasteError(ErrorDescriptions.describeTranscriptionError(error), wasBtw: false)
+                }
+                // Die Datei bleibt im Archiv liegen — eine Wiederholung darf beliebig oft laufen.
             }
         }
     }

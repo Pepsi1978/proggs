@@ -16,6 +16,24 @@ final class GroqWhisperClient {
     private let maxRetries = 0
     private let delays: [TimeInterval] = [2, 4, 8]
 
+    // ----- Upload-Groessenlimit / Chunking (Almanach bugs/apis/groq-api.md Nr. 11,
+    // bugs/desktop/groq-transkription.md 4.3) -----
+    // Groq weist zu grosse Uploads mit HTTP 413 ("Request Entity Too Large") ab: 25 MB im
+    // Free-Plan, im Dev-Plan in der Praxis schon ab ~37 MB trotz dokumentierter 100 MB.
+    // Bei 16 kHz mono 16-bit sind das 32 kB/s -> das Limit faellt nach rund 13 Minuten.
+    // Vorfall 29.08.2026: 15,4 Minuten am Stueck diktiert -> 29,5 MB -> 413 -> der gesamte
+    // gesprochene Text war verloren. Ein 413 ist NICHT retrybar (kleiner wird die Datei ja
+    // nicht), deshalb wird lange Audio VOR dem Senden in Teile geschnitten.
+    private static let wavHeaderSize = 44
+    private static let maxUploadBytes = 20 * 1024 * 1024
+    /// Ziel-Groesse eines Teilstuecks (~8,7 Min bei 16 kHz mono). Bewusst unter maxUploadBytes,
+    /// damit die Pausensuche den Schnitt nach vorne verschieben darf, ohne das Limit zu reissen.
+    private static let chunkTargetBytes = 16 * 1024 * 1024
+    /// Suchfenster fuer den Schnitt an einer Sprechpause: die letzten 45 s vor dem Ziel-Ende.
+    private static let cutSearchWindowMs = 45_000
+    /// Ab so vielen zusammenhaengenden stillen 20-ms-Frames gilt eine Stelle als Sprechpause.
+    private static let minPauseFrames = 4
+
     // ----- Abwehr gegen Whisper-Stille-Halluzination (Almanach bugs/desktop/groq-transkription.md) -----
     // Schicht 1 (Vorfilter): reine Stille gar nicht erst senden — Whisper halluziniert sonst Floskeln
     // ("Vielen Dank") MIT hoher Confidence, die das Confidence-Gate nicht faengt; ultrakurze Clips
@@ -79,8 +97,274 @@ final class GroqWhisperClient {
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-            self.sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
+            // Lange Aufnahmen wuerden am Groq-Upload-Limit mit 413 scheitern (siehe
+            // maxUploadBytes) — sie werden in Teile geschnitten und einzeln gesendet.
+            let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
+            let size = (attrs?[.size] as? NSNumber)?.intValue ?? 0
+            if size > Self.maxUploadBytes {
+                self.transcribeInChunks(fileURL: fileURL, completion: completion)
+            } else {
+                self.sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
+            }
         }
+    }
+
+    // MARK: - Chunking langer Aufnahmen
+
+    /// Kopfdaten einer 16-bit-PCM-WAV (fuer das Chunking langer Aufnahmen).
+    private struct WavFormat {
+        let sampleRate: Int
+        let channels: Int
+        let bitsPerSample: Int
+        let blockAlign: Int
+        let byteRate: Int
+        let dataOffset: Int
+        let dataLength: Int
+    }
+
+    /// Transkribiert eine Aufnahme, die ueber dem Groq-Upload-Limit liegt, in mehreren Teilen.
+    /// Geschnitten wird bevorzugt in einer Sprechpause kurz vor der Ziel-Groesse, damit kein Wort
+    /// zerrissen wird; findet sich keine Pause, wird hart geschnitten (funktionserhaltend: lieber
+    /// eine Wortgrenze riskieren als die ganze Aufnahme verlieren). Faellt ein einzelner Teil aus,
+    /// gehen NUR dessen Sekunden verloren — alle uebrigen Teile kommen trotzdem an.
+    private func transcribeInChunks(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let wav = try? Data(contentsOf: fileURL) else {
+            completion(.failure(APIError.fileReadError))
+            return
+        }
+        guard let fmt = Self.readWavFormat(wav) else {
+            // Unlesbarer Header -> nicht schneiden, sondern wie bisher senden. Dann entscheidet
+            // Groq (evtl. 413) — aber die Aufnahme wird nicht durch falsches Schneiden zerstoert.
+            DiagLog.warn("Groq", "chunk_header_unreadable", [("bytes", wav.count)])
+            sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
+            return
+        }
+
+        let ranges = Self.planChunks(wav, fmt)
+        DiagLog.write("Groq", "chunk_plan",
+                      [("bytes", wav.count), ("chunks", ranges.count),
+                       ("limitBytes", Self.maxUploadBytes)])
+
+        // Teilstuecke als temporaere Dateien ablegen — sendRequest arbeitet dateibasiert.
+        // Das sind abgeleitete Daten; die Original-Aufnahme selbst bleibt unangetastet.
+        var chunkURLs: [URL] = []
+        let tmpDir = FileManager.default.temporaryDirectory
+        for (i, range) in ranges.enumerated() {
+            let chunk = Self.buildChunkWav(wav, fmt, range.start, range.length)
+            let url = tmpDir.appendingPathComponent("tvo_chunk_\(UUID().uuidString)_\(i).wav")
+            do {
+                try chunk.write(to: url)
+                chunkURLs.append(url)
+            } catch {
+                DiagLog.warn("Groq", "chunk_write_failed", [("index", i + 1), ("err", error.localizedDescription)])
+            }
+        }
+
+        guard !chunkURLs.isEmpty else {
+            completion(.failure(APIError.fileReadError))
+            return
+        }
+
+        sendChunk(chunkURLs, index: 0, parts: [], failed: 0, completion: completion)
+    }
+
+    /// Schickt die Teilstuecke NACHEINANDER (Groq-Rate-Limits) und setzt die Texte zusammen.
+    private func sendChunk(_ urls: [URL],
+                           index: Int,
+                           parts: [String],
+                           failed: Int,
+                           completion: @escaping (Result<String, Error>) -> Void) {
+        guard index < urls.count else {
+            for url in urls { try? FileManager.default.removeItem(at: url) }
+            DiagLog.write("Groq", "chunk_merged",
+                          [("chunks", urls.count), ("ok", parts.count), ("failed", failed)])
+            if !parts.isEmpty {
+                completion(.success(parts.joined(separator: " ")))
+            } else if failed > 0 {
+                // Wirklich alles gescheitert -> Fehler melden.
+                completion(.failure(APIError.httpError(0, "Alle \(urls.count) Teilstuecke der langen Aufnahme sind fehlgeschlagen")))
+            } else {
+                // Kein Fehler, nur kein Sprachinhalt -> leerer Erfolg (fuegt nichts ein).
+                completion(.success(""))
+            }
+            return
+        }
+
+        sendRequest(fileURL: urls[index], attempt: 0) { [weak self] result in
+            guard let self = self else { return }
+            var next = parts
+            var failedNext = failed
+            switch result {
+            case .success(let text):
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                DiagLog.write("Groq", "chunk_done",
+                              [("index", index + 1), ("of", urls.count), ("chars", trimmed.count)])
+                if !trimmed.isEmpty { next.append(trimmed) }
+            case .failure(let error):
+                // Funktionserhaltend: ein kaputter Teil darf die uebrigen Teile nicht mitreissen.
+                failedNext += 1
+                DiagLog.warn("Groq", "chunk_failed",
+                             [("index", index + 1), ("of", urls.count), ("err", error.localizedDescription)])
+            }
+            self.sendChunk(urls, index: index + 1, parts: next, failed: failedNext, completion: completion)
+        }
+    }
+
+    /// Legt die Byte-Bereiche der Teilstuecke fest. Jedes Teilstueck bleibt unter `maxUploadBytes`;
+    /// der Schnitt wird, wenn moeglich, in die laengste Sprechpause im letzten
+    /// `cutSearchWindowMs`-Fenster vor der Ziel-Groesse gelegt.
+    private static func planChunks(_ wav: Data, _ fmt: WavFormat) -> [(start: Int, length: Int)] {
+        var ranges: [(start: Int, length: Int)] = []
+        let voiced = buildVoicedTimeline(wav, fmt)
+        let frameBytes = max(fmt.blockAlign, fmt.sampleRate * frameMs / 1000 * fmt.blockAlign)
+        let dataEnd = fmt.dataOffset + fmt.dataLength
+        let payloadPerChunk = chunkTargetBytes - wavHeaderSize
+
+        var pos = fmt.dataOffset
+        while pos < dataEnd {
+            let remaining = dataEnd - pos
+            if remaining + wavHeaderSize <= maxUploadBytes {
+                ranges.append((start: pos, length: remaining))
+                break
+            }
+
+            let hardEnd = pos + payloadPerChunk
+            var cut = findPauseCut(voiced, fmt, frameBytes, pos, hardEnd) ?? hardEnd
+            // Nie mitten in ein Sample schneiden — sonst knackt der naechste Teil am Anfang.
+            cut -= (cut - fmt.dataOffset) % fmt.blockAlign
+            if cut <= pos { cut = hardEnd }              // Sicherheitsnetz gegen Endlosschleife
+            if cut > dataEnd { cut = dataEnd }
+            ranges.append((start: pos, length: cut - pos))
+            pos = cut
+        }
+        return ranges
+    }
+
+    /// Sucht im Fenster [hardEnd - cutSearchWindowMs, hardEnd] die laengste zusammenhaengende
+    /// Stille und liefert deren Mitte als Schnitt-Byte. nil, wenn keine ausreichende Pause da ist.
+    private static func findPauseCut(_ voiced: [Bool]?,
+                                     _ fmt: WavFormat,
+                                     _ frameBytes: Int,
+                                     _ rangeStart: Int,
+                                     _ hardEnd: Int) -> Int? {
+        guard let voiced = voiced, frameBytes > 0 else { return nil }
+        let windowBytes = min(cutSearchWindowMs * fmt.byteRate / 1000, hardEnd - rangeStart)
+        guard windowBytes > 0 else { return nil }
+
+        let fromFrame = max(0, (hardEnd - windowBytes - fmt.dataOffset) / frameBytes)
+        let toFrame = min(voiced.count, (hardEnd - fmt.dataOffset) / frameBytes)
+        guard toFrame - fromFrame >= minPauseFrames else { return nil }
+
+        var bestStart = -1, bestLen = 0, runStart = -1
+        for f in fromFrame..<toFrame {
+            if !voiced[f] {
+                if runStart < 0 { runStart = f }
+                let len = f - runStart + 1
+                if len > bestLen { bestLen = len; bestStart = runStart }
+            } else {
+                runStart = -1
+            }
+        }
+        guard bestLen >= minPauseFrames else { return nil }
+
+        let midFrame = bestStart + bestLen / 2
+        return fmt.dataOffset + midFrame * frameBytes
+    }
+
+    /// Baut aus einem Byte-Bereich der Quelldatei eine eigenstaendige WAV mit frischem
+    /// kanonischem 44-Byte-Header (RIFF- und data-Groesse passend zum Teilstueck).
+    private static func buildChunkWav(_ source: Data, _ fmt: WavFormat, _ dataStart: Int, _ dataLength: Int) -> Data {
+        var header = Data(capacity: wavHeaderSize)
+        func ascii(_ s: String) { header.append(contentsOf: Array(s.utf8)) }
+        func i32(_ v: Int) {
+            let u = UInt32(truncatingIfNeeded: v)
+            header.append(contentsOf: [UInt8(u & 0xFF), UInt8((u >> 8) & 0xFF),
+                                       UInt8((u >> 16) & 0xFF), UInt8((u >> 24) & 0xFF)])
+        }
+        func i16(_ v: Int) {
+            let u = UInt16(truncatingIfNeeded: v)
+            header.append(contentsOf: [UInt8(u & 0xFF), UInt8((u >> 8) & 0xFF)])
+        }
+
+        ascii("RIFF"); i32(wavHeaderSize + dataLength - 8); ascii("WAVE")
+        ascii("fmt "); i32(16); i16(1)
+        i16(fmt.channels); i32(fmt.sampleRate); i32(fmt.byteRate)
+        i16(fmt.blockAlign); i16(fmt.bitsPerSample)
+        ascii("data"); i32(dataLength)
+
+        var out = header
+        out.append(source.subdata(in: dataStart..<(dataStart + dataLength)))
+        return out
+    }
+
+    /// Liest fmt- und data-Chunk einer RIFF/WAVE-Datei. Laeuft die Chunk-Kette echt durch, statt
+    /// den 44-Byte-Standardheader anzunehmen — Aufnahmen mit LIST/fact-Chunk werden sonst falsch
+    /// geschnitten. nil bei allem, was nicht als 16-bit-PCM lesbar ist.
+    private static func readWavFormat(_ wav: Data) -> WavFormat? {
+        let b = [UInt8](wav)
+        guard b.count >= wavHeaderSize else { return nil }
+        func tag(_ at: Int) -> String {
+            String(bytes: b[at..<(at + 4)], encoding: .ascii) ?? ""
+        }
+        func le32(_ at: Int) -> Int {
+            Int(b[at]) | (Int(b[at + 1]) << 8) | (Int(b[at + 2]) << 16) | (Int(b[at + 3]) << 24)
+        }
+        func le16(_ at: Int) -> Int { Int(b[at]) | (Int(b[at + 1]) << 8) }
+
+        guard tag(0) == "RIFF", tag(8) == "WAVE" else { return nil }
+
+        var channels = 0, sampleRate = 0, byteRate = 0, blockAlign = 0, bits = 0
+        var dataOffset = -1, dataLength = 0
+        var pos = 12
+        while pos + 8 <= b.count {
+            let id = tag(pos)
+            let size = le32(pos + 4)
+            if size < 0 { return nil }
+            let body = pos + 8
+            if id == "fmt ", size >= 16, body + 16 <= b.count {
+                channels = le16(body + 2)
+                sampleRate = le32(body + 4)
+                byteRate = le32(body + 8)
+                blockAlign = le16(body + 12)
+                bits = le16(body + 14)
+            } else if id == "data" {
+                dataOffset = body
+                // Groesse aus dem Header kann bei abgebrochener Aufnahme zu gross sein -> kappen.
+                dataLength = min(size, b.count - body)
+                break
+            }
+            pos = body + size + (size % 2)   // RIFF-Chunks sind auf gerade Byte-Grenzen gepaddet
+        }
+
+        guard dataOffset >= 0, dataLength > 0, bits == 16, channels > 0, sampleRate > 0 else { return nil }
+        let align = blockAlign > 0 ? blockAlign : channels * bits / 8
+        let rate = byteRate > 0 ? byteRate : sampleRate * align
+        return WavFormat(sampleRate: sampleRate, channels: channels, bitsPerSample: bits,
+                         blockAlign: align, byteRate: rate,
+                         dataOffset: dataOffset, dataLength: dataLength)
+    }
+
+    /// Voiced-Timeline ueber den echten data-Bereich (Variante fuer den Chunking-Pfad, der den
+    /// Header nicht als fix 44 Byte annehmen darf).
+    private static func buildVoicedTimeline(_ wav: Data, _ fmt: WavFormat) -> [Bool]? {
+        let bytes = [UInt8](wav)
+        let frameSamples = max(1, fmt.sampleRate * frameMs / 1000)
+        let frameBytes = frameSamples * fmt.blockAlign
+        let frameCount = fmt.dataLength / frameBytes
+        guard frameCount > 0 else { return nil }
+        var voiced = [Bool](repeating: false, count: frameCount)
+        for f in 0..<frameCount {
+            let baseB = fmt.dataOffset + f * frameBytes
+            var sumSq = 0.0
+            for s in 0..<frameSamples {
+                let idx = baseB + s * fmt.blockAlign      // bei Stereo nur der linke Kanal
+                let sample = Int16(bitPattern: UInt16(bytes[idx]) | (UInt16(bytes[idx + 1]) << 8))
+                let v = Double(sample) / 32768.0
+                sumSq += v * v
+            }
+            voiced[f] = (sumSq / Double(frameSamples)).squareRoot() > speechRmsThreshold
+        }
+        return voiced
     }
 
     private func sendRequest(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {

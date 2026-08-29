@@ -51,6 +51,7 @@ SWIFT_FILES=(
     "$SRC_DIR/AppWatcher.swift"
     "$SRC_DIR/AudioRecorder.swift"
     "$SRC_DIR/GroqWhisperClient.swift"
+    "$SRC_DIR/RecordingArchive.swift"
     "$SRC_DIR/GeminiClient.swift"
     "$SRC_DIR/TerminalController.swift"
     "$SRC_DIR/OverlayPanel.swift"
