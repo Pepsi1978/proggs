@@ -41,7 +41,7 @@ ClaudeVoiceOverlay, use `Both` instead of `TVO`.
 | `Services/AudioRecorder.cs` | NAudio microphone recording |
 | `Services/GroqWhisperClient.cs` | Groq Whisper API for speech-to-text |
 | `Services/GeminiClient.cs` | Gemini API for text correction/formatting |
-| `Services/GeminiTranscribeClient.cs` | Gemini Live API (WebSocket) speech-to-text — `gemini-3.5-transcribe-live` only supports `bidiGenerateContent` |
+| `Services/GeminiTranscribeClient.cs` | Gemini Live API (WebSocket) speech-to-text — `gemini-3.5-transcribe-live` only supports `bidiGenerateContent`. VAD MUST be disabled (`automaticActivityDetection.disabled` + manual `activityStart`/`activityEnd`), else it cuts off at the first pause. Language and vocabulary go into `inputAudioTranscription.languageCodes` (array!) / `.customVocabulary` — `speechConfig` does not exist on this model |
 | `Services/SpeechToTextRouter.cs` | Picks Groq vs Gemini per recording; Whisper hallucination guard stays Groq-only |
 | `Services/TranscriptionEngineSetting.cs` | Engine switch, stored as `SK/VoiceOverlays/transcription-engine.txt` |
 | `Services/TerminalController.cs` | Win32 keyboard simulation for terminals (keybd_event) |

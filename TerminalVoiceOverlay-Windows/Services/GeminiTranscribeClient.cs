@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -46,6 +48,14 @@ namespace TerminalVoiceOverlay.Services
     ///   3. generationComplete/turnComplete kommt zuverlaessig, sobald das
     ///      Ende des Sprechens markiert ist. Das Stille-Fenster
     ///      (<see cref="IdleMs"/>) bleibt nur als Sicherheitsnetz.
+    ///
+    ///   4. SPRACHE UND WOERTERBUCH GEHOEREN AN inputAudioTranscription.
+    ///      Nicht ins Setup gehoeren dagegen "speechConfig" (existiert bei
+    ///      diesem Modell gar nicht: "Unknown name speechConfig at 'setup'")
+    ///      und ein einzelnes "languageCode" — das Feld heisst
+    ///      languageCodes und ist ein Array. Fachbegriffe gehen als
+    ///      customVocabulary mit; damit werden Eigennamen schon bei der
+    ///      Erkennung richtig geschrieben statt erst in der Nachkorrektur.
     ///
     /// BEWUSST OHNE HALLUZINATIONS-GATE: die dreischichtige Abwehr gegen
     /// Whisper-Stille-Halluzinationen in GroqWhisperClient haengt an Whispers
@@ -114,19 +124,29 @@ namespace TerminalVoiceOverlay.Services
             //    Modell soll das Gesprochene verschriftlichen, nicht antworten.
             //    automaticActivityDetection.disabled: siehe Eigenheit 1 oben —
             //    ohne das schneidet die API bei der ersten Denkpause ab.
+            //    languageCodes + customVocabulary: siehe Eigenheit 4 oben.
+            var vocabulary = LoadCustomVocabulary();
+            var transcription = new Dictionary<string, object>
+            {
+                ["languageCodes"] = new[] { LanguageTag(_language) },
+            };
+            if (vocabulary.Length > 0)
+                transcription["customVocabulary"] = vocabulary;
+
             var setup = JsonSerializer.Serialize(new
             {
                 setup = new
                 {
                     model = "models/" + _model,
                     generationConfig = new { responseModalities = new[] { "TEXT" } },
-                    inputAudioTranscription = new { },
+                    inputAudioTranscription = transcription,
                     realtimeInputConfig = new
                     {
                         automaticActivityDetection = new { disabled = true }
                     },
                 }
             });
+            DiagLog.Write("GeminiSTT", "setup", ("lang", LanguageTag(_language)), ("vocabWords", vocabulary.Length));
             await SendAsync(ws, setup, ct).ConfigureAwait(false);
 
             // 2) Anfang des Sprechens von Hand markieren (die Automatik ist aus).
@@ -338,6 +358,65 @@ namespace TerminalVoiceOverlay.Services
                 return
                     (server.TryGetProperty("turnComplete", out var tc) && tc.ValueKind == JsonValueKind.True) ||
                     (server.TryGetProperty("generationComplete", out var gc) && gc.ValueKind == JsonValueKind.True);
+            }
+        }
+
+        /// <summary>
+        /// Sprachkennung fuer die Live-API. Die Konfiguration haelt "de" (wie
+        /// Whisper es braucht), die Live-API will BCP-47 mit Region ("de-DE").
+        /// </summary>
+        private static string LanguageTag(string code)
+        {
+            if (code.Contains('-')) return code;
+            return code.ToLowerInvariant() switch
+            {
+                "de" => "de-DE",
+                "en" => "en-US",
+                "fr" => "fr-FR",
+                "es" => "es-ES",
+                "it" => "it-IT",
+                _ => code,
+            };
+        }
+
+        /// <summary>
+        /// Das persoenliche Woerterbuch aus dem SK-Ordner als customVocabulary.
+        /// Dieselbe Datei und derselbe Ein/Aus-Schalter wie bei der
+        /// Gemini-Textkorrektur — was Frank dort pflegt, hilft jetzt schon bei
+        /// der Erkennung statt erst bei der Nachkorrektur. Eintraege stehen
+        /// zeilen- oder kommagetrennt in der Datei.
+        /// </summary>
+        private static string[] LoadCustomVocabulary()
+        {
+            try
+            {
+                var dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "SK", "VoiceOverlays");
+
+                var togglePath = Path.Combine(dir, "vocabulary-enabled.txt");
+                if (!File.Exists(togglePath) ||
+                    !string.Equals(File.ReadAllText(togglePath).Trim(), "true", StringComparison.OrdinalIgnoreCase))
+                    return Array.Empty<string>();
+
+                var vocabPath = Path.Combine(dir, "personal-vocabulary.txt");
+                if (!File.Exists(vocabPath)) return Array.Empty<string>();
+
+                var words = File.ReadAllText(vocabPath)
+                    .Split(new[] { '\n', '\r', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(w => w.Trim())
+                    .Where(w => w.Length > 0 && !w.StartsWith('#'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    // Die API nimmt bis zu 1000 Begriffe; laut Google sind die
+                    // Ergebnisse bis etwa 100 am besten. Deckel bei 100.
+                    .Take(100)
+                    .ToArray();
+                return words;
+            }
+            catch
+            {
+                // Best-effort: ohne Woerterbuch transkribieren ist besser als gar nicht.
+                return Array.Empty<string>();
             }
         }
 

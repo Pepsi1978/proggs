@@ -109,7 +109,7 @@
                                 <ComboBoxItem Content="Gemini Transcribe Live (Free Tier, ohne Stille-Schutz)"/>
                             </ComboBox>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Die dreischichtige Abwehr gegen Whisper-Stille-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur beim Groq-Modell — sie hängt an Whisper-Messwerten, die Gemini nicht liefert. Gemini bekommt stattdessen per Anweisung gesagt, bei Stille nichts auszugeben. Die Umschaltung wirkt sofort, ohne Neustart. Der Gemini-Schlüssel dafür steht als GEMINI_TRANSCRIBE_API_KEY in der zentralen .env."/>
+                                       Text="Die dreischichtige Abwehr gegen Whisper-Stille-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur beim Groq-Modell — sie hängt an Whisper-Messwerten, die Gemini nicht liefert. Gemini bekommt dafür die Sprache (Deutsch) und dein Wörterbuch direkt mit in die Erkennung und schneidet bei Denkpausen nicht mehr ab. Die Umschaltung wirkt sofort, ohne Neustart. Der Gemini-Schlüssel dafür steht als GEMINI_TRANSCRIBE_API_KEY in der zentralen .env."/>
                         </StackPanel>
                     </Border>
 
@@ -118,13 +118,13 @@
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardHeader}" Text="Persönliches Wörterbuch"/>
                             <CheckBox x:Name="UseVocabularyCheck" Style="{StaticResource DarkCheck}"
-                                      Content="Wörterbuch verwenden (an Gemini mitschicken)" Margin="0,0,0,8"/>
+                                      Content="Wörterbuch verwenden (bei der Erkennung UND der Gemini-Korrektur)" Margin="0,0,0,8"/>
                             <TextBox x:Name="VocabularyBox" Style="{StaticResource DarkBox}"
                                      AcceptsReturn="True" TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
                                      MinHeight="84" MaxHeight="150" Margin="0,0,0,6"/>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Gemini schreibt sie kontextabhängig korrekt; es ersetzt nicht stur. Gilt für alle Profile und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
+                                       Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Beim Gemini-Transkriptions-Modell gehen die ersten 100 Einträge direkt als customVocabulary in die Erkennung, werden also schon beim Zuhören richtig geschrieben. Zusätzlich schreibt Gemini sie bei der Korrektur kontextabhängig korrekt; es ersetzt nicht stur. Gilt für alle Profile und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4"
                                        Text="Einleitungstext an Gemini (steht vor der Wortliste — erklärt Gemini, was es mit dem Wörterbuch tun soll)"/>
                             <TextBox x:Name="PreambleBox" Style="{StaticResource DarkBox}"
