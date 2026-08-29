@@ -1,6 +1,6 @@
 # Android-App-Referenz — verbindliche Standard-Bausteine für alle meine Apps
 
-> **Stand:** 29.08.2026, 16:17 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
+> **Stand:** 29.08.2026, 16:31 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
 > **Referenz-Apps im Repo:** `~/proggs/PerfectMoment`, `~/proggs/CortexAndroid`,
 > `~/proggs/BestJournalAndroid`, `~/proggs/TerminalVoiceOverlay-Windows`
 
@@ -414,7 +414,7 @@ später nicht nachvollziehbar, warum etwas fehlt.
 
 ## 7. Baustein G — Einstellungs-Bildschirm ⭐ PFLICHT
 
-Erreichbar über das Zahnrad aus Baustein C. Enthält **immer mindestens** diese drei Blöcke:
+Erreichbar über das Zahnrad aus Baustein C. Enthält **immer mindestens** diese Blöcke:
 
 ### 7.1 Vorlesen
 **Ein gemeinsames Stimmen-Dropdown** über alle Engines nach Kapitel 4.6 (Meine Stimmen → Alibaba →
@@ -431,6 +431,12 @@ Feld **Groq-API-Key** · Modellanzeige `whisper-large-v3-turbo` · Schalter für
 **Hell / Dunkel — nur diese beiden**, als Zwei-Wege-Auswahl (Segmented Button oder zwei Karten).
 **Kein „System"-, „Automatik"- oder „Gerätevorgabe"-Eintrag** (Baustein A). Voreinstellung hell,
 zuletzt gewählter Modus wird gemerkt · falls vorhanden: Schriftgröße.
+
+### 7.4 KI (sobald die App eine KI benutzt — Baustein O)
+Umschalter **Abo / eigener Schlüssel** mit Anmeldestatus · bei der Anmeldung der Code mit Knopf
+**„Code kopieren"** (O.1) · **Modell-Dropdown** (Sol / Terra / Luna, neuere Modelle ergänzbar) ·
+**Effort-Auswahl** (Niedrig / Mittel / Hoch / Sehr hoch / Maximal) — **beide zusammen, nie nur eines**
+(O.2) · Feld für den eigenen API-Schlüssel mit Testknopf.
 
 **Regeln für die Schlüssel**
 
@@ -804,7 +810,69 @@ Baustein G, mit Testknopf.
 funktioniert. Ist keiner eingerichtet, sagt die App **wofür** sie den Zugang braucht und führt direkt
 zur Einrichtung — sie versteckt die Funktion nicht einfach.
 
-### O.2 Antworten strömend anzeigen
+### O.2 Modell **und** Denkaufwand (Effort) sind auswählbar ⭐ PFLICHT
+
+**Was:** Sobald Codex/ChatGPT eingebaut ist, kann ich in den Einstellungen **beides selbst wählen**:
+welches **Modell** rechnet und mit wie viel **Denkaufwand**. Beides zusammen, nie nur eines — das
+Effort-Feld wurde in der Vergangenheit vergessen, das darf nicht wieder passieren.
+
+**Modell-Auswahl**
+
+- Ein **Dropdown** mit allen Modellen. Ausgangsliste (deutscher Anzeigename → API-Kennung):
+
+  | Anzeige | API-Kennung | Charakter |
+  |---|---|---|
+  | GPT 5.6 Sol | `gpt-5.6-sol` | schnell |
+  | **GPT 5.6 Terra** | `gpt-5.6-terra` | ausgewogen — **Voreinstellung** |
+  | GPT 5.6 Luna | `gpt-5.6-luna` | am gründlichsten |
+
+- **Neuere Modelle kommen dazu, ohne dass die App umgebaut wird.** Die Liste steht als *ein*
+  `enum class CodexModel(label, apiId)` an *einer* Stelle im Projekt — eine neue Zeile genügt.
+  Vorlage: `PerfectMoment/.../auth/CodexModels.kt`, `GenialeIdeen/.../auth/CodexModels.kt`.
+- **Eine unbekannte gespeicherte Kennung stürzt nicht ab:** `fromLabel()` fällt auf die
+  Voreinstellung zurück (Terra), meldet das aber einmal im Klartext statt stumm umzuschalten.
+- Neben jedem Eintrag steht **ein Halbsatz, wofür das Modell gut ist** (schnell / ausgewogen /
+  gründlich) — ich soll nicht raten müssen.
+
+**Effort-Auswahl (Denkaufwand)**
+
+- Ein **eigenes Auswahlfeld direkt unter dem Modell** — Dropdown oder Segmented Button, fünf Stufen:
+
+  | Anzeige | API-Wert |
+  |---|---|
+  | Niedrig | `low` |
+  | **Mittel** | `medium` — **Voreinstellung** |
+  | Hoch | `high` |
+  | Sehr hoch | `xhigh` |
+  | Maximal | `max` |
+
+- Der Wert geht bei **jeder** Anfrage mit, als `reasoning.effort` im Anfrage-Rumpf:
+  `.put("reasoning", JSONObject().put("effort", reasoningEffort.apiValue))`.
+  **Nicht nur beim Hauptaufruf** — jede Stelle, die Codex ruft (Fragen, Zusammenfassung,
+  Text glätten, Sitzungs-Prompt), reicht Modell *und* Effort durch. Keine Stelle mit hartverdrahtetem
+  Standardwert.
+- Ein höherer Effort dauert länger — die App zeigt bei `xhigh`/`max` einen Hinweis („kann deutlich
+  länger dauern") und lässt das Abbrechen aus O.3 trotzdem jederzeit zu.
+
+**Gemeinsame Regeln**
+
+- **Modell und Effort werden persistent gespeichert** (nach den Regeln aus Baustein G) und beim Start
+  wiederhergestellt — die zuletzt gewählte Kombination gilt weiter.
+- **Beides ist auch in den Einstellungen sichtbar, nicht nur änderbar** — ich sehe jederzeit, womit
+  gerade gerechnet wird, ohne das Dropdown zu öffnen.
+- **Beides gehört als Paar in den Datentyp der Anfrage** (`model` + `reasoningEffort` im
+  Request-`data class`), damit man das eine nicht ohne das andere durchreichen kann. Vorlage:
+  `CodexQuestionRequest` in `GenialeIdeen/.../auth/CodexModels.kt`.
+- Läuft die App über **Weg 2 (eigener API-Schlüssel)** statt über das Abo, gilt dasselbe: Modell- und
+  Effort-Auswahl bleiben stehen, nur die Liste passt sich dem Anbieter an. Kennt ein Anbieter kein
+  `effort`, wird das Feld ausgegraut **mit Begründung**, nicht entfernt.
+- Wird eine Kombination vom Dienst abgelehnt (Modell nicht freigeschaltet, Effort unbekannt), sagt die
+  App **welche** Kombination abgelehnt wurde und bietet den Rückfall auf Terra/Mittel an — kein
+  stiller Wechsel (Baustein L).
+
+---
+
+### O.3 Antworten strömend anzeigen
 
 - Die Antwort erscheint **Wort für Wort**, während sie entsteht — nicht erst am Stück nach langem
   Warten. Vorher ein Zustand „denkt nach" (Baustein L).
@@ -816,7 +884,7 @@ zur Einrichtung — sie versteckt die Funktion nicht einfach.
 - Bricht die Verbindung mitten in der Antwort ab, bleibt das **bereits Empfangene erhalten** und wird
   als unvollständig gekennzeichnet — nie kommentarlos verwerfen.
 
-### O.3 KI-Textverbesserung nach dem Diktat
+### O.4 KI-Textverbesserung nach dem Diktat
 
 - Neben dem Mikrofon (Baustein F) sitzt ein Knopf **„Text glätten"**: Füllwörter raus, Satzzeichen und
   Absätze rein, Versprecher bereinigt — **ohne den Inhalt zu verändern**.
@@ -825,9 +893,10 @@ zur Einrichtung — sie versteckt die Funktion nicht einfach.
 - Der Prompt enthält die Umlaut-Vorgabe aus **Baustein M.3** und die Anweisung, nichts hinzuzuerfinden.
 - Nur ein Knopfdruck, nie automatisch — sonst weiß ich nicht mehr, was von mir ist.
 
-### O.4 Allgemein
+### O.5 Allgemein
 
-- Der Modellname steht **an einer Stelle** im Projekt und ist in den Einstellungen sichtbar.
+- Die Modell-Liste steht **an einer Stelle** im Projekt (ein `enum`), und Modell **wie** Effort sind in
+  den Einstellungen sichtbar **und auswählbar** (O.2) — nicht bloß angezeigt, nicht hartverdrahtet.
 - **Keine Schlüssel und keine Token ins Log** (Baustein P), auch nicht gekürzt.
 - Jede KI-Antwort läuft vor der Anzeige durch die Umlaut-Korrektur aus Baustein M.
 - **Wird die Antwort vorgelesen, enthält der Prompt zusätzlich die TTS-Vorgabe aus Kapitel 4.5**
@@ -900,7 +969,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **D (4.6)** **Ein** Dropdown mit allen Stimmen: Meine → Alibaba → Google Chirp 3 HD → Edge, mit Probe-Knopf, Favoriten, ausgegrauten statt versteckten Einträgen; Auswahl gespeichert
 - [ ] **E** Eigene Stimme aufnehmbar, benennbar, auswählbar — **und meine schon vorhandenen Alibaba-Stimmen werden aus dem Konto geladen, zwischengespeichert und sind sofort wählbar** (nicht nur ein Schlüsselfeld)
 - [ ] **F** Mikrofon-Knopf; `whisper-large-v3-turbo`; alle **vier** Halluzinations-Fixes; 413-Schnitt
-- [ ] **G** Einstellungen mit den drei Blöcken; Schlüssel verschlüsselt; Testknöpfe
+- [ ] **G** Einstellungen mit allen Blöcken (Vorlesen, Spracheingabe, Darstellung, KI); Schlüssel verschlüsselt; Testknöpfe
 - [ ] **H** Version und Zeitstempel gebumpt und in der App sichtbar
 - [ ] **I** Biometrische App-Sperre mit PIN-Rückfall und Hintergrund-Zeitsperre
 - [ ] **J** Export/Import als Datei; Drive-Sicherung im `appDataFolder`; `backup_rules.xml` gepflegt
@@ -909,6 +978,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
 - [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` zentral, jeder Bildschirm durch die Abnahme N.6
 - [ ] **O** KI über Abo **und** Schlüssel; **Codex-Anmeldecode mit Knopf „Code kopieren" und Rückmeldung**; Antwort strömt; „Text glätten" mit erhaltenem Original
+- [ ] **O (O.2)** **Modell-Dropdown (Sol / Terra / Luna, erweiterbar) UND Effort-Auswahl (Niedrig bis Maximal)** vorhanden, gespeichert und an *jeder* Codex-Anfrage mitgesendet — keine Stelle mit hartverdrahtetem Wert
 - [ ] **P** Absturz-Fänger schreibt vor dem Absturz; Diagnose-Bildschirm mit Teilen-Knopf; keine Geheimnisse im Log
 - [ ] **D (4.3)** Vorlesen läuft bei ausgeschaltetem Bildschirm weiter, mit Pause/Weiter/Stopp in der Benachrichtigung
 - [ ] **D (4.5)** Vorgelesener Text ist TTS-freundlich: KI-Prompt mit Vorlese-Vorgabe **und** Aufbereitung an einer Stelle; keine Sonderzeichen in der Sprachausgabe; Anzeige unverändert
@@ -937,6 +1007,8 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | Stille-Erkennung (Schicht 1) | `PerfectMoment/.../audio/SpeechAnalyzer.kt` |
 | 413-Schnitt bei langen Diktaten | `TerminalVoiceOverlay-Windows/Services/GroqWhisperClient.cs` |
 | KI-Zugang über das ChatGPT-Abo (Geräteanmeldung) | `PerfectMoment/.../auth/CodexAuthManager.kt` |
+| Modell- und Effort-Auswahl (Sol/Terra/Luna, `low`…`max`) | `GenialeIdeen/.../auth/CodexModels.kt`, `PerfectMoment/.../auth/CodexModels.kt` |
+| Modell und Effort in den Einstellungen anbieten | `GenialeIdeen/.../ui/EinstellungenScreen.kt` |
 | Umschalter Abo/Schlüssel | `BestJournalFrank/.../data/remote/ai/AiGateway.kt` |
 | KI-Textverbesserung | `BestJournalAndroid/.../domain/usecase/ImproveTextUseCase.kt` |
 | Absturz-Fänger | `CortexAndroid/.../observability/CortexCrashHandler.kt` |
@@ -958,6 +1030,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
 | 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
 | 29.08.2026, 13:59 Uhr | Zweite Durchsicht aller 14 Apps (Klassennamen, Manifeste, Berechtigungen): Baustein O (KI über Abo oder Schlüssel, strömende Antworten, Text glätten), Baustein P (Absturz-Fänger und Diagnose-Bildschirm) und Kapitel 4.3 (Vorlesen im Vordergrunddienst) ergänzt |
+| 29.08.2026, 16:31 Uhr | Kapitel O.2 neu: Modell-Auswahl (Sol / Terra / Luna, neuere ergänzbar) **und** Effort-Auswahl (Niedrig bis Maximal) sind Pflicht, gespeichert und an jeder Anfrage mitgesendet; alte O.2–O.4 zu O.3–O.5 verschoben; Einstellungs-Block 7.4 (KI) ergänzt |
 | 29.08.2026, 16:17 Uhr | Baustein O.1: Codex-Anmeldecode ist immer kopierbar — Pflicht-Knopf „Code kopieren" mit Rückmeldung, antippbarer Code, „Seite öffnen" |
 | 29.08.2026, 16:17 Uhr | Kapitel 4.6 ergänzt: **ein** gemeinsames Stimmen-Dropdown über alle Engines (Meine → Alibaba → Google Chirp 3 HD → Edge) statt getrennter Engine-Auswahl |
 | 29.08.2026, 16:17 Uhr | Baustein E erweitert: schon vorhandene geklonte Alibaba-Stimmen werden aus dem Konto geladen, zwischengespeichert und sind sofort auswählbar — nicht nur ein Schlüsselfeld |
