@@ -18,6 +18,7 @@ import de.frank.genialeideen.backup.Sicherung
 import de.frank.genialeideen.backup.SicherungsVorschau
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
+import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.di.AppContainer
 import de.frank.genialeideen.observability.IdeenCrashHandler
@@ -134,6 +135,10 @@ class IdeenViewModel(
 
     private val _offeneIdee = MutableStateFlow<Long?>(null)
 
+    /** Die Kategorie, nach der die Liste gerade gefiltert wird - null heisst alle. */
+    private val _gewaehlteKategorie = MutableStateFlow<Long?>(null)
+    val gewaehlteKategorie: StateFlow<Long?> = _gewaehlteKategorie.asStateFlow()
+
     private val _eigeneStimmen = MutableStateFlow<List<ClonedVoice>>(emptyList())
     val eigeneStimmen: StateFlow<List<ClonedVoice>> = _eigeneStimmen.asStateFlow()
 
@@ -166,6 +171,9 @@ class IdeenViewModel(
 
     val umgesetzteIdeen: StateFlow<List<IdeeEntity>> = alleIdeen
         .map { liste -> liste.filter { it.status == IdeenStatus.UMGESETZT.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val kategorien: StateFlow<List<KategorieEntity>> = repository.alleKategorien()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val letzteSuchanfragen: StateFlow<List<String>> = repository.letzteSuchanfragen()
@@ -203,6 +211,7 @@ class IdeenViewModel(
 
     init {
         ladeEigeneStimmen()
+        viewModelScope.launch { repository.legeVorabKategorienAn(VORAB_KATEGORIEN) }
         // Der gemessene Pegel wandert in den Aufnahmestand, damit die Anzeige am Knopf
         // wirklich auf die Stimme reagiert und nichts simuliert.
         viewModelScope.launch {
@@ -219,12 +228,128 @@ class IdeenViewModel(
         IdeenCrashHandler.letzteAktion = if (id == null) "Liste" else "Idee geöffnet"
     }
 
-    fun legeAn(titel: String, text: String, aufnahmePfad: String? = null, originalText: String? = null) {
+    fun legeAn(
+        titel: String,
+        text: String,
+        aufnahmePfad: String? = null,
+        originalText: String? = null,
+        kategorieId: Long? = null,
+    ) {
         viewModelScope.launch {
             // Auch der Ersatztitel bleibt bei drei Wörtern — sonst sprengt er die Liste.
             val name = titel.trim().ifBlank { ersatzTitel(text) }
-            repository.lege(name, text.trim(), aufnahmePfad, originalText)
+            repository.lege(name, text.trim(), aufnahmePfad, originalText, kategorieId)
             zeige(Meldung("Idee gespeichert."))
+        }
+    }
+
+    // ---- Kategorien (Baustein P) ----
+
+    fun waehleKategorie(id: Long?) {
+        _gewaehlteKategorie.value = id
+    }
+
+    fun setzeKategorie(ideeId: Long, kategorieId: Long?) {
+        viewModelScope.launch { repository.setzeKategorie(ideeId, kategorieId) }
+    }
+
+    /** Legt eine Kategorie an (oder findet die vorhandene) und meldet die Kennung zurück. */
+    fun legeKategorieAn(name: String, fertig: (Long?) -> Unit = {}) {
+        viewModelScope.launch {
+            val id = repository.kategorieAnlegenOderFinden(name)
+            if (id == null) zeige(Meldung("Der Name der Kategorie war leer.", istFehler = true))
+            fertig(id)
+        }
+    }
+
+    fun loescheKategorie(id: Long) {
+        viewModelScope.launch {
+            repository.loescheKategorie(id)
+            if (_gewaehlteKategorie.value == id) _gewaehlteKategorie.value = null
+        }
+    }
+
+    /**
+     * Lässt die KI die passende Kategorie zur Idee suchen. Sie darf aus den vorhandenen
+     * wählen oder eine neue vorschlagen — die wird dann angelegt.
+     */
+    fun schlageKategorieVor(text: String, fertig: (Long?) -> Unit) {
+        val quelle = text.trim()
+        if (quelle.isBlank()) return
+        viewModelScope.launch {
+            val vorhandene = repository.kategorienEinmal()
+            val liste = vorhandene.joinToString(", ") { it.name }
+            try {
+                val antwort = codex.streamChat(
+                    instructions = KATEGORIE + "\n\nVorhandene Kategorien: " + liste,
+                    turns = listOf(ChatTurn("user", quelle.take(4000))),
+                    model = CodexModel.fromLabel(settings.model),
+                    reasoningEffort = ReasoningEffort.fromLabel(settings.reasoning),
+                )
+                val name = kuerzeAufZweiWoerter(UmlautKorrektur.korrigiere(antwort))
+                if (name.isBlank()) {
+                    fertig(null)
+                    return@launch
+                }
+                val id = repository.kategorieAnlegenOderFinden(name)
+                IdeenLog.info("Kategorie", "schlageKategorieVor", "Kategorie von der KI", mapOf("name" to name))
+                fertig(id)
+            } catch (fehler: Exception) {
+                IdeenLog.warn(
+                    "Kategorie",
+                    "schlageKategorieVor",
+                    "Keine Kategorie von der KI",
+                    mapOf("art" to fehler.javaClass.simpleName),
+                )
+                fertig(null)
+            }
+        }
+    }
+
+    /** Wie [kuerzeAufDreiWoerter], nur enger: Eine Kategorie trägt höchstens zwei Wörter. */
+    internal fun kuerzeAufZweiWoerter(roh: String): String = roh
+        .lineSequence()
+        .firstOrNull { it.isNotBlank() }
+        .orEmpty()
+        .trim()
+        .trim('"', '\'', '„', '“', '”', '«', '»')
+        .split(Regex("\\s+"))
+        .filter(String::isNotBlank)
+        .take(2)
+        .joinToString(" ")
+        .trimEnd('.', ',', ';', ':', '!')
+        .trim()
+
+    // ---- Chatverlauf aufräumen (Baustein P.2) ----
+
+    fun loescheNachricht(nachricht: NachrichtEntity) {
+        viewModelScope.launch {
+            repository.loescheNachricht(nachricht.id)
+            zeige(Meldung(if (nachricht.rolle == "user") "Frage gelöscht." else "Antwort gelöscht."))
+        }
+    }
+
+    /** Löscht die Frage samt der Antwort, die unmittelbar darauf folgte. */
+    fun loescheFrageUndAntwort(nachricht: NachrichtEntity) {
+        viewModelScope.launch {
+            val alle = repository.nachrichtenEinmal(nachricht.ideeId)
+            val stelle = alle.indexOfFirst { it.id == nachricht.id }
+            if (stelle < 0) return@launch
+            val ids = mutableListOf(nachricht.id)
+            if (nachricht.rolle == "user") {
+                alle.drop(stelle + 1).takeWhile { it.rolle == "assistant" }.forEach { ids += it.id }
+            } else {
+                alle.take(stelle).lastOrNull { it.rolle == "user" }?.let { ids += it.id }
+            }
+            repository.loescheNachrichten(ids)
+            zeige(Meldung("Frage und Antwort gelöscht."))
+        }
+    }
+
+    fun loescheKonversation(ideeId: Long) {
+        viewModelScope.launch {
+            repository.loescheKonversation(ideeId)
+            zeige(Meldung("Die Unterhaltung ist gelöscht."))
         }
     }
 
@@ -1022,6 +1147,25 @@ class IdeenViewModel(
                 "- Keine Einleitung wie „Titel:" + "“ — gib nur den Titel selbst zurück.\n" +
                 "- Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß).\n" +
                 "- Benutze die Worte der Idee, erfinde kein neues Thema."
+
+        /** Die Vorab-Kategorien beim allerersten Start (Baustein P). */
+        val VORAB_KATEGORIEN = listOf(
+            "Schlaf", "Gesundheit", "Ernährung", "Sport", "Arbeit", "Geschäftsideen",
+            "Technik", "Software", "Finanzen", "Haushalt", "Wohnen", "Garten",
+            "Auto", "Reisen", "Familie", "Beziehungen", "Freizeit", "Kreativität",
+            "Lernen", "Sonstiges",
+        )
+
+        /** Der Auftrag für die Kategorie: höchstens zwei Wörter, am liebsten eine vorhandene. */
+        const val KATEGORIE =
+            "Du bekommst eine Idee. Ordne sie einer Kategorie zu.\n\n" +
+                "Regeln:\n" +
+                "- Nimm bevorzugt eine der vorhandenen Kategorien, wenn sie halbwegs passt.\n" +
+                "- Passt keine, erfinde eine neue, treffende Kategorie.\n" +
+                "- Höchstens zwei Wörter, Substantiv, gross geschrieben.\n" +
+                "- Gib nur den Namen der Kategorie zurück, ohne Vorrede, ohne " +
+                "Anführungszeichen, ohne Punkt.\n" +
+                "- Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß)."
 
         const val KORREKTUR =
             "Du bekommst einen diktierten Text. Erkenne, was gemeint ist, und gib ihn in " +

@@ -26,6 +26,16 @@ data class IdeeEntity(
     val aufnahmePfad: String? = null,
     /** Das ungeglättete Diktat — „Text glätten" überschreibt nie unwiderruflich (Baustein O.3). */
     val originalText: String? = null,
+    /** Die Kategorie, in der die Idee zusätzlich zu ihrer Liste auftaucht (Baustein P). */
+    @ColumnInfo(defaultValue = "NULL") val kategorieId: Long? = null,
+)
+
+/** Eine Schublade für Ideen. Die Idee bleibt trotzdem in ihrer Liste stehen (Baustein P). */
+@Entity(tableName = "kategorien", indices = [Index(value = ["name"], unique = true)])
+data class KategorieEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val reihenfolge: Int = 0,
 )
 
 /** Die Spiegeltabelle für die Volltextsuche (Baustein K). */

@@ -35,10 +35,16 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +67,9 @@ import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.NachrichtEntity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.Hoehe
 import de.frank.genialeideen.ui.theme.LocalGold
@@ -81,9 +90,12 @@ fun DetailScreen(
     val aufnahme by viewModel.aufnahme.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val korrektur by viewModel.korrektur.collectAsState()
+    val kategorien by viewModel.kategorien.collectAsState()
 
     var eingabe by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    // Auf welche Nachricht wurde lang gedrückt? Solange sie steht, liegt das Löschblatt oben.
+    var gedrueckt by remember { mutableStateOf<NachrichtEntity?>(null) }
 
     LaunchedEffect(nachrichten.size, ki.teilAntwort) {
         if (nachrichten.isNotEmpty()) listState.animateScrollToItem(nachrichten.size)
@@ -125,6 +137,9 @@ fun DetailScreen(
 
         IdeenKopf(
             idee = aktuelle,
+            kategorien = kategorien,
+            aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
+            aufNeueKategorie = { name, fertig -> viewModel.legeKategorieAn(name, fertig) },
             spricht = vorlese.quelle == "detail-${aktuelle.id}",
             vorleseZustand = vorlese.zustand,
             aufVorlesen = {
@@ -176,6 +191,7 @@ fun DetailScreen(
                                     nachricht.text,
                                 )
                             },
+                            aufLangdruck = { gedrueckt = nachricht },
                         )
                     }
                     if (ki.teilAntwort.isNotBlank()) {
@@ -188,6 +204,25 @@ fun DetailScreen(
                     }
                 }
             }
+        }
+
+        gedrueckt?.let { gewaehlte ->
+            NachrichtLoeschBlatt(
+                nachricht = gewaehlte,
+                aufSchliessen = { gedrueckt = null },
+                aufNachrichtLoeschen = {
+                    viewModel.loescheNachricht(gewaehlte)
+                    gedrueckt = null
+                },
+                aufPaarLoeschen = {
+                    viewModel.loescheFrageUndAntwort(gewaehlte)
+                    gedrueckt = null
+                },
+                aufKonversationLoeschen = {
+                    viewModel.loescheKonversation(aktuelle.id)
+                    gedrueckt = null
+                },
+            )
         }
 
         EingabeZeile(
@@ -227,6 +262,9 @@ fun DetailScreen(
 @Composable
 private fun IdeenKopf(
     idee: IdeeEntity,
+    kategorien: List<de.frank.genialeideen.data.local.KategorieEntity>,
+    aufKategorie: (Long?) -> Unit,
+    aufNeueKategorie: (String, (Long?) -> Unit) -> Unit,
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
@@ -250,6 +288,19 @@ private fun IdeenKopf(
                 Spacer(Modifier.width(8.dp))
                 LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
             }
+            Spacer(Modifier.height(12.dp))
+            KategorieWahl(
+                kategorien = kategorien,
+                gewaehlt = idee.kategorieId,
+                aufWahl = aufKategorie,
+                aufNeueKategorie = { name, fertig ->
+                    aufNeueKategorie(name) { id ->
+                        if (id != null) aufKategorie(id)
+                        fertig(id)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(14.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -308,12 +359,14 @@ private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NachrichtenBlase(
     nachricht: NachrichtEntity,
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
+    aufLangdruck: () -> Unit = {},
     laufenderAbsatz: String = "",
 ) {
     val gold = LocalGold.current
@@ -325,6 +378,12 @@ private fun NachrichtenBlase(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onLongClick = aufLangdruck,
+                    onClick = {},
+                )
                 .clip(
                     RoundedCornerShape(
                         topStart = 18.dp,
@@ -604,6 +663,96 @@ private fun hervorgehobenerAbsatz(
             append(absatz)
         }
         if (index < absaetze.lastIndex) append(ZEILENUMBRUCH)
+    }
+}
+
+/**
+ * Was bei Langdruck auf eine Nachricht erscheint: Frage, Antwort, das Paar oder die ganze
+ * Unterhalfung fliegen raus. Nichts davon fragt zweimal nach — die Meldung unten sagt, was weg ist.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NachrichtLoeschBlatt(
+    nachricht: NachrichtEntity,
+    aufSchliessen: () -> Unit,
+    aufNachrichtLoeschen: () -> Unit,
+    aufPaarLoeschen: () -> Unit,
+    aufKonversationLoeschen: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val vonMir = nachricht.rolle == "user"
+    val blatt = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = aufSchliessen,
+        sheetState = blatt,
+        containerColor = gold.flaecheErhoeht,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+        ) {
+            Text(
+                if (vonMir) "Diese Frage" else "Diese Antwort",
+                style = MaterialTheme.typography.labelSmall,
+                color = gold.textGedaempft,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                nachricht.text.trim().take(120),
+                style = MaterialTheme.typography.bodySmall,
+                color = gold.textPrimaer,
+            )
+            Spacer(Modifier.height(14.dp))
+            LoeschZeile(
+                symbol = Icons.Default.Delete,
+                text = if (vonMir) "Frage löschen" else "Antwort löschen",
+                aufTipp = aufNachrichtLoeschen,
+            )
+            LoeschZeile(
+                symbol = Icons.Default.QuestionAnswer,
+                text = "Frage und Antwort löschen",
+                aufTipp = aufPaarLoeschen,
+            )
+            LoeschZeile(
+                symbol = Icons.Default.DeleteSweep,
+                text = "Ganze Unterhaltung löschen",
+                warnend = true,
+                aufTipp = aufKonversationLoeschen,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoeschZeile(
+    symbol: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    aufTipp: () -> Unit,
+    warnend: Boolean = false,
+) {
+    val gold = LocalGold.current
+    val farbe = if (warnend) Semantisch.fehler else gold.textPrimaer
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .druckEffekt(aufTipp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(gold.flaeche)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol,
+            contentDescription = null,
+            tint = farbe,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = farbe)
     }
 }
 

@@ -33,6 +33,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Mic
@@ -40,7 +44,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,11 +75,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
+import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.speech.VorleseZustand
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.Semantisch
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.unit.DpSize
+import kotlinx.coroutines.launch
 
 enum class ListenBereich(val titel: String) {
     OFFEN("Offene Ideen"),
@@ -95,10 +113,25 @@ fun ListenScreen(
     val vorlese by viewModel.vorleseStand.collectAsState()
     val aufnahme by viewModel.aufnahme.collectAsState()
 
+    val kategorien by viewModel.kategorien.collectAsState()
+    val gewaehlteKategorie by viewModel.gewaehlteKategorie.collectAsState()
+
     var bereich by remember { mutableStateOf(ListenBereich.OFFEN) }
     var suchOffen by remember { mutableStateOf(false) }
 
-    val liste = if (bereich == ListenBereich.OFFEN) offene else umgesetzte
+    val schublade = rememberDrawerState(DrawerValue.Closed)
+    val bereichsraum = rememberCoroutineScope()
+    val kategorieName = kategorien.firstOrNull { it.id == gewaehlteKategorie }?.name
+
+    // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
+    BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
+
+    val roheListe = if (bereich == ListenBereich.OFFEN) offene else umgesetzte
+    val liste = if (gewaehlteKategorie == null) {
+        roheListe
+    } else {
+        roheListe.filter { it.kategorieId == gewaehlteKategorie }
+    }
     // Die gezogene Reihenfolge lebt lokal, bis der Finger losgelassen wird.
     var reihenfolge by remember(liste) { mutableStateOf(liste.map(IdeeEntity::id)) }
     LaunchedEffect(liste) { reihenfolge = liste.map(IdeeEntity::id) }
@@ -109,13 +142,30 @@ fun ListenScreen(
     val listState = rememberLazyListState()
     ReorderAutoScroll(zustand, listState)
 
+    ModalNavigationDrawer(
+        drawerState = schublade,
+        drawerContent = {
+            KategorienLeiste(
+                kategorien = kategorien,
+                gewaehlt = gewaehlteKategorie,
+                anzahlJeKategorie = alleZaehlung(offene + umgesetzte),
+                gesamt = offene.size + umgesetzte.size,
+                aufWahl = { id ->
+                    viewModel.waehleKategorie(id)
+                    bereichsraum.launch { schublade.close() }
+                },
+                aufNeueKategorie = { name -> viewModel.legeKategorieAn(name) },
+                aufLoeschen = { id -> viewModel.loescheKategorie(id) },
+            )
+        },
+    ) {
     Box(Modifier.fillMaxSize().background(hintergrundVerlauf())) {
     BewegterHintergrund()
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
         IdeenKopfleiste(
-            titel = "Geniale Ideen",
+            titel = kategorieName ?: "Geniale Ideen",
             themeWahl = theme,
             aufThemeTipp = viewModel::themeWeiterschalten,
             aufEinstellungen = aufEinstellungen,
@@ -147,6 +197,14 @@ fun ListenScreen(
                     aufLeeren = viewModel::leereSuche,
                 )
                 laedt -> SchimmerGeruest(zeilen = 4, modifier = Modifier.padding(16.dp))
+                sortiert.isEmpty() && gewaehlteKategorie != null -> Leerzustand(
+                    symbol = "🗂",
+                    ueberschrift = "Hier liegt noch nichts",
+                    satz = "In dieser Kategorie steht in dieser Liste noch keine Idee.",
+                    knopfText = "Alle Ideen zeigen",
+                    aufKnopf = { viewModel.waehleKategorie(null) },
+                    modifier = Modifier.align(Alignment.Center),
+                )
                 sortiert.isEmpty() && bereich == ListenBereich.OFFEN -> Leerzustand(
                     symbol = "💡",
                     ueberschrift = "Noch keine Idee festgehalten",
@@ -191,13 +249,6 @@ fun ListenScreen(
                                 aufVorlesen = {
                                     viewModel.lies("idee-${idee.id}", idee.titel, "${idee.titel}.\n\n${idee.text}")
                                 },
-                                aufUmgesetzt = {
-                                    if (idee.status == IdeenStatus.OFFEN.name) {
-                                        viewModel.setzeUmgesetzt(idee)
-                                    } else {
-                                        viewModel.zurueckZuOffen(idee)
-                                    }
-                                },
                             )
                         }
                     }
@@ -216,8 +267,221 @@ fun ListenScreen(
                     aufTipp = aufNeueIdee,
                 )
             }
+
+            // Der Seitenschalter: ein schmaler Griff am linken Rand holt die Kategorien herein.
+            SeitenGriff(
+                modifier = Modifier.align(Alignment.CenterStart),
+                aufTipp = { bereichsraum.launch { schublade.open() } },
+            )
         }
     }
+    }
+    }
+}
+
+/** Zählt, wie viele Ideen in jeder Kategorie liegen. */
+private fun alleZaehlung(ideen: List<IdeeEntity>): Map<Long, Int> =
+    ideen.mapNotNull { it.kategorieId }.groupingBy { it }.eachCount()
+
+/** Der Griff am linken Rand, der die Seitenleiste hereinholt (Baustein P). */
+@Composable
+private fun SeitenGriff(modifier: Modifier = Modifier, aufTipp: () -> Unit) {
+    val gold = LocalGold.current
+    Box(
+        modifier = modifier
+            .padding(start = 0.dp)
+            .size(width = 22.dp, height = 82.dp)
+            .druckEffekt(aufTipp)
+            .clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(gold.primaer.copy(alpha = 0.85f), gold.primaerGedaempft.copy(alpha = 0.55f)),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = "Kategorien einblenden",
+            tint = gold.aufPrimaer,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** Die Seitenleiste mit allen Kategorien (Baustein P). */
+@Composable
+private fun KategorienLeiste(
+    kategorien: List<KategorieEntity>,
+    gewaehlt: Long?,
+    anzahlJeKategorie: Map<Long, Int>,
+    gesamt: Int,
+    aufWahl: (Long?) -> Unit,
+    aufNeueKategorie: (String) -> Unit,
+    aufLoeschen: (Long) -> Unit,
+) {
+    val gold = LocalGold.current
+    var neuOffen by remember { mutableStateOf(false) }
+    var neuerName by remember { mutableStateOf("") }
+
+    ModalDrawerSheet(
+        drawerContainerColor = gold.hintergrund,
+        drawerContentColor = gold.textPrimaer,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp),
+        ) {
+            Text(
+                "Kategorien",
+                modifier = Modifier.padding(start = 6.dp, top = 12.dp, bottom = 10.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = gold.primaer,
+            )
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
+            ) {
+                item {
+                    KategorieZeile(
+                        name = "Alle Ideen",
+                        anzahl = gesamt,
+                        gewaehlt = gewaehlt == null,
+                        aufTipp = { aufWahl(null) },
+                        aufLoeschen = null,
+                    )
+                }
+                items(kategorien, key = KategorieEntity::id) { kategorie ->
+                    KategorieZeile(
+                        name = kategorie.name,
+                        anzahl = anzahlJeKategorie[kategorie.id] ?: 0,
+                        gewaehlt = gewaehlt == kategorie.id,
+                        aufTipp = { aufWahl(kategorie.id) },
+                        aufLoeschen = { aufLoeschen(kategorie.id) },
+                    )
+                }
+            }
+
+            if (neuOffen) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(gold.eingabefeld)
+                        .border(1.dp, gold.primaer, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        if (neuerName.isBlank()) {
+                            Text(
+                                "Name der Kategorie",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = gold.textGedaempft,
+                            )
+                        }
+                        BasicTextField(
+                            value = neuerName,
+                            onValueChange = { neuerName = it },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
+                            cursorBrush = SolidColor(gold.primaer),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Box(
+                        modifier = Modifier.size(30.dp).druckEffekt {
+                            if (neuerName.isNotBlank()) aufNeueKategorie(neuerName.trim())
+                            neuerName = ""
+                            neuOffen = false
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Kategorie anlegen",
+                            tint = gold.primaer,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .druckEffekt { neuOffen = !neuOffen }
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(gold.flaecheErhoeht)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = gold.primaer,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "Neue Kategorie",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = gold.primaer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KategorieZeile(
+    name: String,
+    anzahl: Int,
+    gewaehlt: Boolean,
+    aufTipp: () -> Unit,
+    aufLoeschen: (() -> Unit)?,
+) {
+    val gold = LocalGold.current
+    val farbe by animateColorAsState(
+        if (gewaehlt) gold.primaer.copy(alpha = 0.18f) else Color.Transparent,
+        label = "kategoriezeile",
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .druckEffekt(aufTipp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(farbe)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Default.Label,
+            contentDescription = null,
+            tint = if (gewaehlt) gold.primaer else gold.textGedaempft,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            name,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal,
+            ),
+            color = if (gewaehlt) gold.primaer else gold.textPrimaer,
+            maxLines = 1,
+        )
+        Text(
+            anzahl.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = gold.textGedaempft,
+        )
     }
 }
 
@@ -286,7 +550,6 @@ private fun IdeenKarte(
     vorleseZustand: VorleseZustand,
     aufTipp: () -> Unit,
     aufVorlesen: () -> Unit,
-    aufUmgesetzt: () -> Unit,
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
@@ -314,7 +577,9 @@ private fun IdeenKarte(
             ) {
                 Text(
                     idee.titel,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
                     color = if (umgesetzt) gold.textGedaempft else gold.textPrimaer,
                     maxLines = 2,
                 )
@@ -333,8 +598,6 @@ private fun IdeenKarte(
                 zustand = vorleseZustand,
                 aufTipp = aufVorlesen,
             )
-            Spacer(Modifier.width(4.dp))
-            UmgesetztKnopf(umgesetzt = umgesetzt, aufTipp = aufUmgesetzt)
         }
     }
 }
@@ -391,27 +654,6 @@ fun LautsprecherKnopf(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun UmgesetztKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
-    val gold = LocalGold.current
-    Box(
-        modifier = Modifier
-            .size(38.dp)
-            .druckEffekt(aufTipp)
-            .clip(CircleShape)
-            .background(if (umgesetzt) Semantisch.erfolg.copy(alpha = 0.22f) else Color.Transparent)
-            .border(1.dp, if (umgesetzt) Semantisch.erfolg else gold.rahmen, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = if (umgesetzt) Icons.Default.Undo else Icons.Default.Check,
-            contentDescription = if (umgesetzt) "Zurück zu den offenen Ideen" else "Als umgesetzt markieren",
-            tint = if (umgesetzt) Semantisch.erfolg else gold.textGedaempft,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }
 
@@ -538,7 +780,9 @@ private fun SuchErgebnisse(
                     Column(Modifier.padding(14.dp)) {
                         Text(
                             hervorgehoben(idee.titel, anfrage, gold.primaer),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                            ),
                             color = gold.textPrimaer,
                         )
                         Spacer(Modifier.height(6.dp))

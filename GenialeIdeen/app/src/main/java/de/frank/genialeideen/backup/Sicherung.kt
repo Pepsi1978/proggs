@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
+import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.observability.IdeenLog
 import java.text.SimpleDateFormat
@@ -48,7 +49,17 @@ class Sicherung(
                     .put("angelegtAm", idee.angelegtAm)
                     .put("geaendertAm", idee.geaendertAm)
                     .put("umgesetztAm", idee.umgesetztAm ?: JSONObject.NULL)
-                    .put("originalText", idee.originalText ?: JSONObject.NULL),
+                    .put("originalText", idee.originalText ?: JSONObject.NULL)
+                    .put("kategorieId", idee.kategorieId ?: JSONObject.NULL),
+            )
+        }
+        val kategorien = JSONArray()
+        datenbank.kategorienDao().alleEinmal().forEach { kategorie ->
+            kategorien.put(
+                JSONObject()
+                    .put("id", kategorie.id)
+                    .put("name", kategorie.name)
+                    .put("reihenfolge", kategorie.reihenfolge),
             )
         }
         val nachrichten = JSONArray()
@@ -68,6 +79,7 @@ class Sicherung(
             .put("schemaVersion", SCHEMA_VERSION)
             .put("erstelltAm", ZEIT.format(Date()))
             .put("ideen", ideen)
+            .put("kategorien", kategorien)
             .put("nachrichten", nachrichten)
             .toString(2)
     }
@@ -105,6 +117,19 @@ class Sicherung(
             datenbank.nachrichtenDao().alleLoeschen()
             datenbank.ideenDao().alleLoeschen()
         }
+        // Die Kategorien zuerst — die Ideen zeigen mit ihrer Kennung auf sie.
+        val kategorien = json.optJSONArray("kategorien") ?: JSONArray()
+        val faecher = mutableListOf<KategorieEntity>()
+        for (index in 0 until kategorien.length()) {
+            val eintrag = kategorien.optJSONObject(index) ?: continue
+            faecher += KategorieEntity(
+                id = eintrag.optLong("id"),
+                name = eintrag.optString("name"),
+                reihenfolge = eintrag.optInt("reihenfolge"),
+            )
+        }
+        if (faecher.isNotEmpty()) datenbank.kategorienDao().einfuegenAlle(faecher)
+
         val ideen = json.optJSONArray("ideen") ?: JSONArray()
         val eingelesen = mutableListOf<IdeeEntity>()
         for (index in 0 until ideen.length()) {
@@ -119,6 +144,7 @@ class Sicherung(
                 geaendertAm = eintrag.optLong("geaendertAm", System.currentTimeMillis()),
                 umgesetztAm = eintrag.opt("umgesetztAm") as? Long,
                 originalText = eintrag.optString("originalText").takeIf(String::isNotBlank),
+                kategorieId = eintrag.optLong("kategorieId").takeIf { it > 0L },
             )
         }
         datenbank.ideenDao().einfuegenAlle(eingelesen)
@@ -194,7 +220,7 @@ class Sicherung(
     fun standText(): String = BackupStatus.describe(context)
 
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         private val ZEIT = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
         private val DATEI_ZEIT = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY)
 

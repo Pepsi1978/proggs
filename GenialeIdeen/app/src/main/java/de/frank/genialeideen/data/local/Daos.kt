@@ -23,6 +23,9 @@ interface IdeenDao {
     @Query("SELECT * FROM ideen WHERE id = :id")
     suspend fun lade(id: Long): IdeeEntity?
 
+    @Query("UPDATE ideen SET kategorieId = :kategorieId, geaendertAm = :jetzt WHERE id = :id")
+    suspend fun setzeKategorie(id: Long, kategorieId: Long?, jetzt: Long = System.currentTimeMillis())
+
     @Query("SELECT COALESCE(MIN(reihenfolge), 0) - 1 FROM ideen WHERE status = :status")
     suspend fun naechsteReihenfolgeOben(status: String): Int
 
@@ -77,6 +80,15 @@ interface NachrichtenDao {
     @Update
     suspend fun aktualisieren(nachricht: NachrichtEntity)
 
+    @Query("SELECT * FROM nachrichten WHERE ideeId = :ideeId ORDER BY zeitpunkt ASC, id ASC")
+    suspend fun fuerIdeeEinmal(ideeId: Long): List<NachrichtEntity>
+
+    @Query("DELETE FROM nachrichten WHERE id = :id")
+    suspend fun loesche(id: Long)
+
+    @Query("DELETE FROM nachrichten WHERE id IN (:ids)")
+    suspend fun loescheMehrere(ids: List<Long>)
+
     @Query("DELETE FROM nachrichten WHERE ideeId = :ideeId")
     suspend fun loescheFuerIdee(ideeId: Long)
 
@@ -94,4 +106,28 @@ interface SuchverlaufDao {
 
     @Query("DELETE FROM suchverlauf")
     suspend fun leeren()
+}
+
+@Dao
+interface KategorienDao {
+    @Query("SELECT * FROM kategorien ORDER BY reihenfolge ASC, name ASC")
+    fun alle(): Flow<List<KategorieEntity>>
+
+    @Query("SELECT * FROM kategorien ORDER BY reihenfolge ASC, name ASC")
+    suspend fun alleEinmal(): List<KategorieEntity>
+
+    @Query("SELECT * FROM kategorien WHERE name = :name COLLATE NOCASE LIMIT 1")
+    suspend fun nachName(name: String): KategorieEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun einfuegen(kategorie: KategorieEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun einfuegenAlle(kategorien: List<KategorieEntity>)
+
+    @Query("SELECT COUNT(*) FROM kategorien")
+    suspend fun anzahl(): Int
+
+    @Query("DELETE FROM kategorien WHERE id = :id")
+    suspend fun loesche(id: Long)
 }

@@ -86,8 +86,12 @@ fun ErfassenScreen(
     val korrektur by viewModel.korrektur.collectAsState()
     val titelLaeuft by viewModel.titelLaeuft.collectAsState()
 
+    val kategorien by viewModel.kategorien.collectAsState()
+
     var titel by remember { mutableStateOf("") }
     var text by remember { mutableStateOf("") }
+    var kategorieId by remember { mutableStateOf<Long?>(null) }
+    var kategorieLaeuft by remember { mutableStateOf(false) }
 
     // Beim Öffnen läuft die Aufnahme sofort los — dafür ist die App da.
     LaunchedEffect(mikrofonErlaubt) {
@@ -185,6 +189,19 @@ fun ErfassenScreen(
                     )
                 }
 
+                GestaffeltEinblenden(sichtbar = true, index = 3) {
+                    KategorieWahl(
+                        kategorien = kategorien,
+                        gewaehlt = kategorieId,
+                        laedt = kategorieLaeuft,
+                        aufWahl = { kategorieId = it },
+                        aufNeueKategorie = { name, fertig ->
+                            viewModel.legeKategorieAn(name, fertig)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
                 AnimatedVisibility(visible = korrektur != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -234,6 +251,15 @@ fun ErfassenScreen(
                                             if (titel.isBlank()) titel = vorschlag
                                         }
                                     }
+                                    // Die Kategorie schlägt die KI ebenfalls vor; von Hand
+                                    // Gewähltes wird nie überschrieben.
+                                    if (kategorieId == null) {
+                                        kategorieLaeuft = true
+                                        viewModel.schlageKategorieVor(gesamt) { id ->
+                                            kategorieLaeuft = false
+                                            if (kategorieId == null) kategorieId = id
+                                        }
+                                    }
                                 }
                             } else if (mikrofonErlaubt) {
                                 viewModel.starteAufnahme()
@@ -264,7 +290,12 @@ fun ErfassenScreen(
                         laedt = aufnahme.wirdUebertragen,
                         hauptKnopf = true,
                         aufTipp = {
-                            viewModel.legeAn(titel, text, originalText = korrektur?.original)
+                            viewModel.legeAn(
+                                titel,
+                                text,
+                                originalText = korrektur?.original,
+                                kategorieId = kategorieId,
+                            )
                             viewModel.korrekturVergessen()
                             aufZurueck()
                         },

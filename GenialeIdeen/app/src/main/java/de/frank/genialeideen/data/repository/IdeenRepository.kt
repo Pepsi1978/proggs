@@ -3,6 +3,7 @@ package de.frank.genialeideen.data.repository
 import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
+import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.data.local.SuchanfrageEntity
 import de.frank.genialeideen.observability.IdeenLog
@@ -13,6 +14,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     private val ideenDao = datenbank.ideenDao()
     private val nachrichtenDao = datenbank.nachrichtenDao()
     private val suchverlaufDao = datenbank.suchverlaufDao()
+    private val kategorienDao = datenbank.kategorienDao()
 
     fun alleIdeen(): Flow<List<IdeeEntity>> = ideenDao.alle()
 
@@ -22,11 +24,39 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
 
     fun letzteSuchanfragen(): Flow<List<SuchanfrageEntity>> = suchverlaufDao.letzte()
 
+    fun alleKategorien(): Flow<List<KategorieEntity>> = kategorienDao.alle()
+
+    suspend fun kategorienEinmal(): List<KategorieEntity> = kategorienDao.alleEinmal()
+
+    /** Legt die Vorab-Kategorien beim ersten Start an — nur, wenn noch gar keine da ist. */
+    suspend fun legeVorabKategorienAn(namen: List<String>) {
+        if (kategorienDao.anzahl() > 0) return
+        kategorienDao.einfuegenAlle(
+            namen.mapIndexed { index, name -> KategorieEntity(name = name, reihenfolge = index) },
+        )
+    }
+
+    /** Gibt es die Kategorie schon, kommt ihre Kennung zurück; sonst wird sie angelegt. */
+    suspend fun kategorieAnlegenOderFinden(rohName: String): Long? {
+        val name = rohName.trim()
+        if (name.isBlank()) return null
+        kategorienDao.nachName(name)?.let { return it.id }
+        val reihenfolge = kategorienDao.anzahl()
+        val id = kategorienDao.einfuegen(KategorieEntity(name = name, reihenfolge = reihenfolge))
+        return if (id > 0) id else kategorienDao.nachName(name)?.id
+    }
+
+    suspend fun setzeKategorie(ideeId: Long, kategorieId: Long?) =
+        ideenDao.setzeKategorie(ideeId, kategorieId)
+
+    suspend fun loescheKategorie(id: Long) = kategorienDao.loesche(id)
+
     suspend fun lege(
         titel: String,
         text: String,
         aufnahmePfad: String? = null,
         originalText: String? = null,
+        kategorieId: Long? = null,
     ): Long {
         val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.OFFEN.name)
         val id = ideenDao.einfuegen(
@@ -36,6 +66,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
                 reihenfolge = oben,
                 aufnahmePfad = aufnahmePfad,
                 originalText = originalText,
+                kategorieId = kategorieId,
             ),
         )
         IdeenLog.info("Ideen", "lege", "Neue Idee angelegt", mapOf("id" to id, "chars" to text.length))
@@ -80,6 +111,15 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     )
 
     suspend fun aktualisiereNachricht(nachricht: NachrichtEntity) = nachrichtenDao.aktualisieren(nachricht)
+
+    suspend fun loescheNachricht(id: Long) = nachrichtenDao.loesche(id)
+
+    suspend fun loescheNachrichten(ids: List<Long>) = nachrichtenDao.loescheMehrere(ids)
+
+    suspend fun loescheKonversation(ideeId: Long) = nachrichtenDao.loescheFuerIdee(ideeId)
+
+    suspend fun nachrichtenEinmal(ideeId: Long): List<NachrichtEntity> =
+        nachrichtenDao.fuerIdeeEinmal(ideeId)
 
     /**
      * Sucht über Titel und Text. Umlaute und Ersatzschreibung finden dasselbe: Die Anfrage wird
