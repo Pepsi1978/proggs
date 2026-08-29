@@ -586,7 +586,7 @@ private fun IdeenKarte(
                 Text(
                     idee.titel,
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.titleMedium.copy(
+                    style = MaterialTheme.typography.titleSmall.copy(
                         fontFamily = IdeenSchriftDick,
                         fontWeight = FontWeight.Black,
                     ),
