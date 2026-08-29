@@ -1,0 +1,116 @@
+package de.frank.genialeideen.data.repository
+
+import de.frank.genialeideen.data.local.GenialeIdeenDatabase
+import de.frank.genialeideen.data.local.IdeeEntity
+import de.frank.genialeideen.data.local.IdeenStatus
+import de.frank.genialeideen.data.local.NachrichtEntity
+import de.frank.genialeideen.data.local.SuchanfrageEntity
+import de.frank.genialeideen.observability.IdeenLog
+import java.text.Normalizer
+import kotlinx.coroutines.flow.Flow
+
+class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
+    private val ideenDao = datenbank.ideenDao()
+    private val nachrichtenDao = datenbank.nachrichtenDao()
+    private val suchverlaufDao = datenbank.suchverlaufDao()
+
+    fun alleIdeen(): Flow<List<IdeeEntity>> = ideenDao.alle()
+
+    fun beobachteIdee(id: Long): Flow<IdeeEntity?> = ideenDao.beobachte(id)
+
+    fun nachrichten(ideeId: Long): Flow<List<NachrichtEntity>> = nachrichtenDao.fuerIdee(ideeId)
+
+    fun letzteSuchanfragen(): Flow<List<SuchanfrageEntity>> = suchverlaufDao.letzte()
+
+    suspend fun lege(
+        titel: String,
+        text: String,
+        aufnahmePfad: String? = null,
+        originalText: String? = null,
+    ): Long {
+        val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.OFFEN.name)
+        val id = ideenDao.einfuegen(
+            IdeeEntity(
+                titel = titel,
+                text = text,
+                reihenfolge = oben,
+                aufnahmePfad = aufnahmePfad,
+                originalText = originalText,
+            ),
+        )
+        IdeenLog.info("Ideen", "lege", "Neue Idee angelegt", mapOf("id" to id, "chars" to text.length))
+        return id
+    }
+
+    suspend fun aendere(idee: IdeeEntity, titel: String, text: String) {
+        ideenDao.aktualisieren(
+            idee.copy(titel = titel, text = text, geaendertAm = System.currentTimeMillis()),
+        )
+    }
+
+    suspend fun setzeStatus(idee: IdeeEntity, status: IdeenStatus) {
+        val oben = ideenDao.naechsteReihenfolgeOben(status.name)
+        ideenDao.aktualisieren(
+            idee.copy(
+                status = status.name,
+                reihenfolge = oben,
+                geaendertAm = System.currentTimeMillis(),
+                umgesetztAm = if (status == IdeenStatus.UMGESETZT) System.currentTimeMillis() else null,
+            ),
+        )
+        IdeenLog.info("Ideen", "setzeStatus", "Status gewechselt", mapOf("id" to idee.id, "status" to status.name))
+    }
+
+    suspend fun loesche(idee: IdeeEntity) {
+        idee.aufnahmePfad?.let { pfad -> runCatching { java.io.File(pfad).delete() } }
+        ideenDao.loeschen(idee)
+    }
+
+    suspend fun schreibeReihenfolge(ids: List<Long>) = ideenDao.schreibeReihenfolge(ids)
+
+    suspend fun lade(id: Long): IdeeEntity? = ideenDao.lade(id)
+
+    suspend fun ergaenzeNachricht(
+        ideeId: Long,
+        rolle: String,
+        text: String,
+        unvollstaendig: Boolean = false,
+    ): Long = nachrichtenDao.einfuegen(
+        NachrichtEntity(ideeId = ideeId, rolle = rolle, text = text, unvollstaendig = unvollstaendig),
+    )
+
+    suspend fun aktualisiereNachricht(nachricht: NachrichtEntity) = nachrichtenDao.aktualisieren(nachricht)
+
+    /**
+     * Sucht über Titel und Text. Umlaute und Ersatzschreibung finden dasselbe: Die Anfrage wird
+     * in beiden Schreibweisen als ODER-Ausdruck an FTS4 gegeben (Baustein K).
+     */
+    suspend fun suche(rohAnfrage: String): List<IdeeEntity> {
+        val anfrage = rohAnfrage.trim()
+        if (anfrage.length < 2) return emptyList()
+        val varianten = linkedSetOf(anfrage.lowercase(), entumlaute(anfrage), umlaute(anfrage))
+            .filter { it.isNotBlank() }
+        val ausdruck = varianten.joinToString(" OR ") { variante ->
+            variante.split(Regex("""\s+""")).filter(String::isNotBlank).joinToString(" ") { wort ->
+                "${wort.replace("\"", "")}*"
+            }
+        }
+        return runCatching { ideenDao.suche(ausdruck) }
+            .onFailure { IdeenLog.warn("Suche", "suche", "FTS-Ausdruck abgelehnt", mapOf("laenge" to anfrage.length)) }
+            .getOrDefault(emptyList())
+    }
+
+    suspend fun merkeSuchanfrage(anfrage: String) {
+        if (anfrage.trim().length < 2) return
+        suchverlaufDao.merken(SuchanfrageEntity(anfrage.trim()))
+    }
+
+    suspend fun leereSuchverlauf() = suchverlaufDao.leeren()
+
+    private fun entumlaute(text: String): String = text.lowercase()
+        .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+        .let { Normalizer.normalize(it, Normalizer.Form.NFC) }
+
+    private fun umlaute(text: String): String = text.lowercase()
+        .replace("ae", "ä").replace("oe", "ö").replace("ue", "ü").replace("ss", "ß")
+}

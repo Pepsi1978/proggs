@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gesichert wird genau das, was ich selbst angelegt habe: Ideen, Gespräche und Suchverlauf
+  liegen alle in geniale_ideen.db.
+
+  Alles andere bleibt bewusst draussen — vor allem die EncryptedSharedPreferences mit den
+  Codex-Tokens und den API-Schlüsseln: Ihr Masterschlüssel liegt im Keystore des Geräts und
+  wird nicht mitgesichert, ein Zurückspielen brächte also nur unlesbare Daten.
+-->
+<full-backup-content>
+    <include domain="database" path="geniale_ideen.db" />
+    <include domain="database" path="geniale_ideen.db-wal" />
+    <include domain="database" path="geniale_ideen.db-shm" />
+    <exclude domain="file" path="logs" />
+    <exclude domain="file" path="crashes" />
+</full-backup-content>

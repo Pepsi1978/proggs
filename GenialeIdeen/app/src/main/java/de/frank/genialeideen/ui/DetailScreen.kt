@@ -1,0 +1,538 @@
+package de.frank.genialeideen.ui
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import de.frank.genialeideen.data.local.IdeeEntity
+import de.frank.genialeideen.data.local.IdeenStatus
+import de.frank.genialeideen.data.local.NachrichtEntity
+import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
+import de.frank.genialeideen.ui.theme.LocalGold
+import de.frank.genialeideen.ui.theme.Semantisch
+
+@Composable
+fun DetailScreen(
+    viewModel: IdeenViewModel,
+    aufZurueck: () -> Unit,
+    aufEinstellungen: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val idee by viewModel.aktuelleIdee.collectAsState()
+    val nachrichten by viewModel.nachrichten.collectAsState()
+    val ki by viewModel.ki.collectAsState()
+    val vorlese by viewModel.vorleseStand.collectAsState()
+    val aufnahme by viewModel.aufnahme.collectAsState()
+    val theme by viewModel.theme.collectAsState()
+
+    var eingabe by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(nachrichten.size, ki.teilAntwort) {
+        if (nachrichten.isNotEmpty()) listState.animateScrollToItem(nachrichten.size)
+    }
+
+    val aktuelle = idee
+    if (aktuelle == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            SchimmerGeruest(zeilen = 2, modifier = Modifier.padding(24.dp))
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gold.hintergrund)
+            .imePadding(),
+    ) {
+        IdeenKopfleiste(
+            titel = aktuelle.titel,
+            themeWahl = theme,
+            aufEinstellungen = aufEinstellungen,
+            voran = {
+                Box(
+                    modifier = Modifier.size(38.dp).druckEffekt(aufZurueck),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Zurück zur Liste",
+                        tint = gold.primaer,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+            },
+        )
+
+        IdeenKopf(
+            idee = aktuelle,
+            spricht = vorlese.quelle == "detail-${aktuelle.id}",
+            vorleseZustand = vorlese.zustand,
+            aufVorlesen = {
+                viewModel.lies("detail-${aktuelle.id}", aktuelle.titel, "${aktuelle.titel}.\n\n${aktuelle.text}")
+            },
+            aufUmgesetzt = {
+                if (aktuelle.status == IdeenStatus.OFFEN.name) {
+                    viewModel.setzeUmgesetzt(aktuelle)
+                } else {
+                    viewModel.zurueckZuOffen(aktuelle)
+                }
+            },
+            aufLoeschen = {
+                viewModel.loesche(aktuelle)
+                aufZurueck()
+            },
+        )
+
+        Box(Modifier.weight(1f)) {
+            if (nachrichten.isEmpty() && ki.teilAntwort.isBlank()) {
+                Leerzustand(
+                    symbol = "💬",
+                    ueberschrift = "Denk laut über die Idee nach",
+                    satz = "Frag das Modell nach dem ersten Schritt, nach Risiken oder danach, " +
+                        "was die Idee wirklich braucht.",
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(nachrichten, key = NachrichtEntity::id) { nachricht ->
+                        NachrichtenBlase(
+                            nachricht = nachricht,
+                            spricht = vorlese.quelle == "nachricht-${nachricht.id}",
+                            vorleseZustand = vorlese.zustand,
+                            aufVorlesen = {
+                                viewModel.lies(
+                                    "nachricht-${nachricht.id}",
+                                    aktuelle.titel,
+                                    nachricht.text,
+                                )
+                            },
+                        )
+                    }
+                    if (ki.teilAntwort.isNotBlank()) {
+                        item {
+                            StroemendeAntwort(text = ki.teilAntwort)
+                        }
+                    }
+                    if (ki.antwortet && ki.teilAntwort.isBlank()) {
+                        item { DenktNach() }
+                    }
+                }
+            }
+        }
+
+        EingabeZeile(
+            text = eingabe,
+            aufText = { eingabe = it },
+            antwortet = ki.antwortet,
+            nimmtAuf = aufnahme.laeuft,
+            uebertraegt = aufnahme.wirdUebertragen,
+            aufSenden = {
+                viewModel.frage(aktuelle, eingabe)
+                eingabe = ""
+            },
+            aufAbbrechen = viewModel::brichKiAb,
+            aufMikrofon = {
+                if (aufnahme.laeuft) {
+                    viewModel.beendeAufnahme { text ->
+                        eingabe = if (eingabe.isBlank()) text else "$eingabe $text"
+                    }
+                } else {
+                    viewModel.starteAufnahme()
+                }
+            },
+            aufGlaetten = {
+                viewModel.glaetteText(eingabe) { geglaettet -> eingabe = geglaettet }
+            },
+        )
+    }
+}
+
+@Composable
+private fun IdeenKopf(
+    idee: IdeeEntity,
+    spricht: Boolean,
+    vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
+    aufVorlesen: () -> Unit,
+    aufUmgesetzt: () -> Unit,
+    aufLoeschen: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
+    GoldKarte(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        erhoeht = true,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    idee.text.ifBlank { "Ohne weiteren Text." },
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = gold.textPrimaer,
+                )
+                Spacer(Modifier.width(8.dp))
+                LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                UmsetzungsKnopf(umgesetzt = umgesetzt, aufTipp = aufUmgesetzt)
+                Spacer(Modifier.weight(1f))
+                Box(
+                    modifier = Modifier.size(38.dp).druckEffekt(aufLoeschen),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Idee löschen",
+                        tint = gold.textGedaempft,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Der grosse Knopf „Umgesetzt" mit kleiner Feier beim Umlegen (Baustein N.2). */
+@Composable
+private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
+    val gold = LocalGold.current
+    val farbe = if (umgesetzt) Semantisch.erfolg else gold.primaer
+    Row(
+        modifier = Modifier
+            .druckEffekt(aufTipp)
+            .goldSchein(farbe.copy(alpha = 0.55f), hoehe = 10.dp, radius = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (umgesetzt) {
+                    Brush.horizontalGradient(listOf(Semantisch.erfolg, Semantisch.erfolg.copy(alpha = 0.75f)))
+                } else {
+                    Brush.horizontalGradient(listOf(gold.primaer, gold.primaerGedaempft))
+                },
+            )
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (umgesetzt) Icons.Default.Undo else Icons.Default.Check,
+            contentDescription = null,
+            tint = gold.aufPrimaer,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (umgesetzt) "Wieder offen" else "Umgesetzt",
+            color = gold.aufPrimaer,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        )
+    }
+}
+
+@Composable
+private fun NachrichtenBlase(
+    nachricht: NachrichtEntity,
+    spricht: Boolean,
+    vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
+    aufVorlesen: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val vonMir = nachricht.rolle == "user"
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (vonMir) Arrangement.End else Arrangement.Start,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 18.dp,
+                        topEnd = 18.dp,
+                        bottomStart = if (vonMir) 18.dp else 4.dp,
+                        bottomEnd = if (vonMir) 4.dp else 18.dp,
+                    ),
+                )
+                .background(if (vonMir) gold.primaer.copy(alpha = 0.16f) else gold.flaeche)
+                .border(
+                    1.dp,
+                    if (vonMir) gold.primaer.copy(alpha = 0.35f) else gold.rahmen,
+                    RoundedCornerShape(18.dp),
+                )
+                .padding(14.dp),
+        ) {
+            Text(
+                nachricht.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = gold.textPrimaer,
+            )
+            if (nachricht.unvollstaendig) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Diese Antwort ist unvollständig — die Verbindung brach ab.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Semantisch.warnung,
+                )
+            }
+            if (!vonMir) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LautsprecherKnopf(
+                        spricht = spricht,
+                        zustand = vorleseZustand,
+                        aufTipp = aufVorlesen,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StroemendeAntwort(text: String) {
+    val gold = LocalGold.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .clip(RoundedCornerShape(18.dp))
+            .background(gold.flaeche)
+            .border(1.dp, gold.primaer.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
+            .padding(14.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+    }
+}
+
+@Composable
+private fun DenktNach() {
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val uebergang = rememberInfiniteTransition(label = "denkt")
+    val takt by uebergang.animateFloat(
+        initialValue = 0.4f,
+        targetValue = if (reduziert) 0.4f else 1f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "taktwert",
+    )
+    Row(
+        modifier = Modifier.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(3) { index ->
+            Box(
+                modifier = Modifier
+                    .padding(end = 6.dp)
+                    .size(8.dp)
+                    .scale(if (index == 1) takt else 1f)
+                    .clip(CircleShape)
+                    .background(gold.primaer.copy(alpha = takt)),
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Text("denkt nach …", style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
+    }
+}
+
+@Composable
+private fun EingabeZeile(
+    text: String,
+    aufText: (String) -> Unit,
+    antwortet: Boolean,
+    nimmtAuf: Boolean,
+    uebertraegt: Boolean,
+    aufSenden: () -> Unit,
+    aufAbbrechen: () -> Unit,
+    aufMikrofon: () -> Unit,
+    aufGlaetten: () -> Unit,
+) {
+    val gold = LocalGold.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(gold.flaeche)
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        AnimatedVisibility(visible = antwortet) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Antwort läuft ein",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .druckEffekt(aufAbbrechen)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(gold.flaecheErhoeht)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text("Abbrechen", style = MaterialTheme.typography.labelSmall, color = gold.primaer)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.Bottom) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 46.dp, max = 160.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(gold.eingabefeld)
+                    .border(1.dp, gold.rahmen, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                if (text.isEmpty()) {
+                    Text(
+                        if (nimmtAuf) "Sprich einfach los …" else "Frag etwas zu dieser Idee",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = gold.textGedaempft,
+                    )
+                }
+                BasicTextField(
+                    value = text,
+                    onValueChange = aufText,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
+                    cursorBrush = SolidColor(gold.primaer),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            if (text.isNotBlank()) {
+                RundKnopf(
+                    beschreibung = "Text glätten",
+                    farbe = gold.textGedaempft,
+                    aufTipp = aufGlaetten,
+                ) {
+                    Icon(
+                        Icons.Default.AutoFixHigh,
+                        contentDescription = null,
+                        tint = gold.textGedaempft,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            RundKnopf(
+                beschreibung = if (nimmtAuf) "Aufnahme beenden" else "Antwort einsprechen",
+                farbe = if (nimmtAuf) Semantisch.fehler else gold.primaer,
+                aufTipp = aufMikrofon,
+            ) {
+                Icon(
+                    imageVector = if (nimmtAuf) Icons.Default.Stop else Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = if (nimmtAuf) Semantisch.fehler else gold.primaer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            RundKnopf(
+                beschreibung = "Frage senden",
+                farbe = gold.primaer,
+                gefuellt = true,
+                aktiviert = text.isNotBlank() && !antwortet && !uebertraegt,
+                aufTipp = aufSenden,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = null,
+                    tint = gold.aufPrimaer,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RundKnopf(
+    beschreibung: String,
+    farbe: Color,
+    aufTipp: () -> Unit,
+    gefuellt: Boolean = false,
+    aktiviert: Boolean = true,
+    inhalt: @Composable () -> Unit,
+) {
+    val gold = LocalGold.current
+    Box(
+        modifier = Modifier
+            .size(46.dp)
+            .then(if (aktiviert) Modifier.druckEffekt(aufTipp) else Modifier)
+            .clip(CircleShape)
+            .background(
+                when {
+                    gefuellt && aktiviert -> Brush.linearGradient(listOf(gold.primaer, gold.primaerGedaempft))
+                    gefuellt -> Brush.linearGradient(listOf(gold.rahmen, gold.rahmen))
+                    else -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                },
+            )
+            .border(if (gefuellt) 0.dp else 1.dp, if (gefuellt) Color.Transparent else farbe.copy(alpha = 0.45f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { inhalt() }
+}

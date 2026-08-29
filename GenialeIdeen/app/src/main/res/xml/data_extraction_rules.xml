@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ab Android 12 getrennte Regeln für Cloud-Sicherung und Geräteübertragung. Beide sichern nur
+  geniale_ideen.db. Schlüssel, Protokoll und Zwischendateien bleiben in beiden Fällen draussen.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="geniale_ideen.db" />
+        <include domain="database" path="geniale_ideen.db-wal" />
+        <include domain="database" path="geniale_ideen.db-shm" />
+        <exclude domain="file" path="logs" />
+        <exclude domain="file" path="crashes" />
+    </cloud-backup>
+
+    <device-transfer>
+        <include domain="database" path="geniale_ideen.db" />
+        <include domain="database" path="geniale_ideen.db-wal" />
+        <include domain="database" path="geniale_ideen.db-shm" />
+        <exclude domain="file" path="logs" />
+        <exclude domain="file" path="crashes" />
+    </device-transfer>
+</data-extraction-rules>

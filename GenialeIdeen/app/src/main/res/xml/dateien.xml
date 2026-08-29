@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur das Protokoll darf über das Teilen-Menü das Gerät verlassen (Baustein P.2). -->
+<paths>
+    <files-path name="protokoll" path="logs/" />
+    <files-path name="abstuerze" path="crashes/" />
+</paths>
