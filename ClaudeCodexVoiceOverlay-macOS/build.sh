@@ -52,6 +52,7 @@ SWIFT_FILES=(
     "$SRC_DIR/AudioRecorder.swift"
     "$SRC_DIR/GroqWhisperClient.swift"
     "$SRC_DIR/TranscriptionEngineSetting.swift"
+    "$SRC_DIR/TranscriptionModeSetting.swift"
     "$SRC_DIR/PersonalVocabulary.swift"
     "$SRC_DIR/GeminiBatchTranscribeClient.swift"
     "$SRC_DIR/SpeechToTextRouter.swift"

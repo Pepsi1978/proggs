@@ -109,6 +109,16 @@
                                 <ComboBoxItem Content="Gemini Transcribe — genauer, kostenlos (empfohlen)"/>
                                 <ComboBoxItem Content="Gemini Transcribe Live — Streaming-Variante"/>
                             </ComboBox>
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="Wie wörtlich soll Gemini transkribieren?"/>
+                            <ComboBox x:Name="TranscriptionModeBox"
+                                      Background="#FF1B1B1B" Foreground="Black"
+                                      BorderBrush="#FF454545" BorderThickness="1"
+                                      Padding="8,6" FontSize="13" Margin="0,0,0,8">
+                                <ComboBoxItem Content="Wortgetreu — nichts fällt weg (empfohlen)"/>
+                                <ComboBoxItem Content="Aufgeräumt — Absätze, Füllwörter raus"/>
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                       Text="Gemessen sind beide gleich schnell (Median 4,6 s gegen 6,1 s — der Unterschied liegt im Rauschen der Serverlast). Aufgeräumt setzt Absätze und wirft Füllwörter raus, formuliert dabei aber um und ließ in JEDEM Messdurchgang ein Wort weg (aus &quot;Ich frage mich&quot; wurde &quot;Frage mich&quot;). Bei einer Zahl, einem Dateinamen oder einem &quot;nicht&quot; wäre das teuer — deshalb ist wortgetreu voreingestellt. Füllwörter räumt die Gemini-Korrektur ohnehin weg. Gilt nur für die Gemini-Modelle, nicht für Groq."/>
                             <TextBlock Style="{StaticResource Hint}"
                                        Text="Gemini Transcribe ist der von Google für fertige Aufnahmen vorgesehene Weg: gemessen 4,4 s statt 15,1 s gegenüber der Live-Variante, Wortfehlerrate 2,6 % gegenüber 4,0 % (Groq: 4,6 %), und dein Wörterbuch geht direkt in die Erkennung. Die Live-Variante ist für Echtzeit-Streaming gebaut und hier nur zum Vergleich drin. Der Stille-Schutz gegen Whisper-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur bei Groq — er hängt an Whisper-Messwerten, die Gemini nicht liefert. Fällt Gemini aus (Kontingent erschöpft, Netz weg), springt automatisch Groq ein, damit kein Diktat verloren geht. Die Umschaltung wirkt sofort, ohne Neustart."/>
                         </StackPanel>

@@ -20,10 +20,12 @@ import Foundation
 /// allem landen die Diktate so NICHT als Dateien auf Google-Servern, wo sie
 /// sonst 48 h liegen blieben.
 ///
-/// VERBATIM STATT SMART: der Smart-Modus wirft Fuellwoerter raus und setzt
-/// Absaetze, formuliert dabei aber um und LAESST WOERTER WEG (im Test wurde aus
-/// "Ich frage mich" ein "Frage mich"). Schneller ist er nicht (4,4 s gegen
-/// 4,3 s). Fuellwoerter raeumt anschliessend ohnehin die Gemini-Textkorrektur weg.
+/// VERBATIM ODER SMART: umschaltbar in den Einstellungen, siehe
+/// `TranscriptionModeSetting`. Voreinstellung ist verbatim, weil smart zwar
+/// Fuellwoerter raeumt und Absaetze setzt, dabei aber umformuliert und WOERTER
+/// WEGLAESST — in jedem Messdurchgang wurde aus "Ich frage mich" ein "Frage
+/// mich". Schneller ist smart nicht (Median 4,6 s gegen 6,1 s, im Rauschen der
+/// Serverlast). Fuellwoerter raeumt ohnehin die Gemini-Textkorrektur weg.
 ///
 /// BEWUSST OHNE HALLUZINATIONS-GATE: die dreischichtige Abwehr gegen
 /// Whisper-Stille-Halluzinationen im GroqWhisperClient haengt an Whispers
@@ -79,12 +81,15 @@ final class GeminiBatchTranscribeClient {
         }
 
         let vocabulary = PersonalVocabulary.load()
+        let mode = TranscriptionModeSetting.current
         DiagLog.write("GeminiBatch", "start",
-                      [("model", model), ("wavBytes", wav.count), ("vocabWords", vocabulary.count)])
+                      [("model", model), ("wavBytes", wav.count),
+                       ("vocabWords", vocabulary.count), ("mode", mode)])
 
         var transcriptionConfig: [String: Any] = [
-            // Verbatim: wortgetreu, nichts faellt weg (Begruendung oben).
-            "mode": ["type": "verbatim"]
+            // Verbatim (Standard) = wortgetreu; smart = aufgeraeumt, aber
+            // laesst Woerter weg. Umschaltbar in den Einstellungen.
+            "mode": ["type": mode]
         ]
         if !vocabulary.isEmpty {
             transcriptionConfig["custom_vocabulary"] = vocabulary

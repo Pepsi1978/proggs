@@ -16,6 +16,9 @@ final class SettingsDialog: NSWindow {
     /// sondern als geteilte SK-Datei (TranscriptionEngineSetting) — damit
     /// wirkt die Umschaltung sofort und gilt fuer beide Overlays.
     private let transcriptionEnginePopup = NSPopUpButton()
+    /// Wortgetreu oder aufgeraeumt — ebenfalls als geteilte SK-Datei
+    /// (TranscriptionModeSetting), gilt nur fuer die Gemini-Modelle.
+    private let transcriptionModePopup = NSPopUpButton()
     private let autoHideCheck    = NSButton(checkboxWithTitle: "Auto-Hide (Collapsed-Mic)", target: nil, action: nil)
     private let horizontalCheck  = NSButton(checkboxWithTitle: "Horizontal-Orientierung", target: nil, action: nil)
     private let persistPosCheck  = NSButton(checkboxWithTitle: "Position ueber Neustart merken", target: nil, action: nil)
@@ -62,6 +65,7 @@ final class SettingsDialog: NSWindow {
     func loadFromDefaults() {
         let d = UserDefaults.standard
         transcriptionEnginePopup.selectItem(at: TranscriptionEngineSetting.useGemini ? 1 : 0)
+        transcriptionModePopup.selectItem(at: TranscriptionModeSetting.useSmart ? 1 : 0)
         groqKeyField.stringValue    = d.string(forKey: "GROQ_API_KEY") ?? ""
         geminiKeyField.stringValue  = d.string(forKey: "GEMINI_API_KEY") ?? ""
         separatorField.stringValue  = d.string(forKey: "SEPARATOR_TEMPLATE") ?? "\n\n;\n\n"
@@ -122,6 +126,26 @@ final class SettingsDialog: NSWindow {
         engineHint.font = .systemFont(ofSize: 10)
         engineHint.drawsBackground = false
         cv.addSubview(engineHint); y -= 56
+
+        addLabel("Transkriptions-Modus (nur Gemini)", atY: y); y -= 24
+        transcriptionModePopup.removeAllItems()
+        transcriptionModePopup.addItems(withTitles: [
+            "Wortgetreu — nichts faellt weg (empfohlen)",
+            "Aufgeraeumt — Absaetze, Fuellwoerter raus"
+        ])
+        transcriptionModePopup.frame = NSRect(x: pad, y: y, width: 580, height: 26)
+        cv.addSubview(transcriptionModePopup); y -= 34
+
+        let modeHint = NSTextField(wrappingLabelWithString:
+            "Beide sind gleich schnell. \"Aufgeraeumt\" setzt Absaetze und wirft Fuellwoerter raus, "
+            + "formuliert dabei aber um und liess in JEDEM Messdurchgang ein Wort weg "
+            + "(aus \"Ich frage mich\" wurde \"Frage mich\"). Fuellwoerter raeumt die "
+            + "Gemini-Korrektur ohnehin weg.")
+        modeHint.frame = NSRect(x: pad, y: y - 22, width: 580, height: 36)
+        modeHint.textColor = NSColor(white: 0.6, alpha: 1)
+        modeHint.font = .systemFont(ofSize: 10)
+        modeHint.drawsBackground = false
+        cv.addSubview(modeHint); y -= 44
 
         addLabel("Groq API Key (Pflicht)", atY: y); y -= 24
         addTextField(groqKeyField, atY: y); y -= 36
@@ -197,6 +221,9 @@ final class SettingsDialog: NSWindow {
         TranscriptionEngineSetting.save(transcriptionEnginePopup.indexOfSelectedItem == 1
                                         ? TranscriptionEngineSetting.gemini
                                         : TranscriptionEngineSetting.groq)
+        TranscriptionModeSetting.save(transcriptionModePopup.indexOfSelectedItem == 1
+                                      ? TranscriptionModeSetting.smart
+                                      : TranscriptionModeSetting.verbatim)
 
         // Direkt in UserDefaults persistieren — der Aufrufer kann via onSave
         // zusaetzlich auf die Felder reagieren.

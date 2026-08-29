@@ -27,12 +27,13 @@ namespace TerminalVoiceOverlay.Services
     ///     Zusammensetzen von Teilstuecken — genau die Stellen, an denen die
     ///     Live-Variante Text verschluckt hat.
     ///
-    /// WARUM VERBATIM UND NICHT SMART: der Smart-Modus wirft Fuellwoerter raus
-    /// und setzt Absaetze — er formuliert dabei aber auch um und LAESST WOERTER
-    /// WEG (im Test wurde aus "Ich frage mich" ein "Frage mich"). Genau das
-    /// soll hier nicht passieren. Schneller ist er auch nicht: gemessen 4,4 s
-    /// gegen 4,3 s, also gleich. Fuellwoerter raeumt anschliessend ohnehin die
-    /// Gemini-Textkorrektur weg.
+    /// VERBATIM ODER SMART: umschaltbar in den Einstellungen, siehe
+    /// <see cref="TranscriptionModeSetting"/>. Voreinstellung ist verbatim,
+    /// weil smart zwar Fuellwoerter raeumt und Absaetze setzt, dabei aber
+    /// umformuliert und WOERTER WEGLAESST — in jedem Messdurchgang wurde aus
+    /// "Ich frage mich" ein "Frage mich". Schneller ist smart nicht (Median
+    /// 4,6 s gegen 6,1 s, im Rauschen der Serverlast). Fuellwoerter raeumt
+    /// anschliessend ohnehin die Gemini-Textkorrektur weg.
     ///
     /// AUDIO GEHT INLINE, NICHT UEBER DIE FILES-API: beides funktioniert, aber
     /// inline spart den zweiten Roundtrip (gemessen 4,4 s statt 5,7 s) und vor
@@ -75,12 +76,14 @@ namespace TerminalVoiceOverlay.Services
             var wav = await File.ReadAllBytesAsync(wavFilePath).ConfigureAwait(false);
             var vocabulary = PersonalVocabulary.Load();
             DiagLog.Write("GeminiBatch", "start", ("model", _model), ("wavBytes", wav.Length),
-                ("vocabWords", vocabulary.Length));
+                ("vocabWords", vocabulary.Length), ("mode", TranscriptionModeSetting.Current));
 
+            var mode = TranscriptionModeSetting.Current;
             var transcriptionConfig = new Dictionary<string, object>
             {
-                // Verbatim: wortgetreu, nichts faellt weg (Begruendung oben).
-                ["mode"] = new { type = "verbatim" },
+                // Verbatim (Standard) = wortgetreu; smart = aufgeraeumt, aber
+                // laesst Woerter weg. Umschaltbar in den Einstellungen.
+                ["mode"] = new { type = mode },
             };
             if (vocabulary.Length > 0)
                 transcriptionConfig["custom_vocabulary"] = vocabulary;

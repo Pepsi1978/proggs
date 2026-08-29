@@ -48,6 +48,7 @@ public partial class SettingsDialog : Window
             TranscriptionEngineSetting.GeminiLive => 2,
             _ => 0,
         };
+        TranscriptionModeBox.SelectedIndex = TranscriptionModeSetting.UseSmart ? 1 : 0;
         VocabularyBox.Text = LoadPersonalVocabulary();
         UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
         PreambleBox.Text = GeminiClient.EffectiveVocabularyPreamble();
@@ -74,6 +75,9 @@ public partial class SettingsDialog : Window
                 2 => TranscriptionEngineSetting.GeminiLive,
                 _ => TranscriptionEngineSetting.Groq,
             });
+            TranscriptionModeSetting.Save(TranscriptionModeBox.SelectedIndex == 1
+                ? TranscriptionModeSetting.Smart
+                : TranscriptionModeSetting.Verbatim);
             SavePersonalVocabulary(VocabularyBox.Text);
             SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
             GeminiClient.SaveVocabularyPreamble(PreambleBox.Text);
