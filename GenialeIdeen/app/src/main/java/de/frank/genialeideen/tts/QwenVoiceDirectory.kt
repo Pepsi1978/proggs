@@ -12,6 +12,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 /** A voice that was cloned from a recording and lives in Frank's Model Studio account. */
+/** Warum die Liste der eigenen Stimmen nicht kam — im Klartext für die Anzeige. */
+class QwenVoiceListException(message: String) : Exception(message)
+
 data class ClonedVoice(
     val id: String,
     val name: String,
@@ -47,7 +50,15 @@ class QwenVoiceDirectory {
                 val text = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     android.util.Log.e(TAG, "list failed ${response.code}: ${text.take(300)}")
-                    return@withContext emptyList()
+                    // Kein stiller Fehlschlag (Baustein L): Wer einen Schlüssel eingetragen hat
+                    // und trotzdem keine Stimme sieht, muss den Grund erfahren.
+                    throw QwenVoiceListException(
+                        when (response.code) {
+                            401, 403 -> "Der DashScope-Schlüssel wurde abgelehnt (Fehler ${response.code})."
+                            429 -> "Das Kontingent bei Alibaba ist gerade erschöpft (Fehler 429)."
+                            else -> "Alibaba antwortete mit Fehler ${response.code}."
+                        },
+                    )
                 }
                 val list = JSONObject(text)
                     .optJSONObject("output")
@@ -64,9 +75,13 @@ class QwenVoiceDirectory {
                     )
                 }
             }
+        } catch (error: QwenVoiceListException) {
+            throw error
         } catch (error: Exception) {
             android.util.Log.e(TAG, "list failed: ${error.message}", error)
-            emptyList()
+            throw QwenVoiceListException(
+                "Die eigenen Stimmen liessen sich nicht laden: ${error.message ?: error.javaClass.simpleName}",
+            )
         }
     }
 

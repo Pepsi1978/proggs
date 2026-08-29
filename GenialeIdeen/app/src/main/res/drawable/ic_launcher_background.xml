@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Der Grund füllt die ganze Fläche — erst dadurch schneidet der Startbildschirm das Symbol in
+  dieselbe Form wie alle anderen Symbole. Ein Kreis auf dunklem Grund sähe auf schwarzem
+  Hintergrund freistehend aus und fiele aus der Reihe.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="34"
+                android:centerY="28"
+                android:gradientRadius="112"
+                android:startColor="#F4D480"
+                android:endColor="#8B6914" />
+        </aapt:attr>
+    </path>
+
+    <!-- Warmer Kupferschimmer in der unteren Ecke, damit die Fläche nicht flach wirkt. -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="88"
+                android:centerY="94"
+                android:gradientRadius="70"
+                android:startColor="#55C25E00"
+                android:endColor="#00C25E00" />
+        </aapt:attr>
+    </path>
+</vector>

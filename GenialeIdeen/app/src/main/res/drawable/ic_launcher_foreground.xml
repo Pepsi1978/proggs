@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Das geschwungene G: ein durchgehender Strich mit runden Enden — grosser Bogen von rechts oben
+  herum, dann der Querbalken nach innen. Dunkelbraun auf Gold, weil Weiss auf Gold zu wenig
+  Kontrast hätte (Baustein A verlangt mindestens 4,5 zu 1).
+  Alles liegt in der sicheren Fläche des adaptiven Symbols (18 bis 90).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Lichtkante unter dem Buchstaben: lässt ihn in die goldene Fläche eingeprägt wirken. -->
+    <path
+        android:pathData="M74.8,43.6 A23,23 0 1 0 74.8,66.6 L74.8,55.6 L59,55.6"
+        android:strokeColor="#66FFF3D2"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <path
+        android:pathData="M74.8,42 A23,23 0 1 0 74.8,65 L74.8,54 L59,54"
+        android:strokeColor="#FF1F1706"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

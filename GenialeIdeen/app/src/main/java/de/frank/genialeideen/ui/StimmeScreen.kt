@@ -17,12 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,21 +39,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.audio.MicRecorder
 import de.frank.genialeideen.audio.VoiceSampleScript
-import de.frank.genialeideen.tts.ClonedVoice
-import de.frank.genialeideen.tts.QwenVoiceDirectory
-import de.frank.genialeideen.tts.QwenVoiceEnrollment
+import de.frank.genialeideen.tts.TtsProvider
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Semantisch
 import kotlinx.coroutines.launch
 
 /**
  * Baustein E: eine eigene Stimme aufnehmen, benennen, auswählen und wieder löschen.
+ *
+ * Die Liste kommt aus dem ViewModel, damit sie hier und im Klappmenü der Einstellungen
+ * dieselbe ist — eine neu aufgenommene Stimme steht sofort an beiden Stellen.
  */
 @Composable
 fun StimmeScreen(
@@ -65,31 +67,19 @@ fun StimmeScreen(
     val bereich = rememberCoroutineScope()
     val settings = viewModel.settings
     val theme by viewModel.theme.collectAsState()
+    val stimmen by viewModel.eigeneStimmen.collectAsState()
+    val laedt by viewModel.stimmenLaden.collectAsState()
+    val gewaehlt by viewModel.gewaehlteEigeneStimme.collectAsState()
 
     val recorder = remember { MicRecorder(context) }
-    val verzeichnis = remember { QwenVoiceDirectory() }
-    val anmeldung = remember { QwenVoiceEnrollment() }
 
-    var stimmen by remember { mutableStateOf<List<ClonedVoice>>(emptyList()) }
     var laeuftAufnahme by remember { mutableStateOf(false) }
-    var laedt by remember { mutableStateOf(false) }
     var aufgenommen by remember { mutableStateOf<ByteArray?>(null) }
     var name by remember { mutableStateOf("") }
-    var gewaehlt by remember { mutableStateOf(settings.qwenTtsVoiceId) }
 
     val skript = remember { VoiceSampleScript.script(VoiceSampleScript.fallback) }
 
-    LaunchedEffect(Unit) {
-        if (settings.qwenTtsApiKey.isNotBlank()) {
-            runCatching { verzeichnis.list(settings.qwenTtsApiKey) }
-                .onSuccess { liste -> stimmen = liste }
-                .onFailure { fehler ->
-                    viewModel.zeige(
-                        Meldung("Die eigenen Stimmen liessen sich nicht laden: ${fehler.message}", istFehler = true),
-                    )
-                }
-        }
-    }
+    LaunchedEffect(Unit) { viewModel.ladeEigeneStimmen() }
 
     Column(
         modifier = Modifier.fillMaxSize().background(gold.hintergrund).imePadding(),
@@ -140,14 +130,50 @@ fun StimmeScreen(
                 }
             }
 
+            // Die Auswahl steht oben: meistens kommt man hierher, um umzuschalten,
+            // nicht um neu aufzunehmen.
+            GoldKarte(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Klappmenue(
+                        beschriftung = "Welche Stimme liest vor",
+                        eintraege = stimmen.map { eintrag ->
+                            KlappEintrag(
+                                id = eintrag.id,
+                                name = viewModel.stimmenName(eintrag),
+                                zusatz = eintrag.createdAt,
+                            )
+                        },
+                        gewaehlt = gewaehlt,
+                        laedt = laedt,
+                        leerText = if (settings.qwenTtsApiKey.isBlank()) {
+                            "Erst den DashScope-Schlüssel eintragen"
+                        } else {
+                            "Noch keine eigene Stimme aufgenommen"
+                        },
+                        aufWahl = viewModel::waehleEigeneStimme,
+                        aufProbe = { id ->
+                            viewModel.waehleEigeneStimme(id)
+                            viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, id)
+                        },
+                        aufNeuLaden = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
+                    )
+                }
+            }
+
             GoldKarte(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        "Lies diesen Text ruhig vor",
+                        "Neue Stimme aufnehmen",
                         style = MaterialTheme.typography.titleSmall,
                         color = gold.textPrimaer,
                     )
                     Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Lies diesen Text ruhig vor:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                    )
+                    Spacer(Modifier.height(8.dp))
                     skript.forEach { zeile ->
                         Text(
                             zeile,
@@ -184,7 +210,10 @@ fun StimmeScreen(
                                 laeuftAufnahme = recorder.start(bereich, MicRecorder.CLONING_SAMPLE_RATE)
                                 if (!laeuftAufnahme) {
                                     viewModel.zeige(
-                                        Meldung("Die Aufnahme ging nicht los — prüf die Mikrofon-Freigabe.", istFehler = true),
+                                        Meldung(
+                                            "Die Aufnahme ging nicht los — prüf die Mikrofon-Freigabe.",
+                                            istFehler = true,
+                                        ),
                                     )
                                 }
                             }
@@ -234,28 +263,11 @@ fun StimmeScreen(
                             aktiviert = name.isNotBlank() && settings.qwenTtsApiKey.isNotBlank(),
                             aufTipp = {
                                 val daten = aufgenommen ?: return@GoldKnopf
-                                laedt = true
-                                bereich.launch {
-                                    runCatching {
-                                        anmeldung.create(settings.qwenTtsApiKey, name.trim(), daten)
-                                    }.onSuccess { id ->
-                                        settings.qwenVoiceNames = settings.qwenVoiceNames + (id to name.trim())
-                                        settings.qwenTtsVoiceId = id
-                                        gewaehlt = id
+                                viewModel.legeStimmeAn(name, daten) { geklappt ->
+                                    if (geklappt) {
                                         aufgenommen = null
                                         name = ""
-                                        stimmen = runCatching { verzeichnis.list(settings.qwenTtsApiKey) }
-                                            .getOrDefault(stimmen)
-                                        viewModel.zeige(Meldung("Die Stimme steht bereit."))
-                                    }.onFailure { fehler ->
-                                        viewModel.zeige(
-                                            Meldung(
-                                                "Die Stimme konnte nicht angelegt werden: ${fehler.message}",
-                                                istFehler = true,
-                                            ),
-                                        )
                                     }
-                                    laedt = false
                                 }
                             },
                         )
@@ -263,7 +275,7 @@ fun StimmeScreen(
                 }
             }
 
-            if (stimmen.isEmpty()) {
+            if (stimmen.isEmpty() && !laedt) {
                 Leerzustand(
                     symbol = "🎙️",
                     ueberschrift = "Noch keine eigene Stimme",
@@ -276,7 +288,7 @@ fun StimmeScreen(
                     color = gold.textGedaempft,
                 )
                 stimmen.forEach { eintrag ->
-                    val anzeigeName = settings.qwenVoiceNames[eintrag.id] ?: eintrag.name
+                    val anzeigeName = viewModel.stimmenName(eintrag)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -293,13 +305,15 @@ fun StimmeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(
-                            modifier = Modifier.weight(1f).druckEffekt {
-                                settings.qwenTtsVoiceId = eintrag.id
-                                settings.ttsProvider = de.frank.genialeideen.tts.TtsProvider.QWEN_CLONE.id
-                                gewaehlt = eintrag.id
-                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .druckEffekt { viewModel.waehleEigeneStimme(eintrag.id) },
                         ) {
-                            Text(anzeigeName, style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+                            Text(
+                                anzeigeName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = gold.textPrimaer,
+                            )
                             Text(
                                 eintrag.createdAt,
                                 style = MaterialTheme.typography.labelSmall,
@@ -307,24 +321,28 @@ fun StimmeScreen(
                             )
                         }
                         Box(
-                            modifier = Modifier.size(34.dp).druckEffekt {
-                                bereich.launch {
-                                    runCatching { anmeldung.delete(settings.qwenTtsApiKey, eintrag.id) }
-                                        .onSuccess {
-                                            stimmen = stimmen.filterNot { it.id == eintrag.id }
-                                            if (gewaehlt == eintrag.id) {
-                                                settings.qwenTtsVoiceId = ""
-                                                gewaehlt = ""
-                                            }
-                                            viewModel.zeige(Meldung("Stimme gelöscht."))
-                                        }
-                                        .onFailure { fehler ->
-                                            viewModel.zeige(
-                                                Meldung("Löschen ging nicht: ${fehler.message}", istFehler = true),
-                                            )
-                                        }
+                            modifier = Modifier
+                                .size(34.dp)
+                                .druckEffekt {
+                                    viewModel.waehleEigeneStimme(eintrag.id)
+                                    viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, eintrag.id)
                                 }
-                            },
+                                .clip(CircleShape)
+                                .border(1.dp, gold.rahmen, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = "Probe abspielen",
+                                tint = gold.primaer,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .druckEffekt { viewModel.loescheEigeneStimme(eintrag.id) },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(

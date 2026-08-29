@@ -24,6 +24,10 @@ import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
 import de.frank.genialeideen.speech.VorleseStand
 import de.frank.genialeideen.text.UmlautKorrektur
+import de.frank.genialeideen.tts.ClonedVoice
+import de.frank.genialeideen.tts.QwenVoiceDirectory
+import de.frank.genialeideen.tts.QwenVoiceEnrollment
+import de.frank.genialeideen.tts.TtsProvider
 import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +79,8 @@ class IdeenViewModel(
     private val codex = container.codexAuthManager
     private val sicherung = Sicherung(application, container.database)
     private val recorder = MicRecorder(application)
+    private val verzeichnis = QwenVoiceDirectory()
+    private val stimmAnmeldung = QwenVoiceEnrollment()
 
     val vorleseStand: StateFlow<VorleseStand> = vorleser.stand
 
@@ -110,6 +116,16 @@ class IdeenViewModel(
 
     private val _offeneIdee = MutableStateFlow<Long?>(null)
 
+    private val _eigeneStimmen = MutableStateFlow<List<ClonedVoice>>(emptyList())
+    val eigeneStimmen: StateFlow<List<ClonedVoice>> = _eigeneStimmen.asStateFlow()
+
+    private val _stimmenLaden = MutableStateFlow(false)
+    val stimmenLaden: StateFlow<Boolean> = _stimmenLaden.asStateFlow()
+
+    private val _gewaehlteEigeneStimme = MutableStateFlow(settings.qwenTtsVoiceId)
+    val gewaehlteEigeneStimme: StateFlow<String> = _gewaehlteEigeneStimme.asStateFlow()
+
+    private var stimmenJob: Job? = null
     private var suchJob: Job? = null
     private var kiJob: Job? = null
     private var aufnahmeJob: Job? = null
@@ -142,6 +158,10 @@ class IdeenViewModel(
 
     val chatGptVerbunden: Boolean get() = codex.isConnected
     val chatGptKonto: String? get() = codex.email
+
+    init {
+        ladeEigeneStimmen()
+    }
 
     // ---- Ideen ----
 
@@ -482,12 +502,122 @@ class IdeenViewModel(
         }
     }
 
-    fun probeStimme(stimmeId: String) {
-        val vorher = settings.googleTtsVoice
-        settings.googleTtsVoice = stimmeId
-        vorleser.sprich("probe", "Stimmprobe", "So klingt diese Stimme, wenn sie deine Ideen vorliest.")
-        // Die Wahl bleibt, bis der Nutzer eine andere trifft — die Probe setzt sie also.
-        if (vorher.isBlank()) settings.googleTtsVoice = stimmeId
+    /**
+     * Spielt eine Kostprobe. Die angetippte Stimme wird dabei auch übernommen — sonst hörte man
+     * eine Stimme, die danach gar nicht liest.
+     */
+    fun probeStimme(anbieter: String, stimmeId: String) {
+        when (anbieter) {
+            TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = stimmeId
+            TtsProvider.EDGE.id -> settings.edgeTtsVoice = stimmeId
+            TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId = stimmeId
+        }
+        settings.ttsProvider = anbieter
+        vorleser.sprich(
+            "probe",
+            "Stimmprobe",
+            "So klingt diese Stimme, wenn sie deine Ideen vorliest.",
+        )
+    }
+
+    // ---- Eigene Stimmen (Baustein E) ----
+
+    /**
+     * Lädt die geklonten Stimmen des Kontos. Ohne diesen Aufruf stünde nur die rohe Kennung da,
+     * die niemand von Hand eintippt.
+     */
+    fun ladeEigeneStimmen(zeigeFehler: Boolean = false) {
+        val schluessel = settings.qwenTtsApiKey
+        if (schluessel.isBlank()) {
+            _eigeneStimmen.value = emptyList()
+            return
+        }
+        stimmenJob?.cancel()
+        stimmenJob = viewModelScope.launch {
+            _stimmenLaden.value = true
+            runCatching { verzeichnis.list(schluessel) }
+                .onSuccess { liste ->
+                    _eigeneStimmen.value = liste
+                    IdeenLog.info("Stimmen", "ladeEigeneStimmen", "Eigene Stimmen geladen", mapOf("anzahl" to liste.size))
+                    if (zeigeFehler && liste.isEmpty()) {
+                        zeige(
+                            Meldung(
+                                "Zu diesem Schlüssel gibt es noch keine geklonte Stimme. " +
+                                    "Nimm unter „Eigene Stimme aufnehmen“ eine auf.",
+                            ),
+                        )
+                    }
+                }
+                .onFailure { fehler ->
+                    _eigeneStimmen.value = emptyList()
+                    IdeenLog.warn("Stimmen", "ladeEigeneStimmen", "Liste nicht geladen", mapOf("art" to fehler.javaClass.simpleName))
+                    zeige(
+                        Meldung(
+                            fehler.message ?: "Die eigenen Stimmen liessen sich nicht laden.",
+                            istFehler = true,
+                            wiederholen = { ladeEigeneStimmen(zeigeFehler) },
+                        ),
+                    )
+                }
+            _stimmenLaden.value = false
+        }
+    }
+
+    /** Der Name, unter dem eine geklonte Stimme in der App steht. */
+    fun stimmenName(stimme: ClonedVoice): String =
+        settings.qwenVoiceNames[stimme.id] ?: stimme.name
+
+    fun benenneStimme(id: String, name: String) {
+        settings.qwenVoiceNames = settings.qwenVoiceNames + (id to name.trim())
+        _eigeneStimmen.value = _eigeneStimmen.value.toList()
+    }
+
+    fun waehleEigeneStimme(id: String) {
+        settings.qwenTtsVoiceId = id
+        settings.ttsProvider = TtsProvider.QWEN_CLONE.id
+        _gewaehlteEigeneStimme.value = id
+    }
+
+    fun loescheEigeneStimme(id: String) {
+        viewModelScope.launch {
+            runCatching { stimmAnmeldung.delete(settings.qwenTtsApiKey, id) }
+                .onSuccess {
+                    _eigeneStimmen.value = _eigeneStimmen.value.filterNot { it.id == id }
+                    if (settings.qwenTtsVoiceId == id) {
+                        settings.qwenTtsVoiceId = ""
+                        _gewaehlteEigeneStimme.value = ""
+                    }
+                    zeige(Meldung("Stimme gelöscht."))
+                }
+                .onFailure { fehler ->
+                    zeige(Meldung("Löschen ging nicht: ${fehler.message}", istFehler = true))
+                }
+        }
+    }
+
+    /** Legt aus einer fertigen Aufnahme eine neue geklonte Stimme an. */
+    fun legeStimmeAn(name: String, wav: ByteArray, fertig: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _stimmenLaden.value = true
+            runCatching { stimmAnmeldung.create(settings.qwenTtsApiKey, name.trim(), wav) }
+                .onSuccess { id ->
+                    benenneStimme(id, name)
+                    waehleEigeneStimme(id)
+                    ladeEigeneStimmen()
+                    zeige(Meldung("Die Stimme steht bereit."))
+                    fertig(true)
+                }
+                .onFailure { fehler ->
+                    zeige(
+                        Meldung(
+                            "Die Stimme konnte nicht angelegt werden: ${fehler.message}",
+                            istFehler = true,
+                        ),
+                    )
+                    fertig(false)
+                }
+            _stimmenLaden.value = false
+        }
     }
 
     // ---- Sicherung (Baustein J) ----

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -50,10 +51,13 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.BuildConfig
+import de.frank.genialeideen.auth.CodexModel
+import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.tts.TtsCatalog
 import de.frank.genialeideen.tts.TtsProvider
 import de.frank.genialeideen.tts.VoiceGender
@@ -72,10 +76,14 @@ fun EinstellungenScreen(
     aufAppSperreUmschalten: (Boolean) -> Unit,
 ) {
     val gold = LocalGold.current
+    val zwischenablage = LocalClipboardManager.current
     val settings = viewModel.settings
     val theme by viewModel.theme.collectAsState()
     val schrift by viewModel.schriftgroesse.collectAsState()
     val anmeldung by viewModel.anmeldung.collectAsState()
+    val eigeneStimmen by viewModel.eigeneStimmen.collectAsState()
+    val stimmenLaden by viewModel.stimmenLaden.collectAsState()
+    val eigeneGewaehlt by viewModel.gewaehlteEigeneStimme.collectAsState()
 
     var googleKey by remember { mutableStateOf(settings.googleTtsApiKey) }
     var qwenKey by remember { mutableStateOf(settings.qwenTtsApiKey) }
@@ -83,11 +91,14 @@ fun EinstellungenScreen(
     var geminiKey by remember { mutableStateOf(settings.geminiApiKey) }
     var anbieter by remember { mutableStateOf(settings.ttsProvider) }
     var stimme by remember { mutableStateOf(settings.googleTtsVoice) }
+    var edgeStimme by remember { mutableStateOf(settings.edgeTtsVoice) }
     var tempo by remember { mutableStateOf(settings.ttsSpeechRate) }
     var favoriten by remember { mutableStateOf(settings.favoriteTtsVoices) }
     var sperreAn by remember { mutableStateOf(settings.appLockEnabled) }
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
     var kiZugang by remember { mutableStateOf(settings.kiZugang) }
+    var modell by remember { mutableStateOf(settings.model) }
+    var denktiefe by remember { mutableStateOf(settings.reasoning) }
     var pruefErgebnis by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     Column(
@@ -142,23 +153,84 @@ fun EinstellungenScreen(
                 }
                 Spacer(Modifier.height(14.dp))
 
-                if (anbieter == TtsProvider.GOOGLE_CLOUD.id) {
-                    StimmenListe(
-                        stimmen = TtsCatalog.googleVoices,
+                when (anbieter) {
+                    TtsProvider.GOOGLE_CLOUD.id -> Klappmenue(
+                        beschriftung = "Stimme von Google Chirp 3 HD",
+                        eintraege = TtsCatalog.googleVoices.map { eintrag ->
+                            KlappEintrag(
+                                id = eintrag.id,
+                                name = eintrag.name,
+                                gruppe = geschlechtsGruppe(eintrag.gender),
+                            )
+                        },
                         gewaehlt = stimme,
                         favoriten = favoriten,
                         aufWahl = {
                             stimme = it
                             settings.googleTtsVoice = it
                         },
-                        aufProbe = viewModel::probeStimme,
+                        aufProbe = { id ->
+                            stimme = id
+                            viewModel.probeStimme(TtsProvider.GOOGLE_CLOUD.id, id)
+                        },
                         aufFavorit = { id ->
                             favoriten = if (id in favoriten) favoriten - id else favoriten + id
                             settings.favoriteTtsVoices = favoriten
                         },
                     )
-                    Spacer(Modifier.height(14.dp))
+
+                    TtsProvider.EDGE.id -> Klappmenue(
+                        beschriftung = "Stimme von Microsoft Edge",
+                        eintraege = TtsCatalog.edgeVoices.map { eintrag ->
+                            KlappEintrag(
+                                id = eintrag.id,
+                                name = eintrag.name,
+                                gruppe = geschlechtsGruppe(eintrag.gender),
+                            )
+                        },
+                        gewaehlt = edgeStimme,
+                        favoriten = favoriten,
+                        aufWahl = {
+                            edgeStimme = it
+                            settings.edgeTtsVoice = it
+                        },
+                        aufProbe = { id ->
+                            edgeStimme = id
+                            viewModel.probeStimme(TtsProvider.EDGE.id, id)
+                        },
+                        aufFavorit = { id ->
+                            favoriten = if (id in favoriten) favoriten - id else favoriten + id
+                            settings.favoriteTtsVoices = favoriten
+                        },
+                    )
+
+                    // Die eigenen Stimmen kommen vom Konto, nicht aus einem festen Katalog —
+                    // darum mit Ladezustand, Neu-laden-Knopf und eigenem Leerzustand.
+                    TtsProvider.QWEN_CLONE.id -> Klappmenue(
+                        beschriftung = "Meine aufgenommenen Stimmen",
+                        eintraege = eigeneStimmen.map { eintrag ->
+                            KlappEintrag(
+                                id = eintrag.id,
+                                name = viewModel.stimmenName(eintrag),
+                                zusatz = eintrag.createdAt,
+                            )
+                        },
+                        gewaehlt = eigeneGewaehlt,
+                        laedt = stimmenLaden,
+                        leerText = if (qwenKey.isBlank()) {
+                            "Erst den DashScope-Schlüssel eintragen"
+                        } else {
+                            "Noch keine eigene Stimme aufgenommen"
+                        },
+                        aufWahl = viewModel::waehleEigeneStimme,
+                        aufProbe = { id ->
+                            viewModel.waehleEigeneStimme(id)
+                            viewModel.probeStimme(TtsProvider.QWEN_CLONE.id, id)
+                        },
+                        aufNeuLaden = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
+                    )
                 }
+                Spacer(Modifier.height(14.dp))
 
                 Text(
                     "Sprechtempo: ${"%.2f".format(tempo)}×",
@@ -172,6 +244,7 @@ fun EinstellungenScreen(
                         settings.ttsSpeechRate = it
                     },
                     valueRange = 0.5f..2.0f,
+                    colors = goldRegler(),
                 )
 
                 SchluesselFeld(
@@ -194,7 +267,17 @@ fun EinstellungenScreen(
                     aufWert = {
                         qwenKey = it
                         settings.qwenTtsApiKey = it.filterNot(Char::isWhitespace)
+                        // Sobald der Schlüssel steht, holt die App die vorhandenen Stimmen —
+                        // sie sollen nicht erst nach einem Neustart auftauchen.
+                        viewModel.ladeEigeneStimmen()
                     },
+                    ergebnis = when {
+                        qwenKey.isBlank() -> null
+                        stimmenLaden -> "Die Stimmen werden geholt …"
+                        eigeneStimmen.isEmpty() -> null
+                        else -> "${eigeneStimmen.size} eigene Stimmen gefunden."
+                    },
+                    aufPruefen = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
                 )
                 Spacer(Modifier.height(10.dp))
                 GoldKnopf(text = "Eigene Stimme aufnehmen", aufTipp = aufEigeneStimme)
@@ -270,10 +353,33 @@ fun EinstellungenScreen(
                     AnimatedVisibility(visible = anmeldung.code != null) {
                         Column {
                             Text(
-                                "Gib diesen Code im Browser ein: ${anmeldung.code}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = gold.primaer,
+                                "Gib diesen Code im Browser ein:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = gold.textGedaempft,
                             )
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    anmeldung.code.orEmpty(),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(gold.eingabefeld)
+                                        .border(1.dp, gold.primaer.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = gold.primaer,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Auswahlchip("Code kopieren", false) {
+                                    val code = anmeldung.code.orEmpty()
+                                    if (code.isNotBlank()) {
+                                        zwischenablage.setText(AnnotatedString(code))
+                                        viewModel.zeige(Meldung("Code kopiert: $code"))
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(6.dp))
                             Text(
                                 "Der Code gilt rund 15 Minuten.",
                                 style = MaterialTheme.typography.labelSmall,
@@ -288,7 +394,11 @@ fun EinstellungenScreen(
                             laedt = anmeldung.laeuft,
                             aufTipp = aufAnmelden,
                         )
-                        if (viewModel.chatGptVerbunden) {
+                        // Eine laufende Anmeldung wartet bis zu 15 Minuten auf die Bestätigung im
+                        // Browser — ohne diesen Knopf käme man aus dem Warten nicht mehr heraus.
+                        if (anmeldung.laeuft) {
+                            Auswahlchip("Abbrechen", false) { viewModel.brichAnmeldungAb() }
+                        } else if (viewModel.chatGptVerbunden) {
                             Auswahlchip("Abmelden", false) { viewModel.meldeAb() }
                         }
                     }
@@ -302,11 +412,52 @@ fun EinstellungenScreen(
                         },
                     )
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Modell: ${settings.model} · Denktiefe: ${settings.reasoning}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = gold.textGedaempft,
+                Spacer(Modifier.height(16.dp))
+
+                // Modell und Denktiefe gehören zusammen: Beides entscheidet, wie gründlich und
+                // wie schnell die Antwort zur Idee kommt.
+                Klappmenue(
+                    beschriftung = "Modell",
+                    eintraege = CodexModel.entries.map { eintrag ->
+                        KlappEintrag(
+                            id = eintrag.apiId,
+                            name = eintrag.label,
+                            zusatz = when (eintrag) {
+                                CodexModel.SOL -> "gründlich"
+                                CodexModel.TERRA -> "ausgewogen"
+                                CodexModel.LUNA -> "schnell"
+                            },
+                        )
+                    },
+                    gewaehlt = modell,
+                    aufWahl = {
+                        modell = it
+                        settings.model = it
+                    },
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                Klappmenue(
+                    beschriftung = "Denktiefe",
+                    eintraege = ReasoningEffort.entries.map { eintrag ->
+                        KlappEintrag(
+                            id = eintrag.apiValue,
+                            name = eintrag.label,
+                            zusatz = when (eintrag) {
+                                ReasoningEffort.LOW -> "kommt sofort"
+                                ReasoningEffort.MEDIUM -> "guter Mittelweg"
+                                ReasoningEffort.HIGH -> "denkt länger nach"
+                                ReasoningEffort.XHIGH -> "für harte Nüsse"
+                                ReasoningEffort.MAX -> "dauert am längsten"
+                            },
+                        )
+                    },
+                    gewaehlt = denktiefe,
+                    aufWahl = {
+                        denktiefe = it
+                        settings.reasoning = it
+                    },
                 )
             }
 
@@ -327,6 +478,7 @@ fun EinstellungenScreen(
                     value = schrift,
                     onValueChange = viewModel::setzeSchriftgroesse,
                     valueRange = 0.85f..1.4f,
+                    colors = goldRegler(),
                 )
             }
 
@@ -636,4 +788,22 @@ private fun StimmenListe(
                 }
             }
     }
+}
+
+/** Die Überschrift, unter der eine Stimme im Klappmenü einsortiert wird. */
+private fun geschlechtsGruppe(geschlecht: VoiceGender): String = when (geschlecht) {
+    VoiceGender.FEMALE -> "Weibliche Stimmen"
+    VoiceGender.MALE -> "Männliche Stimmen"
+}
+
+/** Regler in Gold — die Vorgabefarbe von Material passt nicht zur Marke (Baustein A). */
+@Composable
+private fun goldRegler() = LocalGold.current.let { gold ->
+    SliderDefaults.colors(
+        thumbColor = gold.primaer,
+        activeTrackColor = gold.primaer,
+        inactiveTrackColor = gold.rahmen,
+        activeTickColor = gold.aufPrimaer,
+        inactiveTickColor = gold.textGedaempft,
+    )
 }
