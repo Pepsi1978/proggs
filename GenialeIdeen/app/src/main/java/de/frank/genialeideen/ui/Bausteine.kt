@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +85,7 @@ fun IdeenKopfleiste(
     themeWahl: String,
     modifier: Modifier = Modifier,
     aufThemeTipp: (() -> Unit)? = null,
+    aufSuche: (() -> Unit)? = null,
     aufEinstellungen: () -> Unit,
     voran: (@Composable () -> Unit)? = null,
 ) {
@@ -107,6 +109,17 @@ fun IdeenKopfleiste(
             ),
             maxLines = 1,
         )
+        if (aufSuche != null) {
+            KopfKnopf(beschreibung = "Alle Ideen durchsuchen", aufTipp = aufSuche) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = gold.primaer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+        }
         if (aufThemeTipp != null) {
             KopfKnopf(
                 beschreibung = if (themeWahl == "dark") {

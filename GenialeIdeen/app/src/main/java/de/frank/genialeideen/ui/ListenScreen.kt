@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,6 +64,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -176,34 +179,14 @@ fun ListenScreen(
             titel = kategorieName ?: "Geniale Ideen",
             themeWahl = theme,
             aufThemeTipp = viewModel::themeWeiterschalten,
+            aufSuche = { suchOffen = true },
             aufEinstellungen = aufEinstellungen,
         )
 
-        SuchZeile(
-            offen = suchOffen,
-            text = suchtext,
-            letzteAnfragen = letzteAnfragen,
-            aufOeffnen = { suchOffen = true },
-            aufText = viewModel::suche,
-            aufSchliessen = {
-                suchOffen = false
-                viewModel.leereSuche()
-            },
-            aufVerlaufLeeren = viewModel::leereSuchverlauf,
-        )
-
-        if (!suchOffen) {
-            BereichsWaehler(bereich, offene.size, umgesetzte.size) { bereich = it }
-        }
+        BereichsWaehler(bereich, offene.size, umgesetzte.size) { bereich = it }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
-                suchOffen -> SuchErgebnisse(
-                    anfrage = suchtext,
-                    treffer = treffer,
-                    aufIdee = aufIdee,
-                    aufLeeren = viewModel::leereSuche,
-                )
                 laedt -> SchimmerGeruest(zeilen = 4, modifier = Modifier.padding(16.dp))
                 sortiert.isEmpty() && gewaehlteKategorie != null -> Leerzustand(
                     symbol = "🗂",
@@ -263,7 +246,7 @@ fun ListenScreen(
                 }
             }
 
-            if (!suchOffen) {
+            run {
                 AufnahmeKnopfMitPegel(
                     laeuft = aufnahme.laeuft,
                     pegel = aufnahme.pegel,
@@ -283,7 +266,154 @@ fun ListenScreen(
             )
         }
     }
+
+    if (suchOffen) {
+        SuchFenster(
+            text = suchtext,
+            treffer = treffer,
+            letzteAnfragen = letzteAnfragen,
+            aufText = viewModel::suche,
+            aufIdee = { idee ->
+                suchOffen = false
+                viewModel.leereSuche()
+                aufIdee(idee)
+            },
+            aufSchliessen = {
+                suchOffen = false
+                viewModel.leereSuche()
+            },
+            aufVerlaufLeeren = viewModel::leereSuchverlauf,
+        )
     }
+    }
+    }
+}
+
+/**
+ * Die Suche als eigenes Fenster über der Liste — sie öffnet sich über die Lupe in der
+ * Kopfleiste und nimmt dem Bildschirm damit die feste Suchzeile ab.
+ */
+@Composable
+private fun SuchFenster(
+    text: String,
+    treffer: List<IdeeEntity>,
+    letzteAnfragen: List<String>,
+    aufText: (String) -> Unit,
+    aufIdee: (IdeeEntity) -> Unit,
+    aufSchliessen: () -> Unit,
+    aufVerlaufLeeren: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val feld = remember { FocusRequester() }
+
+    BackHandler { aufSchliessen() }
+    // Die Tastatur steht sofort — wer die Lupe tippt, will tippen.
+    LaunchedEffect(Unit) { runCatching { feld.requestFocus() } }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gold.hintergrund)
+            .imePadding(),
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(gold.eingabefeld)
+                        .border(1.dp, gold.primaer.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = gold.primaer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Box(Modifier.weight(1f)) {
+                        if (text.isEmpty()) {
+                            Text(
+                                "Suchwort eingeben",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = gold.textGedaempft,
+                            )
+                        }
+                        BasicTextField(
+                            value = text,
+                            onValueChange = aufText,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
+                            cursorBrush = SolidColor(gold.primaer),
+                            modifier = Modifier.fillMaxWidth().focusRequester(feld),
+                        )
+                    }
+                    if (text.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier.size(24.dp).druckEffekt { aufText("") },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Suchwort löschen",
+                                tint = gold.textGedaempft,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                KopfKnopf(beschreibung = "Suche schliessen", aufTipp = aufSchliessen) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        tint = gold.primaer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            if (text.isBlank() && letzteAnfragen.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    letzteAnfragen.take(3).forEach { anfrage ->
+                        Box(
+                            modifier = Modifier
+                                .druckEffekt { aufText(anfrage) }
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(gold.flaecheErhoeht)
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                        ) {
+                            Text(anfrage, style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
+                        }
+                    }
+                    Box(modifier = Modifier.druckEffekt(aufVerlaufLeeren).padding(6.dp)) {
+                        Text("leeren", style = MaterialTheme.typography.labelSmall, color = gold.primaer)
+                    }
+                }
+            }
+
+            Box(Modifier.weight(1f)) {
+                SuchErgebnisse(
+                    anfrage = text,
+                    treffer = treffer,
+                    aufIdee = aufIdee,
+                    aufLeeren = { aufText("") },
+                )
+            }
+        }
     }
 }
 
@@ -665,98 +795,6 @@ fun LautsprecherKnopf(
                     tint = gold.textGedaempft,
                     modifier = Modifier.size(18.dp),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SuchZeile(
-    offen: Boolean,
-    text: String,
-    letzteAnfragen: List<String>,
-    aufOeffnen: () -> Unit,
-    aufText: (String) -> Unit,
-    aufSchliessen: () -> Unit,
-    aufVerlaufLeeren: () -> Unit,
-) {
-    val gold = LocalGold.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(gold.eingabefeld)
-            .border(1.dp, gold.rahmen, RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Default.Search,
-            contentDescription = "Suchen",
-            tint = gold.textGedaempft,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            if (!offen) {
-                Text(
-                    "Alle Ideen durchsuchen",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = gold.textGedaempft,
-                    modifier = Modifier.druckEffekt(aufOeffnen).fillMaxWidth(),
-                )
-            } else {
-                if (text.isEmpty()) {
-                    Text(
-                        "Suchwort eingeben",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = gold.textGedaempft,
-                    )
-                }
-                BasicTextField(
-                    value = text,
-                    onValueChange = aufText,
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
-                    cursorBrush = SolidColor(gold.primaer),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        if (offen) {
-            Box(
-                modifier = Modifier.size(24.dp).druckEffekt(aufSchliessen),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Suche schliessen",
-                    tint = gold.textGedaempft,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
-    }
-    if (offen && text.isBlank() && letzteAnfragen.isNotEmpty()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            letzteAnfragen.take(3).forEach { anfrage ->
-                Box(
-                    modifier = Modifier
-                        .druckEffekt { aufText(anfrage) }
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(gold.flaecheErhoeht)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                ) {
-                    Text(anfrage, style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
-                }
-            }
-            Box(modifier = Modifier.druckEffekt(aufVerlaufLeeren).padding(6.dp)) {
-                Text("leeren", style = MaterialTheme.typography.labelSmall, color = gold.primaer)
             }
         }
     }
