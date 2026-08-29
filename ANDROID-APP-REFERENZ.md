@@ -1,6 +1,6 @@
 # Android-App-Referenz — verbindliche Standard-Bausteine für alle meine Apps
 
-> **Stand:** 29.08.2026, 11:19 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
+> **Stand:** 29.08.2026, 16:17 Uhr · **Gilt für:** jede neue oder erweiterte Android-App von Frank
 > **Referenz-Apps im Repo:** `~/proggs/PerfectMoment`, `~/proggs/CortexAndroid`,
 > `~/proggs/BestJournalAndroid`, `~/proggs/TerminalVoiceOverlay-Windows`
 
@@ -40,9 +40,16 @@ den Chat ein, dann gilt:
 
 **Regeln**
 
-- Drei Modi: `hell`, `dunkel`, `system` (Systemvorgabe folgen). Voreinstellung: `system`.
-- Die Wahl wird **persistent** gespeichert (`EncryptedSharedPreferences` bzw. DataStore) und beim Start
-  sofort angewandt — kein Aufblitzen des falschen Modus.
+- **Genau zwei Modi: `hell` und `dunkel`. Kein Automatik-/System-Modus.** Die App folgt der
+  Systemvorgabe **nicht** — weder als dritte Auswahl noch als Voreinstellung. `isSystemInDarkTheme()`
+  wird nirgends als Quelle für den Modus benutzt, `AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM` ist
+  verboten.
+- **Voreinstellung beim allerersten Start: hell.**
+- **Die App merkt sich den zuletzt gewählten Modus** und startet immer damit — persistent gespeichert
+  (`EncryptedSharedPreferences` bzw. DataStore) und beim Start sofort angewandt, kein Aufblitzen des
+  falschen Modus.
+- Die Speicherung erfolgt **beim Umschalten**, nicht erst beim Verlassen des Bildschirms — ein
+  Absturz oder ein Wegwischen der App darf die Wahl nie verlieren.
 - Beide Paletten werden **komplett** durchgezeichnet: Hintergrund, Fläche, erhöhte Fläche, Rahmen,
   Text, gedämpfter Text, Eingabefeld, Chip. Kein Modus ist „die schnelle Variante".
 - **Dynamic Color (Material You) ist AUS.** Gold ist die Markenfarbe, sie darf nicht vom Systemhintergrund
@@ -120,8 +127,10 @@ der Normalfall, nach dem gestaltet und getestet wird. Der aufgeklappte Innenbild
 - **Links der Theme-Knopf**, rechts daneben der **Einstellungs-Knopf** (Zahnrad). Diese Reihenfolge ist
   fest — ich greife sie blind.
 - Der Theme-Knopf schaltet direkt um und zeigt den **aktuellen** Zustand als Icon:
-  `Icons.Default.LightMode` (hell) / `Icons.Default.DarkMode` (dunkel) /
-  `Icons.Default.BrightnessAuto` (system). Ein Tipp = nächster Modus im Kreis (hell → dunkel → system).
+  `Icons.Default.LightMode` (hell) / `Icons.Default.DarkMode` (dunkel). Ein Tipp = **Umschalter
+  zwischen genau diesen beiden** (hell ⇄ dunkel). **Kein dritter Zustand**, kein
+  `Icons.Default.BrightnessAuto`, kein Durchlauf über einen Automatik-Modus (Baustein A).
+  Der neue Modus wird sofort gespeichert.
 - Beide Knöpfe: 38–40 dp Fläche, abgerundetes Quadrat (Radius 12 dp), goldener Rahmen oder goldene
   Tönung, `contentDescription` auf Deutsch gesetzt.
 - Die Leiste respektiert `statusBarsPadding()`.
@@ -148,8 +157,8 @@ Text vor. Die Wiedergabe startet fast sofort, auch bei sehr langen Texten, und l
 - Google-Endpunkt: `https://texttospeech.googleapis.com/v1/text:synthesize`, Stimmen der Form
   `de-DE-Chirp3-HD-<Name>` (Kore, Zephyr, Leda, Puck, Charon, Orus …). **Wichtig:** Chirp-3-HD-Stimmen
   kennen keinen `pitch`-Parameter — `pitch` nur an Nicht-Chirp-Stimmen senden, sonst Fehler 400.
-- **Stimmenauswahl im Einstellungs-Bildschirm:** vollständige Liste, nach Geschlecht gruppiert, mit
-  **Probe-abspielen-Knopf** je Stimme und **Favoriten**. Sprechtempo als Regler (0,5–2,0).
+- **Stimmenauswahl:** ein einziges gemeinsames Dropdown über *alle* Engines — siehe Kapitel 4.6.
+  Sprechtempo als Regler (0,5–2,0).
 - Vollständiger Stimmen-Katalog als Vorlage:
   `PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/TtsCatalog.kt`
 
@@ -252,6 +261,54 @@ Absatz-Leerzeilen bleiben ebenfalls, denn sie sind die Schnittkante der Pipeline
   übersprungen statt als Stille abgespielt.
 - Vorlage: `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt`.
 
+---
+
+### 4.6 Alle Stimmen in **einem** Dropdown-Menü ⭐ PFLICHT
+
+**Was:** Es gibt **genau eine** Stimmenauswahl in der App — ein Aufklapp-Menü (Dropdown), in dem
+**sämtliche verfügbaren Stimmen aller Engines** untereinander stehen. Ich wähle die Stimme, nicht die
+Engine: Mit der Stimme wird die zugehörige Engine automatisch mitgeschaltet.
+
+**Reihenfolge der Gruppen im Dropdown — fest, immer diese:**
+
+| # | Gruppe | Quelle | Kennung |
+|---|---|---|---|
+| 1 | **Meine Stimmen** | eigene geklonte Stimmen (Baustein E), aus dem Alibaba-Konto geladen | `qwen_clone` |
+| 2 | **Alibaba-Stimmen** | die fertigen Qwen-/DashScope-Standardstimmen | `qwen` |
+| 3 | **Google Chirp 3 HD** | `de-DE-Chirp3-HD-<Name>` (Kore, Zephyr, Leda, Puck, Charon, Orus …) | `google_cloud` |
+| 4 | **Edge-Stimmen** | Microsoft Edge TTS (kostenlos, kein Schlüssel) | `edge_tts` |
+
+**Regeln**
+
+- **Ein Dropdown, keine zwei Schritte.** Es gibt *keinen* vorgelagerten Engine-Umschalter, aus dem
+  danach erst eine zweite Liste entsteht. Engine-Wahl und Stimmenwahl sind derselbe Handgriff.
+- **Gruppenüberschriften** trennen die vier Blöcke sichtbar (nicht anklickbar, gedämpfte Schrift,
+  darüber ein feiner Trenner). Innerhalb einer Gruppe: nach Geschlecht sortiert bzw. gruppiert.
+- **Meine Stimmen stehen immer ganz oben**, auch wenn es nur eine ist. Gibt es noch keine, steht dort
+  statt der Liste ein Eintrag **„Eigene Stimme aufnehmen …"**, der direkt zur Aufnahme aus Baustein E
+  führt — die Gruppe verschwindet nie ganz.
+- **Jeder Eintrag zeigt:** Name der Stimme · ein kleines Kennzeichen der Herkunft (Chip/Icon, z. B.
+  „Meine" · „Alibaba" · „Google" · „Edge") · Geschlecht, wo bekannt.
+- **Probe-abspielen-Knopf je Eintrag** (kleines Lautsprecher-Symbol rechts): spielt einen kurzen
+  deutschen Beispielsatz mit *genau dieser* Stimme, ohne das Menü zu schließen. Bei laufender Probe
+  wird das Symbol zum Stopp-Symbol.
+- **Favoriten:** Stern je Eintrag; markierte Stimmen erscheinen zusätzlich als Gruppe **„Favoriten"**
+  ganz oben, noch vor „Meine Stimmen".
+- **Suchfeld im Kopf des Menüs**, sobald mehr als 15 Stimmen gelistet sind — filtert über alle Gruppen.
+- **Nicht nutzbare Stimmen werden nicht versteckt, sondern ausgegraut**, mit Klartext-Grund darunter
+  („Alibaba-Schlüssel fehlt", „Google-Schlüssel fehlt"). Ein Tipp darauf führt direkt zum passenden
+  Schlüsselfeld in den Einstellungen. Kein stilles Weglassen — sonst suche ich Stimmen, die es gibt.
+- **Der Fehlschlag einer Engine leert das Menü nicht.** Kann eine Stimmenliste gerade nicht geladen
+  werden (kein Netz, Schlüssel abgelehnt), bleiben alle anderen Gruppen bedienbar; die betroffene
+  Gruppe zeigt eine Zeile „Konnte nicht geladen werden — erneut versuchen" (Baustein L).
+- **Die Auswahl wird persistent gespeichert** (Stimm-Kennung *und* Engine) und beim Start
+  wiederhergestellt. Ist die gemerkte Stimme nicht mehr verfügbar (Stimme gelöscht, Schlüssel weg),
+  fällt die App auf **Edge TTS** zurück und **sagt es einmal im Klartext**, statt stumm zu schweigen.
+- **Edge ist immer wählbar**, weil es keinen Schlüssel braucht — es ist der garantierte Rückfall.
+- Der Stimmen-Katalog steht an **einer** Stelle im Projekt (Vorlage:
+  `PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/TtsCatalog.kt`), die eigenen Stimmen
+  kommen dynamisch aus dem Verzeichnis (Vorlage: `QwenVoiceDirectory.kt`) — beide fließen in
+  **dieselbe** Liste, die das Dropdown speist.
 
 ---
 
@@ -271,6 +328,33 @@ wird mit meiner eigenen Stimme vorgelesen.
 - **Mehrere eigene Stimmen** sind möglich: Liste mit Namen, eigener Reihenfolge, Umbenennen und Löschen.
 - Die zurückgelieferte Audio-URL kommt teils als `http://` — vor dem Abspielen auf `https://` heben,
   sonst blockt Android sie.
+
+**⭐ Meine schon vorhandenen Alibaba-Stimmen werden abgerufen und sind sofort auswählbar**
+
+Das ist der Kern und wurde in der Vergangenheit vergessen: Es reicht **nicht**, nur ein Feld für den
+Alibaba-Schlüssel einzubauen. Die Stimmen, die in meinem Alibaba-Konto **bereits geklont sind**, müssen
+in der App **erscheinen und benutzbar sein** — ich klone sie nicht in jeder App neu.
+
+- **Sobald ein Alibaba-Schlüssel hinterlegt ist, holt die App die Liste meiner geklonten Stimmen aus
+  dem Konto** (DashScope-Stimmenverzeichnis, `list`-Aufruf desselben Dienstes) — ungefragt, beim
+  Speichern des Schlüssels und danach bei jedem App-Start.
+- Die geladenen Stimmen landen **in der Gruppe „Meine Stimmen"** ganz oben im Dropdown aus Kapitel 4.6
+  und sind ohne weiteren Schritt anwählbar.
+- **Die Liste wird lokal zwischengespeichert** (Stimm-ID, Name, Anlagedatum, Modell), damit sie ohne
+  Netz sofort dasteht; im Hintergrund wird sie aufgefrischt. Kein leeres Menü beim Start.
+- **Ein Knopf „Stimmen neu laden"** in den Einstellungen holt die Liste jederzeit von Hand.
+- **Namen bleiben erhalten:** Der von mir vergebene Name wird lokal zur Stimm-ID gemerkt. Kennt die App
+  eine ID noch nicht, zeigt sie sie mit einem verständlichen Ersatznamen an (z. B. „Eigene Stimme 3 —
+  angelegt am 14.06.2026") und lässt sich sofort umbenennen — **nie** als roher Kennungs-String.
+- **Zum Sprechen wird dasselbe Modell benutzt, mit dem die Stimme geklont wurde.** Das Modell wird
+  daher **je Stimme** mitgespeichert, nicht global angenommen — sonst wird die Stimm-ID abgelehnt.
+  Eine Stimme mit unbekanntem Modell wird ausgegraut, nicht stillschweigend mit dem Standardmodell
+  probiert.
+- **Löschen im Konto, nicht nur lokal:** Der Löschen-Knopf entfernt die Stimme wirklich bei Alibaba,
+  mit Rückfrage vorher.
+- Schlägt der Abruf fehl, sagt die App **warum** im Klartext (Schlüssel ungültig, kein Netz, Kontingent)
+  und bietet Wiederholen an (Baustein L) — die schon zwischengespeicherten Stimmen bleiben nutzbar.
+- Vorlage für das Verzeichnis: `PerfectMoment/.../tts/QwenVoiceDirectory.kt`
 - Vorlagen: `PerfectMoment/app/src/main/java/de/frank/perfectmoment/tts/QwenTtsPlayer.kt`,
   `QwenVoiceEnrollment.kt`, `QwenVoiceDirectory.kt`, `audio/VoiceSampleScript.kt`
 
@@ -333,16 +417,20 @@ später nicht nachvollziehbar, warum etwas fehlt.
 Erreichbar über das Zahnrad aus Baustein C. Enthält **immer mindestens** diese drei Blöcke:
 
 ### 7.1 Vorlesen
-Engine-Auswahl (Google Chirp 3 HD / Meine Stimme / Edge) · Stimmenliste mit Probe-Knopf und Favoriten ·
+**Ein gemeinsames Stimmen-Dropdown** über alle Engines nach Kapitel 4.6 (Meine Stimmen → Alibaba →
+Google Chirp 3 HD → Edge), mit Probe-Knopf und Favoriten — **kein separater Engine-Umschalter** ·
 Sprechtempo-Regler · Feld **Google-/Gemini-API-Key** · Feld **Alibaba-DashScope-API-Key** ·
-Knopf „Eigene Stimme aufnehmen" mit Verwaltung der geklonten Stimmen.
+Knopf **„Stimmen neu laden"** (holt meine geklonten Alibaba-Stimmen ins Konto-Verzeichnis, Baustein E) ·
+Knopf „Eigene Stimme aufnehmen" mit Verwaltung der geklonten Stimmen (umbenennen, löschen).
 
 ### 7.2 Spracheingabe
 Feld **Groq-API-Key** · Modellanzeige `whisper-large-v3-turbo` · Schalter für die Filter-Schichten
 (Voreinstellung: alle an) · optionaler Testknopf „Aufnahme prüfen".
 
 ### 7.3 Darstellung
-Hell / Dunkel / System · falls vorhanden: Schriftgröße.
+**Hell / Dunkel — nur diese beiden**, als Zwei-Wege-Auswahl (Segmented Button oder zwei Karten).
+**Kein „System"-, „Automatik"- oder „Gerätevorgabe"-Eintrag** (Baustein A). Voreinstellung hell,
+zuletzt gewählter Modus wird gemerkt · falls vorhanden: Schriftgröße.
 
 **Regeln für die Schlüssel**
 
@@ -676,7 +764,28 @@ die App Zugang — **ohne** dass pro Anfrage abgerechnet wird. Das Verfahren ist
 `PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/CodexAuthManager.kt` fertig ausgearbeitet
 und wird von dort übernommen, nicht neu erfunden.
 
-Was dabei zwingend mitkommt:
+**⭐ Der angezeigte Anmeldecode ist immer kopierbar — mit einem Knopf „Code kopieren".**
+Das ist keine Kür, sondern Pflicht in jeder App mit Codex-/ChatGPT-Anmeldung. Ich tippe den Code
+niemals ab.
+
+- Direkt unter dem Code steht ein gut sichtbarer Knopf **„Code kopieren"** (Icon
+  `Icons.Default.ContentCopy` + Beschriftung), der den Code in die Zwischenablage legt
+  (`ClipboardManager`, Label „Anmeldecode").
+- **Auch der Code selbst ist antippbar** und kopiert dann dasselbe — der Knopf ist der offensichtliche
+  Weg, der Code der bequeme.
+- Nach dem Kopieren **sichtbare Rückmeldung**: der Knopf wechselt kurz auf „Kopiert ✓" (rund 2
+  Sekunden, dann zurück) und/oder ein kurzer Snackbar-Hinweis. Kein stummes Kopieren.
+  Auf Android 13+ zeigt das System selbst eine Bestätigung — dann keine zweite doppelt einblenden.
+- Der Code steht **groß, mit Sperrschrift und in einer Festbreitenschrift** da (Zeichen einzeln
+  lesbar), damit Notfalls auch Abtippen ginge.
+- **Der Code wird kopiert wie er angezeigt wird** — mit Bindestrich, wenn er mit Bindestrich dasteht.
+  Formatierung an *einer* Stelle (`DeviceCodeFormat.kt`), nie zweimal unterschiedlich.
+- Daneben ein Knopf **„Seite öffnen"**, der die Bestätigungs-URL im Browser aufruft, damit ich den
+  kopierten Code dort nur noch einfügen muss.
+- Bei neuem Code (Ablauf, „Neuen Code anfordern") gilt dasselbe wieder — der Kopier-Knopf verschwindet
+  nie und bezieht sich immer auf den aktuell gültigen Code.
+
+Was außerdem zwingend mitkommt:
 - **Zugangs- und Auffrischungs-Token in `EncryptedSharedPreferences`**, nie im Klartext.
 - **Auffrischung mit Vorlauf** (rund 2 Minuten vor Ablauf) und **unter einem Mutex** — sonst frischen
   mehrere gleichzeitige Anfragen dasselbe Token mehrfach auf und der Anbieter sperrt es
@@ -784,11 +893,12 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 
 ## 18. Checkliste vor „fertig"
 
-- [ ] **A** Hell- und Dunkelmodus in Gold, beide vollständig, Wahl gespeichert, Dynamic Color aus
+- [ ] **A** Hell- und Dunkelmodus in Gold, beide vollständig, **nur diese zwei (kein Automatik-/System-Modus)**, Start hell, zuletzt gewählter Modus gemerkt, Dynamic Color aus
 - [ ] **B** Cover-Display des Fold 8 als Basis-Layout, aufgeklappt sauber, Faltung ohne Neustart
 - [ ] **C** Theme-Knopf und Zahnrad oben rechts auf dem Hauptbildschirm, in dieser Reihenfolge
 - [ ] **D** Lautsprecher-Knopf am Text; Absatz-Pipeline mit Vorausschau 2 und ~1 s Pause; drei Engines
-- [ ] **E** Eigene Stimme aufnehmbar, benennbar, auswählbar
+- [ ] **D (4.6)** **Ein** Dropdown mit allen Stimmen: Meine → Alibaba → Google Chirp 3 HD → Edge, mit Probe-Knopf, Favoriten, ausgegrauten statt versteckten Einträgen; Auswahl gespeichert
+- [ ] **E** Eigene Stimme aufnehmbar, benennbar, auswählbar — **und meine schon vorhandenen Alibaba-Stimmen werden aus dem Konto geladen, zwischengespeichert und sind sofort wählbar** (nicht nur ein Schlüsselfeld)
 - [ ] **F** Mikrofon-Knopf; `whisper-large-v3-turbo`; alle **vier** Halluzinations-Fixes; 413-Schnitt
 - [ ] **G** Einstellungen mit den drei Blöcken; Schlüssel verschlüsselt; Testknöpfe
 - [ ] **H** Version und Zeitstempel gebumpt und in der App sichtbar
@@ -798,7 +908,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **L** Kein stiller Fehlschlag: Klartext-Meldung + Wiederholen, Lade- und Leerzustände überall
 - [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
 - [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` zentral, jeder Bildschirm durch die Abnahme N.6
-- [ ] **O** KI über Abo **und** Schlüssel; Antwort strömt; „Text glätten" mit erhaltenem Original
+- [ ] **O** KI über Abo **und** Schlüssel; **Codex-Anmeldecode mit Knopf „Code kopieren" und Rückmeldung**; Antwort strömt; „Text glätten" mit erhaltenem Original
 - [ ] **P** Absturz-Fänger schreibt vor dem Absturz; Diagnose-Bildschirm mit Teilen-Knopf; keine Geheimnisse im Log
 - [ ] **D (4.3)** Vorlesen läuft bei ausgeschaltetem Bildschirm weiter, mit Pause/Weiter/Stopp in der Benachrichtigung
 - [ ] **D (4.5)** Vorgelesener Text ist TTS-freundlich: KI-Prompt mit Vorlese-Vorgabe **und** Aufbereitung an einer Stelle; keine Sonderzeichen in der Sprachausgabe; Anzeige unverändert
@@ -818,6 +928,8 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | Text für die Sprachausgabe säubern (TTS-freundlich, 4.5) | `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt` |
 | Google Chirp 3 HD | `PerfectMoment/.../tts/GoogleCloudTtsPlayer.kt` |
 | Stimmen-Katalog | `PerfectMoment/.../tts/TtsCatalog.kt` |
+| Verzeichnis meiner geklonten Alibaba-Stimmen | `PerfectMoment/.../tts/QwenVoiceDirectory.kt` |
+| Anmeldecode formatieren (für Anzeige und Kopieren) | `PerfectMoment/.../auth/DeviceCodeFormat.kt` |
 | Eigene Stimme (Klonen und Sprechen) | `PerfectMoment/.../tts/QwenTtsPlayer.kt`, `QwenVoiceEnrollment.kt` |
 | Aufnahme 16 kHz mono | `PerfectMoment/.../audio/MicRecorder.kt` |
 | Groq-Anfrage | `PerfectMoment/.../audio/GroqTranscriber.kt` |
@@ -846,4 +958,8 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
 | 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
 | 29.08.2026, 13:59 Uhr | Zweite Durchsicht aller 14 Apps (Klassennamen, Manifeste, Berechtigungen): Baustein O (KI über Abo oder Schlüssel, strömende Antworten, Text glätten), Baustein P (Absturz-Fänger und Diagnose-Bildschirm) und Kapitel 4.3 (Vorlesen im Vordergrunddienst) ergänzt |
+| 29.08.2026, 16:17 Uhr | Baustein O.1: Codex-Anmeldecode ist immer kopierbar — Pflicht-Knopf „Code kopieren" mit Rückmeldung, antippbarer Code, „Seite öffnen" |
+| 29.08.2026, 16:17 Uhr | Kapitel 4.6 ergänzt: **ein** gemeinsames Stimmen-Dropdown über alle Engines (Meine → Alibaba → Google Chirp 3 HD → Edge) statt getrennter Engine-Auswahl |
+| 29.08.2026, 16:17 Uhr | Baustein E erweitert: schon vorhandene geklonte Alibaba-Stimmen werden aus dem Konto geladen, zwischengespeichert und sind sofort auswählbar — nicht nur ein Schlüsselfeld |
+| 29.08.2026, 16:17 Uhr | Baustein A, C und 7.3: nur noch Hell- und Dunkelmodus, **kein Automatik-/System-Modus** mehr; Start hell, zuletzt gewählter Modus wird gemerkt |
 | 29.08.2026, 15:43 Uhr | Kapitel 4.5 ergänzt: vorgelesener Text muss TTS-freundlich sein — Vorgabe schon im KI-Prompt plus Aufbereitung als Netz, Zeichen-Tabelle, Leitplanken; gilt nur für Text, der wirklich gesprochen wird |
