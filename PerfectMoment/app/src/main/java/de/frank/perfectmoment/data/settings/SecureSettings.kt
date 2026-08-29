@@ -11,6 +11,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONException
 import org.json.JSONObject
 
+internal const val MIN_PAUSE_SECONDS = 2
+internal const val MAX_PAUSE_SECONDS = 60
+internal const val MAX_REPETITIONS_PER_QUESTION = 30
+
+internal fun normalizePauseSeconds(value: Int): Int =
+    ((value.coerceIn(MIN_PAUSE_SECONDS, MAX_PAUSE_SECONDS) + 1) / 2) * 2
+
 class SecureSettings(context: Context) : Closeable {
     private val appContext = context.applicationContext
 
@@ -137,18 +144,18 @@ class SecureSettings(context: Context) : Closeable {
 
     var pauseRepSeconds: Int
         get() = preferences?.getInt(Keys.PAUSE_REP_SECONDS, Defaults.PAUSE_REP_SECONDS)
-            ?.coerceIn(1, 30) ?: Defaults.PAUSE_REP_SECONDS
-        set(value) = writeInt(Keys.PAUSE_REP_SECONDS, value.coerceIn(1, 30))
+            ?.let(::normalizePauseSeconds) ?: Defaults.PAUSE_REP_SECONDS
+        set(value) = writeInt(Keys.PAUSE_REP_SECONDS, normalizePauseSeconds(value))
 
     var pauseNextSeconds: Int
         get() = preferences?.getInt(Keys.PAUSE_NEXT_SECONDS, Defaults.PAUSE_NEXT_SECONDS)
-            ?.coerceIn(1, 60) ?: Defaults.PAUSE_NEXT_SECONDS
-        set(value) = writeInt(Keys.PAUSE_NEXT_SECONDS, value.coerceIn(1, 60))
+            ?.let(::normalizePauseSeconds) ?: Defaults.PAUSE_NEXT_SECONDS
+        set(value) = writeInt(Keys.PAUSE_NEXT_SECONDS, normalizePauseSeconds(value))
 
     var repsPerQuestion: Int
         get() = preferences?.getInt(Keys.REPS_PER_QUESTION, Defaults.REPS_PER_QUESTION)
-            ?.coerceIn(1, 10) ?: Defaults.REPS_PER_QUESTION
-        set(value) = writeInt(Keys.REPS_PER_QUESTION, value.coerceIn(1, 10))
+            ?.coerceIn(1, MAX_REPETITIONS_PER_QUESTION) ?: Defaults.REPS_PER_QUESTION
+        set(value) = writeInt(Keys.REPS_PER_QUESTION, value.coerceIn(1, MAX_REPETITIONS_PER_QUESTION))
 
     var sessionDurationMin: Int
         get() = preferences?.getInt(Keys.SESSION_DURATION_MIN, Defaults.SESSION_DURATION_MIN)

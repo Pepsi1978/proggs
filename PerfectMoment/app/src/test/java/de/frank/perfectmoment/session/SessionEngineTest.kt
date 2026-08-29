@@ -746,6 +746,28 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `Vorlese Session sendet jede Wiederholung und jeden Schleifendurchlauf neu an TTS`() = runTest {
+        val fixture = fixture(
+            questions = listOf(question(1), question(2)),
+            config = config(pauseRepMs = 0, pauseNextMs = 0, reps = 2),
+            loopQuestions = true,
+        )
+        fixture.startSpeaking()
+
+        repeat(4) {
+            fixture.tts.completeCurrent()
+            runCurrent()
+        }
+
+        assertEquals(
+            listOf("Frage 1", "Frage 1", "Frage 2", "Frage 2", "Frage 1"),
+            fixture.tts.spokenTexts,
+        )
+        assertTrue(fixture.tts.calls.all { it.varied })
+        fixture.engine.close()
+    }
+
+    @Test
     fun `Wiedergabe aus dem Verlauf laedt erst 30 Fragen vor Bestandsende nach`() = runTest {
         val refill = FakeRefill().apply {
             responses += List(30) { "✨ Nachschub ${it + 271}" }
@@ -813,6 +835,7 @@ class SessionEngineTest {
         initialGenerationInFlight: Boolean = false,
         checkpoint: SessionCheckpoint? = null,
         refillWhenStockIsLow: Boolean = false,
+        loopQuestions: Boolean = false,
     ): Fixture {
         val tts = FakeTts()
         val engine = SessionEngine(
@@ -826,6 +849,7 @@ class SessionEngineTest {
             initialGenerationInFlight = initialGenerationInFlight,
             checkpoint = checkpoint,
             refillWhenStockIsLow = refillWhenStockIsLow,
+            loopQuestions = loopQuestions,
         )
         return Fixture(engine, tts, this)
     }

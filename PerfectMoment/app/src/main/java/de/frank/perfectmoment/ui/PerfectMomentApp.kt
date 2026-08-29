@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.ReasoningEffort
+import de.frank.perfectmoment.data.settings.MAX_PAUSE_SECONDS
+import de.frank.perfectmoment.data.settings.MAX_REPETITIONS_PER_QUESTION
+import de.frank.perfectmoment.data.settings.MIN_PAUSE_SECONDS
 import de.frank.perfectmoment.session.SessionRuntime
 import de.frank.perfectmoment.session.SessionState
 import de.frank.perfectmoment.tts.TtsCatalog
@@ -71,6 +74,7 @@ import de.frank.perfectmoment.ui.theme.Inter
 import de.frank.perfectmoment.ui.theme.LocalMotionActive
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.LocalReducedMotion
+import kotlin.math.roundToInt
 
 @Composable
 fun PerfectMomentApp(
@@ -260,14 +264,28 @@ private fun AppBottomSheet(
             ) {
                 when (sheet) {
                     AppSheet.PAUSES -> {
-                        SliderBlock("Pause zwischen Wiederholungen", viewModel.pauseRep, 1..30, viewModel::updatePauseRep, "s")
+                        SliderBlock(
+                            "Pause zwischen Wiederholungen",
+                            viewModel.pauseRep,
+                            MIN_PAUSE_SECONDS..MAX_PAUSE_SECONDS,
+                            viewModel::updatePauseRep,
+                            "s",
+                            stepSize = 2,
+                        )
                         Spacer(Modifier.height(24.dp))
-                        SliderBlock("Pause bis zur nächsten Frage", viewModel.pauseNext, 1..60, viewModel::updatePauseNext, "s")
+                        SliderBlock(
+                            "Pause bis zur nächsten Frage",
+                            viewModel.pauseNext,
+                            MIN_PAUSE_SECONDS..MAX_PAUSE_SECONDS,
+                            viewModel::updatePauseNext,
+                            "s",
+                            stepSize = 2,
+                        )
                     }
                     AppSheet.REPETITIONS -> SliderBlock(
                         "Wiederholungen pro Frage",
                         viewModel.repetitions,
-                        1..10,
+                        1..MAX_REPETITIONS_PER_QUESTION,
                         viewModel::updateRepetitions,
                         "×",
                     )
@@ -313,11 +331,17 @@ private fun SliderBlock(
     range: IntRange,
     onValue: (Int) -> Unit,
     suffix: String,
+    stepSize: Int = 1,
 ) {
     val colors = LocalPmColors.current
+    val maxStepIndex = (range.last - range.first) / stepSize
+    fun snap(rawValue: Float): Int =
+        (range.first + ((rawValue - range.first) / stepSize).roundToInt() * stepSize)
+            .coerceIn(range)
+    val snappedValue = snap(value.toFloat())
     SectionLabel(label, decorated = true)
     Text(
-        "$value $suffix",
+        "$snappedValue $suffix",
         color = colors.goldHi,
         fontFamily = Inter,
         fontWeight = FontWeight.SemiBold,
@@ -326,10 +350,10 @@ private fun SliderBlock(
         modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
     )
     Slider(
-        value = value.toFloat(),
-        onValueChange = { onValue(it.toInt()) },
+        value = snappedValue.toFloat(),
+        onValueChange = { onValue(snap(it)) },
         valueRange = range.first.toFloat()..range.last.toFloat(),
-        steps = range.last - range.first - 1,
+        steps = (maxStepIndex - 1).coerceAtLeast(0),
         colors = SliderDefaults.colors(
             thumbColor = colors.goldHi,
             activeTrackColor = colors.gold,

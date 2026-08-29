@@ -30,6 +30,8 @@ import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
 import de.frank.perfectmoment.data.local.SkillEntity
+import de.frank.perfectmoment.data.settings.MAX_REPETITIONS_PER_QUESTION
+import de.frank.perfectmoment.data.settings.normalizePauseSeconds
 import de.frank.perfectmoment.di.AppContainer
 import de.frank.perfectmoment.session.EmojiParser
 import de.frank.perfectmoment.session.Phase
@@ -820,17 +822,17 @@ class AppViewModel(
     }
 
     fun updatePauseRep(value: Int) {
-        pauseRep = value.coerceIn(1, 30)
+        pauseRep = normalizePauseSeconds(value)
         settings.pauseRepSeconds = pauseRep
     }
 
     fun updatePauseNext(value: Int) {
-        pauseNext = value.coerceIn(1, 60)
+        pauseNext = normalizePauseSeconds(value)
         settings.pauseNextSeconds = pauseNext
     }
 
     fun updateRepetitions(value: Int) {
-        repetitions = value.coerceIn(1, 10)
+        repetitions = value.coerceIn(1, MAX_REPETITIONS_PER_QUESTION)
         settings.repsPerQuestion = repetitions
     }
 
@@ -1378,9 +1380,9 @@ class AppViewModel(
             historyDetail = sessionRepository.getSession(id)
             historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
-                pauseRep = session.pauseRep
-                pauseNext = session.pauseNext
-                repetitions = session.reps
+                pauseRep = normalizePauseSeconds(session.pauseRep)
+                pauseNext = normalizePauseSeconds(session.pauseNext)
+                repetitions = session.reps.coerceIn(1, MAX_REPETITIONS_PER_QUESTION)
                 durationMinutes = session.durationMin
                 settings.pauseRepSeconds = pauseRep
                 settings.pauseNextSeconds = pauseNext
@@ -1504,9 +1506,9 @@ class AppViewModel(
             historyDetail = sessionRepository.getSession(id)
             historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
-                pauseRep = session.pauseRep
-                pauseNext = session.pauseNext
-                repetitions = session.reps
+                pauseRep = normalizePauseSeconds(session.pauseRep)
+                pauseNext = normalizePauseSeconds(session.pauseNext)
+                repetitions = session.reps.coerceIn(1, MAX_REPETITIONS_PER_QUESTION)
                 durationMinutes = session.durationMin
                 settings.pauseRepSeconds = pauseRep
                 settings.pauseNextSeconds = pauseNext
