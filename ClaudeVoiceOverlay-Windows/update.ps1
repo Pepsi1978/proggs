@@ -25,6 +25,7 @@ $maxAttempts = 10
 $watcherStopped = $false
 $reservationHeld = $false
 . (Join-Path $PSScriptRoot '..\voice-overlay-deploy-guard.ps1')
+. (Join-Path $PSScriptRoot '..\voice-overlay-proc-info.ps1')
 
 $sdkDotnet = Join-Path $env:USERPROFILE ".dotnet\dotnet.exe"
 if (Test-Path -LiteralPath $sdkDotnet -PathType Leaf) {
@@ -35,7 +36,12 @@ if (Test-Path -LiteralPath $sdkDotnet -PathType Leaf) {
 }
 
 function Get-TargetOverlayProcesses {
-    @(Get-CimInstance Win32_Process -Filter "Name = '$exeName'" -ErrorAction Stop | Where-Object {
+    # Get-OverlayProcessInfo statt Win32_Process direkt: aus einer nicht erhoehten Konsole
+    # liefert WMI fuer diese Prozesse leere ExecutablePath-/CommandLine-Felder, wodurch die
+    # laufende Instanz frueher unentdeckt blieb und der EXE-Tausch danach am
+    # Single-Instance-Lock scheiterte (Vorfall 29.08.2026). Die Pfadpruefung darunter bleibt
+    # unveraendert scharf — ein Prozess ohne ermittelbaren Pfad wird weiterhin NICHT angefasst.
+    @(Get-OverlayProcessInfo -Name $exeName | Where-Object {
         $_.ExecutablePath -and
         [System.IO.Path]::GetFullPath($_.ExecutablePath).Equals(
             $canonicalExePath,
@@ -80,7 +86,9 @@ function Stop-TargetOverlayProcesses {
 }
 
 function Get-TargetWatcherProcesses {
-    @(Get-CimInstance Win32_Process -Filter "Name = 'wscript.exe' OR Name = 'cscript.exe'" -ErrorAction Stop | Where-Object {
+    # Auch hier ueber Get-OverlayProcessInfo: die Zuordnung laeuft ueber die Kommandozeile,
+    # die WMI aus einer nicht erhoehten Konsole ebenfalls leer laesst.
+    @(Get-OverlayProcessInfo -Name 'wscript.exe', 'cscript.exe' | Where-Object {
         $_.CommandLine -and $_.CommandLine.Contains($watcherPath, [System.StringComparison]::OrdinalIgnoreCase)
     })
 }
@@ -191,6 +199,17 @@ try {
         }
     }
     if ($null -eq $uiProcessId) {
+        # Haeufigste Ursache: eine alte Instanz laeuft noch und haelt den Single-Instance-Lock,
+        # die neue EXE beendet sich daraufhin sofort ("Overlay already running, exiting").
+        # Das ausdruecklich benennen statt nur "kein UI-Prozess" zu melden — beim Vorfall
+        # 29.08.2026 kostete die unklare Meldung unnoetig lange Fehlersuche.
+        $strays = @(Get-Process -Name ([System.IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue |
+            Where-Object { $_.Id -ne $watchdogProcessId })
+        if ($strays.Count -gt 0) {
+            throw ("Die neue EXE beendete sich sofort — es laeuft noch eine andere Instanz " +
+                   "(PID: $($strays.Id -join ', ')), die den Single-Instance-Lock haelt. " +
+                   "Diese Prozesse beenden und das Update erneut starten.")
+        }
         throw "Die neue EXE startete keinen UI-Prozess mit --run (Watchdog-PID: $watchdogProcessId)."
     }
 
