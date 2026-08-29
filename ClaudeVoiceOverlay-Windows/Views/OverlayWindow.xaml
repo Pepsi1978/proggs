@@ -226,7 +226,8 @@
                         <Button x:Name="MicButton"
                                 Style="{StaticResource MicButton}"
                                 Click="BtnMic_Click"
-                                ToolTip="Aufnahme">
+                                MouseRightButtonUp="BtnMic_MouseRightButtonUp"
+                                ToolTip="Aufnahme&#10;Rechtsklick: letzte Aufnahme erneut transkribieren&#10;Umschalt+Rechtsklick: die vorletzte">
                             <Grid Width="48" Height="48">
                                 <!-- Dark icon for contrast on yellow background -->
                                 <Viewbox x:Name="MicIcon" Width="22" Height="22">

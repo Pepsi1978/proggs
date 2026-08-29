@@ -2712,7 +2712,7 @@ namespace TerminalVoiceOverlay.Views
                         Console.WriteLine($"Transcription error: {ex.Message}");
                         DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "main"), ("ms", turnSw.ElapsedMilliseconds));
                         SetMicState(RecordingState.Error);
-                        RescueFailedRecording(wavFile);
+                        RecordingArchive.Archive(wavFile, success: false);
                     }
                     finally
                     {
@@ -2721,8 +2721,10 @@ namespace TerminalVoiceOverlay.Views
                         DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "main"));
                         ScheduleReset();
 
-                        try { if (wavFile != null) File.Delete(wavFile); }
-                        catch { /* ignore */ }
+                        // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv,
+                        // wo die letzten zwei Diktate liegen bleiben und per Rechtsklick auf das
+                        // Mikrofon erneut transkribiert werden koennen.
+                        RecordingArchive.Archive(wavFile, success: true);
                     }
                 }
                 finally
@@ -2888,7 +2890,7 @@ namespace TerminalVoiceOverlay.Views
                         Console.WriteLine($"BTW transcription error: {ex.Message}");
                         DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "btw"), ("ms", turnSw.ElapsedMilliseconds));
                         SetBtwMicState(RecordingState.Error);
-                        RescueFailedRecording(wavFile);
+                        RecordingArchive.Archive(wavFile, success: false);
                     }
                     finally
                     {
@@ -2901,8 +2903,10 @@ namespace TerminalVoiceOverlay.Views
                         if (!isBtwRecording)
                             SetBtwMicState(RecordingState.Idle);
 
-                        try { if (wavFile != null) File.Delete(wavFile); }
-                        catch { /* ignore */ }
+                        // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv,
+                        // wo die letzten zwei Diktate liegen bleiben und per Rechtsklick auf das
+                        // Mikrofon erneut transkribiert werden koennen.
+                        RecordingArchive.Archive(wavFile, success: true);
                     }
                 }
                 finally
@@ -4701,45 +4705,89 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Rettet die WAV einer fehlgeschlagenen Aufnahme, statt sie zu verwerfen. Vorfall 29.08.2026:
-        /// eine 15-Minuten-Aufnahme lief in Groqs 413 (Upload zu gross) und wurde danach im finally
-        /// geloescht — der gesprochene Text war endgueltig weg. Seitdem wandert jede fehlgeschlagene
-        /// Aufnahme nach %LOCALAPPDATA%\TerminalVoiceOverlay\failed\ und kann von dort erneut
-        /// transkribiert werden. Zweite Schicht hinter dem Chunking im GroqWhisperClient: das
-        /// Chunking verhindert den bekannten Fehler, die Rettung faengt jeden kuenftigen ab.
-        /// Rettungen aelter als 14 Tage werden dabei aufgeraeumt, damit der Ordner nicht waechst.
+        /// Rechtsklick auf das Mikrofon: die zuletzt aufgenommene Datei noch einmal an die
+        /// Transkription schicken und den Text einfuegen. Mit gedrueckter Umschalttaste die
+        /// VORLETZTE Aufnahme. Gedacht fuer den Fall "die Transkription hat nicht geklappt" —
+        /// seit dem 413-Vorfall vom 29.08.2026 wird keine Aufnahme mehr geloescht, die letzten
+        /// zwei liegen im Archiv (siehe <see cref="RecordingArchive"/>).
         /// </summary>
-        private static void RescueFailedRecording(string? wavFile)
+        private async void BtnMic_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
+            e.Handled = true;
+            bool takePrevious = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+            await RetranscribeArchivedRecordingAsync(takePrevious ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Transkribiert eine archivierte Aufnahme erneut (0 = letzte, 1 = vorletzte) und fuegt das
+        /// Ergebnis wie ein normales Diktat ein. Laeuft durch denselben Client wie eine frische
+        /// Aufnahme, also inklusive Chunking langer Diktate — genau das, was beim Original
+        /// fehlgeschlagen war.
+        /// </summary>
+        private async Task RetranscribeArchivedRecordingAsync(int index)
+        {
+            if (_isProcessing || _micState == RecordingState.Recording || isBtwRecording) return;
+
+            string? wav = RecordingArchive.At(index);
+            if (wav == null)
+            {
+                string welche = index == 0 ? "letzte" : "vorletzte";
+                Console.WriteLine($"Keine {welche} Aufnahme im Archiv.");
+                DiagLog.Warn("VoiceTurn", "retranscribe_no_recording", ("index", index));
+                SetMicState(RecordingState.Error);
+                ScheduleReset();
+                return;
+            }
+
+            string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+            var turnSw = Stopwatch.StartNew();
+            var targetHwnd = _terminalWatcher.ActiveTerminalHwnd;
+            long wavBytes = 0;
+            try { wavBytes = new FileInfo(wav).Length; } catch { /* nur fuers Log */ }
+
+            DiagLog.Write("VoiceTurn", "retranscribe_start",
+                ("turn", turnId), ("index", index), ("path", wav), ("wavBytes", wavBytes));
+
+            _isProcessing = true;
+            SetMicState(RecordingState.Processing);
             try
             {
-                if (string.IsNullOrEmpty(wavFile) || !File.Exists(wavFile)) return;
+                var transcript = await _groqClient.TranscribeAsync(wav);
+                DiagLog.Write("VoiceTurn", "retranscribe_done",
+                    ("turn", turnId), ("chars", transcript.Length));
 
-                string dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "TerminalVoiceOverlay", "failed");
-                Directory.CreateDirectory(dir);
-
-                string target = Path.Combine(dir, $"aufnahme_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.wav");
-                File.Move(wavFile, target, overwrite: true);
-                long bytes = new FileInfo(target).Length;
-                Console.WriteLine($"Aufnahme gerettet: {target}");
-                DiagLog.Write("VoiceTurn", "recording_rescued", ("path", target), ("bytes", bytes));
-
-                foreach (var old in Directory.EnumerateFiles(dir, "aufnahme_*.wav"))
+                string finalText = transcript;
+                if (_promptPanel?.IsInputWindowVisible == true)
                 {
-                    try
-                    {
-                        if (File.GetLastWriteTimeUtc(old) < DateTime.UtcNow.AddDays(-14))
-                            File.Delete(old);
-                    }
-                    catch { /* einzelne Datei gesperrt -> naechster Lauf raeumt sie auf */ }
+                    _promptPanel.RouteVoiceTextToInput(finalText, autoEnterEnabled);
+                    SetMicState(RecordingState.Success);
                 }
+                else
+                {
+                    var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                    if (!string.IsNullOrEmpty(preFix)) finalText = preFix + finalText;
+                    if (!string.IsNullOrEmpty(postFix)) finalText = finalText + postFix;
+                    finalText += " ; ";
+
+                    if (!await TerminalController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                        throw new InvalidOperationException("Kein Terminal-Zielfenster fuer die Wiederholung gefunden.");
+                    SetMicState(RecordingState.Success);
+                }
+                Console.WriteLine($"Aufnahme erneut transkribiert ({finalText.Length} Zeichen) aus {wav}");
             }
             catch (Exception ex)
             {
-                // Die Rettung darf den ohnehin schon fehlgeschlagenen Turn nie zusaetzlich sprengen.
-                DiagLog.Warn("VoiceTurn", "recording_rescue_failed", ("err", ex.Message), ("type", ex.GetType().Name));
+                Console.WriteLine($"Wiederholte Transkription fehlgeschlagen: {ex.Message}");
+                DiagLog.Error("VoiceTurn", "retranscribe_failed", ex,
+                    ("turn", turnId), ("path", wav), ("ms", turnSw.ElapsedMilliseconds));
+                SetMicState(RecordingState.Error);
+            }
+            finally
+            {
+                // Die Datei bleibt im Archiv liegen — eine Wiederholung darf beliebig oft laufen.
+                _isProcessing = false;
+                DiagLog.Perf("VoiceTurn", "retranscribe_total", turnSw, ("turn", turnId));
+                ScheduleReset();
             }
         }
 

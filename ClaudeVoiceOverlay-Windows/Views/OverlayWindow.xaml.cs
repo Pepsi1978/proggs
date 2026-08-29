@@ -2653,6 +2653,7 @@ namespace ClaudeVoiceOverlay.Views
                     {
                         Console.WriteLine($"Transcription error: {ex.Message}");
                         SetMicState(RecordingState.Error);
+                        RecordingArchive.Archive(wavFile, success: false);
                     }
                     finally
                     {
@@ -2660,8 +2661,10 @@ namespace ClaudeVoiceOverlay.Views
                         _mainRecordingTargetHwnd = IntPtr.Zero;
                         ScheduleReset();
 
-                        try { if (wavFile != null) File.Delete(wavFile); }
-                        catch { /* ignore */ }
+                        // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv,
+                        // wo die letzten zwei Diktate liegen bleiben und per Rechtsklick auf das
+                        // Mikrofon erneut transkribiert werden koennen.
+                        RecordingArchive.Archive(wavFile, success: true);
                     }
                 }
                 finally
@@ -2807,6 +2810,7 @@ namespace ClaudeVoiceOverlay.Views
                     {
                         Console.WriteLine($"BTW transcription error: {ex.Message}");
                         SetBtwMicState(RecordingState.Error);
+                        RecordingArchive.Archive(wavFile, success: false);
                     }
                     finally
                     {
@@ -2818,8 +2822,10 @@ namespace ClaudeVoiceOverlay.Views
                         if (!isBtwRecording)
                             SetBtwMicState(RecordingState.Idle);
 
-                        try { if (wavFile != null) File.Delete(wavFile); }
-                        catch { /* ignore */ }
+                        // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv,
+                        // wo die letzten zwei Diktate liegen bleiben und per Rechtsklick auf das
+                        // Mikrofon erneut transkribiert werden koennen.
+                        RecordingArchive.Archive(wavFile, success: true);
                     }
                 }
                 finally
@@ -4630,6 +4636,84 @@ namespace ClaudeVoiceOverlay.Views
                 case RecordingState.Error:
                     BtwButton.Background = BtnX;
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Rechtsklick auf das Mikrofon: die zuletzt aufgenommene Datei noch einmal an die
+        /// Transkription schicken und den Text einfuegen. Mit gedrueckter Umschalttaste die
+        /// VORLETZTE Aufnahme. Gedacht fuer den Fall "die Transkription hat nicht geklappt" —
+        /// seit dem 413-Vorfall vom 29.08.2026 wird keine Aufnahme mehr geloescht, die letzten
+        /// zwei liegen im Archiv (siehe <see cref="RecordingArchive"/>).
+        /// </summary>
+        private async void BtnMic_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            bool takePrevious = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+            await RetranscribeArchivedRecordingAsync(takePrevious ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Transkribiert eine archivierte Aufnahme erneut (0 = letzte, 1 = vorletzte) und fuegt das
+        /// Ergebnis wie ein normales Diktat ein. Laeuft durch denselben Client wie eine frische
+        /// Aufnahme, also inklusive Chunking langer Diktate — genau das, was beim Original
+        /// fehlgeschlagen war.
+        /// </summary>
+        private async Task RetranscribeArchivedRecordingAsync(int index)
+        {
+            if (_isProcessing || _micState == RecordingState.Recording || isBtwRecording) return;
+
+            string? wav = RecordingArchive.At(index);
+            if (wav == null)
+            {
+                string welche = index == 0 ? "letzte" : "vorletzte";
+                Console.WriteLine($"Keine {welche} Aufnahme im Archiv.");
+                DiagLog.Write("VoiceTurn", "retranscribe_no_recording", ("index", index));
+                SetMicState(RecordingState.Error);
+                ScheduleReset();
+                return;
+            }
+
+            var targetHwnd = _appWatcher.ActiveAppHwnd;
+            DiagLog.Write("VoiceTurn", "retranscribe_start", ("index", index), ("path", wav));
+
+            _isProcessing = true;
+            SetMicState(RecordingState.Processing);
+            try
+            {
+                var transcript = await _groqClient.TranscribeAsync(wav);
+                DiagLog.Write("VoiceTurn", "retranscribe_done", ("chars", transcript.Length));
+
+                string finalText = transcript;
+                if (_promptPanel?.IsInputWindowVisible == true)
+                {
+                    _promptPanel.RouteVoiceTextToInput(finalText, autoEnterEnabled);
+                    SetMicState(RecordingState.Success);
+                }
+                else
+                {
+                    var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                    if (!string.IsNullOrEmpty(preFix)) finalText = preFix + finalText;
+                    if (!string.IsNullOrEmpty(postFix)) finalText = finalText + postFix;
+                    finalText += " ; ";
+
+                    if (!await AppController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                        throw new InvalidOperationException("Kein Ziel-Fenster fuer die Wiederholung gefunden.");
+                    SetMicState(RecordingState.Success);
+                }
+                Console.WriteLine($"Aufnahme erneut transkribiert ({finalText.Length} Zeichen) aus {wav}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Wiederholte Transkription fehlgeschlagen: {ex.Message}");
+                DiagLog.Write("VoiceTurn", "retranscribe_failed", ("path", wav), ("error", ex.Message));
+                SetMicState(RecordingState.Error);
+            }
+            finally
+            {
+                // Die Datei bleibt im Archiv liegen — eine Wiederholung darf beliebig oft laufen.
+                _isProcessing = false;
+                ScheduleReset();
             }
         }
 
