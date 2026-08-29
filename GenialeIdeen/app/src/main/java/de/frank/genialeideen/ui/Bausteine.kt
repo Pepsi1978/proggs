@@ -86,7 +86,8 @@ fun IdeenKopfleiste(
     modifier: Modifier = Modifier,
     aufThemeTipp: (() -> Unit)? = null,
     aufSuche: (() -> Unit)? = null,
-    aufEinstellungen: () -> Unit,
+    /** Null lässt das Zahnrad weg — in den Einstellungen selbst hat es nichts zu suchen. */
+    aufEinstellungen: (() -> Unit)? = null,
     voran: (@Composable () -> Unit)? = null,
 ) {
     val gold = LocalGold.current
@@ -138,13 +139,15 @@ fun IdeenKopfleiste(
             }
             Spacer(Modifier.width(8.dp))
         }
-        KopfKnopf(beschreibung = "Einstellungen öffnen", aufTipp = aufEinstellungen) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = null,
-                tint = gold.primaer,
-                modifier = Modifier.size(20.dp),
-            )
+        if (aufEinstellungen != null) {
+            KopfKnopf(beschreibung = "Einstellungen öffnen", aufTipp = aufEinstellungen) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null,
+                    tint = gold.primaer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

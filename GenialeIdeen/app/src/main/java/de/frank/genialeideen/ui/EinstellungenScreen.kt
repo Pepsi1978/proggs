@@ -116,7 +116,9 @@ fun EinstellungenScreen(
         IdeenKopfleiste(
             titel = "Einstellungen",
             themeWahl = theme,
-            aufEinstellungen = aufZurueck,
+            // Hier steht statt des Zahnrads der Hell-Dunkel-Schalter: In den Einstellungen
+            // will man das Aussehen umlegen, nicht die Einstellungen nochmal öffnen.
+            aufThemeTipp = viewModel::themeWeiterschalten,
             voran = {
                 Box(
                     modifier = Modifier.size(38.dp).druckEffekt(aufZurueck),
