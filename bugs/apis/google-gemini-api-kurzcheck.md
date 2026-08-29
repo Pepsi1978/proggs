@@ -20,3 +20,9 @@
 | 6 | 403 PERMISSION_DENIED trotz Key | Billing + API aktivieren, Key→Projekt | §C6 |
 | 7 | Streaming liefert Muell | `?alt=sse` anhaengen, zeilenweise parsen | §I21 |
 | 8 | API-Key uebergeben | Header `x-goog-api-key`, nie `?key=` Query | §C8 |
+| 10 | Live-API: nur Anfang transkribiert | Sprechpausen-Erkennung schneidet ab → `automaticActivityDetection.disabled` + `activityStart`/`activityEnd` | §K26 |
+| 11 | Live-API: Client haengt, kein Text | Feld heisst `interimInputTranscription` (kumulativ!); `inputTranscription` ist das laengere Endergebnis | §K27, §K28 |
+| 12 | Setup stumm abgelehnt (kein setupComplete) | Close-Grund lesen! `speechConfig` existiert nicht; Sprache/Vokabular an `inputAudioTranscription.languageCodes` (Array) / `.customVocabulary` | §K29 |
+| 13 | Fertige Audiodatei transkribieren | NICHT das `-live`-Modell: `gemini-3.5-transcribe` ueber `POST /v1beta/interactions` (4,4 s statt 15,1 s). `generateContent` liefert dort leeren Text mit STOP | §K30 |
+| 14 | Woerter fehlen im Transkript | `transcription_config.mode` auf `verbatim` — `smart` formuliert um und laesst weg | §K31 |
+| 15 | 429 mitten im Betrieb | Free-Tier-Limits undokumentiert; auf Zweitanbieter ausweichen, aber NUR bei technischen Fehlern (nicht bei stiller Aufnahme) | §K32 |

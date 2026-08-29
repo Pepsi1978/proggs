@@ -62,6 +62,51 @@
 - **`gemini-embedding-001` (Text, 1536 default):** `embed_content` nimmt MEHRERE `contents` in EINEM Call; `resp.embeddings` kommt in Eingabe-Reihenfolge zurück (N Vektoren). N Chunks NIE seriell — ein 150-Chunk-Dokument macht sonst 150 Round-Trips (Minuten) statt ~10 Batches (Sekunden). `task_type` (RETRIEVAL_DOCUMENT/RETRIEVAL_QUERY) als API-Parameter. Batch-Größe konservativ (z.B. 16), Vektor-ANZAHL gegen Eingabe prüfen, bei Mismatch HART abbrechen. Quelle: ai.google.dev/gemini-api/docs/embeddings · offiziell; live verifiziert 2026-07-02 (brain-api 1.20.0 `embed_many`).
 - **`gemini-embedding-2` (multimodal, 3072 default, GA seit ~30.04.2026):** eine Liste `contents=[…]` liefert EINEN AGGREGIERTEN Vektor (NICHT N!) — für N separate Vektoren pro Text EINEN Call (parallelisierbar über ThreadPool) ODER die asynchrone Batch API (`asyncBatchEmbedContent`, ~halber Preis). `task_type` ist ENTFERNT → Absicht als Text-Präfix: Dokument `title: {Titel} | text: {Inhalt}` (ohne Titel `title: none`), Query `task: search result | query: {Suchtext}` (weitere: question answering / fact checking / code retrieval; symmetrisch: classification / clustering / sentence similarity). Default 3072 (empf. 768/1536/3072, MRL); <3072 wird NICHT auto-normalisiert (bei Cosine egal — Qdrant normalisiert intern). Input-Limit 8192 Token (4× `-001`). Dimensionswechsel erzwingt neue Vektor-Collection (bugs/server/qdrant.md §2). Quelle: ai.google.dev/gemini-api/docs/embeddings (NOTE + „Task types with Embeddings 2") · offiziell; Recherche 2026-07-08.
 
+## 10. Sprache-zu-Text: Modellwahl und Live-API (Stand 2026-08-29)
+
+**Erst das richtige Modell waehlen — das entscheidet mehr als jede Feineinstellung.**
+
+| Aufgabe | Modell | Weg |
+|---|---|---|
+| Fertige Aufnahme (Datei liegt vor) | `gemini-3.5-transcribe` | `POST /v1beta/interactions` |
+| Echtzeit ab Mikrofon, Live-Untertitel | `gemini-3.5-transcribe-live` | WebSocket `bidiGenerateContent` |
+
+Google verweist im Live-Guide selbst weg vom Streaming: *"Read the Gemini Transcribe documentation
+for non-streaming audio files."* Gemessen an derselben 64,5-s-Aufnahme: **4,4 s gegen 15,1 s**,
+Wortfehlerrate **2,6 % gegen 4,0 %** (Groq Whisper large-v3-turbo: 4,6 %, aber ~7× guenstiger).
+Ein Diktier-Overlay hat beim Transkribieren IMMER eine fertige Datei — dort ist der Live-Weg das
+falsche Werkzeug und handelt sich nur dessen Pausen-Probleme ein.
+
+**Batch-Weg (`interactions`) — die Regeln:**
+- Audio **inline** als `data` (Base64) mitschicken statt ueber die Files-API: spart einen Roundtrip
+  (4,4 s statt 5,7 s) und die Aufnahmen landen nicht fuer 48 h auf Google-Servern. Files-API erst
+  bei grossen Dateien.
+- `transcription_config.mode` auf `verbatim`, wenn Wortgetreue zaehlt — `smart` entfernt zwar
+  Fuellwoerter und setzt Absaetze, laesst aber auch Woerter weg. Tempo ist identisch.
+- Fachbegriffe ueber `custom_vocabulary` (bis 1000 Begriffe, laut Google beste Ergebnisse bis ~100).
+- Antworttext steht in `steps[].content[].text`; `output_text` gibt es nur in den SDKs.
+
+**Live-Weg — die Regeln, falls Streaming wirklich noetig ist:**
+- Sprechpausen-Erkennung abschalten und Aktivitaet selbst markieren, sonst schneidet die API bei
+  jeder Denkpause ab (Almanach §K26). Nicht auf `silenceDurationMs` verlassen.
+- Sprache und Vokabular an `inputAudioTranscription`: `languageCodes` (ARRAY, BCP-47) und
+  `customVocabulary`. `speechConfig` gibt es dort nicht.
+- Zwischenstand (`interimInputTranscription`, kumulativ) und Endergebnis (`inputTranscription`)
+  getrennt halten. `finished` ist kaputt — auf `generationComplete`/`turnComplete` plus
+  Stille-Fenster setzen.
+- 16 kHz / 16 bit / mono PCM ist das native Format; hoehere Abtastraten werden intern
+  heruntergerechnet und bringen nichts.
+
+**Ausfallsicherheit:** Free-Tier-Limits sind fuer diese Modelle nicht dokumentiert; 429 kann
+jederzeit kommen. Einen zweiten Anbieter als Rueckfall vorsehen — aber nur bei TECHNISCHEN Fehlern.
+Eine Aufnahme ohne Sprachinhalt ist ein gueltiges Ergebnis und darf nicht weitergereicht werden,
+sonst liefert der Zweitanbieter eine halluzinierte Floskel. Dafuer eine eigene Ausnahmeklasse.
+
+**Audioqualitaet:** Google nennt keinen dBFS-Zielbereich, nur qualitativ — Stoergeraeusche niedrig
+halten, Mikro naeher ans Gesicht, Uebersteuerung vermeiden ("avoid severe clipping"). Reine
+Lautstaerke-Normalisierung hebt Nutzsignal UND Rauschen und bringt wenig; echte Rauschunterdrueckung
+bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
+
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
 |---|---|

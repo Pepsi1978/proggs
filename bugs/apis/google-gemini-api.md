@@ -7,6 +7,16 @@
 
 > **Update 2026-07-02:** Keine neuen belastbaren `google-genai`-/`thinkingConfig`-/`finishReason`-Bugs seit 2026-06-08 gefunden. Bestaetigt bleibt der Deprecation-/Shutdown-Druck: alte 1.0/1.5- und Preview-Modelle sind weg; weitere 2.5-/Embedding-Varianten laufen 2026 aus. Modell-IDs weiter pinnen und Deprecations vor Releases pruefen.
 
+> **Update 2026-08-29 (NEU Abschnitt K — Live API & Transcribe):** Neun-Researcher-Recherche plus
+> eigene Messungen zu `gemini-3.5-transcribe-live` / `gemini-3.5-transcribe` (beide Preview seit
+> 26.08.2026). Sechs selbst getroffene Fallen: (K26) die Sprechpausen-Erkennung schneidet fertig
+> aufgenommenes Audio ab — Automatik muss AUS; (K27) das Transkript kommt als
+> `interimInputTranscription`, kumulativ, und `inputTranscription` ist das laengere Endergebnis;
+> (K28) `finished` ist serverseitig kaputt; (K29) `speechConfig` existiert nicht → stiller
+> Verbindungsabbruch, Sprache/Vokabular gehoeren an `inputAudioTranscription`; (K30) fuer fertige
+> Dateien ist `gemini-3.5-transcribe` ueber die **Interactions API** das richtige Modell (4,4 s
+> statt 15,1 s, WER 2,6 % statt 4,0 %); (K31) der Smart-Modus laesst Woerter weg.
+
 > **Update 2026-07-08 (NEU Abschnitt J — Embeddings):** Umstieg `gemini-embedding-001` → `gemini-embedding-2` (GA ~30.04.2026) hat drei echte Migrations-Fallen: (J23) eine Liste `contents=[…]` liefert bei Embedding 2 EINEN aggregierten Vektor statt N; (J24) `task_type` ist entfernt → Text-Präfixe; (J25) Dimensionswechsel (1536→3072) erzwingt eine neue Qdrant-Collection. Recherche 2026-07-08 (Firecrawl+MiniMax, offizielle Google-Doku).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
@@ -182,6 +192,110 @@
 - **Quelle:** ai.google.dev/gemini-api/docs/embeddings + bugs/server/qdrant.md §1/§2 · Recherche 2026-07-08.
 
 ---
+
+## K. Live API & Transcribe (Sprache-zu-Text, Stand 2026-08-29)
+
+> Recherche 2026-08-29 (Engine C: Sonnet-5-Schwarm, 9 Researcher) PLUS eigene Messungen gegen die
+> echte API mit `gemini-3.5-transcribe-live` / `gemini-3.5-transcribe`. Beide Modelle sind seit
+> 26.08.2026 in Preview. Getroffen im Projekt `TerminalVoiceOverlay-Windows` (v1.7 → v1.10).
+
+### 26. ⭐⭐ Live-API schneidet bei Sprechpausen ab — Automatik MUSS aus
+**Symptom:** Eine fertig aufgenommene Datei wird am Stueck (schneller als Echtzeit) in die Live-API
+geschoben; nach 2–3 s kommt `generationComplete` und nur der ANFANG des Textes. Bei einer 57-s-
+Aufnahme kamen 27 Zeichen zurueck.
+**Ursache:** Die Live-API ist auf Echtzeit-GESPRAECH ausgelegt. Ihre Sprechpausen-Erkennung (VAD)
+schliesst den Zug bei der ersten Pause ab und verwirft alles Weitere. Der Standardwert fuer
+`silenceDurationMs` ist **100 ms** — beim Einspeisen im Zeitraffer sieht die API jede Denkpause
+sofort.
+**Messung:** 36,7-s-Aufnahme mit 12 s Pause in der Mitte → mit Automatik 61 Zeichen, ohne Automatik
+die vollen 330 Zeichen.
+**Fix:** `setup.realtimeInputConfig.automaticActivityDetection.disabled = true`, danach Anfang und
+Ende des Sprechens von Hand markieren: `{"realtimeInput":{"activityStart":{}}}` → Audio →
+`{"realtimeInput":{"activityEnd":{}}}`.
+**NICHT stattdessen** `silenceDurationMs` hochsetzen: laut js-genai#1467, cookbook#1263 und #1262
+ignoriert der Server den konfigurierten Wert bei den 3.x-Live-Modellen teilweise und wendet einen
+kuerzeren internen Timeout an. Nur das Abschalten umgeht die serverseitige Stille-Uhr wirklich.
+**Doku-Widerspruch (beachten):** Laut API-Referenz schliessen `activityStart`/`activityEnd`
+(nur bei ABgeschalteter Automatik) und `audioStreamEnd` (nur bei EINgeschalteter) einander aus.
+Gemessen funktioniert das Senden beider; ob das dauerhaft unschaedlich ist, ist unbelegt.
+
+### 27. ⭐ Falsches Transkript-Feld → Client haengt bis zum Timeout
+**Symptom:** Setup klappt (`setupComplete` kommt), Audio geht raus, aber der Client sammelt nie Text
+ein und laeuft in seinen Timeout; im UI bleibt der Verarbeiten-Zustand stehen.
+**Ursache:** Das laufende Zwischenergebnis kommt als `serverContent.interimInputTranscription` —
+NICHT als das naheliegende `inputTranscription`. Wer nur letzteres liest, sieht nichts.
+**Zweite Falle:** Der Zwischenstand ist **kumulativ** (jedes Frame enthaelt den gesamten bisherigen
+Text, teils mit rueckwirkend geaenderter Gross-/Kleinschreibung). Anhaengen vervielfacht den Text —
+es muss ERSETZT werden.
+**Dritte Falle:** `inputTranscription` (ohne "interim") ist das FERTIGE Ergebnis und faellt
+regelmaessig laenger aus als der letzte Zwischenstand (gemessen 330 gegen 218 Zeichen). Beide in
+denselben Topf zu werfen verschluckt Text. Getrennt halten: fertige Abschnitte aneinanderreihen,
+Zwischenstand nur als Rueckfallebene.
+
+### 28. `finished`-Flag der Transkription ist serverseitig kaputt
+**Symptom:** Das `finished`-Feld am `Transcription`-Objekt ist immer `null`/`undefined`, obwohl es
+im Schema steht (neben `text`, `languageCode`, `speakerLabel`, `words`).
+**Belege:** python-genai#1504 (als "not planned" geschlossen), js-genai#1429 (offen).
+**Fix:** Nicht auf `finished` warten. Als Abschluss `generationComplete` bzw. `turnComplete`
+nehmen — und zusaetzlich ein Stille-Fenster als Sicherheitsnetz, weil es Faelle gibt, in denen
+gar kein Schlusssignal kommt (eigene Messung ohne `activityEnd`: der Strom verstummt einfach).
+
+### 29. `speechConfig` existiert bei Transcribe-Modellen nicht → stiller Verbindungsabbruch
+**Symptom:** Das Setup wird abgelehnt, der Server schickt kein `setupComplete` und schliesst die
+Verbindung — beim naiven Client sieht das aus wie ein Netzproblem.
+**Ursache:** `speechConfig` gehoert zur Sprach-AUSGABE (TTS) und ist bei `*-transcribe-live` kein
+gueltiges Setup-Feld. Der Close-Grund nennt es woertlich:
+`Invalid JSON payload received. Unknown name "speechConfig" at 'setup': Cannot find field.`
+Dieselbe Falle bei `inputAudioTranscription.languageCode` (Singular).
+**Fix:** Den WebSocket-Close-Grund IMMER auslesen und loggen — er benennt das falsche Feld exakt.
+Sprache und Vokabular gehoeren an `inputAudioTranscription`:
+`{"inputAudioTranscription":{"languageCodes":["de-DE"],"customVocabulary":["Groq","Whisper"]}}`
+(`languageCodes` ist ein ARRAY). `systemInstruction` wird zwar akzeptiert, ist laut Google aber
+nicht Teil der Live-Transkription und blieb in der Messung wirkungslos.
+
+### 30. Falsches Modell fuer fertige Aufnahmen (Live statt Batch)
+**Symptom:** Umstaendlicher WebSocket-Code, Pausen-Probleme, verschluckte Woerter, langsam.
+**Ursache:** Es gibt ZWEI Modelle. `gemini-3.5-transcribe-live` (nur `bidiGenerateContent`) ist
+fuer Echtzeit-Streaming; `gemini-3.5-transcribe` ist fuer fertige Dateien und laeuft ueber die
+**Interactions API** (`POST /v1beta/interactions`) — nicht ueber `generateContent`. Ein
+`generateContent`-Aufruf gegen das Batch-Modell liefert `finishReason: STOP` mit LEEREM Text
+(kein Fehler! — deshalb schwer zu erkennen).
+**Messung an derselben 64,5-s-Aufnahme:** Live 15,1 s, Batch 4,4 s. Wortfehlerrate laut Artificial
+Analysis 4,0 % gegen 2,6 % (Groq Whisper large-v3-turbo: 4,6 %).
+**Fix:** Fuer fertige Aufnahmen immer das Batch-Modell. Text steht in `steps[].content[].text`
+(ein `output_text` gibt es nur in den SDKs, nicht in der REST-Antwort).
+
+### 31. Smart-Modus laesst Woerter weg
+**Symptom:** Einzelne Woerter fehlen im Transkript, obwohl deutlich gesprochen.
+**Ursache:** `transcription_config.mode = {"type":"smart"}` (Standard) entfernt Fuellwoerter, setzt
+Absaetze — und formuliert dabei um. Gemessen wurde aus "Ich frage mich" ein "Frage mich".
+**Fix:** Wo Wortgetreue zaehlt, `{"type":"verbatim"}` setzen. Kostet nichts an Tempo (gemessen
+4,3 s gegen 4,4 s). Fuellwoerter kann eine nachgelagerte Textkorrektur entfernen.
+
+### 32. Free-Tier-Kontingent ohne dokumentierte Grenze → 429 mitten im Betrieb
+**Symptom:** `429 You exceeded your current quota` nach wenigen Aufrufen in kurzer Folge.
+**Ursache:** RPM/RPD des Free Tier sind fuer die Transcribe-Modelle NICHT oeffentlich dokumentiert
+(nur im auth-geschuetzten AI-Studio-Dashboard sichtbar). Beim Messen mit ~12 Aufrufen in wenigen
+Minuten getroffen.
+**Fix:** 429 abfangen und auf einen zweiten Anbieter ausweichen, statt die Aufnahme zu verlieren.
+Wichtig: NUR bei technischen Fehlern ausweichen — eine stille Aufnahme ist ein gueltiges Ergebnis
+und darf nicht an den Zweitanbieter gehen (sonst halluziniert der eine Floskel). Dafuer eine eigene
+Ausnahmeklasse statt einer allgemeinen.
+
+### 33. Weitere bestaetigte Live-API-Bugs (nicht selbst getroffen)
+- **Leere/fehlende Transkriptionsfelder** trotz korrekter Konfiguration: js-genai#1212, #478,
+  python-genai#1279 — meist nur durch Modellwechsel "geloest".
+- **Vorzeitiger `turnComplete` mitten im Satz**, serverseitig: python-genai#2117, OFFEN, ~40
+  betroffene Entwickler.
+- **Wortweise zerhackte Transkripte** ueber viele Frames: cookbook#951, #1197 (bei Interrupts).
+- **Halluzinationen bei Stille** und VAD-Turn-Thrashing: cookbook#1262 + Forum-Thread.
+- **WebSocket 1007/1011** im Transkriptionskontext mehrfach dokumentiert.
+
+### 34. Session-Limit 10 Minuten (Transcribe-Live)
+`gemini-3.5-transcribe-live` hat ein hartes 10-Minuten-Limit pro Session — kuerzer als die
+15 Minuten der Live-Dialogmodelle. Session Resumption/Context Window Compression sind fuer dieses
+Modell nicht dokumentiert. Das Kontextfenster ist nicht der Engpass (25 Tokens/s Audio bei
+131.072 Token Limit ≈ 87 Minuten). Bei laengeren Aufnahmen Session-Neuaufbau einplanen.
 
 ## Fix-Status (Stand 2026-06-08)
 

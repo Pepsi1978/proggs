@@ -21,3 +21,8 @@
 | 7 | Caching/Token | Wiederkehrendes an Prompt-Anfang; `system_instruction` | §7 |
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
 | 9 | Embeddings (mehrere Texte) | `embed_content` BATCHEN: `contents=[t1,t2,…]` -> eine embeddings-Liste in Eingabe-Reihenfolge; nie seriell je Text | §9 |
+| 10 | Sprache-zu-Text, fertige Datei | `gemini-3.5-transcribe` ueber `POST /v1beta/interactions`, Audio inline; NICHT das `-live`-Modell (4,4 s statt 15,1 s, WER 2,6 % statt 4,0 %) | §10 |
+| 11 | Transkript soll wortgetreu sein | `transcription_config.mode` = `verbatim`; `smart` laesst Woerter weg (gleich schnell) | §10 |
+| 12 | Fachbegriffe/Eigennamen | `custom_vocabulary` (Batch) bzw. `inputAudioTranscription.customVocabulary` (Live), bis ~100 Begriffe | §10 |
+| 13 | Live-Transkription noetig | VAD abschalten + `activityStart`/`activityEnd`, sonst Abbruch bei jeder Denkpause; `languageCodes` ist ein ARRAY | §10 |
+| 14 | STT-Ausfallsicherheit | Bei 429/Netzfehler auf Zweitanbieter ausweichen — aber NIE bei stiller Aufnahme (eigene Ausnahmeklasse) | §10 |
