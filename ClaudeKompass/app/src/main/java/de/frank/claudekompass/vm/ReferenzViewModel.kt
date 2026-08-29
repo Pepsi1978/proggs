@@ -9,6 +9,7 @@ import de.frank.claudekompass.data.local.FrageEntity
 import de.frank.claudekompass.data.local.SuchTreffer
 import de.frank.claudekompass.data.model.Bereich
 import de.frank.claudekompass.observability.KompassLog
+import de.frank.claudekompass.observability.probe
 import de.frank.claudekompass.tts.VorleseZustand
 import de.frank.claudekompass.update.LaufFortschritt
 import kotlinx.coroutines.CancellationException
@@ -133,31 +134,67 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
 
     // --- Bereiche ---------------------------------------------------------------------------
 
-    fun zustandFuer(bereich: Bereich): StateFlow<ReferenzZustand> = combine(
-        repository.beobachteAktive(bereich),
-        repository.beobachteEntfernte(bereich),
-        fragenAlle,
-        historieAnzahlen,
-        combine(ausgeklappt, fragenOffen, arbeitetAn, meldungen, fehler) { a, f, w, m, e ->
-            Bedienzustand(a, f, w, m, e)
-        },
-    ) { aktive, entfernte, fragen, anzahlen, bedien ->
-        val nachEintrag = fragen.groupBy { it.eintragId }
-        ReferenzZustand(
-            laedt = false,
-            aktive = aktive.map {
-                ListenEintrag(it, nachEintrag[it.id].orEmpty(), (anzahlen[it.id] ?: 0) > 0)
-            },
-            entfernte = entfernte.map {
-                ListenEintrag(it, nachEintrag[it.id].orEmpty(), (anzahlen[it.id] ?: 0) > 0)
-            },
-            ausgeklappt = bedien.ausgeklappt,
-            fragenOffen = bedien.fragenOffen,
-            arbeitetAn = bedien.arbeitetAn,
-            meldung = bedien.meldung,
-            fehler = bedien.fehler,
+    /**
+     * Je Bereich genau EIN Fluss, einmal gebaut und danach wiederverwendet.
+     *
+     * Ohne diesen Zwischenspeicher entstuende bei jeder Neuzeichnung ein neuer `stateIn`-Fluss.
+     * Der beginnt bei seinem Anfangswert — und der heisst hier `laedt = true`. Die Liste bliebe
+     * damit dauerhaft im Ladezustand stehen, obwohl die Daten laengst da sind (Almanach
+     * jetpack-compose §2.14: roher Fluss pro Neuzeichnung neu erzeugt).
+     *
+     * Die Regel dahinter gilt allgemein: Eine Funktion eines Ansichtsmodells, die einen Fluss
+     * ZURUECKGIBT, darf ihn nicht bei jedem Aufruf neu bauen.
+     */
+    private val zustaende = mutableMapOf<Bereich, StateFlow<ReferenzZustand>>()
+
+    fun zustandFuer(bereich: Bereich): StateFlow<ReferenzZustand> =
+        synchronized(zustaende) {
+            zustaende.getOrPut(bereich) { baueZustand(bereich) }
+        }
+
+    /** Zaehlt, wie oft je Bereich gebaut wurde — Grundlage der Sonde in [baueZustand]. */
+    private val bauZaehler = mutableMapOf<Bereich, Int>()
+
+    private fun baueZustand(bereich: Bereich): StateFlow<ReferenzZustand> {
+        // Zweite Schicht neben dem Zwischenspeicher: Sollte jemand den Speicher spaeter
+        // entfernen, faellt das hier sofort auf, statt sich als „Liste laedt ewig" zu zeigen —
+        // ein Fehlerbild, dem man die Ursache nicht ansieht.
+        val anzahl = (bauZaehler[bereich] ?: 0) + 1
+        bauZaehler[bereich] = anzahl
+        probe(
+            anzahl == 1,
+            "Der Zustandsfluss wurde fuer denselben Bereich mehrfach gebaut — die Liste bliebe " +
+                "im Ladezustand haengen",
+            "ReferenzViewModel",
+            "baueZustand",
+            mapOf("bereich" to bereich.id, "anzahl" to anzahl),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReferenzZustand())
+        return combine(
+            repository.beobachteAktive(bereich),
+            repository.beobachteEntfernte(bereich),
+            fragenAlle,
+            historieAnzahlen,
+            combine(ausgeklappt, fragenOffen, arbeitetAn, meldungen, fehler) { a, f, w, m, e ->
+                Bedienzustand(a, f, w, m, e)
+            },
+        ) { aktive, entfernte, fragen, anzahlen, bedien ->
+            val nachEintrag = fragen.groupBy { it.eintragId }
+            ReferenzZustand(
+                laedt = false,
+                aktive = aktive.map {
+                    ListenEintrag(it, nachEintrag[it.id].orEmpty(), (anzahlen[it.id] ?: 0) > 0)
+                },
+                entfernte = entfernte.map {
+                    ListenEintrag(it, nachEintrag[it.id].orEmpty(), (anzahlen[it.id] ?: 0) > 0)
+                },
+                ausgeklappt = bedien.ausgeklappt,
+                fragenOffen = bedien.fragenOffen,
+                arbeitetAn = bedien.arbeitetAn,
+                meldung = bedien.meldung,
+                fehler = bedien.fehler,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReferenzZustand())
+    }
 
     private data class Bedienzustand(
         val ausgeklappt: Set<String>,
