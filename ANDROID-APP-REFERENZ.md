@@ -11,7 +11,7 @@
 Sage ich **„nutze die Referenzdatei"**, **„bau nach der Android-Referenz"** oder füge ich diese Datei in
 den Chat ein, dann gilt:
 
-1. **Jeder Baustein A bis N wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
+1. **Jeder Baustein A bis P wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
    du Hell/Dunkel-Modus?" oder „soll Vorlesen rein?". Die Antwort ist immer ja.
 2. **Einzige Ausnahme:** Ein Baustein ergibt in dieser konkreten App *nachweislich* keinen Sinn (z. B.
    Vorlesen in einer App, die überhaupt keinen Text anzeigt). Dann — und nur dann — **melde es einmal
@@ -24,12 +24,12 @@ den Chat ein, dann gilt:
    **Baustein M (echte Umlaute) ist von dieser Ausnahme ausgenommen** — er gilt immer, in jeder App.
 3. **Diese Datei ersetzt nicht die Projekt-Regeln** aus `CLAUDE.md` (Version-Bump, Commit+Push vor Build,
    Deutsch mit echten Umlauten, Secrets aus `~/SK/`, Bug-Almanach-Kurzcheck). Sie kommt *zusätzlich*.
-4. **Reihenfolge beim Neubau:** Grundgerüst (Kap. 9) → Theme (A) → Kopfleiste (C) → Einstellungen (G) →
+4. **Reihenfolge beim Neubau:** Grundgerüst (Kap. 17) → Theme (A) → Kopfleiste (C) → Einstellungen (G) →
    Fold-Layout (B) → Fehler-/Lade-/Leerzustände (L, von Anfang an mitdenken) → App-Logik →
    Vorlesen (D/E) → Transkription (F) → Suche (K) → App-Sperre (I) → Sicherung (J) →
    Version sichtbar (H). **Baustein M (Umlaute) und Baustein N (Optik) laufen durchgehend mit** —
    bei jedem Text und jedem Bildschirm, der entsteht, nicht als Schritt am Ende.
-5. **Bestehende App erweitern:** Zuerst prüfen, welche Bausteine schon da sind (Checkliste Kap. 10),
+5. **Bestehende App erweitern:** Zuerst prüfen, welche Bausteine schon da sind (Checkliste Kap. 18),
    dann nur die fehlenden nachrüsten. Nichts doppelt bauen, nichts Bestehendes wegwerfen.
 
 ---
@@ -171,7 +171,22 @@ Das ist der Kern — abgeschaut von **CortexAndroid** (`ui/chat/ChatViewModel.kt
 6. **Ergebnis:** Der erste Ton kommt nach wenigen hundert Millisekunden statt nach dem Synthetisieren
    des ganzen Textes. Ein 20-Minuten-Text startet genauso schnell wie ein einzelner Absatz.
 
-### 4.3 Robustheit (Pflicht, nicht optional)
+### 4.3 Vorlesen läuft weiter, auch bei ausgeschaltetem Bildschirm
+
+- Das Vorlesen läuft in einem **Vordergrunddienst**
+  (`FOREGROUND_SERVICE_MEDIA_PLAYBACK`, Dienst-Typ `mediaPlayback`) — es hört **nicht** auf, wenn der
+  Bildschirm ausgeht oder ich die App verlasse. Genau dafür lese ich lange Texte vor.
+- **Medien-Benachrichtigung** mit Titel des Vorgelesenen und den Knöpfen **Pause / Weiter / Stopp**,
+  auch auf dem Sperrbildschirm sichtbar.
+- Die Bedienelemente vom Kopfhörer und aus dem Auto funktionieren (`MediaSession`).
+- **Audiofokus** anfordern und wieder abgeben; bei Anruf pausieren, danach fortsetzen.
+- **Wachhaltung nur solange gesprochen wird** — der Dienst beendet sich selbst, sobald der letzte
+  Absatz durch ist. Kein Dienst, der still im Hintergrund weiterläuft.
+- Beim Zurückkehren in die App zeigt sie den laufenden Stand an (welcher Absatz gerade dran ist).
+- Ab Android 13 vorher die **Benachrichtigungs-Berechtigung** erfragen (mit einem Satz Begründung,
+  siehe Baustein L) — ohne sie gibt es keine Bedienknöpfe.
+
+### 4.4 Robustheit (Pflicht, nicht optional)
 
 - **Gleichzeitigkeit begrenzen** (Semaphore), sonst laufen die TTS-Dienste ins Rate-Limit.
 - **429 / Rate-Limit:** exponentiell warten und erneut versuchen; Wartezeit protokollieren.
@@ -181,7 +196,6 @@ Das ist der Kern — abgeschaut von **CortexAndroid** (`ui/chat/ChatViewModel.kt
 - **Text vorher säubern:** Markdown-Zeichen, Code-Blöcke, URLs und Emoji entfernen bzw. ersetzen, damit
   nicht „Sternchen Sternchen" vorgelesen wird
   (Vorlage: `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt`).
-- **Audiofokus** anfordern und wieder abgeben; Wiedergabe bei einem Anruf pausieren.
 - **Sichtbarer Zustand:** Der Lautsprecher-Knopf zeigt „lädt" / „spricht" / „aus" und stoppt bei
   erneutem Tipp sofort.
 
@@ -306,7 +320,7 @@ Hell / Dunkel / System · falls vorhanden: Schriftgröße.
 
 ---
 
-## 8b. Baustein I — Biometrische App-Sperre ⭐ PFLICHT
+## 9. Baustein I — Biometrische App-Sperre ⭐ PFLICHT
 
 **Was:** Die App lässt sich per Fingerabdruck oder Gesicht sperren.
 
@@ -328,7 +342,7 @@ Hell / Dunkel / System · falls vorhanden: Schriftgröße.
 
 ---
 
-## 8c. Baustein J — Sicherung und Wiederherstellung ⭐ PFLICHT
+## 10. Baustein J — Sicherung und Wiederherstellung ⭐ PFLICHT
 
 **Was:** Meine Daten sind nie an ein Gerät gefesselt. Zwei Wege, beide in den Einstellungen unter
 **Sicherung**:
@@ -359,7 +373,7 @@ Hell / Dunkel / System · falls vorhanden: Schriftgröße.
 
 ---
 
-## 8d. Baustein K — Volltextsuche über alle Inhalte ⭐ PFLICHT
+## 11. Baustein K — Volltextsuche über alle Inhalte ⭐ PFLICHT
 
 **Was:** Ein Suchfeld, das alles findet, was die App gespeichert hat.
 
@@ -378,7 +392,7 @@ Hell / Dunkel / System · falls vorhanden: Schriftgröße.
 
 ---
 
-## 8e. Baustein L — Fehler, Ladezustände, Leerzustände ⭐ PFLICHT
+## 12. Baustein L — Fehler, Ladezustände, Leerzustände ⭐ PFLICHT
 
 **Grundregel: Es gibt keinen stillen Fehlschlag.** Wenn etwas nicht klappt, sehe ich das — sofort, auf
 Deutsch, mit einem Weg nach vorn.
@@ -420,7 +434,7 @@ Deutsch, mit einem Weg nach vorn.
 
 ---
 
-## 8f. Baustein M — Nur echte deutsche Umlaute ⭐ PFLICHT
+## 13. Baustein M — Nur echte deutsche Umlaute ⭐ PFLICHT
 
 **Grundregel: Innerhalb der App erscheinen ausschließlich echte Umlaute — ä ö ü Ä Ö Ü ß.**
 Niemals die Ersatzschreibung „ae", „oe", „ue", „ss". Das gilt für **jeden** Text, den ich zu sehen
@@ -483,7 +497,7 @@ strasse → Straße · gruss → Gruß · massnahme → Maßnahme · dass ≠ da
 
 ---
 
-## 8g. Baustein N — Fünf-Sterne-Optik: modern, mit vielen optischen Effekten ⭐ PFLICHT
+## 14. Baustein N — Fünf-Sterne-Optik: modern, mit vielen optischen Effekten ⭐ PFLICHT
 
 **Was:** Die App soll aussehen wie eine der besten Apps im Play Store — modern, aufwendig, mit vielen
 optischen Effekten. Nichts darf nach Standard-Baukasten aussehen.
@@ -596,7 +610,96 @@ Aufgabe, keine Geschmacksfrage.
 
 ---
 
-## 9. Technische Grundausstattung
+## 15. Baustein O — KI-Anbindung ⭐ PFLICHT (sobald die App überhaupt eine KI benutzt)
+
+### O.1 Zwei Wege zur KI — Abo oder Schlüssel
+
+In den Einstellungen wähle ich, **wie** die App an die KI kommt. Beide Wege werden eingebaut:
+
+**Weg 1 — Anmeldung über mein ChatGPT-Abo (Voreinstellung).**
+Geräteanmeldung mit Benutzercode: Die App zeigt einen Code, ich bestätige ihn im Browser, danach hat
+die App Zugang — **ohne** dass pro Anfrage abgerechnet wird. Das Verfahren ist in
+`PerfectMoment/app/src/main/java/de/frank/perfectmoment/auth/CodexAuthManager.kt` fertig ausgearbeitet
+und wird von dort übernommen, nicht neu erfunden.
+
+Was dabei zwingend mitkommt:
+- **Zugangs- und Auffrischungs-Token in `EncryptedSharedPreferences`**, nie im Klartext.
+- **Auffrischung mit Vorlauf** (rund 2 Minuten vor Ablauf) und **unter einem Mutex** — sonst frischen
+  mehrere gleichzeitige Anfragen dasselbe Token mehrfach auf und der Anbieter sperrt es
+  (`refresh_token_reused`).
+- **Abgelaufene Anmeldung ist kein Absturz:** bei 401/403 oder `invalid_grant` wird abgemeldet und im
+  Klartext gemeldet: „Die Anmeldung ist abgelaufen. Bitte neu anmelden." mit Knopf dorthin.
+- Der Gerätecode hat eine **begrenzte Gültigkeit** (rund 15 Minuten) — die App zeigt die verbleibende
+  Zeit und bietet einen neuen Code an, statt stumm zu warten.
+- Beim Anmelden auf Netz warten statt sofort zu scheitern (kurzes Nachfassen mit steigendem Abstand).
+
+**Weg 2 — Eigener API-Schlüssel.**
+Feld in den Einstellungen (Gemini bzw. der Anbieter der App), gespeichert nach den Regeln aus
+Baustein G, mit Testknopf.
+
+**Umschalter** zwischen beiden Wegen, dazu die Anzeige, welcher gerade aktiv ist und ob er
+funktioniert. Ist keiner eingerichtet, sagt die App **wofür** sie den Zugang braucht und führt direkt
+zur Einrichtung — sie versteckt die Funktion nicht einfach.
+
+### O.2 Antworten strömend anzeigen
+
+- Die Antwort erscheint **Wort für Wort**, während sie entsteht — nicht erst am Stück nach langem
+  Warten. Vorher ein Zustand „denkt nach" (Baustein L).
+- **Das Vorlesen (Baustein D) hängt sich ein:** Sobald der erste vollständige Absatz durchgelaufen ist,
+  beginnt die Sprachausgabe, während der Rest noch einläuft.
+- **Abbrechen ist jederzeit möglich** und beendet die Anfrage wirklich (Abbruch der laufenden
+  Verbindung), nicht nur die Anzeige.
+- Bricht die Verbindung mitten in der Antwort ab, bleibt das **bereits Empfangene erhalten** und wird
+  als unvollständig gekennzeichnet — nie kommentarlos verwerfen.
+
+### O.3 KI-Textverbesserung nach dem Diktat
+
+- Neben dem Mikrofon (Baustein F) sitzt ein Knopf **„Text glätten"**: Füllwörter raus, Satzzeichen und
+  Absätze rein, Versprecher bereinigt — **ohne den Inhalt zu verändern**.
+- **Das Original bleibt erhalten** und ist mit einem Tipp wiederherstellbar („Original anzeigen"). Der
+  geglättete Text überschreibt nie unwiderruflich, was ich gesagt habe.
+- Der Prompt enthält die Umlaut-Vorgabe aus **Baustein M.3** und die Anweisung, nichts hinzuzuerfinden.
+- Nur ein Knopfdruck, nie automatisch — sonst weiß ich nicht mehr, was von mir ist.
+
+### O.4 Allgemein
+
+- Der Modellname steht **an einer Stelle** im Projekt und ist in den Einstellungen sichtbar.
+- **Keine Schlüssel und keine Token ins Log** (Baustein P), auch nicht gekürzt.
+- Jede KI-Antwort läuft vor der Anzeige durch die Umlaut-Korrektur aus Baustein M.
+
+---
+
+## 16. Baustein P — Absturz-Fänger und Diagnose-Bildschirm ⭐ PFLICHT
+
+**Was:** Wenn etwas schiefgeht, muss ich es nachlesen können, ohne das Gerät an den Rechner zu hängen.
+
+### P.1 Absturz-Fänger
+- In der `Application`-Klasse ein `Thread.setDefaultUncaughtExceptionHandler`, der **vor** dem Absturz
+  schreibt: Zeitpunkt, App-Version und Zeitstempel (Baustein H), Gerät und Android-Fassung, voller
+  Aufrufpfad, letzte Aktion.
+- Danach wird der ursprüngliche Handler aufgerufen — der Absturz wird **nicht verschluckt**.
+- Beim nächsten Start zeigt die App einen ruhigen Hinweis: „Die App ist beim letzten Mal abgestürzt.
+  [Bericht ansehen] [Verwerfen]".
+- Vorlagen: `CortexAndroid/.../observability/CortexCrashHandler.kt`,
+  `ClaudeKompass/.../observability/KompassCrashHandler.kt`
+
+### P.2 Diagnose-Bildschirm in den Einstellungen
+- Eigener Punkt **„Diagnose"** mit: laufendem Protokoll (neueste zuerst, filterbar nach Stufe),
+  Absturzberichten, Speicherort der Log-Datei und deren Größe.
+- **Knopf „Protokoll teilen"** — schickt die Datei über das Android-Teilen-Menü (per `FileProvider`),
+  damit ich sie direkt weiterreichen kann.
+- Knopf **„Protokoll leeren"**.
+- Vorlage: `EntropieReductor/.../presentation/settings/diagnostics/DiagnosticLogScreen.kt`
+
+### P.3 Was im Protokoll steht — und was nicht
+- Struktur wie in Kapitel 17: `ts`, `level`, `module`, `fn`, `msg`, `ctx`; Rotation ab etwa 1 MB.
+- **Niemals** hinein: API-Schlüssel, Token, Passwörter, vollständige Diktate oder Notizinhalte. Statt
+  des Inhalts die Länge protokollieren (`{"chars": 412}`).
+- Der Log-Pfad steht in `.gitignore`.
+
+---
+
+## 17. Technische Grundausstattung
 
 **Stack (Standard, ohne Rückfrage):**
 
@@ -618,11 +721,11 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 **Keine Schlüssel und keine persönlichen Daten ins Log.**
 
 **Sprache:** Deutsch mit **echten Umlauten** überall — die vollständigen Regeln dazu stehen in
-**Baustein M** (Kapitel 8f) und gelten für angezeigten, transkribierten und KI-erzeugten Text.
+**Baustein M** (Kapitel 13) und gelten für angezeigten, transkribierten und KI-erzeugten Text.
 
 ---
 
-## 10. Checkliste vor „fertig"
+## 18. Checkliste vor „fertig"
 
 - [ ] **A** Hell- und Dunkelmodus in Gold, beide vollständig, Wahl gespeichert, Dynamic Color aus
 - [ ] **B** Cover-Display des Fold 8 als Basis-Layout, aufgeklappt sauber, Faltung ohne Neustart
@@ -638,12 +741,15 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **L** Kein stiller Fehlschlag: Klartext-Meldung + Wiederholen, Lade- und Leerzustände überall
 - [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
 - [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` zentral, jeder Bildschirm durch die Abnahme N.6
+- [ ] **O** KI über Abo **und** Schlüssel; Antwort strömt; „Text glätten" mit erhaltenem Original
+- [ ] **P** Absturz-Fänger schreibt vor dem Absturz; Diagnose-Bildschirm mit Teilen-Knopf; keine Geheimnisse im Log
+- [ ] **D (4.3)** Vorlesen läuft bei ausgeschaltetem Bildschirm weiter, mit Pause/Weiter/Stopp in der Benachrichtigung
 - [ ] Bauen und Tests grün → committen → pushen → auf dem Fold 8 installiert
 - [ ] Jeder weggelassene Baustein wurde mit einem Satz begründet gemeldet
 
 ---
 
-## 11. Fundstellen im Repo (zum Abschauen statt neu erfinden)
+## 19. Fundstellen im Repo (zum Abschauen statt neu erfinden)
 
 | Thema | Datei |
 |---|---|
@@ -660,6 +766,11 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | Halluzinations-Filter (Schichten 2–4) | `PerfectMoment/.../audio/WhisperHallucinationFilter.kt` |
 | Stille-Erkennung (Schicht 1) | `PerfectMoment/.../audio/SpeechAnalyzer.kt` |
 | 413-Schnitt bei langen Diktaten | `TerminalVoiceOverlay-Windows/Services/GroqWhisperClient.cs` |
+| KI-Zugang über das ChatGPT-Abo (Geräteanmeldung) | `PerfectMoment/.../auth/CodexAuthManager.kt` |
+| Umschalter Abo/Schlüssel | `BestJournalFrank/.../data/remote/ai/AiGateway.kt` |
+| KI-Textverbesserung | `BestJournalAndroid/.../domain/usecase/ImproveTextUseCase.kt` |
+| Absturz-Fänger | `CortexAndroid/.../observability/CortexCrashHandler.kt` |
+| Diagnose-Bildschirm mit Teilen-Knopf | `EntropieReductor/.../presentation/settings/diagnostics/DiagnosticLogScreen.kt` |
 | Schlüssel verschlüsselt ablegen | `PerfectMoment/.../data/settings/SecureSettings.kt` |
 | Strukturiertes Log | `CortexAndroid/.../observability/CortexLog.kt` |
 | Biometrische App-Sperre | `PerfectMoment/.../security/AppLockManager.kt` |
@@ -668,7 +779,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 
 ---
 
-## 12. Änderungsprotokoll
+## 20. Änderungsprotokoll
 
 | Datum | Änderung |
 |---|---|
@@ -676,3 +787,4 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 11:19 Uhr | Bausteine I (App-Sperre), J (Sicherung), K (Volltextsuche) und L (Fehler-, Lade- und Leerzustände) ergänzt — nach Durchsicht aller 14 Android-Apps im Repo |
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
 | 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
+| 29.08.2026, 13:59 Uhr | Zweite Durchsicht aller 14 Apps (Klassennamen, Manifeste, Berechtigungen): Baustein O (KI über Abo oder Schlüssel, strömende Antworten, Text glätten), Baustein P (Absturz-Fänger und Diagnose-Bildschirm) und Kapitel 4.3 (Vorlesen im Vordergrunddienst) ergänzt |
