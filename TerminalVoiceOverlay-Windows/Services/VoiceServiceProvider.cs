@@ -75,6 +75,6 @@ public static class VoiceServiceProvider
         Recorder = recorder;
         Groq = groq;
         Gemini = gemini;
-        Stt = stt ?? new SpeechToTextRouter(groq, null);
+        Stt = stt ?? new SpeechToTextRouter(groq, null, null);
     }
 }

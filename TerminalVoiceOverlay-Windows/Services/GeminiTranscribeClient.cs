@@ -125,7 +125,7 @@ namespace TerminalVoiceOverlay.Services
             //    automaticActivityDetection.disabled: siehe Eigenheit 1 oben —
             //    ohne das schneidet die API bei der ersten Denkpause ab.
             //    languageCodes + customVocabulary: siehe Eigenheit 4 oben.
-            var vocabulary = LoadCustomVocabulary();
+            var vocabulary = PersonalVocabulary.Load();
             var transcription = new Dictionary<string, object>
             {
                 ["languageCodes"] = new[] { LanguageTag(_language) },
@@ -242,7 +242,7 @@ namespace TerminalVoiceOverlay.Services
                 // leer zurueckgeben, damit der Aufrufer-catch greift und NICHTS
                 // getippt wird (kein einsames " ; ").
                 DiagLog.Warn("GeminiSTT", "empty_result");
-                throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt (Gemini gab keinen Text zurueck)");
+                throw new NoSpeechException("Aufnahme ohne erkennbaren Sprachinhalt (Gemini gab keinen Text zurueck)");
             }
 
             DiagLog.Perf("GeminiSTT", "done", sw, ("chars", text.Length));
@@ -377,47 +377,6 @@ namespace TerminalVoiceOverlay.Services
                 "it" => "it-IT",
                 _ => code,
             };
-        }
-
-        /// <summary>
-        /// Das persoenliche Woerterbuch aus dem SK-Ordner als customVocabulary.
-        /// Dieselbe Datei und derselbe Ein/Aus-Schalter wie bei der
-        /// Gemini-Textkorrektur — was Frank dort pflegt, hilft jetzt schon bei
-        /// der Erkennung statt erst bei der Nachkorrektur. Eintraege stehen
-        /// zeilen- oder kommagetrennt in der Datei.
-        /// </summary>
-        private static string[] LoadCustomVocabulary()
-        {
-            try
-            {
-                var dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "SK", "VoiceOverlays");
-
-                var togglePath = Path.Combine(dir, "vocabulary-enabled.txt");
-                if (!File.Exists(togglePath) ||
-                    !string.Equals(File.ReadAllText(togglePath).Trim(), "true", StringComparison.OrdinalIgnoreCase))
-                    return Array.Empty<string>();
-
-                var vocabPath = Path.Combine(dir, "personal-vocabulary.txt");
-                if (!File.Exists(vocabPath)) return Array.Empty<string>();
-
-                var words = File.ReadAllText(vocabPath)
-                    .Split(new[] { '\n', '\r', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(w => w.Trim())
-                    .Where(w => w.Length > 0 && !w.StartsWith('#'))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    // Die API nimmt bis zu 1000 Begriffe; laut Google sind die
-                    // Ergebnisse bis etwa 100 am besten. Deckel bei 100.
-                    .Take(100)
-                    .ToArray();
-                return words;
-            }
-            catch
-            {
-                // Best-effort: ohne Woerterbuch transkribieren ist besser als gar nicht.
-                return Array.Empty<string>();
-            }
         }
 
         private static Task SendAsync(ClientWebSocket ws, string json, CancellationToken ct) =>

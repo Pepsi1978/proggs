@@ -4,16 +4,24 @@ using System.IO;
 namespace TerminalVoiceOverlay.Services
 {
     /// <summary>
-    /// Welches Sprache-zu-Text-Modell benutzt wird: Groq Whisper (Standard) oder
-    /// Gemini Transcribe. Die Auswahl lebt — wie der Woerterbuch-Schalter — als
-    /// winzige Datei im geteilten SK-Ordner, damit sie sofort wirkt, keinen
-    /// Neustart braucht und sich TVO/CVO auf einem Rechner teilen.
-    /// Inhalt: "groq" oder "gemini". Fehlende/kaputte Datei = groq.
+    /// Welches Sprache-zu-Text-Modell benutzt wird. Die Auswahl lebt — wie der
+    /// Woerterbuch-Schalter — als winzige Datei im geteilten SK-Ordner, damit
+    /// sie sofort wirkt, keinen Neustart braucht und sich TVO/CVO auf einem
+    /// Rechner teilen.
+    ///
+    /// Inhalt: "groq", "gemini" oder "gemini-live". Fehlende/kaputte Datei = groq.
+    /// "gemini" ist bewusst der schnellere, genauere Batch-Weg
+    /// (gemini-3.5-transcribe): wer die Auswahl frueher auf Gemini gestellt
+    /// hatte, bekommt damit automatisch den besseren Weg statt der
+    /// Streaming-Variante.
     /// </summary>
     public static class TranscriptionEngineSetting
     {
         public const string Groq = "groq";
+        /// <summary>gemini-3.5-transcribe — fertige Aufnahme, ein HTTPS-Aufruf.</summary>
         public const string Gemini = "gemini";
+        /// <summary>gemini-3.5-transcribe-live — Streaming ueber WebSocket.</summary>
+        public const string GeminiLive = "gemini-live";
 
         private static string Path_ => System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -39,7 +47,12 @@ namespace TerminalVoiceOverlay.Services
                         if (stamp != _cachedStamp)
                         {
                             var raw = File.ReadAllText(path).Trim().ToLowerInvariant();
-                            _cached = raw == Gemini ? Gemini : Groq;
+                            _cached = raw switch
+                            {
+                                Gemini => Gemini,
+                                GeminiLive => GeminiLive,
+                                _ => Groq,
+                            };
                             _cachedStamp = stamp;
                         }
                         return _cached;
@@ -50,6 +63,9 @@ namespace TerminalVoiceOverlay.Services
         }
 
         public static bool UseGemini => Current == Gemini;
+        public static bool UseGeminiLive => Current == GeminiLive;
+        /// <summary>Irgendeine der beiden Gemini-Varianten.</summary>
+        public static bool UseAnyGemini => Current is Gemini or GeminiLive;
 
         public static void Save(string engine)
         {
@@ -57,7 +73,13 @@ namespace TerminalVoiceOverlay.Services
             {
                 var path = Path_;
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, (engine == Gemini ? Gemini : Groq) + "\n");
+                var value = engine switch
+                {
+                    Gemini => Gemini,
+                    GeminiLive => GeminiLive,
+                    _ => Groq,
+                };
+                File.WriteAllText(path, value + "\n");
                 lock (_lock) { _cachedStamp = DateTime.MinValue; }
             }
             catch { /* best-effort: der Schalter darf das Speichern nicht blockieren */ }

@@ -24,6 +24,7 @@ namespace TerminalVoiceOverlay.Services
         // GeminiTranscribeApiKey auf GEMINI_API_KEY zurueck.
         public string? GeminiTranscribeApiKey { get; }
         public string GeminiTranscribeModel { get; }
+        public string GeminiTranscribeBatchModel { get; }
         public bool GeminiTranscribeAvailable => !string.IsNullOrEmpty(GeminiTranscribeApiKey);
 
         // Audio
@@ -51,6 +52,7 @@ namespace TerminalVoiceOverlay.Services
             env.TryGetValue("GEMINI_TRANSCRIBE_API_KEY", out var transcribeKey);
             GeminiTranscribeApiKey = string.IsNullOrEmpty(transcribeKey) ? GeminiApiKey : transcribeKey;
             GeminiTranscribeModel = Get(env, "GEMINI_TRANSCRIBE_MODEL", "gemini-3.5-transcribe-live");
+            GeminiTranscribeBatchModel = Get(env, "GEMINI_TRANSCRIBE_BATCH_MODEL", "gemini-3.5-transcribe");
 
             // Audio
             AudioSampleRate = GetInt(env, "AUDIO_SAMPLE_RATE", 16000);

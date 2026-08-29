@@ -105,11 +105,12 @@
                                       Background="#FF1B1B1B" Foreground="Black"
                                       BorderBrush="#FF454545" BorderThickness="1"
                                       Padding="8,6" FontSize="13" Margin="0,0,0,8">
-                                <ComboBoxItem Content="Groq Whisper (Standard, mit Stille-Schutz)"/>
-                                <ComboBoxItem Content="Gemini Transcribe Live (Free Tier, ohne Stille-Schutz)"/>
+                                <ComboBoxItem Content="Groq Whisper — schnell, mit Stille-Schutz"/>
+                                <ComboBoxItem Content="Gemini Transcribe — genauer, kostenlos (empfohlen)"/>
+                                <ComboBoxItem Content="Gemini Transcribe Live — Streaming-Variante"/>
                             </ComboBox>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Die dreischichtige Abwehr gegen Whisper-Stille-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur beim Groq-Modell — sie hängt an Whisper-Messwerten, die Gemini nicht liefert. Gemini bekommt dafür die Sprache (Deutsch) und dein Wörterbuch direkt mit in die Erkennung und schneidet bei Denkpausen nicht mehr ab. Die Umschaltung wirkt sofort, ohne Neustart. Der Gemini-Schlüssel dafür steht als GEMINI_TRANSCRIBE_API_KEY in der zentralen .env."/>
+                                       Text="Gemini Transcribe ist der von Google für fertige Aufnahmen vorgesehene Weg: gemessen 4,4 s statt 15,1 s gegenüber der Live-Variante, Wortfehlerrate 2,6 % gegenüber 4,0 % (Groq: 4,6 %), und dein Wörterbuch geht direkt in die Erkennung. Die Live-Variante ist für Echtzeit-Streaming gebaut und hier nur zum Vergleich drin. Der Stille-Schutz gegen Whisper-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur bei Groq — er hängt an Whisper-Messwerten, die Gemini nicht liefert. Fällt Gemini aus (Kontingent erschöpft, Netz weg), springt automatisch Groq ein, damit kein Diktat verloren geht. Die Umschaltung wirkt sofort, ohne Neustart."/>
                         </StackPanel>
                     </Border>
 

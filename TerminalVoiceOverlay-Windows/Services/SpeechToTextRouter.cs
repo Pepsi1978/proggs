@@ -5,9 +5,10 @@ namespace TerminalVoiceOverlay.Services
 {
     /// <summary>
     /// Eine Anlaufstelle fuer die Transkription. Entscheidet pro Aufnahme
-    /// anhand von <see cref="TranscriptionEngineSetting"/>, ob Groq Whisper
-    /// oder Gemini Transcribe gefragt wird — die Auswahl wirkt damit sofort,
-    /// ohne Overlay-Neustart.
+    /// anhand von <see cref="TranscriptionEngineSetting"/>, welcher der drei
+    /// Wege gefragt wird — Groq Whisper, Gemini Transcribe (fertige Aufnahme,
+    /// ein HTTPS-Aufruf) oder Gemini Transcribe Live (Streaming). Die Auswahl
+    /// wirkt sofort, ohne Overlay-Neustart.
     ///
     /// Die Whisper-Halluzinations-Abwehr steckt komplett in
     /// <see cref="GroqWhisperClient"/> und laeuft deshalb bewusst NUR im
@@ -16,38 +17,68 @@ namespace TerminalVoiceOverlay.Services
     public sealed class SpeechToTextRouter
     {
         private readonly GroqWhisperClient _groq;
-        private readonly GeminiTranscribeClient? _gemini;
+        private readonly GeminiBatchTranscribeClient? _geminiBatch;
+        private readonly GeminiTranscribeClient? _geminiLive;
 
-        public SpeechToTextRouter(GroqWhisperClient groq, GeminiTranscribeClient? gemini)
+        public SpeechToTextRouter(GroqWhisperClient groq,
+            GeminiBatchTranscribeClient? geminiBatch,
+            GeminiTranscribeClient? geminiLive)
         {
             _groq = groq;
-            _gemini = gemini;
+            _geminiBatch = geminiBatch;
+            _geminiLive = geminiLive;
         }
 
-        public bool GeminiAvailable => _gemini is not null;
+        public bool GeminiAvailable => _geminiBatch is not null || _geminiLive is not null;
 
-        /// <summary>Modellname fuer Logs/Statusanzeige.</summary>
-        public string ActiveEngine =>
-            TranscriptionEngineSetting.UseGemini && _gemini is not null
-                ? TranscriptionEngineSetting.Gemini
-                : TranscriptionEngineSetting.Groq;
-
-        public Task<string> TranscribeAsync(string wavFilePath)
+        /// <summary>Welcher Weg gerade greift — fuer Logs/Statusanzeige.</summary>
+        public string ActiveEngine => TranscriptionEngineSetting.Current switch
         {
-            if (TranscriptionEngineSetting.UseGemini)
+            TranscriptionEngineSetting.Gemini when _geminiBatch is not null => TranscriptionEngineSetting.Gemini,
+            TranscriptionEngineSetting.GeminiLive when _geminiLive is not null => TranscriptionEngineSetting.GeminiLive,
+            _ => TranscriptionEngineSetting.Groq,
+        };
+
+        public async Task<string> TranscribeAsync(string wavFilePath)
+        {
+            // Auswahl steht auf Gemini, aber kein Schluessel hinterlegt: still
+            // auf Groq zurueckfallen statt die Aufnahme zu verlieren.
+            Func<Task<string>>? gemini = TranscriptionEngineSetting.Current switch
             {
-                if (_gemini is null)
-                {
-                    // Auswahl steht auf Gemini, aber kein Schluessel hinterlegt:
-                    // still auf Groq zurueckfallen statt die Aufnahme zu verlieren.
-                    DiagLog.Warn("STT", "gemini_selected_but_unconfigured");
-                }
-                else
-                {
-                    return _gemini.TranscribeAsync(wavFilePath);
-                }
+                TranscriptionEngineSetting.Gemini when _geminiBatch is not null
+                    => () => _geminiBatch.TranscribeAsync(wavFilePath),
+                TranscriptionEngineSetting.GeminiLive when _geminiLive is not null
+                    => () => _geminiLive.TranscribeAsync(wavFilePath),
+                _ => null,
+            };
+
+            if (gemini is null)
+            {
+                if (TranscriptionEngineSetting.UseAnyGemini)
+                    DiagLog.Warn("STT", "gemini_selected_but_unconfigured",
+                        ("engine", TranscriptionEngineSetting.Current));
+                return await _groq.TranscribeAsync(wavFilePath).ConfigureAwait(false);
             }
-            return _groq.TranscribeAsync(wavFilePath);
+
+            try
+            {
+                return await gemini().ConfigureAwait(false);
+            }
+            catch (NoSpeechException)
+            {
+                // Stille Aufnahme ist ein gueltiges Ergebnis, kein Ausfall —
+                // durchreichen, damit nichts getippt wird.
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Kontingent erschoepft, Netz weg, API-Aenderung: das Diktat ist
+                // schon gesprochen und darf nicht verloren gehen. Groq springt
+                // ein — samt seinem Halluzinations-Schutz.
+                DiagLog.Warn("STT", "gemini_failed_fallback_groq",
+                    ("engine", TranscriptionEngineSetting.Current), ("error", ex.Message));
+                return await _groq.TranscribeAsync(wavFilePath).ConfigureAwait(false);
+            }
         }
     }
 }

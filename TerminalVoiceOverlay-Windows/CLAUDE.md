@@ -42,8 +42,10 @@ ClaudeVoiceOverlay, use `Both` instead of `TVO`.
 | `Services/GroqWhisperClient.cs` | Groq Whisper API for speech-to-text |
 | `Services/GeminiClient.cs` | Gemini API for text correction/formatting |
 | `Services/GeminiTranscribeClient.cs` | Gemini Live API (WebSocket) speech-to-text — `gemini-3.5-transcribe-live` only supports `bidiGenerateContent`. VAD MUST be disabled (`automaticActivityDetection.disabled` + manual `activityStart`/`activityEnd`), else it cuts off at the first pause. Language and vocabulary go into `inputAudioTranscription.languageCodes` (array!) / `.customVocabulary` — `speechConfig` does not exist on this model |
-| `Services/SpeechToTextRouter.cs` | Picks Groq vs Gemini per recording; Whisper hallucination guard stays Groq-only |
-| `Services/TranscriptionEngineSetting.cs` | Engine switch, stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `Services/GeminiBatchTranscribeClient.cs` | **Default Gemini path.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64 — no WebSocket, no VAD, no file upload. Measured 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,0 % (Groq 4,6 %). Mode `verbatim`, because `smart` drops words |
+| `Services/PersonalVocabulary.cs` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to both Gemini paths as `customVocabulary` |
+| `Services/SpeechToTextRouter.cs` | Picks Groq / Gemini / Gemini-Live per recording; falls back to Groq on any technical Gemini failure (quota, network) but NOT on `NoSpeechException`; Whisper hallucination guard stays Groq-only |
+| `Services/TranscriptionEngineSetting.cs` | Engine switch (`groq` / `gemini` / `gemini-live`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
 | `Services/TerminalController.cs` | Win32 keyboard simulation for terminals (keybd_event) |
 | `Services/TerminalWatcher.cs` | SetWinEventHook for target app detection |
 | `Views/OverlayWindow.xaml` | WPF overlay UI (XAML layout) |

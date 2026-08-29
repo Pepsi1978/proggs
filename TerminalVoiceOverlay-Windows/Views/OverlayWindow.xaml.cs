@@ -481,6 +481,9 @@ namespace TerminalVoiceOverlay.Views
             _stt             = new SpeechToTextRouter(
                 _groqClient,
                 config.GeminiTranscribeAvailable
+                    ? new GeminiBatchTranscribeClient(config.GeminiTranscribeApiKey!, config.GeminiTranscribeBatchModel)
+                    : null,
+                config.GeminiTranscribeAvailable
                     ? new GeminiTranscribeClient(config.GeminiTranscribeApiKey!, config.GeminiTranscribeModel, config.WhisperLang)
                     : null);
             _terminalWatcher = new TerminalWatcher(config.TerminalProcessNames);
