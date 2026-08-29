@@ -11,7 +11,7 @@
 Sage ich **„nutze die Referenzdatei"**, **„bau nach der Android-Referenz"** oder füge ich diese Datei in
 den Chat ein, dann gilt:
 
-1. **Jeder Baustein A bis M wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
+1. **Jeder Baustein A bis N wird eingebaut — ohne Rückfrage.** Es wird *nicht* gefragt „möchtest
    du Hell/Dunkel-Modus?" oder „soll Vorlesen rein?". Die Antwort ist immer ja.
 2. **Einzige Ausnahme:** Ein Baustein ergibt in dieser konkreten App *nachweislich* keinen Sinn (z. B.
    Vorlesen in einer App, die überhaupt keinen Text anzeigt). Dann — und nur dann — **melde es einmal
@@ -27,8 +27,8 @@ den Chat ein, dann gilt:
 4. **Reihenfolge beim Neubau:** Grundgerüst (Kap. 9) → Theme (A) → Kopfleiste (C) → Einstellungen (G) →
    Fold-Layout (B) → Fehler-/Lade-/Leerzustände (L, von Anfang an mitdenken) → App-Logik →
    Vorlesen (D/E) → Transkription (F) → Suche (K) → App-Sperre (I) → Sicherung (J) →
-   Version sichtbar (H). **Baustein M (Umlaute) läuft durchgehend mit** — bei jedem Text, der
-   entsteht, nicht als Schritt am Ende.
+   Version sichtbar (H). **Baustein M (Umlaute) und Baustein N (Optik) laufen durchgehend mit** —
+   bei jedem Text und jedem Bildschirm, der entsteht, nicht als Schritt am Ende.
 5. **Bestehende App erweitern:** Zuerst prüfen, welche Bausteine schon da sind (Checkliste Kap. 10),
    dann nur die fehlenden nachrüsten. Nichts doppelt bauen, nichts Bestehendes wegwerfen.
 
@@ -483,6 +483,119 @@ strasse → Straße · gruss → Gruß · massnahme → Maßnahme · dass ≠ da
 
 ---
 
+## 8g. Baustein N — Fünf-Sterne-Optik: modern, mit vielen optischen Effekten ⭐ PFLICHT
+
+**Was:** Die App soll aussehen wie eine der besten Apps im Play Store — modern, aufwendig, mit vielen
+optischen Effekten. Nichts darf nach Standard-Baukasten aussehen.
+
+### N.1 Grundhaltung
+
+- **Kein Bildschirm ohne Gestaltung.** Jede Fläche bekommt Tiefe, Bewegung und Charakter — auch
+  Einstellungen, Leerzustände und Fehlermeldungen.
+- **Es bewegt sich immer etwas**, wenn ich etwas tue: nichts erscheint hart, nichts verschwindet
+  schlagartig, nichts springt.
+- Die **Gold-Palette aus Baustein A ist die Bühne** für alle Effekte. Verläufe, Glanz und Schein werden
+  aus Gold gebaut, nicht aus Fremdfarben.
+- Grundlage: **Material 3 Expressive** (`MaterialTheme` mit `MotionScheme.expressive()`), nicht das
+  nüchterne Standard-Material.
+
+### N.2 Pflicht-Effekt-Katalog
+
+Jede App bekommt **mindestens** das Folgende. Mehr ist ausdrücklich erwünscht.
+
+**Tiefe und Material**
+- **Farbverläufe** statt Einfarbflächen: `Brush.linearGradient` auf Karten und Kopfbereichen,
+  `Brush.radialGradient` als weicher Schein hinter wichtigen Elementen, `Brush.sweepGradient` für
+  Ringe und Fortschritt.
+- **Goldener Schein (Glow)** an aktiven Elementen: `Modifier.shadow(elevation, shape,
+  ambientColor = Gold, spotColor = Gold)`.
+- **Milchglas (Glassmorphismus)** hinter Kopf- und Fußleisten sowie Dialogen: `Modifier.blur()` bzw.
+  `RenderEffect.createBlurEffect` auf der darunterliegenden Ebene, dazu halbtransparente Fläche und
+  1-dp-Lichtkante oben.
+- **Lichtkante:** feiner heller Rahmen oben, dunklerer unten — gibt Karten Körperlichkeit.
+- **Gestaffelte Höhenwirkung:** Hintergrund → Karte → erhöhte Karte → Dialog, jede Stufe mit eigener
+  Fläche *und* eigenem Schatten.
+- **Eigene Formen** statt nur Rechtecke: `androidx.graphics.shapes` (`RoundedPolygon`) für Abzeichen,
+  Symbolhintergründe und Fortschrittsanzeigen.
+
+**Bewegung**
+- **Federnde Bewegung (Spring)** als Standard, nicht lineares `tween` — alles schwingt kurz aus.
+- **Formwandel (Shape-Morphing)** beim Umschalten von Zuständen (`Morph` aus
+  `androidx.graphics.shapes`), z. B. Kreis → Rundquadrat beim Auswählen.
+- **Pulsieren und Atmen** an laufenden Vorgängen: Aufnahme-Knopf pulsiert, Vorlese-Knopf atmet im
+  Sprechrhythmus, Ladeanzeige dreht mit Verlauf.
+- **Schimmer (Shimmer)** über den Platzhalter-Gerüsten beim Laden (Baustein L).
+- **Gestaffeltes Einblenden** von Listen: jedes Element 40–60 ms nach dem vorigen, mit leichtem
+  Hochgleiten und Aufblenden.
+- **Parallaxe** beim Scrollen: Kopfbild bewegt sich langsamer als der Inhalt, Titel schrumpft weich
+  in die Leiste (`nestedScroll` mit `TopAppBarScrollBehavior`).
+
+**Übergänge**
+- **Geteilte Elemente (Shared Element Transition)** zwischen Übersicht und Detail — das angetippte
+  Element wandert sichtbar an seinen neuen Platz (`SharedTransitionLayout`).
+- **`AnimatedContent`** für jeden Inhaltswechsel, mit Richtung passend zur Navigation.
+- **Vorausschauendes Zurück (Predictive Back)** unterstützen, damit die Zurück-Geste den Bildschirm
+  schon beim Wischen mitzieht.
+- **Listenumsortierung** animiert (`Modifier.animateItem()`), niemals hartes Neuzeichnen.
+
+**Mikro-Interaktionen**
+- Jeder Knopf reagiert beim Drücken: kurz einsinken (Skalierung ~0,96) und wieder ausfedern.
+- **Wellen-Effekt (Ripple)** in Gold eingefärbt, nicht im Grauton der Vorgabe.
+- Umschalter, Haken und Auswahlkreise werden **gezeichnet, nicht getauscht** — der Haken malt sich.
+- Erfolgsmomente bekommen eine kleine Feier: aufblitzender Ring, kurzes Aufleuchten, Zähler zählt hoch.
+
+**Text und Farbe**
+- Wichtige Überschriften mit **Verlaufsschrift** (`Brush` als `TextStyle.brush`).
+- **Zahlen zählen animiert hoch** statt zu springen (`animateIntAsState`).
+- Eine gut gewählte **Schriftfamilie über Google Fonts** (`compose.google.fonts`), nicht die
+  Systemschrift — mit klarer Größen- und Gewichtungsstaffel.
+
+### N.3 Bewegungs-Standards (einheitlich in der ganzen App)
+
+| Vorgang | Dauer | Kurve |
+|---|---|---|
+| Mikro-Rückmeldung (Druck, Haken, Umschalter) | 100–150 ms | Spring, straff |
+| Zustandswechsel innerhalb eines Bildschirms | 250–300 ms | Spring, mittel |
+| Bildschirmwechsel, geteilte Elemente | 350–450 ms | Emphasized / Spring weich |
+| Gestaffeltes Listen-Einblenden | 40–60 ms Versatz je Element | Aufblenden + 12 dp Hochgleiten |
+
+Diese Werte stehen **einmal zentral** im Projekt (`ui/theme/Motion.kt`) und werden überall von dort
+geholt — keine handgetippten Dauern verstreut im Code.
+
+### N.4 Leitplanken (die Effekte dürfen nichts kaputt machen)
+
+- **Lesbarkeit schlägt Effekt.** Verlauf oder Milchglas hinter Text nur, wenn der Kontrast danach
+  immer noch mindestens 4,5:1 beträgt (Baustein A). Im Zweifel eine deckende Schicht unterlegen.
+- **Bildrate:** Das Fold 8 läuft mit 120 Hz, ein Bild hat also rund **8 ms**. Blur und Shader nur auf
+  kleinen Flächen und niemals in einem scrollenden Listenelement. Bei Rucklern: Effekt vereinfachen,
+  nicht die Liste kürzen.
+- **Rückfall für ältere Geräte:** `Modifier.blur` wirkt erst ab Android 12, AGSL-Shader erst ab
+  Android 13. Bei `minSdk 26` heißt das: **jeder Effekt braucht eine ordentliche einfachere Fassung**
+  (statt Milchglas eine halbtransparente Fläche mit Verlauf) — nie ein leeres oder kaputtes Bild.
+- **Bewegungsreduzierung achten:** Ist im System „Animationen reduzieren" gesetzt
+  (`Settings.Global.ANIMATOR_DURATION_SCALE == 0`), werden Dauern auf nahe null gesetzt und
+  Dauerbewegungen (Pulsieren, Schimmer) abgeschaltet. Die App bleibt voll bedienbar.
+- **Kein Effekt kostet Verständlichkeit:** Ein Knopf muss als Knopf erkennbar bleiben, ein Feld als
+  Feld. Verzierung ersetzt nie eine Beschriftung.
+
+### N.5 Was verboten ist
+
+- Standard-Material-Optik ohne eigene Handschrift („sieht aus wie das Compose-Beispielprojekt").
+- Effekte, die nur auf einem Bildschirm auftauchen — dann wirkt die App zusammengestückelt.
+- Dauerbewegung im Sichtfeld, während ich lese (blinkende Ränder, endlose Wellen hinter Text).
+- Verläufe quer durch fremde Farbwelten — Gold bleibt die Leitfarbe.
+- Effekte, die den ersten Bildaufbau verzögern: Der Bildschirm ist zuerst da, die Verzierung kommt
+  im selben Atemzug hinterher.
+
+### N.6 Abnahme
+
+Vor „fertig" wird jeder Bildschirm einmal durchgegangen:
+Hat er Tiefe? Bewegt sich beim Betreten etwas? Reagiert jeder Knopf sichtbar? Ist der Übergang zum
+nächsten Bildschirm animiert? Sieht der Leerzustand gestaltet aus? — Ein „nein" ist eine offene
+Aufgabe, keine Geschmacksfrage.
+
+---
+
 ## 9. Technische Grundausstattung
 
 **Stack (Standard, ohne Rückfrage):**
@@ -491,6 +604,8 @@ strasse → Straße · gruss → Gruß · massnahme → Maßnahme · dass ≠ da
 - Version-Katalog `gradle/libs.versions.toml` — **keine** hartcodierten Abhängigkeits-Versionen
 - `androidx.navigation:navigation-compose`, `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose`
 - `material3-window-size-class` (für Baustein B)
+- `androidx.compose.animation:animation`, `androidx.graphics:graphics-shapes` und
+  `androidx.compose.ui:ui-text-google-fonts` (für Baustein N)
 - `androidx.security:security-crypto` (für Baustein G)
 - **Room**, sobald mehr als eine Handvoll Datensätze dauerhaft gespeichert wird; sonst DataStore
 - **OkHttp** (dazu Retrofit + Moshi ab mehr als zwei Endpunkten)
@@ -522,6 +637,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **K** Volltextsuche (Room FTS4) über alle Inhalte, mit Hervorhebung und Leerzustand
 - [ ] **L** Kein stiller Fehlschlag: Klartext-Meldung + Wiederholen, Lade- und Leerzustände überall
 - [ ] **M** Nur echte Umlaute in Oberfläche, Transkript und KI-Text; `strings.xml`-Test läuft; keine blinde Ersetzung
+- [ ] **N** Fünf-Sterne-Optik: Effekt-Katalog umgesetzt, `Motion.kt` zentral, jeder Bildschirm durch die Abnahme N.6
 - [ ] Bauen und Tests grün → committen → pushen → auf dem Fold 8 installiert
 - [ ] Jeder weggelassene Baustein wurde mit einem Satz begründet gemeldet
 
@@ -559,3 +675,4 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 11:19 Uhr | Erstfassung: Bausteine A–H aus PerfectMoment, CortexAndroid, BestJournalAndroid und TerminalVoiceOverlay zusammengetragen |
 | 29.08.2026, 11:19 Uhr | Bausteine I (App-Sperre), J (Sicherung), K (Volltextsuche) und L (Fehler-, Lade- und Leerzustände) ergänzt — nach Durchsicht aller 14 Android-Apps im Repo |
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
+| 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
