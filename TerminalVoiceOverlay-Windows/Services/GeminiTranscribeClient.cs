@@ -21,16 +21,31 @@ namespace TerminalVoiceOverlay.Services
     /// hineinschieben, audioStreamEnd senden, die Transkript-Fragmente
     /// einsammeln.
     ///
-    /// ZWEI EIGENHEITEN DER LIVE-API (gegen die echte API gemessen, nicht
-    /// geraten — beide haben den ersten Anlauf haengen lassen):
-    ///   1. Das Feld heisst "interimInputTranscription", nicht
-    ///      "inputTranscription", und sein Text ist KUMULATIV: jedes Frame
-    ///      enthaelt das bisher Gehoerte komplett. Anhaengen wuerde den Text
-    ///      vervielfachen — es wird ersetzt.
-    ///   2. Der Server schickt am Ende WEDER turnComplete NOCH
-    ///      generationComplete; der Strom verstummt einfach. Ein Warten auf
-    ///      das Schlusssignal laeuft darum immer in den Timeout. Ende ist
-    ///      deshalb: Text vorhanden und seit <see cref="IdleMs"/> nichts Neues.
+    /// DREI EIGENHEITEN DER LIVE-API (gegen die echte API gemessen, nicht
+    /// geraten — jede einzelne hat einen Anlauf gekostet):
+    ///
+    ///   1. SPRECHPAUSEN-ERKENNUNG MUSS AUS. Die Live-API ist auf
+    ///      Echtzeit-Gespraech ausgelegt: erkennt sie eine Sprechpause,
+    ///      schliesst sie den Zug ab und verwirft alles Weitere. Weil hier eine
+    ///      fertige Aufnahme am Stueck hineingeht, sieht sie jede Denkpause
+    ///      sofort. Gemessen an einer Aufnahme mit 12 s Pause in der Mitte:
+    ///      mit Automatik kam nur der Anfang (61 Zeichen), ohne Automatik der
+    ///      ganze Text (330 Zeichen). Deshalb
+    ///      realtimeInputConfig.automaticActivityDetection.disabled und
+    ///      Anfang/Ende des Sprechens von Hand markieren (activityStart /
+    ///      activityEnd) — so darf Frank beim Diktieren beliebig lange
+    ///      nachdenken.
+    ///
+    ///   2. ZWEI TRANSKRIPT-FELDER MIT UNTERSCHIEDLICHER BEDEUTUNG:
+    ///      "interimInputTranscription" ist der laufende Zwischenstand
+    ///      (kumulativ, wird ersetzt), "inputTranscription" ist das fertige
+    ///      Ergebnis und hat Vorrang. Der Zwischenstand bleibt regelmaessig
+    ///      hinter dem Endergebnis zurueck — beide in einen Topf zu werfen
+    ///      verschluckt Text.
+    ///
+    ///   3. generationComplete/turnComplete kommt zuverlaessig, sobald das
+    ///      Ende des Sprechens markiert ist. Das Stille-Fenster
+    ///      (<see cref="IdleMs"/>) bleibt nur als Sicherheitsnetz.
     ///
     /// BEWUSST OHNE HALLUZINATIONS-GATE: die dreischichtige Abwehr gegen
     /// Whisper-Stille-Halluzinationen in GroqWhisperClient haengt an Whispers
@@ -97,6 +112,8 @@ namespace TerminalVoiceOverlay.Services
 
             // 1) Setup. responseModalities TEXT + inputAudioTranscription: das
             //    Modell soll das Gesprochene verschriftlichen, nicht antworten.
+            //    automaticActivityDetection.disabled: siehe Eigenheit 1 oben —
+            //    ohne das schneidet die API bei der ersten Denkpause ab.
             var setup = JsonSerializer.Serialize(new
             {
                 setup = new
@@ -104,11 +121,18 @@ namespace TerminalVoiceOverlay.Services
                     model = "models/" + _model,
                     generationConfig = new { responseModalities = new[] { "TEXT" } },
                     inputAudioTranscription = new { },
+                    realtimeInputConfig = new
+                    {
+                        automaticActivityDetection = new { disabled = true }
+                    },
                 }
             });
             await SendAsync(ws, setup, ct).ConfigureAwait(false);
 
-            // 2) Aufnahme hineinschieben. mimeType nach Live-API-Vorgabe:
+            // 2) Anfang des Sprechens von Hand markieren (die Automatik ist aus).
+            await SendAsync(ws, "{\"realtimeInput\":{\"activityStart\":{}}}", ct).ConfigureAwait(false);
+
+            // 3) Aufnahme hineinschieben. mimeType nach Live-API-Vorgabe:
             //    16-bit PCM, little endian, mono, Rate aus dem WAV-Header.
             for (int offset = 0; offset < pcm.Length; offset += ChunkBytes)
             {
@@ -124,10 +148,12 @@ namespace TerminalVoiceOverlay.Services
                 await SendAsync(ws, msg, ct).ConfigureAwait(false);
             }
 
-            // 3) Ende der Aufnahme melden.
+            // 4) Ende des Sprechens und Ende des Stroms melden. Erst das
+            //    activityEnd loest das Schlusssignal aus.
+            await SendAsync(ws, "{\"realtimeInput\":{\"activityEnd\":{}}}", ct).ConfigureAwait(false);
             await SendAsync(ws, "{\"realtimeInput\":{\"audioStreamEnd\":true}}", ct).ConfigureAwait(false);
 
-            // 4) Fragmente einsammeln, bis der Strom verstummt.
+            // 5) Fragmente einsammeln, bis das Schlusssignal kommt.
             var collector = new TranscriptCollector();
             var buffer = new byte[64 * 1024];
             var frame = new StringBuilder();
@@ -204,44 +230,48 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Sammelt die kumulativen Transkript-Frames ein. Jedes Frame enthaelt
-        /// den bisherigen Text komplett und darf sich dabei auch rueckwirkend
-        /// aendern ("das Ganze" wird zu "das ganze mal"), deshalb wird ersetzt
-        /// statt angehaengt. Faellt die Laenge dagegen stark ab, hat die API
-        /// einen neuen Abschnitt begonnen — dann wird der bisherige Stand
-        /// weggeschrieben und neu gesammelt.
+        /// Haelt die beiden Transkript-Sorten auseinander (Eigenheit 2 oben).
+        ///
+        /// Fertige Abschnitte ("inputTranscription") werden aneinandergereiht —
+        /// bei mehreren Abschnitten ergibt das den ganzen Text. Der laufende
+        /// Zwischenstand ("interimInputTranscription") ist kumulativ und wird
+        /// nur ersetzt; er dient allein als Rueckfallebene, falls kein fertiger
+        /// Abschnitt kommt. Beides zu vermischen kostete im Test Text.
         /// </summary>
         private sealed class TranscriptCollector
         {
-            private readonly StringBuilder _committed = new();
-            private string _current = string.Empty;
+            private readonly StringBuilder _final = new();
+            private string _interim = string.Empty;
 
-            public bool HasText => _committed.Length > 0 || _current.Length > 0;
+            public bool HasText => _final.Length > 0 || _interim.Length > 0;
 
-            public void Update(string? text)
+            /// <summary>Fertiger Abschnitt — wird angehaengt.</summary>
+            public void AddFinal(string? text)
+            {
+                if (string.IsNullOrWhiteSpace(text)) return;
+                if (_final.Length > 0) _final.Append(' ');
+                _final.Append(text.Trim());
+                // Der Zwischenstand ist mit dem fertigen Abschnitt verbraucht.
+                _interim = string.Empty;
+            }
+
+            /// <summary>Laufender Zwischenstand — ersetzt den vorherigen.</summary>
+            public void SetInterim(string? text)
             {
                 if (string.IsNullOrEmpty(text)) return;
-
-                // Neuer Abschnitt: der neue Text ist deutlich kuerzer und damit
-                // keine Fortschreibung des bisherigen mehr.
-                if (_current.Length > 0 && text.Length * 2 < _current.Length)
-                {
-                    if (_committed.Length > 0) _committed.Append(' ');
-                    _committed.Append(_current);
-                    _current = text;
-                    return;
-                }
-
-                _current = text;
+                _interim = text;
             }
 
             public string Result()
             {
-                var sb = new StringBuilder(_committed.ToString());
-                if (_current.Length > 0)
+                if (_final.Length > 0 && _interim.Length == 0)
+                    return _final.ToString().Trim();
+
+                var sb = new StringBuilder(_final.ToString());
+                if (_interim.Length > 0)
                 {
                     if (sb.Length > 0) sb.Append(' ');
-                    sb.Append(_current);
+                    sb.Append(_interim);
                 }
                 return sb.ToString().Trim();
             }
@@ -275,17 +305,20 @@ namespace TerminalVoiceOverlay.Services
                 if (!root.TryGetProperty("serverContent", out var server))
                     return false;
 
-                // Beide Schreibweisen mitnehmen: gemessen kommt
-                // interimInputTranscription, inputTranscription ist der
-                // dokumentierte Name — falls die API ihn doch noch schickt.
-                foreach (var field in new[] { "interimInputTranscription", "inputTranscription" })
+                // Zwischenstand: ersetzt den vorherigen.
+                if (server.TryGetProperty("interimInputTranscription", out var interim) &&
+                    interim.TryGetProperty("text", out var interimText) &&
+                    interimText.ValueKind == JsonValueKind.String)
                 {
-                    if (server.TryGetProperty(field, out var part) &&
-                        part.TryGetProperty("text", out var t) &&
-                        t.ValueKind == JsonValueKind.String)
-                    {
-                        collector.Update(t.GetString());
-                    }
+                    collector.SetInterim(interimText.GetString());
+                }
+
+                // Fertiger Abschnitt: hat Vorrang und wird angehaengt.
+                if (server.TryGetProperty("inputTranscription", out var final) &&
+                    final.TryGetProperty("text", out var finalText) &&
+                    finalText.ValueKind == JsonValueKind.String)
+                {
+                    collector.AddFinal(finalText.GetString());
                 }
 
                 // Falls das Modell den Text als normale Antwort liefert.
@@ -298,7 +331,7 @@ namespace TerminalVoiceOverlay.Services
                         if (part.TryGetProperty("thought", out var thought) && thought.ValueKind == JsonValueKind.True)
                             continue;
                         if (part.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
-                            collector.Update(t.GetString());
+                            collector.AddFinal(t.GetString());
                     }
                 }
 
