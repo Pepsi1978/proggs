@@ -213,6 +213,7 @@ fun Modifier.milchglas(
     flaeche: Color,
     form: Shape,
     deckung: Float = 0.62f,
+    kante: Boolean = true,
 ): Modifier = this
     .background(
         brush = Brush.verticalGradient(
@@ -232,7 +233,9 @@ fun Modifier.milchglas(
         shape = form,
     )
     .koernung()
-    .border(1.dp, lichtKante(staerke = 0.30f), form)
+    // Randlos, wo die Fläche bis an den Bildschirmrand läuft: Sonst stünde die helle Kante
+    // im Dunkelmodus als weisser Strich ganz oben und an der Seite.
+    .then(if (kante) Modifier.border(1.dp, lichtKante(staerke = 0.30f), form) else Modifier)
 
 /**
  * Sehr feine Rausch-Textur über dem Glas — nimmt dem Verlauf die Plastikwirkung (N.4).

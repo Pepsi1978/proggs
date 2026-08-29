@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.BuildConfig
@@ -140,6 +141,9 @@ fun EinstellungenScreen(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // Der erste Block klebt sonst an der Kopfleiste.
+            Spacer(Modifier.height(4.dp))
+
             // ---- Vorlesen ----
             Klappblock("Vorlesen", "Stimme, Tempo und Schlüssel", offenAnfangs = true) {
                 // Genau eine Stimmenauswahl über alle Engines — kein vorgelagerter
@@ -511,7 +515,8 @@ fun EinstellungenScreen(
                 "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_BUMPED_AT})",
                 style = MaterialTheme.typography.labelSmall,
                 color = gold.textGedaempft,
-                modifier = Modifier.padding(bottom = 24.dp),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
             )
         }
     }

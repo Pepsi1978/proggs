@@ -91,7 +91,7 @@ fun IdeenKopfleiste(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .milchglas(gold.flaeche, RoundedCornerShape(0.dp), deckung = 0.55f)
+            .milchglas(gold.flaeche, RoundedCornerShape(0.dp), deckung = 0.55f, kante = false)
             .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
