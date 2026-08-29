@@ -2712,6 +2712,7 @@ namespace TerminalVoiceOverlay.Views
                         Console.WriteLine($"Transcription error: {ex.Message}");
                         DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "main"), ("ms", turnSw.ElapsedMilliseconds));
                         SetMicState(RecordingState.Error);
+                        RescueFailedRecording(wavFile);
                     }
                     finally
                     {
@@ -2887,6 +2888,7 @@ namespace TerminalVoiceOverlay.Views
                         Console.WriteLine($"BTW transcription error: {ex.Message}");
                         DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "btw"), ("ms", turnSw.ElapsedMilliseconds));
                         SetBtwMicState(RecordingState.Error);
+                        RescueFailedRecording(wavFile);
                     }
                     finally
                     {
@@ -4695,6 +4697,49 @@ namespace TerminalVoiceOverlay.Views
                 case RecordingState.Error:
                     BtwButton.Background = BtnX;
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Rettet die WAV einer fehlgeschlagenen Aufnahme, statt sie zu verwerfen. Vorfall 29.08.2026:
+        /// eine 15-Minuten-Aufnahme lief in Groqs 413 (Upload zu gross) und wurde danach im finally
+        /// geloescht — der gesprochene Text war endgueltig weg. Seitdem wandert jede fehlgeschlagene
+        /// Aufnahme nach %LOCALAPPDATA%\TerminalVoiceOverlay\failed\ und kann von dort erneut
+        /// transkribiert werden. Zweite Schicht hinter dem Chunking im GroqWhisperClient: das
+        /// Chunking verhindert den bekannten Fehler, die Rettung faengt jeden kuenftigen ab.
+        /// Rettungen aelter als 14 Tage werden dabei aufgeraeumt, damit der Ordner nicht waechst.
+        /// </summary>
+        private static void RescueFailedRecording(string? wavFile)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(wavFile) || !File.Exists(wavFile)) return;
+
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "TerminalVoiceOverlay", "failed");
+                Directory.CreateDirectory(dir);
+
+                string target = Path.Combine(dir, $"aufnahme_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.wav");
+                File.Move(wavFile, target, overwrite: true);
+                long bytes = new FileInfo(target).Length;
+                Console.WriteLine($"Aufnahme gerettet: {target}");
+                DiagLog.Write("VoiceTurn", "recording_rescued", ("path", target), ("bytes", bytes));
+
+                foreach (var old in Directory.EnumerateFiles(dir, "aufnahme_*.wav"))
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(old) < DateTime.UtcNow.AddDays(-14))
+                            File.Delete(old);
+                    }
+                    catch { /* einzelne Datei gesperrt -> naechster Lauf raeumt sie auf */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Die Rettung darf den ohnehin schon fehlgeschlagenen Turn nie zusaetzlich sprengen.
+                DiagLog.Warn("VoiceTurn", "recording_rescue_failed", ("err", ex.Message), ("type", ex.GetType().Name));
             }
         }
 

@@ -77,6 +77,25 @@ namespace TerminalVoiceOverlay.Services
         private const int    FrameMs        = 20;    // RMS-Fenster (gleich wie HasSpeechContent)
         private const double SegVoicedRatio = 0.10;  // < 10% laute Frames im Segment-Fenster = still
 
+        // ----- Upload-Groessenlimit / Chunking (Almanach bugs/apis/groq-api.md Nr. 11,
+        // bugs/desktop/groq-transkription.md 4.3) -----
+        // Groq weist zu grosse Uploads mit HTTP 413 ("Request Entity Too Large") ab: 25 MB im
+        // Free-Plan, im Dev-Plan in der Praxis schon ab ~37 MB trotz dokumentierter 100 MB.
+        // Bei 16 kHz mono 16-bit sind das 32 kB/s -> das Limit faellt nach rund 13 Minuten.
+        // Vorfall 29.08.2026: 15,4 Minuten am Stueck diktiert -> 29,5 MB -> 413 -> der gesamte
+        // gesprochene Text war verloren. Ein 413 ist NICHT retrybar (kleiner wird die Datei ja
+        // nicht), deshalb wird lange Audio VOR dem Senden in Teile geschnitten und Teil fuer
+        // Teil transkribiert. 20 MB Schwelle laesst Luft fuer multipart-Overhead und Header.
+        private const int WavHeaderSize    = 44;
+        private const int MaxUploadBytes   = 20 * 1024 * 1024;
+        // Ziel-Groesse eines Teilstuecks (~8,7 Min bei 16 kHz mono). Bewusst unter MaxUploadBytes,
+        // damit die Pausensuche den Schnitt nach vorne verschieben darf, ohne das Limit zu reissen.
+        private const int ChunkTargetBytes = 16 * 1024 * 1024;
+        // Suchfenster fuer den Schnitt an einer Sprechpause: die letzten 45 s vor dem Ziel-Ende.
+        private const int CutSearchWindowMs = 45_000;
+        // Ab so vielen zusammenhaengenden stillen 20-ms-Frames gilt eine Stelle als Sprechpause.
+        private const int MinPauseFrames    = 4;   // 80 ms
+
         // ----- Floskel-Blocklist (Schicht 4, letzter Filter, Almanach §2.4) -----
         // Bei kurzem Knopfdruck ("nichts gesagt", nur Klick/Atem) halluziniert Whisper "Vielen Dank"
         // MIT hoher Confidence (Schicht 2 greift nicht) und der Klick liegt oft IM Segment-Zeitfenster
@@ -148,7 +167,11 @@ namespace TerminalVoiceOverlay.Services
             DiagLog.Perf("Groq", "prefilter_ok", prefilterSw, ("bytes", fileBytes.Length));
             try
             {
-                var text = await TranscribeWithRetry(fileBytes, 0).ConfigureAwait(false);
+                // Lange Aufnahmen wuerden am Groq-Upload-Limit mit 413 scheitern (siehe
+                // MaxUploadBytes) — sie werden in Teile geschnitten und einzeln gesendet.
+                var text = fileBytes.Length > MaxUploadBytes
+                    ? await TranscribeInChunksAsync(fileBytes).ConfigureAwait(false)
+                    : await TranscribeWithRetry(fileBytes, 0).ConfigureAwait(false);
                 DiagLog.Perf("Groq", "transcribe_total", totalSw, ("chars", text.Length));
                 return text;
             }
@@ -510,6 +533,225 @@ namespace TerminalVoiceOverlay.Services
         /// der RMS-Pegel ueber der Stille-Schwelle liegt. Liest die Sample-Rate aus dem Header (Bytes
         /// 24-27). Bei jedem Problem null -> dann kein Audio-Abgleich (funktionserhaltend).
         /// </summary>
+        /// <summary>
+        /// Transkribiert eine Aufnahme, die ueber dem Groq-Upload-Limit liegt, in mehreren Teilen.
+        /// Geschnitten wird bevorzugt in einer Sprechpause kurz vor der Ziel-Groesse, damit kein Wort
+        /// zerrissen wird; findet sich keine Pause, wird hart geschnitten (funktionserhaltend: lieber
+        /// eine Wortgrenze riskieren als die ganze Aufnahme verlieren). Faellt ein einzelner Teil aus,
+        /// gehen NUR dessen Sekunden verloren — alle uebrigen Teile kommen trotzdem an.
+        /// </summary>
+        private async Task<string> TranscribeInChunksAsync(byte[] wav)
+        {
+            if (!TryReadWavFormat(wav, out var fmt))
+            {
+                // Unlesbarer Header -> nicht schneiden, sondern wie bisher senden. Dann entscheidet
+                // Groq (evtl. 413) — aber die Aufnahme wird nicht durch falsches Schneiden zerstoert.
+                DiagLog.Warn("Groq", "chunk_header_unreadable", ("bytes", wav.Length));
+                return await TranscribeWithRetry(wav, 0).ConfigureAwait(false);
+            }
+
+            var ranges = PlanChunks(wav, fmt);
+            DiagLog.Write("Groq", "chunk_plan",
+                ("bytes", wav.Length), ("chunks", ranges.Count),
+                ("limitBytes", MaxUploadBytes), ("sampleRate", fmt.SampleRate));
+            Console.WriteLine($"Aufnahme zu gross fuer einen Upload ({wav.Length / (1024.0 * 1024.0):F1} MB) — wird in {ranges.Count} Teile transkribiert.");
+
+            var parts = new List<string>(ranges.Count);
+            int failed = 0;
+            for (int i = 0; i < ranges.Count; i++)
+            {
+                var (start, length) = ranges[i];
+                byte[] chunk = BuildChunkWav(wav, fmt, start, length);
+                var chunkSw = Stopwatch.StartNew();
+                try
+                {
+                    string part = await TranscribeWithRetry(chunk, 0).ConfigureAwait(false);
+                    DiagLog.Perf("Groq", "chunk_done", chunkSw,
+                        ("index", i + 1), ("of", ranges.Count), ("bytes", chunk.Length),
+                        ("audioMs", length * 1000L / Math.Max(1, fmt.ByteRate)), ("chars", part.Length));
+                    if (!string.IsNullOrWhiteSpace(part)) parts.Add(part.Trim());
+                }
+                catch (Exception ex)
+                {
+                    // Funktionserhaltend: ein kaputter Teil darf die uebrigen Teile nicht mitreissen.
+                    failed++;
+                    DiagLog.Error("Groq", "chunk_failed", ex,
+                        ("index", i + 1), ("of", ranges.Count), ("bytes", chunk.Length),
+                        ("ms", chunkSw.ElapsedMilliseconds));
+                }
+            }
+
+            if (parts.Count == 0)
+                throw new Exception($"Alle {ranges.Count} Teilstuecke der langen Aufnahme sind fehlgeschlagen");
+
+            DiagLog.Write("Groq", "chunk_merged",
+                ("chunks", ranges.Count), ("ok", parts.Count), ("failed", failed));
+            return string.Join(" ", parts);
+        }
+
+        /// <summary>
+        /// Legt die Byte-Bereiche der Teilstuecke fest. Jedes Teilstueck bleibt unter
+        /// <see cref="MaxUploadBytes"/>; der Schnitt wird, wenn moeglich, in die laengste Sprechpause
+        /// im letzten <see cref="CutSearchWindowMs"/>-Fenster vor der Ziel-Groesse gelegt.
+        /// </summary>
+        private static List<(int Start, int Length)> PlanChunks(byte[] wav, WavFormat fmt)
+        {
+            var ranges = new List<(int, int)>();
+            bool[]? voiced = BuildVoicedTimeline(wav, fmt);
+            int frameBytes = Math.Max(fmt.BlockAlign, fmt.SampleRate * FrameMs / 1000 * fmt.BlockAlign);
+            int dataEnd = fmt.DataOffset + fmt.DataLength;
+            int payloadPerChunk = ChunkTargetBytes - WavHeaderSize;
+
+            int pos = fmt.DataOffset;
+            while (pos < dataEnd)
+            {
+                int remaining = dataEnd - pos;
+                if (remaining + WavHeaderSize <= MaxUploadBytes)
+                {
+                    ranges.Add((pos, remaining));
+                    break;
+                }
+
+                int hardEnd = pos + payloadPerChunk;
+                int cut = FindPauseCut(voiced, fmt, frameBytes, pos, hardEnd) ?? hardEnd;
+                // Nie mitten in ein Sample schneiden — sonst knackt der naechste Teil am Anfang.
+                cut -= (cut - fmt.DataOffset) % fmt.BlockAlign;
+                if (cut <= pos) cut = hardEnd;                 // Sicherheitsnetz gegen Endlosschleife
+                if (cut > dataEnd) cut = dataEnd;
+                ranges.Add((pos, cut - pos));
+                pos = cut;
+            }
+            return ranges;
+        }
+
+        /// <summary>
+        /// Sucht im Fenster [hardEnd - CutSearchWindowMs, hardEnd] die laengste zusammenhaengende
+        /// Stille und liefert deren Mitte als Schnitt-Byte. Null, wenn keine ausreichende Pause da ist.
+        /// </summary>
+        private static int? FindPauseCut(bool[]? voiced, WavFormat fmt, int frameBytes, int rangeStart, int hardEnd)
+        {
+            if (voiced == null || frameBytes <= 0) return null;
+            int windowBytes = (int)Math.Min((long)CutSearchWindowMs * fmt.ByteRate / 1000, hardEnd - rangeStart);
+            if (windowBytes <= 0) return null;
+
+            int fromFrame = Math.Max(0, (hardEnd - windowBytes - fmt.DataOffset) / frameBytes);
+            int toFrame = Math.Min(voiced.Length, (hardEnd - fmt.DataOffset) / frameBytes);
+            if (toFrame - fromFrame < MinPauseFrames) return null;
+
+            int bestStart = -1, bestLen = 0, runStart = -1;
+            for (int f = fromFrame; f < toFrame; f++)
+            {
+                if (!voiced[f])
+                {
+                    if (runStart < 0) runStart = f;
+                    int len = f - runStart + 1;
+                    if (len > bestLen) { bestLen = len; bestStart = runStart; }
+                }
+                else runStart = -1;
+            }
+            if (bestLen < MinPauseFrames) return null;
+
+            int midFrame = bestStart + bestLen / 2;
+            return fmt.DataOffset + midFrame * frameBytes;
+        }
+
+        /// <summary>
+        /// Baut aus einem Byte-Bereich der Quelldatei eine eigenstaendige WAV mit frischem
+        /// kanonischem 44-Byte-Header (RIFF- und data-Groesse passend zum Teilstueck).
+        /// </summary>
+        private static byte[] BuildChunkWav(byte[] source, WavFormat fmt, int dataStart, int dataLength)
+        {
+            var chunk = new byte[WavHeaderSize + dataLength];
+            void Ascii(int at, string tag) { for (int i = 0; i < 4; i++) chunk[at + i] = (byte)tag[i]; }
+            void I32(int at, int v)
+            {
+                chunk[at] = (byte)v; chunk[at + 1] = (byte)(v >> 8);
+                chunk[at + 2] = (byte)(v >> 16); chunk[at + 3] = (byte)(v >> 24);
+            }
+            void I16(int at, int v) { chunk[at] = (byte)v; chunk[at + 1] = (byte)(v >> 8); }
+
+            Ascii(0, "RIFF");  I32(4, WavHeaderSize + dataLength - 8);  Ascii(8, "WAVE");
+            Ascii(12, "fmt "); I32(16, 16); I16(20, 1);
+            I16(22, fmt.Channels); I32(24, fmt.SampleRate); I32(28, fmt.ByteRate);
+            I16(32, fmt.BlockAlign); I16(34, fmt.BitsPerSample);
+            Ascii(36, "data"); I32(40, dataLength);
+            Buffer.BlockCopy(source, dataStart, chunk, WavHeaderSize, dataLength);
+            return chunk;
+        }
+
+        /// <summary>
+        /// Liest fmt- und data-Chunk einer RIFF/WAVE-Datei. Laeuft die Chunk-Kette echt durch, statt
+        /// den 44-Byte-Standardheader anzunehmen — Aufnahmen mit LIST/fact-Chunk werden sonst falsch
+        /// geschnitten. False bei allem, was nicht als 16-bit-PCM lesbar ist.
+        /// </summary>
+        private static bool TryReadWavFormat(byte[] wav, out WavFormat fmt)
+        {
+            fmt = default;
+            if (wav.Length < WavHeaderSize) return false;
+            if (!(wav[0] == (byte)'R' && wav[1] == (byte)'I' && wav[2] == (byte)'F' && wav[3] == (byte)'F')) return false;
+            if (!(wav[8] == (byte)'W' && wav[9] == (byte)'A' && wav[10] == (byte)'V' && wav[11] == (byte)'E')) return false;
+
+            int channels = 0, sampleRate = 0, byteRate = 0, blockAlign = 0, bits = 0;
+            int dataOffset = -1, dataLength = 0;
+            int pos = 12;
+            while (pos + 8 <= wav.Length)
+            {
+                string id = $"{(char)wav[pos]}{(char)wav[pos + 1]}{(char)wav[pos + 2]}{(char)wav[pos + 3]}";
+                int size = wav[pos + 4] | (wav[pos + 5] << 8) | (wav[pos + 6] << 16) | (wav[pos + 7] << 24);
+                if (size < 0) return false;
+                int body = pos + 8;
+                if (id == "fmt " && size >= 16 && body + 16 <= wav.Length)
+                {
+                    channels   = wav[body + 2] | (wav[body + 3] << 8);
+                    sampleRate = wav[body + 4] | (wav[body + 5] << 8) | (wav[body + 6] << 16) | (wav[body + 7] << 24);
+                    byteRate   = wav[body + 8] | (wav[body + 9] << 8) | (wav[body + 10] << 16) | (wav[body + 11] << 24);
+                    blockAlign = wav[body + 12] | (wav[body + 13] << 8);
+                    bits       = wav[body + 14] | (wav[body + 15] << 8);
+                }
+                else if (id == "data")
+                {
+                    dataOffset = body;
+                    // Groesse aus dem Header kann bei abgebrochener Aufnahme zu gross sein -> kappen.
+                    dataLength = Math.Min(size, wav.Length - body);
+                    break;
+                }
+                pos = body + size + (size % 2);   // RIFF-Chunks sind auf gerade Byte-Grenzen gepaddet
+            }
+
+            if (dataOffset < 0 || dataLength <= 0 || bits != 16 || channels <= 0 || sampleRate <= 0) return false;
+            if (blockAlign <= 0) blockAlign = channels * bits / 8;
+            if (byteRate <= 0) byteRate = sampleRate * blockAlign;
+            fmt = new WavFormat(sampleRate, channels, bits, blockAlign, byteRate, dataOffset, dataLength);
+            return true;
+        }
+
+        /// <summary>
+        /// Voiced-Timeline ueber den echten data-Bereich (Variante fuer den Chunking-Pfad, der den
+        /// Header nicht als fix 44 Byte annehmen darf).
+        /// </summary>
+        private static bool[]? BuildVoicedTimeline(byte[] wav, WavFormat fmt)
+        {
+            int frameSamples = Math.Max(1, fmt.SampleRate * FrameMs / 1000);
+            int frameBytes = frameSamples * fmt.BlockAlign;
+            int frameCount = fmt.DataLength / frameBytes;
+            if (frameCount <= 0) return null;
+            var voiced = new bool[frameCount];
+            for (int f = 0; f < frameCount; f++)
+            {
+                int baseB = fmt.DataOffset + f * frameBytes;
+                double sumSq = 0;
+                for (int s = 0; s < frameSamples; s++)
+                {
+                    int idx = baseB + s * fmt.BlockAlign;      // bei Stereo nur der linke Kanal
+                    short sample = (short)(wav[idx] | (wav[idx + 1] << 8));
+                    double v = sample / 32768.0;
+                    sumSq += v * v;
+                }
+                voiced[f] = Math.Sqrt(sumSq / frameSamples) > SpeechRmsThreshold;
+            }
+            return voiced;
+        }
+
         private static bool[]? BuildVoicedTimeline(byte[] wav)
         {
             const int headerSize = 44;
@@ -618,6 +860,11 @@ namespace TerminalVoiceOverlay.Services
     // ---- verbose_json-DTOs (System.Text.Json Source-Generator: reflection-frei, trim-/AOT-fest fuer
     // self-contained publish). Groq liefert snake_case -> explizite [JsonPropertyName]. Unbekannte
     // Felder (id, seek, tokens, x_groq ...) ignoriert STJ automatisch. ----
+    /// <summary>Gelesene Kopfdaten einer 16-bit-PCM-WAV (fuer das Chunking langer Aufnahmen).</summary>
+    internal readonly record struct WavFormat(
+        int SampleRate, int Channels, int BitsPerSample,
+        int BlockAlign, int ByteRate, int DataOffset, int DataLength);
+
     internal sealed record GroqVerboseResponse(
         [property: JsonPropertyName("text")]     string? Text,
         [property: JsonPropertyName("segments")] IReadOnlyList<GroqSegment>? Segments);

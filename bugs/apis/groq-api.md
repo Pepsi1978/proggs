@@ -87,6 +87,16 @@
 - **Symptom:** 413 schon bei ~37 MB auf Dev-Plan trotz „100 MB"; >30 MB teils silent fail.
 - **FIX:** chunken — <~24 MB direkt, sonst in ~20-min-Segmente (32 kbps mono, 16 kHz) splitten + stitchen; alternativ `url`-Parameter.
 - **Quelle:** https://console.groq.com/docs/speech-to-text
+- **Eigener Vorfall 29.08.2026 (TerminalVoiceOverlay, Free-Plan):** 923 s (15,4 Min) am Stück
+  diktiert → 16 kHz mono 16-bit = 32 kB/s → **29 548 784 Byte** → `413 request_too_large`.
+  **Merksatz: bei 16 kHz mono ist das 25-MB-Limit nach ~13 Minuten erreicht** — jedes längere
+  Diktat schlägt zu 100 % fehl. Ein 413 ist **nicht retrybar** (die Datei wird nicht kleiner),
+  deshalb muss VOR dem Senden geschnitten werden, statt danach zu reagieren.
+- **Zweite Lehre (kostete den kompletten Text):** Die App löschte die WAV im `finally` auch nach
+  Fehlschlag → 15 Minuten Sprechen unwiederbringlich weg. **Jede fehlgeschlagene Aufnahme in einen
+  Rettungsordner verschieben statt löschen** (Defense-in-Depth-Schicht hinter dem Chunking).
+  Fix: `GroqWhisperClient.TranscribeInChunksAsync` (Schnitt in der längsten Sprechpause vor der
+  Ziel-Größe) + `OverlayWindow.RescueFailedRecording`.
 
 ### 12. Timestamps brechen beim Chunking
 - **FIX:** `timeOffsetSec` mitführen, zu jedem Segment-Timestamp addieren; `verbose_json` + `timestamp_granularities`.
