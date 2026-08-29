@@ -1,0 +1,39 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Prototyp" },
+    { "id": "page-2", "name": "Richtungen" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Kern — Feed", "page": "page-1" },
+    { "file": "DirectionA.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "A — Editorial", "page": "page-2" },
+    { "file": "DirectionB.dc.html", "x": 510, "y": 0, "w": 390, "h": 844, "title": "B — Terminal", "page": "page-2" },
+    { "file": "DirectionC.dc.html", "x": 1020, "y": 0, "w": 390, "h": 844, "title": "C — Ruhige Karten", "page": "page-2" }
+  ],
+  "annotations": [
+    {
+      "id": "bedienung",
+      "x": 510,
+      "y": 0,
+      "w": 320,
+      "page": "page-1",
+      "text": "Das ist Richtung A, ausgebaut.\n\nAlles hier reagiert:\n· Filter-Chips oben wechseln das Thema\n· Artikel antippen öffnet die Leseansicht\n· Lesezeichen (Aufmacher und Leseansicht) legt in die Ablage\n· Fußleiste wechselt zwischen Heute und Ablage\n· Der Kreis oben rechts schaltet auf Dunkel\n\nThemen und Du sind blass, weil sie noch nicht entworfen sind.\n\nÜber dem Rahmen liegen drei Regler: Akzentfarbe, Start im Dunkelmodus, Dichte (ruhig/dicht)."
+    },
+    {
+      "id": "beispieltexte",
+      "x": 510,
+      "y": 430,
+      "w": 320,
+      "page": "page-1",
+      "text": "Schlagzeilen und Texte sind Beispiele, keine echten Meldungen — sie zeigen Länge und Rhythmus. Für den Bau später aus einer echten Quelle füllen."
+    },
+    {
+      "id": "wahl",
+      "x": 0,
+      "y": -400,
+      "w": 430,
+      "page": "page-2",
+      "text": "Drei Grundhaltungen, bewusst grob gehalten.\n\nA Editorial — eine Geschichte pro Bildschirm, große Serif, viel Weißraum. Ruhig und wertig; zeigt wenig auf einmal.\n\nB Terminal — dunkel, Mono, dicht. Schnelles Überfliegen für Leute, die viel lesen; wirkt technisch und kann kalt sein.\n\nC Ruhige Karten — vertraute Kartenliste. Schnell zu bauen und leicht verständlich; sieht aus wie viele andere Apps.\n\nSag mir, welche es wird — dann baue ich sie in den Prototyp."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

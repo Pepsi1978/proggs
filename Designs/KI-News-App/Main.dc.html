@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #b4432a; text-decoration: none; } a:hover { color: #8c3320; }
+    .serif { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight: 400; }
+    .kicker { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+    .tap { cursor: pointer; user-select: none; }
+    .scroll { overflow-y: auto; scrollbar-width: none; }
+    .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+
+<div class="scroll" style="width: 390px; height: 844px; box-sizing: border-box; background: {{t.bg}}; color: {{t.fg}}; display: flex; flex-direction: column; position: relative;">
+
+  <sc-if value="{{ isFeed }}" hint-placeholder-val="{{ true }}">
+  <div style="display: flex; flex-direction: column; flex-grow: 1; min-height: 0;">
+
+    <div style="padding: 22px 20px 12px; display: flex; flex-direction: column; gap: 14px; background: {{t.bg}};">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span class="serif" style="font-size: 30px; line-height: 1; letter-spacing: -0.01em; color: {{t.fg}};">Kern</span>
+          <span style="font-size: 11px; color: {{t.muted}}; letter-spacing: 0.04em;">{{ headerNote }}</span>
+        </div>
+        <div class="tap" onClick="{{ toggleTheme }}" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid {{t.line}}; display: flex; align-items: center; justify-content: center;">
+          <sc-if value="{{ dark }}" hint-placeholder-val="{{ false }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{t.accent}}" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+          </sc-if>
+          <sc-if value="{{ light }}" hint-placeholder-val="{{ true }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{t.accent}}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"></path></svg>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px;">
+        <sc-for list="{{ chips }}" as="chip" hint-placeholder-count="4">
+          <div class="tap kicker" onClick="{{ chip.pick }}" style="flex-shrink: 0; height: 44px; padding: 0 16px; display: flex; align-items: center; border-radius: 999px; border: 1px solid {{chip.border}}; background: {{chip.bg}}; color: {{chip.color}};">{{ chip.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="scroll" style="flex-grow: 1; padding: 0 20px 96px; display: flex; flex-direction: column; gap: 26px;">
+
+      <sc-if value="{{ hero }}" hint-placeholder-val="{{ true }}">
+        <div class="tap" onClick="{{ hero.open }}" style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
+          <div style="height: 196px; border-radius: 3px; background: {{hero.art}}; position: relative; overflow: hidden;">
+            <svg width="350" height="196" viewBox="0 0 350 196" style="position: absolute; inset: 0; opacity: 0.5;"><g fill="none" stroke="{{t.artLine}}" stroke-width="1"><circle cx="266" cy="58" r="42"></circle><circle cx="266" cy="58" r="68"></circle><circle cx="266" cy="58" r="94"></circle><path d="M0 150 C 80 118, 134 178, 224 132 S 322 96, 350 118"></path><path d="M0 168 C 80 140, 134 196, 224 152 S 322 118, 350 140"></path></g></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <span class="kicker" style="color: {{t.accent}};">{{ hero.kicker }}</span>
+            <span class="serif" style="font-size: 33px; line-height: 1.08; letter-spacing: -0.015em; text-wrap: pretty; color: {{t.fg}};">{{ hero.title }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: {{t.soft}}; text-wrap: pretty;">{{ hero.teaser }}</span>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px;">
+              <span style="font-size: 11.5px; color: {{t.muted}};">{{ hero.meta }}</span>
+              <div class="tap" onClick="{{ hero.save }}" style="margin-left: auto; width: 44px; height: 44px; margin-right: -10px; display: flex; align-items: center; justify-content: center;">
+                <sc-if value="{{ hero.saved }}" hint-placeholder-val="{{ false }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="{{t.accent}}" stroke="{{t.accent}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+                </sc-if>
+                <sc-if value="{{ hero.unsaved }}" hint-placeholder-val="{{ true }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{t.muted}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 0;">
+        <sc-for list="{{ items }}" as="item" hint-placeholder-count="4">
+          <div class="tap" onClick="{{ item.open }}" style="display: flex; gap: 14px; align-items: flex-start; padding: {{ pad }} 0; border-top: 1px solid {{t.line}};">
+            <div style="display: flex; flex-direction: column; gap: 7px; flex-grow: 1; min-width: 0;">
+              <span class="kicker" style="color: {{item.tone}};">{{ item.kicker }}</span>
+              <span class="serif" style="font-size: 20px; line-height: 1.18; letter-spacing: -0.005em; text-wrap: pretty; color: {{t.fg}};">{{ item.title }}</span>
+              <span style="font-size: 11.5px; color: {{t.muted}};">{{ item.meta }}</span>
+            </div>
+            <div style="width: 66px; height: 66px; border-radius: 3px; background: {{item.art}}; flex-shrink: 0;"></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-top: 1px solid {{t.line}}; padding-top: 18px; display: flex; flex-direction: column; gap: 6px; align-items: center;">
+        <span class="serif" style="font-size: 17px; color: {{t.soft}};">Das war der Tag.</span>
+        <span style="font-size: 11.5px; color: {{t.muted}};">Morgen früh um 7 gibt es neue Meldungen.</span>
+      </div>
+
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+  <div style="display: flex; flex-direction: column; flex-grow: 1; min-height: 0;">
+    <div style="padding: 22px 20px 14px; display: flex; flex-direction: column; gap: 4px;">
+      <span class="serif" style="font-size: 30px; line-height: 1; color: {{t.fg}};">Gespeichert</span>
+      <span style="font-size: 11px; color: {{t.muted}};">{{ savedNote }}</span>
+    </div>
+    <div class="scroll" style="flex-grow: 1; padding: 0 20px 96px; display: flex; flex-direction: column; gap: 0;">
+      <sc-for list="{{ savedItems }}" as="item" hint-placeholder-count="2">
+        <div class="tap" onClick="{{ item.open }}" style="display: flex; gap: 14px; align-items: flex-start; padding: 16px 0; border-top: 1px solid {{t.line}};">
+          <div style="display: flex; flex-direction: column; gap: 7px; flex-grow: 1; min-width: 0;">
+            <span class="kicker" style="color: {{item.tone}};">{{ item.kicker }}</span>
+            <span class="serif" style="font-size: 20px; line-height: 1.18; text-wrap: pretty; color: {{t.fg}};">{{ item.title }}</span>
+            <span style="font-size: 11.5px; color: {{t.muted}};">{{ item.meta }}</span>
+          </div>
+          <div class="tap" onClick="{{ item.save }}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="{{t.accent}}" stroke="{{t.accent}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ nothingSaved }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 60px 20px; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{t.line}}" stroke-width="1.4" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+          <span class="serif" style="font-size: 19px; color: {{t.soft}};">Noch nichts aufgehoben</span>
+          <span style="font-size: 12.5px; line-height: 1.5; color: {{t.muted}};">Tippe im Feed auf das Lesezeichen, dann liegt der Artikel hier.</span>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+  <div class="scroll" style="flex-grow: 1; display: flex; flex-direction: column;">
+    <div style="padding: 18px 20px 10px; display: flex; align-items: center; justify-content: space-between;">
+      <div class="tap" onClick="{{ back }}" style="width: 44px; height: 44px; margin-left: -12px; display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{t.fg}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+      </div>
+      <div class="tap" onClick="{{ saveOpen }}" style="width: 44px; height: 44px; margin-right: -12px; display: flex; align-items: center; justify-content: center;">
+        <sc-if value="{{ open.saved }}" hint-placeholder-val="{{ false }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="{{t.accent}}" stroke="{{t.accent}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+        </sc-if>
+        <sc-if value="{{ open.unsaved }}" hint-placeholder-val="{{ true }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{t.muted}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="padding: 0 20px 110px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="kicker" style="color: {{t.accent}};">{{ open.kicker }}</span>
+        <span class="serif" style="font-size: 31px; line-height: 1.1; letter-spacing: -0.015em; text-wrap: pretty; color: {{t.fg}};">{{ open.title }}</span>
+        <span style="font-size: 11.5px; color: {{t.muted}};">{{ open.meta }}</span>
+      </div>
+
+      <div style="height: 168px; border-radius: 3px; background: {{open.art}}; position: relative; overflow: hidden;">
+        <svg width="350" height="168" viewBox="0 0 350 168" style="position: absolute; inset: 0; opacity: 0.5;"><g fill="none" stroke="{{t.artLine}}" stroke-width="1"><circle cx="262" cy="52" r="40"></circle><circle cx="262" cy="52" r="66"></circle><path d="M0 128 C 80 100, 140 154, 230 112 S 320 82, 350 100"></path></g></svg>
+      </div>
+
+      <div style="border-left: 2px solid {{t.accent}}; padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 9px;">
+        <span class="kicker" style="color: {{t.accent}};">In drei Sätzen</span>
+        <span style="font-size: 13.5px; line-height: 1.6; color: {{t.soft}}; white-space: pre-line;">{{ open.tldr }}</span>
+      </div>
+
+      <span style="font-size: 15.5px; line-height: 1.68; color: {{t.fg}}; white-space: pre-line; text-wrap: pretty;">{{ open.body }}</span>
+
+      <div style="border-top: 1px solid {{t.line}}; padding-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <sc-for list="{{ open.tags }}" as="tag" hint-placeholder-count="3">
+          <span class="kicker" style="padding: 8px 12px; border-radius: 999px; border: 1px solid {{t.line}}; color: {{t.muted}};">{{ tag.label }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: {{t.navBg}}; border-top: 1px solid {{t.line}}; padding: 8px 12px 22px; display: flex; justify-content: space-around; align-items: center; backdrop-filter: blur(12px);">
+    <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="4">
+      <div class="tap" onClick="{{ tab.pick }}" style="min-width: 60px; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+        <div style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
+          <sc-if value="{{ tab.isFeed }}" hint-placeholder-val="{{ true }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{tab.color}}" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+          </sc-if>
+          <sc-if value="{{ tab.isTopics }}" hint-placeholder-val="{{ false }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{tab.color}}" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+          </sc-if>
+          <sc-if value="{{ tab.isSaved }}" hint-placeholder-val="{{ false }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{tab.color}}" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5z"></path></svg>
+          </sc-if>
+          <sc-if value="{{ tab.isYou }}" hint-placeholder-val="{{ false }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{tab.color}}" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5 20c0-3.3 3.1-5.4 7-5.4s7 2.1 7 5.4"></path></svg>
+          </sc-if>
+        </div>
+        <span style="font-size: 9.5px; letter-spacing: 0.06em; color: {{tab.color}};">{{ tab.label }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#b4432a", "options": ["#b4432a", "#1f5f4e", "#3b4f8a", "#7a3b6b"], "section": "Farbe"},
+  "startDark": {"editor": "boolean", "default": false, "section": "Farbe"},
+  "density": {"editor": "enum", "default": "ruhig", "options": ["ruhig", "dicht"], "section": "Layout"},
+  "$preview": {"width": 390, "height": 844}
+}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'feed', filter: 'alle', saved: {}, openId: null, dark: null };
+  }
+
+  articles() {
+    return [
+      { id: 'a1', kicker: 'Forschung', cat: 'forschung', title: 'Modelle lernen, ihre eigenen Fehler zu finden',
+        teaser: 'Ein Prüfschritt nach dem Antworten senkt Falschaussagen deutlich — ohne größeres Modell. Was das für Assistenten im Alltag heißt.',
+        meta: 'vor 2 Std · 6 Min Lesezeit',
+        tldr: 'Das Modell beantwortet die Frage und prüft die eigene Antwort danach ein zweites Mal.\nDer Zusatzschritt kostet Rechenzeit, aber kein neues Training.\nIn der Praxis hilft er vor allem bei Fragen mit einer eindeutigen Lösung.',
+        body: 'Der Ansatz klingt banal und ist es nicht: Statt eine Antwort direkt auszugeben, bekommt das Modell sie noch einmal vorgelegt — mit dem Auftrag, sie zu widerlegen.\n\nWas dabei auffällt: Fehler, die vorher unbemerkt durchgingen, fallen im zweiten Durchgang auf. Der Preis dafür ist Rechenzeit. Jede Antwort wird doppelt erzeugt, und bei langen Texten summiert sich das.\n\nFür Anwendungen mit klarer Prüfbarkeit — Rechnen, Code, strukturierte Auszüge — ist der Handel günstig. Bei offenen Fragen fällt der Gewinn kleiner aus, weil sich nicht sagen lässt, was die richtige Antwort gewesen wäre.',
+        tags: ['Reasoning', 'Auswertung', 'Kosten'] },
+      { id: 'a2', kicker: 'Produkte', cat: 'produkte', title: 'Assistenten ziehen in die Betriebssysteme ein',
+        teaser: 'Was bisher eine App war, wird zur Systemebene.',
+        meta: 'vor 4 Std · 4 Min',
+        tldr: 'Der Assistent sitzt nicht mehr in einer App, sondern unter allen Apps.\nDas verschiebt die Frage, wer die Daten sieht.\nFür Entwickler heißt es: neue Schnittstellen, neue Berechtigungen.',
+        body: 'Der Assistent wandert von der App in die Systemebene. Damit ändert sich weniger die Technik als die Zuständigkeit: Wer die Ebene besitzt, entscheidet, welche App überhaupt gefragt wird.\n\nFür Entwickler heißt das, Funktionen anmelden zu müssen, statt sie nur anzubieten. Für Nutzer heißt es, dass eine Anfrage Daten aus mehreren Apps berührt — sichtbar oder nicht.',
+        tags: ['Plattform', 'Datenschutz'] },
+      { id: 'a3', kicker: 'Regulierung', cat: 'regulierung', title: 'Was neue Leitlinien für kleine Teams bedeuten',
+        teaser: 'Dokumentationspflichten treffen nicht nur die Großen.',
+        meta: 'gestern · 7 Min',
+        tldr: 'Die Pflichten hängen am Einsatzzweck, nicht an der Firmengröße.\nDokumentation lässt sich früh billig, später teuer nachholen.\nDrei Punkte sind für kleine Teams sofort relevant.',
+        body: 'Die verbreitete Annahme, Auflagen träfen nur große Anbieter, hält der Lektüre nicht stand. Entscheidend ist, wofür ein System eingesetzt wird — nicht, wer es baut.\n\nWer früh mitschreibt, welche Daten wofür verwendet wurden, hat den größten Teil der Arbeit schon erledigt. Wer es nachholen muss, rekonstruiert Monate später aus Commit-Logs.',
+        tags: ['Recht', 'Dokumentation'] },
+      { id: 'a4', kicker: 'Open Source', cat: 'opensource', title: 'Kleines Modell, große Wirkung',
+        teaser: 'Ein kompaktes Modell zieht bei Alltagsaufgaben nach.',
+        meta: 'gestern · 5 Min',
+        tldr: 'Kompakte Modelle holen bei alltäglichen Aufgaben spürbar auf.\nDer Abstand bleibt dort, wo lange Kontexte gebraucht werden.\nAuf dem Gerät zählt vor allem der Speicherbedarf.',
+        body: 'Der interessante Teil ist nicht die Bestenliste, sondern der Speicherbedarf: Was auf ein Telefon passt, kann offline laufen — und was offline läuft, verlässt das Gerät nicht.\n\nBei langen Zusammenhängen bleibt der Abstand zu den großen Modellen bestehen. Für Zusammenfassen, Umformulieren und Einsortieren reicht die kleine Klasse inzwischen.',
+        tags: ['Open Source', 'On-Device'] },
+      { id: 'a5', kicker: 'Forschung', cat: 'forschung', title: 'Warum längeres Nachdenken nicht immer hilft',
+        teaser: 'Mehr Rechenzeit pro Antwort hat einen Wendepunkt.',
+        meta: 'vor 2 Tagen · 8 Min',
+        tldr: 'Mehr Denkzeit hilft — bis zu einem Punkt.\nDanach argumentiert sich das Modell von der richtigen Antwort weg.\nDer Wendepunkt hängt an der Aufgabenart.',
+        body: 'Die Kurve steigt und kippt. Bis zu einem gewissen Punkt bringt jeder zusätzliche Denkschritt Genauigkeit; danach beginnt das Modell, eine bereits gefundene richtige Antwort wieder zu zerreden.\n\nDas macht die Frage praktisch: Wie viel Denkzeit ist genug? Die Antwort hängt an der Aufgabe, nicht am Modell.',
+        tags: ['Reasoning', 'Effizienz'] },
+      { id: 'a6', kicker: 'Produkte', cat: 'produkte', title: 'Inferenz auf dem Gerät wird zur Grundausstattung',
+        teaser: 'Neue Chips rechnen lokal, was bisher in die Cloud ging.',
+        meta: 'vor 2 Tagen · 4 Min',
+        tldr: 'Neue Chip-Generationen rechnen mehr lokal.\nDas senkt Latenz und Datenabfluss.\nDie Grenze liegt weiter bei Speicher und Akku.',
+        body: 'Was lokal läuft, braucht keine Verbindung und schickt nichts weg. Beides ist für Nachrichten-Apps mit Zusammenfassungen ein Argument.\n\nDie Grenze verschiebt sich, verschwindet aber nicht: Speicher und Akku bleiben die harten Schranken.',
+        tags: ['Hardware', 'Latenz'] }
+    ];
+  }
+
+  renderVals() {
+    const s = this.state || {};
+    const accent = this.props.accent || '#b4432a';
+    const dark = (s.dark === null || s.dark === undefined) ? (this.props.startDark ?? false) : s.dark;
+    const dense = (this.props.density || 'ruhig') === 'dicht';
+
+    const t = dark
+      ? { bg: '#15130f', navBg: 'rgba(21,19,15,0.92)', fg: '#f2ece2', soft: '#c2b9ab', muted: '#8b8175', line: '#2f2b25', accent: accent, artLine: '#5a5147' }
+      : { bg: '#faf7f1', navBg: 'rgba(250,247,241,0.92)', fg: '#1c1813', soft: '#4d463c', muted: '#8b8175', line: '#e2dbcf', accent: accent, artLine: '#b8ad9c' };
+
+    const arts = dark
+      ? ['linear-gradient(145deg,#2a2420,#1d211f)', 'linear-gradient(145deg,#252029,#1e2226)', 'linear-gradient(145deg,#2b2620,#20221c)']
+      : ['linear-gradient(145deg,#e8e0d3,#dfe3e0)', 'linear-gradient(145deg,#e4dfe8,#dde2e6)', 'linear-gradient(145deg,#eae2d4,#e0e3da)'];
+
+    const cats = [
+      { id: 'alle', label: 'Alles' },
+      { id: 'forschung', label: 'Forschung' },
+      { id: 'produkte', label: 'Produkte' },
+      { id: 'regulierung', label: 'Regulierung' },
+      { id: 'opensource', label: 'Open Source' }
+    ];
+
+    const filter = s.filter || 'alle';
+    const chips = cats.map((c) => {
+      const on = c.id === filter;
+      return {
+        label: c.label,
+        bg: on ? accent : 'transparent',
+        color: on ? (dark ? '#15130f' : '#faf7f1') : t.muted,
+        border: on ? accent : t.line,
+        pick: () => this.setState({ filter: c.id })
+      };
+    });
+
+    const savedMap = s.saved || {};
+    const all = this.articles();
+    const toggleSave = (id, e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const next = {};
+      Object.keys(savedMap).forEach((k) => { next[k] = savedMap[k]; });
+      next[id] = !savedMap[id];
+      this.setState({ saved: next });
+    };
+
+    const decorate = (a) => ({
+      id: a.id,
+      kicker: a.kicker,
+      title: a.title,
+      teaser: a.teaser,
+      meta: a.meta,
+      art: arts[all.indexOf(a) % arts.length],
+      tone: a.cat === 'regulierung' ? t.muted : accent,
+      saved: !!savedMap[a.id],
+      unsaved: !savedMap[a.id],
+      open: () => this.setState({ openId: a.id }),
+      save: (e) => toggleSave(a.id, e)
+    });
+
+    const filtered = all.filter((a) => filter === 'alle' || a.cat === filter).map(decorate);
+    const tab = s.tab || 'feed';
+    const openArticle = all.filter((a) => a.id === s.openId)[0];
+    const savedList = all.filter((a) => savedMap[a.id]).map(decorate);
+
+    const tabDefs = [
+      { id: 'feed', label: 'HEUTE', ready: true },
+      { id: 'topics', label: 'THEMEN', ready: false },
+      { id: 'saved', label: 'ABLAGE', ready: true },
+      { id: 'you', label: 'DU', ready: false }
+    ];
+    const dimColor = dark ? '#4a443c' : '#cfc6b6';
+
+    return {
+      t: t,
+      dark: dark,
+      light: !dark,
+      pad: dense ? '12px' : '18px',
+      headerNote: dense ? 'Sechs Meldungen · kompakt' : 'Dein Überblick · sechs Meldungen',
+      isFeed: !openArticle && tab !== 'saved',
+      isSaved: !openArticle && tab === 'saved',
+      isDetail: !!openArticle,
+      hero: (!openArticle && tab !== 'saved' && filtered.length) ? filtered[0] : null,
+      items: (!openArticle && tab !== 'saved') ? filtered.slice(1) : [],
+      savedItems: savedList,
+      nothingSaved: savedList.length === 0,
+      savedNote: savedList.length === 0
+        ? 'Hier landet, was du dir merkst'
+        : (savedList.length === 1 ? 'Ein Artikel für später' : savedList.length + ' Artikel für später'),
+      open: openArticle
+        ? {
+            kicker: openArticle.kicker,
+            title: openArticle.title,
+            meta: openArticle.meta,
+            tldr: openArticle.tldr,
+            body: openArticle.body,
+            art: arts[all.indexOf(openArticle) % arts.length],
+            saved: !!savedMap[openArticle.id],
+            unsaved: !savedMap[openArticle.id],
+            tags: (openArticle.tags || []).map((x) => ({ label: x }))
+          }
+        : { tags: [] },
+      back: () => this.setState({ openId: null }),
+      saveOpen: (e) => { if (openArticle) toggleSave(openArticle.id, e); },
+      toggleTheme: () => this.setState({ dark: !dark }),
+      chips: chips,
+      tabs: tabDefs.map((d) => ({
+        label: d.label,
+        color: d.ready ? (d.id === tab ? accent : t.muted) : dimColor,
+        isFeed: d.id === 'feed',
+        isTopics: d.id === 'topics',
+        isSaved: d.id === 'saved',
+        isYou: d.id === 'you',
+        pick: d.ready ? () => this.setState({ tab: d.id, openId: null }) : () => {}
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

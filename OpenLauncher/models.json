@@ -264,7 +264,8 @@
       "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
       "meta-llama/llama-3.3-70b-instruct:free",
       "meta-llama/llama-3.2-3b-instruct:free",
-      "nousresearch/hermes-3-llama-3.1-405b:free"
+      "nousresearch/hermes-3-llama-3.1-405b:free",
+      "stealth/ox-alpha"
     ],
     "KnownSyncedModelSlugs": [
       "cohere/north-mini-code:free",
@@ -286,7 +287,7 @@
       "thinkingmachines/inkling-small:free",
       "z-ai/glm-5.2:free"
     ],
-    "IsExpanded": false
+    "IsExpanded": true
   },
   {
     "Id": "opencode-go",
@@ -820,17 +821,8 @@
         "IsUserDefined": false,
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
-        "Slug": "unsloth/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27B UD - unsloth (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
         "Slug": "qwen/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27B - qwen (lokal)",
+        "DisplayName": "Qwen3.8 27b (lokal)",
         "IsHidden": false
       },
       {
@@ -838,8 +830,8 @@
         "IsUserDefined": false,
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
-        "Slug": "google/gemma-4-e4b",
-        "DisplayName": "Gemma 4 E4B - google (lokal)",
+        "Slug": "qwen3.8-27b@iq2_xxs",
+        "DisplayName": "Qwen3.8 27b@iq2_xxs (lokal)",
         "IsHidden": false
       },
       {
@@ -847,47 +839,16 @@
         "IsUserDefined": false,
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
-        "Slug": "medgemma-1.5-4b-it",
-        "DisplayName": "Medgemma 1.5 4B Instruct - mradermacher (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "mistralai/ministral-3-14b-reasoning",
-        "DisplayName": "Ministral 3 14B Reasoning - mistralai (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "qwen/qwen3.5-9b",
-        "DisplayName": "Qwen3.5 9B - qwen (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "openai/gpt-oss-20b",
-        "DisplayName": "GPT-OSS 20B - openai (lokal)",
+        "Slug": "qwen3.8-27b@iq3_xxs",
+        "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
         "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
-      "qwen/qwen3.8-27b",
-      "unsloth/qwen3.8-27b",
-      "google/gemma-4-e4b",
-      "qwen/qwen3.5-9b",
-      "medgemma-1.5-4b-it",
-      "mistralai/ministral-3-14b-reasoning",
-      "openai/gpt-oss-20b"
+      "qwen3.8-27b@iq2_xxs",
+      "qwen3.8-27b@iq3_xxs",
+      "qwen/qwen3.8-27b"
     ],
     "IsExpanded": true
   }

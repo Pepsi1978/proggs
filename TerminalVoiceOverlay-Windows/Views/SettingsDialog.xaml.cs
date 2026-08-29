@@ -40,6 +40,9 @@ public partial class SettingsDialog : Window
         GeminiKeyBox.Text = string.IsNullOrWhiteSpace(current.GeminiApiKey)
             ? fileConfig?.GeminiApiKey ?? string.Empty
             : current.GeminiApiKey;
+        // Transkriptions-Modell: Groq Whisper (0) oder Gemini Transcribe (1).
+        // Lebt als SK-Datei, deshalb ausserhalb des SettingsEditResult.
+        TranscriptionEngineBox.SelectedIndex = TranscriptionEngineSetting.UseGemini ? 1 : 0;
         VocabularyBox.Text = LoadPersonalVocabulary();
         UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
         PreambleBox.Text = GeminiClient.EffectiveVocabularyPreamble();
@@ -60,6 +63,9 @@ public partial class SettingsDialog : Window
         {
             // Persoenliches Vokabular in die SK-Datei schreiben — unabhaengig vom
             // SettingsEditResult, weil GeminiClient die Datei direkt liest.
+            TranscriptionEngineSetting.Save(TranscriptionEngineBox.SelectedIndex == 1
+                ? TranscriptionEngineSetting.Gemini
+                : TranscriptionEngineSetting.Groq);
             SavePersonalVocabulary(VocabularyBox.Text);
             SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
             GeminiClient.SaveVocabularyPreamble(PreambleBox.Text);

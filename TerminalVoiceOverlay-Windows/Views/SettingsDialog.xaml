@@ -96,6 +96,23 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Karte: Transkriptions-Modell -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardHeader}" Text="Transkriptions-Modell"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Welches Modell wandelt deine Sprache in Text um?"/>
+                            <ComboBox x:Name="TranscriptionEngineBox"
+                                      Background="#FF1B1B1B" Foreground="Black"
+                                      BorderBrush="#FF454545" BorderThickness="1"
+                                      Padding="8,6" FontSize="13" Margin="0,0,0,8">
+                                <ComboBoxItem Content="Groq Whisper (Standard, mit Stille-Schutz)"/>
+                                <ComboBoxItem Content="Gemini Transcribe Live (Free Tier, ohne Stille-Schutz)"/>
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Die dreischichtige Abwehr gegen Whisper-Stille-Halluzinationen (&quot;Vielen Dank&quot;, &quot;Untertitel&quot;) greift nur beim Groq-Modell — sie hängt an Whisper-Messwerten, die Gemini nicht liefert. Gemini bekommt stattdessen per Anweisung gesagt, bei Stille nichts auszugeben. Die Umschaltung wirkt sofort, ohne Neustart. Der Gemini-Schlüssel dafür steht als GEMINI_TRANSCRIBE_API_KEY in der zentralen .env."/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Karte: Persoenliches Woerterbuch -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>

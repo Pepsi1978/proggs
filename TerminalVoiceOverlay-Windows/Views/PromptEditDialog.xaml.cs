@@ -437,7 +437,7 @@ public partial class PromptEditDialog : Window
                     return;
                 }
                 var sttSw = System.Diagnostics.Stopwatch.StartNew();
-                var text = await groq.TranscribeAsync(wavPath);
+                var text = await (VoiceServiceProvider.Stt?.TranscribeAsync(wavPath) ?? groq.TranscribeAsync(wavPath));
                 DiagLog.Perf("PromptEditMic", "stt_done", sttSw, ("chars", text.Length));
                 AppendToPromptText(text);
                 DiagLog.Perf("PromptEditMic", "total", turnSw, ("chars", text.Length));
