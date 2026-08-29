@@ -194,10 +194,64 @@ Das ist der Kern — abgeschaut von **CortexAndroid** (`ui/chat/ChatViewModel.kt
 - **Fehler, die die ganze Sitzung betreffen** (ungültiger Schlüssel, Kontingent leer): Pipeline sofort
   anhalten und **die echte Fehlermeldung anzeigen** — nicht jeden Absatz still überspringen.
 - **Text vorher säubern:** Markdown-Zeichen, Code-Blöcke, URLs und Emoji entfernen bzw. ersetzen, damit
-  nicht „Sternchen Sternchen" vorgelesen wird
+  nicht „Sternchen Sternchen" vorgelesen wird — die vollständigen Regeln stehen in **Kapitel 4.5**
   (Vorlage: `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt`).
 - **Sichtbarer Zustand:** Der Lautsprecher-Knopf zeigt „lädt" / „spricht" / „aus" und stoppt bei
   erneutem Tipp sofort.
+
+### 4.5 Der vorgelesene Text muss TTS-freundlich sein ⭐ PFLICHT
+
+**Grundregel:** Jeder Text, der vorgelesen wird, ist so geschrieben, dass eine Sprachausgabe ihn
+sauber sprechen kann — **so gut wie keine Sonderzeichen**. Das gilt **ausschließlich für Text, der
+tatsächlich vertont wird** (Vorlese-Bereiche, KI-Antworten, die vorgelesen werden, Ansagen des
+Vordergrunddienstes). Text, der nur angezeigt und nie gesprochen wird — Code, Logs, Tabellen, das
+Diagnose-Protokoll, technische Bezeichner —, bleibt unangetastet.
+
+**Zwei Stellen, an denen das durchgesetzt wird:**
+
+1. **Schon bei der Texterzeugung** (KI-Prompt, Baustein O): Wird die Antwort anschließend vorgelesen,
+   enthält der Systemprompt die Vorgabe:
+   > „Dieser Text wird vorgelesen. Schreib ihn in ganzen, gesprochenen Sätzen. Verzichte auf
+   > Markdown, Aufzählungszeichen, Sternchen, Rauten, Klammern, Tabellen, Emoji und Abkürzungen.
+   > Schreib Zahlen, Einheiten und Abkürzungen aus. Antworte auf Deutsch mit echten Umlauten
+   > (ä ö ü Ä Ö Ü ß)."
+   Das ist der bessere Weg: sauber erzeugter Text muss hinterher nicht repariert werden.
+2. **Als Netz davor** (Aufbereitung, `ChatSpeechSanitizer`): Was trotzdem an Sonderzeichen
+   durchkommt, wird unmittelbar vor der Synthese entfernt oder ersetzt. Der Filter läuft **immer**,
+   auch bei selbst getipptem oder importiertem Text.
+
+**Was die Aufbereitung macht**
+
+| Im Text | Was passiert |
+|---|---|
+| `**fett**`, `*kursiv*`, `` `code` ``, `# Überschrift`, `> Zitat` | Auszeichnung raus, Inhalt bleibt |
+| Aufzählungszeichen `-`, `*`, `•`, `1.` am Zeilenanfang | entfernt, Zeile wird ein eigener Satz |
+| Code-Blöcke (```) | ganz raus, ersetzt durch „Codebeispiel" |
+| URLs, E-Mail-Adressen, Dateipfade | ersetzt durch „Link" bzw. „Dateipfad" — nie Zeichen für Zeichen buchstabieren |
+| Emoji und Symbolzeichen (☑ → ✓ ★ …) | entfernt |
+| Klammern `( )`, `[ ]`, `{ }` | Klammerzeichen weg, Inhalt bleibt als Einschub |
+| `&`, `%`, `+`, `=`, `/`, `~`, `_`, `\|`, `#`, `@` | ausgesprochen (`und`, `Prozent`, `plus`, `gleich`, `pro`, …) oder gestrichen |
+| Tabellen | zeilenweise als Sätze, Trennstriche `\|` weg |
+| Abkürzungen `z. B.`, `u. a.`, `bzw.`, `ca.`, `Nr.`, `ggf.` | ausgeschrieben |
+| Zahlen, Einheiten, Datum, Uhrzeit (`12.5.`, `3,5 kg`, `14:30`) | in gesprochene Form (`zwölfter Mai`, `drei Komma fünf Kilogramm`, `vierzehn Uhr dreißig`) |
+| Mehrfache Satzzeichen `!!!`, `???`, `…` | auf eines reduziert |
+| Ersatzschreibung `ae/oe/ue/ss` | über die Wörterbuch-Korrektur aus **Baustein M.4** |
+
+**Was erhalten bleibt** (das sind die *guten* Sonderzeichen): Punkt, Komma, Fragezeichen,
+Ausrufezeichen, Doppelpunkt, Semikolon und Bindestrich in Wörtern — sie steuern Betonung und Pausen.
+Absatz-Leerzeilen bleiben ebenfalls, denn sie sind die Schnittkante der Pipeline aus 4.2.
+
+**Leitplanken**
+
+- Die Aufbereitung sitzt an **einer** Stelle (`de.<paket>.tts.SpeechText`) und wird von allen drei
+  Engines gemeinsam benutzt — nicht je Engine neu gebaut.
+- **Der angezeigte Text ändert sich nicht.** Die Aufbereitung passiert nur auf dem Weg zur Synthese;
+  auf dem Bildschirm bleibt das Markdown mit allen Zeichen stehen.
+- **Nichts sinnentstellend kürzen.** Im Zweifel wird ein Zeichen gestrichen, nie ein Wort.
+- Bleibt nach der Aufbereitung ein **leerer Absatz** übrig (z. B. reiner Code-Block), wird er
+  übersprungen statt als Stille abgespielt.
+- Vorlage: `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt`.
+
 
 ---
 
@@ -469,7 +523,7 @@ bekomme, ohne Ausnahme:
   > ae, oe, ue oder ss."
 - Die Antwort wird vor der Anzeige durch dieselbe Wörterbuch-Korrektur geschickt.
 - Auch der Text, der zum **Vorlesen** geht (Baustein D), läuft vorher durch — sonst spricht die Stimme
-  „Bueromoebel" statt „Büromöbel".
+  „Bueromoebel" statt „Büromöbel". Danach folgt die TTS-Aufbereitung aus Kapitel 4.5.
 
 ### M.4 Wie korrigiert wird (wichtig: kein blindes Suchen und Ersetzen)
 
@@ -646,7 +700,8 @@ zur Einrichtung — sie versteckt die Funktion nicht einfach.
 - Die Antwort erscheint **Wort für Wort**, während sie entsteht — nicht erst am Stück nach langem
   Warten. Vorher ein Zustand „denkt nach" (Baustein L).
 - **Das Vorlesen (Baustein D) hängt sich ein:** Sobald der erste vollständige Absatz durchgelaufen ist,
-  beginnt die Sprachausgabe, während der Rest noch einläuft.
+  beginnt die Sprachausgabe, während der Rest noch einläuft — der Absatz läuft vorher durch die
+  TTS-Aufbereitung aus Kapitel 4.5.
 - **Abbrechen ist jederzeit möglich** und beendet die Anfrage wirklich (Abbruch der laufenden
   Verbindung), nicht nur die Anzeige.
 - Bricht die Verbindung mitten in der Antwort ab, bleibt das **bereits Empfangene erhalten** und wird
@@ -666,6 +721,8 @@ zur Einrichtung — sie versteckt die Funktion nicht einfach.
 - Der Modellname steht **an einer Stelle** im Projekt und ist in den Einstellungen sichtbar.
 - **Keine Schlüssel und keine Token ins Log** (Baustein P), auch nicht gekürzt.
 - Jede KI-Antwort läuft vor der Anzeige durch die Umlaut-Korrektur aus Baustein M.
+- **Wird die Antwort vorgelesen, enthält der Prompt zusätzlich die TTS-Vorgabe aus Kapitel 4.5**
+  (gesprochene Sätze, kein Markdown, keine Sonderzeichen, Zahlen und Abkürzungen ausgeschrieben).
 
 ---
 
@@ -744,6 +801,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 - [ ] **O** KI über Abo **und** Schlüssel; Antwort strömt; „Text glätten" mit erhaltenem Original
 - [ ] **P** Absturz-Fänger schreibt vor dem Absturz; Diagnose-Bildschirm mit Teilen-Knopf; keine Geheimnisse im Log
 - [ ] **D (4.3)** Vorlesen läuft bei ausgeschaltetem Bildschirm weiter, mit Pause/Weiter/Stopp in der Benachrichtigung
+- [ ] **D (4.5)** Vorgelesener Text ist TTS-freundlich: KI-Prompt mit Vorlese-Vorgabe **und** Aufbereitung an einer Stelle; keine Sonderzeichen in der Sprachausgabe; Anzeige unverändert
 - [ ] Bauen und Tests grün → committen → pushen → auf dem Fold 8 installiert
 - [ ] Jeder weggelassene Baustein wurde mit einem Satz begründet gemeldet
 
@@ -757,7 +815,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | Zwei-Paletten-Theme | `CortexAndroid/app/src/main/java/de/frank/cortex/ui/theme/` |
 | Kopfleiste mit Theme-Knopf | `CortexAndroid/.../ui/common/CortexTopBar.kt` |
 | Absatz-Pipeline mit Vorausschau | `CortexAndroid/.../ui/chat/ChatViewModel.kt` (`chunkText`, `TTS_PREFETCH_AHEAD`) |
-| Text für die Sprachausgabe säubern | `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt` |
+| Text für die Sprachausgabe säubern (TTS-freundlich, 4.5) | `CortexAndroid/.../ui/chat/ChatSpeechSanitizer.kt` |
 | Google Chirp 3 HD | `PerfectMoment/.../tts/GoogleCloudTtsPlayer.kt` |
 | Stimmen-Katalog | `PerfectMoment/.../tts/TtsCatalog.kt` |
 | Eigene Stimme (Klonen und Sprechen) | `PerfectMoment/.../tts/QwenTtsPlayer.kt`, `QwenVoiceEnrollment.kt` |
@@ -788,3 +846,4 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |
 | 29.08.2026, 13:48 Uhr | Baustein N ergänzt: Fünf-Sterne-Optik mit Pflicht-Effekt-Katalog, Bewegungs-Standards, Leitplanken und Abnahme |
 | 29.08.2026, 13:59 Uhr | Zweite Durchsicht aller 14 Apps (Klassennamen, Manifeste, Berechtigungen): Baustein O (KI über Abo oder Schlüssel, strömende Antworten, Text glätten), Baustein P (Absturz-Fänger und Diagnose-Bildschirm) und Kapitel 4.3 (Vorlesen im Vordergrunddienst) ergänzt |
+| 29.08.2026, 15:43 Uhr | Kapitel 4.5 ergänzt: vorgelesener Text muss TTS-freundlich sein — Vorgabe schon im KI-Prompt plus Aufbereitung als Netz, Zeichen-Tabelle, Leitplanken; gilt nur für Text, der wirklich gesprochen wird |
