@@ -36,8 +36,7 @@ fun GenialeIdeenApp(
     mikrofonErlaubt: Boolean,
     aufMikrofonFragen: () -> Unit,
     aufAnmelden: () -> Unit,
-    aufExport: () -> Unit,
-    aufImport: () -> Unit,
+    aufOrdnerWaehlen: () -> Unit,
     aufAppSperreUmschalten: (Boolean) -> Unit,
     aufSeiteOeffnen: (String?) -> Unit,
 ) {
@@ -136,8 +135,7 @@ fun GenialeIdeenApp(
                     aufDiagnose = { bildschirm = Bildschirm.DIAGNOSE },
                     aufEigeneStimme = { bildschirm = Bildschirm.STIMME },
                     aufAnmelden = aufAnmelden,
-                    aufExport = aufExport,
-                    aufImport = aufImport,
+                    aufOrdnerWaehlen = aufOrdnerWaehlen,
                     aufAppSperreUmschalten = aufAppSperreUmschalten,
                     aufSeiteOeffnen = aufSeiteOeffnen,
                 )

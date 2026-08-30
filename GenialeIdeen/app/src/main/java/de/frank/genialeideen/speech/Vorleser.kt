@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,6 +64,13 @@ class Vorleser(
     val stand: StateFlow<VorleseStand> = _stand.asStateFlow()
 
     private var laufenderJob: Job? = null
+
+    /**
+     * Zaehlt jeden Vorlese-Auftrag durch. Beim Wechsel auf eine andere Idee laeuft das
+     * Aufraeumen des alten Auftrags erst, wenn der neue schon spricht — ohne diese Nummer
+     * riss es dem neuen Lauf den Tonfokus, die Zwischendateien und den Dienst wieder weg.
+     */
+    private val laufNummer = java.util.concurrent.atomic.AtomicLong(0)
     private var spieler: MediaPlayer? = null
     private var fokusAnfrage: AudioFocusRequest? = null
 
@@ -74,7 +82,10 @@ class Vorleser(
             stopp()
             return
         }
-        stopp()
+        // Beim Wechsel auf eine andere Idee bleibt der Dienst stehen und wird gleich darauf
+        // nur aktualisiert. Ihn zu beenden und im selben Atemzug neu zu starten, brachte die
+        // App zum Absturz (ForegroundServiceDidNotStartInTimeException).
+        stopp(dienstBeenden = false)
         val text = SprechText.fuerStimme(rohText)
         val absaetze = SprechText.absaetze(text)
         if (absaetze.isEmpty()) {
@@ -95,6 +106,7 @@ class Vorleser(
             "Vorlesen beginnt",
             mapOf("absaetze" to absaetze.size, "chars" to text.length),
         )
+        val meinLauf = laufNummer.incrementAndGet()
         laufenderJob = bereich.launch {
             try {
                 if (synthese.kannVorausschauen()) pipelineMitVorausschau(absaetze) else reihum(absaetze)
@@ -110,19 +122,26 @@ class Vorleser(
                     fehler = fehler.message ?: "Das Vorlesen ist unterwegs abgebrochen.",
                 )
             } finally {
-                gibFokusFrei()
-                VorleseDienst.beenden(appContext)
-                synthese.raeumeAuf()
+                // Nur der jeweils juengste Lauf raeumt auf. Sonst nimmt der beendete Vorgaenger
+                // dem neuen Vorlesen Tonfokus, Zwischendateien und Dienst wieder weg.
+                if (laufNummer.get() == meinLauf) {
+                    gibFokusFrei()
+                    VorleseDienst.beenden(appContext)
+                    synthese.raeumeAuf()
+                }
             }
         }
     }
 
     /** Google und die eigene Stimme können vorab erzeugen — hier greift die Vorausschau. */
-    private suspend fun pipelineMitVorausschau(absaetze: List<String>) {
+    private suspend fun pipelineMitVorausschau(absaetze: List<String>) = coroutineScope {
         val inArbeit = HashMap<Int, Deferred<File>>()
+        // Bewusst aus diesem Bereich, nicht aus dem langlebigen: So brechen die vorausgeschickten
+        // Auftraege mit ab, sobald auf eine andere Idee gewechselt wird. Aus dem App-Bereich
+        // heraus liefen sie weiter und schrieben in einen Ordner, den niemand mehr las.
         fun beauftrage(index: Int) {
             if (index in absaetze.indices && index !in inArbeit) {
-                inArbeit[index] = bereich.async(Dispatchers.IO) { synthetisiereMitTeilung(absaetze[index]) }
+                inArbeit[index] = async(Dispatchers.IO) { synthetisiereMitTeilung(absaetze[index]) }
             }
         }
         // Absatz 0 sowie die beiden folgenden gehen sofort in Arbeit.
@@ -260,7 +279,15 @@ class Vorleser(
         )
     }
 
-    fun stopp() {
+    /**
+     * @param dienstBeenden false, wenn gleich darauf weitergelesen wird — der Dienst laeuft dann
+     *   durch und wird nur neu beschriftet, statt beendet und sofort wieder gestartet zu werden.
+     */
+    @JvmOverloads
+    fun stopp(dienstBeenden: Boolean = true) {
+        // Zuerst hochzaehlen: Damit weiss das finally des abgebrochenen Laufs, dass es nichts
+        // mehr aufzuraeumen hat.
+        laufNummer.incrementAndGet()
         laufenderJob?.cancel()
         laufenderJob = null
         ttsManager.stop()
@@ -269,8 +296,13 @@ class Vorleser(
             runCatching { player.release() }
         }
         spieler = null
-        gibFokusFrei()
-        VorleseDienst.beenden(appContext)
+        if (dienstBeenden) {
+            gibFokusFrei()
+            VorleseDienst.beenden(appContext)
+        }
+        // Die Zwischendateien des abgebrochenen Laufs sind hier noch die einzigen im Ordner —
+        // der neue Lauf legt seine erst danach an.
+        synthese.raeumeAuf()
         _stand.value = VorleseStand()
     }
 
@@ -346,6 +378,9 @@ internal object VorleseAktion {
     const val PAUSE = "de.frank.genialeideen.VORLESEN_PAUSE"
     const val WEITER = "de.frank.genialeideen.VORLESEN_WEITER"
     const val STOPP = "de.frank.genialeideen.VORLESEN_STOPP"
+
+    /** Räumt nur den Dienst ab, ohne das Vorlesen noch einmal zu stoppen. */
+    const val SCHLIESSEN = "de.frank.genialeideen.VORLESEN_SCHLIESSEN"
 
     fun intent(context: Context, aktion: String): Intent =
         Intent(context, VorleseDienst::class.java).setAction(aktion)

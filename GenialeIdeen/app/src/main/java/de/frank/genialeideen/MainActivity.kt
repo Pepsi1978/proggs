@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
@@ -42,7 +41,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import de.frank.genialeideen.backup.Sicherung
 import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
 import de.frank.genialeideen.ui.GenialeIdeenApp
@@ -127,45 +125,11 @@ class MainActivity : FragmentActivity() {
                     }
                 }
 
-                // Google verlangt vor dem ersten Drive-Zugriff eine Bestätigung. Ohne diesen
-                // Bildschirm scheiterte jede Sicherung an „Zugriff muss bestätigt werden“.
-                val driveFreigabe = rememberLauncherForActivityResult(
-                    ActivityResultContracts.StartIntentSenderForResult(),
-                ) { ergebnis -> viewModel.driveFreigabeBeantwortet(ergebnis.data) }
-
-                val offeneFreigabe by viewModel.driveFreigabe.collectAsStateWithLifecycle()
-                LaunchedEffect(offeneFreigabe) {
-                    val anfrage = offeneFreigabe ?: return@LaunchedEffect
-                    runCatching {
-                        driveFreigabe.launch(IntentSenderRequest.Builder(anfrage).build())
-                    }.onFailure {
-                        viewModel.driveFreigabeAbgebrochen(
-                            "Der Google-Bildschirm ließ sich nicht öffnen: ${it.message}",
-                        )
-                    }
-                }
-
-                val exportZiel = rememberLauncherForActivityResult(
-                    ActivityResultContracts.CreateDocument("application/json"),
-                ) { ziel: Uri? -> ziel?.let(viewModel::exportiere) }
-
-                val importQuelle = rememberLauncherForActivityResult(
-                    ActivityResultContracts.OpenDocument(),
-                ) { quelle: Uri? ->
-                    quelle?.let { adresse ->
-                        viewModel.vorschau(adresse) { vorschau ->
-                            if (vorschau == null) return@vorschau
-                            viewModel.zeige(
-                                Meldung(
-                                    "${vorschau.ideen} Ideen werden eingespielt, " +
-                                        "${vorschau.bestehende} bestehende bleiben. " +
-                                        "Sicherung vom ${vorschau.erstelltAm}.",
-                                    wiederholen = { viewModel.importiere(adresse, ersetzen = false) },
-                                ),
-                            )
-                        }
-                    }
-                }
+                // Ein Ordner statt einer einzelnen Datei: Nur so kann die App die vorige
+                // Sicherung stehen lassen und alles Ältere selbst wegräumen.
+                val ordnerWahl = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocumentTree(),
+                ) { ordner: Uri? -> ordner?.let(viewModel::merkeOrdnerUndSichere) }
 
                 if (gesperrt) {
                     SperrBildschirm(aufEntsperren = ::frageSperreAb)
@@ -176,8 +140,7 @@ class MainActivity : FragmentActivity() {
                         mikrofonErlaubt = mikrofonErlaubt,
                         aufMikrofonFragen = { mikrofonAnfrage.launch(Manifest.permission.RECORD_AUDIO) },
                         aufAnmelden = { viewModel.meldeAn(this@MainActivity) },
-                        aufExport = { exportZiel.launch(Sicherung.dateiName()) },
-                        aufImport = { importQuelle.launch(arrayOf("application/json", "text/plain")) },
+                        aufOrdnerWaehlen = { runCatching { ordnerWahl.launch(null) } },
                         aufAppSperreUmschalten = ::schalteAppSperre,
                         aufSeiteOeffnen = ::oeffneSeite,
                     )

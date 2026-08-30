@@ -1,8 +1,6 @@
 package de.frank.genialeideen.ui
 
 import android.app.Application
-import android.app.PendingIntent
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.AndroidViewModel
@@ -16,7 +14,6 @@ import de.frank.genialeideen.auth.CodexAuthException
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.DeviceAuthInfo
 import de.frank.genialeideen.auth.ReasoningEffort
-import de.frank.genialeideen.backup.DriveAuth
 import de.frank.genialeideen.backup.Sicherung
 import de.frank.genialeideen.backup.SicherungsVorschau
 import de.frank.genialeideen.data.local.IdeeEntity
@@ -133,17 +130,6 @@ class IdeenViewModel(
 
     private val _schriftgroesse = MutableStateFlow(settings.schriftgroesse)
     val schriftgroesse: StateFlow<Float> = _schriftgroesse.asStateFlow()
-
-    /**
-     * Der Freigabe-Bildschirm von Google, sobald Drive ihn verlangt. Die Activity zeigt ihn und
-     * meldet das Ergebnis zurück — ohne diesen Weg endete jede Sicherung bei
-     * „Zugriff auf Google Drive muss bestätigt werden“.
-     */
-    private val _driveFreigabe = MutableStateFlow<PendingIntent?>(null)
-    val driveFreigabe: StateFlow<PendingIntent?> = _driveFreigabe.asStateFlow()
-
-    /** Was nach erteilter Freigabe erneut laufen soll. */
-    private var driveWiederholung: (() -> Unit)? = null
 
     private val _abgestuerzt = MutableStateFlow(IdeenCrashHandler.berichte(application).isNotEmpty())
     val abgestuerzt: StateFlow<Boolean> = _abgestuerzt.asStateFlow()
@@ -985,118 +971,118 @@ class IdeenViewModel(
 
     // ---- Sicherung (Baustein J) ----
 
-    fun exportiere(ziel: Uri) {
-        viewModelScope.launch {
-            runCatching { sicherung.exportiere(ziel) }
-                .onSuccess { anzahl -> zeige(Meldung("$anzahl Ideen in die Datei geschrieben.")) }
-                .onFailure { fehler ->
-                    zeige(Meldung("Export fehlgeschlagen: ${fehler.message}", istFehler = true))
-                }
-        }
-    }
+    /** Der Name des gemerkten Sicherungsordners — null, solange keiner gewählt wurde. */
+    private val _sicherungsOrdner = MutableStateFlow(sicherung.ordnerName())
+    val sicherungsOrdner: StateFlow<String?> = _sicherungsOrdner.asStateFlow()
 
-    fun vorschau(quelle: Uri, fertig: (SicherungsVorschau?) -> Unit) {
-        viewModelScope.launch {
-            runCatching { sicherung.vorschau(quelle) }
-                .onSuccess(fertig)
-                .onFailure { fehler ->
-                    fertig(null)
-                    zeige(Meldung("Die Datei liess sich nicht lesen: ${fehler.message}", istFehler = true))
-                }
+    /**
+     * Sichert in den gemerkten Ordner. Fehlt einer, öffnet [ordnerWaehlen] den Ordnerwähler —
+     * es passiert nie stillschweigend nichts.
+     */
+    fun sichereJetzt(ordnerWaehlen: () -> Unit) {
+        if (sicherung.sicherungsOrdner == null) {
+            zeige(Meldung("Wähl zuerst den Ordner aus, in den gesichert werden soll."))
+            ordnerWaehlen()
+            return
         }
-    }
-
-    fun importiere(quelle: Uri, ersetzen: Boolean) {
         viewModelScope.launch {
-            runCatching { sicherung.importiere(quelle, ersetzen) }
-                .onSuccess { anzahl -> zeige(Meldung("$anzahl Ideen eingespielt.")) }
-                .onFailure { fehler ->
-                    zeige(Meldung("Import fehlgeschlagen: ${fehler.message}", istFehler = true))
-                }
-        }
-    }
-
-    fun sichereNachDrive() {
-        viewModelScope.launch {
-            runCatching { sicherung.nachDriveSichern() }
+            runCatching { sicherung.sichere() }
                 .onSuccess { stand ->
-                    driveWiederholung = null
-                    zeige(Meldung("Bei Google gesichert. $stand"))
+                    zeige(Meldung("Gesichert. $stand"))
                 }
                 .onFailure { fehler ->
-                    if (brauchtFreigabe(fehler, ::sichereNachDrive)) return@launch
                     zeige(
                         Meldung(
-                            "Die Google-Sicherung ging nicht: ${fehler.message}",
+                            "Die Sicherung ging nicht: ${fehler.message}",
                             istFehler = true,
-                            wiederholen = ::sichereNachDrive,
+                            wiederholen = ordnerWaehlen,
                         ),
                     )
                 }
         }
     }
 
-    fun holeVonDrive(ersetzen: Boolean) {
+    /** Der frisch gewählte Ordner wird gemerkt und sofort beschrieben. */
+    fun merkeOrdnerUndSichere(ordner: Uri) {
+        sicherung.merkeOrdner(ordner)
+        _sicherungsOrdner.value = sicherung.ordnerName()
         viewModelScope.launch {
-            runCatching { sicherung.vonDriveHolen(ersetzen) }
-                .onSuccess { anzahl ->
-                    driveWiederholung = null
-                    zeige(Meldung("$anzahl Ideen aus der Google-Sicherung geholt."))
-                }
+            runCatching { sicherung.sichere() }
+                .onSuccess { stand -> zeige(Meldung("Gesichert. $stand")) }
                 .onFailure { fehler ->
-                    if (brauchtFreigabe(fehler) { holeVonDrive(ersetzen) }) return@launch
-                    zeige(Meldung("Wiederherstellen ging nicht: ${fehler.message}", istFehler = true))
+                    zeige(
+                        Meldung(
+                            "In diesen Ordner liess sich nicht schreiben: ${fehler.message}",
+                            istFehler = true,
+                        ),
+                    )
                 }
         }
     }
 
     /**
-     * Fängt genau den Fall ab, in dem Google erst eine Bestaetigung sehen will: Statt einer
-     * Fehlermeldung wandert der Freigabe-Bildschirm nach oben, und danach laeuft [wiederholung]
-     * von allein noch einmal.
+     * Holt die jüngste Sicherung aus dem gemerkten Ordner zurück. Vor dem Einspielen wird
+     * gezeigt, was drinsteckt — erst der zweite Tipp schreibt wirklich in den Bestand.
      */
-    private fun brauchtFreigabe(fehler: Throwable, wiederholung: () -> Unit): Boolean {
-        val freigabe = fehler as? DriveAuth.NeedsConsent ?: return false
-        driveWiederholung = wiederholung
-        _driveFreigabe.value = freigabe.pendingIntent
-        return true
+    fun stelleWiederHer(ordnerWaehlen: () -> Unit) {
+        if (sicherung.sicherungsOrdner == null) {
+            zeige(Meldung("Wähl zuerst den Ordner aus, in dem die Sicherung liegt."))
+            ordnerWaehlen()
+            return
+        }
+        viewModelScope.launch {
+            val neueste = runCatching { sicherung.neuesteSicherung() }.getOrNull()
+            if (neueste == null) {
+                zeige(
+                    Meldung(
+                        "In diesem Ordner liegt noch keine Sicherung dieser App.",
+                        istFehler = true,
+                        wiederholen = ordnerWaehlen,
+                    ),
+                )
+                return@launch
+            }
+            zeigeVorschau(neueste.uri, neueste.name)
+        }
     }
 
-    /** Die Activity hat den Freigabe-Bildschirm gezeigt; hier kommt Googles Antwort an. */
-    fun driveFreigabeBeantwortet(daten: Intent?) {
-        _driveFreigabe.value = null
-        val wiederholung = driveWiederholung
-        driveWiederholung = null
-        sicherung.driveFreigabeErgebnis(daten)
-            .onSuccess { erteilt ->
-                if (erteilt) {
-                    wiederholung?.invoke()
-                } else {
-                    zeige(
-                        Meldung(
-                            "Ohne die Bestaetigung kann die App nicht bei Google sichern.",
-                            istFehler = true,
-                            wiederholen = wiederholung,
-                        ),
-                    )
-                }
+    private suspend fun zeigeVorschau(quelle: Uri, name: String) {
+        runCatching { sicherung.vorschauVon(quelle) }
+            .onSuccess { vorschau ->
+                zeige(
+                    Meldung(
+                        "$name: ${vorschau.ideen} Ideen vom ${vorschau.erstelltAm}. Deine " +
+                            "${vorschau.bestehende} bestehenden bleiben stehen. " +
+                            "Zum Einspielen noch einmal tippen.",
+                        wiederholen = { spieleEin(quelle) },
+                    ),
+                )
             }
             .onFailure { fehler ->
                 zeige(
                     Meldung(
-                        fehler.message ?: "Die Freigabe für Google Drive kam nicht zustande.",
+                        "Die Sicherung liess sich nicht lesen: ${fehler.message}",
                         istFehler = true,
-                        wiederholen = wiederholung,
                     ),
                 )
             }
     }
 
-    /** Der Freigabe-Bildschirm ließ sich nicht öffnen — dann darf er nicht haengen bleiben. */
-    fun driveFreigabeAbgebrochen(grund: String) {
-        _driveFreigabe.value = null
-        driveWiederholung = null
-        zeige(Meldung(grund, istFehler = true))
+    private fun spieleEin(quelle: Uri) {
+        viewModelScope.launch {
+            runCatching { sicherung.stelleWiederHerAus(quelle, ersetzen = false) }
+                .onSuccess { anzahl -> zeige(Meldung("$anzahl Ideen eingespielt.")) }
+                .onFailure { fehler ->
+                    zeige(Meldung("Einspielen ging nicht: ${fehler.message}", istFehler = true))
+                }
+        }
+    }
+
+    /** Trennt den gemerkten Ordner — die Sicherungen darin bleiben liegen. */
+    fun vergissSicherungsOrdner() {
+        sicherung.vergissOrdner()
+        _sicherungsOrdner.value = null
+        zeige(Meldung("Der Sicherungsordner ist vergessen. Die Dateien bleiben liegen."))
     }
 
     fun sicherungsStand(): String = sicherung.standText()

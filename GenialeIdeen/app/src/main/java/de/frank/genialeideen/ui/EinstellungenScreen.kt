@@ -75,8 +75,7 @@ fun EinstellungenScreen(
     aufDiagnose: () -> Unit,
     aufEigeneStimme: () -> Unit,
     aufAnmelden: () -> Unit,
-    aufExport: () -> Unit,
-    aufImport: () -> Unit,
+    aufOrdnerWaehlen: () -> Unit,
     aufAppSperreUmschalten: (Boolean) -> Unit,
     aufSeiteOeffnen: (String?) -> Unit,
 ) {
@@ -99,6 +98,9 @@ fun EinstellungenScreen(
     var geminiKey by remember { mutableStateOf(settings.geminiApiKey) }
     var tempo by remember { mutableStateOf(settings.ttsSpeechRate) }
     var immerDeutsch by remember { mutableStateOf(settings.immerDeutschVorlesen) }
+    // Kommt aus dem ViewModel, damit die Anzeige sofort steht, nachdem der Systemwähler
+    // einen Ordner geliefert hat.
+    val ordnerAnzeige by viewModel.sicherungsOrdner.collectAsState()
     var sperreAn by remember { mutableStateOf(settings.appLockEnabled) }
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
     var kiZugang by remember { mutableStateOf(settings.kiZugang) }
@@ -488,7 +490,20 @@ fun EinstellungenScreen(
             }
 
             // ---- Sicherung ----
-            Klappblock("Sicherung", "Datei und Google Drive") {
+            Klappblock("Sicherung", "Eine Datei in deinem Ordner") {
+                Text(
+                    "Wähl einmal einen Ordner — zum Beispiel einen in Google Drive. Danach " +
+                        "schreibt die App ohne Rückfrage dorthin. Es liegen immer nur zwei " +
+                        "Sicherungen dort: die aktuelle und die davor.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = gold.textGedaempft,
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    ordnerAnzeige ?: "Noch kein Ordner gewählt",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (ordnerAnzeige == null) gold.textGedaempft else gold.primaer,
+                )
                 Text(
                     viewModel.sicherungsStand(),
                     style = MaterialTheme.typography.labelSmall,
@@ -496,20 +511,23 @@ fun EinstellungenScreen(
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Auswahlchip("Exportieren", false, aufExport)
-                    Auswahlchip("Importieren", false, aufImport)
+                    Auswahlchip("Jetzt sichern", false) {
+                        viewModel.sichereJetzt(aufOrdnerWaehlen)
+                    }
+                    Auswahlchip("Wiederherstellen", false) {
+                        viewModel.stelleWiederHer(aufOrdnerWaehlen)
+                    }
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Google Drive — die App sieht dabei ausschliesslich ihren eigenen versteckten " +
-                        "Ordner, nie deine übrigen Dateien.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = gold.textGedaempft,
-                )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Auswahlchip("Jetzt sichern", false) { viewModel.sichereNachDrive() }
-                    Auswahlchip("Wiederherstellen", false) { viewModel.holeVonDrive(ersetzen = false) }
+                    Auswahlchip("Ordner wählen", false) {
+                        aufOrdnerWaehlen()
+                    }
+                    if (ordnerAnzeige != null) {
+                        Auswahlchip("Ordner vergessen", false) {
+                            viewModel.vergissSicherungsOrdner()
+                        }
+                    }
                 }
             }
 

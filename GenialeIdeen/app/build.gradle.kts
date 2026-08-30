@@ -13,10 +13,10 @@ android {
         applicationId = "de.frank.genialeideen"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.4.1"
+        versionCode = 18
+        versionName = "1.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"30.08.2026, 14:51 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"30.08.2026, 15:12 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -86,7 +86,6 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.okhttp)
-    implementation(libs.play.services.auth)
     implementation(libs.security.crypto)
     implementation(libs.media)
     implementation(libs.graphics.shapes)

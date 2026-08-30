@@ -32,6 +32,7 @@ class VorleseDienst : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        laeuft = true
         legeKanalAn()
         sitzung = MediaSessionCompat(this, "GenialeIdeenVorlesen").apply {
             setCallback(object : MediaSessionCompat.Callback() {
@@ -52,24 +53,49 @@ class VorleseDienst : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Der Vordergrund kommt IMMER zuerst — vor jeder Fallunterscheidung und vor jedem
+        // vorzeitigen return. Wer mit startForegroundService gerufen wird, hat fünf Sekunden,
+        // um startForeground nachzuliefern; sonst beendet Android die ganze App mit
+        // ForegroundServiceDidNotStartInTimeException. Genau daran stürzte die App ab, wenn
+        // man von einer vorgelesenen Idee zur nächsten sprang.
+        val titel = intent?.getStringExtra(EXTRA_TITEL) ?: letzterTitel
+        val nummer = intent?.getIntExtra(EXTRA_NUMMER, 0) ?: 0
+        val gesamt = intent?.getIntExtra(EXTRA_GESAMT, 0) ?: 0
+        val pausiert = intent?.getBooleanExtra(EXTRA_PAUSIERT, false) ?: false
+        letzterTitel = titel
+        starteImVordergrund(baueMeldung(titel, nummer, gesamt, pausiert))
+
         when (intent?.action) {
             VorleseAktion.PAUSE -> Vorleser.aktuell()?.pause()
             VorleseAktion.WEITER -> Vorleser.aktuell()?.weiter()
             VorleseAktion.STOPP -> {
                 Vorleser.aktuell()?.stopp()
-                stopSelf()
+                halteAn()
+                return START_NOT_STICKY
+            }
+            VorleseAktion.SCHLIESSEN -> {
+                // Nur den Dienst abräumen; das Vorlesen hat sich bereits selbst beendet.
+                halteAn()
                 return START_NOT_STICKY
             }
         }
-        val titel = intent?.getStringExtra(EXTRA_TITEL).orEmpty()
-        val nummer = intent?.getIntExtra(EXTRA_NUMMER, 0) ?: 0
-        val gesamt = intent?.getIntExtra(EXTRA_GESAMT, 0) ?: 0
-        val pausiert = intent?.getBooleanExtra(EXTRA_PAUSIERT, false) ?: false
-        starteImVordergrund(baueMeldung(titel, nummer, gesamt, pausiert))
         return START_NOT_STICKY
     }
 
+    /** Verlässt den Vordergrund ordentlich, bevor der Dienst stirbt. */
+    private fun halteAn() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        stopSelf()
+    }
+
     override fun onDestroy() {
+        laeuft = false
+        letzterTitel = "Geniale Ideen"
         sitzung?.isActive = false
         sitzung?.release()
         sitzung = null
@@ -160,6 +186,12 @@ class VorleseDienst : Service() {
     }
 
     companion object {
+        /** Ob der Dienst gerade lebt — ohne das würde [beenden] ihn erst starten. */
+        @Volatile private var laeuft = false
+
+        /** Der zuletzt gezeigte Titel, damit ein Neustart ohne Extras nicht leer dasteht. */
+        @Volatile private var letzterTitel = "Geniale Ideen"
+
         private const val KANAL_ID = "vorlesen"
         private const val MELDUNG_ID = 4711
         private const val EXTRA_TITEL = "titel"
@@ -200,8 +232,21 @@ class VorleseDienst : Service() {
             }
         }
 
+        /**
+         * Beendet den Dienst über seinen eigenen Weg, damit er vorher noch [startForeground]
+         * ruft. Ein blosses `stopService` von aussen schiesst ihn ab, während ein gerade
+         * abgesetztes `startForegroundService` noch auf sein `startForeground` wartet — und
+         * genau dieses Rennen kostete die App das Leben.
+         */
         fun beenden(context: Context) {
-            runCatching { context.stopService(Intent(context, VorleseDienst::class.java)) }
+            if (!laeuft) return
+            val intent = Intent(context, VorleseDienst::class.java).setAction(VorleseAktion.SCHLIESSEN)
+            runCatching { context.startService(intent) }
+                .onFailure {
+                    // Aus dem Hintergrund darf kein Dienst mehr angestossen werden; dann bleibt
+                    // nur der harte Weg — dort wartet aber auch niemand mehr auf startForeground.
+                    runCatching { context.stopService(Intent(context, VorleseDienst::class.java)) }
+                }
         }
 
         private fun darfMelden(context: Context): Boolean =

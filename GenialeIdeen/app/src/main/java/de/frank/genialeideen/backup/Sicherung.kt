@@ -13,7 +13,6 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -26,7 +25,8 @@ data class SicherungsVorschau(
 )
 
 /**
- * Datei-Export und -Import sowie die Google-Drive-Sicherung (Baustein J).
+ * Die Sicherung: ein Abzug des ganzen Bestands als Datei in einem selbst gewählten Ordner
+ * (Baustein J) — in der Praxis ein Google-Drive-Ordner.
  *
  * API-Schlüssel gehören ausdrücklich **nicht** in die Sicherung.
  */
@@ -34,8 +34,16 @@ class Sicherung(
     private val context: Context,
     private val datenbank: GenialeIdeenDatabase,
 ) {
-    private val driveAuth = DriveAuth(context)
-    private val driveClient = DriveClient(OkHttpClient())
+    private val datei = DateiSicherung(context)
+
+    /** Der gemerkte Sicherungsordner — null, solange keiner gewählt wurde. */
+    val sicherungsOrdner: Uri? get() = datei.ordner
+
+    fun ordnerName(): String? = datei.ordnerName()
+
+    fun merkeOrdner(uri: Uri) = datei.merkeOrdner(uri)
+
+    fun vergissOrdner() = datei.vergissOrdner()
 
     suspend fun alsJson(): String = withContext(Dispatchers.IO) {
         val ideen = JSONArray()
@@ -84,34 +92,6 @@ class Sicherung(
             .put("kategorien", kategorien)
             .put("nachrichten", nachrichten)
             .toString(2)
-    }
-
-    suspend fun exportiere(ziel: Uri): Int = withContext(Dispatchers.IO) {
-        val inhalt = alsJson()
-        context.contentResolver.openOutputStream(ziel)?.use { strom ->
-            strom.write(inhalt.toByteArray(Charsets.UTF_8))
-        } ?: error("Die Datei konnte nicht zum Schreiben geöffnet werden.")
-        val anzahl = JSONObject(inhalt).optJSONArray("ideen")?.length() ?: 0
-        IdeenLog.info("Sicherung", "exportiere", "Datei geschrieben", mapOf("ideen" to anzahl))
-        anzahl
-    }
-
-    suspend fun vorschau(quelle: Uri): SicherungsVorschau = withContext(Dispatchers.IO) {
-        val json = lese(quelle)
-        pruefeSchema(json)
-        SicherungsVorschau(
-            ideen = json.optJSONArray("ideen")?.length() ?: 0,
-            nachrichten = json.optJSONArray("nachrichten")?.length() ?: 0,
-            bestehende = datenbank.ideenDao().alleEinmal().size,
-            erstelltAm = json.optString("erstelltAm"),
-        )
-    }
-
-    /** [ersetzen] = true wirft den bestehenden Bestand weg, sonst wird zusammengeführt. */
-    suspend fun importiere(quelle: Uri, ersetzen: Boolean): Int = withContext(Dispatchers.IO) {
-        val json = lese(quelle)
-        pruefeSchema(json)
-        spieleEin(json, ersetzen)
     }
 
     private suspend fun spieleEin(json: JSONObject, ersetzen: Boolean): Int {
@@ -179,13 +159,6 @@ class Sicherung(
         return eingelesen.size
     }
 
-    private fun lese(quelle: Uri): JSONObject {
-        val text = context.contentResolver.openInputStream(quelle)?.use { strom ->
-            strom.readBytes().toString(Charsets.UTF_8)
-        } ?: error("Die Datei konnte nicht gelesen werden.")
-        return JSONObject(text)
-    }
-
     /** Eine unbekannte, höhere Fassung wird abgelehnt statt halb eingelesen. */
     private fun pruefeSchema(json: JSONObject) {
         val version = json.optInt("schemaVersion", 0)
@@ -198,44 +171,46 @@ class Sicherung(
         if (!json.has("ideen")) error("In der Datei fehlt der Abschnitt „ideen“.")
     }
 
-    // ---- Google Drive, ausschliesslich im appDataFolder ----
+    // ---- Der eine Sicherungsweg: eine Datei im gemerkten Ordner ----
 
-    suspend fun driveVerbunden(): Boolean = driveAuth.isConnected()
-
-    suspend fun nachDriveSichern(): String {
-        val token = driveAuth.accessToken()
-        val vorhanden = driveClient.findBackup(token)
-        driveClient.upload(token, vorhanden?.id, alsJson())
-        BackupStatus.markBackedUp(context)
-        IdeenLog.info("Sicherung", "nachDriveSichern", "In den appDataFolder geschrieben")
+    /**
+     * Schreibt den ganzen Bestand als neue Datei in den gemerkten Ordner und räumt dabei auf:
+     * Es bleiben nur die aktuelle Sicherung und die eine davor.
+     */
+    suspend fun sichere(): String {
+        val geschrieben = datei.schreibe(alsJson())
+        IdeenLog.info("Sicherung", "sichere", "Sicherung geschrieben", mapOf("name" to geschrieben.name))
         return BackupStatus.describe(context)
     }
 
-    suspend fun vonDriveHolen(ersetzen: Boolean): Int {
-        val token = driveAuth.accessToken()
-        val datei = driveClient.findBackup(token)
-            ?: error("Im Google-Konto liegt noch keine Sicherung dieser App.")
-        val json = JSONObject(driveClient.download(token, datei.id))
+    /** Die jüngste Sicherung im Ordner — sie wird beim Wiederherstellen genommen. */
+    suspend fun neuesteSicherung(): Sicherungsdatei? = datei.sicherungen().firstOrNull()
+
+    /** Wie viele Sicherungen gerade im Ordner liegen. */
+    suspend fun anzahlSicherungen(): Int = datei.sicherungen().size
+
+    suspend fun stelleWiederHerAus(quelle: Uri, ersetzen: Boolean): Int {
+        val json = JSONObject(datei.lies(quelle))
         pruefeSchema(json)
         return spieleEin(json, ersetzen)
     }
 
-    suspend fun driveTrennen() = driveAuth.disconnect()
-
-    /**
-     * Nimmt Googles Antwort auf den Freigabe-Bildschirm entgegen. Erst danach liegt ein Zugang
-     * bereit — der Rueckgabewert der Activity allein sagt darueber nichts aus.
-     */
-    fun driveFreigabeErgebnis(daten: android.content.Intent?): Result<Boolean> =
-        driveAuth.readConsentResult(daten)
+    /** Was in der Sicherung steckt — für die Rückfrage vor dem Einspielen. */
+    suspend fun vorschauVon(quelle: Uri): SicherungsVorschau = withContext(Dispatchers.IO) {
+        val json = JSONObject(datei.lies(quelle))
+        pruefeSchema(json)
+        SicherungsVorschau(
+            ideen = json.optJSONArray("ideen")?.length() ?: 0,
+            nachrichten = json.optJSONArray("nachrichten")?.length() ?: 0,
+            bestehende = datenbank.ideenDao().alleEinmal().size,
+            erstelltAm = json.optString("erstelltAm"),
+        )
+    }
 
     fun standText(): String = BackupStatus.describe(context)
 
     companion object {
         const val SCHEMA_VERSION = 3
         private val ZEIT = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
-        private val DATEI_ZEIT = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY)
-
-        fun dateiName(): String = "geniale-ideen-sicherung-${DATEI_ZEIT.format(Date())}.json"
     }
 }
